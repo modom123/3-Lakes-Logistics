@@ -369,6 +369,23 @@ nav{
 .osv-p{font-size:12px;color:var(--muted);}
 .ob-form{background:var(--white);border-radius:20px;box-shadow:var(--shadow-lg);overflow:hidden;border:1.5px solid var(--border);}
 .ob-prog{height:4px;background:linear-gradient(90deg,var(--navy),var(--gold));transition:width .4s ease;}
+.ob-sub{font-family:var(--ff-h);font-size:13px;color:var(--navy);font-weight:800;letter-spacing:1px;text-transform:uppercase;margin:22px 0 10px;padding-bottom:6px;border-bottom:1.5px dashed rgba(11,37,69,.18);}
+.ob-st > .ob-sub:first-of-type{margin-top:2px;}
+.ob-hint{font-size:11px;color:var(--muted);font-family:var(--ff-m);margin-top:4px;line-height:1.55;}
+.ob-api{background:linear-gradient(135deg,rgba(11,37,69,.04),rgba(200,144,42,.06));border:1.5px dashed rgba(200,144,42,.35);border-radius:10px;padding:13px 16px;margin:12px 0 18px;}
+.ob-api-t{font-family:var(--ff-m);font-size:10.5px;color:var(--gold);font-weight:700;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:5px;}
+.ob-api-p{font-size:12px;color:var(--muted);line-height:1.6;}
+.ob-file{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px;border:1.5px dashed var(--border);border-radius:10px;background:var(--off);cursor:pointer;transition:all .2s;}
+.ob-file:hover{border-color:var(--gold);background:rgba(200,144,42,.04);}
+.ob-file-l{display:flex;align-items:center;gap:10px;min-width:0;}
+.ob-file-i{font-size:20px;flex-shrink:0;}
+.ob-file-t{font-family:var(--ff-h);font-size:13px;color:var(--navy);font-weight:700;}
+.ob-file-s{font-size:11px;color:var(--muted);}
+.ob-file-b{font-family:var(--ff-m);font-size:10px;color:var(--gold);font-weight:700;letter-spacing:1px;padding:6px 11px;border:1.5px solid var(--gold);border-radius:6px;background:white;white-space:nowrap;}
+.ob-file input[type=file]{display:none;}
+.ob-file.has-file{border-style:solid;border-color:var(--gold);background:rgba(200,144,42,.07);}
+.ob-file.has-file .ob-file-b{background:var(--gold);color:white;}
+.ob-sig{font-family:'Playfair Display',serif;font-size:22px;font-style:italic;color:var(--navy);letter-spacing:.5px;}
 .ob-hd{background:var(--navy);padding:24px 42px;display:flex;justify-content:space-between;align-items:center;}
 .ob-hd-l{flex:1;}
 .ob-hd-t{font-family:var(--ff-h);font-size:21px;color:white;font-weight:800;}
@@ -819,72 +836,251 @@ footer{background:var(--navy);padding:60px 60px 34px;}
 
 <!-- ═══════════════ ONBOARDING ═══════════════ -->
 <div class="page" id="page-onboard">
-  <div class="ph"><div class="ph-dec"></div><div class="ph-inner"><span class="chip">Carrier Onboarding</span><h1 class="ph-h">Ready to Earn More?<br/>Let's Get You Set Up.</h1><p class="ph-p">Complete this 4-step application and a 3 Lakes dispatcher will call you within 24 hours to finalize onboarding and book your first load.</p></div></div>
+  <div class="ph"><div class="ph-dec"></div><div class="ph-inner"><span class="chip">Carrier Onboarding</span><h1 class="ph-h">Ready to Earn More?<br/>Let's Get You Set Up.</h1><p class="ph-p">Complete this full intake — MC, fleet, ELD, insurance, factoring, payout — so our automation can launch your account, verify compliance, and book your first load within 24 hours. Every field you fill feeds 155+ automations.</p></div></div>
 
   <div class="ob-pg"><div class="ob-inner">
     <div class="ob-vis rev">
-      <div class="osv"><div class="osv-c" style="background:var(--navy);">1</div><div class="osv-t">Apply Online</div><div class="osv-p">10-minute form below</div></div>
-      <div class="osv"><div class="osv-c" style="background:var(--navy);">2</div><div class="osv-t">Verify &amp; Approve</div><div class="osv-p">MC, insurance, safety check</div></div>
-      <div class="osv"><div class="osv-c" style="background:var(--navy);">3</div><div class="osv-t">Sign Agreement</div><div class="osv-p">E-sign dispatch agreement</div></div>
-      <div class="osv"><div class="osv-c" style="background:linear-gradient(135deg,var(--gold),var(--gold3));color:var(--navy);">4</div><div class="osv-t">Start Earning</div><div class="osv-p">First load within 48 hours</div></div>
+      <div class="osv"><div class="osv-c" style="background:var(--navy);">1</div><div class="osv-t">6-Step Intake</div><div class="osv-p">Business, authority, fleet, ELD, payout</div></div>
+      <div class="osv"><div class="osv-c" style="background:var(--navy);">2</div><div class="osv-t">Shield Auto-Verify</div><div class="osv-p">FMCSA, CSA, insurance, Clearinghouse</div></div>
+      <div class="osv"><div class="osv-c" style="background:var(--navy);">3</div><div class="osv-t">API + Stripe Wired</div><div class="osv-p">ELD connected, plan activated</div></div>
+      <div class="osv"><div class="osv-c" style="background:linear-gradient(135deg,var(--gold),var(--gold3));color:var(--navy);">4</div><div class="osv-t">Start Earning</div><div class="osv-p">First load within 24 hours</div></div>
     </div>
 
     <div class="ob-form rev">
-      <div class="ob-prog" id="obPr" style="width:25%"></div>
+      <div class="ob-prog" id="obPr" style="width:16.6%"></div>
       <div class="ob-hd">
-        <div class="ob-hd-l"><div class="ob-hd-t">Carrier Partner Application</div><div class="ob-hd-s">3 Lakes Logistics · FMCSA Licensed &amp; Bonded</div></div>
-        <div class="ob-ind"><div class="oi cur" id="oi1">1</div><div class="oi" id="oi2">2</div><div class="oi" id="oi3">3</div><div class="oi" id="oi4">4</div></div>
+        <div class="ob-hd-l"><div class="ob-hd-t">Carrier Partner Application</div><div class="ob-hd-s">3 Lakes Logistics · FMCSA Licensed &amp; Bonded · 6-Step Automated Intake</div></div>
+        <div class="ob-ind"><div class="oi cur" id="oi1">1</div><div class="oi" id="oi2">2</div><div class="oi" id="oi3">3</div><div class="oi" id="oi4">4</div><div class="oi" id="oi5">5</div><div class="oi" id="oi6">6</div></div>
       </div>
 
       <div class="ob-bd" id="obBd">
         <!-- STEP 1 -->
         <div class="ob-st cur" id="ost1">
-          <div class="ob-st-t">Step 1 — Contact Information</div>
-          <div class="ob-st-p">Tell us about yourself so we can assign you a dedicated dispatcher.</div>
-          <div class="ob-row"><div class="ob-g"><label class="ob-lbl">First Name <span>*</span></label><input class="ob-in" id="o1fn" placeholder="John"/></div><div class="ob-g"><label class="ob-lbl">Last Name <span>*</span></label><input class="ob-in" id="o1ln" placeholder="Smith"/></div></div>
-          <div class="ob-row"><div class="ob-g"><label class="ob-lbl">Phone <span>*</span></label><input class="ob-in" type="tel" id="o1ph" placeholder="(555) 000-0000"/></div><div class="ob-g"><label class="ob-lbl">Email <span>*</span></label><input class="ob-in" type="email" id="o1em" placeholder="you@email.com"/></div></div>
-          <div class="ob-row"><div class="ob-g"><label class="ob-lbl">Home Base City &amp; State <span>*</span></label><input class="ob-in" id="o1ct" placeholder="Chicago, IL"/></div><div class="ob-g"><label class="ob-lbl">Best Time to Call</label><select class="ob-sel"><option>Select</option><option>Morning 6am–12pm</option><option>Afternoon 12–5pm</option><option>Evening 5–9pm</option><option>Anytime</option></select></div></div>
-          <div class="ob-nav"><div></div><button class="ob-nx" onclick="oNext(1)">Next: Equipment →</button></div>
+          <div class="ob-st-t">Step 1 — Business &amp; Contact</div>
+          <div class="ob-st-p">Legal entity and primary contact — maps to <code>active_carriers</code>.</div>
+
+          <div class="ob-sub">Legal Entity</div>
+          <div class="ob-row"><div class="ob-g"><label class="ob-lbl">Legal Company Name <span>*</span></label><input class="ob-in" id="company_name" name="company_name" placeholder="Smith Transport LLC"/></div><div class="ob-g"><label class="ob-lbl">DBA / Trade Name</label><input class="ob-in" id="dba_name" name="dba_name" placeholder="If different from legal name"/></div></div>
+          <div class="ob-row"><div class="ob-g"><label class="ob-lbl">Entity Type <span>*</span></label><select class="ob-sel" id="entity_type" name="entity_type"><option value="">Select</option><option>LLC</option><option>S-Corp</option><option>C-Corp</option><option>Sole Proprietor</option><option>Partnership</option></select></div><div class="ob-g"><label class="ob-lbl">EIN / Tax ID <span>*</span></label><input class="ob-in" id="ein" name="ein" placeholder="XX-XXXXXXX"/></div></div>
+
+          <div class="ob-sub">Primary Owner / Point of Contact</div>
+          <div class="ob-row"><div class="ob-g"><label class="ob-lbl">First Name <span>*</span></label><input class="ob-in" id="o1fn" name="owner_first_name" placeholder="John"/></div><div class="ob-g"><label class="ob-lbl">Last Name <span>*</span></label><input class="ob-in" id="o1ln" name="owner_last_name" placeholder="Smith"/></div></div>
+          <div class="ob-row"><div class="ob-g"><label class="ob-lbl">Title / Role <span>*</span></label><select class="ob-sel" id="owner_title" name="owner_title"><option value="">Select</option><option>Owner / Principal</option><option>Operations Manager</option><option>Dispatcher</option><option>Driver (Owner-Operator)</option><option>Safety Manager</option></select></div><div class="ob-g"><label class="ob-lbl">Preferred Contact Method <span>*</span></label><select class="ob-sel" id="pref_contact" name="pref_contact"><option value="">Select</option><option>Phone Call</option><option>SMS / Text</option><option>Email</option><option>Any</option></select></div></div>
+          <div class="ob-row"><div class="ob-g"><label class="ob-lbl">Mobile Phone <span>*</span></label><input class="ob-in" type="tel" id="o1ph" name="owner_phone" placeholder="(555) 000-0000"/></div><div class="ob-g"><label class="ob-lbl">Email <span>*</span></label><input class="ob-in" type="email" id="o1em" name="owner_email" placeholder="you@email.com"/></div></div>
+          <div class="ob-row"><div class="ob-g"><label class="ob-lbl">Secondary Phone</label><input class="ob-in" type="tel" id="secondary_phone" name="secondary_phone" placeholder="Office or 24-hr line"/></div><div class="ob-g"><label class="ob-lbl">Best Time to Call</label><select class="ob-sel" id="best_call_time" name="best_call_time"><option value="">Select</option><option>Morning 6am–12pm</option><option>Afternoon 12–5pm</option><option>Evening 5–9pm</option><option>Anytime</option></select></div></div>
+
+          <div class="ob-sub">Business Address</div>
+          <div class="ob-row full"><div class="ob-g"><label class="ob-lbl">Street Address <span>*</span></label><input class="ob-in" id="address_line" name="address_line" placeholder="123 Main St, Suite 4B"/></div></div>
+          <div class="ob-row"><div class="ob-g"><label class="ob-lbl">City <span>*</span></label><input class="ob-in" id="o1ct" name="address_city" placeholder="Chicago"/></div><div class="ob-g"><label class="ob-lbl">State <span>*</span></label><input class="ob-in" id="address_state" name="address_state" placeholder="IL" maxlength="2"/></div></div>
+          <div class="ob-row"><div class="ob-g"><label class="ob-lbl">ZIP Code <span>*</span></label><input class="ob-in" id="address_zip" name="address_zip" placeholder="60601"/></div><div class="ob-g"><label class="ob-lbl">Time Zone</label><select class="ob-sel" id="time_zone" name="time_zone"><option value="">Select</option><option>Eastern (ET)</option><option>Central (CT)</option><option>Mountain (MT)</option><option>Pacific (PT)</option><option>Alaska (AKT)</option></select></div></div>
+
+          <div class="ob-row full" style="margin-bottom:0;">
+            <label class="cb-i" style="padding:13px 16px;align-items:flex-start;">
+              <input type="checkbox" id="sms_consent" name="sms_consent"/>
+              <span class="cb-bx" style="margin-top:2px;"></span>
+              <span class="cb-tx" style="font-size:12px;color:var(--muted);line-height:1.65;font-weight:400;">I consent to receive SMS/text messages from 3 Lakes Logistics for load offers, dispatch updates, compliance alerts, and payout notifications. Msg &amp; data rates may apply. Reply STOP to cancel.</span>
+            </label>
+          </div>
+
+          <div class="ob-nav"><div></div><button class="ob-nx" onclick="oNext(1)">Next: Authority →</button></div>
         </div>
         <!-- STEP 2 -->
         <div class="ob-st" id="ost2">
-          <div class="ob-st-t">Step 2 — Equipment &amp; Authority</div>
-          <div class="ob-st-p">Tell us about your truck and operating credentials.</div>
-          <div class="ob-row"><div class="ob-g"><label class="ob-lbl">MC Authority # <span>*</span></label><input class="ob-in" id="o2mc" placeholder="MC-123456"/></div><div class="ob-g"><label class="ob-lbl">DOT Number</label><input class="ob-in" placeholder="USDOT-1234567"/></div></div>
-          <div class="ob-row"><div class="ob-g"><label class="ob-lbl">Number of Trucks <span>*</span></label><select class="ob-sel" id="o2tr"><option value="">Select</option><option>1 (Owner-Operator)</option><option>2–3 Trucks</option><option>4–5 Trucks</option><option>6–10 Trucks</option><option>10+ Trucks</option></select></div><div class="ob-g"><label class="ob-lbl">Years Operating</label><select class="ob-sel"><option>Select</option><option>New Authority</option><option>Less than 1 year</option><option>1–2 Years</option><option>3–5 Years</option><option>5+ Years</option></select></div></div>
-          <div class="ob-g" style="margin-bottom:10px;"><label class="ob-lbl">Equipment Type(s) <span>*</span></label></div>
-          <div class="cb-g">
-            <label class="cb-i"><input type="checkbox"/><span class="cb-bx"></span><span class="cb-tx">🚛 Dry Van</span></label>
-            <label class="cb-i"><input type="checkbox"/><span class="cb-bx"></span><span class="cb-tx">🏗️ Flatbed</span></label>
-            <label class="cb-i"><input type="checkbox"/><span class="cb-bx"></span><span class="cb-tx">❄️ Refrigerated (Reefer)</span></label>
-            <label class="cb-i"><input type="checkbox"/><span class="cb-bx"></span><span class="cb-tx">📐 Step Deck</span></label>
-            <label class="cb-i"><input type="checkbox"/><span class="cb-bx"></span><span class="cb-tx">⚡ Power Only</span></label>
-            <label class="cb-i"><input type="checkbox"/><span class="cb-bx"></span><span class="cb-tx">📦 Box Truck (26ft)</span></label>
+          <div class="ob-st-t">Step 2 — Authority &amp; Compliance</div>
+          <div class="ob-st-p">FMCSA credentials — Shield will pull SAFER, CSA, and insurance records from these IDs.</div>
+
+          <div class="ob-sub">FMCSA Authority</div>
+          <div class="ob-row"><div class="ob-g"><label class="ob-lbl">USDOT Number <span>*</span></label><input class="ob-in" id="dot_number" name="dot_number" placeholder="1234567"/><div class="ob-hint">Numeric only. Used to pull SAFER + CSA scores.</div></div><div class="ob-g"><label class="ob-lbl">MC / FF Number <span>*</span></label><input class="ob-in" id="o2mc" name="mc_number" placeholder="MC-123456"/></div></div>
+          <div class="ob-row"><div class="ob-g"><label class="ob-lbl">Authority Status <span>*</span></label><select class="ob-sel" id="authority_status" name="authority_status"><option value="">Select</option><option>Active</option><option>Pending (awaiting grant)</option><option>New (&lt;30 days)</option><option>Reinstating</option></select></div><div class="ob-g"><label class="ob-lbl">Authority Granted Date</label><input class="ob-in" type="date" id="authority_granted_date" name="authority_granted_date"/></div></div>
+          <div class="ob-row"><div class="ob-g"><label class="ob-lbl">Authority Type <span>*</span></label><select class="ob-sel" id="authority_type" name="authority_type"><option value="">Select</option><option>Common Carrier</option><option>Contract Carrier</option><option>Common + Contract</option><option>Broker (with carrier)</option></select></div><div class="ob-g"><label class="ob-lbl">Years in Business <span>*</span></label><select class="ob-sel" id="years_operating" name="years_operating"><option value="">Select</option><option>New Authority</option><option>Less than 1 year</option><option>1–2 Years</option><option>3–5 Years</option><option>5–10 Years</option><option>10+ Years</option></select></div></div>
+
+          <div class="ob-sub">Safety &amp; Compliance Filings</div>
+          <div class="ob-row"><div class="ob-g"><label class="ob-lbl">FMCSA Safety Rating</label><select class="ob-sel" id="safety_rating" name="safety_rating"><option value="">Select</option><option>Satisfactory</option><option>Conditional</option><option>Unrated / New</option><option>Unsatisfactory</option></select></div><div class="ob-g"><label class="ob-lbl">CSA Score (if known)</label><input class="ob-in" id="csa_score" name="csa_score" placeholder="e.g. 45"/></div></div>
+          <div class="ob-row"><div class="ob-g"><label class="ob-lbl">BOC-3 Filed <span>*</span></label><select class="ob-sel" id="boc3_filed" name="boc3_filed"><option value="">Select</option><option>Yes</option><option>No</option><option>Not Sure</option></select></div><div class="ob-g"><label class="ob-lbl">UCR Current Year <span>*</span></label><select class="ob-sel" id="ucr_current" name="ucr_current"><option value="">Select</option><option>Yes — Paid</option><option>No — Pending</option><option>Exempt</option></select></div></div>
+          <div class="ob-row"><div class="ob-g"><label class="ob-lbl">IRP / Apportioned Plates</label><select class="ob-sel" id="irp_status" name="irp_status"><option value="">Select</option><option>Yes</option><option>No (intrastate)</option></select></div><div class="ob-g"><label class="ob-lbl">IFTA License Active</label><select class="ob-sel" id="ifta_active" name="ifta_active"><option value="">Select</option><option>Yes</option><option>No (intrastate)</option><option>Pending</option></select></div></div>
+          <div class="ob-row"><div class="ob-g"><label class="ob-lbl">HM Permit (Hazmat)</label><select class="ob-sel" id="hm_permit" name="hm_permit"><option value="">Select</option><option>Not Applicable</option><option>Yes — Active</option><option>Pending</option></select></div><div class="ob-g"><label class="ob-lbl">Drug &amp; Alcohol Consortium</label><input class="ob-in" id="drug_consortium" name="drug_consortium" placeholder="e.g. DISA, USA Mobile Drug Testing"/></div></div>
+
+          <div class="ob-row full" style="margin-bottom:0;">
+            <label class="cb-i" style="padding:13px 16px;align-items:flex-start;">
+              <input type="checkbox" id="fmcsa_consent" name="fmcsa_consent"/>
+              <span class="cb-bx" style="margin-top:2px;"></span>
+              <span class="cb-tx" style="font-size:12px;color:var(--muted);line-height:1.65;font-weight:400;">I authorize 3 Lakes Logistics (Shield automation) to query FMCSA SAFER, CSA BASIC scores, Pre-Employment Screening Program (PSP), insurance filings (BMC-91/MCS-90), and the Drug &amp; Alcohol Clearinghouse using the authority numbers above.</span>
+            </label>
           </div>
-          <div class="ob-row"><div class="ob-g"><label class="ob-lbl">Current Dispatch Situation</label><select class="ob-sel"><option>Select</option><option>No dispatcher — looking now</option><option>Self-dispatching</option><option>With another company (want to switch)</option></select></div><div class="ob-g"><label class="ob-lbl">Target RPM</label><select class="ob-sel"><option>Select</option><option>$2.00–$2.50 / mile</option><option>$2.50–$3.00 / mile</option><option>$3.00–$3.50 / mile</option><option>$3.50+ / mile</option></select></div></div>
-          <div class="ob-nav"><button class="ob-bk" onclick="oBack(2)">← Back</button><button class="ob-nx" onclick="oNext(2)">Next: Preferences →</button></div>
+
+          <div class="ob-nav"><button class="ob-bk" onclick="oBack(2)">← Back</button><button class="ob-nx" onclick="oNext(2)">Next: Fleet →</button></div>
         </div>
         <!-- STEP 3 -->
         <div class="ob-st" id="ost3">
-          <div class="ob-st-t">Step 3 — Lane &amp; Schedule Preferences</div>
-          <div class="ob-st-p">Help us find the right freight for your operation from day one.</div>
-          <div class="ob-g" style="margin-bottom:10px;"><label class="ob-lbl">Preferred Regions <span>*</span></label></div>
-          <div class="cb-g">
-            <label class="cb-i"><input type="checkbox"/><span class="cb-bx"></span><span class="cb-tx">🏭 Midwest</span></label>
-            <label class="cb-i"><input type="checkbox"/><span class="cb-bx"></span><span class="cb-tx">🌅 Southeast</span></label>
-            <label class="cb-i"><input type="checkbox"/><span class="cb-bx"></span><span class="cb-tx">🗽 Northeast</span></label>
-            <label class="cb-i"><input type="checkbox"/><span class="cb-bx"></span><span class="cb-tx">🤠 Southwest / Texas</span></label>
-            <label class="cb-i"><input type="checkbox"/><span class="cb-bx"></span><span class="cb-tx">🌊 West Coast</span></label>
-            <label class="cb-i"><input type="checkbox"/><span class="cb-bx"></span><span class="cb-tx">🗺️ Nationwide</span></label>
+          <div class="ob-st-t">Step 3 — Fleet &amp; Equipment</div>
+          <div class="ob-st-p">Truck, trailer, and driver details — maps to <code>fleet_assets</code>. Provide lead truck now; additional trucks can be added after onboarding.</div>
+
+          <div class="ob-sub">Fleet Size</div>
+          <div class="ob-row"><div class="ob-g"><label class="ob-lbl">Number of Power Units <span>*</span></label><select class="ob-sel" id="o2tr" name="fleet_size"><option value="">Select</option><option>1 (Owner-Operator)</option><option>2–3 Trucks</option><option>4–5 Trucks</option><option>6–10 Trucks</option><option>11–25 Trucks</option><option>25+ Trucks</option></select></div><div class="ob-g"><label class="ob-lbl">Number of Trailers</label><input class="ob-in" type="number" id="trailer_count" name="trailer_count" placeholder="e.g. 2" min="0"/></div></div>
+
+          <div class="ob-sub">Lead Truck — Asset Record</div>
+          <div class="ob-row"><div class="ob-g"><label class="ob-lbl">Unit / Truck ID <span>*</span></label><input class="ob-in" id="truck_id" name="truck_id" placeholder="e.g. TRK-101"/><div class="ob-hint">Your internal unit number. Used as asset key in telemetry.</div></div><div class="ob-g"><label class="ob-lbl">Year / Make / Model <span>*</span></label><input class="ob-in" id="truck_year_make" name="truck_year_make" placeholder="2022 Freightliner Cascadia"/></div></div>
+          <div class="ob-row"><div class="ob-g"><label class="ob-lbl">VIN <span>*</span></label><input class="ob-in" id="vin" name="vin" placeholder="17-character VIN" maxlength="17"/></div><div class="ob-g"><label class="ob-lbl">License Plate / State</label><input class="ob-in" id="truck_plate" name="truck_plate" placeholder="ABC1234 / IL"/></div></div>
+          <div class="ob-row"><div class="ob-g"><label class="ob-lbl">Trailer Type <span>*</span></label><select class="ob-sel" id="trailer_type" name="trailer_type"><option value="">Select</option><option>53' Dry Van</option><option>53' Reefer</option><option>48' Flatbed</option><option>53' Flatbed</option><option>Step Deck</option><option>Double Drop / RGN</option><option>Power Only</option><option>Box Truck 26ft</option><option>Conestoga</option><option>Tanker</option></select></div><div class="ob-g"><label class="ob-lbl">Max Weight Capacity (lbs) <span>*</span></label><input class="ob-in" type="number" id="max_weight" name="max_weight" placeholder="45000"/></div></div>
+          <div class="ob-row"><div class="ob-g"><label class="ob-lbl">Axle Configuration</label><select class="ob-sel" id="axle_config" name="axle_config"><option value="">Select</option><option>3-Axle (Day Cab)</option><option>5-Axle (Standard)</option><option>6-Axle</option><option>7+ Axle (Heavy Haul)</option></select></div><div class="ob-g"><label class="ob-lbl">Fuel Type</label><select class="ob-sel" id="fuel_type" name="fuel_type"><option value="">Select</option><option>Diesel</option><option>Gasoline</option><option>CNG</option><option>Electric</option></select></div></div>
+
+          <div class="ob-g" style="margin-bottom:10px;"><label class="ob-lbl">Equipment Types Operated <span>*</span></label></div>
+          <div class="cb-g" id="equip_cb">
+            <label class="cb-i"><input type="checkbox" name="equip_dry_van"/><span class="cb-bx"></span><span class="cb-tx">🚛 Dry Van</span></label>
+            <label class="cb-i"><input type="checkbox" name="equip_reefer"/><span class="cb-bx"></span><span class="cb-tx">❄️ Refrigerated</span></label>
+            <label class="cb-i"><input type="checkbox" name="equip_flatbed"/><span class="cb-bx"></span><span class="cb-tx">🏗️ Flatbed</span></label>
+            <label class="cb-i"><input type="checkbox" name="equip_step_deck"/><span class="cb-bx"></span><span class="cb-tx">📐 Step Deck</span></label>
+            <label class="cb-i"><input type="checkbox" name="equip_power_only"/><span class="cb-bx"></span><span class="cb-tx">⚡ Power Only</span></label>
+            <label class="cb-i"><input type="checkbox" name="equip_box"/><span class="cb-bx"></span><span class="cb-tx">📦 Box Truck (26ft)</span></label>
+            <label class="cb-i"><input type="checkbox" name="equip_rgn"/><span class="cb-bx"></span><span class="cb-tx">🛠️ RGN / Lowboy</span></label>
+            <label class="cb-i"><input type="checkbox" name="equip_tanker"/><span class="cb-bx"></span><span class="cb-tx">🛢️ Tanker</span></label>
           </div>
-          <div class="ob-row" style="margin-top:16px;"><div class="ob-g"><label class="ob-lbl">Miles Per Week</label><select class="ob-sel"><option>Select</option><option>Under 1,500 mi/wk</option><option>1,500–2,500 mi/wk</option><option>2,500–3,500 mi/wk</option><option>3,500+ mi/wk</option></select></div><div class="ob-g"><label class="ob-lbl">Home Time</label><select class="ob-sel"><option>Select</option><option>Weekly home time</option><option>Bi-weekly</option><option>OTR (Out 3–4 weeks)</option><option>Regional (home daily)</option></select></div></div>
-          <div class="ob-row"><div class="ob-g"><label class="ob-lbl">Preferred Load Type</label><select class="ob-sel"><option>No preference</option><option>General Freight</option><option>Manufacturing / Industrial</option><option>Food &amp; Beverage</option><option>Building Materials</option><option>Auto Parts</option></select></div><div class="ob-g"><label class="ob-lbl">Membership Plan <span>*</span></label><select class="ob-sel"><option>Select</option><option>Founders — $200/month (First 1,000 Trucks)</option><option>Pro — $400/month</option><option>Not Sure — Want to Discuss</option></select></div></div>
-          <div class="ob-nav"><button class="ob-bk" onclick="oBack(3)">← Back</button><button class="ob-nx" onclick="oNext(3)">Next: Final Details →</button></div>
+
+          <div class="ob-sub">Driver Credentials (Lead Driver)</div>
+          <div class="ob-row"><div class="ob-g"><label class="ob-lbl">CDL Number <span>*</span></label><input class="ob-in" id="cdl_number" name="cdl_number" placeholder="CDL ID #"/></div><div class="ob-g"><label class="ob-lbl">CDL State <span>*</span></label><input class="ob-in" id="cdl_state" name="cdl_state" placeholder="IL" maxlength="2"/></div></div>
+          <div class="ob-row"><div class="ob-g"><label class="ob-lbl">CDL Class <span>*</span></label><select class="ob-sel" id="cdl_class" name="cdl_class"><option value="">Select</option><option>Class A</option><option>Class B</option><option>Class C</option></select></div><div class="ob-g"><label class="ob-lbl">CDL Expiration <span>*</span></label><input class="ob-in" type="date" id="cdl_expiration" name="cdl_expiration"/></div></div>
+          <div class="ob-row"><div class="ob-g"><label class="ob-lbl">Years Driving Experience <span>*</span></label><select class="ob-sel" id="years_experience" name="years_experience"><option value="">Select</option><option>Less than 1 year</option><option>1–2 Years</option><option>3–5 Years</option><option>6–10 Years</option><option>10+ Years</option></select></div><div class="ob-g"><label class="ob-lbl">Medical Card Expiration</label><input class="ob-in" type="date" id="medcard_expiration" name="medcard_expiration"/></div></div>
+
+          <div class="ob-g" style="margin-bottom:10px;"><label class="ob-lbl">Endorsements / Special Auth</label></div>
+          <div class="cb-g" id="endorse_cb">
+            <label class="cb-i"><input type="checkbox" name="end_hazmat"/><span class="cb-bx"></span><span class="cb-tx">☣️ HAZMAT (H)</span></label>
+            <label class="cb-i"><input type="checkbox" name="end_tanker"/><span class="cb-bx"></span><span class="cb-tx">🛢️ Tanker (N)</span></label>
+            <label class="cb-i"><input type="checkbox" name="end_doubles"/><span class="cb-bx"></span><span class="cb-tx">🚚 Doubles/Triples (T)</span></label>
+            <label class="cb-i"><input type="checkbox" name="end_twic"/><span class="cb-bx"></span><span class="cb-tx">🛂 TWIC Card</span></label>
+            <label class="cb-i"><input type="checkbox" name="end_passport"/><span class="cb-bx"></span><span class="cb-tx">🛃 Passport / FAST</span></label>
+            <label class="cb-i"><input type="checkbox" name="end_overweight"/><span class="cb-bx"></span><span class="cb-tx">⚖️ Overweight Permits</span></label>
+          </div>
+
+          <div class="ob-sub">Safety History (Last 3 Years)</div>
+          <div class="ob-row"><div class="ob-g"><label class="ob-lbl">Accidents / Incidents</label><select class="ob-sel" id="accidents_3y" name="accidents_3y"><option value="">Select</option><option>0</option><option>1</option><option>2</option><option>3+</option></select></div><div class="ob-g"><label class="ob-lbl">Moving Violations</label><select class="ob-sel" id="violations_3y" name="violations_3y"><option value="">Select</option><option>0</option><option>1</option><option>2</option><option>3+</option></select></div></div>
+
+          <div class="ob-nav"><button class="ob-bk" onclick="oBack(3)">← Back</button><button class="ob-nx" onclick="oNext(3)">Next: ELD &amp; Tech →</button></div>
         </div>
         <!-- STEP 4 -->
         <div class="ob-st" id="ost4">
-          <div class="ob-st-t">Step 4 — Final Details &amp; Agreement</div>
-          <div class="ob-st-p">Almost there — review the Carrier Dispatch Agreement, then complete your application.</div>
+          <div class="ob-st-t">Step 4 — ELD Integration &amp; Technology</div>
+          <div class="ob-st-p">Connect your ELD so our tracking + HOS + telemetry automations (<code>truck_telemetry</code>, <code>driver_hos_status</code>) can stream live data.</div>
+
+          <div class="ob-api">
+            <div class="ob-api-t">⚡ Live API Integration</div>
+            <div class="ob-api-p">We connect directly to Motive, Samsara, Geotab, and Omnitracs via their REST APIs. The API token below is stored encrypted and used only for HOS, location, and fault-code polling.</div>
+          </div>
+
+          <div class="ob-sub">ELD Provider</div>
+          <div class="ob-row"><div class="ob-g"><label class="ob-lbl">ELD Provider <span>*</span></label><select class="ob-sel" id="eld_provider" name="eld_provider"><option value="">Select</option><option value="motive">Motive (KeepTruckin)</option><option value="samsara">Samsara</option><option value="geotab">Geotab</option><option value="omnitracs">Omnitracs</option><option value="pedigree">Pedigree / Rand McNally</option><option value="eroad">EROAD</option><option value="isaac">Isaac Instruments</option><option value="other">Other</option><option value="none">None yet</option></select></div><div class="ob-g"><label class="ob-lbl">ELD Account Email <span>*</span></label><input class="ob-in" type="email" id="eld_account_email" name="eld_account_email" placeholder="admin@yourfleet.com"/></div></div>
+          <div class="ob-row"><div class="ob-g"><label class="ob-lbl">ELD Account ID / Company Code</label><input class="ob-in" id="eld_account_id" name="eld_account_id" placeholder="Fleet ID from ELD portal"/></div><div class="ob-g"><label class="ob-lbl">ELD API Token <span>*</span></label><input class="ob-in" id="eld_api_token" name="eld_api_token" type="password" placeholder="Paste API token from your ELD admin console"/><div class="ob-hint">Stored encrypted · used for HOS, GPS, DVIR, fault-code polling.</div></div></div>
+
+          <div class="ob-sub">Telematics &amp; Safety Tech</div>
+          <div class="ob-row"><div class="ob-g"><label class="ob-lbl">GPS Tracking Enabled <span>*</span></label><select class="ob-sel" id="gps_tracking" name="gps_tracking"><option value="">Select</option><option>Yes — real-time</option><option>Yes — periodic (every 15+ min)</option><option>No</option></select></div><div class="ob-g"><label class="ob-lbl">Dash Cam Installed</label><select class="ob-sel" id="dash_cam" name="dash_cam"><option value="">Select</option><option>Yes — inward + outward</option><option>Yes — outward only</option><option>No</option></select></div></div>
+          <div class="ob-row"><div class="ob-g"><label class="ob-lbl">Engine Diagnostics Sharing</label><select class="ob-sel" id="engine_diag" name="engine_diag"><option value="">Select</option><option>Yes</option><option>No</option><option>Not Sure</option></select></div><div class="ob-g"><label class="ob-lbl">Load Tracking Method <span>*</span></label><select class="ob-sel" id="tracking_method" name="tracking_method"><option value="">Select</option><option>ELD API</option><option>MacroPoint / Project44</option><option>Trucker Tools</option><option>Phone App (FourKites / TL)</option><option>Manual Check-calls</option></select></div></div>
+
+          <div class="ob-sub">Load Board &amp; Dispatch Tools</div>
+          <div class="ob-g" style="margin-bottom:10px;"><label class="ob-lbl">Load Boards You Use</label></div>
+          <div class="cb-g" id="loadboard_cb">
+            <label class="cb-i"><input type="checkbox" name="lb_dat"/><span class="cb-bx"></span><span class="cb-tx">📊 DAT</span></label>
+            <label class="cb-i"><input type="checkbox" name="lb_truckstop"/><span class="cb-bx"></span><span class="cb-tx">🛑 Truckstop</span></label>
+            <label class="cb-i"><input type="checkbox" name="lb_123lb"/><span class="cb-bx"></span><span class="cb-tx">🔢 123Loadboard</span></label>
+            <label class="cb-i"><input type="checkbox" name="lb_direct"/><span class="cb-bx"></span><span class="cb-tx">🏭 Direct Shippers</span></label>
+            <label class="cb-i"><input type="checkbox" name="lb_brokers"/><span class="cb-bx"></span><span class="cb-tx">🏢 Direct Brokers</span></label>
+            <label class="cb-i"><input type="checkbox" name="lb_none"/><span class="cb-bx"></span><span class="cb-tx">🆕 None yet</span></label>
+          </div>
+          <div class="ob-row"><div class="ob-g"><label class="ob-lbl">Current Dispatch Situation</label><select class="ob-sel" id="current_dispatch" name="current_dispatch"><option value="">Select</option><option>No dispatcher — looking now</option><option>Self-dispatching</option><option>With another company (want to switch)</option><option>In-house dispatcher</option></select></div><div class="ob-g"><label class="ob-lbl">TMS / Software Used</label><input class="ob-in" id="tms_software" name="tms_software" placeholder="e.g. McLeod, Prophesy, none"/></div></div>
+
+          <div class="ob-nav"><button class="ob-bk" onclick="oBack(4)">← Back</button><button class="ob-nx" onclick="oNext(4)">Next: Lanes &amp; Payout →</button></div>
+        </div>
+
+        <!-- STEP 5 -->
+        <div class="ob-st" id="ost5">
+          <div class="ob-st-t">Step 5 — Lanes, Insurance, Factoring &amp; Payout</div>
+          <div class="ob-st-p">Freight preferences + banking info for Settler weekly payouts + insurance for compliance.</div>
+
+          <div class="ob-sub">Preferred Lanes &amp; Schedule</div>
+          <div class="ob-g" style="margin-bottom:10px;"><label class="ob-lbl">Preferred Regions <span>*</span></label></div>
+          <div class="cb-g" id="region_cb">
+            <label class="cb-i"><input type="checkbox" name="reg_midwest"/><span class="cb-bx"></span><span class="cb-tx">🏭 Midwest</span></label>
+            <label class="cb-i"><input type="checkbox" name="reg_southeast"/><span class="cb-bx"></span><span class="cb-tx">🌅 Southeast</span></label>
+            <label class="cb-i"><input type="checkbox" name="reg_northeast"/><span class="cb-bx"></span><span class="cb-tx">🗽 Northeast</span></label>
+            <label class="cb-i"><input type="checkbox" name="reg_southwest"/><span class="cb-bx"></span><span class="cb-tx">🤠 Southwest / Texas</span></label>
+            <label class="cb-i"><input type="checkbox" name="reg_westcoast"/><span class="cb-bx"></span><span class="cb-tx">🌊 West Coast</span></label>
+            <label class="cb-i"><input type="checkbox" name="reg_mountain"/><span class="cb-bx"></span><span class="cb-tx">🏔️ Mountain States</span></label>
+            <label class="cb-i"><input type="checkbox" name="reg_nationwide"/><span class="cb-bx"></span><span class="cb-tx">🗺️ Nationwide</span></label>
+            <label class="cb-i"><input type="checkbox" name="reg_canada"/><span class="cb-bx"></span><span class="cb-tx">🍁 Canada Cross-Border</span></label>
+          </div>
+          <div class="ob-row"><div class="ob-g"><label class="ob-lbl">States to Avoid</label><input class="ob-in" id="avoid_states" name="avoid_states" placeholder="e.g. NY, CA, NJ"/></div><div class="ob-g"><label class="ob-lbl">Target RPM <span>*</span></label><select class="ob-sel" id="target_rpm" name="target_rpm"><option value="">Select</option><option>$2.00–$2.50 / mile</option><option>$2.50–$3.00 / mile</option><option>$3.00–$3.50 / mile</option><option>$3.50+ / mile</option></select></div></div>
+          <div class="ob-row"><div class="ob-g"><label class="ob-lbl">Miles Per Week <span>*</span></label><select class="ob-sel" id="miles_per_week" name="miles_per_week"><option value="">Select</option><option>Under 1,500 mi/wk</option><option>1,500–2,500 mi/wk</option><option>2,500–3,500 mi/wk</option><option>3,500+ mi/wk</option></select></div><div class="ob-g"><label class="ob-lbl">Home Time <span>*</span></label><select class="ob-sel" id="home_time" name="home_time"><option value="">Select</option><option>Weekly home time</option><option>Bi-weekly</option><option>OTR (Out 3–4 weeks)</option><option>Regional (home daily)</option></select></div></div>
+          <div class="ob-row"><div class="ob-g"><label class="ob-lbl">Preferred Load Type</label><select class="ob-sel" id="preferred_load_type" name="preferred_load_type"><option value="">Select</option><option>No preference</option><option>General Freight</option><option>Manufacturing / Industrial</option><option>Food &amp; Beverage</option><option>Building Materials</option><option>Auto Parts</option><option>Paper / Packaging</option><option>Beverage / Dairy</option><option>Hazmat</option></select></div><div class="ob-g"><label class="ob-lbl">Deadhead Tolerance</label><select class="ob-sel" id="deadhead_tolerance" name="deadhead_tolerance"><option value="">Select</option><option>0–50 mi</option><option>50–100 mi</option><option>100–200 mi</option><option>200+ mi OK</option></select></div></div>
+
+          <div class="ob-sub">Insurance Coverage</div>
+          <div class="ob-row"><div class="ob-g"><label class="ob-lbl">Insurance Carrier <span>*</span></label><input class="ob-in" id="o4ins" name="insurance_carrier" placeholder="e.g. Progressive Commercial"/></div><div class="ob-g"><label class="ob-lbl">Policy Number <span>*</span></label><input class="ob-in" id="policy_number" name="policy_number" placeholder="Policy #"/></div></div>
+          <div class="ob-row"><div class="ob-g"><label class="ob-lbl">Liability Limit <span>*</span></label><select class="ob-sel" id="liability_limit" name="liability_limit"><option value="">Select</option><option>$750,000</option><option>$1,000,000</option><option>$1,500,000</option><option>$2,000,000+</option></select></div><div class="ob-g"><label class="ob-lbl">Cargo Coverage <span>*</span></label><select class="ob-sel" id="cargo_limit" name="cargo_limit"><option value="">Select</option><option>$100,000</option><option>$150,000</option><option>$200,000</option><option>$250,000+</option></select></div></div>
+          <div class="ob-row"><div class="ob-g"><label class="ob-lbl">Trailer Interchange</label><select class="ob-sel" id="trailer_interchange" name="trailer_interchange"><option value="">Select</option><option>$0 (none)</option><option>$25,000</option><option>$50,000</option><option>$75,000+</option></select></div><div class="ob-g"><label class="ob-lbl">Policy Expiration <span>*</span></label><input class="ob-in" type="date" id="policy_expiration" name="policy_expiration"/></div></div>
+          <div class="ob-row"><div class="ob-g"><label class="ob-lbl">Insurance Agent Name</label><input class="ob-in" id="agent_name" name="agent_name" placeholder="Agent contact"/></div><div class="ob-g"><label class="ob-lbl">Agent Phone</label><input class="ob-in" type="tel" id="agent_phone" name="agent_phone" placeholder="(555) 000-0000"/></div></div>
+
+          <div class="ob-sub">Factoring &amp; Billing</div>
+          <div class="ob-row"><div class="ob-g"><label class="ob-lbl">Using a Factoring Company? <span>*</span></label><select class="ob-sel" id="use_factoring" name="use_factoring"><option value="">Select</option><option>Yes</option><option>No — direct invoicing</option><option>QuickPay only</option></select></div><div class="ob-g"><label class="ob-lbl">Factoring Company</label><input class="ob-in" id="factoring_company" name="factoring_company" placeholder="e.g. TAFS, RTS, Triumph"/></div></div>
+          <div class="ob-row"><div class="ob-g"><label class="ob-lbl">Factoring Contact Email</label><input class="ob-in" type="email" id="factoring_email" name="factoring_email" placeholder="billing@factor.com"/></div><div class="ob-g"><label class="ob-lbl">NOA (Notice of Assignment) on File</label><select class="ob-sel" id="noa_on_file" name="noa_on_file"><option value="">Select</option><option>Yes</option><option>No</option><option>N/A</option></select></div></div>
+
+          <div class="ob-sub">Settlement Payout (Settler — Weekly ACH)</div>
+          <div class="ob-api">
+            <div class="ob-api-t">🏦 Banking Info · Encrypted Storage</div>
+            <div class="ob-api-p">Settler automation runs weekly settlements every Friday 9am CT. Payouts land via ACH Monday. Banking info is stored with AES-256 encryption, never exposed to dispatchers.</div>
+          </div>
+          <div class="ob-row"><div class="ob-g"><label class="ob-lbl">Payout Method <span>*</span></label><select class="ob-sel" id="payout_method" name="payout_method"><option value="">Select</option><option>ACH (direct deposit)</option><option>Wire</option><option>Paper Check</option><option>Pay via Factoring Company</option></select></div><div class="ob-g"><label class="ob-lbl">Payee Name (on bank account) <span>*</span></label><input class="ob-in" id="payee_name" name="payee_name" placeholder="Legal name on account"/></div></div>
+          <div class="ob-row"><div class="ob-g"><label class="ob-lbl">Bank Name <span>*</span></label><input class="ob-in" id="bank_name" name="bank_name" placeholder="e.g. Chase, Wells Fargo"/></div><div class="ob-g"><label class="ob-lbl">Account Type <span>*</span></label><select class="ob-sel" id="account_type" name="account_type"><option value="">Select</option><option>Business Checking</option><option>Business Savings</option><option>Personal Checking</option><option>Personal Savings</option></select></div></div>
+          <div class="ob-row"><div class="ob-g"><label class="ob-lbl">Routing Number <span>*</span></label><input class="ob-in" id="bank_routing" name="bank_routing" type="password" placeholder="9-digit ABA" maxlength="9"/></div><div class="ob-g"><label class="ob-lbl">Account Number <span>*</span></label><input class="ob-in" id="bank_account" name="bank_account" type="password" placeholder="Account #"/></div></div>
+          <div class="ob-row"><div class="ob-g"><label class="ob-lbl">Fuel Card Provider</label><select class="ob-sel" id="fuel_card" name="fuel_card"><option value="">Select</option><option>None</option><option>EFS</option><option>RTS Fuel Card</option><option>Comdata</option><option>TCH</option><option>Pilot / Flying J</option><option>Other</option></select></div><div class="ob-g"><label class="ob-lbl">Advance Requests Allowed</label><select class="ob-sel" id="advances_allowed" name="advances_allowed"><option value="">Select</option><option>Yes — up to 50%</option><option>Yes — up to 25%</option><option>No advances</option></select></div></div>
+
+          <div class="ob-sub">Membership Plan</div>
+          <div class="ob-row full"><div class="ob-g"><label class="ob-lbl">Subscription Plan <span>*</span></label><select class="ob-sel" id="plan" name="plan"><option value="">Select</option><option value="founders">Founders — $200/month (First 1,000 Trucks, Locked for Life)</option><option value="pro">Pro — $400/month</option><option value="discuss">Not Sure — Want to Discuss on Call</option></select></div></div>
+
+          <div class="ob-nav"><button class="ob-bk" onclick="oBack(5)">← Back</button><button class="ob-nx" onclick="oNext(5)">Next: Documents &amp; Sign →</button></div>
+        </div>
+
+        <!-- STEP 6 -->
+        <div class="ob-st" id="ost6">
+          <div class="ob-st-t">Step 6 — Documents, Consent &amp; Signature</div>
+          <div class="ob-st-p">Upload required paperwork, review the Dispatch Agreement, and e-sign to finalize.</div>
+
+          <div class="ob-sub">Document Uploads</div>
+          <div class="ob-row full"><div class="ob-g">
+            <label class="ob-file" id="file_mc_wrap">
+              <input type="file" id="doc_mc_authority" name="doc_mc_authority" accept=".pdf,.png,.jpg,.jpeg" onchange="fileLbl(this,'file_mc_wrap','file_mc_lbl')"/>
+              <div class="ob-file-l"><span class="ob-file-i">📜</span><div><div class="ob-file-t">MC Authority Letter (MCS-150)</div><div class="ob-file-s" id="file_mc_lbl">PDF or image · from FMCSA portal</div></div></div>
+              <div class="ob-file-b">Upload</div>
+            </label>
+          </div></div>
+          <div class="ob-row full"><div class="ob-g">
+            <label class="ob-file" id="file_coi_wrap">
+              <input type="file" id="doc_coi" name="doc_coi" accept=".pdf,.png,.jpg,.jpeg" onchange="fileLbl(this,'file_coi_wrap','file_coi_lbl')"/>
+              <div class="ob-file-l"><span class="ob-file-i">🛡️</span><div><div class="ob-file-t">Certificate of Insurance (COI)</div><div class="ob-file-s" id="file_coi_lbl">Must name 3 Lakes Logistics as certificate holder</div></div></div>
+              <div class="ob-file-b">Upload</div>
+            </label>
+          </div></div>
+          <div class="ob-row full"><div class="ob-g">
+            <label class="ob-file" id="file_w9_wrap">
+              <input type="file" id="doc_w9" name="doc_w9" accept=".pdf,.png,.jpg,.jpeg" onchange="fileLbl(this,'file_w9_wrap','file_w9_lbl')"/>
+              <div class="ob-file-l"><span class="ob-file-i">💵</span><div><div class="ob-file-t">W-9 Form</div><div class="ob-file-s" id="file_w9_lbl">Required for 1099 reporting</div></div></div>
+              <div class="ob-file-b">Upload</div>
+            </label>
+          </div></div>
+          <div class="ob-row full"><div class="ob-g">
+            <label class="ob-file" id="file_cdl_wrap">
+              <input type="file" id="doc_cdl" name="doc_cdl" accept=".pdf,.png,.jpg,.jpeg" onchange="fileLbl(this,'file_cdl_wrap','file_cdl_lbl')"/>
+              <div class="ob-file-l"><span class="ob-file-i">🪪</span><div><div class="ob-file-t">CDL — Front &amp; Back</div><div class="ob-file-s" id="file_cdl_lbl">Lead driver CDL scan</div></div></div>
+              <div class="ob-file-b">Upload</div>
+            </label>
+          </div></div>
+          <div class="ob-row full"><div class="ob-g">
+            <label class="ob-file" id="file_vc_wrap">
+              <input type="file" id="doc_voided_check" name="doc_voided_check" accept=".pdf,.png,.jpg,.jpeg" onchange="fileLbl(this,'file_vc_wrap','file_vc_lbl')"/>
+              <div class="ob-file-l"><span class="ob-file-i">🏦</span><div><div class="ob-file-t">Voided Check or Bank Letter</div><div class="ob-file-s" id="file_vc_lbl">Confirms routing + account numbers</div></div></div>
+              <div class="ob-file-b">Upload</div>
+            </label>
+          </div></div>
+          <div class="ob-row"><div class="ob-g"><label class="ob-lbl">How Did You Hear About Us?</label><select class="ob-sel" id="referral_source" name="referral_source"><option value="">Select</option><option>Facebook Group</option><option>Google Search</option><option>Driver Referral</option><option>Instagram / TikTok</option><option>LinkedIn</option><option>Truck Stop / Event</option><option>Other</option></select></div><div class="ob-g"><label class="ob-lbl">Referring Driver / Company</label><input class="ob-in" id="referral_name" name="referral_name" placeholder="If referred, who?"/></div></div>
+          <div class="ob-row full"><div class="ob-g"><label class="ob-lbl">Tell Us About Your Operation</label><textarea class="ob-ta" id="operation_notes" name="operation_notes" placeholder="Share your goals, challenges, or what you need from a dispatch partner..."></textarea></div></div>
+
+          <div class="ob-sub">Dispatch Agreement</div>
           <div class="ag-box">
             <div class="ag-t">📄 New Carrier–Dispatch Service Agreement</div>
             <p class="ag-p">Download and review the 3 Lakes Logistics Carrier Dispatch Agreement before submitting. This document covers commission rates, payment terms, load acceptance policies, liability limits, and termination procedures. You'll sign during your onboarding call.</p>
@@ -893,18 +1089,17 @@ footer{background:var(--navy);padding:60px 60px 34px;}
               <button class="btn-dl-o" onclick="prvPDF()">👁 Preview Agreement</button>
             </div>
           </div>
-          <div class="ob-row"><div class="ob-g"><label class="ob-lbl">Insurance Company <span>*</span></label><input class="ob-in" id="o4ins" placeholder="e.g. Progressive Commercial"/></div><div class="ob-g"><label class="ob-lbl">Coverage Level</label><select class="ob-sel"><option>Select</option><option>$750,000 Liability</option><option>$1,000,000 Liability</option><option>$1,500,000+ Liability</option></select></div></div>
-          <div class="ob-row"><div class="ob-g"><label class="ob-lbl">ELD Provider</label><input class="ob-in" placeholder="e.g. Samsara, Motive"/></div><div class="ob-g"><label class="ob-lbl">How Did You Hear About Us?</label><select class="ob-sel"><option>Select</option><option>Facebook Group</option><option>Google Search</option><option>Driver Referral</option><option>Instagram / TikTok</option><option>LinkedIn</option><option>Other</option></select></div></div>
-          <div class="ob-row full"><div class="ob-g"><label class="ob-lbl">Tell Us About Your Operation</label><textarea class="ob-ta" placeholder="Share your goals, challenges, or what you need from a dispatch partner..."></textarea></div></div>
+          <div class="ob-sub">Electronic Signature</div>
+          <div class="ob-row"><div class="ob-g"><label class="ob-lbl">Full Legal Name (Type to Sign) <span>*</span></label><input class="ob-in ob-sig" id="esign_name" name="esign_name" placeholder="Type your full legal name"/><div class="ob-hint">Legally binding electronic signature per ESIGN Act.</div></div><div class="ob-g"><label class="ob-lbl">Signature Date <span>*</span></label><input class="ob-in" type="date" id="esign_date" name="esign_date"/></div></div>
           <div class="ob-row full" style="margin-bottom:0;">
             <label class="cb-i" style="padding:13px 16px;align-items:flex-start;">
               <input type="checkbox" id="o4ag"/>
               <span class="cb-bx" style="margin-top:2px;"></span>
-              <span class="cb-tx" style="font-size:12px;color:var(--muted);line-height:1.65;font-weight:400;">I have reviewed the Carrier Dispatch Agreement and authorize 3 Lakes Logistics to verify my MC authority, insurance, and FMCSA safety rating through public records. A dispatcher will contact me within 24 hours.</span>
+              <span class="cb-tx" style="font-size:12px;color:var(--muted);line-height:1.65;font-weight:400;">I have reviewed the Carrier Dispatch Service Agreement, certify that all information provided is accurate, authorize 3 Lakes Logistics to verify my MC authority, insurance, FMCSA safety rating, Clearinghouse status, and PSP records, and enroll me in the selected subscription plan. I understand subscription fees are billed monthly via Stripe.</span>
             </label>
           </div>
           <div class="ob-nav">
-            <button class="ob-bk" onclick="oBack(4)">← Back</button>
+            <button class="ob-bk" onclick="oBack(6)">← Back</button>
             <button class="ob-nx" onclick="oSub()" style="background:linear-gradient(135deg,var(--gold),var(--gold2));color:var(--navy);font-size:15px;padding:13px 34px;box-shadow:0 4px 18px rgba(200,144,42,.38);">🚛 Submit Application</button>
           </div>
         </div>
@@ -1017,58 +1212,101 @@ showPage=function(n){_origShowPage(n);if(n==='home'||n==='services')setTimeout(s
 let oStep=1;
 function oNext(f){
   if(f===1&&(!v('o1fn')||!v('o1ph')||!v('o1em')||!v('o1ct'))){shk('obBd');return;}
-  if(f===2&&(!v('o2mc')||!document.getElementById('o2tr').value)){shk('obBd');return;}
+  if(f===2&&(!v('dot_number')||!v('o2mc')||!document.getElementById('authority_status').value||!document.getElementById('authority_type').value||!document.getElementById('years_operating').value||!document.getElementById('boc3_filed').value||!document.getElementById('ucr_current').value||!document.getElementById('fmcsa_consent').checked)){shk('obBd');return;}
+  if(f===3&&(!document.getElementById('o2tr').value||!v('truck_id')||!v('truck_year_make')||!v('vin')||!document.getElementById('trailer_type').value||!v('max_weight')||!v('cdl_number')||!v('cdl_state')||!document.getElementById('cdl_class').value||!v('cdl_expiration')||!document.getElementById('years_experience').value)){shk('obBd');return;}
+  if(f===4&&(!document.getElementById('eld_provider').value||!v('eld_account_email')||!v('eld_api_token')||!document.getElementById('gps_tracking').value||!document.getElementById('tracking_method').value)){shk('obBd');return;}
+  if(f===5&&(!v('o4ins')||!v('policy_number')||!document.getElementById('liability_limit').value||!document.getElementById('cargo_limit').value||!v('policy_expiration')||!document.getElementById('use_factoring').value||!document.getElementById('payout_method').value||!v('payee_name')||!v('bank_name')||!document.getElementById('account_type').value||!v('bank_routing')||!v('bank_account')||!document.getElementById('plan').value||!document.getElementById('target_rpm').value||!document.getElementById('miles_per_week').value||!document.getElementById('home_time').value)){shk('obBd');return;}
   document.getElementById('ost'+f).classList.remove('cur');
   oStep=f+1;document.getElementById('ost'+oStep).classList.add('cur');
   updO();document.getElementById('obBd').scrollIntoView({behavior:'smooth',block:'start'});
 }
 function oBack(f){document.getElementById('ost'+f).classList.remove('cur');oStep=f-1;document.getElementById('ost'+oStep).classList.add('cur');updO();}
+const OB_STEPS=6;
 function updO(){
-  document.getElementById('obPr').style.width=(oStep/4*100)+'%';
-  for(let i=1;i<=4;i++){const el=document.getElementById('oi'+i);el.classList.remove('cur','done');if(i<oStep)el.classList.add('done');else if(i===oStep)el.classList.add('cur');}
+  document.getElementById('obPr').style.width=(oStep/OB_STEPS*100)+'%';
+  for(let i=1;i<=OB_STEPS;i++){const el=document.getElementById('oi'+i);el.classList.remove('cur','done');if(i<oStep)el.classList.add('done');else if(i===oStep)el.classList.add('cur');}
+}
+function fileLbl(input,wrapId,lblId){
+  const w=document.getElementById(wrapId),l=document.getElementById(lblId);
+  if(input.files&&input.files[0]){w.classList.add('has-file');l.textContent='✓ '+input.files[0].name;}
+  else{w.classList.remove('has-file');}
 }
 function oSub(){
-  if(!v('o4ins')||!document.getElementById('o4ag').checked){shk('obBd');return;}
+  if(!v('o4ins')||!v('esign_name')||!v('esign_date')||!document.getElementById('o4ag').checked){shk('obBd');return;}
 
-  // Collect all form data
-  const fn   = document.getElementById('o1fn').value.trim();
-  const ln   = document.getElementById('o1ln').value.trim();
-  const ph   = document.getElementById('o1ph').value.trim();
-  const em   = document.getElementById('o1em').value.trim();
-  const city = document.getElementById('o1ct').value.trim();
-  const mc   = document.getElementById('o2mc').value.trim();
-  const dotEl = document.querySelector('#ost2 input[placeholder="USDOT-1234567"]');
-  const dot  = dotEl ? dotEl.value.trim() || '___________' : '___________';
-  const ins  = document.getElementById('o4ins').value.trim();
-  const trucks = document.getElementById('o2tr').value || '___________';
-  const today = new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'});
-  const agreeNum = '3LL-DSP-' + Date.now().toString().slice(-6);
+  const g=id=>{const e=document.getElementById(id);return e?(e.value||'').trim():'';};
+  const gv=id=>g(id)||'___________';
+  const fn=g('o1fn'),ln=g('o1ln'),ph=g('o1ph'),em=g('o1em'),city=g('o1ct');
+  const mc=g('o2mc'),dot=gv('dot_number'),ins=g('o4ins');
+  const trucks=gv('o2tr');
+  const today=new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'});
+  const agreeNum='3LL-DSP-'+Date.now().toString().slice(-6);
 
-  const equip = [...document.querySelectorAll('#ost2 .cb-i input:checked')].map(cb=>cb.closest('.cb-i').querySelector('.cb-tx').textContent.replace(/[^\w\s\/]/g,'').trim()).join(', ') || '___________';
-  const regions = [...document.querySelectorAll('#ost3 .cb-i input:checked')].map(cb=>cb.closest('.cb-i').querySelector('.cb-tx').textContent.replace(/[^\w\s\/]/g,'').trim()).join(', ') || '___________';
+  const equip=[...document.querySelectorAll('#ost3 #equip_cb .cb-i input:checked')].map(cb=>cb.closest('.cb-i').querySelector('.cb-tx').textContent.replace(/[^\w\s\/]/g,'').trim()).join(', ')||'___________';
+  const regions=[...document.querySelectorAll('#ost5 #region_cb .cb-i input:checked')].map(cb=>cb.closest('.cb-i').querySelector('.cb-tx').textContent.replace(/[^\w\s\/]/g,'').trim()).join(', ')||'___________';
 
-  const planSelEl = document.querySelector('#ost3 select:last-of-type');
-  const planSel = planSelEl ? planSelEl.value : '';
-  let planLabel = 'Pro Membership — $400/month';
-  let planFee   = '$400/month flat';
-  if(planSel.includes('200') || planSel.toLowerCase().includes('founders')){planLabel='Founders Membership — $200/month (locked for life)';planFee='$200/month flat';}
-  else if(planSel.toLowerCase().includes('pro') || planSel.includes('400')){planLabel='Pro Membership — $400/month';planFee='$400/month flat';}
+  const planSel=g('plan');
+  let planLabel='Pro Membership — $400/month',planFee='$400/month flat';
+  if(planSel==='founders'){planLabel='Founders Membership — $200/month (locked for life)';planFee='$200/month flat';}
+  else if(planSel==='pro'){planLabel='Pro Membership — $400/month';planFee='$400/month flat';}
 
-  const covEl = document.querySelector('#ost4 select');
-  const coverage = covEl ? covEl.value || '$1,000,000 Liability' : '$1,000,000 Liability';
-  const eldEl = document.querySelector('#ost4 input[placeholder="e.g. Samsara, Motive"]');
-  const eld = eldEl ? eldEl.value.trim() || '___________' : '___________';
+  const coverage=g('liability_limit')||'$1,000,000 Liability';
+  const eld=(g('eld_provider')?g('eld_provider').toUpperCase():'___________');
 
-  const agreementHTML = generateAgreementHTML({fn,ln,ph,em,city,mc,dot,ins,trucks,equip,regions,planLabel,planFee,coverage,eld,today,agreeNum});
+  // Full Supabase-aligned payload (for API submission)
+  const payload={
+    // active_carriers
+    company_name:g('company_name'),dba_name:g('dba_name'),entity_type:g('entity_type'),ein:g('ein'),
+    owner_first_name:fn,owner_last_name:ln,owner_title:g('owner_title'),owner_phone:ph,owner_email:em,
+    secondary_phone:g('secondary_phone'),pref_contact:g('pref_contact'),best_call_time:g('best_call_time'),
+    sms_consent:document.getElementById('sms_consent').checked,
+    address_line:g('address_line'),address_city:city,address_state:g('address_state'),address_zip:g('address_zip'),time_zone:g('time_zone'),
+    dot_number:dot,mc_number:mc,authority_status:g('authority_status'),authority_granted_date:g('authority_granted_date'),
+    authority_type:g('authority_type'),years_operating:g('years_operating'),safety_rating:g('safety_rating'),csa_score:g('csa_score'),
+    boc3_filed:g('boc3_filed'),ucr_current:g('ucr_current'),irp_status:g('irp_status'),ifta_active:g('ifta_active'),
+    hm_permit:g('hm_permit'),drug_consortium:g('drug_consortium'),fmcsa_consent:document.getElementById('fmcsa_consent').checked,
+    // fleet_assets
+    fleet_size:g('o2tr'),trailer_count:g('trailer_count'),
+    truck_id:g('truck_id'),truck_year_make:g('truck_year_make'),vin:g('vin'),truck_plate:g('truck_plate'),
+    trailer_type:g('trailer_type'),max_weight:g('max_weight'),axle_config:g('axle_config'),fuel_type:g('fuel_type'),
+    equipment_types:[...document.querySelectorAll('#equip_cb input:checked')].map(e=>e.name),
+    // driver
+    cdl_number:g('cdl_number'),cdl_state:g('cdl_state'),cdl_class:g('cdl_class'),cdl_expiration:g('cdl_expiration'),
+    years_experience:g('years_experience'),medcard_expiration:g('medcard_expiration'),
+    endorsements:[...document.querySelectorAll('#endorse_cb input:checked')].map(e=>e.name),
+    accidents_3y:g('accidents_3y'),violations_3y:g('violations_3y'),
+    // ELD
+    eld_provider:g('eld_provider'),eld_account_email:g('eld_account_email'),eld_account_id:g('eld_account_id'),eld_api_token:g('eld_api_token'),
+    gps_tracking:g('gps_tracking'),dash_cam:g('dash_cam'),engine_diag:g('engine_diag'),tracking_method:g('tracking_method'),
+    load_boards:[...document.querySelectorAll('#loadboard_cb input:checked')].map(e=>e.name),
+    current_dispatch:g('current_dispatch'),tms_software:g('tms_software'),
+    // lanes
+    preferred_regions:[...document.querySelectorAll('#region_cb input:checked')].map(e=>e.name),
+    avoid_states:g('avoid_states'),target_rpm:g('target_rpm'),miles_per_week:g('miles_per_week'),home_time:g('home_time'),
+    preferred_load_type:g('preferred_load_type'),deadhead_tolerance:g('deadhead_tolerance'),
+    // insurance
+    insurance_carrier:ins,policy_number:g('policy_number'),liability_limit:g('liability_limit'),cargo_limit:g('cargo_limit'),
+    trailer_interchange:g('trailer_interchange'),policy_expiration:g('policy_expiration'),agent_name:g('agent_name'),agent_phone:g('agent_phone'),
+    // factoring + payout
+    use_factoring:g('use_factoring'),factoring_company:g('factoring_company'),factoring_email:g('factoring_email'),noa_on_file:g('noa_on_file'),
+    payout_method:g('payout_method'),payee_name:g('payee_name'),bank_name:g('bank_name'),account_type:g('account_type'),
+    bank_routing:g('bank_routing'),bank_account:g('bank_account'),fuel_card:g('fuel_card'),advances_allowed:g('advances_allowed'),
+    // plan + meta
+    plan:planSel,referral_source:g('referral_source'),referral_name:g('referral_name'),operation_notes:g('operation_notes'),
+    esign_name:g('esign_name'),esign_date:g('esign_date'),agreement_number:agreeNum,submitted_at:new Date().toISOString()
+  };
+  window.__3LL_LAST_PAYLOAD=payload;
+  try{console.log('[3LL intake payload]',payload);}catch(_){}
 
-  document.getElementById('agFrame').srcdoc = agreementHTML;
+  const agreementHTML=generateAgreementHTML({fn,ln,ph,em,city,mc,dot,ins,trucks,equip,regions,planLabel,planFee,coverage,eld,today,agreeNum});
+  document.getElementById('agFrame').srcdoc=agreementHTML;
   document.getElementById('agMod').style.display='flex';
 
   document.getElementById('obBd').style.display='none';
   document.getElementById('obWin').classList.add('show');
   document.getElementById('obPr').style.width='100%';
   document.getElementById('obPr').style.background='var(--gold)';
-  for(let i=1;i<=4;i++)document.getElementById('oi'+i).classList.add('done');
+  for(let i=1;i<=OB_STEPS;i++)document.getElementById('oi'+i).classList.add('done');
 }
 
 function closeAg(){document.getElementById('agMod').style.display='none';document.getElementById('agFrame').srcdoc='';}
