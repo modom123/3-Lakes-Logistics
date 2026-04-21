@@ -315,6 +315,27 @@ nav{
 .cb-cta .cb-prim:hover{transform:translateY(-1px);box-shadow:0 6px 22px rgba(200,144,42,.5);}
 .cb-cta .cb-sec{background:transparent;color:var(--white);border:1.5px solid rgba(255,255,255,.28);}
 .cb-cta .cb-sec:hover{border-color:var(--gold3);color:var(--gold3);}
+.cb-agg{display:flex;align-items:baseline;gap:12px;margin-bottom:4px;}
+.cb-agg-num{font-family:var(--ff-h);font-size:52px;font-weight:900;color:var(--white);line-height:1;letter-spacing:-1.5px;}
+.cb-agg-total{color:rgba(255,255,255,.35);font-size:26px;font-weight:500;margin-left:6px;}
+.cb-agg-lbl{font-family:var(--ff-m);font-size:10px;letter-spacing:2px;color:rgba(200,144,42,.9);text-transform:uppercase;font-weight:600;margin-top:10px;margin-bottom:12px;}
+.ct-tbl{margin-top:18px;display:flex;flex-direction:column;gap:6px;}
+.ct-row{display:grid;grid-template-columns:22px 1.4fr 1fr 66px;gap:10px;align-items:center;padding:8px 10px;border-radius:8px;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.06);transition:all .25s;}
+.ct-row.low{background:rgba(200,144,42,.12);border-color:rgba(200,144,42,.35);}
+.ct-row.danger{background:linear-gradient(90deg,rgba(239,68,68,.18),rgba(200,144,42,.18));border-color:rgba(239,68,68,.45);box-shadow:0 0 14px rgba(239,68,68,.18);}
+.ct-row.sold{opacity:.45;}
+.ct-ic{font-size:16px;text-align:center;}
+.ct-nm{display:flex;flex-direction:column;gap:2px;}
+.ct-nm-t{font-family:var(--ff-h);font-size:12.5px;font-weight:700;color:var(--white);line-height:1.1;}
+.ct-nm-s{font-family:var(--ff-m);font-size:9px;letter-spacing:1.2px;color:var(--gold3);text-transform:uppercase;font-weight:700;}
+.ct-row.danger .ct-nm-s{color:#fca5a5;animation:ctBlink 1.2s infinite;}
+.ct-bar-wrap{height:7px;border-radius:100px;background:rgba(255,255,255,.07);overflow:hidden;border:1px solid rgba(255,255,255,.05);}
+.ct-bar{height:100%;background:linear-gradient(90deg,var(--gold),var(--gold3));border-radius:100px;transition:width 1.4s ease;box-shadow:0 0 6px rgba(200,144,42,.4);}
+.ct-row.danger .ct-bar{background:linear-gradient(90deg,#ef4444,#f97316);box-shadow:0 0 8px rgba(239,68,68,.5);}
+.ct-rem{display:flex;align-items:baseline;justify-content:flex-end;gap:2px;font-family:var(--ff-h);}
+.ct-rem-n{font-size:19px;font-weight:900;color:var(--white);line-height:1;}
+.ct-rem-t{font-size:10.5px;color:rgba(255,255,255,.4);font-weight:500;}
+.ct-row.danger .ct-rem-n{color:#fca5a5;}
 
 /* FOUNDERS BANNER */
 .fndb{background:linear-gradient(90deg,rgba(11,37,69,.06),rgba(200,144,42,.08),rgba(11,37,69,.06));border-top:1px solid var(--border);border-bottom:1px solid var(--border);padding:18px 60px;}
@@ -322,9 +343,12 @@ nav{
 .fndb-txt{font-family:var(--ff-h);font-size:16px;color:var(--navy);font-weight:700;}
 .fndb-txt span{color:var(--gold);}
 .fndb-pill{display:inline-flex;align-items:center;gap:7px;padding:5px 13px;border-radius:100px;background:var(--navy);color:var(--gold3);font-family:var(--ff-m);font-size:11px;letter-spacing:1.6px;font-weight:700;}
+.fndb-pill.alert{background:#dc2626;color:white;animation:ctBlink 1.4s infinite;}
 .fndb-pill .fb-dot{width:6px;height:6px;border-radius:50%;background:var(--gold3);animation:ctBlink 1.6s infinite;}
+.fndb-pill.alert .fb-dot{background:white;}
 .fndb-link{font-size:13px;color:var(--navy);font-weight:700;border-bottom:2px solid var(--gold);cursor:pointer;transition:all .2s;background:none;border-top:none;border-left:none;border-right:none;padding:2px 0;font-family:var(--ff-b);}
 .fndb-link:hover{color:var(--gold);}
+.fndb-runout{color:#dc2626!important;font-weight:800;}
 
 /* ── CONTACT ── */
 .contact-wrap{padding:80px 60px;max-width:1200px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr;gap:72px;align-items:start;}
@@ -486,10 +510,13 @@ footer{background:var(--navy);padding:60px 60px 34px;}
   .counter-s{padding:52px 20px;}
   .counter-inner{grid-template-columns:1fr;gap:28px;}
   .ct-h{font-size:28px;}
-  .cb-num{font-size:56px;}
-  .cb-num .cb-total{font-size:34px;}
+  .cb-agg-num{font-size:42px;}
+  .cb-agg-total{font-size:20px;}
+  .ct-row{grid-template-columns:20px 1.3fr 1fr 58px;gap:8px;padding:7px 8px;}
+  .ct-nm-t{font-size:11.5px;}
+  .ct-rem-n{font-size:17px;}
   .fndb{padding:14px 20px;}
-  .fndb-txt{font-size:14px;}
+  .fndb-txt{font-size:13.5px;}
 }
 </style>
 </head>
@@ -576,9 +603,9 @@ footer{background:var(--navy);padding:60px 60px 34px;}
   <!-- FOUNDERS BANNER -->
   <div class="fndb">
     <div class="fndb-inner">
-      <span class="fndb-pill"><span class="fb-dot"></span>LIVE</span>
-      <div class="fndb-txt"><span id="fndb-remaining">873</span> of 1,000 <span>Founders spots</span> remaining — locked at <span>$200/mo for life</span></div>
-      <button class="fndb-link" onclick="showPage('services');setTimeout(()=>{const el=document.getElementById('plans-anchor');if(el)el.scrollIntoView({behavior:'smooth',block:'start'});},120)">View Plans →</button>
+      <span class="fndb-pill alert" id="fndb-pill"><span class="fb-dot"></span>RUNNING OUT</span>
+      <div class="fndb-txt"><span class="fndb-runout" id="fndb-runout">Only 8 Tanker / Hazmat Founders spots left</span> · <span id="fndb-remaining">670</span> of 1,000 spots remaining — <span>$200/mo locked for life</span></div>
+      <button class="fndb-link" onclick="showPage('services');setTimeout(()=>{const el=document.getElementById('plans-anchor');if(el)el.scrollIntoView({behavior:'smooth',block:'start'});},120)">See Countdown →</button>
     </div>
   </div>
 
@@ -596,11 +623,11 @@ footer{background:var(--navy);padding:60px 60px 34px;}
         </div>
       </div>
       <div class="counter-box rev">
-        <div class="cb-top"><div class="cb-lbl">Founders Spots Remaining</div><div class="cb-live">Live</div></div>
-        <div class="cb-num"><span id="cb-remaining">873</span><span class="cb-slash">/</span><span class="cb-total">1000</span></div>
-        <div class="cb-sub">Joined in the last 7 days: <strong id="cb-recent" style="color:var(--gold3);">28 carriers</strong></div>
-        <div class="cb-track"><div class="cb-fill" id="cb-fill" style="width:12.7%;"></div></div>
-        <div class="cb-meta"><span>Claimed: <span id="cb-claimed">127</span></span><span>Cap: 1,000 Trucks</span></div>
+        <div class="cb-top"><div class="cb-lbl">Founders Countdown · By Truck Type</div><div class="cb-live">Live</div></div>
+        <div class="cb-agg"><div class="cb-agg-num"><span id="cb-remaining">670</span><span class="cb-agg-total">/ 1,000</span></div></div>
+        <div class="cb-agg-lbl">Total Founders Spots Remaining</div>
+        <div class="cb-track"><div class="cb-fill" id="cb-fill" style="width:33%;"></div></div>
+        <div class="ct-tbl" data-tbl-host="1"></div>
         <div class="cb-cta">
           <button class="cb-prim" onclick="showPage('onboard')">Claim My Spot</button>
           <button class="cb-sec" onclick="showPage('services');setTimeout(()=>{const el=document.getElementById('plans-anchor');if(el)el.scrollIntoView({behavior:'smooth',block:'start'});},120)">Compare Plans</button>
@@ -759,8 +786,8 @@ footer{background:var(--navy);padding:60px 60px 34px;}
     <div class="counter-inner">
       <div class="counter-l rev">
         <span class="ct-chip"><span class="ct-dot"></span>Founders Offer · Live</span>
-        <h2 class="ct-h">Truck <span id="ct-claimed-inline">127</span> of <span>1,000</span> claimed.</h2>
-        <p class="ct-p">The Founders rate of $200/month disappears forever once 1,000 trucks onboard. Pro stays at $400/month after — and scales up from there. Claim yours while the door is open.</p>
+        <h2 class="ct-h">Only <span id="ct-remaining-inline">670</span> of <span>1,000</span> Founders spots left.</h2>
+        <p class="ct-p">The Founders rate of $200/month disappears forever once 1,000 trucks onboard — broken out below by equipment type. When your category hits zero, Founders pricing is gone for that type. Pro at $400/month stays available to everyone after.</p>
         <div class="ct-stats">
           <div class="ct-st"><div class="ct-st-v">$200/mo</div><div class="ct-st-l">Founders Lock-In</div></div>
           <div class="ct-st"><div class="ct-st-v">$400/mo</div><div class="ct-st-l">Pro (Post-Cap)</div></div>
@@ -768,11 +795,11 @@ footer{background:var(--navy);padding:60px 60px 34px;}
         </div>
       </div>
       <div class="counter-box rev">
-        <div class="cb-top"><div class="cb-lbl">Founders Spots Remaining</div><div class="cb-live">Live</div></div>
-        <div class="cb-num"><span id="cb-remaining-2">873</span><span class="cb-slash">/</span><span class="cb-total">1000</span></div>
-        <div class="cb-sub">Joined this week: <strong id="cb-recent-2" style="color:var(--gold3);">28 carriers</strong></div>
-        <div class="cb-track"><div class="cb-fill" id="cb-fill-2" style="width:12.7%;"></div></div>
-        <div class="cb-meta"><span>Claimed: <span id="cb-claimed-2">127</span></span><span>Cap: 1,000 Trucks</span></div>
+        <div class="cb-top"><div class="cb-lbl">Founders Countdown · By Truck Type</div><div class="cb-live">Live</div></div>
+        <div class="cb-agg"><div class="cb-agg-num"><span id="cb-remaining-2">670</span><span class="cb-agg-total">/ 1,000</span></div></div>
+        <div class="cb-agg-lbl">Total Founders Spots Remaining</div>
+        <div class="cb-track"><div class="cb-fill" id="cb-fill-2" style="width:33%;"></div></div>
+        <div class="ct-tbl" data-tbl-host="2"></div>
         <div class="cb-cta">
           <button class="cb-prim" onclick="showPage('onboard')">Claim My Spot</button>
           <button class="cb-sec" onclick="document.getElementById('plans-anchor').scrollIntoView({behavior:'smooth',block:'start'});">View Plans Below</button>
@@ -786,7 +813,7 @@ footer{background:var(--navy);padding:60px 60px 34px;}
     <div class="rev" style="text-align:center;"><span class="chip">Membership Plans</span><h2 class="sh">One Flat Fee. Zero Commission.<br/>All of 3 Lakes.</h2><div class="rule" style="margin:18px auto;"></div><p class="sp" style="margin:0 auto;text-align:center;">Every plan includes our full 155+ automation stack — AI dispatch, paperless compliance, Shield safety, and revenue recovery. Pick your tier.</p></div>
 
     <div class="price-g sub-g">
-      <div class="pb pb-sub founders rev"><div class="pb-bar" style="background:linear-gradient(90deg,var(--gold),var(--gold3))"></div><div class="pb-top"><span class="pb-badge bpop">Once-in-a-Lifetime</span><div class="pb-name">Founders</div><div class="pb-dollar"><span class="ds">$</span>200<span class="dper">/month</span></div><div class="pb-desc">First 1,000 trucks only · Locked for the life of your authority</div><div class="pb-sublabel">★ <span id="pb-founders-remaining">873</span> spots left of 1,000</div></div><ul class="pb-feats"><li>Full AI dispatch &amp; automated load matching</li><li>24/7 AI voice check-calls &amp; broker confirmations</li><li>Automated rate con, BOL, POD &amp; invoice processing</li><li>Shield continuous compliance monitoring (ELD, CSA, insurance)</li><li>Automated detention, TONU &amp; lumper claim recovery</li><li>IFTA mileage &amp; fuel tax auto-reporting</li><li>Carrier performance dashboard &amp; monthly reports</li><li>Priority onboarding &amp; dedicated launch support</li><li>Rate locked at $200/month — forever</li></ul><div class="pb-act"><button class="bpbtn bp-gold" onclick="showPage('onboard')">Claim Founders Spot</button></div></div>
+      <div class="pb pb-sub founders rev"><div class="pb-bar" style="background:linear-gradient(90deg,var(--gold),var(--gold3))"></div><div class="pb-top"><span class="pb-badge bpop">Once-in-a-Lifetime</span><div class="pb-name">Founders</div><div class="pb-dollar"><span class="ds">$</span>200<span class="dper">/month</span></div><div class="pb-desc">First 1,000 trucks only · Locked for the life of your authority</div><div class="pb-sublabel">★ <span id="pb-founders-remaining">670</span> of 1,000 spots remaining</div></div><ul class="pb-feats"><li>Full AI dispatch &amp; automated load matching</li><li>24/7 AI voice check-calls &amp; broker confirmations</li><li>Automated rate con, BOL, POD &amp; invoice processing</li><li>Shield continuous compliance monitoring (ELD, CSA, insurance)</li><li>Automated detention, TONU &amp; lumper claim recovery</li><li>IFTA mileage &amp; fuel tax auto-reporting</li><li>Carrier performance dashboard &amp; monthly reports</li><li>Priority onboarding &amp; dedicated launch support</li><li>Rate locked at $200/month — forever</li></ul><div class="pb-act"><button class="bpbtn bp-gold" onclick="showPage('onboard')">Claim Founders Spot</button></div></div>
       <div class="pb pb-sub rev"><div class="pb-bar" style="background:linear-gradient(90deg,var(--navy),var(--navy3))"></div><div class="pb-top"><span class="pb-badge bstd">Standard</span><div class="pb-name">Pro</div><div class="pb-dollar"><span class="ds">$</span>400<span class="dper">/month</span></div><div class="pb-desc">Month-to-month · Available to all carriers</div><div class="pb-sublabel" style="background:rgba(11,37,69,.08);color:var(--navy);">Open to all carriers</div></div><ul class="pb-feats"><li>Full AI dispatch &amp; automated load matching</li><li>24/7 AI voice check-calls &amp; broker confirmations</li><li>Automated rate con, BOL, POD &amp; invoice processing</li><li>Shield continuous compliance monitoring</li><li>Automated detention, TONU &amp; lumper claim recovery</li><li>IFTA mileage &amp; fuel tax auto-reporting</li><li>Carrier performance dashboard &amp; monthly reports</li><li>Dedicated account manager &amp; priority queue</li><li>Month-to-month — cancel anytime</li></ul><div class="pb-act"><button class="bpbtn bp-fill" onclick="showPage('onboard')">Start Pro Plan</button></div></div>
     </div>
 
@@ -1172,10 +1199,17 @@ function initRev(){
 }
 setTimeout(initRev,80);
 
-// ── Founders Counter ──
-const FOUNDERS_CAP=1000;
-const FOUNDERS_CLAIMED=127;
-const FOUNDERS_RECENT=28;
+// ── Founders Countdown (by truck type) ──
+const FOUNDERS_CATEGORIES=[
+  {key:'dry_van',   label:'Dry Van',                 icon:'🚛', total:300, claimed:82},
+  {key:'reefer',    label:'Reefer',                  icon:'❄️', total:200, claimed:54},
+  {key:'flatbed',   label:'Flatbed / Step Deck',     icon:'🏗️', total:150, claimed:38},
+  {key:'box_truck', label:"Box Truck 26' (Non-CDL)", icon:'📦', total:100, claimed:22},
+  {key:'cargo_van', label:'Cargo Van',               icon:'🚐', total:100, claimed:14},
+  {key:'tanker',    label:'Tanker / Hazmat',         icon:'☣️', total:50,  claimed:42},
+  {key:'hotshot',   label:'Hot Shot',                icon:'⚡', total:50,  claimed:41},
+  {key:'auto',      label:'Auto Carrier',            icon:'🚗', total:50,  claimed:37}
+];
 function animateCounter(el,to,dur=1400){
   if(!el)return;
   const start=performance.now();const from=0;
@@ -1187,22 +1221,51 @@ function animateCounter(el,to,dur=1400){
   };
   requestAnimationFrame(tick);
 }
+function buildCountdownTable(host){
+  host.innerHTML=FOUNDERS_CATEGORIES.map(c=>{
+    const rem=c.total-c.claimed;
+    const pctClaimed=(c.claimed/c.total)*100;
+    const cls=rem===0?'sold':rem<=10?'danger':rem<=25?'low':'';
+    const badge=rem===0?'SOLD OUT':rem<=10?'Almost gone':rem<=25?'Low':'';
+    return '<div class="ct-row '+cls+'" data-cat="'+c.key+'">'
+      +'<div class="ct-ic">'+c.icon+'</div>'
+      +'<div class="ct-nm"><div class="ct-nm-t">'+c.label+'</div>'
+      +(badge?'<div class="ct-nm-s">'+badge+'</div>':'')
+      +'</div>'
+      +'<div class="ct-bar-wrap"><div class="ct-bar" style="width:'+pctClaimed.toFixed(1)+'%;"></div></div>'
+      +'<div class="ct-rem"><span class="ct-rem-n">'+rem+'</span><span class="ct-rem-t">/'+c.total+'</span></div>'
+      +'</div>';
+  }).join('');
+}
 function syncFoundersCounter(){
-  const remaining=FOUNDERS_CAP-FOUNDERS_CLAIMED;
-  const pct=(FOUNDERS_CLAIMED/FOUNDERS_CAP)*100;
-  ['cb-remaining','cb-remaining-2','fndb-remaining','pb-founders-remaining'].forEach(id=>{
-    const el=document.getElementById(id);if(el)animateCounter(el,remaining);
-  });
-  ['cb-claimed','cb-claimed-2','ct-claimed-inline'].forEach(id=>{
-    const el=document.getElementById(id);if(el)animateCounter(el,FOUNDERS_CLAIMED);
-  });
-  ['cb-recent','cb-recent-2'].forEach(id=>{
-    const el=document.getElementById(id);if(el)el.textContent=FOUNDERS_RECENT+' carriers';
+  const totalCap=FOUNDERS_CATEGORIES.reduce((s,c)=>s+c.total,0);
+  const totalClaimed=FOUNDERS_CATEGORIES.reduce((s,c)=>s+c.claimed,0);
+  const totalRemaining=totalCap-totalClaimed;
+  const pctClaimed=(totalClaimed/totalCap)*100;
+
+  document.querySelectorAll('.ct-tbl').forEach(buildCountdownTable);
+
+  ['cb-remaining','cb-remaining-2','fndb-remaining','pb-founders-remaining','ct-remaining-inline'].forEach(id=>{
+    const el=document.getElementById(id);if(el)animateCounter(el,totalRemaining);
   });
   ['cb-fill','cb-fill-2'].forEach(id=>{
     const el=document.getElementById(id);
-    if(el){el.style.width='0%';setTimeout(()=>{el.style.width=pct.toFixed(1)+'%';},180);}
+    if(el){el.style.width='0%';setTimeout(()=>{el.style.width=pctClaimed.toFixed(1)+'%';},180);}
   });
+
+  // Running-out banner — pick lowest-remaining non-zero category
+  const active=FOUNDERS_CATEGORIES.filter(c=>(c.total-c.claimed)>0).sort((a,b)=>(a.total-a.claimed)-(b.total-b.claimed));
+  const low=active[0];
+  const pill=document.getElementById('fndb-pill');
+  const runout=document.getElementById('fndb-runout');
+  if(low&&runout){
+    const rem=low.total-low.claimed;
+    runout.textContent='Only '+rem+' '+low.label+' Founders '+(rem===1?'spot':'spots')+' left';
+    if(pill){
+      pill.classList.toggle('alert',rem<=15);
+      pill.innerHTML='<span class="fb-dot"></span>'+(rem<=10?'RUNNING OUT':rem<=25?'LOW STOCK':'LIVE');
+    }
+  }
 }
 setTimeout(syncFoundersCounter,220);
 // Re-run counter sync whenever user navigates back to home or services page
