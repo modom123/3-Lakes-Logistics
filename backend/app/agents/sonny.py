@@ -18,7 +18,8 @@ def _score_match(load: dict, truck: dict) -> float:
     score = 50.0
     if (load.get("trailer_type") or "").lower() == (truck.get("trailer_type") or "").lower():
         score += 20
-    if (load.get("weight_lbs") or 0) <= (truck.get("max_weight") or 0):
+    truck_cap = truck.get("max_weight_lbs") or truck.get("max_weight") or 0
+    if (load.get("weight_lbs") or 0) <= truck_cap:
         score += 10
     rpm = load.get("rate_per_mile") or 0
     if rpm >= 3.0:
@@ -46,11 +47,11 @@ def rank(loads: list[dict], truck: dict) -> list[dict]:
     return sorted(out, key=lambda x: x["match_score"], reverse=True)
 
 
-def filter_by_equipment(loads: list[dict], max_weight: int, trailer: str) -> list[dict]:
+def filter_by_equipment(loads: list[dict], max_weight_lbs: int, trailer: str) -> list[dict]:
     return [
         l for l in loads
         if (l.get("trailer_type") or "").lower() == (trailer or "").lower()
-        and (l.get("weight_lbs") or 0) <= max_weight
+        and (l.get("weight_lbs") or 0) <= max_weight_lbs
     ]
 
 
@@ -59,7 +60,9 @@ def _available_trucks() -> list[dict]:
         from ..supabase_client import get_supabase
         return (
             get_supabase().table("fleet_assets")
-            .select("id, carrier_id, truck_id, trailer_type, max_weight")
+            .select("id, carrier_id, truck_id, trailer_type, "
+                    "max_weight_lbs, hos_hours_remaining")
+            .eq("status", "available")
             .execute()
         ).data or []
     except Exception as exc:  # noqa: BLE001
