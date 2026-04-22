@@ -17,8 +17,11 @@ from __future__ import annotations
 from fastapi import APIRouter, HTTPException, Request, status
 
 from ..agents import penny, shield
+from ..audit import record as audit_record
 from ..logging_service import get_logger, log_agent
 from ..models.intake import CarrierIntake, IntakeResponse
+from ..security import encrypt_str, mask_last4
+from ..storage import store_agreement_pdf
 from ..supabase_client import get_supabase
 
 log = get_logger("route.intake")
@@ -81,12 +84,12 @@ async def carrier_intake(payload: CarrierIntake, request: Request) -> IntakeResp
         "equipment_count": payload.equipment_count,
     }).execute()
 
-    # 3. eld_connections (token will be encrypted in production)
+    # 3. eld_connections (token is PII-encrypted at rest — step 76)
     if payload.eld_provider and payload.eld_provider != "other":
         sb.table("eld_connections").insert({
             "carrier_id": carrier_id,
             "eld_provider": payload.eld_provider,
-            "eld_api_token": payload.eld_api_token,
+            "eld_api_token_enc": encrypt_str(payload.eld_api_token),
             "eld_account_id": payload.eld_account_id,
             "status": "pending",
         }).execute()
@@ -105,16 +108,21 @@ async def carrier_intake(payload: CarrierIntake, request: Request) -> IntakeResp
         "psp_consent": payload.psp_consent,
     }).execute()
 
-    # 5. banking_accounts (only last4; token provisioned via Stripe/Plaid later)
+    # 5. banking_accounts (encrypted full tokens + public last4 display)
     sb.table("banking_accounts").insert({
         "carrier_id": carrier_id,
+        "bank_routing_enc": encrypt_str(payload.bank_routing),
+        "bank_account_enc": encrypt_str(payload.bank_account),
         "bank_routing_last4": _last4(payload.bank_routing),
         "bank_account_last4": _last4(payload.bank_account),
+        "bank_account_mask": mask_last4(payload.bank_account),
         "account_type": payload.account_type,
         "payee_name": payload.payee_name,
     }).execute()
 
-    # 6. signatures_audit
+    # 6. signatures_audit — upload PDF to Supabase Storage, record hash
+    pdf_url = store_agreement_pdf(carrier_id, payload.agreement_pdf_base64) \
+        if getattr(payload, "agreement_pdf_base64", None) else None
     sb.table("signatures_audit").insert({
         "carrier_id": carrier_id,
         "doc_type": "dispatch_agreement",
@@ -122,7 +130,12 @@ async def carrier_intake(payload: CarrierIntake, request: Request) -> IntakeResp
         "ip": payload.esign_ip or ip,
         "user_agent": payload.esign_user_agent or ua,
         "pdf_hash": payload.agreement_pdf_hash,
+        "pdf_url": pdf_url,
     }).execute()
+    audit_record(actor="public", action="carrier.intake",
+                 entity="active_carriers", entity_id=carrier_id,
+                 carrier_id=carrier_id, ip=ip, user_agent=ua,
+                 meta={"plan": payload.plan, "trailer": payload.trailer_type})
 
     # 7. founders_inventory claim++
     sb.rpc("claim_founders_slot", {"p_category": payload.trailer_type}).execute() \
@@ -130,7 +143,7 @@ async def carrier_intake(payload: CarrierIntake, request: Request) -> IntakeResp
 
     # 8. Kick Shield + Penny
     log_agent("atlas", "intake_received", carrier_id=carrier_id, payload={"plan": payload.plan})
-    checkout_url = penny.create_checkout_session(carrier_id, payload.plan, str(payload.email))
+    checkout_url = penny.create_checkout(carrier_id, payload.plan, str(payload.email))
     shield.enqueue_safety_check(carrier_id, payload.dot_number, payload.mc_number)
 
     return IntakeResponse(

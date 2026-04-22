@@ -119,6 +119,8 @@ class CarrierIntake(BaseModel):
     esign_ip: str | None = None
     esign_user_agent: str | None = None
     agreement_pdf_hash: str | None = None
+    agreement_pdf_base64: str | None = None  # step 78 — stored in Supabase Storage
+    reservation_id: str | None = None        # step 77 — links Founders claim
 
 
 class IntakeResponse(BaseModel):

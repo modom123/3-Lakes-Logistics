@@ -1,86 +1,77 @@
-"""Penny — Steps 17, 29-30. Stripe subscription lifecycle."""
+"""Penny — Billing & subscription lifecycle (Stage 5 step 65)."""
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from typing import Any
 
-import stripe
-
+from ..integrations.email import send_email
+from ..integrations.stripe_client import create_checkout_session as _checkout
 from ..logging_service import log_agent
-from ..settings import get_settings
-from ..supabase_client import get_supabase
 
 
-def _sk() -> str:
-    s = get_settings().stripe_secret_key
-    if not s:
-        raise RuntimeError("STRIPE_SECRET_KEY not set")
-    stripe.api_key = s
-    return s
-
-
-def create_checkout_session(carrier_id: str, plan: str, email: str) -> str | None:
-    """Step 17: after intake we hand the carrier a Stripe checkout URL."""
-    s = get_settings()
-    if not s.stripe_secret_key or not s.stripe_price_founders:
-        log_agent("penny", "checkout", carrier_id=carrier_id, error="stripe_not_configured")
+def create_checkout(carrier_id: str, plan: str, email: str) -> str | None:
+    res = _checkout(
+        plan=plan, carrier_id=carrier_id,
+        success_url=f"https://3lakeslogistics.com/welcome?cid={carrier_id}",
+        cancel_url=f"https://3lakeslogistics.com/?cid={carrier_id}",
+    )
+    if res.get("status") != "ok":
+        log_agent("penny", "checkout_failed", carrier_id=carrier_id,
+                  error=res.get("error") or res.get("reason"))
         return None
-    try:
-        _sk()
-        session = stripe.checkout.Session.create(
-            mode="subscription",
-            customer_email=email,
-            line_items=[{"price": s.stripe_price_founders, "quantity": 1}],
-            success_url="https://3lakeslogistics.com/welcome?cid=" + carrier_id,
-            cancel_url="https://3lakeslogistics.com/?cid=" + carrier_id,
-            metadata={"carrier_id": carrier_id, "plan": plan},
-        )
-        get_supabase().table("active_carriers").update(
-            {"stripe_customer_id": session.customer or None}
-        ).eq("id", carrier_id).execute()
-        log_agent("penny", "checkout_created", carrier_id=carrier_id, result=session.id)
-        return session.url
-    except Exception as e:  # noqa: BLE001
-        log_agent("penny", "checkout", carrier_id=carrier_id, error=str(e))
-        return None
+    log_agent("penny", "checkout_created", carrier_id=carrier_id, result=res.get("id"))
+    return res.get("url")
 
 
-def verify_and_parse(payload: bytes, sig: str | None) -> dict[str, Any]:
-    _sk()
-    secret = get_settings().stripe_webhook_secret
-    if not secret or not sig:
-        raise ValueError("webhook signature not configured")
-    event = stripe.Webhook.construct_event(payload, sig, secret)
-    return event
+def handle_event(event: dict[str, Any]) -> dict[str, Any]:
+    """Apply a verified Stripe event to the active_carriers row."""
+    etype = event.get("type") or ""
+    obj = (event.get("data") or {}).get("object") or {}
+    carrier_id = (obj.get("metadata") or {}).get("carrier_id") or obj.get("client_reference_id")
+    email = obj.get("customer_email") or obj.get("receipt_email")
+    now = datetime.now(timezone.utc).isoformat()
 
-
-def handle_event(event: dict[str, Any]) -> None:
-    """Steps 29-30: invoice.paid → activate; invoice.payment_failed → suspend."""
-    etype = event.get("type")
-    data = event.get("data", {}).get("object", {})
-    carrier_id = (data.get("metadata") or {}).get("carrier_id")
-    sb = get_supabase()
-
-    if etype == "checkout.session.completed" and carrier_id:
-        sb.table("active_carriers").update({
+    patch: dict[str, Any] = {}
+    if etype == "checkout.session.completed":
+        patch = {
             "subscription_status": "active",
-            "stripe_subscription_id": data.get("subscription"),
+            "stripe_customer_id": obj.get("customer"),
+            "stripe_subscription_id": obj.get("subscription"),
             "status": "active",
-            "onboarded_at": "now()",
-        }).eq("id", carrier_id).execute()
-        log_agent("penny", "activated", carrier_id=carrier_id, result=etype)
+            "onboarded_at": now,
+        }
+    elif etype == "customer.subscription.updated":
+        patch = {"subscription_status": obj.get("status") or "active"}
+    elif etype == "invoice.payment_succeeded":
+        patch = {"subscription_status": "active", "status": "active"}
+        if email:
+            send_email(email, "Payment received", "<p>Thanks — your 3 Lakes Logistics subscription is current.</p>", tag="payment_ok")
+    elif etype == "invoice.payment_failed":
+        patch = {"subscription_status": "past_due", "status": "suspended"}
+        if email:
+            send_email(email, "Payment failed — action needed",
+                       "<p>We couldn't charge your card. Please update billing in your portal.</p>", tag="dunning_1")
+    elif etype == "customer.subscription.deleted":
+        patch = {"subscription_status": "canceled", "status": "churned"}
 
-    elif etype == "invoice.payment_failed" and carrier_id:
-        sb.table("active_carriers").update({
-            "subscription_status": "past_due", "status": "suspended",
-        }).eq("id", carrier_id).execute()
-        log_agent("penny", "suspended", carrier_id=carrier_id, result=etype)
+    if carrier_id and patch:
+        try:
+            from ..supabase_client import get_supabase
+            get_supabase().table("active_carriers").update(patch).eq("id", carrier_id).execute()
+        except Exception as exc:  # noqa: BLE001
+            log_agent("penny", "update_failed", carrier_id=carrier_id, error=str(exc))
+            return {"status": "error", "error": str(exc)}
 
-    elif etype == "customer.subscription.deleted" and carrier_id:
-        sb.table("active_carriers").update({
-            "subscription_status": "canceled", "status": "churned",
-        }).eq("id", carrier_id).execute()
+    log_agent("penny", f"event:{etype}", carrier_id=carrier_id, result="applied" if patch else "ignored")
+    return {"status": "ok", "applied": bool(patch), "type": etype}
 
 
 def run(payload: dict[str, Any]) -> dict[str, Any]:
-    log_agent("penny", "manual_run", payload=payload, result="noop")
-    return {"agent": "penny", "status": "ok"}
+    kind = payload.get("kind") or "noop"
+    if kind == "apply_event":
+        return {"agent": "penny", **handle_event(payload.get("event") or {})}
+    if kind == "checkout":
+        url = create_checkout(payload.get("carrier_id"), payload.get("plan") or "founders",
+                              payload.get("email") or "")
+        return {"agent": "penny", "status": "ok" if url else "error", "url": url}
+    return {"agent": "penny", "status": "ok", "note": "no-op"}

@@ -1,112 +1,113 @@
 # 3 Lakes Logistics — Backend
 
-FastAPI + Supabase backend wired to the **index (7).html** public site
-and the **3LakesLogistics_OpsSuite_v5.html** command center.
-Executes Phases 1–3 (steps 1–60) of `Logistics Hub Implementation Roadmap.pdf`.
+FastAPI + Supabase backend powering:
+- **Public site** (`index (7).html`) — 6-step carrier intake + Founders
+  countdown.
+- **Command center** (`3LakesLogistics_OpsSuite_v5.html`) — AI agents,
+  pipeline, fleet, compliance, finance.
+
+Executes the full 100-step Logistics Hub Implementation Roadmap
+(Stages 1–5).
 
 ## Layout
 
 ```
 backend/
 ├── requirements.txt
-├── Dockerfile
+├── Dockerfile               # multi-mode: api | worker | scheduler
+├── docker-compose.yml       # spins up all three locally
 ├── .env.example
-├── sql/                       # steps 5-9 migrations
-│   ├── 001_active_carriers.sql
-│   ├── 002_fleet_assets.sql
-│   ├── 003_truck_telemetry.sql
-│   ├── 004_leads.sql
-│   ├── 005_driver_hos_status.sql
-│   ├── 006_banking_and_compliance.sql
-│   └── 007_rls_policies.sql
+├── sql/                     # numbered migrations (run in order)
+│   ├── 001_active_carriers.sql ...
+│   ├── 007_rls_policies.sql
+│   ├── 008_stage5_queue_and_events.sql
+│   ├── 009_audit_log.sql
+│   ├── 010_founders_reservations.sql
+│   ├── 011_encrypted_columns.sql
+│   └── 012_sms_nurture.sql
 ├── app/
-│   ├── main.py                # FastAPI entrypoint
-│   ├── settings.py            # pydantic-settings
-│   ├── supabase_client.py     # step 14
-│   ├── logging_service.py     # step 16 (writes agent_log)
-│   ├── models/                # Pydantic schemas
-│   ├── api/                   # route groups
-│   │   ├── routes_intake.py       ← POST /api/carriers/intake (the 6-step form)
-│   │   ├── routes_carriers.py
-│   │   ├── routes_fleet.py
-│   │   ├── routes_telemetry.py
-│   │   ├── routes_leads.py
-│   │   ├── routes_dashboard.py
-│   │   ├── routes_founders.py
-│   │   ├── routes_agents.py       ← POST /api/agents/{name}/run
-│   │   └── routes_webhooks.py     ← Stripe, Vapi, Motive
-│   ├── agents/                # Phase 2 (steps 21-40)
-│   │   ├── router.py, prompts.py
-│   │   ├── vance.py sonny.py shield.py scout.py penny.py settler.py
-│   │   │   audit.py nova.py signal.py echo.py atlas.py beacon.py
-│   │   │   orbit.py pulse.py motive_webhook.py
-│   └── prospecting/           # Phase 3 (steps 41-60)
-│       ├── fmcsa_scraper.py (41), gmaps_scraper.py (42),
-│       ├── loadboard_scraper.py (43), scoring.py (44), dedupe.py (45),
-│       ├── traffic_controller.py (46), vapi_outbound.py (47),
-│       ├── sms_compliance.py (48), ab_testing.py (49),
-│       ├── email_nurture.py (50), url_tracking.py (51),
-│       ├── dashboard.py (52), airtable_sync.py (53),
-│       ├── social_listener.py (54), referral_loop.py (55),
-│       ├── daily_digest.py (56), truckpaper_scraper.py (57),
-│       ├── owner_search.py (58), outbound_schedule.py (59),
-│       └── dry_run.py (60)
+│   ├── main.py              # FastAPI entrypoint + lifespan (Sentry, scheduler)
+│   ├── worker.py            # python -m app.worker
+│   ├── scheduler.py         # python -m app.scheduler
+│   ├── settings.py
+│   ├── security.py          # Fernet PII + webhook signature verifiers
+│   ├── audit.py             # immutable audit log writer
+│   ├── storage.py           # Supabase Storage uploads (agreements)
+│   ├── supabase_client.py
+│   ├── logging_service.py
+│   ├── models/
+│   ├── api/                 # route groups (all JWT- or bearer-guarded)
+│   ├── agents/              # 14 agents + router + prompts + task queue
+│   ├── integrations/        # eld, maps, sms, email, slack, fmcsa, stripe
+│   └── prospecting/         # 20 prospecting modules
 └── scripts/
-    ├── init_stripe_product.py    # step 17
+    ├── init_stripe_product.py
     └── seed_demo_data.py
 ```
 
 ## Quickstart
 
 ```bash
-# 1. Create venv
 cd backend
 python -m venv .venv && source .venv/bin/activate
-
-# 2. Install deps
 pip install -r requirements.txt
-
-# 3. Copy env + fill in keys
-cp .env.example .env
-
-# 4. Run SQL migrations in your Supabase dashboard (sql/001..007)
-
-# 5. Start API
+cp .env.example .env         # fill keys
+# Run SQL migrations in Supabase (sql/001 → sql/012)
 uvicorn app.main:app --reload --port 8080
+# second shell — background worker
+python -m app.worker
+# third shell — scheduled jobs (optional; also wired into FastAPI lifespan
+# when ENABLE_SCHEDULER=1)
+python -m app.scheduler
+```
 
-# 6. Smoke test
+Smoke:
+```bash
 curl http://localhost:8080/api/health
+curl http://localhost:8080/api/ready
 curl http://localhost:8080/api/founders/inventory
 ```
 
-## Key endpoints
+## Auth
 
-| Method | Path                           | Caller                       |
-|--------|--------------------------------|------------------------------|
-| POST   | `/api/carriers/intake`         | `index (7).html` `oSub()`    |
-| GET    | `/api/founders/inventory`      | countdown on public site     |
-| GET    | `/api/dashboard/kpis`          | command center home          |
-| GET    | `/api/carriers/`               | command center `Carriers`    |
-| GET    | `/api/fleet/`                  | command center `Dispatch`    |
-| GET    | `/api/telemetry/latest`        | command center live map      |
-| GET    | `/api/leads/`                  | command center `Leads`       |
-| POST   | `/api/agents/{agent}/run`      | command center action buttons|
-| POST   | `/api/webhooks/stripe`         | Stripe                       |
-| POST   | `/api/webhooks/vapi`           | Vapi.ai                      |
-| POST   | `/api/webhooks/motive`         | Motive / Samsara             |
+| Surface                                | Guard           |
+|----------------------------------------|-----------------|
+| Public (intake, founders inventory)    | none            |
+| Command center + internal scripts      | `API_BEARER_TOKEN` via `require_bearer` |
+| Carrier / dispatcher portal            | Supabase JWT via `require_jwt` + `require_role(...)` |
+| Plan-gated endpoints                   | `require_plan("pro" \| "scale")` |
 
-Admin routes (everything except `/intake` and `/founders/inventory`)
-require `Authorization: Bearer $API_BEARER_TOKEN`.
+Use `Authorization: Bearer <token>` on every request.
 
-## Roadmap coverage
+## Agents
 
-- **Phase 1 (1-20)** — ✅ Repo, venv-ready, deps, SQL for 5 tables + RLS, `.env`,
-  `models/`, `scripts/`, `api/`, `supabase_client`, Docker, `logging_service`,
-  Stripe init, Postmark/Twilio/Vapi wiring in settings.
-- **Phase 2 (21-40)** — ✅ All 14 agent modules + prompts + router.
-  Stub implementations with TODO markers for SDK calls.
-- **Phase 3 (41-60)** — ✅ All 20 prospecting modules scaffolded.
-- **Phase 4 (61-80)** — client site (`index (7).html`) already covers the
-  6-step intake, Founders countdown, PWA-ready single-page design.
-  Dedicated driver PWA still pending.
-- **Phase 5 (81-100)** — pending.
+All agents support `POST /api/agents/{agent}/run` with a JSON body like
+`{"kind": "match_all_trucks"}`. Synchronous responses return the result;
+use the `/api/agents/log` endpoint to inspect recent runs.
+
+Agents can also be queued for background execution:
+```python
+from app.agents.router import enqueue
+enqueue("sonny", "match_all_trucks", {"carrier_id": "..."})
+```
+
+## Scheduled jobs
+
+See `app/scheduler.py` for the cron table. Heartbeats land in the
+`scheduled_jobs` table (visible in the Ops Suite KPI strip).
+
+## Observability
+
+- **Sentry** — set `SENTRY_DSN` (initialized inside lifespan).
+- **KPI snapshots** — `pulse.kpi_snapshot` runs every 5 min.
+- **Audit log** — every mutation writes to `audit_log` (append-only).
+- **Webhook log** — every inbound signed payload lands in `webhook_log`.
+
+## Deployment
+
+Three services from one image via `RUN_MODE` env var:
+- `RUN_MODE=api` → uvicorn on :8080 (Fly/Render/Cloud Run)
+- `RUN_MODE=worker` → `python -m app.worker` (dedicated machine type)
+- `RUN_MODE=scheduler` → `python -m app.scheduler` (singleton)
+
+See `docs/RUNBOOK.md` for staging → prod cutover.

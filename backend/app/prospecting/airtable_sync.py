@@ -25,7 +25,9 @@ def sync_airtable_leads(table: str = "Leads") -> dict[str, Any]:
         f = rec.get("fields", {})
         dot = f.get("DOT")
         mc = f.get("MC")
-        if dedupe.is_duplicate(dot, mc):
+        row_probe = {"dot_number": dot, "mc_number": mc,
+                     "phone": f.get("Phone"), "email": f.get("Email")}
+        if dedupe.is_duplicate(row_probe):
             continue
         row = {
             "source": "airtable", "source_ref": rec.get("id"),

@@ -1,0 +1,27 @@
+version: "3.9"
+
+services:
+  api:
+    build: .
+    env_file: .env
+    environment:
+      RUN_MODE: api
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+
+  worker:
+    build: .
+    env_file: .env
+    environment:
+      RUN_MODE: worker
+    restart: unless-stopped
+    depends_on: [api]
+
+  scheduler:
+    build: .
+    env_file: .env
+    environment:
+      RUN_MODE: scheduler
+    restart: unless-stopped
+    depends_on: [api]

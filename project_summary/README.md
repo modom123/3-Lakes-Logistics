@@ -17,3 +17,4 @@ next. Read files in numerical order.
 | `06_prospecting.md` | 20 prospecting engines under `backend/app/prospecting` |
 | `07_stage5_plan.md` | Steps 61–100 — the work remaining |
 | `08_next_actions.md` | Ordered checklist to pick up Stage 5 |
+| `09_stage5_delivered.md` | Stage 5 completion map (steps 61–100 → file) |
