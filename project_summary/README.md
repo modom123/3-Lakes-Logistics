@@ -18,3 +18,4 @@ next. Read files in numerical order.
 | `07_stage5_plan.md` | Steps 61–100 — the work remaining |
 | `08_next_actions.md` | Ordered checklist to pick up Stage 5 |
 | `09_stage5_delivered.md` | Stage 5 completion map (steps 61–100 → file) |
+| `10_go_live_roadmap.md` | **150-step launch plan** (accounts → deploy → pilots → v1.0) |
