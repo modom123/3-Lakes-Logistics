@@ -1210,6 +1210,19 @@ const FOUNDERS_CATEGORIES=[
   {key:'hotshot',   label:'Hot Shot',                icon:'⚡', total:50,  claimed:0},
   {key:'auto',      label:'Auto Carrier',            icon:'🚗', total:50,  claimed:0}
 ];
+window.FOUNDERS_CATEGORIES=FOUNDERS_CATEGORIES;
+// Backend base URL. Override from browser console: window.__3LL_API_BASE='https://api.3lakeslogistics.com'
+window.__3LL_API_BASE=window.__3LL_API_BASE||'http://localhost:8080';
+// On page load, sync the founders counter from the backend if it's up.
+(function syncFromBackend(){
+  try{
+    fetch(window.__3LL_API_BASE+'/api/founders/inventory').then(r=>r.ok?r.json():null).then(inv=>{
+      if(!inv||!Array.isArray(inv.categories))return;
+      inv.categories.forEach(c=>{const row=FOUNDERS_CATEGORIES.find(x=>x.key===c.category);if(row)row.claimed=c.claimed;});
+      if(typeof syncFoundersCounter==='function')syncFoundersCounter();
+    }).catch(()=>{});
+  }catch(_){}
+})();
 function animateCounter(el,to,dur=1400){
   if(!el)return;
   const start=performance.now();const from=0;
@@ -1371,6 +1384,44 @@ function oSub(){
   };
   window.__3LL_LAST_PAYLOAD=payload;
   try{console.log('[3LL intake payload]',payload);}catch(_){}
+
+  // Fire-and-forget POST to the FastAPI backend. On success, update the
+  // Founders countdown and stash the carrier_id + Stripe checkout URL so
+  // Step 6 can hand it off to Penny. On failure, queue for retry.
+  (function sendIntake(){
+    const API=(window.__3LL_API_BASE||'http://localhost:8080').replace(/\/$/,'');
+    fetch(API+'/api/carriers/intake',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(payload),
+      credentials:'omit',
+      mode:'cors'
+    })
+    .then(r=>r.ok?r.json():r.text().then(t=>Promise.reject(new Error(r.status+': '+t))))
+    .then(res=>{
+      window.__3LL_LAST_RESPONSE=res;
+      try{console.log('[3LL intake ok]',res);}catch(_){}
+      if(res&&res.carrier_id){try{localStorage.setItem('3LL_CARRIER_ID',res.carrier_id);}catch(_){}}
+      if(res&&res.stripe_checkout_url){window.__3LL_STRIPE_URL=res.stripe_checkout_url;}
+      // Refresh countdown after a successful intake
+      if(typeof syncFoundersCounter==='function'){
+        try{fetch(API+'/api/founders/inventory').then(r=>r.json()).then(inv=>{
+          if(inv&&Array.isArray(inv.categories)&&window.FOUNDERS_CATEGORIES){
+            inv.categories.forEach(c=>{const row=window.FOUNDERS_CATEGORIES.find(x=>x.key===c.category);if(row)row.claimed=c.claimed;});
+            syncFoundersCounter();
+          }
+        }).catch(()=>{});}catch(_){}
+      }
+    })
+    .catch(err=>{
+      try{console.warn('[3LL intake offline — queued]',err&&err.message);}catch(_){}
+      try{
+        const q=JSON.parse(localStorage.getItem('3LL_INTAKE_QUEUE')||'[]');
+        q.push({payload:payload,ts:Date.now(),error:String(err&&err.message||err)});
+        localStorage.setItem('3LL_INTAKE_QUEUE',JSON.stringify(q));
+      }catch(_){}
+    });
+  })();
 
   const agreementHTML=generateAgreementHTML({fn,ln,ph,em,city,mc,dot,ins,trucks,equip,regions,planLabel,planFee,coverage,eld,today,agreeNum});
   document.getElementById('agFrame').srcdoc=agreementHTML;

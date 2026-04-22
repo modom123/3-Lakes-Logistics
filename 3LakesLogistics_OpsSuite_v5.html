@@ -527,6 +527,12 @@ td.td-name{font-weight:600;color:var(--navy);}
     <div class="sb-item" onclick="nav('checklist')"><span class="sb-icon">📋</span> Daily Checklist</div>
     <div class="sb-item" onclick="nav('notes')"><span class="sb-icon">📝</span> Dispatcher Notes</div>
   </div>
+  <div class="sb-section">
+    <div class="sb-label">Automation</div>
+    <div class="sb-item" onclick="nav('agents')"><span class="sb-icon">🤖</span> AI Agents <span class="sb-badge" id="agents-notif" style="display:none">●</span></div>
+    <div class="sb-item" onclick="nav('founders')"><span class="sb-icon">🏁</span> Founders Program</div>
+    <div class="sb-item" onclick="nav('leads')"><span class="sb-icon">🎯</span> Lead Pipeline</div>
+  </div>
 
   <div class="sb-footer">
     <div class="sb-user">
@@ -925,6 +931,90 @@ td.td-name{font-weight:600;color:var(--navy);}
       </div>
     </div>
 
+    <!-- ── AI AGENTS ── -->
+    <div class="page" id="page-agents">
+      <div class="page-hdr">
+        <div class="page-hdr-l">
+          <div class="chip">Automation</div>
+          <h2>AI Agents</h2>
+          <span class="badge badge-navy" id="agents-api-status">Backend: checking…</span>
+        </div>
+        <div class="page-hdr-r" style="display:flex;gap:8px">
+          <button class="btn-out" onclick="refreshAgentLog()">Refresh Log</button>
+        </div>
+      </div>
+
+      <div class="metrics" style="margin-bottom:16px">
+        <div class="mc"><div class="mc-label">Registered Agents</div><div class="mc-val gold" id="agent-count">—</div><div class="mc-sub">14 personas live</div></div>
+        <div class="mc"><div class="mc-label">Actions Today</div><div class="mc-val green" id="agent-actions-today">—</div></div>
+        <div class="mc"><div class="mc-label">Errors (24h)</div><div class="mc-val red" id="agent-errors-24h">—</div></div>
+        <div class="mc"><div class="mc-label">Backend</div><div class="mc-val blue" id="agent-backend-env">—</div></div>
+      </div>
+
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-hd"><div class="card-title">Run Agent</div></div>
+        <div id="agent-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px">
+          <div class="loading"><div class="spin"></div>Loading agents…</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-hd"><div class="card-title">Recent Agent Log</div></div>
+        <div id="agent-log-list"><div class="loading"><div class="spin"></div>Loading…</div></div>
+      </div>
+    </div>
+
+    <!-- ── FOUNDERS ── -->
+    <div class="page" id="page-founders">
+      <div class="page-hdr">
+        <div class="page-hdr-l">
+          <div class="chip">Subscriptions</div>
+          <h2>Founders Program</h2>
+        </div>
+        <div class="page-hdr-r" style="display:flex;gap:8px">
+          <button class="btn-out" onclick="loadFoundersInventory()">Refresh</button>
+        </div>
+      </div>
+
+      <div class="metrics" style="margin-bottom:16px">
+        <div class="mc"><div class="mc-label">Total Spots</div><div class="mc-val blue" id="fd-total">—</div></div>
+        <div class="mc"><div class="mc-label">Claimed</div><div class="mc-val green" id="fd-claimed">—</div></div>
+        <div class="mc"><div class="mc-label">Remaining</div><div class="mc-val gold" id="fd-remaining">—</div></div>
+        <div class="mc"><div class="mc-label">MRR at Full</div><div class="mc-val orange">$200,000</div><div class="mc-sub">$200/mo × 1,000</div></div>
+      </div>
+
+      <div class="card">
+        <div class="card-hd"><div class="card-title">Inventory by Equipment</div></div>
+        <div id="fd-inventory-table"><div class="loading"><div class="spin"></div>Loading inventory…</div></div>
+      </div>
+    </div>
+
+    <!-- ── LEADS ── -->
+    <div class="page" id="page-leads">
+      <div class="page-hdr">
+        <div class="page-hdr-l">
+          <div class="chip">Prospecting</div>
+          <h2>Lead Pipeline</h2>
+        </div>
+        <div class="page-hdr-r" style="display:flex;gap:8px">
+          <button class="btn-out" onclick="loadLeadsPipeline()">Refresh</button>
+          <button class="btn-navy" onclick="runAgent('vance', {})">🎤 Run Vance (Outbound)</button>
+        </div>
+      </div>
+
+      <div class="metrics" style="margin-bottom:16px">
+        <div class="mc"><div class="mc-label">New</div><div class="mc-val blue" id="lp-new">—</div></div>
+        <div class="mc"><div class="mc-label">Contacted</div><div class="mc-val orange" id="lp-contacted">—</div></div>
+        <div class="mc"><div class="mc-label">Qualified</div><div class="mc-val gold" id="lp-qualified">—</div></div>
+        <div class="mc"><div class="mc-label">Converted</div><div class="mc-val green" id="lp-converted">—</div></div>
+      </div>
+
+      <div class="card">
+        <div class="card-hd"><div class="card-title">Top Scored Leads</div></div>
+        <div id="lp-table"><div class="loading"><div class="spin"></div>Loading leads…</div></div>
+      </div>
+    </div>
+
   </div><!-- /content -->
 </div><!-- /main -->
 
@@ -1047,7 +1137,36 @@ const sb = createClient('https://zngipootstubwvgdmckt.supabase.co','sb_publishab
 
 let allCarriers=[], allLoads=[], allInvoices=[], currentInvFilter='all', loadCounter=3849;
 
-const pageNames={dashboard:'Dashboard',dispatch:'Dispatch Board',carriers:'Carriers',loads:'Load Manager',invoices:'Invoices & Billing',compliance:'DOT Compliance',ifta:'IFTA / Permits',insurance:'Insurance',revenue:'Revenue Tracker',providers:'Compliance Providers',checklist:'Daily Checklist',notes:'Dispatcher Notes'};
+const pageNames={dashboard:'Dashboard',dispatch:'Dispatch Board',carriers:'Carriers',loads:'Load Manager',invoices:'Invoices & Billing',compliance:'DOT Compliance',ifta:'IFTA / Permits',insurance:'Insurance',revenue:'Revenue Tracker',providers:'Compliance Providers',checklist:'Daily Checklist',notes:'Dispatcher Notes',agents:'AI Agents',founders:'Founders Program',leads:'Lead Pipeline'};
+
+// ── 3 Lakes Logistics Backend API (FastAPI) ──
+const API_BASE = (window.__3LL_API_BASE || 'http://localhost:8080').replace(/\/$/,'');
+const API_TOKEN = (window.__3LL_API_TOKEN || localStorage.getItem('3LL_API_TOKEN') || 'change-me-in-prod');
+const API = {
+  async get(path){
+    const r = await fetch(API_BASE+path,{headers:{'Authorization':'Bearer '+API_TOKEN}});
+    if(!r.ok) throw new Error(r.status+': '+(await r.text()));
+    return r.json();
+  },
+  async post(path, body){
+    const r = await fetch(API_BASE+path,{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+API_TOKEN},
+      body: body?JSON.stringify(body):undefined
+    });
+    if(!r.ok) throw new Error(r.status+': '+(await r.text()));
+    return r.json();
+  },
+  async health(){ return fetch(API_BASE+'/api/health').then(r=>r.ok?r.json():null).catch(()=>null); },
+  kpis(){ return this.get('/api/dashboard/kpis'); },
+  founders(){ return fetch(API_BASE+'/api/founders/inventory').then(r=>r.json()); },
+  listAgents(){ return this.get('/api/agents/list'); },
+  runAgent(name, payload){ return this.post('/api/agents/'+encodeURIComponent(name)+'/run', payload||{}); },
+  agentLog(){ return this.get('/api/agents/log?limit=50'); },
+  leads(){ return this.get('/api/leads/?limit=100'); },
+  carriersList(){ return this.get('/api/carriers/'); },
+  telemetryLatest(){ return this.get('/api/telemetry/latest'); },
+};
 
 function nav(id){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
@@ -1825,10 +1944,157 @@ async function doSendInvoice(inv, carrier, toEmail) {
   }
 }
 
+// ── Backend-powered pages (AI Agents, Founders, Leads) ──
+const AGENT_META = {
+  vance:  {icon:'🎤', label:'Vance',   desc:'Outbound prospecting calls'},
+  sonny:  {icon:'🎯', label:'Sonny',   desc:'Load board scraper'},
+  shield: {icon:'🛡️', label:'Shield',  desc:'FMCSA safety monitor'},
+  scout:  {icon:'📄', label:'Scout',   desc:'BOL/Rate Con OCR'},
+  penny:  {icon:'💳', label:'Penny',   desc:'Stripe billing'},
+  settler:{icon:'💵', label:'Settler', desc:'Weekly driver payouts'},
+  audit:  {icon:'📋', label:'Audit',   desc:'Credit / fuel advance'},
+  nova:   {icon:'📧', label:'Nova',    desc:'Broker check-call emails'},
+  signal: {icon:'🚨', label:'Signal',  desc:'Emergency 800# router'},
+  echo:   {icon:'💬', label:'Echo',    desc:'Driver SMS liaison'},
+  atlas:  {icon:'🧭', label:'Atlas',   desc:'Master orchestrator'},
+  beacon: {icon:'📣', label:'Beacon',  desc:'Executive daily digest'},
+  orbit:  {icon:'🛰️', label:'Orbit',   desc:'Geofence arrivals'},
+  pulse:  {icon:'❤️', label:'Pulse',   desc:'Weekly wellness check'},
+};
+
+async function checkBackend(){
+  const el=document.getElementById('agents-api-status');
+  const envEl=document.getElementById('agent-backend-env');
+  try{
+    const h=await API.health();
+    if(el){el.textContent='Backend: ✅ '+(h?.env||'up');el.className='badge badge-navy';}
+    if(envEl)envEl.textContent=h?.env||'up';
+    return true;
+  }catch(e){
+    if(el){el.textContent='Backend: ⚠ offline';el.className='badge badge-navy';}
+    if(envEl)envEl.textContent='offline';
+    return false;
+  }
+}
+
+async function loadAgents(){
+  try{
+    const {agents}=await API.listAgents();
+    const grid=document.getElementById('agent-grid');
+    const countEl=document.getElementById('agent-count');
+    if(countEl)countEl.textContent=agents.length;
+    if(!grid)return;
+    grid.innerHTML=agents.map(name=>{
+      const m=AGENT_META[name]||{icon:'🤖',label:name,desc:''};
+      return '<div class="card" style="padding:14px">'+
+        '<div style="font-size:24px">'+m.icon+'</div>'+
+        '<div style="font-weight:700;margin-top:4px">'+m.label+'</div>'+
+        '<div style="font-size:11px;color:var(--muted);margin-bottom:10px">'+esc(m.desc)+'</div>'+
+        '<button class="btn-navy-sm" style="width:100%" onclick="runAgent(\''+name+'\',{})">Run</button>'+
+        '</div>';
+    }).join('');
+  }catch(e){
+    const grid=document.getElementById('agent-grid');
+    if(grid)grid.innerHTML='<div class="empty-state">Backend offline. Start with: <code>uvicorn app.main:app --port 8080</code></div>';
+  }
+}
+
+async function runAgent(name, payload){
+  toast('Running '+name+'…');
+  try{
+    const res=await API.runAgent(name, payload||{});
+    toast('✓ '+name+' complete');
+    console.log('[agent:'+name+']', res);
+    refreshAgentLog();
+  }catch(e){toast('Agent '+name+' failed','error');console.error(e);}
+}
+
+async function refreshAgentLog(){
+  try{
+    const {items}=await API.agentLog();
+    const list=document.getElementById('agent-log-list');
+    const today=new Date().toDateString();
+    const todayCount=items.filter(r=>new Date(r.ts).toDateString()===today).length;
+    const errors=items.filter(r=>r.error&&new Date(r.ts)>Date.now()-86400000).length;
+    const tEl=document.getElementById('agent-actions-today');if(tEl)tEl.textContent=todayCount;
+    const eEl=document.getElementById('agent-errors-24h');if(eEl)eEl.textContent=errors;
+    if(!list)return;
+    if(!items.length){list.innerHTML='<div class="empty-state">No agent activity yet.</div>';return;}
+    list.innerHTML='<div class="tbl-wrap"><table><thead><tr><th>Time</th><th>Agent</th><th>Action</th><th>Result</th><th>Error</th></tr></thead><tbody>'+
+      items.map(r=>'<tr>'+
+        '<td class="t-mono" style="font-size:11px">'+new Date(r.ts).toLocaleString()+'</td>'+
+        '<td><strong>'+esc(r.agent)+'</strong></td>'+
+        '<td>'+esc(r.action||'')+'</td>'+
+        '<td>'+esc(r.result||'—')+'</td>'+
+        '<td style="color:var(--red)">'+esc(r.error||'')+'</td>'+
+      '</tr>').join('')+'</tbody></table></div>';
+  }catch(e){/* silent */}
+}
+
+async function loadFoundersInventory(){
+  try{
+    const inv=await API.founders();
+    document.getElementById('fd-total').textContent=inv.total;
+    document.getElementById('fd-claimed').textContent=inv.claimed;
+    document.getElementById('fd-remaining').textContent=inv.remaining;
+    const tbl=document.getElementById('fd-inventory-table');
+    if(tbl){
+      tbl.innerHTML='<div class="tbl-wrap"><table><thead><tr><th>Category</th><th>Total</th><th>Claimed</th><th>Remaining</th><th>%</th></tr></thead><tbody>'+
+        inv.categories.map(c=>{
+          const pct=c.total?Math.round(100*c.claimed/c.total):0;
+          return '<tr><td><strong>'+esc(c.display_name||c.category)+'</strong></td><td>'+c.total+'</td><td>'+c.claimed+'</td><td>'+(c.total-c.claimed)+'</td><td>'+pct+'%</td></tr>';
+        }).join('')+'</tbody></table></div>';
+    }
+  }catch(e){
+    const tbl=document.getElementById('fd-inventory-table');
+    if(tbl)tbl.innerHTML='<div class="empty-state">Backend offline — inventory unavailable.</div>';
+  }
+}
+
+async function loadLeadsPipeline(){
+  try{
+    const {items}=await API.leads();
+    const count=(stage)=>items.filter(l=>l.stage===stage).length;
+    document.getElementById('lp-new').textContent=count('new');
+    document.getElementById('lp-contacted').textContent=count('contacted');
+    document.getElementById('lp-qualified').textContent=count('qualified');
+    document.getElementById('lp-converted').textContent=count('converted');
+    const tbl=document.getElementById('lp-table');
+    if(!tbl)return;
+    if(!items.length){tbl.innerHTML='<div class="empty-state">No leads yet. Run FMCSA scraper or connect Airtable sync.</div>';return;}
+    tbl.innerHTML='<div class="tbl-wrap"><table><thead><tr><th>Score</th><th>Company</th><th>DOT</th><th>Phone</th><th>Source</th><th>Stage</th><th>Action</th></tr></thead><tbody>'+
+      items.slice(0,50).map(l=>'<tr>'+
+        '<td><strong>'+(l.score||0)+'</strong></td>'+
+        '<td>'+esc(l.company_name||'—')+'</td>'+
+        '<td class="t-mono" style="font-size:11px">'+esc(l.dot_number||'—')+'</td>'+
+        '<td class="t-mono" style="font-size:11px">'+esc(l.phone||'—')+'</td>'+
+        '<td><span class="badge badge-navy">'+esc(l.source)+'</span></td>'+
+        '<td>'+esc(l.stage)+'</td>'+
+        '<td><button class="btn-navy-sm" onclick="runAgent(\'vance\',{lead_id:\''+esc(l.id)+'\',phone:\''+esc(l.phone||'')+'\'})">📞 Call</button></td>'+
+      '</tr>').join('')+'</tbody></table></div>';
+  }catch(e){
+    const tbl=document.getElementById('lp-table');
+    if(tbl)tbl.innerHTML='<div class="empty-state">Backend offline — lead pipeline unavailable.</div>';
+  }
+}
+
+// Re-route nav so backend pages auto-load on open
+(function wrapNav(){
+  const orig=window.nav;
+  window.nav=function(id){
+    orig(id);
+    if(id==='agents'){loadAgents();refreshAgentLog();}
+    else if(id==='founders')loadFoundersInventory();
+    else if(id==='leads')loadLeadsPipeline();
+  };
+})();
+
 (async function init(){
   await testConnection();
   await refreshAll();
+  await checkBackend();
   setInterval(refreshAll,30000);
+  setInterval(checkBackend,60000);
 })();
 </script>
 </body>
