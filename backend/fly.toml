@@ -1,0 +1,71 @@
+# 3 Lakes Logistics — backend on Fly.io.
+# One app, three process types (api | worker | scheduler) sharing the
+# same image and secrets. The Dockerfile's CMD is ignored in favor of the
+# [processes] commands below.
+#
+# First-time deploy: see docs/DEPLOY_FLY.md.
+
+app = "3lakes-backend"
+primary_region = "ord"              # Chicago — central US
+
+[build]
+  dockerfile = "Dockerfile"
+
+[processes]
+  api       = "uvicorn app.main:app --host 0.0.0.0 --port 8080"
+  worker    = "python -m app.worker"
+  scheduler = "python -m app.scheduler"
+
+# Non-secret defaults. Anything sensitive must go to `fly secrets set`.
+[env]
+  ENV                     = "production"
+  LOG_LEVEL               = "INFO"
+  CORS_ORIGINS            = "https://3lakeslogistics.com,https://ops.3lakeslogistics.com"
+  QUEUE_POLL_INTERVAL_SEC = "5"
+  QUEUE_MAX_CONCURRENCY   = "8"
+  ENABLE_SCHEDULER        = "0"      # dedicated scheduler process owns cron
+
+# Public HTTPS listener — api process only.
+[http_service]
+  internal_port        = 8080
+  force_https          = true
+  auto_stop_machines   = "suspend"
+  auto_start_machines  = true
+  min_machines_running = 1
+  processes            = ["api"]
+
+  [http_service.concurrency]
+    type       = "requests"
+    soft_limit = 200
+    hard_limit = 250
+
+  [[http_service.checks]]
+    grace_period = "10s"
+    interval     = "30s"
+    method       = "GET"
+    path         = "/api/health"
+    protocol     = "http"
+    timeout      = "5s"
+
+# Health check that verifies Supabase reachability — slower cadence.
+  [[http_service.checks]]
+    grace_period = "30s"
+    interval     = "2m"
+    method       = "GET"
+    path         = "/api/ready"
+    protocol     = "http"
+    timeout      = "10s"
+
+# Shared VM size. Scale each process independently via
+#   fly scale count api=2 worker=2 scheduler=1
+[[vm]]
+  size      = "shared-cpu-1x"
+  memory    = "512mb"
+  processes = ["api", "worker"]
+
+# Scheduler gets a smaller dedicated VM and MUST stay singleton
+# (one process owns the cron schedule).
+[[vm]]
+  size      = "shared-cpu-1x"
+  memory    = "256mb"
+  processes = ["scheduler"]

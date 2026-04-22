@@ -110,4 +110,6 @@ Three services from one image via `RUN_MODE` env var:
 - `RUN_MODE=worker` → `python -m app.worker` (dedicated machine type)
 - `RUN_MODE=scheduler` → `python -m app.scheduler` (singleton)
 
-See `docs/RUNBOOK.md` for staging → prod cutover.
+**Primary deploy target: Fly.io.** See `docs/DEPLOY_FLY.md` for the full
+first-time launch (fly.toml + secrets + migrations + domain + vendor
+webhook registration). See `docs/RUNBOOK.md` for day-2 ops and cutover.
