@@ -1,12 +1,42 @@
 """Carriers CRUD — powers the command center `Carriers` page."""
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from datetime import date
 
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+
+from ..logging_service import log_agent
 from ..supabase_client import get_supabase
 from .deps import require_bearer
 
 router = APIRouter(dependencies=[Depends(require_bearer)])
+
+
+@router.post("/", status_code=status.HTTP_201_CREATED)
+def create_carrier(body: dict) -> dict:
+    """Create a carrier record from the Ops Suite carrier form."""
+    body.setdefault("status", "New — Pending Onboarding")
+    body.setdefault("enrolled_date", date.today().isoformat())
+    body.setdefault("loads_completed", 0)
+    # Normalise: Ops Suite sends full_name; active_carriers uses carrier_name
+    if "full_name" in body and not body.get("carrier_name"):
+        body["carrier_name"] = body.pop("full_name")
+    elif "full_name" in body:
+        body.pop("full_name")
+    res = get_supabase().table("active_carriers").insert(body).execute()
+    if not res.data:
+        raise HTTPException(500, "carrier insert failed")
+    carrier = res.data[0]
+    log_agent("nova", "carrier_created", carrier_id=carrier.get("id"),
+              payload={"carrier_name": carrier.get("carrier_name")})
+    return {"ok": True, "carrier": carrier}
+
+
+@router.delete("/{carrier_id}", status_code=status.HTTP_200_OK)
+def delete_carrier(carrier_id: str) -> dict:
+    """Remove a carrier record (soft-delete via status=churned or hard delete)."""
+    get_supabase().table("active_carriers").delete().eq("id", carrier_id).execute()
+    return {"ok": True, "carrier_id": carrier_id}
 
 
 @router.get("/")

@@ -1444,32 +1444,33 @@ async function saveCarrier(){
   const name=document.getElementById('mc-name').value.trim();
   if(!name){toast('Name is required','error');return;}
   btn.disabled=true;btn.textContent='Saving…';
-  const{error}=await sb.from('carriers').insert({
-    full_name:name,first_name:name.split(' ')[0],last_name:name.split(' ').slice(1).join(' '),
-    mc_number:document.getElementById('mc-number').value.trim(),
-    dot_number:document.getElementById('mc-dot').value.trim(),
-    home_base:document.getElementById('mc-base').value.trim(),
-    equipment:document.getElementById('mc-equip').value,
-    plan:document.getElementById('mc-plan').value,
-    phone:document.getElementById('mc-phone').value.trim(),
-    email:document.getElementById('mc-email').value.trim(),
-    insurance_provider:document.getElementById('mc-ins').value.trim(),
-    eld:document.getElementById('mc-eld').value.trim(),
-    status:'New — Pending Onboarding',
-    enrolled_date:new Date().toISOString().split('T')[0],loads_completed:0
-  });
+  try{
+    await API.post('/api/carriers/',{
+      carrier_name:name,
+      mc_number:document.getElementById('mc-number').value.trim()||null,
+      dot_number:document.getElementById('mc-dot').value.trim()||null,
+      home_base:document.getElementById('mc-base').value.trim()||null,
+      equipment_type:document.getElementById('mc-equip').value||null,
+      plan:document.getElementById('mc-plan').value||null,
+      phone:document.getElementById('mc-phone').value.trim()||null,
+      email:document.getElementById('mc-email').value.trim()||null,
+      insurance_provider:document.getElementById('mc-ins').value.trim()||null,
+      eld_provider:document.getElementById('mc-eld').value.trim()||null,
+    });
+    closeModal('add-carrier-modal');
+    ['mc-name','mc-number','mc-dot','mc-base','mc-phone','mc-email','mc-ins','mc-eld'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+    await loadCarriers();updateDashboard();toast('Carrier saved!');
+  }catch(e){toast('Error: '+e.message,'error');}
   btn.disabled=false;btn.textContent='Add Carrier';
-  if(error){toast('Error: '+error.message,'error');return;}
-  closeModal('add-carrier-modal');
-  ['mc-name','mc-number','mc-dot','mc-base','mc-phone','mc-email','mc-ins','mc-eld'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
-  await loadCarriers();updateDashboard();toast('Carrier saved!');
 }
 
 async function deleteCarrier(id){
   if(!confirm('Remove this carrier?'))return;
-  const{error}=await sb.from('carriers').delete().eq('id',id);
-  if(error){toast('Error: '+error.message,'error');return;}
-  await loadCarriers();updateDashboard();toast('Carrier removed');
+  try{
+    const r=await fetch(API_BASE+'/api/carriers/'+id,{method:'DELETE',headers:{'Authorization':'Bearer '+API_TOKEN}});
+    if(!r.ok)throw new Error(r.status+': '+(await r.text()));
+    await loadCarriers();updateDashboard();toast('Carrier removed');
+  }catch(e){toast('Error: '+e.message,'error');}
 }
 
 // ── LOADS ──

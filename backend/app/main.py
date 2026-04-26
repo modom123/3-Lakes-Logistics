@@ -29,7 +29,9 @@ from .api import (
     founders_router,
     intake_router,
     leads_router,
+    prospecting_router,
     settlement_router,
+    subscriptions_router,
     telemetry_router,
     webhooks_router,
 )
@@ -46,7 +48,7 @@ def create_app() -> FastAPI:
     s = get_settings()
     app = FastAPI(
         title="3 Lakes Logistics API",
-        version="0.3.0",
+        version="0.4.0",
         description="AI-automated trucking backend — 19 agents, 1,000 trucks.",
     )
 
@@ -77,9 +79,11 @@ def create_app() -> FastAPI:
     app.include_router(docs_router,           prefix="/api/docs",        tags=["docs"])
     app.include_router(loads_router,          prefix="/api/loads",       tags=["loads"])
     app.include_router(settlement_router,     prefix="/api/settlement",  tags=["settlement"])
-    app.include_router(invoices_router,       prefix="/api/invoices",    tags=["invoices"])
-    app.include_router(cron_router,           prefix="/api/cron",        tags=["cron"])
-    app.include_router(analytics_router,      prefix="/api/analytics",   tags=["analytics"])
+    app.include_router(invoices_router,       prefix="/api/invoices",       tags=["invoices"])
+    app.include_router(cron_router,           prefix="/api/cron",           tags=["cron"])
+    app.include_router(analytics_router,      prefix="/api/analytics",      tags=["analytics"])
+    app.include_router(prospecting_router,    prefix="/api/prospecting",    tags=["prospecting"])
+    app.include_router(subscriptions_router,  prefix="/api/subscriptions",  tags=["subscriptions"])
 
     @app.get("/api/health", tags=["meta"])
     def health() -> dict:
@@ -95,7 +99,7 @@ def create_app() -> FastAPI:
         return {
             "ok": db_ok,
             "env": s.env,
-            "version": "0.3.0",
+            "version": "0.4.0",
             "db": "connected" if db_ok else f"error: {db_error}",
         }
 
