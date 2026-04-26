@@ -14,5 +14,16 @@ def build_tracked_url(base: str, lead_id: str, campaign: str) -> str:
 
 def record_click(lead_id: str, utm_ref: str) -> None:
     from ..logging_service import log_agent
+    from ..supabase_client import get_supabase
+
     log_agent("vance", "link_click", payload={"lead_id": lead_id, "utm_ref": utm_ref}, result="recorded")
-    # TODO: increment a clicks counter on leads
+
+    try:
+        sb = get_supabase()
+        # Read current clicks count then increment
+        row = sb.table("leads").select("id,clicks").eq("id", lead_id).maybe_single().execute().data
+        if row is not None:
+            current = int(row.get("clicks") or 0)
+            sb.table("leads").update({"clicks": current + 1}).eq("id", lead_id).execute()
+    except Exception:  # noqa: BLE001
+        pass  # click tracking is best-effort; never block the redirect

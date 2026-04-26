@@ -15,6 +15,8 @@ Steps executed on one submission:
 from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException, Request, status
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 
 from ..agents import penny, shield
 from ..logging_service import get_logger, log_agent
@@ -23,6 +25,7 @@ from ..supabase_client import get_supabase
 
 log = get_logger("route.intake")
 router = APIRouter()
+_limiter = Limiter(key_func=get_remote_address)
 
 
 def _last4(s: str | None) -> str | None:
@@ -33,6 +36,7 @@ def _last4(s: str | None) -> str | None:
 
 
 @router.post("/intake", response_model=IntakeResponse, status_code=status.HTTP_201_CREATED)
+@_limiter.limit("5/minute")
 async def carrier_intake(payload: CarrierIntake, request: Request) -> IntakeResponse:
     sb = get_supabase()
     ip = request.client.host if request.client else None

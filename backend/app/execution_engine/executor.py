@@ -88,26 +88,177 @@ def run_domain(
     return results
 
 
+# ── Step-to-agent dispatch table ──────────────────────────────────────────────
+# Maps step.name prefix → callable(step, carrier_id, contract_id, payload) → dict
+
 def _dispatch(
     step: Step,
     carrier_id: UUID | None,
     contract_id: UUID | None,
     payload: dict,
 ) -> dict:
-    """Return structured output for a step execution.
-
-    Each step logs intent and metadata. Concrete integrations
-    (FMCSA, ELD, Stripe, Twilio, Claude) are wired per step in future
-    sprint cycles; this skeleton captures every run in the audit trail.
-    """
-    return {
+    """Route each step to the appropriate agent or service."""
+    cid = str(carrier_id) if carrier_id else payload.get("carrier_id", "")
+    base = {
         "step_number": step.number,
         "step_name": step.name,
         "domain": step.domain,
-        "description": step.description,
-        "carrier_id": str(carrier_id) if carrier_id else None,
+        "carrier_id": cid,
         "contract_id": str(contract_id) if contract_id else None,
+    }
+
+    # ── Onboarding ─────────────────────────────────────────────────────────────
+    if step.name == "nova.welcome_email":
+        from ..agents.nova import send_welcome
+        return {**base, **send_welcome({**payload, "carrier_id": cid})}
+
+    if step.name == "signal.notify_commander":
+        from ..agents.signal import send_emergency
+        return {**base, **send_emergency({**payload, "carrier_id": cid,
+                "incident_type": "New carrier activation"})}
+
+    if step.name in ("fmcsa.lookup", "shield.safety_light", "shield.pre_dispatch_safety"):
+        from ..agents.shield import fetch_safer, score, enqueue_safety_check
+        dot = payload.get("dot_number")
+        mc = payload.get("mc_number")
+        if step.name == "shield.safety_light" and cid:
+            enqueue_safety_check(cid, dot, mc)
+            return {**base, "result": "enqueued"}
+        safer = fetch_safer(dot)
+        light = score(safer)
+        return {**base, "safety_light": light, "safer_status": safer}
+
+    if step.name == "carrier.set_active":
+        from ..supabase_client import get_supabase
+        if cid:
+            get_supabase().table("active_carriers").update(
+                {"status": "active"}
+            ).eq("id", cid).execute()
+        return {**base, "status": "active"}
+
+    if step.name == "lead.convert_to_carrier":
+        from ..supabase_client import get_supabase
+        lead_id = payload.get("lead_id")
+        if lead_id:
+            get_supabase().table("leads").update(
+                {"stage": "converted", "carrier_id": cid}
+            ).eq("id", lead_id).execute()
+        return {**base, "converted": bool(lead_id)}
+
+    # ── Dispatch ───────────────────────────────────────────────────────────────
+    if step.name == "clm.scan_rate_conf":
+        from ..clm.scanner import scan_document
+        text = payload.get("document_text", "")
+        if text:
+            vars_, conf, warnings = scan_document(text, "rate_confirmation")
+            return {**base, "confidence": conf, "warnings": warnings,
+                    "extracted": vars_.model_dump(exclude_none=True)}
+        return {**base, "result": "no_document_text"}
+
+    if step.name == "nova.dispatch_email":
+        from ..agents.nova import send_dispatch
+        return {**base, **send_dispatch({**payload, "carrier_id": cid})}
+
+    if step.name == "signal.dispatch_sms":
+        from ..agents.signal import send_dispatch_sms
+        return {**base, **send_dispatch_sms({**payload, "carrier_id": cid})}
+
+    if step.name == "audit.fuel_advance":
+        from ..agents.audit import decide_advance
+        result = decide_advance(
+            payload.get("driver_id", ""),
+            float(payload.get("amount", 0)),
+            float(payload.get("load_rate", 0)),
+        )
+        return {**base, **result}
+
+    if step.name == "dispatch.match_truck":
+        from ..agents.sonny import run as sonny_run
+        return {**base, **sonny_run({**payload, "carrier_id": cid})}
+
+    if step.name == "penny.margin_preview":
+        rate = float(payload.get("rate_total", 0))
+        fuel_est = float(payload.get("miles", 0)) * 0.55  # ~$0.55/mi fuel est
+        driver_pay = rate * 0.72
+        margin = rate - driver_pay - fuel_est
+        return {**base, "gross": rate, "driver_pay": driver_pay,
+                "fuel_est": fuel_est, "margin": margin, "margin_pct": margin / max(rate, 1)}
+
+    # ── Transit ────────────────────────────────────────────────────────────────
+    if step.name in ("scout.extract_bol", "scout.extract_pod"):
+        from ..agents.scout import run as scout_run
+        return {**base, **scout_run({**payload, "carrier_id": cid})}
+
+    if step.name == "signal.hos_warning":
+        from ..agents.signal import send_hos_warning
+        return {**base, **send_hos_warning({**payload, "carrier_id": cid})}
+
+    if step.name == "signal.emergency_escalate":
+        from ..agents.signal import send_emergency
+        return {**base, **send_emergency({**payload, "carrier_id": cid})}
+
+    if step.name == "orbit.geofence_delivery":
+        from ..agents.orbit import run as orbit_run
+        return {**base, **orbit_run(payload)}
+
+    if step.name in ("atlas.checkcall_1", "atlas.checkcall_2", "atlas.checkcall_3"):
+        from ..agents.nova import send_check_call
+        return {**base, **send_check_call({**payload, "carrier_id": cid})}
+
+    # ── Settlement ─────────────────────────────────────────────────────────────
+    if step.name == "settler.calc_driver_pay":
+        from ..agents.settler import calc_driver_payout
+        driver_id = payload.get("driver_id", "")
+        week_start = payload.get("week_start", "")
+        week_end = payload.get("week_end", "")
+        if driver_id and week_start and week_end:
+            return {**base, **calc_driver_payout(driver_id, week_start, week_end)}
+        return {**base, "result": "missing driver_id/week_start/week_end"}
+
+    if step.name == "nova.settlement_email":
+        from ..agents.nova import send_settlement
+        return {**base, **send_settlement({**payload, "carrier_id": cid})}
+
+    if step.name == "signal.cdl_alert":
+        from ..agents.signal import send_cdl_alert
+        return {**base, **send_cdl_alert({**payload, "carrier_id": cid})}
+
+    # ── Compliance ─────────────────────────────────────────────────────────────
+    if step.name in ("shield.cdl_sweep", "shield.cdl_expiry_check"):
+        from ..agents.shield import check_cdl_expiry
+        alerts = check_cdl_expiry(cid) if cid else []
+        return {**base, "cdl_alerts": alerts}
+
+    if step.name == "nova.compliance_alert":
+        from ..agents.nova import send_compliance_alert
+        return {**base, **send_compliance_alert({**payload, "carrier_id": cid})}
+
+    # ── Analytics ──────────────────────────────────────────────────────────────
+    if step.name in ("beacon.daily_digest", "beacon.activate_dashboard"):
+        from ..agents.beacon import run as beacon_run
+        return {**base, **beacon_run({**payload, "carrier_id": cid})}
+
+    if step.name == "pulse.hos_monitor":
+        from ..agents.pulse import score_driver
+        driver_id = payload.get("driver_id", "")
+        return {**base, **(score_driver(driver_id) if driver_id else {"note": "no driver_id"})}
+
+    # ── Atlas state transitions ────────────────────────────────────────────────
+    if step.name.startswith("atlas."):
+        from ..agents.atlas import advance
+        entity = payload.get("entity", "load")
+        entity_id = payload.get("entity_id", "")
+        from_state = payload.get("from_state", "")
+        event = step.name.replace("atlas.", "")
+        new_status = advance(entity, entity_id, from_state, event) if entity_id else None
+        return {**base, "new_status": new_status}
+
+    # ── Default: log intent and pass through ───────────────────────────────────
+    return {
+        **base,
+        "description": step.description,
         "auto_trigger": step.auto_trigger,
         "requires_steps": step.requires_steps,
         "executed": True,
+        "note": "step logged — integration pending for this step name",
     }

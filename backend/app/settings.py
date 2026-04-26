@@ -53,6 +53,9 @@ class Settings(BaseSettings):
     # Claude AI — CLM contract scanner + autonomous agents
     anthropic_api_key: str = ""
 
+    # Supabase JWT secret — from Supabase project Settings → API → JWT Secret
+    supabase_jwt_secret: str = ""
+
     # SendGrid — inbound email parsing for contract documents
     sendgrid_api_key: str = ""
     sendgrid_inbound_secret: str = ""
