@@ -300,14 +300,45 @@ def send_compliance_alert(payload: dict[str, Any]) -> dict[str, Any]:
     return _send(to, subject, body, carrier_id=payload.get("carrier_id", ""))
 
 
+def send_broker_invoice(payload: dict[str, Any]) -> dict[str, Any]:
+    """Email invoice + POD package to broker after delivery confirmation."""
+    to = payload.get("broker_email", "")
+    if not to:
+        return {"status": "skipped", "reason": "no_broker_email"}
+    load_number = payload.get("load_number", "")
+    subject = f"Invoice & POD — Load #{load_number} | 3 Lakes Logistics"
+    body = (
+        f"Hi {payload.get('broker_name', 'there')},\n\n"
+        f"Delivery confirmed on Load #{load_number}. "
+        f"Please find attached the invoice and signed POD.\n\n"
+        f"Rate: ${float(payload.get('rate_total', 0)):,.2f} | "
+        f"Payment terms: {payload.get('payment_terms', 'Net-30')}\n\n"
+        f"Wire/ACH details on the invoice. Questions? Reply to this email.\n\n"
+        f"Thanks,\n3 Lakes Logistics Dispatch\n"
+    )
+    return _send(to, subject, body, carrier_id=payload.get("carrier_id", ""))
+
+
+def send_nurture(payload: dict[str, Any]) -> dict[str, Any]:
+    """Send a nurture sequence email to a prospect."""
+    to = payload.get("to_email", "") or payload.get("email", "")
+    if not to:
+        return {"status": "skipped", "reason": "no_email"}
+    subject = payload.get("subject", "A note from 3 Lakes Logistics")
+    body = payload.get("body", "")
+    return _send(to, subject, body, carrier_id=payload.get("carrier_id", ""))
+
+
 # ── Agent entrypoint ──────────────────────────────────────────────────────────
 
 _ACTIONS = {
-    "welcome": send_welcome,
-    "dispatch": send_dispatch,
-    "settlement": send_settlement,
-    "check_call": send_check_call,
-    "compliance": send_compliance_alert,
+    "welcome":         send_welcome,
+    "dispatch":        send_dispatch,
+    "settlement":      send_settlement,
+    "check_call":      send_check_call,
+    "compliance":      send_compliance_alert,
+    "broker_invoice":  send_broker_invoice,
+    "nurture":         send_nurture,
 }
 
 

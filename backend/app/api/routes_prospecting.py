@@ -244,8 +244,7 @@ async def vapi_webhook(request: Request) -> dict:
 def nurture_stats() -> dict:
     """Nurture sequence progress: step distribution and pending count."""
     from datetime import datetime, timezone
-    from ..supabase_client import get_supabase as _gsb
-    sb = _gsb()
+    sb = get_supabase()
     now = datetime.now(timezone.utc).isoformat()
     rows = (
         sb.table("leads")

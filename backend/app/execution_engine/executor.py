@@ -147,12 +147,12 @@ def _dispatch(
 
     # ── Dispatch ───────────────────────────────────────────────────────────────
     if step.name == "clm.scan_rate_conf":
-        from ..clm.scanner import scan_document
+        from ..clm.scanner import scan_contract
         text = payload.get("document_text", "")
         if text:
-            vars_, conf, warnings = scan_document(text, "rate_confirmation")
+            extracted, conf, warnings = scan_contract(text, "rate_confirmation")
             return {**base, "confidence": conf, "warnings": warnings,
-                    "extracted": vars_.model_dump(exclude_none=True)}
+                    "extracted": extracted}
         return {**base, "result": "no_document_text"}
 
     if step.name == "nova.dispatch_email":
