@@ -418,10 +418,18 @@ function showView(name) {
 // ── LOAD DATA ────────────────────────────────────────────────────────────────
 async function loadCurrentLoad() {
   try {
-    const res = await apiFetch(`/api/fleet?status=in_transit&limit=1`);
-    const loads = await res.json();
+    const res = await apiFetch(`/api/loads?driver_code=${DRIVER_ID}&status=dispatched&limit=1`);
+    const data = await res.json();
+    const loads = data.loads || data;
     if (loads && loads.length > 0) renderCurrentLoad(loads[0]);
-    else renderNoLoad();
+    else {
+      // Try in_transit
+      const r2 = await apiFetch(`/api/loads?driver_code=${DRIVER_ID}&status=in_transit&limit=1`);
+      const d2 = await r2.json();
+      const l2 = d2.loads || d2;
+      if (l2 && l2.length > 0) renderCurrentLoad(l2[0]);
+      else renderNoLoad();
+    }
   } catch { renderNoLoad(); }
 }
 
@@ -455,8 +463,9 @@ async function loadAvailableLoads() {
   const list = document.getElementById('available-loads-list');
   list.innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted)">Loading loads...</div>';
   try {
-    const res = await apiFetch('/api/fleet?status=booked&limit=10');
-    const loads = await res.json();
+    const res = await apiFetch('/api/loads/available?limit=20');
+    const data = await res.json();
+    const loads = data.loads || data;
     if (!loads || loads.length === 0) {
       list.innerHTML = '<div style="text-align:center;padding:40px;color:var(--muted)">No loads available right now</div>';
       return;
@@ -503,8 +512,21 @@ async function loadProfile() {
   }
 }
 
-function loadDocs() {
-  // Future: pull from /api/clm/vault/docs?carrier_id=...
+async function loadDocs() {
+  try {
+    const carrierId = localStorage.getItem('3ll_carrier_id') || '';
+    if (!carrierId) return;
+    const res = await apiFetch(`/api/docs/?carrier_id=${carrierId}&limit=20`);
+    const data = await res.json();
+    const docs = data.items || [];
+    // Mark upload zones as uploaded if doc already exists
+    const byType = {};
+    docs.forEach(d => { byType[d.doc_type] = d; });
+    ['bol','pod','lumper_receipt'].forEach(type => {
+      const statusEl = document.getElementById(type + '-status');
+      if (statusEl && byType[type]) statusEl.style.display = 'inline-flex';
+    });
+  } catch {}
 }
 
 // ── ACTIONS ──────────────────────────────────────────────────────────────────
@@ -538,21 +560,30 @@ async function confirmDelivery() {
 }
 
 async function acceptLoad(loadId) {
-  await apiFetch(`/api/fleet/${loadId}`, 'PATCH', { status: 'dispatched' });
-  showToast('✅ Load accepted!');
-  showView('home');
-  loadCurrentLoad();
+  try {
+    await apiFetch(`/api/loads/${loadId}/accept`, 'POST', { driver_code: DRIVER_ID });
+    showToast('✅ Load accepted!');
+    showView('home');
+    loadCurrentLoad();
+  } catch {
+    showToast('❌ Could not accept load — try again');
+  }
 }
 
 function reportIssue() {
   const issue = prompt('Describe the issue (breakdown, accident, delay):');
   if (!issue) return;
-  apiFetch('/api/webhooks/driver_issue', 'POST', {
-    driver_id: DRIVER_ID,
+  const isEmergency = /breakdown|accident|crash|injury|fire|hijack|rollover/i.test(issue);
+  apiFetch('/api/agents/signal/run', 'POST', {
+    action: isEmergency ? 'emergency' : 'breakdown',
+    driver_name: localStorage.getItem('3ll_driver_name') || DRIVER_ID,
+    driver_phone: localStorage.getItem('3ll_driver_phone') || '',
     issue,
-    ts: new Date().toISOString(),
+    incident_type: issue.slice(0, 60),
+    location: 'en route',
+    carrier_id: localStorage.getItem('3ll_carrier_id') || '',
   });
-  showToast('⚠️ Issue reported to Commander');
+  showToast(isEmergency ? '🚨 Emergency alert sent to Commander' : '⚠️ Issue reported to dispatch');
 }
 
 function triggerUpload(inputId) {
@@ -563,21 +594,52 @@ async function handleUpload(docType, input) {
   const file = input.files[0];
   if (!file) return;
   showToast(`📤 Uploading ${docType.toUpperCase()}...`);
-  // Stub — full implementation posts to Supabase Storage via /api/clm/vault
-  setTimeout(() => {
+  try {
+    const carrierId = localStorage.getItem('3ll_carrier_id') || '';
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('carrier_id', carrierId);
+    formData.append('doc_type', docType);
+    formData.append('driver_id', DRIVER_ID);
+
+    const res = await fetch(API + '/api/docs/upload', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${TOKEN}` },
+      body: formData,
+    });
+    if (!res.ok) throw new Error(await res.text());
+    const data = await res.json();
+
     const statusEl = document.getElementById(docType + '-status');
     if (statusEl) { statusEl.style.display = 'inline-flex'; }
-    showToast(`✅ ${docType.toUpperCase()} uploaded successfully`);
-  }, 1500);
+    showToast(`✅ ${docType.toUpperCase()} uploaded — scan pending`);
+
+    // If we have a current load, fire a Scout scan on the document
+    if (data.doc_id) {
+      apiFetch(`/api/docs/${data.doc_id}/scan`, 'POST').catch(() => {});
+    }
+  } catch (err) {
+    showToast(`❌ Upload failed — ${err.message}`);
+  }
 }
 
 // ── HOS POLLING ──────────────────────────────────────────────────────────────
 async function pollHOS() {
   try {
     const res = await apiFetch(`/api/telemetry/hos?driver_id=${DRIVER_ID}`);
-    const hos = await res.json();
-    if (!hos || !hos.drive_remaining) return;
-    renderHOS(hos);
+    const data = await res.json();
+    const hos = data.hos || data;
+    if (!hos || (!hos.drive_remaining_min && !hos.hours_remaining)) return;
+    // Normalize: backend may return minutes or hours
+    if (hos.drive_remaining_min !== undefined) {
+      renderHOS({
+        drive_remaining: hos.drive_remaining_min / 60,
+        shift_remaining: (hos.shift_remaining_min || 0) / 60,
+        cycle_remaining: (hos.cycle_remaining_min || 0) / 60,
+      });
+    } else {
+      renderHOS(hos);
+    }
   } catch {}
 }
 

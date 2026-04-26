@@ -20,6 +20,7 @@ from .api import (
     clm_router,
     dashboard_router,
     docs_router,
+    loads_router,
     execution_router,
     fleet_router,
     founders_router,
@@ -71,6 +72,7 @@ def create_app() -> FastAPI:
     app.include_router(execution_router,      prefix="/api/execution",   tags=["execution"])
     app.include_router(atomic_ledger_router,  prefix="/api/ledger",      tags=["ledger"])
     app.include_router(docs_router,           prefix="/api/docs",        tags=["docs"])
+    app.include_router(loads_router,          prefix="/api/loads",       tags=["loads"])
     app.include_router(settlement_router,     prefix="/api/settlement",  tags=["settlement"])
 
     @app.get("/api/health", tags=["meta"])
