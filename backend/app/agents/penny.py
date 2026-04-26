@@ -81,6 +81,106 @@ def handle_event(event: dict[str, Any]) -> None:
         }).eq("id", carrier_id).execute()
 
 
-def run(payload: dict[str, Any]) -> dict[str, Any]:
-    log_agent("penny", "manual_run", payload=payload, result="noop")
-    return {"agent": "penny", "status": "ok"}
+def run(payload: dict[str, Any]) -> dict[str, Any]:  # noqa: C901
+    action = payload.get("action", "margin_preview")
+    carrier_id = payload.get("carrier_id", "")
+
+    # ── Stripe checkout ────────────────────────────────────────────────────────
+    if action == "checkout":
+        plan = payload.get("plan", "standard_5pct")
+        email = payload.get("email", "")
+        url = create_checkout_session(carrier_id, plan, email)
+        return {"agent": "penny", "action": action, "checkout_url": url, "ok": bool(url)}
+
+    # ── Stripe event handler ───────────────────────────────────────────────────
+    if action == "handle_event":
+        event = payload.get("event", payload)
+        handle_event(event)
+        log_agent("penny", "event_handled", carrier_id=carrier_id)
+        return {"agent": "penny", "action": action, "ok": True}
+
+    # ── Pre-dispatch margin preview ────────────────────────────────────────────
+    if action == "margin_preview":
+        rate = float(payload.get("rate_total", 0))
+        fuel_est = float(payload.get("miles", 0)) * 0.55
+        driver_pay = rate * 0.72
+        margin = rate - driver_pay - fuel_est
+        result = {
+            "gross": rate, "driver_pay": driver_pay,
+            "fuel_est": fuel_est, "margin": margin,
+            "margin_pct": margin / max(rate, 1),
+        }
+        log_agent("penny", "margin_preview", carrier_id=carrier_id, result=result)
+        return {"agent": "penny", "action": action, **result, "ok": True}
+
+    # ── Fuel cost tracking ─────────────────────────────────────────────────────
+    if action == "fuel_cost_track":
+        load_id = payload.get("load_id", "")
+        sb = get_supabase()
+        rows = (sb.table("fuel_card_transactions").select("amount")
+                  .eq("load_id", load_id).execute().data or []) if load_id else []
+        total_fuel = sum(float(r.get("amount") or 0) for r in rows)
+        log_agent("penny", "fuel_cost_track", carrier_id=carrier_id,
+                  result={"load_id": load_id, "total_fuel": total_fuel})
+        return {"agent": "penny", "action": action,
+                "load_id": load_id, "total_fuel": total_fuel, "ok": True}
+
+    # ── Final load margin ──────────────────────────────────────────────────────
+    if action == "load_margin":
+        load_id = payload.get("load_id", "")
+        sb = get_supabase()
+        load = (sb.table("loads").select("rate_total,miles")
+                  .eq("id", load_id).maybe_single().execute().data or {}) if load_id else {}
+        rate = float(load.get("rate_total") or payload.get("rate_total", 0))
+        miles = float(load.get("miles") or payload.get("miles", 0))
+
+        pay_rows = (sb.table("driver_settlements").select("driver_pay")
+                      .eq("load_id", load_id).execute().data or []) if load_id else []
+        driver_pay = sum(float(r.get("driver_pay") or 0) for r in pay_rows) or rate * 0.72
+
+        fuel_rows = (sb.table("fuel_card_transactions").select("amount")
+                       .eq("load_id", load_id).execute().data or []) if load_id else []
+        fuel_cost = sum(float(r.get("amount") or 0) for r in fuel_rows) or miles * 0.55
+
+        dispatch_pct = float(payload.get("dispatch_pct", 5))
+        dispatch_fee = rate * dispatch_pct / 100
+        margin = rate - driver_pay - fuel_cost - dispatch_fee
+        result = {
+            "gross": rate, "driver_pay": driver_pay, "fuel_cost": fuel_cost,
+            "dispatch_fee": dispatch_fee, "margin": margin,
+            "margin_pct": margin / max(rate, 1),
+        }
+        log_agent("penny", "load_margin", carrier_id=carrier_id, result=result)
+        return {"agent": "penny", "action": action, **result, "ok": True}
+
+    # ── MTD KPI update ─────────────────────────────────────────────────────────
+    if action == "update_mtd_kpis":
+        from datetime import date
+        month_start = date.today().replace(day=1).isoformat()
+        sb = get_supabase()
+        inv_rows = (
+            sb.table("invoices").select("total_amount,dispatch_fee,status")
+              .eq("carrier_id", carrier_id).gte("invoice_date", month_start)
+              .execute().data or []
+        ) if carrier_id else []
+        mtd_gross = sum(float(r.get("total_amount") or 0) for r in inv_rows)
+        mtd_dispatch = sum(float(r.get("dispatch_fee") or 0) for r in inv_rows)
+        load_rows = (
+            sb.table("loads").select("rate_total,miles")
+              .eq("carrier_id", carrier_id).gte("created_at", month_start)
+              .execute().data or []
+        ) if carrier_id else []
+        total_miles = sum(float(r.get("miles") or 0) for r in load_rows)
+        rpm = round(mtd_gross / max(total_miles, 1), 4)
+        if carrier_id:
+            sb.table("active_carriers").update({
+                "mtd_gross": mtd_gross,
+                "mtd_dispatch_fees": mtd_dispatch,
+            }).eq("id", carrier_id).execute()
+        result = {"mtd_gross": mtd_gross, "mtd_dispatch": mtd_dispatch,
+                  "total_miles": total_miles, "rpm": rpm}
+        log_agent("penny", "update_mtd_kpis", carrier_id=carrier_id, result=result)
+        return {"agent": "penny", "action": action, **result, "ok": True}
+
+    log_agent("penny", "unknown_action", carrier_id=carrier_id, payload=payload)
+    return {"agent": "penny", "action": action, "ok": False, "note": "unknown action"}

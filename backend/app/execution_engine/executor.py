@@ -184,6 +184,19 @@ def _dispatch(
         return {**base, "gross": rate, "driver_pay": driver_pay,
                 "fuel_est": fuel_est, "margin": margin, "margin_pct": margin / max(rate, 1)}
 
+    if step.name in ("penny.fuel_cost_track", "penny.load_margin", "penny.update_mtd_kpis"):
+        from ..agents.penny import run as penny_run
+        action = step.name.split(".", 1)[1]
+        result = penny_run({**payload, "carrier_id": cid, "action": action})
+        return {**base, **result}
+
+    if step.name in ("stripe.create_customer", "stripe.attach_subscription"):
+        from ..agents.penny import create_checkout_session
+        plan = payload.get("plan", "standard_5pct")
+        email = payload.get("email", "")
+        url = create_checkout_session(cid, plan, email) if cid else None
+        return {**base, "checkout_url": url, "result": "checkout_created" if url else "stripe_skipped"}
+
     # ── Transit ────────────────────────────────────────────────────────────────
     if step.name in ("scout.extract_bol", "scout.extract_pod"):
         from ..agents.scout import run as scout_run
