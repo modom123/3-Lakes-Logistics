@@ -177,3 +177,51 @@ def cron_mark_overdue(x_cron_secret: str | None = Header(default=None)) -> dict:
     count = len(res.data or [])
     log_agent("settler", "mark_overdue_batch", payload={"flagged": count, "as_of": today})
     return {"ok": True, "invoices_flagged_overdue": count, "as_of": today}
+
+
+# ── Nurture Email Batch ───────────────────────────────────────────────────────
+
+@router.post("/nurture-batch")
+def cron_nurture_batch(x_cron_secret: str | None = Header(default=None)) -> dict:
+    """Send due nurture emails to all leads in sequence (run daily)."""
+    _check_cron_secret(x_cron_secret)
+    try:
+        from ..prospecting.email_nurture import run_due_nurtures
+        result = run_due_nurtures()
+    except Exception as exc:
+        log_agent("nova", "nurture_batch_error", payload={"error": str(exc)})
+        raise HTTPException(500, f"nurture batch failed: {exc}") from exc
+    log_agent("nova", "nurture_batch_cron", payload=result)
+    return {"ok": True, **result}
+
+
+# ── Referral Batch ────────────────────────────────────────────────────────────
+
+@router.post("/referral-batch")
+def cron_referral_batch(x_cron_secret: str | None = Header(default=None)) -> dict:
+    """Send referral-ask SMS to dead leads that have phones (run weekly)."""
+    _check_cron_secret(x_cron_secret)
+    try:
+        from ..prospecting.referral_loop import request_referrals
+        result = request_referrals(limit=50)
+    except Exception as exc:
+        log_agent("nova", "referral_batch_error", payload={"error": str(exc)})
+        raise HTTPException(500, f"referral batch failed: {exc}") from exc
+    log_agent("nova", "referral_batch_cron", payload=result)
+    return {"ok": True, **result}
+
+
+# ── Social Signal Scan ────────────────────────────────────────────────────────
+
+@router.post("/social-scan")
+def cron_social_scan(x_cron_secret: str | None = Header(default=None)) -> dict:
+    """Scan Reddit for owner-op signal keywords and ingest as leads (run weekly)."""
+    _check_cron_secret(x_cron_secret)
+    try:
+        from ..prospecting.social_listener import ingest_signals
+        result = ingest_signals(limit=25)
+    except Exception as exc:
+        log_agent("scout", "social_scan_error", payload={"error": str(exc)})
+        raise HTTPException(500, f"social scan failed: {exc}") from exc
+    log_agent("scout", "social_scan_cron", payload=result)
+    return {"ok": True, **result}

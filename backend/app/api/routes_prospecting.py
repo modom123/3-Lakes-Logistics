@@ -15,7 +15,7 @@ Routes:
 """
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 
 from ..logging_service import log_agent
 from ..supabase_client import get_supabase
@@ -219,4 +219,107 @@ def trigger_fmcsa_scrape(body: dict | None = None) -> dict:
     from ..prospecting.fmcsa_scraper import ingest
     result = ingest()
     log_agent("scout", "fmcsa_scrape_manual", payload=result)
+    return {"ok": True, **result}
+
+
+# ── Vapi Webhook ──────────────────────────────────────────────────────────────
+
+@router.post("/vapi-webhook")
+async def vapi_webhook(request: Request) -> dict:
+    """Receive Vapi call lifecycle events (call.ended, transcript, recording)."""
+    import json
+    body = await request.body()
+    try:
+        event = json.loads(body)
+    except Exception:
+        raise HTTPException(400, "invalid JSON")
+    from ..agents.vance import handle_vapi_event
+    handle_vapi_event(event)
+    return {"received": True, "type": event.get("type") or event.get("event")}
+
+
+# ── Nurture ───────────────────────────────────────────────────────────────────
+
+@router.get("/nurture/stats")
+def nurture_stats() -> dict:
+    """Nurture sequence progress: step distribution and pending count."""
+    from datetime import datetime, timezone
+    from ..supabase_client import get_supabase as _gsb
+    sb = _gsb()
+    now = datetime.now(timezone.utc).isoformat()
+    rows = (
+        sb.table("leads")
+          .select("id,nurture_step,stage,next_touch_at")
+          .in_("stage", ["nurture", "contacted", "new"])
+          .eq("do_not_contact", False)
+          .execute().data or []
+    )
+    due = [r for r in rows if r.get("next_touch_at") and r["next_touch_at"] <= now]
+    step_dist: dict[int, int] = {}
+    for r in rows:
+        s = int(r.get("nurture_step") or 0)
+        step_dist[s] = step_dist.get(s, 0) + 1
+    return {
+        "in_sequence": len(rows),
+        "due_now": len(due),
+        "step_distribution": step_dist,
+    }
+
+
+@router.post("/nurture/run")
+def run_nurture_batch() -> dict:
+    """Process all leads with a due nurture email."""
+    from ..prospecting.email_nurture import run_due_nurtures
+    result = run_due_nurtures()
+    return {"ok": True, **result}
+
+
+@router.post("/leads/{lead_id}/nurture-enqueue")
+def nurture_enqueue(lead_id: str) -> dict:
+    """Put a specific lead into the nurture sequence at step 0."""
+    sb = get_supabase()
+    lead = sb.table("leads").select("id").eq("id", lead_id).maybe_single().execute().data
+    if not lead:
+        raise HTTPException(404, "lead not found")
+    from ..prospecting.email_nurture import enqueue_lead
+    enqueue_lead(lead_id)
+    return {"ok": True, "lead_id": lead_id, "stage": "nurture"}
+
+
+# ── Referral Loop ─────────────────────────────────────────────────────────────
+
+@router.post("/referrals/run")
+def run_referral_batch(body: dict | None = None) -> dict:
+    """Send referral-ask SMS to dead leads (up to 50)."""
+    body = body or {}
+    limit = int(body.get("limit", 50))
+    from ..prospecting.referral_loop import request_referrals
+    result = request_referrals(limit=limit)
+    return {"ok": True, **result}
+
+
+# ── Social Listener ───────────────────────────────────────────────────────────
+
+@router.post("/social-scan")
+def social_scan(body: dict | None = None) -> dict:
+    """Scan Reddit for owner-op/dispatch signal keywords and ingest as leads."""
+    body = body or {}
+    limit = int(body.get("limit", 25))
+    from ..prospecting.social_listener import ingest_signals
+    result = ingest_signals(limit=limit)
+    log_agent("scout", "social_scan_manual", payload=result)
+    return {"ok": True, **result}
+
+
+# ── TruckPaper Scrape ─────────────────────────────────────────────────────────
+
+@router.post("/truckpaper-scrape")
+def truckpaper_scrape(body: dict | None = None) -> dict:
+    """Scrape TruckPaper listings for prospective owner-operators."""
+    body = body or {}
+    states = body.get("states")
+    equipment = body.get("equipment", "dry_van")
+    from ..prospecting.truckpaper_scraper import ingest
+    result = ingest(states=states, equipment=equipment)
+    log_agent("scout", "truckpaper_scrape_manual", payload=result)
     return {"ok": True, **result}
