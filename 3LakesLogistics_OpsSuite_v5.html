@@ -530,8 +530,16 @@ td.td-name{font-weight:600;color:var(--navy);}
   <div class="sb-section">
     <div class="sb-label">Automation</div>
     <div class="sb-item" onclick="nav('agents')"><span class="sb-icon">🤖</span> AI Agents <span class="sb-badge" id="agents-notif" style="display:none">●</span></div>
+    <div class="sb-item" onclick="nav('execution')"><span class="sb-icon">⚙️</span> Execution Engine</div>
     <div class="sb-item" onclick="nav('founders')"><span class="sb-icon">🏁</span> Founders Program</div>
     <div class="sb-item" onclick="nav('leads')"><span class="sb-icon">🎯</span> Lead Pipeline</div>
+  </div>
+
+  <div class="sb-section">
+    <div class="sb-label">Contracts</div>
+    <div class="sb-item" onclick="nav('clm')"><span class="sb-icon">📑</span> CLM Scanner <span class="sb-badge" id="clm-notif" style="display:none">●</span></div>
+    <div class="sb-item" onclick="nav('vault')"><span class="sb-icon">🗄️</span> Document Vault</div>
+    <div class="sb-item" onclick="nav('ledger')"><span class="sb-icon">📒</span> Atomic Ledger</div>
   </div>
 
   <div class="sb-footer">
@@ -1015,6 +1023,146 @@ td.td-name{font-weight:600;color:var(--navy);}
       </div>
     </div>
 
+    <!-- ── CLM SCANNER PAGE ── -->
+    <div class="page" id="page-clm">
+      <div class="page-hdr">
+        <div class="page-hdr-l">
+          <div class="chip">AI Contract Intelligence</div>
+          <h2>CLM Scanner</h2>
+        </div>
+        <div class="page-hdr-r" style="display:flex;gap:8px">
+          <button class="btn-out" onclick="loadCLMList()">Refresh</button>
+          <button class="btn-navy" onclick="showCLMScan()">+ Scan Contract</button>
+        </div>
+      </div>
+
+      <div class="metrics" style="margin-bottom:16px">
+        <div class="mc"><div class="mc-label">Total Contracts</div><div class="mc-val blue" id="clm-total">—</div></div>
+        <div class="mc"><div class="mc-label">Active</div><div class="mc-val green" id="clm-active">—</div></div>
+        <div class="mc"><div class="mc-label">Avg Confidence</div><div class="mc-val gold" id="clm-confidence">—</div></div>
+        <div class="mc"><div class="mc-label">Pending Review</div><div class="mc-val orange" id="clm-review">—</div></div>
+      </div>
+
+      <!-- Scan Panel -->
+      <div class="card" id="clm-scan-panel" style="display:none;margin-bottom:16px">
+        <div class="card-hd"><div class="card-title">Scan New Contract</div></div>
+        <div style="padding:0 4px">
+          <div class="form-row">
+            <div class="fg">
+              <label class="fl">Document Type</label>
+              <select class="fsel" id="clm-doc-type">
+                <option value="rate_confirmation">Rate Confirmation</option>
+                <option value="bol">Bill of Lading (BOL)</option>
+                <option value="pod">Proof of Delivery (POD)</option>
+                <option value="broker_agreement">Broker Agreement</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="fg">
+              <label class="fl">Paste Contract Text</label>
+              <textarea class="fi" id="clm-raw-text" rows="8" placeholder="Paste rate confirmation, BOL, POD, or broker agreement text here…" style="resize:vertical;font-size:12px;font-family:monospace"></textarea>
+            </div>
+          </div>
+          <div style="display:flex;gap:8px;margin-top:8px">
+            <button class="btn-navy" onclick="runCLMScan()" id="clm-scan-btn">🤖 Scan with Claude AI</button>
+            <button class="btn-out" onclick="document.getElementById('clm-scan-panel').style.display='none'">Cancel</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Results -->
+      <div class="card" id="clm-result-panel" style="display:none;margin-bottom:16px">
+        <div class="card-hd"><div class="card-title">Extraction Result</div><span id="clm-result-conf" class="badge badge-green"></span></div>
+        <div id="clm-result-body" style="padding:4px 0"></div>
+      </div>
+
+      <!-- Contracts Table -->
+      <div class="card">
+        <div class="card-hd"><div class="card-title">All Contracts</div></div>
+        <div id="clm-table"><div class="loading"><div class="spin"></div>Loading contracts…</div></div>
+      </div>
+    </div>
+
+    <!-- ── DOCUMENT VAULT PAGE ── -->
+    <div class="page" id="page-vault">
+      <div class="page-hdr">
+        <div class="page-hdr-l">
+          <div class="chip">CLM</div>
+          <h2>Document Vault</h2>
+        </div>
+        <div class="page-hdr-r">
+          <button class="btn-out" onclick="loadVault()">Refresh</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-hd"><div class="card-title">All Documents</div></div>
+        <div id="vault-table"><div class="loading"><div class="spin"></div>Loading vault…</div></div>
+      </div>
+    </div>
+
+    <!-- ── ATOMIC LEDGER PAGE ── -->
+    <div class="page" id="page-ledger">
+      <div class="page-hdr">
+        <div class="page-hdr-l">
+          <div class="chip">Audit Trail</div>
+          <h2>Atomic Ledger</h2>
+        </div>
+        <div class="page-hdr-r">
+          <button class="btn-out" onclick="loadLedger()">Refresh</button>
+        </div>
+      </div>
+      <div class="metrics" style="margin-bottom:16px">
+        <div class="mc"><div class="mc-label">Total Events</div><div class="mc-val blue" id="ledger-total">—</div></div>
+        <div class="mc"><div class="mc-label">Contracts</div><div class="mc-val green" id="ledger-contracts">—</div></div>
+        <div class="mc"><div class="mc-label">Settlements</div><div class="mc-val gold" id="ledger-settle">—</div></div>
+        <div class="mc"><div class="mc-label">Compliance</div><div class="mc-val orange" id="ledger-compliance">—</div></div>
+      </div>
+      <div class="card">
+        <div class="card-hd"><div class="card-title">Recent Events</div></div>
+        <div id="ledger-table"><div class="loading"><div class="spin"></div>Loading ledger…</div></div>
+      </div>
+    </div>
+
+    <!-- ── EXECUTION ENGINE PAGE ── -->
+    <div class="page" id="page-execution">
+      <div class="page-hdr">
+        <div class="page-hdr-l">
+          <div class="chip">Autonomous Operations</div>
+          <h2>Execution Engine</h2>
+        </div>
+        <div class="page-hdr-r" style="display:flex;gap:8px">
+          <select class="fsel" id="exec-domain-filter" onchange="loadExecutionSteps()" style="width:160px">
+            <option value="">All Domains</option>
+            <option value="onboarding">Onboarding</option>
+            <option value="dispatch">Dispatch</option>
+            <option value="transit">Transit</option>
+            <option value="settlement">Settlement</option>
+            <option value="clm">CLM</option>
+            <option value="compliance">Compliance</option>
+            <option value="analytics">Analytics</option>
+          </select>
+          <button class="btn-out" onclick="loadExecutionSteps()">Refresh</button>
+        </div>
+      </div>
+
+      <div class="metrics" style="margin-bottom:16px">
+        <div class="mc"><div class="mc-label">Total Steps</div><div class="mc-val blue">200</div></div>
+        <div class="mc"><div class="mc-label">Complete</div><div class="mc-val green" id="exec-complete">—</div></div>
+        <div class="mc"><div class="mc-label">Running</div><div class="mc-val orange" id="exec-running">—</div></div>
+        <div class="mc"><div class="mc-label">Failed</div><div class="mc-val red" id="exec-failed">—</div></div>
+      </div>
+
+      <!-- Domain Cards -->
+      <div id="exec-domains" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;margin-bottom:16px"></div>
+
+      <!-- Step Log -->
+      <div class="card">
+        <div class="card-hd"><div class="card-title">Recent Step Executions</div></div>
+        <div id="exec-log"><div class="loading"><div class="spin"></div>Loading executions…</div></div>
+      </div>
+    </div>
+
   </div><!-- /content -->
 </div><!-- /main -->
 
@@ -1178,6 +1326,10 @@ function nav(id){
   if(id==='invoices'){const n=document.getElementById('invoice-notif');if(n)n.style.display='none';renderInvoices();}
   if(id==='notes')loadNotes();
   if(id==='compliance'||id==='insurance')renderCarrierCompliance();
+  if(id==='clm')loadCLMList();
+  if(id==='vault')loadVault();
+  if(id==='ledger')loadLedger();
+  if(id==='execution'){loadExecutionDomains();loadExecutionSteps();}
 }
 
 function openModal(id){
@@ -2096,6 +2248,161 @@ async function loadLeadsPipeline(){
   setInterval(refreshAll,30000);
   setInterval(checkBackend,60000);
 })();
+
+// ══════════════════════════════════════════════════════
+// CLM SCANNER
+// ══════════════════════════════════════════════════════
+function showCLMScan(){
+  const p=document.getElementById('clm-scan-panel');
+  p.style.display=p.style.display==='none'?'block':'none';
+}
+
+async function loadCLMList(){
+  const t=document.getElementById('clm-table');
+  t.innerHTML='<div class="loading"><div class="spin"></div>Loading…</div>';
+  try{
+    const res=await apiFetch('/api/clm/');
+    const data=await res.json();
+    document.getElementById('clm-total').textContent=data.length||0;
+    document.getElementById('clm-active').textContent=data.filter(c=>c.status==='active').length;
+    document.getElementById('clm-review').textContent=data.filter(c=>c.status==='draft').length;
+    if(!data.length){t.innerHTML='<div style="padding:20px;color:var(--muted);text-align:center">No contracts yet. Click "Scan Contract" to process your first rate confirmation.</div>';return;}
+    t.innerHTML=`<table class="tbl"><thead><tr><th>Type</th><th>Counterparty</th><th>Route</th><th>Rate</th><th>Terms</th><th>Milestone</th><th>Status</th><th>Date</th></tr></thead>
+      <tbody>${data.map(c=>`<tr>
+        <td><span class="badge badge-blue">${(c.contract_type||'').replace(/_/g,' ')}</span></td>
+        <td class="td-name">${c.counterparty_name||'—'}</td>
+        <td>${c.origin_city||'?'} → ${c.destination_city||'?'}</td>
+        <td>${c.rate_total?'$'+Number(c.rate_total).toLocaleString():'—'}</td>
+        <td>${c.payment_terms||'—'}</td>
+        <td><div style="display:flex;align-items:center;gap:6px"><div style="flex:1;height:4px;border-radius:2px;background:#e2e8f0;overflow:hidden"><div style="height:100%;width:${c.milestone_pct||0}%;background:var(--green)"></div></div><span style="font-size:11px">${c.milestone_pct||0}%</span></div></td>
+        <td><span class="badge badge-${c.status==='active'?'green':c.status==='executed'?'blue':'orange'}">${c.status}</span></td>
+        <td>${c.created_at?new Date(c.created_at).toLocaleDateString():''}</td>
+      </tr>`).join('')}</tbody></table>`;
+  }catch(e){t.innerHTML=`<div style="padding:20px;color:var(--red)">Error loading contracts: ${e.message}</div>`;}
+}
+
+async function runCLMScan(){
+  const btn=document.getElementById('clm-scan-btn');
+  const rawText=document.getElementById('clm-raw-text').value.trim();
+  const docType=document.getElementById('clm-doc-type').value;
+  if(!rawText){alert('Paste contract text first');return;}
+  btn.disabled=true;btn.textContent='Scanning…';
+  try{
+    const res=await apiFetch('/api/clm/scan','POST',{raw_text:rawText,contract_type:docType});
+    const data=await res.json();
+    const conf=Math.round((data.confidence_score||0)*100);
+    document.getElementById('clm-result-conf').textContent=`${conf}% confidence · ${data.fields_extracted} fields`;
+    document.getElementById('clm-result-conf').className=`badge badge-${conf>=80?'green':conf>=60?'orange':'red'}`;
+    const vars=data.extracted_vars||{};
+    const rows=Object.entries(vars).filter(([k,v])=>v!==null&&v!==undefined&&v!==''&&v!==false&&k!=='extra')
+      .map(([k,v])=>`<tr><td style="color:var(--muted);font-size:11px;padding:4px 8px;white-space:nowrap">${k.replace(/_/g,' ')}</td><td style="font-weight:600;padding:4px 8px">${Array.isArray(v)?v.join(', '):String(v)}</td></tr>`).join('');
+    document.getElementById('clm-result-body').innerHTML=`<table style="width:100%;border-collapse:collapse">${rows}</table>
+      ${data.warnings?.length?`<div style="margin-top:8px;padding:8px 12px;background:#fef3c7;border-radius:6px;font-size:12px;color:#92400e">⚠️ ${data.warnings.join(' · ')}</div>`:''}`;
+    document.getElementById('clm-result-panel').style.display='block';
+    document.getElementById('clm-scan-panel').style.display='none';
+    loadCLMList();
+    showToast('✅ Contract scanned — '+data.fields_extracted+' fields extracted');
+  }catch(e){alert('Scan failed: '+e.message);}
+  btn.disabled=false;btn.textContent='🤖 Scan with Claude AI';
+}
+
+// ══════════════════════════════════════════════════════
+// DOCUMENT VAULT
+// ══════════════════════════════════════════════════════
+async function loadVault(){
+  const t=document.getElementById('vault-table');
+  t.innerHTML='<div class="loading"><div class="spin"></div>Loading…</div>';
+  try{
+    const res=await apiFetch('/api/clm/vault/docs');
+    const data=await res.json();
+    if(!data.length){t.innerHTML='<div style="padding:20px;color:var(--muted);text-align:center">Vault is empty. Docs upload automatically when drivers submit BOL/POD from the Driver App.</div>';return;}
+    t.innerHTML=`<table class="tbl"><thead><tr><th>Type</th><th>Filename</th><th>Size</th><th>Scan Status</th><th>Uploaded</th></tr></thead>
+      <tbody>${data.map(d=>`<tr>
+        <td><span class="badge badge-blue">${d.doc_type}</span></td>
+        <td>${d.filename}</td>
+        <td style="color:var(--muted)">${d.file_size_kb?d.file_size_kb+'KB':'—'}</td>
+        <td><span class="badge badge-${d.scan_status==='complete'?'green':d.scan_status==='failed'?'red':'orange'}">${d.scan_status}</span></td>
+        <td style="color:var(--muted)">${d.uploaded_at?new Date(d.uploaded_at).toLocaleDateString():''}</td>
+      </tr>`).join('')}</tbody></table>`;
+  }catch(e){t.innerHTML=`<div style="padding:20px;color:var(--red)">Error: ${e.message}</div>`;}
+}
+
+// ══════════════════════════════════════════════════════
+// ATOMIC LEDGER
+// ══════════════════════════════════════════════════════
+async function loadLedger(){
+  const t=document.getElementById('ledger-table');
+  t.innerHTML='<div class="loading"><div class="spin"></div>Loading…</div>';
+  try{
+    const res=await apiFetch('/api/ledger/events?limit=100');
+    const data=await res.json();
+    document.getElementById('ledger-total').textContent=data.length;
+    document.getElementById('ledger-contracts').textContent=data.filter(e=>e.event_type?.startsWith('contract.')).length;
+    document.getElementById('ledger-settle').textContent=data.filter(e=>e.event_type?.includes('settlement')).length;
+    document.getElementById('ledger-compliance').textContent=data.filter(e=>e.event_type?.includes('compliance')||e.event_type?.includes('cdl')).length;
+    if(!data.length){t.innerHTML='<div style="padding:20px;color:var(--muted);text-align:center">No events yet. Every agent action writes an atomic event automatically.</div>';return;}
+    t.innerHTML=`<table class="tbl"><thead><tr><th>Event</th><th>Source</th><th>Details</th><th>Amount</th><th>Time</th></tr></thead>
+      <tbody>${data.map(e=>{
+        const lp=e.logistics_payload||{};const fp=e.financial_payload||{};
+        const detail=[lp.origin&&lp.destination?lp.origin+'→'+lp.destination:'',lp.contract_type||''].filter(Boolean).join(' · ');
+        return`<tr>
+          <td><span class="badge badge-blue">${e.event_type}</span></td>
+          <td style="color:var(--muted);font-size:11px">${e.event_source||'—'}</td>
+          <td style="font-size:12px">${detail||'—'}</td>
+          <td style="color:var(--green);font-weight:600">${fp.rate_total?'$'+Number(fp.rate_total).toLocaleString():''}</td>
+          <td style="font-size:11px;color:var(--muted);white-space:nowrap">${e.created_at?new Date(e.created_at).toLocaleString():''}</td>
+        </tr>`;}).join('')}</tbody></table>`;
+  }catch(e){t.innerHTML=`<div style="padding:20px;color:var(--red)">Error: ${e.message}</div>`;}
+}
+
+// ══════════════════════════════════════════════════════
+// EXECUTION ENGINE
+// ══════════════════════════════════════════════════════
+async function loadExecutionDomains(){
+  try{
+    const res=await apiFetch('/api/execution/domains');
+    const data=await res.json();
+    const colors={onboarding:'var(--blue)',dispatch:'var(--green)',transit:'var(--orange)',settlement:'var(--gold)',clm:'var(--blue)',compliance:'var(--red)',analytics:'var(--green)'};
+    document.getElementById('exec-domains').innerHTML=data.map(d=>`
+      <div class="card" style="cursor:pointer;transition:box-shadow .15s" onmouseover="this.style.boxShadow='var(--shadow-lg)'" onmouseout="this.style.boxShadow=''" onclick="document.getElementById('exec-domain-filter').value='${d.domain}';loadExecutionSteps()">
+        <div style="font-size:10px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);margin-bottom:4px">${d.domain}</div>
+        <div style="font-size:26px;font-weight:900;color:${colors[d.domain]||'var(--blue)'}">${d.step_count}</div>
+        <div style="font-size:11px;color:var(--muted)">Steps ${d.step_range}</div>
+      </div>`).join('');
+  }catch(e){}
+}
+
+async function loadExecutionSteps(){
+  const t=document.getElementById('exec-log');
+  t.innerHTML='<div class="loading"><div class="spin"></div>Loading…</div>';
+  const domain=document.getElementById('exec-domain-filter')?.value||'';
+  try{
+    const qs=domain?`?domain=${domain}`:'';
+    const [stepsRes,execRes]=await Promise.all([
+      apiFetch('/api/execution/steps'+qs),
+      apiFetch('/api/execution/executions'+(qs?qs+'&limit=50':'?limit=50'))
+    ]);
+    const steps=await stepsRes.json();
+    const execs=await execRes.json();
+    document.getElementById('exec-complete').textContent=execs.filter(e=>e.status==='complete').length;
+    document.getElementById('exec-running').textContent=execs.filter(e=>e.status==='running').length;
+    document.getElementById('exec-failed').textContent=execs.filter(e=>e.status==='failed').length;
+    if(!execs.length){
+      t.innerHTML=`<div style="padding:24px;text-align:center;color:var(--muted)"><strong>${steps.length} steps registered across 7 domains.</strong><br>Steps execute automatically as carriers onboard, loads dispatch, and contracts process.</div>`;
+      return;
+    }
+    t.innerHTML=`<table class="tbl"><thead><tr><th>Step #</th><th>Name</th><th>Domain</th><th>Status</th><th>Duration</th><th>Carrier</th><th>Time</th></tr></thead>
+      <tbody>${execs.map(e=>`<tr>
+        <td style="font-weight:800;color:var(--navy)">${e.step_number}</td>
+        <td style="font-size:12px">${e.step_name}</td>
+        <td><span class="badge badge-blue">${e.domain}</span></td>
+        <td><span class="badge badge-${e.status==='complete'?'green':e.status==='failed'?'red':'orange'}">${e.status}</span></td>
+        <td style="color:var(--muted);font-size:12px">${e.duration_ms?e.duration_ms+'ms':'—'}</td>
+        <td style="color:var(--muted);font-size:11px">${e.carrier_id?e.carrier_id.slice(0,8)+'…':'—'}</td>
+        <td style="color:var(--muted);font-size:11px;white-space:nowrap">${e.created_at?new Date(e.created_at).toLocaleString():''}</td>
+      </tr>`).join('')}</tbody></table>`;
+  }catch(e){t.innerHTML=`<div style="padding:20px;color:var(--red)">Error: ${e.message}</div>`;}
+}
 </script>
 </body>
 </html>

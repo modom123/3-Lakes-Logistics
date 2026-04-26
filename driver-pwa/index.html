@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#0a0f1e" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>3 Lakes Driver</title>
+  <link rel="manifest" href="manifest.json" />
+  <style>
+    :root {
+      --bg:       #0a0f1e;
+      --surface:  #111827;
+      --card:     #1a2235;
+      --border:   #2a3550;
+      --accent:   #3b82f6;
+      --green:    #22c55e;
+      --yellow:   #f59e0b;
+      --red:      #ef4444;
+      --text:     #f1f5f9;
+      --muted:    #64748b;
+      --radius:   14px;
+      --safe-top: env(safe-area-inset-top, 0px);
+      --safe-bot: env(safe-area-inset-bottom, 0px);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    html, body { height: 100%; background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; overflow: hidden; }
+
+    /* ── HEADER ── */
+    #header {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      padding: calc(var(--safe-top) + 12px) 16px 12px;
+      background: var(--surface); border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    #header .logo { font-size: 18px; font-weight: 700; color: var(--accent); letter-spacing: -.5px; }
+    #header .logo span { color: var(--text); }
+    #driver-name { font-size: 12px; color: var(--muted); }
+    #online-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); box-shadow: 0 0 6px var(--green); }
+
+    /* ── MAIN SCROLL AREA ── */
+    #main {
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      padding-top: calc(var(--safe-top) + 58px);
+      padding-bottom: calc(var(--safe-bot) + 68px);
+      overflow-y: auto; -webkit-overflow-scrolling: touch;
+    }
+    .scroll-inner { padding: 12px 12px 0; }
+
+    /* ── BOTTOM NAV ── */
+    #bottom-nav {
+      position: fixed; bottom: 0; left: 0; right: 0; z-index: 100;
+      padding: 0 0 var(--safe-bot);
+      background: var(--surface); border-top: 1px solid var(--border);
+      display: flex;
+    }
+    .nav-btn {
+      flex: 1; display: flex; flex-direction: column; align-items: center;
+      padding: 10px 4px; gap: 3px; border: none; background: none;
+      color: var(--muted); font-size: 10px; cursor: pointer;
+      transition: color .15s;
+    }
+    .nav-btn.active { color: var(--accent); }
+    .nav-btn svg { width: 22px; height: 22px; }
+
+    /* ── VIEWS ── */
+    .view { display: none; }
+    .view.active { display: block; }
+
+    /* ── CARDS ── */
+    .card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 16px; margin-bottom: 10px;
+    }
+    .card-title { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .8px; margin-bottom: 10px; }
+    .card-value { font-size: 28px; font-weight: 700; }
+    .card-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+    /* ── STATUS PILL ── */
+    .pill {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 4px 10px; border-radius: 99px; font-size: 11px; font-weight: 600;
+    }
+    .pill-green  { background: #14532d44; color: var(--green);  border: 1px solid #22c55e44; }
+    .pill-yellow { background: #78350f44; color: var(--yellow); border: 1px solid #f59e0b44; }
+    .pill-red    { background: #7f1d1d44; color: var(--red);    border: 1px solid #ef444444; }
+    .pill-blue   { background: #1e3a5f44; color: var(--accent); border: 1px solid #3b82f644; }
+    .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+
+    /* ── LOAD CARD ── */
+    .load-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; margin-bottom: 10px; }
+    .load-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
+    .load-number { font-size: 16px; font-weight: 700; }
+    .route { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+    .city { flex: 1; }
+    .city-name { font-size: 15px; font-weight: 600; }
+    .city-state { font-size: 11px; color: var(--muted); }
+    .arrow { color: var(--muted); font-size: 16px; }
+    .load-meta { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .meta-item { background: var(--surface); border-radius: 8px; padding: 8px 10px; }
+    .meta-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 2px; }
+    .meta-value { font-size: 14px; font-weight: 600; }
+
+    /* ── ACTION BUTTONS ── */
+    .btn { width: 100%; padding: 14px; border-radius: var(--radius); border: none; font-size: 15px; font-weight: 600; cursor: pointer; transition: opacity .15s; margin-bottom: 8px; display: flex; align-items: center; justify-content: center; gap: 8px; }
+    .btn:active { opacity: .7; }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-success { background: var(--green); color: #fff; }
+    .btn-warning { background: var(--yellow); color: #000; }
+    .btn-danger  { background: var(--red);   color: #fff; }
+    .btn-ghost   { background: var(--surface); color: var(--text); border: 1px solid var(--border); }
+
+    /* ── HOS GAUGE ── */
+    .hos-row { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin-bottom: 10px; }
+    .hos-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 10px; text-align: center; }
+    .hos-hours { font-size: 22px; font-weight: 700; }
+    .hos-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; margin-top: 2px; }
+    .hos-bar { height: 4px; border-radius: 2px; background: var(--border); margin-top: 6px; overflow: hidden; }
+    .hos-fill { height: 100%; border-radius: 2px; transition: width .3s; }
+
+    /* ── SECTION HEADER ── */
+    .section-header { font-size: 13px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .8px; margin: 16px 0 8px; }
+
+    /* ── TOAST ── */
+    #toast {
+      position: fixed; bottom: calc(var(--safe-bot) + 80px); left: 50%; transform: translateX(-50%) translateY(20px);
+      background: #1e293b; border: 1px solid var(--border); border-radius: 99px;
+      padding: 10px 20px; font-size: 13px; font-weight: 500;
+      opacity: 0; transition: opacity .2s, transform .2s; pointer-events: none; white-space: nowrap; z-index: 999;
+    }
+    #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    /* ── UPLOAD ZONE ── */
+    .upload-zone {
+      border: 2px dashed var(--border); border-radius: var(--radius);
+      padding: 24px 16px; text-align: center; cursor: pointer;
+      transition: border-color .15s; margin-bottom: 10px;
+    }
+    .upload-zone:hover, .upload-zone.drag-over { border-color: var(--accent); }
+    .upload-zone input { display: none; }
+    .upload-icon { font-size: 32px; margin-bottom: 8px; }
+    .upload-text { font-size: 13px; color: var(--muted); }
+    .upload-text strong { color: var(--text); display: block; margin-bottom: 2px; }
+
+    /* ── CDL CARD ── */
+    .cdl-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border); }
+    .cdl-row:last-child { border-bottom: none; }
+    .cdl-label { font-size: 12px; color: var(--muted); }
+    .cdl-value { font-size: 13px; font-weight: 600; }
+  </style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div id="header">
+  <div>
+    <div class="logo">3 Lakes <span>Driver</span></div>
+    <div id="driver-name">Loading...</div>
+  </div>
+  <div style="display:flex;align-items:center;gap:8px;">
+    <div id="online-dot"></div>
+    <span style="font-size:11px;color:var(--muted)" id="conn-label">Online</span>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div id="main">
+  <div class="scroll-inner">
+
+    <!-- ── HOME VIEW ── -->
+    <div class="view active" id="view-home">
+      <div class="section-header">Current Load</div>
+      <div class="load-card" id="current-load-card">
+        <div class="load-header">
+          <div class="load-number" id="load-number">Fetching...</div>
+          <span class="pill pill-blue"><span class="dot"></span><span id="load-status-pill">Loading</span></span>
+        </div>
+        <div class="route">
+          <div class="city">
+            <div class="city-name" id="origin-city">—</div>
+            <div class="city-state" id="origin-state"></div>
+          </div>
+          <div class="arrow">→</div>
+          <div class="city" style="text-align:right">
+            <div class="city-name" id="dest-city">—</div>
+            <div class="city-state" id="dest-state"></div>
+          </div>
+        </div>
+        <div class="load-meta">
+          <div class="meta-item"><div class="meta-label">Rate</div><div class="meta-value" id="load-rate">—</div></div>
+          <div class="meta-item"><div class="meta-label">Miles</div><div class="meta-value" id="load-miles">—</div></div>
+          <div class="meta-item"><div class="meta-label">Pickup</div><div class="meta-value" id="load-pickup">—</div></div>
+        </div>
+      </div>
+
+      <div id="action-area">
+        <button class="btn btn-success" id="btn-pickup" onclick="confirmPickup()">
+          ✅ Confirm Pickup
+        </button>
+        <button class="btn btn-primary" id="btn-delivery" onclick="confirmDelivery()" style="display:none">
+          📦 Confirm Delivery
+        </button>
+        <button class="btn btn-warning" onclick="showView('docs')">
+          📎 Upload BOL / POD
+        </button>
+        <button class="btn btn-ghost" onclick="reportIssue()">
+          ⚠️ Report Issue / Breakdown
+        </button>
+      </div>
+
+      <div class="section-header">HOS — Hours of Service</div>
+      <div class="hos-row">
+        <div class="hos-card">
+          <div class="hos-hours" id="hos-drive" style="color:var(--green)">10:59</div>
+          <div class="hos-label">Drive</div>
+          <div class="hos-bar"><div class="hos-fill" id="hos-drive-bar" style="width:91%;background:var(--green)"></div></div>
+        </div>
+        <div class="hos-card">
+          <div class="hos-hours" id="hos-shift">12:45</div>
+          <div class="hos-label">Shift</div>
+          <div class="hos-bar"><div class="hos-fill" id="hos-shift-bar" style="width:80%;background:var(--accent)"></div></div>
+        </div>
+        <div class="hos-card">
+          <div class="hos-hours" id="hos-cycle">68:30</div>
+          <div class="hos-label">70hr Cycle</div>
+          <div class="hos-bar"><div class="hos-fill" id="hos-cycle-bar" style="width:98%;background:var(--yellow)"></div></div>
+        </div>
+      </div>
+
+      <div class="section-header">Today's Summary</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
+        <div class="card">
+          <div class="card-title">Miles Today</div>
+          <div class="card-value" id="miles-today">—</div>
+        </div>
+        <div class="card">
+          <div class="card-title">Est. Pay</div>
+          <div class="card-value" style="color:var(--green)" id="est-pay">—</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── LOADS VIEW ── -->
+    <div class="view" id="view-loads">
+      <div class="section-header">Available Loads</div>
+      <div id="available-loads-list">
+        <div style="text-align:center;padding:40px;color:var(--muted)">No loads available right now</div>
+      </div>
+    </div>
+
+    <!-- ── DOCS VIEW ── -->
+    <div class="view" id="view-docs">
+      <div class="section-header">Upload Documents</div>
+
+      <div class="card">
+        <div class="card-title">Bill of Lading (BOL)</div>
+        <div class="upload-zone" onclick="triggerUpload('bol-upload')">
+          <input type="file" id="bol-upload" accept="image/*,application/pdf" onchange="handleUpload('bol', this)" />
+          <div class="upload-icon">📄</div>
+          <div class="upload-text"><strong>Tap to upload BOL</strong>Take a photo or choose PDF</div>
+        </div>
+        <div id="bol-status" style="display:none" class="pill pill-green">✓ BOL uploaded</div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Proof of Delivery (POD)</div>
+        <div class="upload-zone" onclick="triggerUpload('pod-upload')">
+          <input type="file" id="pod-upload" accept="image/*,application/pdf" onchange="handleUpload('pod', this)" />
+          <div class="upload-icon">✍️</div>
+          <div class="upload-text"><strong>Tap to upload POD</strong>Get receiver signature then upload</div>
+        </div>
+        <div id="pod-status" style="display:none" class="pill pill-green">✓ POD uploaded</div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Lumper Receipt</div>
+        <div class="upload-zone" onclick="triggerUpload('lumper-upload')">
+          <input type="file" id="lumper-upload" accept="image/*,application/pdf" onchange="handleUpload('lumper', this)" />
+          <div class="upload-icon">🧾</div>
+          <div class="upload-text"><strong>Tap to upload receipt</strong>Required for reimbursement</div>
+        </div>
+      </div>
+
+      <div class="section-header">Uploaded Documents</div>
+      <div id="docs-list" style="color:var(--muted);font-size:13px;padding:8px 0">No documents uploaded for current load.</div>
+    </div>
+
+    <!-- ── PROFILE VIEW ── -->
+    <div class="view" id="view-profile">
+      <div class="section-header">Driver Profile</div>
+      <div class="card">
+        <div class="card-title">CDL Status</div>
+        <div class="cdl-row">
+          <div class="cdl-label">CDL Number</div>
+          <div class="cdl-value" id="cdl-number">—</div>
+        </div>
+        <div class="cdl-row">
+          <div class="cdl-label">Class</div>
+          <div class="cdl-value" id="cdl-class">—</div>
+        </div>
+        <div class="cdl-row">
+          <div class="cdl-label">State</div>
+          <div class="cdl-value" id="cdl-state">—</div>
+        </div>
+        <div class="cdl-row">
+          <div class="cdl-label">Expiry</div>
+          <div class="cdl-value" id="cdl-expiry">—</div>
+        </div>
+        <div class="cdl-row">
+          <div class="cdl-label">Status</div>
+          <div class="cdl-value"><span class="pill pill-green" id="cdl-status-pill"><span class="dot"></span> Valid</span></div>
+        </div>
+        <div class="cdl-row">
+          <div class="cdl-label">Medical Card</div>
+          <div class="cdl-value" id="medical-expiry">—</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Performance</div>
+        <div class="cdl-row">
+          <div class="cdl-label">On-Time Rate</div>
+          <div class="cdl-value" id="perf-ontime">—</div>
+        </div>
+        <div class="cdl-row">
+          <div class="cdl-label">Loads This Month</div>
+          <div class="cdl-value" id="perf-loads">—</div>
+        </div>
+        <div class="cdl-row">
+          <div class="cdl-label">Miles This Month</div>
+          <div class="cdl-value" id="perf-miles">—</div>
+        </div>
+        <div class="cdl-row">
+          <div class="cdl-label">Gross This Month</div>
+          <div class="cdl-value" id="perf-gross">—</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Carrier Info</div>
+        <div class="cdl-row">
+          <div class="cdl-label">Company</div>
+          <div class="cdl-value" id="carrier-name">—</div>
+        </div>
+        <div class="cdl-row">
+          <div class="cdl-label">MC #</div>
+          <div class="cdl-value" id="carrier-mc">—</div>
+        </div>
+        <div class="cdl-row">
+          <div class="cdl-label">ELD Provider</div>
+          <div class="cdl-value" id="eld-provider">—</div>
+        </div>
+      </div>
+
+      <button class="btn btn-ghost" onclick="logout()" style="margin-top:8px">Sign Out</button>
+    </div>
+
+  </div><!-- /scroll-inner -->
+</div><!-- /main -->
+
+<!-- BOTTOM NAV -->
+<div id="bottom-nav">
+  <button class="nav-btn active" id="nav-home" onclick="showView('home')">
+    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+    Home
+  </button>
+  <button class="nav-btn" id="nav-loads" onclick="showView('loads')">
+    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+    Loads
+  </button>
+  <button class="nav-btn" id="nav-docs" onclick="showView('docs')">
+    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+    Docs
+  </button>
+  <button class="nav-btn" id="nav-profile" onclick="showView('profile')">
+    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+    Profile
+  </button>
+</div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<script>
+const API = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+  ? 'http://localhost:8080'
+  : '';
+const TOKEN = localStorage.getItem('3ll_token') || '';
+const DRIVER_ID = localStorage.getItem('3ll_driver_id') || 'DRV-001';
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('driver-name').textContent = localStorage.getItem('3ll_driver_name') || 'Driver';
+  loadCurrentLoad();
+  loadProfile();
+  setInterval(pollHOS, 30000);
+  registerServiceWorker();
+});
+
+function registerServiceWorker() {
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  }
+}
+
+// ── VIEW NAVIGATION ──────────────────────────────────────────────────────────
+function showView(name) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('view-' + name).classList.add('active');
+  document.getElementById('nav-' + name).classList.add('active');
+  if (name === 'loads') loadAvailableLoads();
+  if (name === 'docs') loadDocs();
+}
+
+// ── LOAD DATA ────────────────────────────────────────────────────────────────
+async function loadCurrentLoad() {
+  try {
+    const res = await apiFetch(`/api/fleet?status=in_transit&limit=1`);
+    const loads = await res.json();
+    if (loads && loads.length > 0) renderCurrentLoad(loads[0]);
+    else renderNoLoad();
+  } catch { renderNoLoad(); }
+}
+
+function renderCurrentLoad(load) {
+  document.getElementById('load-number').textContent = load.load_number || load.id?.slice(0,8) || 'LOAD-001';
+  document.getElementById('load-status-pill').textContent = (load.status || 'dispatched').replace('_', ' ').toUpperCase();
+  document.getElementById('origin-city').textContent = load.origin_city || '—';
+  document.getElementById('origin-state').textContent = load.origin_state || '';
+  document.getElementById('dest-city').textContent = load.dest_city || '—';
+  document.getElementById('dest-state').textContent = load.dest_state || '';
+  document.getElementById('load-rate').textContent = load.rate_total ? '$' + Number(load.rate_total).toLocaleString() : '—';
+  document.getElementById('load-miles').textContent = load.miles ? load.miles.toLocaleString() : '—';
+  document.getElementById('load-pickup').textContent = load.pickup_at ? new Date(load.pickup_at).toLocaleDateString('en-US',{month:'short',day:'numeric'}) : '—';
+  document.getElementById('miles-today').textContent = load.miles ? load.miles.toLocaleString() : '—';
+  document.getElementById('est-pay').textContent = load.rate_total ? '$' + (load.rate_total * 0.72).toFixed(0) : '—';
+  if (load.status === 'in_transit') {
+    document.getElementById('btn-pickup').style.display = 'none';
+    document.getElementById('btn-delivery').style.display = 'flex';
+  }
+}
+
+function renderNoLoad() {
+  document.getElementById('load-number').textContent = 'No Active Load';
+  document.getElementById('load-status-pill').textContent = 'AVAILABLE';
+  ['origin-city','dest-city','load-rate','load-miles','load-pickup','miles-today','est-pay'].forEach(id => {
+    document.getElementById(id).textContent = '—';
+  });
+}
+
+async function loadAvailableLoads() {
+  const list = document.getElementById('available-loads-list');
+  list.innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted)">Loading loads...</div>';
+  try {
+    const res = await apiFetch('/api/fleet?status=booked&limit=10');
+    const loads = await res.json();
+    if (!loads || loads.length === 0) {
+      list.innerHTML = '<div style="text-align:center;padding:40px;color:var(--muted)">No loads available right now</div>';
+      return;
+    }
+    list.innerHTML = loads.map(l => `
+      <div class="load-card">
+        <div class="load-header">
+          <div class="load-number">${l.load_number || l.id.slice(0,8)}</div>
+          <span class="pill pill-blue"><span class="dot"></span>Available</span>
+        </div>
+        <div class="route">
+          <div class="city"><div class="city-name">${l.origin_city||'?'}</div><div class="city-state">${l.origin_state||''}</div></div>
+          <div class="arrow">→</div>
+          <div class="city" style="text-align:right"><div class="city-name">${l.dest_city||'?'}</div><div class="city-state">${l.dest_state||''}</div></div>
+        </div>
+        <div class="load-meta">
+          <div class="meta-item"><div class="meta-label">Rate</div><div class="meta-value">${l.rate_total ? '$'+Number(l.rate_total).toLocaleString() : '—'}</div></div>
+          <div class="meta-item"><div class="meta-label">Miles</div><div class="meta-value">${l.miles||'—'}</div></div>
+          <div class="meta-item"><div class="meta-label">RPM</div><div class="meta-value">${l.rate_per_mile ? '$'+Number(l.rate_per_mile).toFixed(2) : '—'}</div></div>
+        </div>
+        <button class="btn btn-primary" style="margin-top:10px;margin-bottom:0" onclick="acceptLoad('${l.id}')">Accept Load</button>
+      </div>`).join('');
+  } catch { list.innerHTML = '<div style="text-align:center;padding:40px;color:var(--muted)">Unable to load</div>'; }
+}
+
+async function loadProfile() {
+  // Populate CDL fields from localStorage or API
+  const cdl = JSON.parse(localStorage.getItem('3ll_cdl') || '{}');
+  document.getElementById('cdl-number').textContent   = cdl.cdl_number || '—';
+  document.getElementById('cdl-class').textContent    = cdl.cdl_class  || '—';
+  document.getElementById('cdl-state').textContent    = cdl.cdl_state  || '—';
+  document.getElementById('cdl-expiry').textContent   = cdl.cdl_expiry || '—';
+  document.getElementById('medical-expiry').textContent = cdl.medical_card_expiry || '—';
+  document.getElementById('carrier-name').textContent = localStorage.getItem('3ll_company') || '—';
+  document.getElementById('carrier-mc').textContent   = localStorage.getItem('3ll_mc') || '—';
+  document.getElementById('eld-provider').textContent = localStorage.getItem('3ll_eld') || '—';
+
+  if (cdl.cdl_expiry) {
+    const days = Math.ceil((new Date(cdl.cdl_expiry) - new Date()) / 86400000);
+    const pill = document.getElementById('cdl-status-pill');
+    if (days < 0)       { pill.className = 'pill pill-red';    pill.innerHTML = '<span class="dot"></span> EXPIRED'; }
+    else if (days <= 7) { pill.className = 'pill pill-red';    pill.innerHTML = `<span class="dot"></span> ${days}d left`; }
+    else if (days <= 30){ pill.className = 'pill pill-yellow'; pill.innerHTML = `<span class="dot"></span> ${days}d left`; }
+  }
+}
+
+function loadDocs() {
+  // Future: pull from /api/clm/vault/docs?carrier_id=...
+}
+
+// ── ACTIONS ──────────────────────────────────────────────────────────────────
+async function confirmPickup() {
+  showToast('📍 Pickup confirmed — uploading position...');
+  navigator.geolocation?.getCurrentPosition(pos => {
+    apiFetch('/api/telemetry/ping', 'POST', {
+      driver_id: DRIVER_ID,
+      lat: pos.coords.latitude,
+      lng: pos.coords.longitude,
+      event: 'pickup_confirmed',
+    });
+  });
+  document.getElementById('btn-pickup').style.display = 'none';
+  document.getElementById('btn-delivery').style.display = 'flex';
+  showToast('✅ Pickup confirmed — BOL upload required');
+}
+
+async function confirmDelivery() {
+  showToast('📦 Confirming delivery...');
+  navigator.geolocation?.getCurrentPosition(pos => {
+    apiFetch('/api/telemetry/ping', 'POST', {
+      driver_id: DRIVER_ID,
+      lat: pos.coords.latitude,
+      lng: pos.coords.longitude,
+      event: 'delivery_confirmed',
+    });
+  });
+  showToast('✅ Delivery confirmed — upload POD now');
+  showView('docs');
+}
+
+async function acceptLoad(loadId) {
+  await apiFetch(`/api/fleet/${loadId}`, 'PATCH', { status: 'dispatched' });
+  showToast('✅ Load accepted!');
+  showView('home');
+  loadCurrentLoad();
+}
+
+function reportIssue() {
+  const issue = prompt('Describe the issue (breakdown, accident, delay):');
+  if (!issue) return;
+  apiFetch('/api/webhooks/driver_issue', 'POST', {
+    driver_id: DRIVER_ID,
+    issue,
+    ts: new Date().toISOString(),
+  });
+  showToast('⚠️ Issue reported to Commander');
+}
+
+function triggerUpload(inputId) {
+  document.getElementById(inputId).click();
+}
+
+async function handleUpload(docType, input) {
+  const file = input.files[0];
+  if (!file) return;
+  showToast(`📤 Uploading ${docType.toUpperCase()}...`);
+  // Stub — full implementation posts to Supabase Storage via /api/clm/vault
+  setTimeout(() => {
+    const statusEl = document.getElementById(docType + '-status');
+    if (statusEl) { statusEl.style.display = 'inline-flex'; }
+    showToast(`✅ ${docType.toUpperCase()} uploaded successfully`);
+  }, 1500);
+}
+
+// ── HOS POLLING ──────────────────────────────────────────────────────────────
+async function pollHOS() {
+  try {
+    const res = await apiFetch(`/api/telemetry/hos?driver_id=${DRIVER_ID}`);
+    const hos = await res.json();
+    if (!hos || !hos.drive_remaining) return;
+    renderHOS(hos);
+  } catch {}
+}
+
+function renderHOS(hos) {
+  const fmtMins = m => `${Math.floor(m/60)}:${String(m%60).padStart(2,'0')}`;
+  const setBar = (id, barId, value, max, dangerPct) => {
+    const el = document.getElementById(id);
+    const bar = document.getElementById(barId);
+    if (!el || !bar) return;
+    const pct = Math.max(0, Math.min(100, value/max*100));
+    el.textContent = fmtMins(value);
+    bar.style.width = pct + '%';
+    const color = pct > 25 ? 'var(--green)' : pct > 10 ? 'var(--yellow)' : 'var(--red)';
+    bar.style.background = color;
+    el.style.color = color;
+  };
+  setBar('hos-drive',  'hos-drive-bar',  (hos.drive_remaining||0)*60,  660, 25);
+  setBar('hos-shift',  'hos-shift-bar',  (hos.shift_remaining||0)*60,  840, 15);
+  setBar('hos-cycle',  'hos-cycle-bar',  (hos.cycle_remaining||0)*60, 4200, 10);
+}
+
+// ── HELPERS ──────────────────────────────────────────────────────────────────
+async function apiFetch(path, method = 'GET', body = null) {
+  const opts = {
+    method,
+    headers: { 'Authorization': `Bearer ${TOKEN}`, 'Content-Type': 'application/json' },
+  };
+  if (body) opts.body = JSON.stringify(body);
+  return fetch(API + path, opts);
+}
+
+let _toastTimer;
+function showToast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => el.classList.remove('show'), 3000);
+}
+
+function logout() {
+  if (!confirm('Sign out?')) return;
+  localStorage.clear();
+  location.reload();
+}
+</script>
+</body>
+</html>
