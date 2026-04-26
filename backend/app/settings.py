@@ -60,6 +60,15 @@ class Settings(BaseSettings):
     sendgrid_api_key: str = ""
     sendgrid_inbound_secret: str = ""
 
+    # External load board APIs (DAT Freight, Truckstop, 123Loadboard)
+    dat_api_key: str = ""
+    dat_api_secret: str = ""
+    truckstop_api_key: str = ""
+    loadboard_123_api_key: str = ""
+
+    # Cron — secret to protect scheduled endpoint triggers
+    cron_secret: str = ""
+
     @property
     def cors_list(self) -> list[str]:
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]

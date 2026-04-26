@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import os
+import sys
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -13,6 +14,19 @@ os.environ.setdefault("API_BEARER_TOKEN", "test-token")
 os.environ.setdefault("SUPABASE_URL", "https://test.supabase.co")
 os.environ.setdefault("SUPABASE_ANON_KEY", "test-anon-key")
 os.environ.setdefault("SUPABASE_SERVICE_ROLE_KEY", "test-service-key")
+
+# Stub out the supabase package so the app can import without a real DB connection.
+# This must happen before any app module is imported.
+if "supabase" not in sys.modules:
+    _supabase_stub = MagicMock()
+    _supabase_stub.create_client.return_value = MagicMock()
+    sys.modules["supabase"] = _supabase_stub
+    sys.modules["supabase.Client"] = MagicMock()
+# Also stub out heavy optional dependencies that may not be installed in CI
+for _mod in ("stripe", "twilio", "twilio.rest", "anthropic", "sendgrid",
+             "sendgrid.helpers", "sendgrid.helpers.mail"):
+    if _mod not in sys.modules:
+        sys.modules[_mod] = MagicMock()
 
 
 def _mock_supabase():

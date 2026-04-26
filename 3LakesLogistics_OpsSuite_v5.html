@@ -452,6 +452,9 @@ td.td-name{font-weight:600;color:var(--navy);}
 .t-sm{font-size:12px;}
 .t-mono{font-family:var(--ff-m);}
 .flex-b{display:flex;align-items:center;justify-content:space-between;}
+.stat-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--slate);font-size:13px;}
+.stat-row:last-child{border-bottom:none;}
+.wk-bar-row{display:flex;align-items:center;padding:5px 0;}
 .flex{display:flex;align-items:center;}
 .gap8{gap:8px;}
 .rev-row{display:flex;align-items:center;gap:12px;margin-bottom:10px;}
@@ -833,6 +836,14 @@ td.td-name{font-weight:600;color:var(--navy);}
         <div class="mc"><div class="mc-label">MTD Dispatch Fees</div><div class="mc-val gold" id="rev-dispatch-fees">—</div></div>
         <div class="mc"><div class="mc-label">AR Outstanding</div><div class="mc-val orange" id="rev-ar">—</div></div>
         <div class="mc"><div class="mc-label">Year 1 Target</div><div class="mc-val blue">$140K</div></div>
+      </div>
+      <div class="g2" style="margin-bottom:20px">
+        <div class="card"><div class="card-hd"><div class="card-title">Live Analytics Summary</div><button class="btn-out" style="font-size:11px;padding:4px 10px" onclick="loadAnalytics()">↺ Refresh</button></div><div id="analytics-revenue-summary"><div class="loading"><div class="spin"></div>Loading analytics…</div></div></div>
+        <div class="card"><div class="card-hd"><div class="card-title">Weekly Revenue (8 wks)</div></div><div id="analytics-weekly-chart" style="padding:12px 0"><div class="loading"><div class="spin"></div></div></div></div>
+      </div>
+      <div class="card" style="margin-bottom:20px">
+        <div class="card-hd"><div class="card-title">Top Carriers by Revenue</div></div>
+        <div class="tbl-wrap"><table id="analytics-carrier-table"><tr><td class="t-muted t-sm" colspan="6">Loading…</td></tr></table></div>
       </div>
       <div class="g2">
         <div class="card"><div class="card-hd"><div class="card-title">MTD Revenue Breakdown</div></div><div id="rev-breakdown"><div class="loading"><div class="spin"></div>Loading…</div></div></div>
@@ -1305,6 +1316,15 @@ const API = {
     if(!r.ok) throw new Error(r.status+': '+(await r.text()));
     return r.json();
   },
+  async patch(path, body){
+    const r = await fetch(API_BASE+path,{
+      method:'PATCH',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+API_TOKEN},
+      body: JSON.stringify(body)
+    });
+    if(!r.ok) throw new Error(r.status+': '+(await r.text()));
+    return r.json();
+  },
   async health(){ return fetch(API_BASE+'/api/health').then(r=>r.ok?r.json():null).catch(()=>null); },
   kpis(){ return this.get('/api/dashboard/kpis'); },
   founders(){ return fetch(API_BASE+'/api/founders/inventory').then(r=>r.json()); },
@@ -1314,16 +1334,21 @@ const API = {
   leads(){ return this.get('/api/leads/?limit=100'); },
   carriersList(){ return this.get('/api/carriers/'); },
   telemetryLatest(){ return this.get('/api/telemetry/latest'); },
+  analytics(endpoint){ return this.get('/api/analytics/'+endpoint); },
 };
 
 function nav(id){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.sb-item').forEach(n=>n.classList.remove('active'));
-  document.getElementById('page-'+id).classList.add('active');
+  const pg=document.getElementById('page-'+id);
+  if(pg)pg.classList.add('active');
   document.querySelectorAll('.sb-item').forEach(n=>{if(n.getAttribute('onclick')?.includes("'"+id+"'"))n.classList.add('active');});
   document.getElementById('page-title').textContent=pageNames[id]||id;
-  if(id==='carriers'){const n=document.getElementById('carrier-notif');if(n)n.style.display='none';}
-  if(id==='invoices'){const n=document.getElementById('invoice-notif');if(n)n.style.display='none';renderInvoices();}
+  if(id==='carriers'){const n=document.getElementById('carrier-notif');if(n)n.style.display='none';loadCarriers();}
+  if(id==='loads')loadLoads();
+  if(id==='dispatch'){loadLoads();loadCarriers();}
+  if(id==='invoices'){const n=document.getElementById('invoice-notif');if(n)n.style.display='none';loadInvoices().then(()=>renderInvoices());}
+  if(id==='revenue')loadAnalytics();
   if(id==='notes')loadNotes();
   if(id==='compliance'||id==='insurance')renderCarrierCompliance();
   if(id==='clm')loadCLMList();
@@ -1353,12 +1378,11 @@ function toast(msg,type='success'){
 async function testConnection(){
   const el=document.getElementById('sb-status');
   try{
-    const{error}=await sb.from('carriers').select('id').limit(1);
-    if(error)throw error;
-    el.textContent='✓ Supabase Live';
-    el.className='sb-conn';
+    const h=await API.health();
+    if(h&&h.ok){el.textContent='✓ API Live';el.className='sb-conn';}
+    else{el.textContent='⚠ API Error';el.className='sb-conn error';}
   }catch(e){
-    el.textContent='⚠ DB Error';
+    el.textContent='⚠ API Error';
     el.className='sb-conn error';
   }
 }
@@ -1372,9 +1396,13 @@ async function refreshAll(){
 
 // ── CARRIERS ──
 async function loadCarriers(){
-  const{data,error}=await sb.from('carriers').select('*').order('created_at',{ascending:false});
-  if(error){console.warn('loadCarriers:',error.message);return;}
-  allCarriers=data||[];
+  try{
+    const res=await API.carriersList();
+    allCarriers=(res.carriers||res.items||res||[]).map(c=>({
+      ...c,
+      full_name: c.carrier_name||c.full_name||'—',
+    }));
+  }catch(e){console.warn('loadCarriers:',e.message);allCarriers=[];}
   renderCarriersTable();
   updateCarrierMetrics();
 }
@@ -1446,9 +1474,17 @@ async function deleteCarrier(id){
 
 // ── LOADS ──
 async function loadLoads(){
-  const{data,error}=await sb.from('loads').select('*').order('created_at',{ascending:false});
-  if(error){console.warn('loadLoads:',error.message);return;}
-  allLoads=data||[];
+  try{
+    const res=await API.get('/api/loads/?limit=500');
+    allLoads=(res.items||res.loads||res||[]).map(l=>({
+      ...l,
+      // normalize field names so render functions work with both old and new schema
+      origin:      l.origin      || [l.origin_city,l.origin_state].filter(Boolean).join(', '),
+      destination: l.destination || [l.dest_city,l.dest_state].filter(Boolean).join(', '),
+      rate:        l.rate        ?? l.rate_total ?? 0,
+      rpm:         l.rpm         ?? (l.rate_total&&l.miles ? parseFloat((l.rate_total/l.miles).toFixed(3)) : null),
+    }));
+  }catch(e){console.warn('loadLoads:',e.message);allLoads=[];}
   renderLoadsTable();renderDispatchBoard();updateLoadMetrics();
 }
 
@@ -1479,10 +1515,10 @@ function renderLoadsTable(){
 function renderDispatchBoard(){
   const tbody=document.getElementById('dispatch-table');
   if(!tbody)return;
-  const active=allLoads.filter(l=>l.status==='En Route'||l.status==='Booked'||l.status==='Check Due');
-  setText('dispatch-on-load',allLoads.filter(l=>l.status==='En Route').length);
-  setText('dispatch-available',allCarriers.filter(c=>!allLoads.some(l=>l.driver_name===c.full_name&&(l.status==='En Route'||l.status==='Booked'))).length);
-  setText('dispatch-pods',allLoads.filter(l=>l.status==='POD Needed').length);
+  const active=allLoads.filter(l=>['En Route','Booked','Check Due','in_transit','dispatched','booked'].includes(l.status));
+  setText('dispatch-on-load',allLoads.filter(l=>l.status==='En Route'||l.status==='in_transit').length);
+  setText('dispatch-available',allCarriers.filter(c=>!allLoads.some(l=>l.driver_name===c.full_name&&['En Route','Booked','in_transit','dispatched','booked'].includes(l.status))).length);
+  setText('dispatch-pods',allLoads.filter(l=>l.status==='POD Needed'||l.status==='pod_needed').length);
   if(active.length===0){tbody.innerHTML='<tr><td colspan="9"><div class="empty-state"><div class="ei">🚛</div><p>No active loads. Book a load to see it on the board.</p></div></td></tr>';return;}
   tbody.innerHTML=active.map(l=>
     '<tr>'+
@@ -1501,13 +1537,16 @@ function renderDispatchBoard(){
 }
 
 async function updateLoadStatus(id){
-  const statuses=['Booked','En Route','Check Due','Delivered','POD Needed','Completed'];
-  const current=allLoads.find(l=>l.id===id)?.status||'Booked';
-  const next=statuses[(statuses.indexOf(current)+1)%statuses.length];
+  // API state machine: available→offered→booked→dispatched→in_transit→delivered→closed
+  const transitions={available:'offered',offered:'booked',booked:'dispatched',dispatched:'in_transit',in_transit:'delivered',delivered:'closed',
+    'Booked':'dispatched','En Route':'in_transit','Check Due':'delivered','Delivered':'closed','POD Needed':'closed'};
+  const current=allLoads.find(l=>l.id===id)?.status||'booked';
+  const next=transitions[current]||'delivered';
   if(!confirm('Change status to: '+next+'?'))return;
-  const{error}=await sb.from('loads').update({status:next}).eq('id',id);
-  if(error){toast('Error: '+error.message,'error');return;}
-  await loadLoads();toast('Status → '+next);
+  try{
+    await API.post('/api/loads/'+id+'/status',{status:next});
+    await loadLoads();toast('Status → '+next);
+  }catch(e){toast('Error: '+e.message,'error');}
 }
 
 function updateLoadMetrics(){
@@ -1545,21 +1584,26 @@ async function saveLoad(){
   if(!driver||!origin||!dest||!rate){toast('Driver, origin, destination and rate required','error');return;}
   btn.disabled=true;btn.textContent='Saving…';
   const fee=Math.round(rate*pct/100);
-  const rpm=miles?parseFloat((rate/miles).toFixed(2)):null;
-  const{error}=await sb.from('loads').insert({
-    load_number:'#'+loadCounter++,driver_name:driver,origin,destination:dest,miles,rate,
-    dispatch_pct:pct,dispatch_fee:fee,rpm,
-    status:document.getElementById('load-status').value,
-    pickup_date:document.getElementById('load-pickup').value||null,
-    commodity:document.getElementById('load-commodity').value.trim(),
-    notes:document.getElementById('load-broker').value.trim()
-  });
+  const originParts=origin.split(',').map(s=>s.trim());
+  const destParts=dest.split(',').map(s=>s.trim());
+  try{
+    await API.post('/api/loads/',{
+      load_number:'#'+loadCounter++,driver_name:driver,
+      origin_city:originParts[0],origin_state:originParts[1]||'',
+      dest_city:destParts[0],dest_state:destParts[1]||'',
+      miles,rate_total:rate,
+      dispatch_fee:fee,
+      status:document.getElementById('load-status').value||'booked',
+      pickup_date:document.getElementById('load-pickup').value||null,
+      commodity:document.getElementById('load-commodity').value.trim(),
+      broker_notes:document.getElementById('load-broker').value.trim()
+    });
+    closeModal('add-load-modal');
+    ['load-origin','load-dest','load-miles','load-rate','load-pickup','load-broker','load-commodity'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+    const prev=document.getElementById('fee-preview');if(prev)prev.textContent='Enter rate to calculate dispatch fee';
+    await loadLoads();updateDashboard();toast('Load saved!');
+  }catch(e){toast('Error: '+e.message,'error');}
   btn.disabled=false;btn.textContent='Save Load';
-  if(error){toast('Error: '+error.message,'error');return;}
-  closeModal('add-load-modal');
-  ['load-origin','load-dest','load-miles','load-rate','load-pickup','load-broker','load-commodity'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
-  const prev=document.getElementById('fee-preview');if(prev)prev.textContent='Enter rate to calculate dispatch fee';
-  await loadLoads();updateDashboard();toast('Load saved!');
 }
 
 function populateDriverSelect(){
@@ -1571,9 +1615,10 @@ function populateDriverSelect(){
 
 // ── INVOICES ──
 async function loadInvoices(){
-  const{data,error}=await sb.from('invoices').select('*').order('created_at',{ascending:false});
-  if(error){console.warn('loadInvoices:',error.message);return;}
-  allInvoices=data||[];
+  try{
+    const res=await API.get('/api/invoices/?limit=500');
+    allInvoices=res.items||[];
+  }catch(e){console.warn('loadInvoices:',e.message);allInvoices=[];}
   updateInvoiceMetrics();
   renderLoadsTable();
 }
@@ -1633,38 +1678,43 @@ async function saveInvoice(){
   btn.disabled=true;btn.textContent='Saving…';
   const carrierId=document.getElementById('inv-carrier-select').value||null;
   const loadId=document.getElementById('inv-load-select').value||null;
-  const{error}=await sb.from('invoices').insert({
-    invoice_number:document.getElementById('inv-number').value.trim()||autoInvNum(),
-    carrier_id:carrierId,load_id:loadId,amount,
-    status:document.getElementById('inv-status').value,
-    due_date:document.getElementById('inv-due').value||null,
-    notes:document.getElementById('inv-notes').value.trim()
-  });
+  try{
+    await API.post('/api/invoices/',{
+      invoice_number:document.getElementById('inv-number').value.trim()||undefined,
+      carrier_id:carrierId,load_id:loadId,amount,
+      status:document.getElementById('inv-status').value,
+      due_date:document.getElementById('inv-due').value||null,
+      notes:document.getElementById('inv-notes').value.trim()
+    });
+    closeModal('add-invoice-modal');
+    ['inv-number','inv-amount','inv-due','inv-notes'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+    await loadInvoices();renderInvoices();updateDashboard();toast('Invoice created!');
+  }catch(e){toast('Error: '+e.message,'error');}
   btn.disabled=false;btn.textContent='Create Invoice';
-  if(error){toast('Error: '+error.message,'error');return;}
-  closeModal('add-invoice-modal');
-  ['inv-number','inv-amount','inv-due','inv-notes'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
-  await loadInvoices();renderInvoices();updateDashboard();toast('Invoice created!');
 }
 
 function autoInvNum(){return 'INV-'+String(allInvoices.length+1).padStart(4,'0');}
 function autoInvNumber(){const el=document.getElementById('inv-number');if(el)el.value=autoInvNum();}
 
 async function markInvoicePaid(id){
-  const{error}=await sb.from('invoices').update({status:'Paid',paid_date:new Date().toISOString().split('T')[0]}).eq('id',id);
-  if(error){toast('Error','error');return;}
-  await loadInvoices();renderInvoices();updateDashboard();toast('Marked as paid!');
+  try{
+    await API.post('/api/invoices/'+id+'/mark-paid',{});
+    await loadInvoices();renderInvoices();updateDashboard();toast('Marked as paid!');
+  }catch(e){toast('Error: '+e.message,'error');}
 }
 async function markInvoiceOverdue(id){
-  const{error}=await sb.from('invoices').update({status:'Overdue'}).eq('id',id);
-  if(error){toast('Error','error');return;}
-  await loadInvoices();renderInvoices();toast('Marked overdue');
+  try{
+    await API.post('/api/invoices/'+id+'/mark-overdue',{});
+    await loadInvoices();renderInvoices();toast('Marked overdue');
+  }catch(e){toast('Error: '+e.message,'error');}
 }
 async function deleteInvoice(id){
-  if(!confirm('Delete this invoice?'))return;
-  const{error}=await sb.from('invoices').delete().eq('id',id);
-  if(error){toast('Error','error');return;}
-  await loadInvoices();renderInvoices();updateDashboard();toast('Invoice deleted');
+  if(!confirm('Void/delete this invoice?'))return;
+  try{
+    const r=await fetch(API_BASE+'/api/invoices/'+id,{method:'DELETE',headers:{'Authorization':'Bearer '+API_TOKEN}});
+    if(!r.ok)throw new Error(r.status+': '+(await r.text()));
+    await loadInvoices();renderInvoices();updateDashboard();toast('Invoice voided');
+  }catch(e){toast('Error: '+e.message,'error');}
 }
 
 function printInvoice(id){
@@ -1718,6 +1768,49 @@ function createInvoiceForLoad(loadId,driverName,fee){
 }
 
 // ── DASHBOARD ──
+async function loadAnalytics(){
+  try{
+    const [rev,carriers,invSnap]=await Promise.all([
+      API.analytics('revenue?weeks=8'),
+      API.analytics('carriers?weeks=4'),
+      API.analytics('invoices'),
+    ]);
+    // Revenue summary card
+    const revEl=document.getElementById('analytics-revenue-summary');
+    if(revEl)revEl.innerHTML=
+      '<div class="stat-row"><span>Gross Revenue (8 wk)</span><span class="val-gold t-mono">$'+Number(rev.total_gross_revenue||0).toLocaleString()+'</span></div>'+
+      '<div class="stat-row"><span>Collected</span><span class="val-green t-mono">$'+Number(rev.total_collected||0).toLocaleString()+'</span></div>'+
+      '<div class="stat-row"><span>Collection Rate</span><span class="t-mono">'+(rev.collection_rate_pct||0)+'%</span></div>'+
+      '<div class="stat-row"><span>MTD Billed</span><span class="val-gold t-mono">$'+Number(invSnap.mtd_billed||0).toLocaleString()+'</span></div>'+
+      '<div class="stat-row"><span>MTD Collected</span><span class="val-green t-mono">$'+Number(invSnap.mtd_collected||0).toLocaleString()+'</span></div>'+
+      '<div class="stat-row"><span>Outstanding AR</span><span style="color:var(--orange)" class="t-mono">$'+Number(invSnap.total_outstanding||0).toLocaleString()+'</span></div>';
+    // Top carriers table
+    const ctEl=document.getElementById('analytics-carrier-table');
+    if(ctEl&&carriers.carriers){
+      ctEl.innerHTML='<tr><th>Carrier</th><th>Loads</th><th>Revenue</th><th>Miles</th><th>RPM</th><th>On-Time</th></tr>'+
+        carriers.carriers.slice(0,10).map(c=>
+          '<tr><td class="td-name">'+esc(c.carrier_name||'—')+'</td>'+
+          '<td class="t-mono">'+c.loads_delivered+'</td>'+
+          '<td class="val-gold t-mono">$'+Number(c.total_revenue||0).toLocaleString()+'</td>'+
+          '<td class="t-mono">'+Number(c.total_miles||0).toLocaleString()+'</td>'+
+          '<td class="t-mono">$'+(c.avg_rpm||0)+'</td>'+
+          '<td class="t-mono">'+(c.on_time_pct||0)+'%</td></tr>'
+        ).join('');
+    }
+    // Weekly revenue chart (simple text bars)
+    const wkEl=document.getElementById('analytics-weekly-chart');
+    if(wkEl&&rev.weekly){
+      const maxRev=Math.max(...rev.weekly.map(w=>w.gross_revenue||0),1);
+      wkEl.innerHTML=rev.weekly.slice(-8).map(w=>{
+        const pct=Math.round((w.gross_revenue/maxRev)*100);
+        return '<div class="wk-bar-row"><span class="t-sm t-muted t-mono" style="min-width:80px">'+w.week+'</span>'+
+          '<div class="prog-bar" style="flex:1;margin:0 10px"><div class="prog-fill" style="width:'+pct+'%;background:var(--gold)"></div></div>'+
+          '<span class="t-sm val-gold t-mono">$'+Number(w.gross_revenue||0).toLocaleString()+'</span></div>';
+      }).join('');
+    }
+  }catch(e){console.warn('loadAnalytics:',e.message);}
+}
+
 function updateDashboard(){
   const total=allCarriers.length;
   setText('dash-total-carriers',total);setText('dash-carrier-sub',total+' in Supabase');

@@ -15,11 +15,14 @@ from slowapi.util import get_remote_address
 
 from .api import (
     agents_router,
+    analytics_router,
     atomic_ledger_router,
     carriers_router,
     clm_router,
+    cron_router,
     dashboard_router,
     docs_router,
+    invoices_router,
     loads_router,
     execution_router,
     fleet_router,
@@ -43,7 +46,7 @@ def create_app() -> FastAPI:
     s = get_settings()
     app = FastAPI(
         title="3 Lakes Logistics API",
-        version="0.2.0",
+        version="0.3.0",
         description="AI-automated trucking backend — 19 agents, 1,000 trucks.",
     )
 
@@ -74,6 +77,9 @@ def create_app() -> FastAPI:
     app.include_router(docs_router,           prefix="/api/docs",        tags=["docs"])
     app.include_router(loads_router,          prefix="/api/loads",       tags=["loads"])
     app.include_router(settlement_router,     prefix="/api/settlement",  tags=["settlement"])
+    app.include_router(invoices_router,       prefix="/api/invoices",    tags=["invoices"])
+    app.include_router(cron_router,           prefix="/api/cron",        tags=["cron"])
+    app.include_router(analytics_router,      prefix="/api/analytics",   tags=["analytics"])
 
     @app.get("/api/health", tags=["meta"])
     def health() -> dict:
@@ -89,7 +95,7 @@ def create_app() -> FastAPI:
         return {
             "ok": db_ok,
             "env": s.env,
-            "version": "0.2.0",
+            "version": "0.3.0",
             "db": "connected" if db_ok else f"error: {db_error}",
         }
 

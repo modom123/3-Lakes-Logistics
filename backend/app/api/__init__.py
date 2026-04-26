@@ -10,6 +10,9 @@ from .routes_webhooks    import router as webhooks_router
 from .routes_docs        import router as docs_router
 from .routes_loads       import router as loads_router
 from .routes_settlement  import router as settlement_router
+from .routes_invoices   import router as invoices_router
+from .routes_cron       import router as cron_router
+from .routes_analytics  import router as analytics_router
 
 from ..clm              import clm_router
 from ..execution_engine import execution_router
@@ -28,6 +31,9 @@ __all__ = [
     "docs_router",
     "loads_router",
     "settlement_router",
+    "invoices_router",
+    "cron_router",
+    "analytics_router",
     "clm_router",
     "execution_router",
     "atomic_ledger_router",

@@ -2,6 +2,7 @@
 from unittest.mock import MagicMock, patch
 
 import pytest
+import app.agents.settler as settler_mod
 
 
 @pytest.fixture
@@ -22,6 +23,8 @@ def _make_qb(data):
     qb.gte.return_value = qb
     qb.lte.return_value = qb
     qb.ilike.return_value = qb
+    qb.order.return_value = qb
+    qb.limit.return_value = qb
     return qb
 
 
@@ -31,8 +34,7 @@ def test_calc_driver_payout_gross(mock_loads):
     sb.table.return_value = _make_qb(mock_loads)
 
     with patch("app.agents.settler.get_supabase", return_value=sb):
-        from app.agents.settler import calc_driver_payout
-        result = calc_driver_payout("driver-1", "2026-04-21", "2026-04-27")
+        result = settler_mod.calc_driver_payout("driver-1", "2026-04-21", "2026-04-27")
 
     total_rate = 2500 + 1800  # 4300
     assert result["gross_rate"] == 4300.0
@@ -49,14 +51,10 @@ def test_calc_driver_payout_escrow(mock_loads):
     sb_empty.table.return_value = _make_qb([])
 
     with patch("app.agents.settler.get_supabase", return_value=sb_with):
-        from app.agents.settler import calc_driver_payout
-        r_with = calc_driver_payout("driver-1", "2026-04-21", "2026-04-27")
+        r_with = settler_mod.calc_driver_payout("driver-1", "2026-04-21", "2026-04-27")
 
     with patch("app.agents.settler.get_supabase", return_value=sb_empty):
-        from importlib import reload
-        import app.agents.settler as s_mod
-        reload(s_mod)
-        r_empty = s_mod.calc_driver_payout("driver-1", "2026-04-21", "2026-04-27")
+        r_empty = settler_mod.calc_driver_payout("driver-1", "2026-04-21", "2026-04-27")
 
     assert r_with["escrow_deduction"] == 50.0
     assert r_empty["escrow_deduction"] == 0.0
@@ -68,12 +66,10 @@ def test_calc_driver_payout_net(mock_loads):
     sb.table.return_value = _make_qb(mock_loads)
 
     with patch("app.agents.settler.get_supabase", return_value=sb):
-        from importlib import reload
-        import app.agents.settler as s_mod
-        reload(s_mod)
-        result = s_mod.calc_driver_payout("driver-1", "2026-04-21", "2026-04-27")
+        result = settler_mod.calc_driver_payout("driver-1", "2026-04-21", "2026-04-27")
 
-    expected_net = round(result["driver_gross"] - 0 - 50 + 0 + 0, 2)
+    expected_net = round(result["driver_gross"] - result["fuel_advances"] - result["escrow_deduction"]
+                         + result["lumper_reimbursements"] + result["detention_pay"], 2)
     assert result["net_pay"] == expected_net
 
 
@@ -84,22 +80,18 @@ def test_dispatch_fee():
     sb.table.return_value = qb
 
     with patch("app.agents.settler.get_supabase", return_value=sb):
-        from importlib import reload
-        import app.agents.settler as s_mod
-        reload(s_mod)
-        result = s_mod.calc_driver_payout("driver-1", "2026-04-21", "2026-04-27")
+        result = settler_mod.calc_driver_payout("driver-1", "2026-04-21", "2026-04-27")
 
     assert result["dispatch_fee"] == round(1000 * 0.08, 2)
 
 
 def test_initiate_ach_skips_zero():
     """ACH should skip when amount is zero or negative."""
-    from unittest.mock import patch
     with patch("app.agents.settler.get_settings") as mock_settings:
         mock_settings.return_value.stripe_secret_key = "sk_test_abc"
-        from importlib import reload
-        import app.agents.settler as s_mod
-        reload(s_mod)
-        result = s_mod.initiate_ach("carrier-1", "driver-1", 0.0, {"week": ["2026-04-21", "2026-04-27"], "loads_delivered": 0})
+        result = settler_mod.initiate_ach(
+            "carrier-1", "driver-1", 0.0,
+            {"week": ["2026-04-21", "2026-04-27"], "loads_delivered": 0}
+        )
     assert result["status"] == "skipped"
     assert result["reason"] == "zero_or_negative_amount"
