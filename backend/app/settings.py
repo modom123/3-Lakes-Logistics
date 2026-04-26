@@ -50,6 +50,13 @@ class Settings(BaseSettings):
 
     sentry_dsn: str = ""
 
+    # Claude AI — CLM contract scanner + autonomous agents
+    anthropic_api_key: str = ""
+
+    # SendGrid — inbound email parsing for contract documents
+    sendgrid_api_key: str = ""
+    sendgrid_inbound_secret: str = ""
+
     @property
     def cors_list(self) -> list[str]:
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
