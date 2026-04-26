@@ -105,6 +105,20 @@ async def carrier_intake(payload: CarrierIntake, request: Request) -> IntakeResp
         "psp_consent": payload.psp_consent,
     }).execute()
 
+    # 4b. driver_cdl — create record when CDL fields are present
+    if payload.cdl_number:
+        sb.table("driver_cdl").insert({
+            "carrier_id": carrier_id,
+            "driver_name": payload.driver_name,
+            "cdl_number": payload.cdl_number,
+            "cdl_state": payload.cdl_state,
+            "cdl_class": payload.cdl_class,
+            "cdl_expiry": payload.cdl_expiry or None,
+            "medical_card_expiry": payload.medical_card_expiry or None,
+            "clearinghouse_enrolled": payload.clearinghouse_enrolled,
+            "cdl_status": "green",
+        }).execute()
+
     # 5. banking_accounts (only last4; token provisioned via Stripe/Plaid later)
     sb.table("banking_accounts").insert({
         "carrier_id": carrier_id,
