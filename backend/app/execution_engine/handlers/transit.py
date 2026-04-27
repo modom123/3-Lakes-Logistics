@@ -503,6 +503,238 @@ def h80_penny_fuel_cost_track(carrier_id, contract_id, payload):
             "gallons": gallons, "location": location}
 
 
+# ── Step 81: transit.mid_route_safety ────────────────────────────────────────
+
+def h81_transit_mid_route_safety(carrier_id, contract_id, payload):
+    if not carrier_id:
+        return {"cleared": True, "note": "no_carrier_id"}
+    sb = _db()
+    if not sb:
+        return {"cleared": True, "note": "supabase_not_configured"}
+    try:
+        r = sb.table("insurance_compliance").select(
+            "safety_light,csa_high_risk,policy_expiry"
+        ).eq("carrier_id", str(carrier_id)).maybe_single().execute()
+        rec = r.data or {}
+        light = rec.get("safety_light", "green")
+        cleared = light != "red"
+        return {"cleared": cleared, "safety_light": light,
+                "csa_high_risk": rec.get("csa_high_risk", False),
+                "policy_expiry": rec.get("policy_expiry")}
+    except Exception as e:  # noqa: BLE001
+        return {"cleared": True, "error": str(e)}
+
+
+# ── Step 82: transit.broker_visibility ───────────────────────────────────────
+
+def h82_transit_broker_visibility(carrier_id, contract_id, payload):
+    lat = payload.get("lat")
+    lng = payload.get("lng")
+    truck_id = payload.get("truck_id")
+    load_id = payload.get("load_id")
+    sb = _db()
+    if sb and load_id:
+        try:
+            sb.table("loads").update({
+                "last_lat": lat, "last_lng": lng, "last_location_at": _NOW()
+            }).eq("id", load_id).execute()
+        except Exception:  # noqa: BLE001
+            pass
+    return {"pushed": True, "truck_id": truck_id, "load_id": load_id,
+            "lat": lat, "lng": lng, "pushed_at": _NOW()}
+
+
+# ── Step 83: transit.eta_sms_update ──────────────────────────────────────────
+
+def h83_transit_eta_sms_update(carrier_id, contract_id, payload):
+    consignee_phone = payload.get("consignee_phone")
+    eta = payload.get("eta") or payload.get("updated_eta")
+    if not consignee_phone:
+        return {"sent": False, "reason": "no_consignee_phone"}
+    s = get_settings()
+    msg = (f"Delivery Update: Load {payload.get('load_number')} — "
+           f"ETA {eta[:16] if eta else 'TBD'}. Driver {payload.get('driver_name','on route')}.")
+    if s.twilio_account_sid and s.twilio_auth_token:
+        try:
+            from twilio.rest import Client  # type: ignore
+            sid = Client(s.twilio_account_sid, s.twilio_auth_token).messages.create(
+                body=msg, from_=s.twilio_from_number, to=consignee_phone).sid
+            return {"sent": True, "sms_sid": sid, "to": consignee_phone, "eta": eta}
+        except Exception as e:  # noqa: BLE001
+            return {"sent": False, "error": str(e)}
+    return {"sent": False, "note": "twilio_not_configured", "would_send": msg}
+
+
+# ── Step 84: transit.dock_schedule ───────────────────────────────────────────
+
+def h84_transit_dock_schedule(carrier_id, contract_id, payload):
+    eta = payload.get("eta")
+    dest = f"{payload.get('dest_city')},{payload.get('dest_state')}"
+    sb = _db()
+    dock_appointment = None
+    if eta:
+        try:
+            eta_dt = datetime.fromisoformat(eta.replace("Z", "+00:00"))
+            # Round to nearest half-hour for dock window
+            mins = eta_dt.minute
+            rounded = eta_dt.replace(minute=0 if mins < 30 else 30, second=0, microsecond=0)
+            dock_appointment = rounded.isoformat()
+        except Exception:  # noqa: BLE001
+            pass
+    if sb and payload.get("load_id"):
+        try:
+            sb.table("loads").update(
+                {"dock_appointment": dock_appointment}
+            ).eq("id", payload["load_id"]).execute()
+        except Exception:  # noqa: BLE001
+            pass
+    return {"scheduled": bool(dock_appointment), "dock_appointment": dock_appointment,
+            "destination": dest, "load_id": payload.get("load_id")}
+
+
+# ── Step 85: transit.hos_remaining ───────────────────────────────────────────
+
+def h85_transit_hos_remaining(carrier_id, contract_id, payload):
+    driver_code = payload.get("driver_code")
+    miles_to_dest = float(payload.get("miles_remaining") or 0)
+    avg_speed = 60.0
+    hours_to_dest = miles_to_dest / avg_speed if avg_speed > 0 else 0
+    sb = _db()
+    drive_remaining = float(payload.get("drive_remaining_hrs") or 11.0)
+    if sb and driver_code:
+        try:
+            r = sb.table("driver_hos_status").select("drive_remaining").eq(
+                "driver_id", driver_code).maybe_single().execute()
+            drive_remaining = float((r.data or {}).get("drive_remaining") or drive_remaining)
+        except Exception:  # noqa: BLE001
+            pass
+    will_make_it = drive_remaining >= hours_to_dest
+    return {"driver_code": driver_code, "drive_remaining_hrs": drive_remaining,
+            "hours_to_dest": round(hours_to_dest, 2), "will_make_it": will_make_it,
+            "rest_needed": not will_make_it}
+
+
+# ── Step 86: transit.border_crossing ─────────────────────────────────────────
+
+def h86_transit_border_crossing(carrier_id, contract_id, payload):
+    crossing = payload.get("border_crossing", False)
+    if not crossing:
+        return {"applicable": False}
+    ctpat = payload.get("ctpat_certified", False)
+    paps = payload.get("paps_number")
+    return {
+        "applicable": True,
+        "ctpat_certified": ctpat,
+        "paps_number": paps,
+        "docs_ready": bool(paps),
+        "warnings": [] if (ctpat and paps) else ["CTPAT cert or PAPS missing"],
+    }
+
+
+# ── Step 87: transit.hazmat_compliance ───────────────────────────────────────
+
+def h87_transit_hazmat_compliance(carrier_id, contract_id, payload):
+    hazmat = payload.get("hazmat", False)
+    if not hazmat:
+        return {"applicable": False}
+    placard = payload.get("placard_confirmed", False)
+    manifest = payload.get("manifest_url")
+    cleared = placard and bool(manifest)
+    return {
+        "applicable": True,
+        "placard_confirmed": placard,
+        "manifest_url": manifest,
+        "cleared": cleared,
+        "warnings": [] if cleared else ["Hazmat placard or manifest missing"],
+    }
+
+
+# ── Step 88: transit.temp_monitoring ─────────────────────────────────────────
+
+def h88_transit_temp_monitoring(carrier_id, contract_id, payload):
+    reefer = payload.get("trailer_type", "").lower() in ("reefer", "refrigerated")
+    if not reefer:
+        return {"applicable": False}
+    current_temp = payload.get("current_temp_f")
+    target_min = float(payload.get("target_temp_min", 34))
+    target_max = float(payload.get("target_temp_max", 38))
+    if current_temp is None:
+        return {"applicable": True, "temp_recorded": False, "note": "no_temp_data"}
+    in_range = target_min <= float(current_temp) <= target_max
+    sb = _db()
+    if sb and payload.get("load_id"):
+        try:
+            sb.table("loads").update({"last_temp_f": current_temp}).eq(
+                "id", payload["load_id"]).execute()
+        except Exception:  # noqa: BLE001
+            pass
+    return {"applicable": True, "temp_recorded": True, "current_temp_f": current_temp,
+            "target_range": [target_min, target_max], "in_range": in_range,
+            "alert": not in_range}
+
+
+# ── Step 89: transit.cargo_claim_detect ──────────────────────────────────────
+
+def h89_transit_cargo_claim_detect(carrier_id, contract_id, payload):
+    damage_reported = payload.get("damage_reported", False)
+    damage_description = payload.get("damage_description")
+    if not damage_reported:
+        return {"risk_detected": False}
+    sb = _db()
+    if sb and payload.get("load_id"):
+        try:
+            sb.table("loads").update({
+                "damage_reported": True,
+                "damage_description": damage_description,
+                "damage_reported_at": _NOW(),
+            }).eq("id", payload["load_id"]).execute()
+        except Exception:  # noqa: BLE001
+            pass
+    return {"risk_detected": True, "damage_description": damage_description,
+            "load_id": payload.get("load_id"), "detected_at": _NOW(),
+            "action": "flag_for_commander_review"}
+
+
+# ── Step 90: transit.complete ─────────────────────────────────────────────────
+
+def h90_transit_complete(carrier_id, contract_id, payload):
+    load_id = payload.get("load_id")
+    sb = _db()
+    if sb and load_id:
+        try:
+            sb.table("loads").update({
+                "status": "delivered",
+                "delivered_at": _NOW(),
+            }).eq("id", load_id).execute()
+        except Exception:  # noqa: BLE001
+            pass
+    if sb and contract_id:
+        try:
+            sb.table("contracts").update({"milestone_pct": 90}).eq(
+                "id", str(contract_id)).execute()
+        except Exception:  # noqa: BLE001
+            pass
+    try:
+        from ...atomic_ledger.service import write_event
+        from ...atomic_ledger.models import AtomicEvent
+        write_event(AtomicEvent(
+            event_type="transit.complete",
+            event_source="execution_engine.step_90",
+            logistics_payload={"load_id": load_id, "truck_id": payload.get("truck_id"),
+                               "driver_code": payload.get("driver_code"),
+                               "delivered_at": _NOW()},
+            financial_payload={"rate_total": payload.get("rate_total"),
+                               "fuel_cost": payload.get("fuel_amount"),
+                               "detention": payload.get("accrued", 0)},
+            compliance_payload={"carrier_id": str(carrier_id) if carrier_id else None,
+                                "milestone_pct": 90},
+        ))
+    except Exception as e:  # noqa: BLE001
+        log.warning("atomic_ledger write failed at step 90: %s", e)
+    return {"transit_complete": True, "load_id": load_id,
+            "milestone_pct": 90, "completed_at": _NOW()}
+
+
 TRANSIT_HANDLERS: dict = {
     61: h61_transit_pickup_confirmed,
     62: h62_document_vault_upload_bol,
@@ -524,4 +756,14 @@ TRANSIT_HANDLERS: dict = {
     78: h78_transit_detention_notify,
     79: h79_transit_lumper_approve,
     80: h80_penny_fuel_cost_track,
+    81: h81_transit_mid_route_safety,
+    82: h82_transit_broker_visibility,
+    83: h83_transit_eta_sms_update,
+    84: h84_transit_dock_schedule,
+    85: h85_transit_hos_remaining,
+    86: h86_transit_border_crossing,
+    87: h87_transit_hazmat_compliance,
+    88: h88_transit_temp_monitoring,
+    89: h89_transit_cargo_claim_detect,
+    90: h90_transit_complete,
 }
