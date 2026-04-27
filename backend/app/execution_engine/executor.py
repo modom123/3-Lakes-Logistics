@@ -8,6 +8,7 @@ from uuid import UUID
 from ..supabase_client import get_supabase
 from ..logging_service import get_logger
 from .registry import STEP_REGISTRY, Step
+from .handlers import HANDLER_MAP
 
 log = get_logger("3ll.execution.executor")
 
@@ -94,12 +95,11 @@ def _dispatch(
     contract_id: UUID | None,
     payload: dict,
 ) -> dict:
-    """Return structured output for a step execution.
-
-    Each step logs intent and metadata. Concrete integrations
-    (FMCSA, ELD, Stripe, Twilio, Claude) are wired per step in future
-    sprint cycles; this skeleton captures every run in the audit trail.
-    """
+    """Route step to its concrete handler, falling back to a structured stub."""
+    handler = HANDLER_MAP.get(step.number)
+    if handler:
+        return handler(carrier_id, contract_id, payload)
+    # Stub for steps not yet implemented
     return {
         "step_number": step.number,
         "step_name": step.name,
@@ -107,7 +107,7 @@ def _dispatch(
         "description": step.description,
         "carrier_id": str(carrier_id) if carrier_id else None,
         "contract_id": str(contract_id) if contract_id else None,
-        "auto_trigger": step.auto_trigger,
         "requires_steps": step.requires_steps,
         "executed": True,
+        "note": "handler_not_yet_implemented",
     }
