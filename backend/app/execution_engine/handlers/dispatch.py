@@ -545,6 +545,281 @@ def h50_dispatch_assign_load_id(carrier_id, contract_id, payload):
     return {"assigned": True, "load_id": load_id, "load_number": load_number, "assigned_at": _NOW()}
 
 
+# ── Step 51: dispatch.notify_shipper ─────────────────────────────────────────
+
+def h51_dispatch_notify_shipper(carrier_id, contract_id, payload):
+    s = get_settings()
+    shipper_email = payload.get("shipper_email")
+    shipper_phone = payload.get("shipper_phone")
+    driver_name = payload.get("driver_name", "on file")
+    truck_id = payload.get("truck_id", "on file")
+    eta = payload.get("eta", "on schedule")
+    load_number = payload.get("load_number")
+    notified = []
+    if s.postmark_server_token and shipper_email:
+        try:
+            from postmarker.core import PostmarkClient  # type: ignore
+            PostmarkClient(server_token=s.postmark_server_token).emails.send(
+                From=s.postmark_from_email, To=shipper_email,
+                Subject=f"Driver En Route — Load {load_number}",
+                TextBody=(f"Driver {driver_name} | Unit {truck_id} is en route.\nETA: {eta}\n— 3 Lakes Logistics"),
+            )
+            notified.append(shipper_email)
+        except Exception:  # noqa: BLE001
+            pass
+    if s.twilio_account_sid and shipper_phone:
+        try:
+            from twilio.rest import Client  # type: ignore
+            Client(s.twilio_account_sid, s.twilio_auth_token).messages.create(
+                body=f"Load {load_number}: Driver {driver_name} | Unit {truck_id} | ETA {eta}",
+                from_=s.twilio_from_number, to=shipper_phone)
+            notified.append(shipper_phone)
+        except Exception:  # noqa: BLE001
+            pass
+    return {"notified": bool(notified), "sent_to": notified,
+            "driver_name": driver_name, "truck_id": truck_id, "eta": eta}
+
+
+# ── Step 52: dispatch.schedule_checkcall_1 ────────────────────────────────────
+
+def h52_dispatch_schedule_checkcall_1(carrier_id, contract_id, payload):
+    pickup_at = payload.get("pickup_at")
+    scheduled_for = None
+    if pickup_at:
+        try:
+            pickup_dt = datetime.fromisoformat(pickup_at.replace("Z", "+00:00"))
+            scheduled_for = (pickup_dt + timedelta(hours=2)).isoformat()
+        except Exception:  # noqa: BLE001
+            pass
+    sb = _db()
+    if sb:
+        try:
+            sb.table("scheduled_tasks").insert({
+                "task_type": "check_call_1",
+                "carrier_id": str(carrier_id) if carrier_id else None,
+                "load_id": payload.get("load_id"),
+                "scheduled_for": scheduled_for,
+                "status": "pending",
+                "created_at": _NOW(),
+            }).execute()
+        except Exception:  # noqa: BLE001
+            pass
+    return {"scheduled": True, "check_call": 1, "scheduled_for": scheduled_for}
+
+
+# ── Step 53: dispatch.schedule_checkcall_2 ────────────────────────────────────
+
+def h53_dispatch_schedule_checkcall_2(carrier_id, contract_id, payload):
+    eta = payload.get("eta")
+    pickup_at = payload.get("pickup_at")
+    scheduled_for = None
+    if eta and pickup_at:
+        try:
+            p = datetime.fromisoformat(pickup_at.replace("Z", "+00:00"))
+            e = datetime.fromisoformat(eta.replace("Z", "+00:00"))
+            midpoint = p + (e - p) / 2
+            scheduled_for = midpoint.isoformat()
+        except Exception:  # noqa: BLE001
+            pass
+    sb = _db()
+    if sb:
+        try:
+            sb.table("scheduled_tasks").insert({
+                "task_type": "check_call_2",
+                "carrier_id": str(carrier_id) if carrier_id else None,
+                "load_id": payload.get("load_id"),
+                "scheduled_for": scheduled_for,
+                "status": "pending",
+                "created_at": _NOW(),
+            }).execute()
+        except Exception:  # noqa: BLE001
+            pass
+    return {"scheduled": True, "check_call": 2, "scheduled_for": scheduled_for}
+
+
+# ── Step 54: dispatch.schedule_checkcall_3 ────────────────────────────────────
+
+def h54_dispatch_schedule_checkcall_3(carrier_id, contract_id, payload):
+    eta = payload.get("eta")
+    scheduled_for = None
+    if eta:
+        try:
+            eta_dt = datetime.fromisoformat(eta.replace("Z", "+00:00"))
+            scheduled_for = (eta_dt - timedelta(hours=2)).isoformat()
+        except Exception:  # noqa: BLE001
+            pass
+    sb = _db()
+    if sb:
+        try:
+            sb.table("scheduled_tasks").insert({
+                "task_type": "check_call_3",
+                "carrier_id": str(carrier_id) if carrier_id else None,
+                "load_id": payload.get("load_id"),
+                "scheduled_for": scheduled_for,
+                "status": "pending",
+                "created_at": _NOW(),
+            }).execute()
+        except Exception:  # noqa: BLE001
+            pass
+    return {"scheduled": True, "check_call": 3, "scheduled_for": scheduled_for}
+
+
+# ── Step 55: fleet.status_intransit ──────────────────────────────────────────
+
+def h55_fleet_status_intransit(carrier_id, contract_id, payload):
+    truck_id = payload.get("truck_id")
+    load_id = payload.get("load_id")
+    if not truck_id:
+        return {"updated": False, "reason": "no_truck_id"}
+    sb = _db()
+    if sb:
+        try:
+            sb.table("fleet_assets").update(
+                {"status": "in_transit", "current_load_id": load_id}
+            ).eq("truck_id", truck_id).execute()
+        except Exception:  # noqa: BLE001
+            pass
+    return {"updated": True, "truck_id": truck_id, "status": "in_transit", "load_id": load_id}
+
+
+# ── Step 56: document_vault.expect_bol ───────────────────────────────────────
+
+def h56_document_vault_expect_bol(carrier_id, contract_id, payload):
+    load_id = payload.get("load_id")
+    pickup_at = payload.get("pickup_at")
+    due_by = None
+    if pickup_at:
+        try:
+            due_by = (datetime.fromisoformat(pickup_at.replace("Z", "+00:00")) + timedelta(hours=2)).isoformat()
+        except Exception:  # noqa: BLE001
+            pass
+    sb = _db()
+    if sb:
+        try:
+            sb.table("scheduled_tasks").insert({
+                "task_type": "bol_due_check",
+                "carrier_id": str(carrier_id) if carrier_id else None,
+                "load_id": load_id,
+                "scheduled_for": due_by,
+                "status": "pending",
+                "created_at": _NOW(),
+            }).execute()
+        except Exception:  # noqa: BLE001
+            pass
+    return {"expectation_set": True, "doc_type": "bol", "load_id": load_id, "due_by": due_by}
+
+
+# ── Step 57: dispatch.rate_lock ───────────────────────────────────────────────
+
+def h57_dispatch_rate_lock(carrier_id, contract_id, payload):
+    load_id = payload.get("load_id")
+    rate_total = payload.get("rate_total")
+    sb = _db()
+    if sb and load_id:
+        try:
+            sb.table("loads").update(
+                {"rate_locked": True, "rate_locked_at": _NOW()}
+            ).eq("id", load_id).execute()
+        except Exception:  # noqa: BLE001
+            pass
+    if sb and contract_id:
+        try:
+            sb.table("contracts").update({"status": "active"}).eq("id", str(contract_id)).execute()
+        except Exception:  # noqa: BLE001
+            pass
+    return {"locked": True, "load_id": load_id, "rate_total": rate_total, "locked_at": _NOW()}
+
+
+# ── Step 58: dispatch.insurance_check ────────────────────────────────────────
+
+def h58_dispatch_insurance_check(carrier_id, contract_id, payload):
+    if not carrier_id:
+        return {"cleared": False, "reason": "no_carrier_id"}
+    sb = _db()
+    if not sb:
+        return {"cleared": True, "note": "supabase_not_configured"}
+    try:
+        r = sb.table("insurance_compliance").select(
+            "policy_expiry,safety_light"
+        ).eq("carrier_id", str(carrier_id)).maybe_single().execute()
+        ins = r.data or {}
+        safety_light = ins.get("safety_light", "green")
+        expiry = ins.get("policy_expiry")
+        if safety_light == "red":
+            return {"cleared": False, "reason": "red_safety_light"}
+        if expiry:
+            from datetime import date
+            days_left = (date.fromisoformat(expiry) - date.today()).days
+            if days_left <= 0:
+                return {"cleared": False, "reason": "insurance_expired", "expiry": expiry}
+        return {"cleared": True, "safety_light": safety_light, "policy_expiry": expiry}
+    except Exception as e:  # noqa: BLE001
+        return {"cleared": False, "error": str(e)}
+
+
+# ── Step 59: shield.pre_dispatch_safety ──────────────────────────────────────
+
+def h59_shield_pre_dispatch_safety(carrier_id, contract_id, payload):
+    if not carrier_id:
+        return {"cleared": False, "reason": "no_carrier_id"}
+    sb = _db()
+    safety_light = "green"
+    csa_high_risk = False
+    if sb:
+        try:
+            r = sb.table("insurance_compliance").select(
+                "safety_light,csa_score"
+            ).eq("carrier_id", str(carrier_id)).maybe_single().execute()
+            rec = r.data or {}
+            safety_light = rec.get("safety_light", "green")
+            csa_high_risk = bool(rec.get("csa_high_risk", False))
+        except Exception:  # noqa: BLE001
+            pass
+    cleared = safety_light != "red" and not csa_high_risk
+    return {
+        "cleared": cleared,
+        "safety_light": safety_light,
+        "csa_high_risk": csa_high_risk,
+        "reason": "red_light_or_csa" if not cleared else None,
+    }
+
+
+# ── Step 60: dispatch.complete ────────────────────────────────────────────────
+
+def h60_dispatch_complete(carrier_id, contract_id, payload):
+    load_id = payload.get("load_id")
+    sb = _db()
+    if sb and load_id:
+        try:
+            sb.table("loads").update({"status": "in_transit"}).eq("id", load_id).execute()
+        except Exception:  # noqa: BLE001
+            pass
+    try:
+        from ...atomic_ledger.service import write_event
+        from ...atomic_ledger.models import AtomicEvent
+        write_event(AtomicEvent(
+            event_type="dispatch.workflow_complete",
+            event_source="execution_engine.step_60",
+            logistics_payload={
+                "load_id": load_id,
+                "truck_id": payload.get("truck_id"),
+                "driver_code": payload.get("driver_code"),
+                "origin": f"{payload.get('origin_city')},{payload.get('origin_state')}",
+                "destination": f"{payload.get('dest_city')},{payload.get('dest_state')}",
+                "eta": payload.get("eta"),
+            },
+            financial_payload={
+                "rate_total": payload.get("rate_total"),
+                "margin": payload.get("gross_margin"),
+                "margin_pct": payload.get("margin_pct"),
+            },
+            compliance_payload={"insurance_cleared": payload.get("insurance_cleared", True)},
+        ))
+    except Exception as e:  # noqa: BLE001
+        log.warning("atomic_ledger write failed at step 60: %s", e)
+    return {"dispatch_complete": True, "load_id": load_id, "completed_at": _NOW()}
+
+
 DISPATCH_HANDLERS_PART1: dict = {
     31: h31_dispatch_load_received,
     32: h32_clm_scan_rate_conf,
@@ -566,4 +841,14 @@ DISPATCH_HANDLERS_PART1: dict = {
     48: h48_dispatch_eta_calculate,
     49: h49_penny_margin_preview,
     50: h50_dispatch_assign_load_id,
+    51: h51_dispatch_notify_shipper,
+    52: h52_dispatch_schedule_checkcall_1,
+    53: h53_dispatch_schedule_checkcall_2,
+    54: h54_dispatch_schedule_checkcall_3,
+    55: h55_fleet_status_intransit,
+    56: h56_document_vault_expect_bol,
+    57: h57_dispatch_rate_lock,
+    58: h58_dispatch_insurance_check,
+    59: h59_shield_pre_dispatch_safety,
+    60: h60_dispatch_complete,
 }
