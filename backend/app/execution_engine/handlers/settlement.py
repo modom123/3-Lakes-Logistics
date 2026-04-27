@@ -439,6 +439,261 @@ def h110_penny_update_mtd_kpis(carrier_id, contract_id, payload):
     }
 
 
+# ── Step 111: fleet.status_available ─────────────────────────────────────────
+
+def h111_fleet_status_available(carrier_id, contract_id, payload):
+    truck_id = payload.get("truck_id")
+    if not truck_id:
+        return {"updated": False, "reason": "no_truck_id"}
+    sb = _db()
+    if sb:
+        try:
+            sb.table("fleet_assets").update({
+                "status": "available", "current_load_id": None
+            }).eq("truck_id", truck_id).execute()
+        except Exception:  # noqa: BLE001
+            pass
+    return {"updated": True, "truck_id": truck_id, "status": "available"}
+
+
+# ── Step 112: dispatch.next_load_offer ────────────────────────────────────────
+
+def h112_dispatch_next_load_offer(carrier_id, contract_id, payload):
+    truck_id = payload.get("truck_id")
+    dest_city = payload.get("dest_city")
+    dest_state = payload.get("dest_state")
+    sb = _db()
+    nearby_loads = []
+    if sb and dest_state:
+        try:
+            rows = sb.table("loads").select(
+                "id,load_number,origin_city,origin_state,dest_city,dest_state,rate_total"
+            ).eq("status", "booked").eq("origin_state", dest_state).limit(5).execute().data or []
+            nearby_loads = rows
+        except Exception:  # noqa: BLE001
+            pass
+    return {
+        "truck_id": truck_id,
+        "current_location": f"{dest_city},{dest_state}",
+        "nearby_loads": nearby_loads,
+        "loads_found": len(nearby_loads),
+    }
+
+
+# ── Step 113: audit.settlement_audit ─────────────────────────────────────────
+
+def h113_audit_settlement_audit(carrier_id, contract_id, payload):
+    net_pay = float(payload.get("net_pay") or 0)
+    gross_pay = float(payload.get("gross_pay") or 0)
+    rate_total = float(payload.get("rate_total") or 0)
+    issues = []
+    if gross_pay > rate_total:
+        issues.append("driver_gross_exceeds_rate")
+    if net_pay < 0:
+        issues.append("negative_net_pay")
+    if rate_total > 0 and (gross_pay / rate_total) > 0.90:
+        issues.append("driver_pct_above_90pct")
+    return {
+        "audit_passed": not issues,
+        "issues": issues,
+        "net_pay": net_pay,
+        "gross_pay": gross_pay,
+        "rate_total": rate_total,
+    }
+
+
+# ── Step 114: beacon.update_load_history ──────────────────────────────────────
+
+def h114_beacon_update_load_history(carrier_id, contract_id, payload):
+    sb = _db()
+    if sb and payload.get("load_id"):
+        try:
+            sb.table("loads").update({
+                "margin": payload.get("gross_margin"),
+                "margin_pct": payload.get("margin_pct"),
+                "history_updated_at": _NOW(),
+            }).eq("id", payload["load_id"]).execute()
+        except Exception:  # noqa: BLE001
+            pass
+    log_agent("beacon", "update_load_history", carrier_id=str(carrier_id) if carrier_id else None,
+              result=f"load={payload.get('load_id')}")
+    return {"updated": True, "load_id": payload.get("load_id"),
+            "gross_margin": payload.get("gross_margin")}
+
+
+# ── Step 115: atomic_ledger.settlement ───────────────────────────────────────
+
+def h115_atomic_ledger_settlement(carrier_id, contract_id, payload):
+    try:
+        from ...atomic_ledger.service import write_event
+        from ...atomic_ledger.models import AtomicEvent
+        write_event(AtomicEvent(
+            event_type="settlement.complete",
+            event_source="execution_engine.step_115",
+            logistics_payload={
+                "load_id": payload.get("load_id"),
+                "load_number": payload.get("load_number"),
+                "driver_code": payload.get("driver_code"),
+                "truck_id": payload.get("truck_id"),
+            },
+            financial_payload={
+                "rate_total": payload.get("rate_total"),
+                "gross_pay": payload.get("gross_pay"),
+                "net_pay": payload.get("net_pay"),
+                "gross_margin": payload.get("gross_margin"),
+                "margin_pct": payload.get("margin_pct"),
+                "gl_posted": payload.get("gl_posted", False),
+            },
+            compliance_payload={
+                "carrier_id": str(carrier_id) if carrier_id else None,
+                "audit_passed": payload.get("audit_passed", True),
+            },
+        ))
+        return {"logged": True}
+    except Exception as e:  # noqa: BLE001
+        return {"logged": False, "error": str(e)}
+
+
+# ── Step 116: driver.performance_score ───────────────────────────────────────
+
+def h116_driver_performance_score(carrier_id, contract_id, payload):
+    driver_code = payload.get("driver_code")
+    on_time = payload.get("on_time", True)
+    pod_uploaded = payload.get("uploaded", True)
+    damage = payload.get("damage_reported", False)
+    score_delta = 0
+    score_delta += 5 if on_time else -10
+    score_delta += 2 if pod_uploaded else -5
+    score_delta += -15 if damage else 0
+    sb = _db()
+    if sb and driver_code:
+        try:
+            r = sb.table("driver_hos_status").select("performance_score").eq(
+                "driver_id", driver_code).maybe_single().execute()
+            current = float((r.data or {}).get("performance_score") or 75)
+            new_score = max(0, min(100, current + score_delta))
+            sb.table("driver_hos_status").update(
+                {"performance_score": new_score}
+            ).eq("driver_id", driver_code).execute()
+        except Exception:  # noqa: BLE001
+            new_score = 75 + score_delta
+    else:
+        new_score = 75 + score_delta
+    return {"driver_code": driver_code, "score_delta": score_delta,
+            "new_score": max(0, min(100, new_score))}
+
+
+# ── Step 117: carrier.revenue_update ─────────────────────────────────────────
+
+def h117_carrier_revenue_update(carrier_id, contract_id, payload):
+    if not carrier_id:
+        return {"updated": False}
+    rate = float(payload.get("rate_total") or 0)
+    sb = _db()
+    if sb:
+        try:
+            r = sb.table("active_carriers").select("ytd_revenue").eq(
+                "id", str(carrier_id)).maybe_single().execute()
+            ytd = float((r.data or {}).get("ytd_revenue") or 0)
+            sb.table("active_carriers").update({
+                "ytd_revenue": round(ytd + rate, 2), "revenue_updated_at": _NOW()
+            }).eq("id", str(carrier_id)).execute()
+        except Exception:  # noqa: BLE001
+            pass
+    return {"updated": True, "carrier_id": str(carrier_id), "added": rate}
+
+
+# ── Step 118: nova.broker_invoice_email ──────────────────────────────────────
+
+def h118_nova_broker_invoice_email(carrier_id, contract_id, payload):
+    s = get_settings()
+    broker_email = payload.get("broker_email")
+    rate_total = payload.get("rate_total", 0)
+    load_number = payload.get("load_number")
+    if not broker_email:
+        return {"sent": False, "reason": "no_broker_email"}
+    body = (f"Invoice + POD Package — Load {load_number}\n\n"
+            f"Amount Due: ${rate_total}\n"
+            f"Payment Terms: {payload.get('payment_terms','Net-30')}\n"
+            f"POD: {payload.get('pod_url','attached')}\n\n"
+            f"— 3 Lakes Logistics Billing")
+    if s.postmark_server_token:
+        try:
+            from postmarker.core import PostmarkClient  # type: ignore
+            PostmarkClient(server_token=s.postmark_server_token).emails.send(
+                From=s.postmark_from_email, To=broker_email,
+                Subject=f"Invoice #{load_number} — ${rate_total}",
+                TextBody=body)
+            return {"sent": True, "to": broker_email, "amount": rate_total}
+        except Exception as e:  # noqa: BLE001
+            return {"sent": False, "error": str(e)}
+    return {"sent": False, "note": "postmark_not_configured", "would_send_to": broker_email}
+
+
+# ── Step 119: dispute.check_variance ─────────────────────────────────────────
+
+def h119_dispute_check_variance(carrier_id, contract_id, payload):
+    expected = float(payload.get("rate_total") or 0)
+    paid = float(payload.get("paid_amount") or 0)
+    if not expected:
+        return {"variance": False, "reason": "no_expected_amount"}
+    variance = round(abs(expected - paid), 2)
+    pct = round(variance / expected * 100, 2) if expected else 0
+    has_variance = variance > 0.01
+    sb = _db()
+    if sb and has_variance and contract_id:
+        try:
+            sb.table("contract_events").insert({
+                "contract_id": str(contract_id),
+                "event_type": "payment_variance",
+                "actor": "execution_engine",
+                "payload": {"expected": expected, "paid": paid,
+                            "variance": variance, "variance_pct": pct},
+            }).execute()
+        except Exception:  # noqa: BLE001
+            pass
+    return {"variance": has_variance, "expected": expected, "paid": paid,
+            "variance_amount": variance, "variance_pct": pct}
+
+
+# ── Step 120: settlement.complete ────────────────────────────────────────────
+
+def h120_settlement_complete(carrier_id, contract_id, payload):
+    load_id = payload.get("load_id")
+    sb = _db()
+    if sb and load_id:
+        try:
+            sb.table("loads").update({"status": "closed"}).eq("id", load_id).execute()
+        except Exception:  # noqa: BLE001
+            pass
+    if sb and contract_id:
+        try:
+            sb.table("contracts").update({
+                "status": "executed", "milestone_pct": 100,
+                "revenue_recognized": True, "updated_at": _NOW(),
+            }).eq("id", str(contract_id)).execute()
+        except Exception:  # noqa: BLE001
+            pass
+    try:
+        from ...atomic_ledger.service import write_event
+        from ...atomic_ledger.models import AtomicEvent
+        write_event(AtomicEvent(
+            event_type="settlement.workflow_complete",
+            event_source="execution_engine.step_120",
+            logistics_payload={"load_id": load_id, "load_number": payload.get("load_number")},
+            financial_payload={"net_pay": payload.get("net_pay"),
+                               "gross_margin": payload.get("gross_margin"),
+                               "rate_total": payload.get("rate_total")},
+            compliance_payload={"gl_posted": payload.get("gl_posted", False),
+                                "audit_passed": payload.get("audit_passed", True)},
+        ))
+    except Exception as e:  # noqa: BLE001
+        log.warning("atomic_ledger write failed at step 120: %s", e)
+    return {"settlement_complete": True, "load_id": load_id,
+            "contract_id": str(contract_id) if contract_id else None,
+            "completed_at": _NOW()}
+
+
 SETTLEMENT_HANDLERS: dict = {
     91:  h91_delivery_confirmed,
     92:  h92_document_vault_upload_pod,
@@ -460,4 +715,14 @@ SETTLEMENT_HANDLERS: dict = {
     108: h108_factoring_track_payment,
     109: h109_clm_mark_gl_posted,
     110: h110_penny_update_mtd_kpis,
+    111: h111_fleet_status_available,
+    112: h112_dispatch_next_load_offer,
+    113: h113_audit_settlement_audit,
+    114: h114_beacon_update_load_history,
+    115: h115_atomic_ledger_settlement,
+    116: h116_driver_performance_score,
+    117: h117_carrier_revenue_update,
+    118: h118_nova_broker_invoice_email,
+    119: h119_dispute_check_variance,
+    120: h120_settlement_complete,
 }
