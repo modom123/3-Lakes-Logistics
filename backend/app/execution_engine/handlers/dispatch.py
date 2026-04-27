@@ -291,6 +291,260 @@ def h40_clm_create_load_contract(carrier_id, contract_id, payload):
         return {"created": False, "error": str(e)}
 
 
+# ── Step 41: dispatch.confirm_broker ─────────────────────────────────────────
+
+def h41_dispatch_confirm_broker(carrier_id, contract_id, payload):
+    s = get_settings()
+    broker_email = payload.get("broker_email")
+    load_id = payload.get("load_id")
+    load_number = payload.get("load_number")
+    driver_name = payload.get("driver_name", "on file")
+    truck_id = payload.get("truck_id", "on file")
+    if s.postmark_server_token and broker_email:
+        try:
+            from postmarker.core import PostmarkClient  # type: ignore
+            PostmarkClient(server_token=s.postmark_server_token).emails.send(
+                From=s.postmark_from_email,
+                To=broker_email,
+                Subject=f"Load {load_number} — Carrier Accepted",
+                TextBody=(
+                    f"Load {load_number} has been accepted.\n"
+                    f"Driver: {driver_name} | Unit: {truck_id}\n"
+                    f"— 3 Lakes Logistics Dispatch"
+                ),
+            )
+            return {"confirmed": True, "to": broker_email, "load_id": load_id}
+        except Exception as e:  # noqa: BLE001
+            return {"confirmed": False, "error": str(e)}
+    return {"confirmed": False, "note": "postmark_not_configured",
+            "would_send_to": broker_email, "load_id": load_id}
+
+
+# ── Step 42: nova.dispatch_email ──────────────────────────────────────────────
+
+def h42_nova_dispatch_email(carrier_id, contract_id, payload):
+    s = get_settings()
+    driver_email = payload.get("driver_email")
+    broker_email = payload.get("broker_email")
+    body = (
+        f"Dispatch Sheet — Load {payload.get('load_number')}\n\n"
+        f"Origin:  {payload.get('origin_city')}, {payload.get('origin_state')}\n"
+        f"Dest:    {payload.get('dest_city')}, {payload.get('dest_state')}\n"
+        f"Pickup:  {payload.get('pickup_at')}\n"
+        f"Deliver: {payload.get('delivery_at')}\n"
+        f"Rate:    ${payload.get('rate_total')}\n"
+        f"Driver:  {payload.get('driver_name', 'TBD')}\n"
+        f"Unit:    {payload.get('truck_id', 'TBD')}\n\n"
+        f"— 3 Lakes Logistics"
+    )
+    sent_to = []
+    if s.postmark_server_token:
+        try:
+            from postmarker.core import PostmarkClient  # type: ignore
+            client = PostmarkClient(server_token=s.postmark_server_token)
+            for addr in filter(None, [driver_email, broker_email]):
+                client.emails.send(From=s.postmark_from_email, To=addr,
+                                   Subject=f"Dispatch Sheet — Load {payload.get('load_number')}",
+                                   TextBody=body)
+                sent_to.append(addr)
+        except Exception as e:  # noqa: BLE001
+            return {"sent": False, "error": str(e)}
+    log_agent("nova", "dispatch_email", carrier_id=str(carrier_id) if carrier_id else None,
+              result=f"sent_to={sent_to}")
+    return {"sent": bool(sent_to), "sent_to": sent_to,
+            "note": "postmark_not_configured" if not s.postmark_server_token else None}
+
+
+# ── Step 43: signal.dispatch_sms ─────────────────────────────────────────────
+
+def h43_signal_dispatch_sms(carrier_id, contract_id, payload):
+    s = get_settings()
+    driver_phone = payload.get("driver_phone")
+    if not driver_phone:
+        return {"sent": False, "reason": "no_driver_phone"}
+    msg = (
+        f"DISPATCHED: Load {payload.get('load_number')} | "
+        f"{payload.get('origin_city')},{payload.get('origin_state')} → "
+        f"{payload.get('dest_city')},{payload.get('dest_state')} | "
+        f"Pickup {payload.get('pickup_at','TBD')[:10] if payload.get('pickup_at') else 'TBD'} | "
+        f"Rate ${payload.get('rate_total')}"
+    )
+    if s.twilio_account_sid and s.twilio_auth_token:
+        try:
+            from twilio.rest import Client  # type: ignore
+            sid = Client(s.twilio_account_sid, s.twilio_auth_token).messages.create(
+                body=msg, from_=s.twilio_from_number, to=driver_phone).sid
+            return {"sent": True, "sms_sid": sid, "to": driver_phone}
+        except Exception as e:  # noqa: BLE001
+            return {"sent": False, "error": str(e)}
+    return {"sent": False, "note": "twilio_not_configured", "would_send": msg}
+
+
+# ── Step 44: orbit.start_tracking ────────────────────────────────────────────
+
+def h44_orbit_start_tracking(carrier_id, contract_id, payload):
+    load_id = payload.get("load_id")
+    truck_id = payload.get("truck_id")
+    sb = _db()
+    if sb and load_id:
+        try:
+            sb.table("loads").update({"status": "in_transit"}).eq("id", load_id).execute()
+        except Exception:  # noqa: BLE001
+            pass
+    log_agent("orbit", "start_tracking", carrier_id=str(carrier_id) if carrier_id else None,
+              payload={"load_id": load_id, "truck_id": truck_id}, result="tracking_started")
+    return {"tracking": True, "load_id": load_id, "truck_id": truck_id, "started_at": _NOW()}
+
+
+# ── Step 45: audit.fuel_advance ───────────────────────────────────────────────
+
+def h45_audit_fuel_advance(carrier_id, contract_id, payload):
+    driver_code = payload.get("driver_code", "")
+    amount = float(payload.get("advance_amount") or 0)
+    rate_total = float(payload.get("rate_total") or 0)
+    if amount == 0:
+        return {"requested": False, "note": "no_advance_requested"}
+    decision = audit.decide_advance(driver_code, amount, rate_total)
+    sb = _db()
+    if sb and decision["approved"]:
+        try:
+            sb.table("loads").update(
+                {"fuel_advance": amount, "fuel_advance_approved_at": _NOW()}
+            ).eq("id", payload.get("load_id", "")).execute()
+        except Exception:  # noqa: BLE001
+            pass
+    return {
+        "requested": True,
+        "amount": amount,
+        "approved": decision["approved"],
+        "reason": decision["reason"],
+        "driver_code": driver_code,
+    }
+
+
+# ── Step 46: dispatch.log_event ───────────────────────────────────────────────
+
+def h46_dispatch_log_event(carrier_id, contract_id, payload):
+    try:
+        from ...atomic_ledger.service import write_event
+        from ...atomic_ledger.models import AtomicEvent
+        write_event(AtomicEvent(
+            event_type="dispatch.complete",
+            event_source="execution_engine.step_46",
+            logistics_payload={
+                "load_id": payload.get("load_id"),
+                "load_number": payload.get("load_number"),
+                "truck_id": payload.get("truck_id"),
+                "driver_code": payload.get("driver_code"),
+                "origin": f"{payload.get('origin_city')},{payload.get('origin_state')}",
+                "destination": f"{payload.get('dest_city')},{payload.get('dest_state')}",
+            },
+            financial_payload={
+                "rate_total": payload.get("rate_total"),
+                "rate_per_mile": payload.get("rate_per_mile"),
+                "fuel_advance": payload.get("advance_amount", 0),
+            },
+            compliance_payload={"carrier_id": str(carrier_id) if carrier_id else None},
+        ))
+        return {"logged": True}
+    except Exception as e:  # noqa: BLE001
+        return {"logged": False, "error": str(e)}
+
+
+# ── Step 47: sonny.post_loadboard ────────────────────────────────────────────
+
+def h47_sonny_post_loadboard(carrier_id, contract_id, payload):
+    is_spot = payload.get("is_spot", False)
+    if not is_spot:
+        return {"posted": False, "reason": "not_a_spot_load"}
+    result = sonny.run({
+        "truck_id": payload.get("truck_id"),
+        "trailer_type": payload.get("equipment_type"),
+        "origin_state": payload.get("origin_state"),
+    })
+    return {"posted": True, "sources": result.get("sources_queried", []), "load_board_result": result}
+
+
+# ── Step 48: dispatch.eta_calculate ──────────────────────────────────────────
+
+def h48_dispatch_eta_calculate(carrier_id, contract_id, payload):
+    miles = payload.get("miles") or 0
+    hos_remaining = float(payload.get("hos_remaining") or 11.0)
+    avg_speed = 60  # mph
+    pickup_at = payload.get("pickup_at")
+    if miles and pickup_at:
+        try:
+            drive_hours_needed = miles / avg_speed
+            # Account for 10hr rest after 11hr drive
+            rest_breaks = max(0, int(drive_hours_needed / hos_remaining) - 1)
+            total_hours = drive_hours_needed + (rest_breaks * 10)
+            pickup_dt = datetime.fromisoformat(pickup_at.replace("Z", "+00:00"))
+            eta_dt = pickup_dt + timedelta(hours=total_hours)
+            eta = eta_dt.isoformat()
+        except Exception:  # noqa: BLE001
+            eta = None
+    else:
+        eta = None
+    s = get_settings()
+    if s.google_maps_api_key and payload.get("origin_zip") and payload.get("dest_zip"):
+        try:
+            import httpx
+            r = httpx.get(
+                "https://maps.googleapis.com/maps/api/distancematrix/json",
+                params={
+                    "origins": payload["origin_zip"],
+                    "destinations": payload["dest_zip"],
+                    "key": s.google_maps_api_key,
+                },
+                timeout=8,
+            )
+            data = r.json()
+            elements = data.get("rows", [{}])[0].get("elements", [{}])[0]
+            if elements.get("status") == "OK":
+                miles = elements["distance"]["value"] / 1609
+                return {"eta": eta, "miles": round(miles), "source": "google_maps"}
+        except Exception:  # noqa: BLE001
+            pass
+    return {"eta": eta, "miles": miles, "source": "estimated", "avg_speed_mph": avg_speed}
+
+
+# ── Step 49: penny.margin_preview ────────────────────────────────────────────
+
+def h49_penny_margin_preview(carrier_id, contract_id, payload):
+    rate = float(payload.get("rate_total") or 0)
+    miles = float(payload.get("miles") or 0)
+    driver_pct = float(payload.get("driver_pct") or 0.75)
+    fuel_cost = float(payload.get("fuel_cost") or (miles * 0.55))  # ~$0.55/mi default
+    driver_pay = rate * driver_pct
+    gross_margin = rate - driver_pay - fuel_cost
+    margin_pct = round((gross_margin / rate * 100), 2) if rate else 0
+    return {
+        "rate_total": rate,
+        "driver_pay": round(driver_pay, 2),
+        "fuel_cost": round(fuel_cost, 2),
+        "gross_margin": round(gross_margin, 2),
+        "margin_pct": margin_pct,
+        "rpm": round(rate / miles, 4) if miles else None,
+        "viable": gross_margin > 0,
+    }
+
+
+# ── Step 50: dispatch.assign_load_id ─────────────────────────────────────────
+
+def h50_dispatch_assign_load_id(carrier_id, contract_id, payload):
+    load_id = payload.get("load_id")
+    load_number = payload.get("load_number")
+    if not load_id:
+        return {"assigned": False, "reason": "no_load_id"}
+    sb = _db()
+    if sb and load_number:
+        try:
+            sb.table("loads").update({"load_number": load_number}).eq("id", load_id).execute()
+        except Exception:  # noqa: BLE001
+            pass
+    return {"assigned": True, "load_id": load_id, "load_number": load_number, "assigned_at": _NOW()}
+
+
 DISPATCH_HANDLERS_PART1: dict = {
     31: h31_dispatch_load_received,
     32: h32_clm_scan_rate_conf,
@@ -302,4 +556,14 @@ DISPATCH_HANDLERS_PART1: dict = {
     38: h38_dispatch_reoffer_on_decline,
     39: h39_eld_lock_hos,
     40: h40_clm_create_load_contract,
+    41: h41_dispatch_confirm_broker,
+    42: h42_nova_dispatch_email,
+    43: h43_signal_dispatch_sms,
+    44: h44_orbit_start_tracking,
+    45: h45_audit_fuel_advance,
+    46: h46_dispatch_log_event,
+    47: h47_sonny_post_loadboard,
+    48: h48_dispatch_eta_calculate,
+    49: h49_penny_margin_preview,
+    50: h50_dispatch_assign_load_id,
 }
