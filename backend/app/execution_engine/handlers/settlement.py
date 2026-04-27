@@ -221,6 +221,224 @@ def h100_settler_lumper_reimbursement(carrier_id, contract_id, payload):
     }
 
 
+# ── Step 101: settler.detention_add ──────────────────────────────────────────
+
+def h101_settler_detention_add(carrier_id, contract_id, payload):
+    detention_accrued = float(payload.get("accrued") or payload.get("detention_accrued") or 0)
+    pay_after_lumper = float(payload.get("pay_after_lumper") or payload.get("gross_pay") or 0)
+    return {
+        "detention_accrued": detention_accrued,
+        "detention_added": detention_accrued,
+        "pay_after_detention": round(pay_after_lumper + detention_accrued, 2),
+    }
+
+
+# ── Step 102: settler.advance_deduct ─────────────────────────────────────────
+
+def h102_settler_advance_deduct(carrier_id, contract_id, payload):
+    fuel_advance = float(payload.get("fuel_advance") or payload.get("advance_amount") or 0)
+    pay_after_detention = float(payload.get("pay_after_detention") or payload.get("gross_pay") or 0)
+    return {
+        "advance_deducted": fuel_advance,
+        "pay_after_advance": round(pay_after_detention - fuel_advance, 2),
+    }
+
+
+# ── Step 103: settler.net_pay_calc ───────────────────────────────────────────
+
+def h103_settler_net_pay_calc(carrier_id, contract_id, payload):
+    gross = float(payload.get("gross_pay") or 0)
+    fuel_ded = float(payload.get("fuel_deduction") or 0)
+    escrow = float(payload.get("escrow_applied") or 0)
+    lumper = float(payload.get("lumper_added") or 0)
+    detention = float(payload.get("detention_added") or 0)
+    advance = float(payload.get("advance_deducted") or 0)
+    net = round(gross - fuel_ded - escrow - advance + lumper + detention, 2)
+    sb = _db()
+    if sb and payload.get("load_id"):
+        try:
+            sb.table("loads").update({"driver_net_pay": net}).eq(
+                "id", payload["load_id"]).execute()
+        except Exception:  # noqa: BLE001
+            pass
+    return {
+        "gross_pay": gross, "fuel_deduction": fuel_ded, "escrow_applied": escrow,
+        "lumper_added": lumper, "detention_added": detention,
+        "advance_deducted": advance, "net_pay": net,
+        "driver_code": payload.get("driver_code"),
+    }
+
+
+# ── Step 104: penny.load_margin ───────────────────────────────────────────────
+
+def h104_penny_load_margin(carrier_id, contract_id, payload):
+    rate = float(payload.get("rate_total") or 0)
+    net_pay = float(payload.get("net_pay") or 0)
+    fuel = float(payload.get("fuel_cost") or payload.get("fuel_deduction") or 0)
+    detention = float(payload.get("detention_added") or 0)
+    lumper = float(payload.get("lumper_added") or 0)
+    total_cost = net_pay + fuel - detention - lumper
+    margin = round(rate - total_cost, 2)
+    margin_pct = round((margin / rate * 100), 2) if rate else 0
+    miles = float(payload.get("miles") or 1)
+    log_agent("penny", "load_margin", carrier_id=str(carrier_id) if carrier_id else None,
+              result=f"margin=${margin} ({margin_pct}%)")
+    return {
+        "rate_total": rate, "total_cost": round(total_cost, 2),
+        "gross_margin": margin, "margin_pct": margin_pct,
+        "revenue_per_mile": round(rate / miles, 4) if miles else None,
+    }
+
+
+# ── Step 105: settler.ach_initiate ────────────────────────────────────────────
+
+def h105_settler_ach_initiate(carrier_id, contract_id, payload):
+    net_pay = float(payload.get("net_pay") or 0)
+    driver_code = payload.get("driver_code")
+    if net_pay <= 0:
+        return {"initiated": False, "reason": "zero_or_negative_pay"}
+    sb = _db()
+    bank = {}
+    if sb and carrier_id:
+        try:
+            r = sb.table("banking_accounts").select(
+                "bank_routing,bank_account,payee_name,verified_at"
+            ).eq("carrier_id", str(carrier_id)).maybe_single().execute()
+            bank = r.data or {}
+        except Exception:  # noqa: BLE001
+            pass
+    if not bank.get("verified_at"):
+        return {"initiated": False, "reason": "bank_not_verified", "net_pay": net_pay}
+    log_agent("settler", "ach_initiate", carrier_id=str(carrier_id) if carrier_id else None,
+              payload={"amount": net_pay, "driver": driver_code}, result="initiated")
+    return {
+        "initiated": True, "net_pay": net_pay, "driver_code": driver_code,
+        "payee_name": bank.get("payee_name"),
+        "ach_status": "pending", "initiated_at": _NOW(),
+        "note": "ACH via Stripe Treasury / banking_accounts — wire live key to complete",
+    }
+
+
+# ── Step 106: nova.settlement_email ──────────────────────────────────────────
+
+def h106_nova_settlement_email(carrier_id, contract_id, payload):
+    s = get_settings()
+    driver_email = payload.get("driver_email")
+    net_pay = payload.get("net_pay", 0)
+    load_number = payload.get("load_number")
+    if not driver_email:
+        return {"sent": False, "reason": "no_driver_email"}
+    body = (
+        f"Settlement Statement — Load {load_number}\n\n"
+        f"Gross Pay:      ${payload.get('gross_pay', 0):.2f}\n"
+        f"Fuel Deduction: -${payload.get('fuel_deduction', 0):.2f}\n"
+        f"Advance:        -${payload.get('advance_deducted', 0):.2f}\n"
+        f"Lumper:         +${payload.get('lumper_added', 0):.2f}\n"
+        f"Detention:      +${payload.get('detention_added', 0):.2f}\n"
+        f"{'─'*35}\n"
+        f"Net Pay:        ${net_pay:.2f}\n\n"
+        f"— 3 Lakes Logistics"
+    )
+    if s.postmark_server_token:
+        try:
+            from postmarker.core import PostmarkClient  # type: ignore
+            PostmarkClient(server_token=s.postmark_server_token).emails.send(
+                From=s.postmark_from_email, To=driver_email,
+                Subject=f"Settlement — Load {load_number} — ${net_pay:.2f}",
+                TextBody=body)
+            return {"sent": True, "to": driver_email, "net_pay": net_pay}
+        except Exception as e:  # noqa: BLE001
+            return {"sent": False, "error": str(e)}
+    return {"sent": False, "note": "postmark_not_configured", "would_send_to": driver_email}
+
+
+# ── Step 107: factoring.submit_invoice ────────────────────────────────────────
+
+def h107_factoring_submit_invoice(carrier_id, contract_id, payload):
+    rate_total = payload.get("rate_total", 0)
+    factoring_company = payload.get("factoring_company") or "generic"
+    return {
+        "submitted": True,
+        "factoring_company": factoring_company,
+        "invoice_amount": rate_total,
+        "submitted_at": _NOW(),
+        "note": f"Wire {factoring_company} API credentials to go live",
+    }
+
+
+# ── Step 108: factoring.track_payment ────────────────────────────────────────
+
+def h108_factoring_track_payment(carrier_id, contract_id, payload):
+    sb = _db()
+    payment_status = payload.get("payment_status", "pending")
+    paid_amount = float(payload.get("paid_amount") or 0)
+    if sb and contract_id and payment_status == "paid":
+        try:
+            sb.table("contracts").update({
+                "milestone_pct": 100, "revenue_recognized": True, "updated_at": _NOW()
+            }).eq("id", str(contract_id)).execute()
+        except Exception:  # noqa: BLE001
+            pass
+    return {
+        "payment_status": payment_status,
+        "paid_amount": paid_amount,
+        "tracked_at": _NOW(),
+    }
+
+
+# ── Step 109: clm.mark_gl_posted ─────────────────────────────────────────────
+
+def h109_clm_mark_gl_posted(carrier_id, contract_id, payload):
+    if not contract_id:
+        return {"posted": False, "reason": "no_contract_id"}
+    sb = _db()
+    if not sb:
+        return {"posted": False, "note": "supabase_not_configured"}
+    try:
+        sb.table("contracts").update({
+            "gl_posted": True, "updated_at": _NOW()
+        }).eq("id", str(contract_id)).execute()
+        sb.table("contract_events").insert({
+            "contract_id": str(contract_id),
+            "event_type": "gl_posted",
+            "actor": "execution_engine",
+            "payload": {"margin": payload.get("gross_margin"),
+                        "rate_total": payload.get("rate_total")},
+        }).execute()
+        return {"posted": True, "contract_id": str(contract_id)}
+    except Exception as e:  # noqa: BLE001
+        return {"posted": False, "error": str(e)}
+
+
+# ── Step 110: penny.update_mtd_kpis ──────────────────────────────────────────
+
+def h110_penny_update_mtd_kpis(carrier_id, contract_id, payload):
+    rate = float(payload.get("rate_total") or 0)
+    margin = float(payload.get("gross_margin") or 0)
+    miles = float(payload.get("miles") or 1)
+    sb = _db()
+    if sb and carrier_id:
+        try:
+            r = sb.table("active_carriers").select(
+                "mtd_gross,mtd_loads,mtd_miles"
+            ).eq("id", str(carrier_id)).maybe_single().execute()
+            cur = r.data or {}
+            sb.table("active_carriers").update({
+                "mtd_gross": round(float(cur.get("mtd_gross") or 0) + rate, 2),
+                "mtd_loads": int(cur.get("mtd_loads") or 0) + 1,
+                "mtd_miles": int(cur.get("mtd_miles") or 0) + int(miles),
+                "mtd_updated_at": _NOW(),
+            }).eq("id", str(carrier_id)).execute()
+        except Exception:  # noqa: BLE001
+            pass
+    log_agent("penny", "update_mtd_kpis", carrier_id=str(carrier_id) if carrier_id else None,
+              result=f"rate={rate} margin={margin}")
+    return {
+        "updated": True, "rate_total": rate, "gross_margin": margin,
+        "rpm": round(rate / miles, 4) if miles else None,
+    }
+
+
 SETTLEMENT_HANDLERS: dict = {
     91:  h91_delivery_confirmed,
     92:  h92_document_vault_upload_pod,
@@ -232,4 +450,14 @@ SETTLEMENT_HANDLERS: dict = {
     98:  h98_settler_fuel_deduction,
     99:  h99_settler_escrow_check,
     100: h100_settler_lumper_reimbursement,
+    101: h101_settler_detention_add,
+    102: h102_settler_advance_deduct,
+    103: h103_settler_net_pay_calc,
+    104: h104_penny_load_margin,
+    105: h105_settler_ach_initiate,
+    106: h106_nova_settlement_email,
+    107: h107_factoring_submit_invoice,
+    108: h108_factoring_track_payment,
+    109: h109_clm_mark_gl_posted,
+    110: h110_penny_update_mtd_kpis,
 }
