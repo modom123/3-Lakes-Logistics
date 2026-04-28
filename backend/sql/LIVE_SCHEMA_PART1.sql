@@ -376,9 +376,9 @@ create table if not exists public.carrier_user_map (
   created_at timestamptz not null default now()
 );
 
-create or replace function public.current_carrier_id() returns uuid
+create or replace function public.current_carrier_id() returns text
 language sql stable security definer as $$
-  select carrier_id from public.carrier_user_map where user_id = auth.uid() limit 1
+  select carrier_id::text from public.carrier_user_map where user_id::text = auth.uid()::text limit 1
 $$;
 
 create or replace function public.is_admin() returns boolean
@@ -421,17 +421,17 @@ drop policy if exists invoices_insert      on public.invoices;
 drop policy if exists invoices_update      on public.invoices;
 drop policy if exists invoices_delete      on public.invoices;
 
-create policy carriers_read_own    on public.active_carriers       for select using (id = public.current_carrier_id() or public.is_admin());
-create policy fleet_read_own       on public.fleet_assets          for select using (carrier_id = public.current_carrier_id() or public.is_admin());
-create policy telemetry_read_own   on public.truck_telemetry       for select using (carrier_id = public.current_carrier_id() or public.is_admin());
-create policy drivers_read_own     on public.drivers               for select using (carrier_id = public.current_carrier_id() or public.is_admin());
-create policy hos_read_own         on public.driver_hos_status     for select using (carrier_id = public.current_carrier_id() or public.is_admin());
-create policy eld_read_own         on public.eld_connections       for select using (carrier_id = public.current_carrier_id() or public.is_admin());
-create policy insurance_read_own   on public.insurance_compliance  for select using (carrier_id = public.current_carrier_id() or public.is_admin());
+create policy carriers_read_own    on public.active_carriers       for select using (id::text = public.current_carrier_id() or public.is_admin());
+create policy fleet_read_own       on public.fleet_assets          for select using (carrier_id::text = public.current_carrier_id() or public.is_admin());
+create policy telemetry_read_own   on public.truck_telemetry       for select using (carrier_id::text = public.current_carrier_id() or public.is_admin());
+create policy drivers_read_own     on public.drivers               for select using (carrier_id::text = public.current_carrier_id() or public.is_admin());
+create policy hos_read_own         on public.driver_hos_status     for select using (carrier_id::text = public.current_carrier_id() or public.is_admin());
+create policy eld_read_own         on public.eld_connections       for select using (carrier_id::text = public.current_carrier_id() or public.is_admin());
+create policy insurance_read_own   on public.insurance_compliance  for select using (carrier_id::text = public.current_carrier_id() or public.is_admin());
 create policy banking_admin_only   on public.banking_accounts      for select using (public.is_admin());
-create policy sig_read_own         on public.signatures_audit      for select using (carrier_id = public.current_carrier_id() or public.is_admin());
-create policy loads_read_own       on public.loads                 for select using (carrier_id = public.current_carrier_id() or public.is_admin());
-create policy invoices_read_own    on public.invoices              for select using (carrier_id = public.current_carrier_id() or public.is_admin());
+create policy sig_read_own         on public.signatures_audit      for select using (carrier_id::text = public.current_carrier_id() or public.is_admin());
+create policy loads_read_own       on public.loads                 for select using (carrier_id::text = public.current_carrier_id() or public.is_admin());
+create policy invoices_read_own    on public.invoices              for select using (carrier_id::text = public.current_carrier_id() or public.is_admin());
 create policy leads_admin_only     on public.leads                 for select using (public.is_admin());
 create policy agent_log_admin_only on public.agent_log             for select using (public.is_admin());
 create policy loads_insert         on public.loads                 for insert with check (true);
