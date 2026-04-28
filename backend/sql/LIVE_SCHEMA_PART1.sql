@@ -298,16 +298,31 @@ create table if not exists public.loads (
   status        text default 'booked',
   created_at    timestamptz not null default now()
 );
-alter table public.loads add column if not exists driver_name  text;
-alter table public.loads add column if not exists origin       text;
-alter table public.loads add column if not exists destination  text;
-alter table public.loads add column if not exists rate         numeric(10,2);
-alter table public.loads add column if not exists rpm          numeric(6,2);
-alter table public.loads add column if not exists dispatch_fee numeric(10,2);
-alter table public.loads add column if not exists dispatch_pct numeric(5,2);
-alter table public.loads add column if not exists pickup_date  date;
-alter table public.loads add column if not exists commodity    text;
-alter table public.loads add column if not exists notes        text;
+alter table public.loads add column if not exists truck_id      text;
+alter table public.loads add column if not exists driver_code   text;
+alter table public.loads add column if not exists broker_name   text;
+alter table public.loads add column if not exists load_number   text;
+alter table public.loads add column if not exists origin_city   text;
+alter table public.loads add column if not exists origin_state  text;
+alter table public.loads add column if not exists dest_city     text;
+alter table public.loads add column if not exists dest_state    text;
+alter table public.loads add column if not exists pickup_at     timestamptz;
+alter table public.loads add column if not exists delivery_at   timestamptz;
+alter table public.loads add column if not exists miles         int;
+alter table public.loads add column if not exists rate_total    numeric(10,2);
+alter table public.loads add column if not exists rate_per_mile numeric(6,2);
+alter table public.loads add column if not exists pod_url       text;
+alter table public.loads add column if not exists driver_name   text;
+alter table public.loads add column if not exists origin        text;
+alter table public.loads add column if not exists destination   text;
+alter table public.loads add column if not exists rate          numeric(10,2);
+alter table public.loads add column if not exists rpm           numeric(6,2);
+alter table public.loads add column if not exists dispatch_fee  numeric(10,2);
+alter table public.loads add column if not exists dispatch_pct  numeric(5,2);
+alter table public.loads add column if not exists pickup_date   date;
+alter table public.loads add column if not exists commodity     text;
+alter table public.loads add column if not exists notes         text;
+alter table public.loads add column if not exists status        text default 'booked';
 create index if not exists idx_loads_carrier on public.loads(carrier_id);
 create index if not exists idx_loads_status  on public.loads(status);
 create index if not exists idx_loads_pickup  on public.loads(pickup_at desc);
@@ -327,8 +342,14 @@ create table if not exists public.invoices (
   paid_date      date,
   created_at     timestamptz not null default now()
 );
-alter table public.invoices add column if not exists notes     text;
-alter table public.invoices add column if not exists paid_date date;
+alter table public.invoices add column if not exists invoice_number text;
+alter table public.invoices add column if not exists amount         numeric(10,2);
+alter table public.invoices add column if not exists dispatch_fee   numeric(10,2);
+alter table public.invoices add column if not exists status         text default 'Unpaid';
+alter table public.invoices add column if not exists due_date       date;
+alter table public.invoices add column if not exists paid_at        timestamptz;
+alter table public.invoices add column if not exists notes          text;
+alter table public.invoices add column if not exists paid_date      date;
 create index if not exists idx_invoices_status  on public.invoices(status);
 create index if not exists idx_invoices_carrier on public.invoices(carrier_id);
 
