@@ -371,7 +371,7 @@ create index if not exists idx_agent_log_carrier  on public.agent_log(carrier_id
 -- ── RLS ─────────────────────────────────────────────────────
 create table if not exists public.carrier_user_map (
   user_id    uuid primary key references auth.users(id) on delete cascade,
-  carrier_id uuid not null references public.active_carriers(id) on delete cascade,
+  carrier_id uuid not null,
   role       text not null default 'owner',
   created_at timestamptz not null default now()
 );
