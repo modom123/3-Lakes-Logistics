@@ -729,3 +729,374 @@ def step_190_spot_vs_contract(
         "advantage_pct": diff_pct,
         "rate_difference": round(diff, 4) if diff is not None else None,
     }
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# STEPS 191-195 — Intelligence layer
+# ═══════════════════════════════════════════════════════════════════════════
+
+def step_191_cash_flow(
+    carrier_id: UUID | None,
+    contract_id: UUID | None,
+    payload: dict,
+) -> dict:
+    """Project cash flow based on factoring cycles and pending settlements.
+
+    Reads uninvoiced contracts (milestone 90%) and outstanding factoring
+    payments (milestone 100%, revenue_recognized=False) to project
+    expected cash inflows over 30/60/90 days.
+    """
+    sb = get_supabase()
+    today = _today()
+
+    # Pending invoices: 90% milestone, not yet paid
+    q_pending = sb.table("contracts").select(
+        "rate_total,payment_terms,delivery_date"
+    ).eq("milestone_pct", 90).eq("revenue_recognized", False)
+    if carrier_id:
+        q_pending = q_pending.eq("carrier_id", str(carrier_id))
+    pending = q_pending.execute().data or []
+
+    # Factored but not yet received: 100% milestone, not revenue_recognized
+    q_factored = sb.table("contracts").select(
+        "rate_total,payment_terms,delivery_date"
+    ).eq("milestone_pct", 100).eq("revenue_recognized", False)
+    if carrier_id:
+        q_factored = q_factored.eq("carrier_id", str(carrier_id))
+    factored = q_factored.execute().data or []
+
+    def _expected_days(terms: str | None) -> int:
+        """Extract net days from payment terms string."""
+        if not terms:
+            return 30
+        digits = "".join(filter(str.isdigit, (terms or "").split("/")[0]))
+        try:
+            return int(digits) if digits else 30
+        except ValueError:
+            return 30
+
+    inflows: list[dict] = []
+    for c in pending + factored:
+        amount = float(c.get("rate_total") or 0)
+        if not amount:
+            continue
+        net_days = _expected_days(c.get("payment_terms"))
+        delivery = c.get("delivery_date")
+        if delivery:
+            try:
+                base = date.fromisoformat(str(delivery))
+                expected_date = base + timedelta(days=net_days)
+            except ValueError:
+                expected_date = today + timedelta(days=net_days)
+        else:
+            expected_date = today + timedelta(days=net_days)
+
+        days_out = (expected_date - today).days
+        inflows.append({
+            "amount": amount,
+            "expected_date": expected_date.isoformat(),
+            "days_out": days_out,
+            "payment_terms": c.get("payment_terms"),
+        })
+
+    proj_30 = sum(i["amount"] for i in inflows if 0 <= i["days_out"] <= 30)
+    proj_60 = sum(i["amount"] for i in inflows if 0 <= i["days_out"] <= 60)
+    proj_90 = sum(i["amount"] for i in inflows if 0 <= i["days_out"] <= 90)
+    overdue = sum(i["amount"] for i in inflows if i["days_out"] < 0)
+
+    log.info("step_191: cash_flow 30d=$%.0f 60d=$%.0f 90d=$%.0f overdue=$%.0f",
+             proj_30, proj_60, proj_90, overdue)
+    return {
+        "pending_invoice_count": len(pending),
+        "factored_count": len(factored),
+        "projected_30d": round(proj_30, 2),
+        "projected_60d": round(proj_60, 2),
+        "projected_90d": round(proj_90, 2),
+        "overdue_amount": round(overdue, 2),
+        "total_outstanding": round(sum(i["amount"] for i in inflows), 2),
+        "inflows": sorted(inflows, key=lambda x: x["days_out"])[:50],
+    }
+
+
+def step_192_carrier_ltv(
+    carrier_id: UUID | None,
+    contract_id: UUID | None,
+    payload: dict,
+) -> dict:
+    """Calculate carrier lifetime value: subscription revenue + load revenue.
+
+    LTV = months_active × plan_monthly_rate + total_settled_load_revenue.
+    Projects 12-month forward LTV using trailing 3-month average.
+    """
+    sb = get_supabase()
+
+    plan_rates: dict[str, float] = {
+        "founders": 297.0,
+        "pro": 497.0,
+        "enterprise": 997.0,
+        "free": 0.0,
+    }
+
+    carriers = [{"id": str(carrier_id)}] if carrier_id else _active_carriers()
+    ltv_data: list[dict] = []
+
+    for c in carriers:
+        cid = c["id"]
+        created_str = (c.get("created_at") or _now())[:10]
+        try:
+            created = date.fromisoformat(created_str)
+        except ValueError:
+            created = _today()
+        months_active = max(1, ((_today() - created).days) // 30)
+        plan = (c.get("plan") or "founders").lower()
+        monthly_rate = plan_rates.get(plan, 297.0)
+        subscription_rev = round(months_active * monthly_rate, 2)
+
+        # Load revenue
+        loads_rev = (
+            sb.table("contracts")
+            .select("rate_total")
+            .eq("carrier_id", cid)
+            .eq("revenue_recognized", True)
+            .execute()
+            .data
+        ) or []
+        total_load_rev = sum(float(l.get("rate_total") or 0) for l in loads_rev)
+        load_count = len(loads_rev)
+
+        # 12-month forward projection from trailing 3-month avg
+        recent_cutoff = (_today() - timedelta(days=90)).isoformat()
+        recent_loads = (
+            sb.table("contracts")
+            .select("rate_total")
+            .eq("carrier_id", cid)
+            .eq("revenue_recognized", True)
+            .gte("created_at", recent_cutoff)
+            .execute()
+            .data
+        ) or []
+        trailing_3mo = sum(float(l.get("rate_total") or 0) for l in recent_loads)
+        projected_annual = round((trailing_3mo / 3) * 12 + monthly_rate * 12, 2)
+
+        ltv_data.append({
+            "carrier_id": cid,
+            "company_name": c.get("company_name"),
+            "plan": plan,
+            "months_active": months_active,
+            "subscription_revenue": subscription_rev,
+            "total_load_revenue": round(total_load_rev, 2),
+            "total_load_count": load_count,
+            "total_ltv": round(subscription_rev + total_load_rev, 2),
+            "projected_annual_value": projected_annual,
+        })
+
+    ltv_data.sort(key=lambda x: x["total_ltv"], reverse=True)
+    total_fleet_ltv = sum(c["total_ltv"] for c in ltv_data)
+
+    log.info("step_192: carrier_ltv carriers=%d total_fleet_ltv=$%.0f", len(ltv_data), total_fleet_ltv)
+    return {
+        "carriers_evaluated": len(ltv_data),
+        "total_fleet_ltv": round(total_fleet_ltv, 2),
+        "avg_carrier_ltv": round(total_fleet_ltv / len(ltv_data), 2) if ltv_data else 0,
+        "top_carrier": ltv_data[0] if ltv_data else None,
+        "carriers": ltv_data[:20],
+    }
+
+
+def step_193_csa_trend(
+    carrier_id: UUID | None,
+    contract_id: UUID | None,
+    payload: dict,
+) -> dict:
+    """Track CSA score trends and predict carrier risk trajectory.
+
+    Reads shield_events for csa_refresh events over the past 90 days,
+    computes the safety_light change frequency, and flags carriers trending red.
+    """
+    sb = get_supabase()
+    cutoff = (_today() - timedelta(days=90)).isoformat()
+
+    q = sb.table("shield_events").select(
+        "carrier_id,event_type,severity,payload,created_at"
+    ).eq("event_type", "safety_light_change").gte("created_at", cutoff)
+    if carrier_id:
+        q = q.eq("carrier_id", str(carrier_id))
+    events = q.execute().data or []
+
+    # Group by carrier
+    by_carrier: dict[str, list[dict]] = {}
+    for e in events:
+        cid = e["carrier_id"]
+        by_carrier.setdefault(cid, []).append(e)
+
+    trending_red: list[dict] = []
+    trending_green: list[dict] = []
+    stable: list[dict] = []
+
+    for cid, carrier_events in by_carrier.items():
+        carrier_events.sort(key=lambda e: e["created_at"])
+        lights = [
+            e.get("payload", {}).get("new_light", "green")
+            for e in carrier_events
+        ]
+        if not lights:
+            continue
+
+        latest = lights[-1]
+        red_count = lights.count("red")
+        yellow_count = lights.count("yellow")
+        total = len(lights)
+
+        # Trending red: last light is red or >50% of readings were yellow/red
+        risk_ratio = (red_count * 2 + yellow_count) / (total * 2) if total else 0
+
+        entry = {
+            "carrier_id": cid,
+            "latest_light": latest,
+            "red_count": red_count,
+            "yellow_count": yellow_count,
+            "total_readings": total,
+            "risk_ratio": round(risk_ratio, 3),
+        }
+        if latest == "red" or risk_ratio > 0.5:
+            trending_red.append(entry)
+        elif latest == "green" and risk_ratio < 0.1:
+            trending_green.append(entry)
+        else:
+            stable.append(entry)
+
+    log.info("step_193: csa_trend carriers=%d trending_red=%d trending_green=%d",
+             len(by_carrier), len(trending_red), len(trending_green))
+    return {
+        "carriers_analyzed": len(by_carrier),
+        "trending_red_count": len(trending_red),
+        "trending_green_count": len(trending_green),
+        "stable_count": len(stable),
+        "trending_red": trending_red,
+        "trending_green": trending_green,
+    }
+
+
+def step_194_rate_index(
+    carrier_id: UUID | None,
+    contract_id: UUID | None,
+    payload: dict,
+) -> dict:
+    """Build internal rate index from all executed rate confirmations.
+
+    Groups by origin_state × destination_state × equipment_type,
+    computes avg/min/max/p25/p75 rate per mile, upserts analytics_rate_index.
+    """
+    sb = get_supabase()
+
+    q = sb.table("contracts").select(
+        "rate_per_mile,extracted_vars"
+    ).eq("contract_type", "rate_confirmation").eq("revenue_recognized", True)
+    if carrier_id:
+        q = q.eq("carrier_id", str(carrier_id))
+    contracts = q.execute().data or []
+
+    # Group by (origin_state, dest_state, equipment_type)
+    buckets: dict[tuple[str, str, str], list[float]] = {}
+    for c in contracts:
+        rpm = float(c.get("rate_per_mile") or 0)
+        if not rpm:
+            continue
+        evars = c.get("extracted_vars") or {}
+        o = (evars.get("origin_state") or "").upper()
+        d = (evars.get("destination_state") or "").upper()
+        eq = (evars.get("equipment_type") or "dry_van").lower().replace(" ", "_")
+        if not o or not d:
+            continue
+        buckets.setdefault((o, d, eq), []).append(rpm)
+
+    upserted: list[dict] = []
+    for (o, d, eq), rates in buckets.items():
+        rates_sorted = sorted(rates)
+        n = len(rates_sorted)
+        p25 = rates_sorted[int(n * 0.25)] if n >= 4 else rates_sorted[0]
+        p75 = rates_sorted[int(n * 0.75)] if n >= 4 else rates_sorted[-1]
+
+        row = {
+            "origin_state": o,
+            "destination_state": d,
+            "equipment_type": eq,
+            "sample_count": n,
+            "avg_rate_per_mile": round(sum(rates) / n, 4),
+            "min_rate_per_mile": round(min(rates), 4),
+            "max_rate_per_mile": round(max(rates), 4),
+            "p25_rate_per_mile": round(p25, 4),
+            "p75_rate_per_mile": round(p75, 4),
+            "computed_at": _now(),
+        }
+        existing = (
+            sb.table("analytics_rate_index")
+            .select("id")
+            .eq("origin_state", o).eq("destination_state", d).eq("equipment_type", eq)
+            .limit(1).execute().data
+        )
+        if existing:
+            sb.table("analytics_rate_index").update(row).eq(
+                "origin_state", o).eq("destination_state", d).eq("equipment_type", eq).execute()
+        else:
+            sb.table("analytics_rate_index").insert(row).execute()
+        upserted.append(row)
+
+    log.info("step_194: rate_index lanes_indexed=%d total_samples=%d",
+             len(upserted), sum(r["sample_count"] for r in upserted))
+    return {
+        "lanes_indexed": len(upserted),
+        "total_samples": sum(r["sample_count"] for r in upserted),
+        "index": upserted[:50],
+    }
+
+
+def step_195_equipment_demand(
+    carrier_id: UUID | None,
+    contract_id: UUID | None,
+    payload: dict,
+) -> dict:
+    """Forecast equipment demand by type from lane stats and load history.
+
+    Counts load volume by equipment_type from executed contracts over the
+    last 90 days, then projects forward demand by type.
+    """
+    sb = get_supabase()
+    cutoff = (_today() - timedelta(days=90)).isoformat()
+
+    q = sb.table("contracts").select(
+        "extracted_vars"
+    ).eq("revenue_recognized", True).gte("created_at", cutoff)
+    if carrier_id:
+        q = q.eq("carrier_id", str(carrier_id))
+    contracts = q.execute().data or []
+
+    demand: dict[str, int] = {}
+    for c in contracts:
+        evars = c.get("extracted_vars") or {}
+        eq = (evars.get("equipment_type") or "dry_van").lower().replace(" ", "_").replace("-", "_")
+        demand[eq] = demand.get(eq, 0) + 1
+
+    total = sum(demand.values()) or 1
+    ranked = sorted(demand.items(), key=lambda x: x[1], reverse=True)
+
+    forecast: list[dict] = []
+    for eq_type, count in ranked:
+        share_pct = round((count / total) * 100, 2)
+        # Project 30-day demand from 90-day trailing
+        projected_30d = round(count / 3)
+        forecast.append({
+            "equipment_type": eq_type,
+            "trailing_90d_loads": count,
+            "market_share_pct": share_pct,
+            "projected_30d_loads": projected_30d,
+        })
+
+    log.info("step_195: equipment_demand types=%d top=%s",
+             len(forecast), forecast[0]["equipment_type"] if forecast else "N/A")
+    return {
+        "trailing_period_days": 90,
+        "total_loads_analyzed": total,
+        "equipment_types": len(forecast),
+        "demand_forecast": forecast,
+    }
