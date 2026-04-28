@@ -8,8 +8,74 @@ from uuid import UUID
 from ..supabase_client import get_supabase
 from ..logging_service import get_logger
 from .registry import STEP_REGISTRY, Step
+from ..clm.steps import (
+    step_121_email_inbound_parse,
+    step_122_doc_classify,
+    step_123_extract_variables,
+    step_124_digital_twin_create,
+    step_125_revenue_leakage_check,
+    step_126_counterparty_lookup,
+    step_127_duplicate_detect,
+    step_128_expiry_schedule,
+    step_129_broker_blacklist_check,
+    step_130_rate_benchmark,
+    step_131_auto_approve,
+    step_132_flag_for_review,
+    step_133_milestone_10pct,
+    step_134_milestone_50pct,
+    step_135_milestone_90pct,
+    step_136_milestone_100pct,
+    step_137_gl_trigger,
+    step_138_factoring_eligibility,
+    step_139_broker_agreement_link,
+    step_140_payment_terms_enforce,
+    step_141_dispute_open,
+    step_142_dispute_escalate,
+    step_143_archive_executed,
+    step_144_analytics_update,
+    step_145_broker_scorecard,
+    step_146_volume_discount_check,
+    step_147_auto_renew_agreement,
+    step_148_contract_export,
+    step_149_compliance_audit,
+    step_150_clm_complete,
+)
 
 log = get_logger("3ll.execution.executor")
+
+# Maps step number → concrete handler for CLM domain (121-150)
+_CLM_HANDLERS: dict[int, object] = {
+    121: step_121_email_inbound_parse,
+    122: step_122_doc_classify,
+    123: step_123_extract_variables,
+    124: step_124_digital_twin_create,
+    125: step_125_revenue_leakage_check,
+    126: step_126_counterparty_lookup,
+    127: step_127_duplicate_detect,
+    128: step_128_expiry_schedule,
+    129: step_129_broker_blacklist_check,
+    130: step_130_rate_benchmark,
+    131: step_131_auto_approve,
+    132: step_132_flag_for_review,
+    133: step_133_milestone_10pct,
+    134: step_134_milestone_50pct,
+    135: step_135_milestone_90pct,
+    136: step_136_milestone_100pct,
+    137: step_137_gl_trigger,
+    138: step_138_factoring_eligibility,
+    139: step_139_broker_agreement_link,
+    140: step_140_payment_terms_enforce,
+    141: step_141_dispute_open,
+    142: step_142_dispute_escalate,
+    143: step_143_archive_executed,
+    144: step_144_analytics_update,
+    145: step_145_broker_scorecard,
+    146: step_146_volume_discount_check,
+    147: step_147_auto_renew_agreement,
+    148: step_148_contract_export,
+    149: step_149_compliance_audit,
+    150: step_150_clm_complete,
+}
 
 
 def run_step(
@@ -94,12 +160,18 @@ def _dispatch(
     contract_id: UUID | None,
     payload: dict,
 ) -> dict:
-    """Return structured output for a step execution.
+    """Route step execution to a concrete handler when available.
 
-    Each step logs intent and metadata. Concrete integrations
-    (FMCSA, ELD, Stripe, Twilio, Claude) are wired per step in future
-    sprint cycles; this skeleton captures every run in the audit trail.
+    CLM steps 121-150 are fully implemented in clm.steps.
+    All other domains fall back to the metadata stub — concrete handlers
+    for those domains are added in subsequent sprint cycles.
     """
+    handler = _CLM_HANDLERS.get(step.number)
+    if handler is not None:
+        return handler(carrier_id, contract_id, payload)  # type: ignore[call-arg]
+
+    # Stub for domains not yet implemented (onboarding, dispatch, transit,
+    # settlement, compliance, analytics — handled in future sprints)
     return {
         "step_number": step.number,
         "step_name": step.name,
@@ -110,4 +182,5 @@ def _dispatch(
         "auto_trigger": step.auto_trigger,
         "requires_steps": step.requires_steps,
         "executed": True,
+        "stub": True,
     }

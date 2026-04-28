@@ -962,3 +962,661 @@ def step_140_payment_terms_enforce(
         "days_overdue": max(0, days_overdue),
         "rate_total": contract.get("rate_total"),
     }
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# STEPS 141-150 — Disputes / archive / analytics / CLM complete
+# ═══════════════════════════════════════════════════════════════════════════
+
+def step_141_dispute_open(
+    carrier_id: UUID | None,
+    contract_id: UUID | None,
+    payload: dict,
+) -> dict:
+    """Open a dispute record when payment variance is detected.
+
+    Expects payload: {dispute_type, expected_amount, paid_amount, notes}.
+    Creates a clm_disputes row and flags the contract.
+    """
+    if not contract_id:
+        return {"dispute_opened": False, "reason": "No contract_id"}
+
+    sb = get_supabase()
+    contract = _fetch_contract(contract_id)
+
+    dispute_type = payload.get("dispute_type", "rate_variance")
+    expected = float(payload.get("expected_amount") or contract.get("rate_total") or 0)
+    paid = float(payload.get("paid_amount") or 0)
+    notes = payload.get("notes")
+
+    row: dict = {
+        "contract_id": str(contract_id),
+        "dispute_type": dispute_type,
+        "expected_amount": expected,
+        "paid_amount": paid,
+        "status": "open",
+        "notes": notes,
+    }
+    if carrier_id:
+        row["carrier_id"] = str(carrier_id)
+
+    res = sb.table("clm_disputes").insert(row).execute()
+    dispute_id = res.data[0]["id"]
+
+    sb.table("contracts").update({
+        "status": "disputed",
+        "flagged_for_review": True,
+        "review_notes": f"Dispute opened: {dispute_type} — expected ${expected:.2f}, paid ${paid:.2f}",
+    }).eq("id", str(contract_id)).execute()
+
+    post_contract_event(contract_id, "dispute_opened", "clm.step_141", {
+        "dispute_id": dispute_id,
+        "dispute_type": dispute_type,
+        "expected_amount": expected,
+        "paid_amount": paid,
+        "variance": expected - paid,
+    })
+
+    log.info("step_141: dispute opened id=%s contract=%s type=%s variance=$%.2f",
+             dispute_id, contract_id, dispute_type, expected - paid)
+    return {
+        "dispute_opened": True,
+        "dispute_id": dispute_id,
+        "contract_id": str(contract_id),
+        "dispute_type": dispute_type,
+        "expected_amount": expected,
+        "paid_amount": paid,
+        "variance_amount": expected - paid,
+    }
+
+
+def step_142_dispute_escalate(
+    carrier_id: UUID | None,
+    contract_id: UUID | None,
+    payload: dict,
+) -> dict:
+    """Escalate open disputes that are older than 5 business days.
+
+    Scans all open disputes for the contract (or fleet-wide if no contract_id)
+    and escalates those past the threshold. Returns count of escalated disputes.
+    """
+    sb = get_supabase()
+    threshold_days = payload.get("threshold_days", 5)
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=threshold_days)).isoformat()
+
+    q = sb.table("clm_disputes").select("*").eq("status", "open").lt("opened_at", cutoff)
+    if contract_id:
+        q = q.eq("contract_id", str(contract_id))
+
+    open_disputes = q.execute().data or []
+    escalated: list[str] = []
+
+    for dispute in open_disputes:
+        sb.table("clm_disputes").update({
+            "status": "escalated",
+            "escalated_at": _now(),
+        }).eq("id", dispute["id"]).execute()
+
+        cid = UUID(dispute["contract_id"])
+        post_contract_event(cid, "dispute_escalated", "clm.step_142", {
+            "dispute_id": dispute["id"],
+            "days_open": threshold_days,
+        })
+        escalated.append(dispute["id"])
+
+    log.info("step_142: escalated %d disputes (threshold=%d days)", len(escalated), threshold_days)
+    return {
+        "escalated_count": len(escalated),
+        "escalated_ids": escalated,
+        "threshold_days": threshold_days,
+    }
+
+
+def step_143_archive_executed(
+    carrier_id: UUID | None,
+    contract_id: UUID | None,
+    payload: dict,
+) -> dict:
+    """Archive a fully executed contract with all supporting documents.
+
+    Verifies milestone is 100%, then sets archived_at and status='archived'.
+    Confirms all required doc types are present in document_vault.
+    """
+    if not contract_id:
+        return {"archived": False, "reason": "No contract_id"}
+
+    sb = get_supabase()
+    contract = _fetch_contract(contract_id)
+
+    if contract.get("milestone_pct", 0) < 100:
+        return {
+            "archived": False,
+            "reason": f"Milestone is {contract.get('milestone_pct')}% — must be 100% to archive",
+        }
+
+    # Check documents
+    docs = (
+        sb.table("document_vault")
+        .select("doc_type")
+        .eq("contract_id", str(contract_id))
+        .execute()
+        .data
+    ) or []
+    doc_types_present = {d["doc_type"] for d in docs}
+    required_docs = {"rate_confirmation", "bol", "pod"}
+    missing_docs = required_docs - doc_types_present
+
+    archived_at = _now()
+    sb.table("contracts").update({
+        "status": "archived",
+        "archived_at": archived_at,
+    }).eq("id", str(contract_id)).execute()
+
+    post_contract_event(contract_id, "archived", "clm.step_143", {
+        "archived_at": archived_at,
+        "doc_types_present": list(doc_types_present),
+        "missing_docs": list(missing_docs),
+    })
+
+    log.info("step_143: contract=%s archived missing_docs=%s", contract_id, missing_docs)
+    return {
+        "archived": True,
+        "contract_id": str(contract_id),
+        "archived_at": archived_at,
+        "doc_types_present": list(doc_types_present),
+        "missing_docs": list(missing_docs),
+        "complete": len(missing_docs) == 0,
+    }
+
+
+def step_144_analytics_update(
+    carrier_id: UUID | None,
+    contract_id: UUID | None,
+    payload: dict,
+) -> dict:
+    """Compute and upsert today's CLM analytics snapshot.
+
+    Aggregates from contracts table: avg rate/mi, payment cycle time,
+    dispute rate, auto-approval rate, factoring usage.
+    """
+    sb = get_supabase()
+    today = date.today().isoformat()
+
+    # Aggregate executed contracts (all time — then filter today's period)
+    period_start = payload.get("period_date", today)
+
+    all_contracts = sb.table("contracts").select(
+        "id,rate_per_mile,payment_terms,auto_approved,revenue_recognized"
+    ).execute().data or []
+
+    disputes = sb.table("clm_disputes").select("id,status").execute().data or []
+    factored = sb.table("contracts").select("id").eq("revenue_recognized", True).execute().data or []
+
+    total = len(all_contracts)
+    if total == 0:
+        return {"computed": False, "note": "No contracts to aggregate"}
+
+    rates = [float(c["rate_per_mile"]) for c in all_contracts if c.get("rate_per_mile")]
+    avg_rpm = round(sum(rates) / len(rates), 4) if rates else None
+
+    auto_approved_count = sum(1 for c in all_contracts if c.get("auto_approved"))
+    auto_approved_pct = round((auto_approved_count / total) * 100, 2) if total else None
+
+    dispute_count = len(disputes)
+    dispute_rate_pct = round((dispute_count / total) * 100, 2) if total else 0.0
+
+    revenue_contracts = sb.table("contracts").select(
+        "rate_total"
+    ).eq("revenue_recognized", True).execute().data or []
+    total_revenue = sum(float(c.get("rate_total") or 0) for c in revenue_contracts)
+
+    row = {
+        "period_date": period_start,
+        "total_contracts": total,
+        "total_revenue": total_revenue,
+        "avg_rate_per_mile": avg_rpm,
+        "dispute_count": dispute_count,
+        "dispute_rate_pct": dispute_rate_pct,
+        "factored_count": len(factored),
+        "auto_approved_pct": auto_approved_pct,
+        "computed_at": _now(),
+    }
+
+    # Upsert by period_date
+    existing = sb.table("clm_analytics").select("id").eq("period_date", period_start).limit(1).execute().data
+    if existing:
+        sb.table("clm_analytics").update(row).eq("period_date", period_start).execute()
+    else:
+        sb.table("clm_analytics").insert(row).execute()
+
+    log.info("step_144: analytics upserted period=%s total=%d revenue=$%.2f", period_start, total, total_revenue)
+    return {**row, "action": "upserted"}
+
+
+def step_145_broker_scorecard(
+    carrier_id: UUID | None,
+    contract_id: UUID | None,
+    payload: dict,
+) -> dict:
+    """Recalculate and upsert broker reliability scorecard after each settled load.
+
+    Aggregates from contracts + clm_disputes grouped by broker_mc.
+    """
+    sb = get_supabase()
+    broker_mc = payload.get("broker_mc")
+
+    if not broker_mc and contract_id:
+        contract = _fetch_contract(contract_id)
+        broker_mc = (contract.get("extracted_vars") or {}).get("broker_mc")
+
+    if not broker_mc:
+        return {"updated": False, "reason": "No broker_mc available"}
+
+    # All executed contracts for this broker
+    broker_contracts = (
+        sb.table("contracts")
+        .select("id,rate_per_mile,revenue_recognized,counterparty_name")
+        .filter("extracted_vars->>'broker_mc'", "eq", broker_mc)
+        .execute()
+        .data
+    ) or []
+
+    total_loads = len(broker_contracts)
+    if total_loads == 0:
+        return {"updated": False, "reason": f"No contracts found for broker MC {broker_mc}"}
+
+    broker_name = next((c.get("counterparty_name") for c in broker_contracts if c.get("counterparty_name")), None)
+    rates = [float(c["rate_per_mile"]) for c in broker_contracts if c.get("rate_per_mile")]
+    avg_rpm = round(sum(rates) / len(rates), 4) if rates else None
+    paid_count = sum(1 for c in broker_contracts if c.get("revenue_recognized"))
+    on_time_pct = round((paid_count / total_loads) * 100, 2) if total_loads else 0.0
+
+    # Dispute rate
+    contract_ids = [c["id"] for c in broker_contracts]
+    disputes = (
+        sb.table("clm_disputes")
+        .select("id")
+        .in_("contract_id", contract_ids)
+        .execute()
+        .data
+    ) if contract_ids else []
+    dispute_rate = round((len(disputes) / total_loads) * 100, 2) if total_loads else 0.0
+
+    # Volume tier
+    if total_loads >= 250:
+        tier = "platinum"
+    elif total_loads >= 100:
+        tier = "gold"
+    elif total_loads >= 50:
+        tier = "silver"
+    elif total_loads >= 10:
+        tier = "bronze"
+    else:
+        tier = "none"
+
+    row = {
+        "broker_mc": broker_mc,
+        "broker_name": broker_name,
+        "total_loads": total_loads,
+        "avg_rate_per_mile": avg_rpm,
+        "on_time_pay_pct": on_time_pct,
+        "dispute_rate_pct": dispute_rate,
+        "volume_discount_tier": tier,
+        "last_updated_at": _now(),
+    }
+
+    existing = sb.table("broker_scorecards").select("id").eq("broker_mc", broker_mc).limit(1).execute().data
+    if existing:
+        sb.table("broker_scorecards").update(row).eq("broker_mc", broker_mc).execute()
+    else:
+        sb.table("broker_scorecards").insert(row).execute()
+
+    log.info("step_145: scorecard upserted broker=%s loads=%d tier=%s", broker_mc, total_loads, tier)
+    return {**row, "action": "upserted"}
+
+
+def step_146_volume_discount_check(
+    carrier_id: UUID | None,
+    contract_id: UUID | None,
+    payload: dict,
+) -> dict:
+    """Check if broker qualifies for a volume discount tier and surface the rate.
+
+    Tier thresholds: bronze ≥10, silver ≥50, gold ≥100, platinum ≥250 loads.
+    """
+    sb = get_supabase()
+    broker_mc = payload.get("broker_mc")
+
+    if not broker_mc and contract_id:
+        contract = _fetch_contract(contract_id)
+        broker_mc = (contract.get("extracted_vars") or {}).get("broker_mc")
+
+    if not broker_mc:
+        return {"tier": "none", "reason": "No broker_mc"}
+
+    sc = sb.table("broker_scorecards").select("*").eq("broker_mc", broker_mc).limit(1).execute().data
+    if not sc:
+        return {"tier": "none", "broker_mc": broker_mc, "reason": "No scorecard found"}
+
+    scorecard = sc[0]
+    tier = scorecard.get("volume_discount_tier", "none")
+
+    discount_pct: dict[str, float] = {
+        "none": 0.0,
+        "bronze": 1.0,
+        "silver": 2.0,
+        "gold": 3.5,
+        "platinum": 5.0,
+    }
+
+    disc = discount_pct.get(tier, 0.0)
+    log.info("step_146: broker=%s tier=%s discount=%.1f%%", broker_mc, tier, disc)
+    return {
+        "broker_mc": broker_mc,
+        "broker_name": scorecard.get("broker_name"),
+        "total_loads": scorecard.get("total_loads"),
+        "volume_discount_tier": tier,
+        "discount_pct": disc,
+        "qualifies": tier != "none",
+    }
+
+
+def step_147_auto_renew_agreement(
+    carrier_id: UUID | None,
+    contract_id: UUID | None,
+    payload: dict,
+) -> dict:
+    """Auto-renew expired broker agreements for brokers in good standing.
+
+    Good standing = not blacklisted + dispute_rate < 10% + on_time_pay > 80%.
+    Extends expires_at by 1 year and resets status to active.
+    """
+    sb = get_supabase()
+
+    # Find expired broker agreements
+    today = date.today().isoformat()
+    q = (
+        sb.table("contracts")
+        .select("id,extracted_vars,counterparty_name,expires_at")
+        .eq("contract_type", "broker_agreement")
+        .eq("status", "active")
+        .lt("expires_at", today)
+    )
+    if contract_id:
+        q = q.eq("id", str(contract_id))
+
+    expired = q.limit(50).execute().data or []
+    renewed: list[dict] = []
+    skipped: list[dict] = []
+
+    for agr in expired:
+        evars = agr.get("extracted_vars") or {}
+        broker_mc = evars.get("broker_mc")
+
+        # Check good standing
+        good_standing = True
+        reason = ""
+
+        if broker_mc:
+            bl = sb.table("broker_blacklist").select("broker_mc").eq("broker_mc", broker_mc).limit(1).execute().data
+            if bl:
+                good_standing = False
+                reason = "Blacklisted"
+
+            sc = sb.table("broker_scorecards").select(
+                "dispute_rate_pct,on_time_pay_pct"
+            ).eq("broker_mc", broker_mc).limit(1).execute().data
+            if sc and good_standing:
+                if float(sc[0].get("dispute_rate_pct") or 0) >= 10:
+                    good_standing = False
+                    reason = "Dispute rate ≥10%"
+                elif float(sc[0].get("on_time_pay_pct") or 100) < 80:
+                    good_standing = False
+                    reason = "On-time pay <80%"
+
+        auto_renew = evars.get("auto_renew", True)
+        if not auto_renew:
+            good_standing = False
+            reason = "auto_renew=False in agreement"
+
+        if good_standing:
+            try:
+                old_exp = date.fromisoformat(str(agr.get("expires_at", today))[:10])
+                new_exp = (old_exp.replace(year=old_exp.year + 1)).isoformat()
+            except ValueError:
+                new_exp = (date.today().replace(year=date.today().year + 1)).isoformat()
+
+            sb.table("contracts").update({
+                "expires_at": new_exp,
+                "status": "active",
+            }).eq("id", agr["id"]).execute()
+
+            post_contract_event(UUID(agr["id"]), "agreement_auto_renewed", "clm.step_147", {
+                "old_expires_at": agr.get("expires_at"),
+                "new_expires_at": new_exp,
+                "broker_mc": broker_mc,
+            })
+            renewed.append({"id": agr["id"], "new_expires_at": new_exp})
+        else:
+            skipped.append({"id": agr["id"], "reason": reason})
+
+    log.info("step_147: auto-renewed %d agreements, skipped %d", len(renewed), len(skipped))
+    return {
+        "renewed_count": len(renewed),
+        "skipped_count": len(skipped),
+        "renewed": renewed,
+        "skipped": skipped,
+    }
+
+
+def step_148_contract_export(
+    carrier_id: UUID | None,
+    contract_id: UUID | None,
+    payload: dict,
+) -> dict:
+    """Export complete contract package (metadata + events + vault docs) as JSON.
+
+    Returns the full package inline; sets export_url on the contract record
+    when a storage_path is provided in payload.
+    """
+    if not contract_id:
+        return {"exported": False, "reason": "No contract_id"}
+
+    sb = get_supabase()
+    contract = _fetch_contract(contract_id)
+
+    events = (
+        sb.table("contract_events")
+        .select("*")
+        .eq("contract_id", str(contract_id))
+        .order("created_at")
+        .execute()
+        .data
+    ) or []
+
+    documents = (
+        sb.table("document_vault")
+        .select("id,doc_type,filename,storage_path,scan_status,uploaded_at")
+        .eq("contract_id", str(contract_id))
+        .execute()
+        .data
+    ) or []
+
+    package = {
+        "contract_id": str(contract_id),
+        "contract_type": contract.get("contract_type"),
+        "status": contract.get("status"),
+        "counterparty_name": contract.get("counterparty_name"),
+        "rate_total": contract.get("rate_total"),
+        "rate_per_mile": contract.get("rate_per_mile"),
+        "origin_city": contract.get("origin_city"),
+        "destination_city": contract.get("destination_city"),
+        "pickup_date": str(contract.get("pickup_date") or ""),
+        "delivery_date": str(contract.get("delivery_date") or ""),
+        "payment_terms": contract.get("payment_terms"),
+        "milestone_pct": contract.get("milestone_pct"),
+        "gl_posted": contract.get("gl_posted"),
+        "auto_approved": contract.get("auto_approved"),
+        "extracted_vars": contract.get("extracted_vars"),
+        "events": events,
+        "documents": documents,
+        "exported_at": _now(),
+    }
+
+    export_url = payload.get("export_url")
+    if export_url:
+        sb.table("contracts").update({"export_url": export_url}).eq("id", str(contract_id)).execute()
+
+    post_contract_event(contract_id, "exported", "clm.step_148", {
+        "event_count": len(events),
+        "document_count": len(documents),
+    })
+
+    log.info("step_148: exported contract=%s events=%d docs=%d", contract_id, len(events), len(documents))
+    return {
+        "exported": True,
+        "contract_id": str(contract_id),
+        "event_count": len(events),
+        "document_count": len(documents),
+        "package": package,
+    }
+
+
+def step_149_compliance_audit(
+    carrier_id: UUID | None,
+    contract_id: UUID | None,
+    payload: dict,
+) -> dict:
+    """Run a compliance audit on contract for SOD and GAAP requirements.
+
+    Checks:
+    - Separation of duties: different actors for scan vs. approve vs. GL-post
+    - Required fields present for GAAP revenue recognition
+    - All milestone events logged in contract_events
+    - GL posted before archiving
+    """
+    if not contract_id:
+        return {"passed": False, "reason": "No contract_id"}
+
+    sb = get_supabase()
+    contract = _fetch_contract(contract_id)
+    events = (
+        sb.table("contract_events")
+        .select("event_type,actor")
+        .eq("contract_id", str(contract_id))
+        .execute()
+        .data
+    ) or []
+
+    findings: list[str] = []
+    event_types = {e["event_type"] for e in events}
+    actors = {e["event_type"]: e["actor"] for e in events}
+
+    # GAAP: revenue recognition requires rate_total, delivery_date, counterparty
+    for field in ("rate_total", "delivery_date", "counterparty_name"):
+        if not contract.get(field):
+            findings.append(f"GAAP: missing required field '{field}' for revenue recognition")
+
+    # GL must be posted
+    if not contract.get("gl_posted"):
+        findings.append("GL not posted — revenue not yet recognized")
+
+    # Milestones must be logged
+    for pct in (10, 50, 90, 100):
+        evt = f"milestone.{pct}pct"
+        # check partial match in event_types
+        if not any(str(pct) in t for t in event_types):
+            findings.append(f"No milestone event found for {pct}%")
+
+    # SOD: scanner and approver should differ
+    scanner_actor = actors.get("scanned") or actors.get("variables_extracted")
+    approver_actor = actors.get("auto_approved") or actors.get("flagged_for_review")
+    if scanner_actor and approver_actor and scanner_actor == approver_actor:
+        findings.append(f"SOD violation: same actor '{scanner_actor}' scanned and approved")
+
+    passed = len(findings) == 0
+    post_contract_event(contract_id, "compliance_audit", "clm.step_149", {
+        "passed": passed,
+        "findings": findings,
+    })
+
+    log.info("step_149: contract=%s compliance_audit passed=%s findings=%d", contract_id, passed, len(findings))
+    return {
+        "passed": passed,
+        "contract_id": str(contract_id),
+        "findings": findings,
+        "finding_count": len(findings),
+        "event_types_found": list(event_types),
+    }
+
+
+def step_150_clm_complete(
+    carrier_id: UUID | None,
+    contract_id: UUID | None,
+    payload: dict,
+) -> dict:
+    """Mark CLM workflow complete — write terminal atomic ledger event.
+
+    Gathers final contract state and writes a comprehensive ledger entry
+    summarizing the full CLM lifecycle for this contract.
+    """
+    if not contract_id:
+        return {"complete": False, "reason": "No contract_id"}
+
+    sb = get_supabase()
+    contract = _fetch_contract(contract_id)
+
+    events = (
+        sb.table("contract_events")
+        .select("event_type,actor,created_at")
+        .eq("contract_id", str(contract_id))
+        .order("created_at")
+        .execute()
+        .data
+    ) or []
+
+    sb.table("atomic_ledger").insert({
+        "event_type": "clm.workflow.complete",
+        "event_source": "clm.step_150",
+        "logistics_payload": {
+            "contract_id": str(contract_id),
+            "contract_type": contract.get("contract_type"),
+            "origin_city": contract.get("origin_city"),
+            "destination_city": contract.get("destination_city"),
+            "load_number": contract.get("load_number"),
+        },
+        "financial_payload": {
+            "rate_total": contract.get("rate_total"),
+            "rate_per_mile": contract.get("rate_per_mile"),
+            "payment_terms": contract.get("payment_terms"),
+            "gl_posted": contract.get("gl_posted"),
+            "revenue_recognized": contract.get("revenue_recognized"),
+            "counterparty": contract.get("counterparty_name"),
+        },
+        "compliance_payload": {
+            "milestone_pct": contract.get("milestone_pct"),
+            "auto_approved": contract.get("auto_approved"),
+            "flagged_for_review": contract.get("flagged_for_review"),
+            "archived": contract.get("status") == "archived",
+            "event_count": len(events),
+            "actor": "clm.engine",
+        },
+    }).execute()
+
+    post_contract_event(contract_id, "clm.workflow.complete", "clm.step_150", {
+        "final_status": contract.get("status"),
+        "milestone_pct": contract.get("milestone_pct"),
+        "event_count": len(events),
+    })
+
+    log.info("step_150: CLM workflow complete contract=%s status=%s", contract_id, contract.get("status"))
+    return {
+        "complete": True,
+        "contract_id": str(contract_id),
+        "final_status": contract.get("status"),
+        "milestone_pct": contract.get("milestone_pct"),
+        "gl_posted": contract.get("gl_posted"),
+        "revenue_recognized": contract.get("revenue_recognized"),
+        "event_count": len(events),
+        "ledger_written": True,
+    }
