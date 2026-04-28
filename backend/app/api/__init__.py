@@ -11,6 +11,7 @@ from .routes_webhooks   import router as webhooks_router
 from ..clm             import clm_router
 from ..execution_engine import execution_router
 from ..atomic_ledger   import atomic_ledger_router
+from ..compliance      import compliance_router
 
 __all__ = [
     "intake_router",
@@ -25,4 +26,5 @@ __all__ = [
     "clm_router",
     "execution_router",
     "atomic_ledger_router",
+    "compliance_router",
 ]
