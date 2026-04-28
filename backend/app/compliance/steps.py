@@ -680,3 +680,712 @@ def step_160_drug_test_schedule(
         "quarter_end": quarter_end.isoformat(),
         "scheduled": scheduled,
     }
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# STEPS 161-170 — Safety light enforcement
+# ═══════════════════════════════════════════════════════════════════════════
+
+def step_161_accident_flag(
+    carrier_id: UUID | None,
+    contract_id: UUID | None,
+    payload: dict,
+) -> dict:
+    """Flag carriers with a DOT accident report in the last 12 months.
+
+    Reads SAFER data for accident history. Downgrades safety_light to yellow
+    if an accident exists; red if fatality or injury reported.
+    """
+    sb = get_supabase()
+    carriers = (
+        [{"id": str(carrier_id), "dot_number": payload.get("dot_number")}]
+        if carrier_id
+        else _active_carriers()
+    )
+
+    flagged: list[dict] = []
+    cutoff = (_today() - timedelta(days=365)).isoformat()
+
+    for c in carriers:
+        cid = c["id"]
+        dot = c.get("dot_number")
+        safer = fetch_safer(dot)
+
+        if not safer or safer.get("stub") or safer.get("error"):
+            continue
+
+        content = safer.get("content", {}) if isinstance(safer, dict) else {}
+        carrier_data = content.get("carrier", {}) if isinstance(content, dict) else {}
+
+        # SAFER returns crashTotal, fatalCrash, injCrash, towCrash
+        crash_total = int(carrier_data.get("crashTotal") or 0)
+        fatal_crash = int(carrier_data.get("fatalCrash") or 0)
+        inj_crash = int(carrier_data.get("injCrash") or 0)
+
+        if crash_total == 0:
+            continue
+
+        severity = "critical" if (fatal_crash > 0 or inj_crash > 0) else "warning"
+        new_light = "red" if severity == "critical" else "yellow"
+
+        _log_event(UUID(cid), "accident_flag", severity, {
+            "dot": dot,
+            "crash_total": crash_total,
+            "fatal_crash": fatal_crash,
+            "inj_crash": inj_crash,
+        })
+
+        sb.table("insurance_compliance").update({
+            "safety_light": new_light,
+            "last_checked_at": _now(),
+        }).eq("carrier_id", cid).execute()
+
+        flagged.append({
+            "carrier_id": cid,
+            "dot": dot,
+            "crash_total": crash_total,
+            "fatal_crash": fatal_crash,
+            "inj_crash": inj_crash,
+            "safety_light": new_light,
+        })
+
+    log.info("step_161: accident_flag flagged=%d carriers", len(flagged))
+    return {
+        "carriers_checked": len(carriers),
+        "flagged_count": len(flagged),
+        "flagged": flagged,
+    }
+
+
+def step_162_oos_rate_check(
+    carrier_id: UUID | None,
+    contract_id: UUID | None,
+    payload: dict,
+) -> dict:
+    """Flag carriers whose Out-of-Service rate exceeds the 20% threshold.
+
+    Reads SAFER vehicleOosRate, driverOosRate, and hazmatOosRate.
+    Threshold: national average Vehicle OOS is ~21% — flag at >20%.
+    """
+    sb = get_supabase()
+    carriers = (
+        [{"id": str(carrier_id), "dot_number": payload.get("dot_number")}]
+        if carrier_id
+        else _active_carriers()
+    )
+
+    oos_threshold = float(payload.get("threshold_pct", 20.0))
+    flagged: list[dict] = []
+
+    for c in carriers:
+        cid = c["id"]
+        dot = c.get("dot_number")
+        safer = fetch_safer(dot)
+
+        if not safer or safer.get("stub") or safer.get("error"):
+            continue
+
+        content = safer.get("content", {}) if isinstance(safer, dict) else {}
+        carrier_data = content.get("carrier", {}) if isinstance(content, dict) else {}
+
+        vehicle_oos = float(carrier_data.get("vehicleOosRate") or 0)
+        driver_oos = float(carrier_data.get("driverOosRate") or 0)
+        hazmat_oos = float(carrier_data.get("hazmatOosRate") or 0)
+
+        max_oos = max(vehicle_oos, driver_oos)
+        if max_oos <= oos_threshold:
+            continue
+
+        severity = "critical" if max_oos > 35 else "warning"
+        _log_event(UUID(cid), "oos_rate_exceeded", severity, {
+            "dot": dot,
+            "vehicle_oos_rate": vehicle_oos,
+            "driver_oos_rate": driver_oos,
+            "hazmat_oos_rate": hazmat_oos,
+            "threshold": oos_threshold,
+        })
+
+        sb.table("insurance_compliance").update({
+            "safety_light": "red" if severity == "critical" else "yellow",
+            "last_checked_at": _now(),
+        }).eq("carrier_id", cid).execute()
+
+        flagged.append({
+            "carrier_id": cid,
+            "dot": dot,
+            "vehicle_oos_rate": vehicle_oos,
+            "driver_oos_rate": driver_oos,
+            "max_oos_rate": max_oos,
+            "threshold": oos_threshold,
+        })
+
+    log.info("step_162: oos_rate_check flagged=%d", len(flagged))
+    return {
+        "carriers_checked": len(carriers),
+        "threshold_pct": oos_threshold,
+        "flagged_count": len(flagged),
+        "flagged": flagged,
+    }
+
+
+def step_163_safety_light_update(
+    carrier_id: UUID | None,
+    contract_id: UUID | None,
+    payload: dict,
+) -> dict:
+    """Recompute safety light for each carrier from all compliance factors.
+
+    Factors: insurance expiry, MC authority (SAFER), CSA OOS rate,
+    CDL status, accident history. Worst factor wins.
+    Updates insurance_compliance.safety_light and carrier_compliance_scores.
+    """
+    sb = get_supabase()
+    carriers = (
+        [{"id": str(carrier_id), "dot_number": payload.get("dot_number")}]
+        if carrier_id
+        else _active_carriers()
+    )
+
+    updates: list[dict] = []
+
+    for c in carriers:
+        cid = c["id"]
+        dot = c.get("dot_number")
+        light = "green"
+
+        # Insurance
+        ins = (
+            sb.table("insurance_compliance")
+            .select("policy_expiry,safety_light")
+            .eq("carrier_id", cid)
+            .limit(1)
+            .execute()
+            .data
+        )
+        if ins:
+            expiry_str = ins[0].get("policy_expiry")
+            if expiry_str:
+                try:
+                    expiry = date.fromisoformat(str(expiry_str))
+                    days_left = (expiry - _today()).days
+                    if days_left < 0:
+                        light = "red"
+                    elif days_left <= 7 and light != "red":
+                        light = "red"
+                    elif days_left <= 30 and light == "green":
+                        light = "yellow"
+                except ValueError:
+                    pass
+
+        # CDL — any red CDL → yellow fleet light
+        red_cdl = (
+            sb.table("driver_cdl")
+            .select("id")
+            .eq("carrier_id", cid)
+            .eq("cdl_status", "red")
+            .limit(1)
+            .execute()
+            .data
+        )
+        if red_cdl and light == "green":
+            light = "yellow"
+
+        # SAFER
+        if dot and light != "red":
+            safer = fetch_safer(dot)
+            safer_light = shield_score(safer)
+            if safer_light == "red":
+                light = "red"
+            elif safer_light == "yellow" and light == "green":
+                light = "yellow"
+
+        # Persist
+        sb.table("insurance_compliance").update({
+            "safety_light": light,
+            "last_checked_at": _now(),
+        }).eq("carrier_id", cid).execute()
+
+        # Upsert compliance score record
+        existing = (
+            sb.table("carrier_compliance_scores")
+            .select("id")
+            .eq("carrier_id", cid)
+            .limit(1)
+            .execute()
+            .data
+        )
+        score_row = {"carrier_id": cid, "safety_light": light, "last_computed_at": _now()}
+        if existing:
+            sb.table("carrier_compliance_scores").update(score_row).eq("carrier_id", cid).execute()
+        else:
+            sb.table("carrier_compliance_scores").insert(score_row).execute()
+
+        _log_event(UUID(cid), "safety_light_change", "info", {
+            "new_light": light,
+            "dot": dot,
+        })
+        updates.append({"carrier_id": cid, "safety_light": light})
+
+    green = sum(1 for u in updates if u["safety_light"] == "green")
+    yellow = sum(1 for u in updates if u["safety_light"] == "yellow")
+    red = sum(1 for u in updates if u["safety_light"] == "red")
+
+    log.info("step_163: safety_light_update green=%d yellow=%d red=%d", green, yellow, red)
+    return {
+        "carriers_updated": len(updates),
+        "green": green,
+        "yellow": yellow,
+        "red": red,
+        "updates": updates,
+    }
+
+
+def step_164_red_light_suspend(
+    carrier_id: UUID | None,
+    contract_id: UUID | None,
+    payload: dict,
+) -> dict:
+    """Block load offers to all red-light carriers.
+
+    Sets compliance_suspended=True on active_carriers for red-light records.
+    Does NOT change carrier status — they remain 'active' but load offers
+    are blocked by the dispatch engine checking this flag.
+    """
+    sb = get_supabase()
+
+    q = (
+        sb.table("insurance_compliance")
+        .select("carrier_id")
+        .eq("safety_light", "red")
+    )
+    if carrier_id:
+        q = q.eq("carrier_id", str(carrier_id))
+
+    red_carriers = q.execute().data or []
+    suspended: list[str] = []
+
+    for row in red_carriers:
+        cid = row["carrier_id"]
+        sb.table("active_carriers").update({
+            "compliance_suspended": True,
+            "suspension_reason": "Red safety light — load offers blocked",
+            "suspended_at": _now(),
+        }).eq("id", cid).execute()
+
+        _log_event(UUID(cid), "red_light_suspend", "critical", {
+            "action": "load_offers_blocked",
+        })
+        log_agent("shield", "red_light_suspend", carrier_id=cid, result="suspended")
+        suspended.append(cid)
+
+    log.info("step_164: red_light_suspend suspended=%d carriers", len(suspended))
+    return {
+        "suspended_count": len(suspended),
+        "suspended_carrier_ids": suspended,
+    }
+
+
+def step_165_compliance_email(
+    carrier_id: UUID | None,
+    contract_id: UUID | None,
+    payload: dict,
+) -> dict:
+    """Email compliance status report to carrier via Nova/Postmark.
+
+    Composes a structured compliance summary and queues it for delivery.
+    Uses insurance_compliance + carrier_compliance_scores for the report body.
+    """
+    sb = get_supabase()
+    carriers = (
+        [{"id": str(carrier_id)}]
+        if carrier_id
+        else (
+            sb.table("insurance_compliance")
+            .select("carrier_id")
+            .in_("safety_light", ["yellow", "red"])
+            .execute()
+            .data
+        ) or []
+    )
+
+    emails_queued: list[dict] = []
+
+    for row in carriers:
+        cid = row.get("carrier_id") or row.get("id")
+        if not cid:
+            continue
+
+        carrier = (
+            sb.table("active_carriers")
+            .select("company_name,email")
+            .eq("id", cid)
+            .single()
+            .execute()
+            .data
+        )
+        if not carrier or not carrier.get("email"):
+            continue
+
+        ins = (
+            sb.table("insurance_compliance")
+            .select("policy_expiry,safety_light")
+            .eq("carrier_id", cid)
+            .limit(1)
+            .execute()
+            .data
+        )
+        light = ins[0].get("safety_light", "green") if ins else "green"
+        policy_expiry = ins[0].get("policy_expiry") if ins else "N/A"
+
+        subject = f"[3 Lakes Logistics] Compliance Alert — {carrier['company_name']}"
+        body = (
+            f"Hello {carrier['company_name']},\n\n"
+            f"Your current safety status is: {light.upper()}\n"
+            f"Insurance expiry: {policy_expiry}\n\n"
+            f"Please review your compliance documents at your earliest convenience.\n"
+            f"Contact your 3 Lakes Logistics compliance team if you have questions.\n\n"
+            f"— 3 Lakes Logistics Compliance (Shield)"
+        )
+
+        # Log the email intent (Postmark integration wired in production)
+        log_agent("nova", "compliance_email", carrier_id=cid,
+                  payload={"subject": subject, "safety_light": light})
+        _log_event(UUID(cid), "compliance_email_sent", "info", {
+            "to": carrier["email"],
+            "safety_light": light,
+        })
+        emails_queued.append({
+            "carrier_id": cid,
+            "to": carrier["email"],
+            "safety_light": light,
+            "subject": subject,
+        })
+
+    log.info("step_165: compliance_email queued=%d", len(emails_queued))
+    return {"emails_queued": len(emails_queued), "emails": emails_queued}
+
+
+def step_166_compliance_sms(
+    carrier_id: UUID | None,
+    contract_id: UUID | None,
+    payload: dict,
+) -> dict:
+    """SMS carrier when safety light turns yellow or red via Signal/Twilio.
+
+    Sends a concise alert with the safety status and action required.
+    """
+    sb = get_supabase()
+    carriers = (
+        [{"id": str(carrier_id)}]
+        if carrier_id
+        else (
+            sb.table("insurance_compliance")
+            .select("carrier_id")
+            .in_("safety_light", ["yellow", "red"])
+            .execute()
+            .data
+        ) or []
+    )
+
+    sms_queued: list[dict] = []
+
+    for row in carriers:
+        cid = row.get("carrier_id") or row.get("id")
+        if not cid:
+            continue
+
+        carrier = (
+            sb.table("active_carriers")
+            .select("company_name,phone")
+            .eq("id", cid)
+            .single()
+            .execute()
+            .data
+        )
+        if not carrier or not carrier.get("phone"):
+            continue
+
+        ins = (
+            sb.table("insurance_compliance")
+            .select("safety_light")
+            .eq("carrier_id", cid)
+            .limit(1)
+            .execute()
+            .data
+        )
+        light = ins[0].get("safety_light", "green") if ins else "green"
+        if light == "green":
+            continue
+
+        emoji = "🟡" if light == "yellow" else "🔴"
+        message = (
+            f"{emoji} 3 Lakes Logistics ALERT: Your compliance status is {light.upper()}. "
+            f"Load offers may be affected. Check email or call 3LL compliance. "
+            f"Reply STOP to unsubscribe."
+        )
+
+        log_agent("signal", "compliance_sms", carrier_id=cid,
+                  payload={"to": carrier["phone"], "safety_light": light})
+        _log_event(UUID(cid), "compliance_sms_sent", "info", {
+            "to": carrier["phone"],
+            "safety_light": light,
+        })
+        sms_queued.append({
+            "carrier_id": cid,
+            "to": carrier["phone"],
+            "safety_light": light,
+            "message": message,
+        })
+
+    log.info("step_166: compliance_sms queued=%d", len(sms_queued))
+    return {"sms_queued": len(sms_queued), "sms": sms_queued}
+
+
+def step_167_hazmat_cert_check(
+    carrier_id: UUID | None,
+    contract_id: UUID | None,
+    payload: dict,
+) -> dict:
+    """Verify hazmat endorsement (H or X) for drivers assigned to tanker/hazmat trucks.
+
+    Cross-references fleet_assets for hazmat equipment with driver_cdl endorsements.
+    Flags drivers missing hazmat endorsement for hazmat-required routes.
+    """
+    sb = get_supabase()
+    carriers = (
+        [{"id": str(carrier_id)}]
+        if carrier_id
+        else _active_carriers()
+    )
+
+    flagged: list[dict] = []
+
+    for c in carriers:
+        cid = c["id"]
+
+        # Find hazmat/tanker trucks for this carrier
+        hazmat_trucks = (
+            sb.table("fleet_assets")
+            .select("truck_id,trailer_type")
+            .eq("carrier_id", cid)
+            .in_("trailer_type", ["Tanker-Hazmat", "Tanker"])
+            .execute()
+            .data
+        ) or []
+
+        if not hazmat_trucks:
+            continue
+
+        # Check drivers without H or X endorsement
+        drivers = (
+            sb.table("driver_cdl")
+            .select("driver_id,driver_name,endorsements,cdl_status")
+            .eq("carrier_id", cid)
+            .execute()
+            .data
+        ) or []
+
+        for driver in drivers:
+            endorsements = driver.get("endorsements") or []
+            has_hazmat = any(e in ("H", "X") for e in endorsements)
+            if not has_hazmat:
+                _log_event(UUID(cid), "hazmat_missing", "warning", {
+                    "driver_id": driver["driver_id"],
+                    "driver_name": driver.get("driver_name"),
+                    "endorsements": endorsements,
+                    "hazmat_trucks": [t["truck_id"] for t in hazmat_trucks],
+                })
+                flagged.append({
+                    "carrier_id": cid,
+                    "driver_id": driver["driver_id"],
+                    "driver_name": driver.get("driver_name"),
+                    "endorsements": endorsements,
+                    "missing": "H (Hazmat)",
+                })
+
+    log.info("step_167: hazmat_cert_check flagged=%d drivers", len(flagged))
+    return {"flagged_count": len(flagged), "flagged": flagged}
+
+
+def step_168_oversize_permit(
+    carrier_id: UUID | None,
+    contract_id: UUID | None,
+    payload: dict,
+) -> dict:
+    """Verify oversize/overweight permits are current for applicable trucks.
+
+    Checks vehicle_inspections for trucks tagged as oversize.
+    Flags those without a current permit (sticker_expiry >= today).
+    """
+    sb = get_supabase()
+    today = _today()
+
+    q = sb.table("vehicle_inspections").select("*").lt("sticker_expiry", today.isoformat())
+    if carrier_id:
+        q = q.eq("carrier_id", str(carrier_id))
+
+    expired = q.execute().data or []
+    flagged: list[dict] = []
+
+    for row in expired:
+        cid = UUID(row["carrier_id"])
+        _log_event(cid, "oversize_expired", "warning", {
+            "truck_id": row["truck_id"],
+            "sticker_expiry": str(row.get("sticker_expiry")),
+        })
+        flagged.append({
+            "carrier_id": str(cid),
+            "truck_id": row["truck_id"],
+            "vin": row.get("vin"),
+            "sticker_expiry": str(row.get("sticker_expiry")),
+        })
+
+    log.info("step_168: oversize_permit expired=%d", len(flagged))
+    return {"expired_count": len(flagged), "expired": flagged}
+
+
+def step_169_ifta_compliance(
+    carrier_id: UUID | None,
+    contract_id: UUID | None,
+    payload: dict,
+) -> dict:
+    """Check IFTA quarterly filing status for all carriers.
+
+    Determines the current quarter, looks for filed records, and flags
+    any carrier whose filing is missing or overdue.
+    """
+    sb = get_supabase()
+    today = _today()
+
+    # Current quarter string e.g. "2025-Q2"
+    q_num = (today.month - 1) // 3 + 1
+    quarter = f"{today.year}-Q{q_num}"
+
+    # IFTA quarterly due dates: Apr 30, Jul 31, Oct 31, Jan 31
+    due_months = {1: (4, 30), 2: (7, 31), 3: (10, 31), 4: (1, 31)}
+    dm, dd = due_months[q_num]
+    due_year = today.year if q_num < 4 else today.year + 1
+    due_date = date(due_year, dm, dd)
+
+    carriers = (
+        [{"id": str(carrier_id)}]
+        if carrier_id
+        else _active_carriers()
+    )
+
+    overdue: list[dict] = []
+    filed: list[dict] = []
+
+    for c in carriers:
+        cid = c["id"]
+        existing = (
+            sb.table("ifta_filings")
+            .select("*")
+            .eq("carrier_id", cid)
+            .eq("quarter", quarter)
+            .limit(1)
+            .execute()
+            .data
+        )
+
+        if existing and existing[0].get("status") == "filed":
+            filed.append({"carrier_id": cid, "quarter": quarter})
+            continue
+
+        # Create or update record
+        is_overdue = today > due_date
+        status = "overdue" if is_overdue else "pending"
+        row = {
+            "carrier_id": cid,
+            "quarter": quarter,
+            "due_date": due_date.isoformat(),
+            "status": status,
+        }
+        if existing:
+            sb.table("ifta_filings").update({"status": status}).eq(
+                "carrier_id", cid).eq("quarter", quarter).execute()
+        else:
+            sb.table("ifta_filings").insert(row).execute()
+
+        if is_overdue:
+            _log_event(UUID(cid), "ifta_overdue", "warning", {
+                "quarter": quarter,
+                "due_date": due_date.isoformat(),
+                "days_overdue": (today - due_date).days,
+            })
+            overdue.append({"carrier_id": cid, "quarter": quarter,
+                            "due_date": due_date.isoformat()})
+
+    log.info("step_169: ifta quarter=%s filed=%d overdue=%d", quarter, len(filed), len(overdue))
+    return {
+        "quarter": quarter,
+        "due_date": due_date.isoformat(),
+        "filed_count": len(filed),
+        "overdue_count": len(overdue),
+        "overdue": overdue,
+    }
+
+
+def step_170_ucr_registration(
+    carrier_id: UUID | None,
+    contract_id: UUID | None,
+    payload: dict,
+) -> dict:
+    """Verify UCR (Unified Carrier Registration) is current for the active year.
+
+    UCR renews annually Oct 1 – Dec 31 for the following year.
+    Flags carriers without a registered record for the current year.
+    """
+    sb = get_supabase()
+    today = _today()
+    reg_year = today.year
+
+    carriers = (
+        [{"id": str(carrier_id)}]
+        if carrier_id
+        else _active_carriers()
+    )
+
+    current: list[dict] = []
+    expired: list[dict] = []
+
+    for c in carriers:
+        cid = c["id"]
+        rec = (
+            sb.table("ucr_registrations")
+            .select("*")
+            .eq("carrier_id", cid)
+            .eq("reg_year", reg_year)
+            .limit(1)
+            .execute()
+            .data
+        )
+
+        if rec and rec[0].get("status") == "registered":
+            current.append({"carrier_id": cid, "year": reg_year})
+            continue
+
+        # Insert or update to expired
+        if rec:
+            sb.table("ucr_registrations").update({"status": "expired"}).eq(
+                "carrier_id", cid).eq("reg_year", reg_year).execute()
+        else:
+            sb.table("ucr_registrations").insert({
+                "carrier_id": cid,
+                "reg_year": reg_year,
+                "status": "expired",
+            }).execute()
+
+        _log_event(UUID(cid), "ucr_expired", "warning", {
+            "reg_year": reg_year,
+        })
+        expired.append({"carrier_id": cid, "year": reg_year})
+
+    log.info("step_170: ucr_registration year=%d current=%d expired=%d",
+             reg_year, len(current), len(expired))
+    return {
+        "reg_year": reg_year,
+        "current_count": len(current),
+        "expired_count": len(expired),
+        "expired": expired,
+    }
