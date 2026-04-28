@@ -8,6 +8,7 @@ from .routes_founders      import router as founders_router
 from .routes_agents        import router as agents_router
 from .routes_webhooks      import router as webhooks_router
 from .routes_prospecting   import router as prospecting_router
+from .routes_triggers      import router as triggers_router
 
 from ..clm             import clm_router
 from ..execution_engine import execution_router
@@ -25,6 +26,7 @@ __all__ = [
     "agents_router",
     "webhooks_router",
     "prospecting_router",
+    "triggers_router",
     "clm_router",
     "execution_router",
     "atomic_ledger_router",

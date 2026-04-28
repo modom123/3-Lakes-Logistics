@@ -933,7 +933,11 @@ td.td-name{font-weight:600;color:var(--navy);}
 
     <!-- COMPLIANCE -->
     <div class="page" id="page-compliance">
-      <div class="page-hdr"><div class="page-hdr-l"><div class="chip">FMCSA</div><h2>DOT Compliance</h2></div></div>
+      <div class="page-hdr"><div class="page-hdr-l"><div class="chip">FMCSA</div><h2>DOT Compliance</h2></div>
+        <div class="page-hdr-acts">
+          <button class="btn-navy" onclick="runComplianceSweep()" id="compliance-sweep-btn">⚙️ Run Compliance Sweep</button>
+        </div>
+      </div>
 
       <!-- FMCSA LIVE LOOKUP -->
       <div class="card" style="margin-bottom:20px;border-top:3px solid var(--gold)">
@@ -1409,15 +1413,39 @@ td.td-name{font-weight:600;color:var(--navy);}
             <option value="compliance">Compliance</option>
             <option value="analytics">Analytics</option>
           </select>
-          <button class="btn-out" onclick="loadExecutionSteps()">Refresh</button>
+          <button class="btn-out" onclick="loadExecutionSteps();loadTriggerStatus()">Refresh</button>
         </div>
       </div>
 
-      <div class="metrics" style="margin-bottom:16px">
+      <div class="g4" style="margin-bottom:16px">
         <div class="mc"><div class="mc-label">Total Steps</div><div class="mc-val blue">200</div></div>
         <div class="mc"><div class="mc-label">Complete</div><div class="mc-val green" id="exec-complete">—</div></div>
         <div class="mc"><div class="mc-label">Running</div><div class="mc-val orange" id="exec-running">—</div></div>
         <div class="mc"><div class="mc-label">Failed</div><div class="mc-val red" id="exec-failed">—</div></div>
+      </div>
+
+      <!-- Manual Trigger Panel -->
+      <div class="card" style="margin-bottom:16px;border-top:3px solid var(--gold)">
+        <div class="card-hd">
+          <div class="card-title">Manual Domain Triggers</div>
+          <span class="card-chip">Fire any domain now</span>
+        </div>
+        <p class="t-sm t-muted" style="margin-bottom:16px">These run automatically on real events (intake → onboarding, load saved → dispatch, etc.). Use these buttons to manually fire a domain or test the engine.</p>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <button class="btn-navy" onclick="manualTrigger('onboarding')">⚙️ Onboarding</button>
+          <button class="btn-navy" onclick="manualTrigger('dispatch')">🚛 Dispatch</button>
+          <button class="btn-navy" onclick="manualTrigger('transit')">🛰️ Transit</button>
+          <button class="btn-navy" onclick="manualTrigger('settlement')">💵 Settlement</button>
+          <button class="btn-navy" onclick="manualTrigger('compliance')">🛡️ Compliance</button>
+          <button class="btn-navy" onclick="manualTrigger('analytics')">📊 Analytics</button>
+        </div>
+        <div id="trigger-status-feed" style="margin-top:16px"></div>
+      </div>
+
+      <!-- Automatic Trigger Log -->
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-hd"><div class="card-title">Trigger Activity Log</div><span class="badge badge-green" style="font-size:9px">Auto-fired on events</span></div>
+        <div id="trigger-log"><div class="loading"><div class="spin"></div>Loading trigger history…</div></div>
       </div>
 
       <!-- Domain Cards -->
@@ -1598,11 +1626,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
 let allCarriers=[], allLoads=[], allInvoices=[], currentInvFilter='all', loadCounter=3849;
 
-const pageNames={dashboard:'Dashboard',dispatch:'Dispatch Board',carriers:'Carriers',loads:'Load Manager',invoices:'Invoices & Billing',compliance:'DOT Compliance',ifta:'IFTA / Permits',insurance:'Insurance',revenue:'Revenue Tracker',providers:'Compliance Providers',checklist:'Daily Checklist',notes:'Dispatcher Notes',agents:'AI Agents',founders:'Founders Program',leads:'Lead Pipeline'};
+const pageNames={dashboard:'Dashboard',dispatch:'Dispatch Board',carriers:'Carriers',loads:'Load Manager',invoices:'Invoices & Billing',compliance:'DOT Compliance',ifta:'IFTA / Permits',insurance:'Insurance',revenue:'Revenue Tracker',providers:'Compliance Providers',checklist:'Daily Checklist',notes:'Dispatcher Notes',agents:'AI Agents',founders:'Founders Program',leads:'Lead Pipeline',execution:'Execution Engine'};
 
 // ── 3 Lakes Logistics Backend API (FastAPI) ──
 const API_BASE = (window.__3LL_API_BASE || 'http://localhost:8080').replace(/\/$/,'');
 const API_TOKEN = (window.__3LL_API_TOKEN || localStorage.getItem('3LL_API_TOKEN') || 'change-me-in-prod');
+
+// ── Execution Engine Trigger Helper ──
+// Called after every Supabase write so the backend can run the right domain.
+async function fireTrigger(event, body) {
+  try {
+    await fetch(`${API_BASE}/api/triggers/${event}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + API_TOKEN },
+      body: JSON.stringify(body),
+    });
+  } catch(e) {
+    // Backend offline — trigger silently fails, Supabase write already succeeded
+    console.warn('[trigger] backend offline, skipping:', event, e.message);
+  }
+}
 const API = {
   async get(path){
     const r = await fetch(API_BASE+path,{headers:{'Authorization':'Bearer '+API_TOKEN}});
@@ -1827,12 +1870,17 @@ function renderDispatchBoard(){
 
 async function updateLoadStatus(id){
   const statuses=['Booked','En Route','Check Due','Delivered','POD Needed','Completed'];
-  const current=allLoads.find(l=>l.id===id)?.status||'Booked';
+  const load=allLoads.find(l=>l.id===id);
+  const current=load?.status||'Booked';
   const next=statuses[(statuses.indexOf(current)+1)%statuses.length];
   if(!confirm('Change status to: '+next+'?'))return;
   const{error}=await sb.from('loads').update({status:next}).eq('id',id);
   if(error){toast('Error: '+error.message,'error');return;}
   await loadLoads();toast('Status → '+next);
+  // Fire the matching execution-engine trigger
+  const triggerBody={load_id:id,load_number:load?.load_number||'',rate:load?.rate||null};
+  if(next==='En Route')   fireTrigger('pickup',    triggerBody);
+  if(next==='Delivered'||next==='Completed') fireTrigger('delivered', triggerBody);
 }
 
 function updateLoadMetrics(){
@@ -1885,6 +1933,14 @@ async function saveLoad(){
   ['load-origin','load-dest','load-miles','load-rate','load-pickup','load-broker','load-commodity'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   const prev=document.getElementById('fee-preview');if(prev)prev.textContent='Enter rate to calculate dispatch fee';
   await loadLoads();updateDashboard();toast('Load saved!');
+  // Fire dispatch execution domain in background
+  const savedLoad = allLoads[0];
+  fireTrigger('load_booked', {
+    load_id: savedLoad?.id || '',
+    load_number: savedLoad?.load_number || '',
+    driver_name: driver,
+    origin, destination: dest, rate,
+  });
 }
 
 function populateDriverSelect(){
@@ -3000,6 +3056,98 @@ async function loadIntegrationStatus() {
 // ── Init realtime + seed notifications ───────────────────────────────────────
 startAgentRealtime();
 seedRecentNotifs();
+
+// ══════════════════════════════════════════════════════
+// EXECUTION ENGINE TRIGGERS (manual + status)
+// ══════════════════════════════════════════════════════
+
+const DOMAIN_MAP = {
+  onboarding: { icon:'⚙️',  endpoint:'onboarding', body:{carrier_id:null} },
+  dispatch:   { icon:'🚛',  endpoint:'load_booked', body:{load_id:'manual'} },
+  transit:    { icon:'🛰️',  endpoint:'pickup',      body:{load_id:'manual'} },
+  settlement: { icon:'💵',  endpoint:'delivered',   body:{load_id:'manual'} },
+  compliance: { icon:'🛡️',  endpoint:'compliance',  body:{} },
+  analytics:  { icon:'📊',  endpoint:'analytics',   body:{} },
+};
+
+async function manualTrigger(domain) {
+  const m = DOMAIN_MAP[domain];
+  if (!m) return;
+  toast(`Firing ${m.icon} ${domain} domain…`);
+  try {
+    const r = await fetch(`${API_BASE}/api/triggers/${m.endpoint}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + API_TOKEN },
+      body: JSON.stringify(m.body),
+    });
+    if (!r.ok) throw new Error(await r.text());
+    toast(`✅ ${domain} domain triggered — check Agent Log`);
+    setTimeout(() => { loadTriggerStatus(); loadExecutionSteps(); }, 1500);
+  } catch(e) {
+    toast('Trigger failed: ' + e.message, 'error');
+  }
+}
+
+async function runComplianceSweep() {
+  const btn = document.getElementById('compliance-sweep-btn');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Running…'; }
+  try {
+    const r = await fetch(`${API_BASE}/api/triggers/compliance`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + API_TOKEN },
+      body: JSON.stringify({}),
+    });
+    if (!r.ok) throw new Error(await r.text());
+    toast('✅ Compliance sweep queued — 30 steps running in background');
+  } catch(e) {
+    toast('Sweep failed: ' + e.message, 'error');
+  }
+  if (btn) { btn.disabled = false; btn.textContent = '⚙️ Run Compliance Sweep'; }
+}
+
+async function loadTriggerStatus() {
+  const logEl = document.getElementById('trigger-log');
+  const feedEl = document.getElementById('trigger-status-feed');
+  try {
+    const r = await fetch(`${API_BASE}/api/triggers/status`, {
+      headers: { 'Authorization': 'Bearer ' + API_TOKEN },
+    });
+    if (!r.ok) throw new Error(r.status);
+    const data = await r.json();
+    const rows = data.triggers || [];
+    const html = rows.length
+      ? '<div class="tbl-wrap"><table><thead><tr><th>Time</th><th>Event</th><th>Carrier</th><th>Detail</th><th>Status</th></tr></thead><tbody>' +
+        rows.map(t => {
+          const domain = (t.action || '').replace('trigger.', '');
+          const domMeta = DOMAIN_MAP[domain] || { icon: '⚙️' };
+          return `<tr>
+            <td class="t-mono" style="font-size:11px;white-space:nowrap">${new Date(t.ts).toLocaleString()}</td>
+            <td><strong>${domMeta.icon} ${domain}</strong></td>
+            <td style="font-size:11px;color:var(--muted)">${t.carrier_id ? t.carrier_id.slice(0,8)+'…' : 'all'}</td>
+            <td style="font-size:11px;color:var(--muted)">${esc(JSON.stringify(t.payload||{}).slice(0,60))}</td>
+            <td><span class="badge ${t.error ? 'badge-red' : 'badge-green'}">${t.error ? 'error' : t.result || 'queued'}</span></td>
+          </tr>`;
+        }).join('') + '</tbody></table></div>'
+      : '<div class="t-sm t-muted" style="padding:12px 0">No triggers fired yet. Save a load or submit the intake form to activate.</div>';
+    if (logEl) logEl.innerHTML = html;
+    if (feedEl && rows.length) {
+      const last = rows[0];
+      const domain = (last.action || '').replace('trigger.', '');
+      feedEl.innerHTML = `<div style="font-family:var(--ff-m);font-size:11px;color:var(--green);margin-top:4px">Last trigger: ${domain} · ${new Date(last.ts).toLocaleString()}</div>`;
+    }
+  } catch(e) {
+    if (logEl) logEl.innerHTML = '<div class="t-sm t-muted" style="padding:12px">Backend offline — trigger log unavailable.</div>';
+  }
+}
+
+// Patch execution nav to also load trigger status
+(function patchNavForExecution(){
+  const orig = window.nav;
+  window.nav = function(id) {
+    orig(id);
+    if (id === 'execution') { loadTriggerStatus(); }
+  };
+})();
 </script>
 </body>
 </html>
