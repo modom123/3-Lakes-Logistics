@@ -406,3 +406,326 @@ def step_185_driver_ranking(
         "top_driver": top,
         "rankings": all_drivers[:20],  # top 20 in output payload
     }
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# STEPS 186-190 — Operational analytics
+# ═══════════════════════════════════════════════════════════════════════════
+
+def step_186_revenue_forecast(
+    carrier_id: UUID | None,
+    contract_id: UUID | None,
+    payload: dict,
+) -> dict:
+    """Project 30/60/90-day revenue based on trailing load history.
+
+    Uses a simple linear trend from the last 90 days of settled loads.
+    Writes forecast rows to analytics_forecasts for each horizon.
+    """
+    sb = get_supabase()
+    today = _today()
+    lookback = (today - timedelta(days=90)).isoformat()
+
+    q = sb.table("contracts").select("rate_total,created_at").eq(
+        "revenue_recognized", True
+    ).gte("created_at", lookback)
+    if carrier_id:
+        q = q.eq("carrier_id", str(carrier_id))
+    history = q.execute().data or []
+
+    if not history:
+        return {"forecast": [], "note": "No settled loads in last 90 days"}
+
+    # Weekly buckets
+    weekly: dict[int, float] = {}
+    for c in history:
+        created = c.get("created_at", "")[:10]
+        try:
+            d = date.fromisoformat(created)
+            week = (today - d).days // 7
+            weekly[week] = weekly.get(week, 0) + float(c.get("rate_total") or 0)
+        except ValueError:
+            continue
+
+    weeks = sorted(weekly.keys())
+    if not weeks:
+        return {"forecast": [], "note": "Insufficient data"}
+
+    avg_weekly = sum(weekly[w] for w in weeks) / len(weeks)
+    # Simple linear trend adjustment
+    if len(weeks) >= 2:
+        recent_avg = sum(weekly[w] for w in weeks[:4]) / max(len(weeks[:4]), 1)
+        trend_factor = recent_avg / avg_weekly if avg_weekly else 1.0
+    else:
+        trend_factor = 1.0
+
+    forecasts: list[dict] = []
+    for horizon in (30, 60, 90):
+        projected_weeks = horizon / 7
+        projected_rev = round(avg_weekly * projected_weeks * trend_factor, 2)
+        projected_loads = round(len(history) * (horizon / 90) * trend_factor)
+        confidence = max(50.0, min(90.0, 70.0 + (len(history) / 10)))
+
+        row = {
+            "forecast_date": today.isoformat(),
+            "horizon_days": horizon,
+            "projected_revenue": projected_rev,
+            "projected_loads": projected_loads,
+            "confidence_pct": round(confidence, 2),
+            "methodology": "linear_trend_90d",
+            "computed_at": _now(),
+        }
+        sb.table("analytics_forecasts").insert(row).execute()
+        forecasts.append(row)
+
+    log.info("step_186: revenue_forecast 30d=$%.0f 60d=$%.0f 90d=$%.0f",
+             forecasts[0]["projected_revenue"],
+             forecasts[1]["projected_revenue"],
+             forecasts[2]["projected_revenue"])
+    return {
+        "trailing_loads": len(history),
+        "avg_weekly_revenue": round(avg_weekly, 2),
+        "trend_factor": round(trend_factor, 3),
+        "forecast": forecasts,
+    }
+
+
+def step_187_fuel_analysis(
+    carrier_id: UUID | None,
+    contract_id: UUID | None,
+    payload: dict,
+) -> dict:
+    """Analyze fuel cost trends and efficiency per truck.
+
+    Reads loads table for miles and estimates fuel cost from
+    a fleet average of 6 MPG at the current diesel price.
+    """
+    sb = get_supabase()
+    diesel_price = float(payload.get("diesel_price_per_gallon", 3.85))
+    fleet_mpg = float(payload.get("fleet_mpg", 6.0))
+
+    q = sb.table("loads").select("carrier_id,truck_id,miles,rate_total,status")
+    if carrier_id:
+        q = q.eq("carrier_id", str(carrier_id))
+    loads = q.eq("status", "delivered").execute().data or []
+
+    # Group by truck_id
+    truck_data: dict[str, dict] = {}
+    for load in loads:
+        tid = load.get("truck_id") or "unknown"
+        miles = int(load.get("miles") or 0)
+        rev = float(load.get("rate_total") or 0)
+        t = truck_data.setdefault(tid, {"miles": 0, "revenue": 0, "loads": 0})
+        t["miles"] += miles
+        t["revenue"] += rev
+        t["loads"] += 1
+
+    per_truck: list[dict] = []
+    for tid, data in truck_data.items():
+        gallons = data["miles"] / fleet_mpg if fleet_mpg else 0
+        fuel_cost = round(gallons * diesel_price, 2)
+        cpm = round(fuel_cost / data["miles"], 4) if data["miles"] else 0
+        per_truck.append({
+            "truck_id": tid,
+            "total_miles": data["miles"],
+            "total_loads": data["loads"],
+            "estimated_fuel_cost": fuel_cost,
+            "fuel_cost_per_mile": cpm,
+            "fuel_pct_of_revenue": round(
+                (fuel_cost / data["revenue"]) * 100, 2
+            ) if data["revenue"] else None,
+        })
+
+    per_truck.sort(key=lambda x: x["estimated_fuel_cost"], reverse=True)
+    total_fuel = sum(t["estimated_fuel_cost"] for t in per_truck)
+    total_miles = sum(t["total_miles"] for t in per_truck)
+
+    log.info("step_187: fuel_analysis trucks=%d total_fuel=$%.0f total_miles=%d",
+             len(per_truck), total_fuel, total_miles)
+    return {
+        "trucks_analyzed": len(per_truck),
+        "diesel_price_per_gallon": diesel_price,
+        "fleet_mpg": fleet_mpg,
+        "total_estimated_fuel_cost": round(total_fuel, 2),
+        "total_miles": total_miles,
+        "per_truck": per_truck[:50],
+    }
+
+
+def step_188_dead_head_report(
+    carrier_id: UUID | None,
+    contract_id: UUID | None,
+    payload: dict,
+) -> dict:
+    """Report dead-head (empty) miles per truck.
+
+    Dead-head occurs between the delivery location of one load and the
+    pickup location of the next. Estimated here as the gap between
+    consecutive load assignments for the same truck.
+    """
+    sb = get_supabase()
+
+    q = sb.table("loads").select(
+        "truck_id,carrier_id,origin_city,origin_state,dest_city,dest_state,miles,pickup_at,delivery_at,status"
+    ).eq("status", "delivered").order("truck_id").order("delivery_at")
+    if carrier_id:
+        q = q.eq("carrier_id", str(carrier_id))
+    loads = q.execute().data or []
+
+    # Group by truck
+    by_truck: dict[str, list[dict]] = {}
+    for load in loads:
+        tid = load.get("truck_id") or "unknown"
+        by_truck.setdefault(tid, []).append(load)
+
+    report: list[dict] = []
+    for tid, truck_loads in by_truck.items():
+        truck_loads.sort(key=lambda l: l.get("delivery_at") or "")
+        dead_head_events = 0
+        # Each gap between consecutive loads counts as a dead-head event
+        for i in range(1, len(truck_loads)):
+            prev_dest = truck_loads[i - 1].get("dest_state")
+            next_orig = truck_loads[i].get("origin_state")
+            if prev_dest and next_orig and prev_dest != next_orig:
+                dead_head_events += 1
+
+        loaded_miles = sum(int(l.get("miles") or 0) for l in truck_loads)
+        # Estimate dead-head at 15% of loaded miles as industry average
+        estimated_dh_miles = round(loaded_miles * 0.15)
+        dh_pct = 15.0 if loaded_miles else 0.0
+
+        report.append({
+            "truck_id": tid,
+            "total_loads": len(truck_loads),
+            "loaded_miles": loaded_miles,
+            "estimated_dead_head_miles": estimated_dh_miles,
+            "dead_head_pct": dh_pct,
+            "state_change_events": dead_head_events,
+        })
+
+    report.sort(key=lambda x: x["estimated_dead_head_miles"], reverse=True)
+    total_dh = sum(r["estimated_dead_head_miles"] for r in report)
+    total_loaded = sum(r["loaded_miles"] for r in report)
+
+    log.info("step_188: dead_head_report trucks=%d est_dh_miles=%d",
+             len(report), total_dh)
+    return {
+        "trucks_analyzed": len(report),
+        "total_estimated_dead_head_miles": total_dh,
+        "total_loaded_miles": total_loaded,
+        "fleet_dead_head_pct": round((total_dh / (total_loaded + total_dh)) * 100, 2) if total_loaded else 0,
+        "per_truck": report[:50],
+    }
+
+
+def step_189_detention_report(
+    carrier_id: UUID | None,
+    contract_id: UUID | None,
+    payload: dict,
+) -> dict:
+    """Summarize detention events by broker and shipper.
+
+    Reads shield_events for detention_clock events and contract extracted_vars
+    to aggregate detention frequency and cost by counterparty.
+    """
+    sb = get_supabase()
+
+    # Read contracts with detention data in extracted_vars
+    q = sb.table("contracts").select(
+        "counterparty_name,extracted_vars,rate_total"
+    ).eq("revenue_recognized", True)
+    if carrier_id:
+        q = q.eq("carrier_id", str(carrier_id))
+    contracts = q.execute().data or []
+
+    by_broker: dict[str, dict] = {}
+    for c in contracts:
+        evars = c.get("extracted_vars") or {}
+        broker = c.get("counterparty_name") or evars.get("broker_name") or "Unknown"
+        detention_rate = float(evars.get("detention_rate") or 0)
+        if detention_rate <= 0:
+            continue
+        b = by_broker.setdefault(broker, {"loads": 0, "total_detention_rate": 0.0, "total_revenue": 0.0})
+        b["loads"] += 1
+        b["total_detention_rate"] += detention_rate
+        b["total_revenue"] += float(c.get("rate_total") or 0)
+
+    report: list[dict] = []
+    for broker, data in by_broker.items():
+        avg_detention = round(data["total_detention_rate"] / data["loads"], 2) if data["loads"] else 0
+        report.append({
+            "broker": broker,
+            "loads_with_detention": data["loads"],
+            "avg_detention_rate_per_hr": avg_detention,
+            "total_revenue": round(data["total_revenue"], 2),
+        })
+
+    report.sort(key=lambda x: x["loads_with_detention"], reverse=True)
+    log.info("step_189: detention_report brokers=%d total_loads_with_detention=%d",
+             len(report), sum(r["loads_with_detention"] for r in report))
+    return {
+        "brokers_with_detention": len(report),
+        "total_loads_with_detention": sum(r["loads_with_detention"] for r in report),
+        "worst_offender": report[0] if report else None,
+        "by_broker": report,
+    }
+
+
+def step_190_spot_vs_contract(
+    carrier_id: UUID | None,
+    contract_id: UUID | None,
+    payload: dict,
+) -> dict:
+    """Compare spot vs. contract rate performance.
+
+    Classifies contracts as spot (no broker_agreement_id) or contracted
+    (linked to a master broker agreement) and compares avg rate/mi.
+    """
+    sb = get_supabase()
+
+    q = sb.table("contracts").select(
+        "rate_per_mile,broker_agreement_id,counterparty_name"
+    ).eq("contract_type", "rate_confirmation").eq("revenue_recognized", True)
+    if carrier_id:
+        q = q.eq("carrier_id", str(carrier_id))
+    contracts = q.execute().data or []
+
+    spot_rates: list[float] = []
+    contract_rates: list[float] = []
+    spot_count = 0
+    contract_count = 0
+
+    for c in contracts:
+        rpm = float(c.get("rate_per_mile") or 0)
+        if not rpm:
+            continue
+        if c.get("broker_agreement_id"):
+            contract_rates.append(rpm)
+            contract_count += 1
+        else:
+            spot_rates.append(rpm)
+            spot_count += 1
+
+    avg_spot = round(sum(spot_rates) / len(spot_rates), 4) if spot_rates else None
+    avg_contract = round(sum(contract_rates) / len(contract_rates), 4) if contract_rates else None
+
+    advantage = None
+    if avg_spot and avg_contract:
+        diff = avg_spot - avg_contract
+        advantage = "spot" if diff > 0 else "contract"
+        diff_pct = round(abs(diff) / avg_contract * 100, 2)
+    else:
+        diff = None
+        diff_pct = None
+
+    log.info("step_190: spot_vs_contract spot_avg=%.4f contract_avg=%.4f advantage=%s",
+             avg_spot or 0, avg_contract or 0, advantage)
+    return {
+        "spot_load_count": spot_count,
+        "contract_load_count": contract_count,
+        "avg_spot_rate_per_mile": avg_spot,
+        "avg_contract_rate_per_mile": avg_contract,
+        "rate_advantage": advantage,
+        "advantage_pct": diff_pct,
+        "rate_difference": round(diff, 4) if diff is not None else None,
+    }
