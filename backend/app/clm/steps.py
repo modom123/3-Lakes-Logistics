@@ -582,3 +582,383 @@ def step_130_rate_benchmark(
         "assessment": assessment,
         "data_source": "internal_scorecards" if internal_rates else "national_benchmark",
     }
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# STEPS 131-140 — Auto-approval / milestones / GL / factoring / payment terms
+# ═══════════════════════════════════════════════════════════════════════════
+
+def step_131_auto_approve(
+    carrier_id: UUID | None,
+    contract_id: UUID | None,
+    payload: dict,
+) -> dict:
+    """Auto-approve contract if confidence >90% and no blocking warnings.
+
+    Conditions checked:
+    - confidence_score >= 0.90
+    - flagged_for_review is False
+    - broker NOT on blacklist (checked in step 129)
+    - No revenue leakage warnings (from step 125)
+
+    Sets auto_approved=True and status='active' on success.
+    """
+    if not contract_id:
+        return {"approved": False, "reason": "No contract_id"}
+
+    sb = get_supabase()
+    contract = _fetch_contract(contract_id)
+
+    confidence = float(contract.get("confidence_score") or 0)
+    flagged = contract.get("flagged_for_review", False)
+    warnings = payload.get("warnings", [])
+
+    # Blocking conditions
+    if confidence < 0.90:
+        reason = f"Confidence {confidence:.0%} < 90% threshold"
+        sb.table("contracts").update({"flagged_for_review": True,
+                                      "review_notes": reason}).eq("id", str(contract_id)).execute()
+        post_contract_event(contract_id, "auto_approve_failed", "clm.step_131",
+                            {"reason": reason, "confidence": confidence})
+        log.info("step_131: contract=%s NOT approved — %s", contract_id, reason)
+        return {"approved": False, "reason": reason, "confidence": confidence}
+
+    if flagged:
+        reason = contract.get("review_notes") or "Flagged for review"
+        post_contract_event(contract_id, "auto_approve_skipped", "clm.step_131", {"reason": reason})
+        log.info("step_131: contract=%s skipped — already flagged", contract_id)
+        return {"approved": False, "reason": reason, "flagged": True}
+
+    if warnings:
+        reason = f"Blocking warnings: {'; '.join(warnings)}"
+        sb.table("contracts").update({"flagged_for_review": True,
+                                      "review_notes": reason}).eq("id", str(contract_id)).execute()
+        post_contract_event(contract_id, "auto_approve_failed", "clm.step_131",
+                            {"reason": reason, "warnings": warnings})
+        return {"approved": False, "reason": reason}
+
+    # All clear — approve
+    sb.table("contracts").update({
+        "auto_approved": True,
+        "status": "active",
+    }).eq("id", str(contract_id)).execute()
+
+    post_contract_event(contract_id, "auto_approved", "clm.step_131", {
+        "confidence": confidence,
+        "auto_approved": True,
+    })
+    log.info("step_131: contract=%s AUTO-APPROVED confidence=%.0f%%", contract_id, confidence * 100)
+    return {"approved": True, "confidence": confidence, "status": "active"}
+
+
+def step_132_flag_for_review(
+    carrier_id: UUID | None,
+    contract_id: UUID | None,
+    payload: dict,
+) -> dict:
+    """Flag contract for Commander review when warnings exist.
+
+    Accepts payload: {reason, warnings (list), severity (low|medium|high)}.
+    Sets flagged_for_review=True and writes review_notes.
+    """
+    if not contract_id:
+        return {"flagged": False, "reason": "No contract_id"}
+
+    sb = get_supabase()
+    reason = payload.get("reason", "Manual flag")
+    warnings = payload.get("warnings", [])
+    severity = payload.get("severity", "medium")
+
+    notes = reason
+    if warnings:
+        notes += " | " + "; ".join(warnings)
+
+    sb.table("contracts").update({
+        "flagged_for_review": True,
+        "review_notes": notes[:500],
+    }).eq("id", str(contract_id)).execute()
+
+    post_contract_event(contract_id, "flagged_for_review", "clm.step_132", {
+        "reason": reason,
+        "warnings": warnings,
+        "severity": severity,
+    })
+
+    log.info("step_132: contract=%s flagged severity=%s", contract_id, severity)
+    return {
+        "flagged": True,
+        "contract_id": str(contract_id),
+        "reason": reason,
+        "severity": severity,
+        "warnings": warnings,
+    }
+
+
+def step_133_milestone_10pct(
+    carrier_id: UUID | None,
+    contract_id: UUID | None,
+    payload: dict,
+) -> dict:
+    """Set contract milestone to 10% — triggered on load assignment."""
+    if not contract_id:
+        return {"milestone_pct": None, "error": "No contract_id"}
+    result = update_milestone(contract_id, 10, "Load assigned to driver")
+    log.info("step_133: contract=%s milestone=10%%", contract_id)
+    return {"milestone_pct": 10, "contract_id": str(contract_id), "result": result}
+
+
+def step_134_milestone_50pct(
+    carrier_id: UUID | None,
+    contract_id: UUID | None,
+    payload: dict,
+) -> dict:
+    """Set contract milestone to 50% — triggered on pickup confirmed."""
+    if not contract_id:
+        return {"milestone_pct": None, "error": "No contract_id"}
+    result = update_milestone(contract_id, 50, "Pickup confirmed — truck in transit")
+    log.info("step_134: contract=%s milestone=50%%", contract_id)
+    return {"milestone_pct": 50, "contract_id": str(contract_id), "result": result}
+
+
+def step_135_milestone_90pct(
+    carrier_id: UUID | None,
+    contract_id: UUID | None,
+    payload: dict,
+) -> dict:
+    """Set contract milestone to 90% — triggered on POD uploaded."""
+    if not contract_id:
+        return {"milestone_pct": None, "error": "No contract_id"}
+    result = update_milestone(contract_id, 90, "POD uploaded — awaiting invoice payment")
+    log.info("step_135: contract=%s milestone=90%%", contract_id)
+    return {"milestone_pct": 90, "contract_id": str(contract_id), "result": result}
+
+
+def step_136_milestone_100pct(
+    carrier_id: UUID | None,
+    contract_id: UUID | None,
+    payload: dict,
+) -> dict:
+    """Set contract milestone to 100% — triggered on invoice paid."""
+    if not contract_id:
+        return {"milestone_pct": None, "error": "No contract_id"}
+    result = update_milestone(contract_id, 100, "Invoice paid — contract fully executed")
+    log.info("step_136: contract=%s milestone=100%%", contract_id)
+    return {"milestone_pct": 100, "contract_id": str(contract_id), "status": "executed", "result": result}
+
+
+def step_137_gl_trigger(
+    carrier_id: UUID | None,
+    contract_id: UUID | None,
+    payload: dict,
+) -> dict:
+    """Trigger GL/accounting entry at 100% milestone.
+
+    Calls trigger_invoice() to recognize revenue and mark gl_posted=True.
+    """
+    if not contract_id:
+        return {"gl_posted": False, "error": "No contract_id"}
+
+    sb = get_supabase()
+    contract = trigger_invoice(contract_id)
+
+    sb.table("contracts").update({
+        "gl_posted": True,
+    }).eq("id", str(contract_id)).execute()
+
+    post_contract_event(contract_id, "gl_posted", "clm.step_137", {
+        "rate_total": contract.get("rate_total"),
+        "payment_terms": contract.get("payment_terms"),
+    })
+
+    log.info("step_137: contract=%s GL posted rate=$%s", contract_id, contract.get("rate_total"))
+    return {
+        "gl_posted": True,
+        "contract_id": str(contract_id),
+        "rate_total": contract.get("rate_total"),
+        "payment_terms": contract.get("payment_terms"),
+        "revenue_recognized": True,
+    }
+
+
+def step_138_factoring_eligibility(
+    carrier_id: UUID | None,
+    contract_id: UUID | None,
+    payload: dict,
+) -> dict:
+    """Check if contract is eligible for factoring.
+
+    Eligibility requires:
+    - factoring_allowed=True in extracted_vars (broker allows factoring)
+    - Broker NOT on blacklist
+    - Contract status = active
+    - rate_total > 0
+    """
+    if not contract_id:
+        return {"eligible": False, "reason": "No contract_id"}
+
+    sb = get_supabase()
+    contract = _fetch_contract(contract_id)
+    evars = contract.get("extracted_vars") or {}
+
+    reasons_denied: list[str] = []
+
+    factoring_allowed = evars.get("factoring_allowed")
+    if factoring_allowed is False:
+        reasons_denied.append("Broker prohibits factoring in rate confirmation")
+
+    broker_mc = evars.get("broker_mc")
+    if broker_mc:
+        hit = sb.table("broker_blacklist").select("broker_mc").eq("broker_mc", broker_mc).limit(1).execute().data
+        if hit:
+            reasons_denied.append(f"Broker MC {broker_mc} is blacklisted")
+
+    if contract.get("status") not in ("active", "executed"):
+        reasons_denied.append(f"Contract status is '{contract.get('status')}' — must be active")
+
+    rate_total = float(contract.get("rate_total") or 0)
+    if rate_total <= 0:
+        reasons_denied.append("rate_total is zero or unknown")
+
+    eligible = len(reasons_denied) == 0
+    post_contract_event(contract_id, "factoring_eligibility_checked", "clm.step_138", {
+        "eligible": eligible,
+        "reasons_denied": reasons_denied,
+        "rate_total": rate_total,
+    })
+
+    log.info("step_138: contract=%s factoring_eligible=%s", contract_id, eligible)
+    return {
+        "eligible": eligible,
+        "contract_id": str(contract_id),
+        "rate_total": rate_total,
+        "broker_mc": broker_mc,
+        "reasons_denied": reasons_denied,
+    }
+
+
+def step_139_broker_agreement_link(
+    carrier_id: UUID | None,
+    contract_id: UUID | None,
+    payload: dict,
+) -> dict:
+    """Link a rate confirmation to its parent master broker agreement.
+
+    Searches contracts for a broker_agreement type with the same broker_mc,
+    then sets broker_agreement_id on the rate confirmation.
+    """
+    if not contract_id:
+        return {"linked": False, "reason": "No contract_id"}
+
+    sb = get_supabase()
+    contract = _fetch_contract(contract_id)
+
+    if contract.get("contract_type") != "rate_confirmation":
+        return {"linked": False, "reason": "Not a rate_confirmation contract"}
+
+    evars = contract.get("extracted_vars") or {}
+    broker_mc = evars.get("broker_mc") or payload.get("broker_mc")
+
+    if not broker_mc:
+        return {"linked": False, "reason": "No broker_mc in contract vars"}
+
+    # Find the matching master broker agreement
+    agreements = (
+        sb.table("contracts")
+        .select("id,counterparty_name,status,expires_at")
+        .eq("contract_type", "broker_agreement")
+        .filter("extracted_vars->>'broker_mc'", "eq", broker_mc)
+        .eq("status", "active")
+        .order("created_at", desc=True)
+        .limit(1)
+        .execute()
+        .data
+    )
+
+    if not agreements:
+        log.info("step_139: no broker_agreement found for mc=%s", broker_mc)
+        return {
+            "linked": False,
+            "broker_mc": broker_mc,
+            "reason": "No active broker agreement on file",
+        }
+
+    agreement = agreements[0]
+    sb.table("contracts").update({
+        "broker_agreement_id": agreement["id"],
+    }).eq("id", str(contract_id)).execute()
+
+    post_contract_event(contract_id, "broker_agreement_linked", "clm.step_139", {
+        "broker_agreement_id": agreement["id"],
+        "broker_mc": broker_mc,
+    })
+
+    log.info("step_139: contract=%s linked to agreement=%s", contract_id, agreement["id"])
+    return {
+        "linked": True,
+        "contract_id": str(contract_id),
+        "broker_agreement_id": agreement["id"],
+        "broker_mc": broker_mc,
+        "agreement_status": agreement.get("status"),
+        "agreement_expires_at": agreement.get("expires_at"),
+    }
+
+
+def step_140_payment_terms_enforce(
+    carrier_id: UUID | None,
+    contract_id: UUID | None,
+    payload: dict,
+) -> dict:
+    """Enforce payment terms — flag contract if payment is overdue.
+
+    Parses payment_terms (e.g. 'Net-30', 'Quick Pay 2%/10') and compares
+    the due date against today. Flags as overdue if unpaid past due date.
+    """
+    if not contract_id:
+        return {"overdue": False, "reason": "No contract_id"}
+
+    sb = get_supabase()
+    contract = _fetch_contract(contract_id)
+
+    if contract.get("revenue_recognized"):
+        return {"overdue": False, "note": "Already paid — no action needed"}
+
+    delivery_date = contract.get("delivery_date")
+    payment_terms = contract.get("payment_terms") or "Net-30"
+
+    if not delivery_date:
+        return {"overdue": False, "note": "No delivery_date — cannot compute due date"}
+
+    try:
+        base = date.fromisoformat(str(delivery_date))
+        # Extract net days from terms string
+        digits = "".join(filter(str.isdigit, payment_terms.split("/")[0]))
+        net_days = int(digits) if digits else 30
+        due_date = base + timedelta(days=net_days)
+        today = date.today()
+        days_overdue = (today - due_date).days
+    except (ValueError, TypeError) as exc:
+        return {"overdue": False, "note": f"Could not parse dates: {exc}"}
+
+    overdue = days_overdue > 0
+
+    if overdue:
+        sb.table("contracts").update({
+            "flagged_for_review": True,
+            "review_notes": f"Payment overdue by {days_overdue} days (terms: {payment_terms})",
+        }).eq("id", str(contract_id)).execute()
+
+        post_contract_event(contract_id, "payment_overdue", "clm.step_140", {
+            "due_date": due_date.isoformat(),
+            "days_overdue": days_overdue,
+            "payment_terms": payment_terms,
+        })
+
+    log.info("step_140: contract=%s overdue=%s days=%d", contract_id, overdue, days_overdue if overdue else 0)
+    return {
+        "overdue": overdue,
+        "contract_id": str(contract_id),
+        "payment_terms": payment_terms,
+        "due_date": due_date.isoformat() if delivery_date else None,
+        "days_overdue": max(0, days_overdue),
+        "rate_total": contract.get("rate_total"),
+    }
