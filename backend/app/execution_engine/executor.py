@@ -40,6 +40,38 @@ from ..clm.steps import (
     step_149_compliance_audit,
     step_150_clm_complete,
 )
+from ..compliance.steps import (
+    step_151_daily_sweep,
+    step_152_csa_refresh,
+    step_153_insurance_30d,
+    step_154_insurance_7d,
+    step_155_insurance_expired,
+    step_156_mc_authority_check,
+    step_157_cdl_expiry_check,
+    step_158_cdl_expiry_30d,
+    step_159_cdl_expiry_7d,
+    step_160_drug_test_schedule,
+    step_161_accident_flag,
+    step_162_oos_rate_check,
+    step_163_safety_light_update,
+    step_164_red_light_suspend,
+    step_165_compliance_email,
+    step_166_compliance_sms,
+    step_167_hazmat_cert_check,
+    step_168_oversize_permit,
+    step_169_ifta_compliance,
+    step_170_ucr_registration,
+    step_171_annual_inspection,
+    step_172_dot_audit_prep,
+    step_173_eld_mandate_check,
+    step_174_cargo_insurance,
+    step_175_new_entrant_monitor,
+    step_176_driver_mvr_check,
+    step_177_lease_agreement,
+    step_178_escrow_audit,
+    step_179_compliance_score,
+    step_180_compliance_complete,
+)
 
 log = get_logger("3ll.execution.executor")
 
@@ -75,6 +107,40 @@ _CLM_HANDLERS: dict[int, object] = {
     148: step_148_contract_export,
     149: step_149_compliance_audit,
     150: step_150_clm_complete,
+}
+
+# Maps step number → concrete handler for compliance domain (151-180)
+_COMPLIANCE_HANDLERS: dict[int, object] = {
+    151: step_151_daily_sweep,
+    152: step_152_csa_refresh,
+    153: step_153_insurance_30d,
+    154: step_154_insurance_7d,
+    155: step_155_insurance_expired,
+    156: step_156_mc_authority_check,
+    157: step_157_cdl_expiry_check,
+    158: step_158_cdl_expiry_30d,
+    159: step_159_cdl_expiry_7d,
+    160: step_160_drug_test_schedule,
+    161: step_161_accident_flag,
+    162: step_162_oos_rate_check,
+    163: step_163_safety_light_update,
+    164: step_164_red_light_suspend,
+    165: step_165_compliance_email,
+    166: step_166_compliance_sms,
+    167: step_167_hazmat_cert_check,
+    168: step_168_oversize_permit,
+    169: step_169_ifta_compliance,
+    170: step_170_ucr_registration,
+    171: step_171_annual_inspection,
+    172: step_172_dot_audit_prep,
+    173: step_173_eld_mandate_check,
+    174: step_174_cargo_insurance,
+    175: step_175_new_entrant_monitor,
+    176: step_176_driver_mvr_check,
+    177: step_177_lease_agreement,
+    178: step_178_escrow_audit,
+    179: step_179_compliance_score,
+    180: step_180_compliance_complete,
 }
 
 
@@ -166,12 +232,12 @@ def _dispatch(
     All other domains fall back to the metadata stub — concrete handlers
     for those domains are added in subsequent sprint cycles.
     """
-    handler = _CLM_HANDLERS.get(step.number)
+    handler = _CLM_HANDLERS.get(step.number) or _COMPLIANCE_HANDLERS.get(step.number)
     if handler is not None:
         return handler(carrier_id, contract_id, payload)  # type: ignore[call-arg]
 
     # Stub for domains not yet implemented (onboarding, dispatch, transit,
-    # settlement, compliance, analytics — handled in future sprints)
+    # settlement, analytics — handled in future sprints)
     return {
         "step_number": step.number,
         "step_name": step.name,

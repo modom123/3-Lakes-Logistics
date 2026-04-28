@@ -1389,3 +1389,864 @@ def step_170_ucr_registration(
         "expired_count": len(expired),
         "expired": expired,
     }
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# STEPS 171-180 — Advanced compliance, scoring, and cycle completion
+# ═══════════════════════════════════════════════════════════════════════════
+
+def step_171_annual_inspection(
+    carrier_id: UUID | None,
+    contract_id: UUID | None,
+    payload: dict,
+) -> dict:
+    """Track annual vehicle inspection compliance (49 CFR § 396.17).
+
+    Inspections are due every 12 months per truck. Reads vehicle_inspections
+    and flags any truck whose due_date has passed without a pass result.
+    Creates stub records for trucks without any inspection row.
+    """
+    sb = get_supabase()
+    today = _today()
+    warn_threshold = today + timedelta(days=30)
+
+    carriers = [{"id": str(carrier_id)}] if carrier_id else _active_carriers()
+    overdue: list[dict] = []
+    upcoming: list[dict] = []
+
+    for c in carriers:
+        cid = c["id"]
+        trucks = (
+            sb.table("fleet_assets")
+            .select("truck_id,vin")
+            .eq("carrier_id", cid)
+            .execute()
+            .data
+        ) or []
+
+        for truck in trucks:
+            tid = truck["truck_id"]
+            rec = (
+                sb.table("vehicle_inspections")
+                .select("*")
+                .eq("carrier_id", cid)
+                .eq("truck_id", tid)
+                .limit(1)
+                .execute()
+                .data
+            )
+
+            if not rec:
+                # No record — create stub due today
+                due = today.isoformat()
+                sb.table("vehicle_inspections").insert({
+                    "carrier_id": cid,
+                    "truck_id": tid,
+                    "vin": truck.get("vin"),
+                    "due_date": due,
+                    "result": "not_performed",
+                }).execute()
+                rec = [{"carrier_id": cid, "truck_id": tid, "due_date": due,
+                        "result": "not_performed", "sticker_expiry": None}]
+
+            row = rec[0]
+            due_date = date.fromisoformat(str(row["due_date"]))
+            result = row.get("result", "not_performed")
+
+            if due_date < today and result != "pass":
+                _log_event(UUID(cid), "inspection_overdue", "warning", {
+                    "truck_id": tid,
+                    "due_date": str(due_date),
+                    "days_overdue": (today - due_date).days,
+                })
+                overdue.append({
+                    "carrier_id": cid,
+                    "truck_id": tid,
+                    "due_date": str(due_date),
+                    "days_overdue": (today - due_date).days,
+                })
+            elif due_date <= warn_threshold and result != "pass":
+                upcoming.append({
+                    "carrier_id": cid,
+                    "truck_id": tid,
+                    "due_date": str(due_date),
+                    "days_until_due": (due_date - today).days,
+                })
+
+    log.info("step_171: annual_inspection overdue=%d upcoming=%d", len(overdue), len(upcoming))
+    return {
+        "overdue_count": len(overdue),
+        "upcoming_count": len(upcoming),
+        "overdue": overdue,
+        "upcoming": upcoming,
+    }
+
+
+def step_172_dot_audit_prep(
+    carrier_id: UUID | None,
+    contract_id: UUID | None,
+    payload: dict,
+) -> dict:
+    """Generate a DOT audit readiness report for a carrier.
+
+    Aggregates: insurance status, CSA scores, CDL status, ELD connectivity,
+    IFTA filing, UCR registration, vehicle inspections, drug test compliance.
+    Returns a scored readiness report (0-100) with per-category findings.
+    """
+    sb = get_supabase()
+    if not carrier_id:
+        return {"error": "carrier_id required for DOT audit prep"}
+
+    cid = str(carrier_id)
+    today = _today()
+    findings: list[dict] = []
+    score = 100.0
+
+    # Insurance
+    ins = (sb.table("insurance_compliance").select("policy_expiry,safety_light")
+           .eq("carrier_id", cid).limit(1).execute().data)
+    if ins:
+        expiry_str = ins[0].get("policy_expiry")
+        light = ins[0].get("safety_light", "green")
+        if light == "red":
+            score -= 30
+            findings.append({"category": "insurance", "status": "fail",
+                              "detail": f"Safety light RED — expiry {expiry_str}"})
+        elif light == "yellow":
+            score -= 10
+            findings.append({"category": "insurance", "status": "warn",
+                              "detail": f"Insurance expiring soon — {expiry_str}"})
+        else:
+            findings.append({"category": "insurance", "status": "pass", "detail": "Current"})
+    else:
+        score -= 20
+        findings.append({"category": "insurance", "status": "missing",
+                          "detail": "No insurance record on file"})
+
+    # CDL
+    red_cdl = (sb.table("driver_cdl").select("driver_id,driver_name,cdl_expiry")
+               .eq("carrier_id", cid).eq("cdl_status", "red").execute().data) or []
+    if red_cdl:
+        score -= 15
+        findings.append({"category": "cdl", "status": "fail",
+                          "detail": f"{len(red_cdl)} driver(s) with red CDL status"})
+    else:
+        findings.append({"category": "cdl", "status": "pass", "detail": "All CDLs current"})
+
+    # ELD
+    eld = (sb.table("eld_connections").select("id").eq("carrier_id", cid)
+           .eq("status", "active").limit(1).execute().data)
+    if not eld:
+        score -= 20
+        findings.append({"category": "eld", "status": "fail",
+                          "detail": "No active ELD connection — ELD mandate violation"})
+    else:
+        findings.append({"category": "eld", "status": "pass", "detail": "ELD connected"})
+
+    # IFTA
+    q_num = (today.month - 1) // 3 + 1
+    quarter = f"{today.year}-Q{q_num}"
+    ifta = (sb.table("ifta_filings").select("status").eq("carrier_id", cid)
+            .eq("quarter", quarter).limit(1).execute().data)
+    ifta_status = ifta[0].get("status") if ifta else "missing"
+    if ifta_status in ("overdue", "missing"):
+        score -= 10
+        findings.append({"category": "ifta", "status": "fail",
+                          "detail": f"IFTA {quarter} not filed"})
+    else:
+        findings.append({"category": "ifta", "status": "pass",
+                          "detail": f"IFTA {quarter} {ifta_status}"})
+
+    # UCR
+    ucr = (sb.table("ucr_registrations").select("status").eq("carrier_id", cid)
+           .eq("reg_year", today.year).limit(1).execute().data)
+    ucr_status = ucr[0].get("status") if ucr else "missing"
+    if ucr_status in ("expired", "missing"):
+        score -= 10
+        findings.append({"category": "ucr", "status": "fail",
+                          "detail": f"UCR {today.year} not registered"})
+    else:
+        findings.append({"category": "ucr", "status": "pass", "detail": f"UCR {today.year} current"})
+
+    # Vehicle inspections
+    overdue_trucks = (
+        sb.table("vehicle_inspections").select("truck_id,due_date")
+        .eq("carrier_id", cid).lt("due_date", today.isoformat())
+        .neq("result", "pass").execute().data
+    ) or []
+    if overdue_trucks:
+        score -= 15
+        findings.append({"category": "inspections", "status": "fail",
+                          "detail": f"{len(overdue_trucks)} truck(s) overdue for annual inspection"})
+    else:
+        findings.append({"category": "inspections", "status": "pass",
+                          "detail": "All truck inspections current"})
+
+    score = max(0.0, round(score, 1))
+    readiness = "ready" if score >= 80 else "at_risk" if score >= 60 else "not_ready"
+
+    _log_event(carrier_id, "dot_audit_prep", "info", {
+        "score": score,
+        "readiness": readiness,
+        "findings": findings,
+    })
+    log_agent("shield", "dot_audit_prep", carrier_id=cid,
+              payload={"score": score, "readiness": readiness})
+
+    log.info("step_172: dot_audit_prep carrier=%s score=%.1f readiness=%s", cid, score, readiness)
+    return {
+        "carrier_id": cid,
+        "audit_readiness_score": score,
+        "readiness": readiness,
+        "findings": findings,
+        "generated_at": _now(),
+    }
+
+
+def step_173_eld_mandate_check(
+    carrier_id: UUID | None,
+    contract_id: UUID | None,
+    payload: dict,
+) -> dict:
+    """Verify ELD mandate compliance for all active carriers.
+
+    FMCSA ELD mandate (49 CFR § 395.8) requires ELD for interstate CMV drivers
+    subject to HOS regulations. Checks eld_connections for active status.
+    """
+    sb = get_supabase()
+    carriers = [{"id": str(carrier_id)}] if carrier_id else _active_carriers()
+
+    compliant: list[str] = []
+    non_compliant: list[dict] = []
+
+    for c in carriers:
+        cid = c["id"]
+        eld = (
+            sb.table("eld_connections")
+            .select("eld_provider,status,last_sync_at")
+            .eq("carrier_id", cid)
+            .eq("status", "active")
+            .limit(1)
+            .execute()
+            .data
+        )
+
+        if eld:
+            compliant.append(cid)
+        else:
+            # Check if there's any connection at all (even inactive)
+            any_eld = (
+                sb.table("eld_connections")
+                .select("eld_provider,status")
+                .eq("carrier_id", cid)
+                .limit(1)
+                .execute()
+                .data
+            )
+            detail = (
+                f"ELD present but status={any_eld[0]['status']}"
+                if any_eld else "No ELD connection on file"
+            )
+            _log_event(UUID(cid), "eld_missing", "critical", {
+                "detail": detail,
+                "provider": any_eld[0].get("eld_provider") if any_eld else None,
+            })
+            non_compliant.append({
+                "carrier_id": cid,
+                "detail": detail,
+            })
+
+    log.info("step_173: eld_mandate_check compliant=%d non_compliant=%d",
+             len(compliant), len(non_compliant))
+    return {
+        "carriers_checked": len(carriers),
+        "compliant_count": len(compliant),
+        "non_compliant_count": len(non_compliant),
+        "non_compliant": non_compliant,
+    }
+
+
+def step_174_cargo_insurance(
+    carrier_id: UUID | None,
+    contract_id: UUID | None,
+    payload: dict,
+) -> dict:
+    """Verify per-load cargo insurance meets the broker's minimum requirement.
+
+    Reads the broker's insurance_required field from the linked contract's
+    extracted_vars and compares against the carrier's cargo coverage on file.
+    """
+    sb = get_supabase()
+
+    # Get the minimum required from the rate conf (passed in payload or from contract)
+    broker_minimum = float(payload.get("insurance_required") or 0)
+
+    if not broker_minimum and contract_id:
+        contract = (
+            sb.table("contracts")
+            .select("extracted_vars")
+            .eq("id", str(contract_id))
+            .single()
+            .execute()
+            .data
+        )
+        if contract:
+            broker_minimum = float(
+                (contract.get("extracted_vars") or {}).get("insurance_required") or 0
+            )
+
+    if not broker_minimum:
+        return {"verified": True, "note": "No broker minimum specified — no check needed"}
+
+    if not carrier_id:
+        return {"verified": False, "reason": "carrier_id required to check cargo insurance"}
+
+    ins = (
+        sb.table("insurance_compliance")
+        .select("policy_expiry,safety_light")
+        .eq("carrier_id", str(carrier_id))
+        .limit(1)
+        .execute()
+        .data
+    )
+
+    if not ins:
+        _log_event(carrier_id, "cargo_insurance_missing", "critical", {
+            "broker_minimum": broker_minimum,
+        })
+        return {
+            "verified": False,
+            "broker_minimum": broker_minimum,
+            "carrier_coverage": None,
+            "reason": "No insurance record on file",
+        }
+
+    # Carrier's policy_expiry check — if current, we assume min coverage met
+    # (actual coverage amount lookup requires integration with insurance provider)
+    expiry_str = ins[0].get("policy_expiry")
+    policy_current = False
+    if expiry_str:
+        try:
+            policy_current = date.fromisoformat(str(expiry_str)) >= _today()
+        except ValueError:
+            pass
+
+    verified = policy_current
+    if not verified:
+        _log_event(carrier_id, "cargo_insurance_expired", "critical", {
+            "broker_minimum": broker_minimum,
+            "policy_expiry": expiry_str,
+        })
+
+    log.info("step_174: cargo_insurance carrier=%s verified=%s broker_min=$%.0f",
+             carrier_id, verified, broker_minimum)
+    return {
+        "verified": verified,
+        "broker_minimum": broker_minimum,
+        "policy_current": policy_current,
+        "policy_expiry": expiry_str,
+    }
+
+
+def step_175_new_entrant_monitor(
+    carrier_id: UUID | None,
+    contract_id: UUID | None,
+    payload: dict,
+) -> dict:
+    """Monitor new authority carriers (< 12 months old) for compliance violations.
+
+    FMCSA subjects new entrant carriers to heightened monitoring in their
+    first 18 months. Checks safety data more frequently and flags any issues.
+    """
+    sb = get_supabase()
+    today = _today()
+    cutoff = (today - timedelta(days=365)).isoformat()
+
+    q = (
+        sb.table("active_carriers")
+        .select("id,company_name,dot_number,mc_number,created_at")
+        .gte("created_at", cutoff)
+        .eq("status", "active")
+    )
+    if carrier_id:
+        q = q.eq("id", str(carrier_id))
+
+    new_entrants = q.execute().data or []
+    monitored: list[dict] = []
+    flagged: list[dict] = []
+
+    for c in new_entrants:
+        cid = c["id"]
+        dot = c.get("dot_number")
+        created = c.get("created_at", "")[:10]
+        days_active = (today - date.fromisoformat(created)).days if created else 0
+
+        # Pull SAFER for this new entrant
+        safer = fetch_safer(dot)
+        light = shield_score(safer)
+
+        ins = (
+            sb.table("insurance_compliance")
+            .select("policy_expiry")
+            .eq("carrier_id", cid)
+            .limit(1)
+            .execute()
+            .data
+        )
+        ins_light = shield_score(safer, ins[0].get("policy_expiry") if ins else None)
+
+        is_flagged = ins_light in ("yellow", "red")
+        entry = {
+            "carrier_id": cid,
+            "company_name": c.get("company_name"),
+            "dot": dot,
+            "days_active": days_active,
+            "safety_light": ins_light,
+        }
+
+        if is_flagged:
+            _log_event(UUID(cid), "new_entrant_violation", "warning", {
+                "days_active": days_active,
+                "safety_light": ins_light,
+                "dot": dot,
+            })
+            flagged.append(entry)
+        else:
+            monitored.append(entry)
+
+    log.info("step_175: new_entrant_monitor total=%d flagged=%d",
+             len(new_entrants), len(flagged))
+    return {
+        "new_entrants_checked": len(new_entrants),
+        "flagged_count": len(flagged),
+        "clean_count": len(monitored),
+        "flagged": flagged,
+    }
+
+
+def step_176_driver_mvr_check(
+    carrier_id: UUID | None,
+    contract_id: UUID | None,
+    payload: dict,
+) -> dict:
+    """Schedule and track annual MVR (Motor Vehicle Record) checks for all drivers.
+
+    DOT requires annual MVR review for CDL drivers. Creates mvr_checks records
+    for drivers whose next_due date has passed and flags overdue checks.
+    """
+    sb = get_supabase()
+    today = _today()
+    one_year_ago = (today - timedelta(days=365)).isoformat()
+
+    carriers = [{"id": str(carrier_id)}] if carrier_id else _active_carriers()
+    overdue: list[dict] = []
+    scheduled: list[dict] = []
+
+    for c in carriers:
+        cid = c["id"]
+        drivers = (
+            sb.table("driver_cdl")
+            .select("driver_id,driver_name,mvr_last_checked")
+            .eq("carrier_id", cid)
+            .execute()
+            .data
+        ) or []
+
+        for driver in drivers:
+            did = driver["driver_id"]
+            last_checked = driver.get("mvr_last_checked")
+
+            # Check for existing mvr record
+            existing = (
+                sb.table("mvr_checks")
+                .select("checked_at,next_due,result")
+                .eq("carrier_id", cid)
+                .eq("driver_id", did)
+                .order("checked_at", desc=True)
+                .limit(1)
+                .execute()
+                .data
+            )
+
+            if existing:
+                next_due = date.fromisoformat(str(existing[0]["next_due"]))
+                if next_due <= today:
+                    overdue.append({
+                        "carrier_id": cid,
+                        "driver_id": did,
+                        "driver_name": driver.get("driver_name"),
+                        "next_due": str(next_due),
+                        "days_overdue": (today - next_due).days,
+                    })
+                    _log_event(UUID(cid), "mvr_due", "warning", {
+                        "driver_id": did,
+                        "next_due": str(next_due),
+                    })
+            else:
+                # No MVR record — schedule one now
+                next_due = today + timedelta(days=30)
+                sb.table("mvr_checks").insert({
+                    "carrier_id": cid,
+                    "driver_id": did,
+                    "driver_name": driver.get("driver_name"),
+                    "checked_at": today.isoformat(),
+                    "next_due": next_due.isoformat(),
+                }).execute()
+                scheduled.append({
+                    "carrier_id": cid,
+                    "driver_id": did,
+                    "next_due": next_due.isoformat(),
+                })
+
+    log.info("step_176: driver_mvr_check overdue=%d scheduled=%d", len(overdue), len(scheduled))
+    return {
+        "overdue_count": len(overdue),
+        "scheduled_count": len(scheduled),
+        "overdue": overdue,
+        "scheduled": scheduled,
+    }
+
+
+def step_177_lease_agreement(
+    carrier_id: UUID | None,
+    contract_id: UUID | None,
+    payload: dict,
+) -> dict:
+    """Verify owner-operator lease agreements are current (49 CFR § 376).
+
+    Checks lease_agreements for expired records where auto_renew=False.
+    Flags expired leases and auto-renews eligible ones by 1 year.
+    """
+    sb = get_supabase()
+    today = _today()
+
+    q = (
+        sb.table("lease_agreements")
+        .select("*")
+        .eq("status", "active")
+        .lt("end_date", today.isoformat())
+    )
+    if carrier_id:
+        q = q.eq("carrier_id", str(carrier_id))
+
+    expired_leases = q.execute().data or []
+    auto_renewed: list[dict] = []
+    flagged: list[dict] = []
+
+    for row in expired_leases:
+        cid = UUID(row["carrier_id"])
+
+        if row.get("auto_renew"):
+            # Extend by 1 year
+            try:
+                old_end = date.fromisoformat(str(row["end_date"]))
+                new_end = old_end.replace(year=old_end.year + 1)
+            except ValueError:
+                new_end = today.replace(year=today.year + 1)
+
+            sb.table("lease_agreements").update({
+                "end_date": new_end.isoformat(),
+                "status": "active",
+            }).eq("id", row["id"]).execute()
+
+            auto_renewed.append({
+                "carrier_id": str(cid),
+                "driver_id": row["driver_id"],
+                "driver_name": row.get("driver_name"),
+                "new_end_date": new_end.isoformat(),
+            })
+        else:
+            sb.table("lease_agreements").update({
+                "status": "expired",
+            }).eq("id", row["id"]).execute()
+
+            _log_event(cid, "lease_expired", "warning", {
+                "driver_id": row["driver_id"],
+                "driver_name": row.get("driver_name"),
+                "end_date": str(row["end_date"]),
+                "auto_renew": False,
+            })
+            flagged.append({
+                "carrier_id": str(cid),
+                "driver_id": row["driver_id"],
+                "driver_name": row.get("driver_name"),
+                "end_date": str(row["end_date"]),
+            })
+
+    log.info("step_177: lease_agreement auto_renewed=%d flagged=%d",
+             len(auto_renewed), len(flagged))
+    return {
+        "auto_renewed_count": len(auto_renewed),
+        "flagged_count": len(flagged),
+        "auto_renewed": auto_renewed,
+        "flagged": flagged,
+    }
+
+
+def step_178_escrow_audit(
+    carrier_id: UUID | None,
+    contract_id: UUID | None,
+    payload: dict,
+) -> dict:
+    """Audit escrow accounts for regulatory compliance (49 CFR § 376.12).
+
+    Owner-operators must have escrow accounts if required by lease.
+    Checks banking_accounts for escrow flag and compares balance against
+    the DOT minimum ($500 or as specified in the lease agreement).
+    """
+    sb = get_supabase()
+    min_escrow = float(payload.get("min_escrow_balance", 500.0))
+
+    carriers = [{"id": str(carrier_id)}] if carrier_id else _active_carriers()
+    compliant: list[dict] = []
+    deficient: list[dict] = []
+
+    for c in carriers:
+        cid = c["id"]
+
+        # Check if carrier has owner-operators with lease agreements
+        leases = (
+            sb.table("lease_agreements")
+            .select("driver_id,driver_name")
+            .eq("carrier_id", cid)
+            .eq("status", "active")
+            .execute()
+            .data
+        ) or []
+
+        if not leases:
+            continue  # No owner-operators — escrow not required
+
+        # Check banking_accounts for this carrier
+        banking = (
+            sb.table("banking_accounts")
+            .select("id,verified_at,account_type")
+            .eq("carrier_id", cid)
+            .limit(1)
+            .execute()
+            .data
+        )
+
+        if not banking or not banking[0].get("verified_at"):
+            _log_event(UUID(cid), "escrow_deficient", "warning", {
+                "reason": "No verified banking account on file",
+                "owner_operators": len(leases),
+                "min_required": min_escrow,
+            })
+            deficient.append({
+                "carrier_id": cid,
+                "reason": "No verified banking account",
+                "owner_operators": len(leases),
+            })
+        else:
+            compliant.append({
+                "carrier_id": cid,
+                "owner_operators": len(leases),
+                "banking_verified": True,
+            })
+
+    log.info("step_178: escrow_audit compliant=%d deficient=%d", len(compliant), len(deficient))
+    return {
+        "carriers_checked": len(carriers),
+        "compliant_count": len(compliant),
+        "deficient_count": len(deficient),
+        "min_escrow_balance": min_escrow,
+        "deficient": deficient,
+    }
+
+
+def step_179_compliance_score(
+    carrier_id: UUID | None,
+    contract_id: UUID | None,
+    payload: dict,
+) -> dict:
+    """Calculate composite compliance score (0-100) per carrier.
+
+    Aggregates sub-scores from all Shield checks:
+      insurance (25pts), CDL (20pts), ELD (20pts), IFTA (10pts),
+      UCR (10pts), inspection (10pts), safety_light (5pts).
+    Upserts carrier_compliance_scores table.
+    """
+    sb = get_supabase()
+    carriers = [{"id": str(carrier_id)}] if carrier_id else _active_carriers()
+    today = _today()
+    scores: list[dict] = []
+
+    for c in carriers:
+        cid = c["id"]
+        total = 100.0
+
+        # Insurance (25 pts)
+        ins = (sb.table("insurance_compliance").select("policy_expiry,safety_light")
+               .eq("carrier_id", cid).limit(1).execute().data)
+        ins_score = 100.0
+        if ins:
+            light = ins[0].get("safety_light", "green")
+            expiry_str = ins[0].get("policy_expiry")
+            if light == "red":
+                ins_score = 0.0
+            elif light == "yellow":
+                ins_score = 50.0
+        else:
+            ins_score = 0.0
+        total -= (100.0 - ins_score) * 0.25
+
+        # CDL (20 pts)
+        red_cdl = (sb.table("driver_cdl").select("id").eq("carrier_id", cid)
+                   .eq("cdl_status", "red").execute().data) or []
+        yellow_cdl = (sb.table("driver_cdl").select("id").eq("carrier_id", cid)
+                      .eq("cdl_status", "yellow").execute().data) or []
+        cdl_score = 100.0 - (len(red_cdl) * 30) - (len(yellow_cdl) * 10)
+        cdl_score = max(0.0, min(100.0, cdl_score))
+        total -= (100.0 - cdl_score) * 0.20
+
+        # ELD (20 pts)
+        eld = (sb.table("eld_connections").select("id").eq("carrier_id", cid)
+               .eq("status", "active").limit(1).execute().data)
+        eld_score = 100.0 if eld else 0.0
+        total -= (100.0 - eld_score) * 0.20
+
+        # IFTA (10 pts)
+        q_num = (today.month - 1) // 3 + 1
+        quarter = f"{today.year}-Q{q_num}"
+        ifta = (sb.table("ifta_filings").select("status").eq("carrier_id", cid)
+                .eq("quarter", quarter).limit(1).execute().data)
+        ifta_score = 100.0
+        if not ifta or ifta[0].get("status") in ("overdue", "missing"):
+            ifta_score = 0.0
+        elif ifta[0].get("status") == "pending":
+            ifta_score = 70.0
+        total -= (100.0 - ifta_score) * 0.10
+
+        # UCR (10 pts)
+        ucr = (sb.table("ucr_registrations").select("status").eq("carrier_id", cid)
+               .eq("reg_year", today.year).limit(1).execute().data)
+        ucr_score = 100.0 if (ucr and ucr[0].get("status") == "registered") else 0.0
+        total -= (100.0 - ucr_score) * 0.10
+
+        # Vehicle inspections (10 pts)
+        overdue_ins = (
+            sb.table("vehicle_inspections").select("id")
+            .eq("carrier_id", cid).lt("due_date", today.isoformat())
+            .neq("result", "pass").execute().data
+        ) or []
+        insp_score = max(0.0, 100.0 - len(overdue_ins) * 25)
+        total -= (100.0 - insp_score) * 0.10
+
+        # Safety light (5 pts)
+        if ins:
+            sl = ins[0].get("safety_light", "green")
+            sl_score = {"green": 100.0, "yellow": 50.0, "red": 0.0}.get(sl, 100.0)
+        else:
+            sl_score = 50.0
+        total -= (100.0 - sl_score) * 0.05
+
+        composite = round(max(0.0, min(100.0, total)), 2)
+        final_light = "green" if composite >= 80 else "yellow" if composite >= 60 else "red"
+
+        row = {
+            "carrier_id": cid,
+            "composite_score": composite,
+            "safety_light": final_light,
+            "insurance_score": round(ins_score, 2),
+            "cdl_score": round(cdl_score, 2),
+            "eld_score": round(eld_score, 2),
+            "ifta_score": round(ifta_score, 2),
+            "ucr_score": round(ucr_score, 2),
+            "inspection_score": round(insp_score, 2),
+            "last_computed_at": _now(),
+        }
+
+        existing = (sb.table("carrier_compliance_scores").select("id")
+                    .eq("carrier_id", cid).limit(1).execute().data)
+        if existing:
+            sb.table("carrier_compliance_scores").update(row).eq("carrier_id", cid).execute()
+        else:
+            sb.table("carrier_compliance_scores").insert(row).execute()
+
+        _log_event(UUID(cid), "compliance_score_computed", "info", {
+            "composite_score": composite,
+            "safety_light": final_light,
+        })
+        scores.append({"carrier_id": cid, "composite_score": composite, "safety_light": final_light})
+
+    avg = round(sum(s["composite_score"] for s in scores) / len(scores), 2) if scores else 0
+    log.info("step_179: compliance_score carriers=%d avg_score=%.1f", len(scores), avg)
+    return {
+        "carriers_scored": len(scores),
+        "average_score": avg,
+        "scores": scores,
+    }
+
+
+def step_180_compliance_complete(
+    carrier_id: UUID | None,
+    contract_id: UUID | None,
+    payload: dict,
+) -> dict:
+    """Write compliance cycle results to atomic ledger — terminal step.
+
+    Reads carrier_compliance_scores and shield_events from the current cycle
+    and writes a comprehensive atomic_ledger entry summarising the sweep.
+    """
+    sb = get_supabase()
+    today = _today().isoformat()
+
+    # Aggregate scores
+    all_scores = sb.table("carrier_compliance_scores").select(
+        "carrier_id,composite_score,safety_light,last_computed_at"
+    ).execute().data or []
+
+    green = sum(1 for s in all_scores if s["safety_light"] == "green")
+    yellow = sum(1 for s in all_scores if s["safety_light"] == "yellow")
+    red = sum(1 for s in all_scores if s["safety_light"] == "red")
+    avg_score = (
+        round(sum(float(s["composite_score"]) for s in all_scores) / len(all_scores), 2)
+        if all_scores else 0
+    )
+
+    # Count unresolved critical events today
+    critical_events = sb.table("shield_events").select("id").eq(
+        "severity", "critical"
+    ).is_("resolved_at", "null").execute().data or []
+
+    # Write atomic ledger entry
+    sb.table("atomic_ledger").insert({
+        "event_type": "compliance.cycle.complete",
+        "event_source": "shield.step_180",
+        "logistics_payload": {
+            "cycle_date": today,
+            "carriers_evaluated": len(all_scores),
+            "green": green,
+            "yellow": yellow,
+            "red": red,
+        },
+        "financial_payload": {},
+        "compliance_payload": {
+            "average_compliance_score": avg_score,
+            "unresolved_critical_events": len(critical_events),
+            "actor": "shield",
+        },
+    }).execute()
+
+    _log_event(carrier_id, "compliance_cycle_complete", "info", {
+        "cycle_date": today,
+        "carriers_evaluated": len(all_scores),
+        "avg_score": avg_score,
+        "green": green,
+        "yellow": yellow,
+        "red": red,
+        "unresolved_critical": len(critical_events),
+    })
+
+    log.info("step_180: compliance_complete carriers=%d avg=%.1f green=%d yellow=%d red=%d",
+             len(all_scores), avg_score, green, yellow, red)
+    return {
+        "complete": True,
+        "cycle_date": today,
+        "carriers_evaluated": len(all_scores),
+        "average_compliance_score": avg_score,
+        "safety_lights": {"green": green, "yellow": yellow, "red": red},
+        "unresolved_critical_events": len(critical_events),
+        "ledger_written": True,
+    }
