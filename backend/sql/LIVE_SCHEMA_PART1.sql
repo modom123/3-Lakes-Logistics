@@ -117,6 +117,24 @@ create table if not exists public.leads (
   created_at      timestamptz not null default now(),
   updated_at      timestamptz not null default now()
 );
+alter table public.leads add column if not exists source_ref      text;
+alter table public.leads add column if not exists company_name    text;
+alter table public.leads add column if not exists dot_number      text;
+alter table public.leads add column if not exists mc_number       text;
+alter table public.leads add column if not exists contact_name    text;
+alter table public.leads add column if not exists contact_title   text;
+alter table public.leads add column if not exists phone           text;
+alter table public.leads add column if not exists email           text;
+alter table public.leads add column if not exists address         text;
+alter table public.leads add column if not exists fleet_size      int;
+alter table public.leads add column if not exists equipment_types text[];
+alter table public.leads add column if not exists score           int;
+alter table public.leads add column if not exists stage           text default 'new';
+alter table public.leads add column if not exists owner_agent     text;
+alter table public.leads add column if not exists last_touch_at   timestamptz;
+alter table public.leads add column if not exists next_touch_at   timestamptz;
+alter table public.leads add column if not exists do_not_contact  boolean default false;
+alter table public.leads add column if not exists updated_at      timestamptz not null default now();
 create unique index if not exists idx_leads_dot        on public.leads(dot_number) where dot_number is not null;
 create unique index if not exists idx_leads_mc         on public.leads(mc_number)  where mc_number  is not null;
 create index        if not exists idx_leads_stage      on public.leads(stage);
