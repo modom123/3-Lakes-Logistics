@@ -15,6 +15,7 @@ from .api import (
     atomic_ledger_router,
     carriers_router,
     clm_router,
+    compliance_router,
     dashboard_router,
     execution_router,
     fleet_router,
@@ -55,9 +56,10 @@ def create_app() -> FastAPI:
     app.include_router(founders_router,       prefix="/api/founders",   tags=["founders"])
     app.include_router(agents_router,         prefix="/api/agents",     tags=["agents"])
     app.include_router(webhooks_router,       prefix="/api/webhooks",   tags=["webhooks"])
-    app.include_router(clm_router,            prefix="/api/clm",        tags=["clm"])
-    app.include_router(execution_router,      prefix="/api/execution",  tags=["execution"])
-    app.include_router(atomic_ledger_router,  prefix="/api/ledger",     tags=["ledger"])
+    app.include_router(clm_router,            prefix="/api/clm",          tags=["clm"])
+    app.include_router(execution_router,      prefix="/api/execution",    tags=["execution"])
+    app.include_router(atomic_ledger_router,  prefix="/api/ledger",       tags=["ledger"])
+    app.include_router(compliance_router,     prefix="/api/compliance",   tags=["compliance"])
 
     @app.get("/api/health", tags=["meta"])
     def health() -> dict:
