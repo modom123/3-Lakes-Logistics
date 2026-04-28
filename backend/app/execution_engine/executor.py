@@ -5,9 +5,9 @@ import time
 from datetime import datetime, timezone
 from uuid import UUID
 
-from ..supabase_client import get_supabase
 from ..logging_service import get_logger
 from .registry import STEP_REGISTRY, Step
+from .handlers import HANDLER_MAP
 from ..clm.steps import (
     step_121_email_inbound_parse,
     step_122_doc_classify,
@@ -144,6 +144,15 @@ _COMPLIANCE_HANDLERS: dict[int, object] = {
 }
 
 
+def _sb():
+    """Return Supabase client or None if not configured."""
+    try:
+        from ..supabase_client import get_supabase
+        return get_supabase()
+    except Exception:  # noqa: BLE001
+        return None
+
+
 def run_step(
     step_number: int,
     carrier_id: UUID | None = None,
@@ -155,46 +164,60 @@ def run_step(
     if not step:
         raise ValueError(f"Step {step_number} not found in registry")
 
-    sb = get_supabase()
-    record: dict = {
-        "step_number": step_number,
-        "step_name": step.name,
-        "domain": step.domain,
-        "status": "running",
-        "input_payload": input_payload or {},
-        "started_at": datetime.now(timezone.utc).isoformat(),
-    }
-    if carrier_id:
-        record["carrier_id"] = str(carrier_id)
-    if contract_id:
-        record["contract_id"] = str(contract_id)
+    exec_id: str | None = None
+    sb = _sb()
 
-    result = sb.table("execution_steps").insert(record).execute()
-    exec_id = result.data[0]["id"]
+    if sb:
+        try:
+            record: dict = {
+                "step_number": step_number,
+                "step_name": step.name,
+                "domain": step.domain,
+                "status": "running",
+                "input_payload": input_payload or {},
+                "started_at": datetime.now(timezone.utc).isoformat(),
+            }
+            if carrier_id:
+                record["carrier_id"] = str(carrier_id)
+            if contract_id:
+                record["contract_id"] = str(contract_id)
+            result = sb.table("execution_steps").insert(record).execute()
+            exec_id = result.data[0]["id"]
+        except Exception as e:  # noqa: BLE001
+            log.warning("execution_steps insert failed (Supabase unavailable?): %s", e)
 
     t0 = time.monotonic()
     try:
         output = _dispatch(step, carrier_id, contract_id, input_payload or {})
         duration_ms = int((time.monotonic() - t0) * 1000)
 
-        sb.table("execution_steps").update({
-            "status": "complete",
-            "output_payload": output,
-            "completed_at": datetime.now(timezone.utc).isoformat(),
-            "duration_ms": duration_ms,
-        }).eq("id", exec_id).execute()
+        if sb and exec_id:
+            try:
+                sb.table("execution_steps").update({
+                    "status": "complete",
+                    "output_payload": output,
+                    "completed_at": datetime.now(timezone.utc).isoformat(),
+                    "duration_ms": duration_ms,
+                }).eq("id", exec_id).execute()
+            except Exception as e:  # noqa: BLE001
+                log.warning("execution_steps update failed: %s", e)
 
         log.info("step=%d (%s) complete %dms", step_number, step.name, duration_ms)
         return {"exec_id": exec_id, "step": step_number, "status": "complete", "output": output}
 
     except Exception as exc:  # noqa: BLE001
         duration_ms = int((time.monotonic() - t0) * 1000)
-        sb.table("execution_steps").update({
-            "status": "failed",
-            "error_message": str(exc),
-            "completed_at": datetime.now(timezone.utc).isoformat(),
-            "duration_ms": duration_ms,
-        }).eq("id", exec_id).execute()
+
+        if sb and exec_id:
+            try:
+                sb.table("execution_steps").update({
+                    "status": "failed",
+                    "error_message": str(exc),
+                    "completed_at": datetime.now(timezone.utc).isoformat(),
+                    "duration_ms": duration_ms,
+                }).eq("id", exec_id).execute()
+            except Exception as e:  # noqa: BLE001
+                log.warning("execution_steps failure update failed: %s", e)
 
         log.error("step=%d (%s) failed: %s", step_number, step.name, exc)
         return {"exec_id": exec_id, "step": step_number, "status": "failed", "error": str(exc)}
@@ -226,6 +249,10 @@ def _dispatch(
     contract_id: UUID | None,
     payload: dict,
 ) -> dict:
+    """Route step to its concrete handler, falling back to a structured stub."""
+    handler = HANDLER_MAP.get(step.number)
+    if handler:
+        return handler(carrier_id, contract_id, payload)
     """Route step execution to a concrete handler when available.
 
     CLM steps 121-150 are fully implemented in clm.steps.
@@ -245,8 +272,8 @@ def _dispatch(
         "description": step.description,
         "carrier_id": str(carrier_id) if carrier_id else None,
         "contract_id": str(contract_id) if contract_id else None,
-        "auto_trigger": step.auto_trigger,
         "requires_steps": step.requires_steps,
         "executed": True,
+        "note": "handler_not_yet_implemented",
         "stub": True,
     }
