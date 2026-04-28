@@ -268,5 +268,8 @@ create table if not exists public.dispatcher_notes (
 alter table public.carriers         enable row level security;
 alter table public.dispatcher_notes enable row level security;
 
+drop policy if exists carriers_all         on public.carriers;
+drop policy if exists dispatcher_notes_all on public.dispatcher_notes;
+
 create policy carriers_all         on public.carriers         for all using (true) with check (true);
 create policy dispatcher_notes_all on public.dispatcher_notes for all using (true) with check (true);
