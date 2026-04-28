@@ -677,17 +677,11 @@ td.td-name{font-weight:600;color:var(--navy);}
           <div id="dash-recent-loads"><div class="loading"><div class="spin"></div>Loading…</div></div>
         </div>
         <div class="card">
-          <div class="card-hd"><div class="card-title">Action Items</div><span class="card-chip">Today</span></div>
-          <div class="tl">
-            <div class="tl-item">
-              <div class="tl-dot" style="background:#fee2e2;color:var(--red)">!</div>
-              <div class="tl-body"><div class="tl-t">Insurance COI Expiring</div><div class="tl-d">Marcus Davis · Primary Liability expires soon</div><div class="tl-time">⚡ Urgent</div></div>
-            </div>
-            <div class="tl-item">
-              <div class="tl-dot" style="background:#fff7ed;color:var(--orange)">📞</div>
-              <div class="tl-body"><div class="tl-t">Check-Call Overdue</div><div class="tl-d">Marcus Davis — CHI→DAL — last check 4.5hrs ago</div><div class="tl-time">🕐 Do Now</div></div>
-            </div>
-            <div id="dynamic-actions"></div>
+          <div class="card-hd"><div class="card-title">To-Do</div><span class="card-chip" id="task-count-chip">0 open</span></div>
+          <div id="task-list" style="margin-bottom:12px"></div>
+          <div style="display:flex;gap:8px;margin-top:4px">
+            <input id="task-input" class="fi" placeholder="Add a task…" style="flex:1;margin:0" onkeydown="if(event.key==='Enter')addTask()"/>
+            <button class="btn-navy-sm" onclick="addTask()">+ Add</button>
           </div>
         </div>
       </div>
@@ -728,7 +722,7 @@ td.td-name{font-weight:600;color:var(--navy);}
       <div class="g4">
         <div class="mc"><div class="mc-label">On Load</div><div class="mc-val green" id="dispatch-on-load">—</div></div>
         <div class="mc"><div class="mc-label">Available</div><div class="mc-val blue" id="dispatch-available">—</div></div>
-        <div class="mc"><div class="mc-label">Check-Calls Due</div><div class="mc-val orange">1</div></div>
+        <div class="mc"><div class="mc-label">Check-Calls Due</div><div class="mc-val orange" id="dispatch-checkcalls">—</div></div>
         <div class="mc"><div class="mc-label">PODs Needed</div><div class="mc-val red" id="dispatch-pods">—</div></div>
       </div>
       <div class="card">
@@ -1457,6 +1451,8 @@ function nav(id){
   if(id==='carriers'){const n=document.getElementById('carrier-notif');if(n)n.style.display='none';}
   if(id==='invoices'){const n=document.getElementById('invoice-notif');if(n)n.style.display='none';renderInvoices();}
   if(id==='notes')loadNotes();
+  if(id==='dashboard')loadTasks();
+  if(id==='checklist')loadChecklist();
   if(id==='compliance'||id==='insurance')renderCarrierCompliance();
   if(id==='clm')loadCLMList();
   if(id==='vault')loadVault();
@@ -1933,7 +1929,7 @@ async function loadNotes(){
   const{data,error}=await sb.from('dispatcher_notes').select('*').order('created_at',{ascending:false});
   const catMap={'Carrier Issue':['#fee2e2','var(--red)'],'Load Update':['rgba(37,99,235,.06)','var(--blue)'],'Compliance / Legal':['#fff7ed','var(--orange)'],'Revenue / Finance':['rgba(5,150,105,.06)','var(--green)'],'General':['var(--off)','var(--muted)']};
   if(error||!data||data.length===0){
-    container.innerHTML='<div class="card" style="margin-bottom:12px;border-left:3px solid var(--gold)"><div class="flex-b" style="margin-bottom:8px"><span class="t-sm val-gold" style="font-weight:600;font-family:var(--ff-m)">Marcus Davis — Insurance Urgent</span><span class="t-sm t-muted t-mono">Today</span></div><div class="t-sm" style="line-height:1.7">COI expires March 18. Called Progressive — renewal takes 3 days. Need Marcus to contact his broker by EOD tomorrow.</div></div>';
+    container.innerHTML='<div class="empty-state"><div class="ei">📝</div><p>No notes yet. Add your first dispatcher note.</p></div>';
     return;
   }
   container.innerHTML=data.map(n=>{
@@ -1965,8 +1961,76 @@ function planBadgeClass(p){if(!p)return 'badge-ghost';if(p.includes('10')||p.inc
 function planShort(p){if(!p)return '5%';if(p.includes('10')||p.includes('Full'))return '10% Full-Service';if(p.includes('8')||p.includes('Premium'))return '8% Premium';return '5% Standard';}
 function statusBadge(s){if(!s)return 'badge-ghost';if(s.includes('Route')||s==='Active'||s.includes('Completed')||s.includes('Delivered')||s.includes('Paid'))return 'badge-green';if(s.includes('Booked'))return 'badge-blue';if(s.includes('Due')||s.includes('Onboarding')||s.includes('Partial')||s.includes('New')||s.includes('Pending'))return 'badge-orange';if(s.includes('POD')||s.includes('Expiring')||s.includes('Overdue'))return 'badge-red';return 'badge-ghost';}
 function invStatusBadge(s){if(s==='Paid')return 'badge-green';if(s==='Overdue')return 'badge-red';if(s==='Partial')return 'badge-orange';return 'badge-gold';}
-function toggleCheck(el){el.classList.toggle('done');el.querySelector('.ck-box').textContent=el.classList.contains('done')?'✓':'';}
-function resetChecklist(){document.querySelectorAll('.check-item').forEach(el=>{el.classList.remove('done');el.querySelector('.ck-box').textContent='';});}
+// ── Checklist (localStorage persistence) ────────────────
+function toggleCheck(el){
+  el.classList.toggle('done');
+  el.querySelector('.ck-box').textContent = el.classList.contains('done') ? '✓' : '';
+  saveChecklist();
+}
+function saveChecklist(){
+  const state = {};
+  document.querySelectorAll('.check-item').forEach((el,i) => { state[i] = el.classList.contains('done'); });
+  localStorage.setItem('3ll_checklist_'+getTodayKey(), JSON.stringify(state));
+}
+function loadChecklist(){
+  const raw = localStorage.getItem('3ll_checklist_'+getTodayKey());
+  if(!raw) return;
+  const state = JSON.parse(raw);
+  document.querySelectorAll('.check-item').forEach((el,i) => {
+    if(state[i]){ el.classList.add('done'); el.querySelector('.ck-box').textContent='✓'; }
+  });
+}
+function resetChecklist(){
+  document.querySelectorAll('.check-item').forEach(el => { el.classList.remove('done'); el.querySelector('.ck-box').textContent=''; });
+  localStorage.removeItem('3ll_checklist_'+getTodayKey());
+}
+function getTodayKey(){ return new Date().toISOString().slice(0,10); }
+
+// ── To-Do Task List (Supabase dispatcher_notes category=Task) ──
+async function loadTasks(){
+  const list = document.getElementById('task-list');
+  if(!list) return;
+  const { data } = await sb.from('dispatcher_notes').select('*').eq('category','Task').order('created_at',{ascending:true});
+  const tasks = data || [];
+  const done = JSON.parse(localStorage.getItem('3ll_tasks_done')||'{}');
+  const open = tasks.filter(t => !done[t.id]);
+  const chip = document.getElementById('task-count-chip');
+  if(chip) chip.textContent = open.length + ' open';
+  if(!tasks.length){
+    list.innerHTML='<div style="color:var(--muted);font-size:13px;padding:8px 0">No tasks. Add one below.</div>';
+    return;
+  }
+  list.innerHTML = tasks.map(t => {
+    const isDone = !!done[t.id];
+    return `<div class="tl-item" style="cursor:pointer;${isDone?'opacity:.45':''}">
+      <div class="tl-dot" style="background:${isDone?'var(--green)':'#f0f4ff'};color:${isDone?'#fff':'var(--navy)'};cursor:pointer" onclick="toggleTask('${t.id}',this)">${isDone?'✓':'○'}</div>
+      <div class="tl-body" onclick="toggleTask('${t.id}',this.previousElementSibling)">
+        <div class="tl-t" style="${isDone?'text-decoration:line-through':''}">${esc(t.title)}</div>
+        ${t.body?`<div class="tl-d">${esc(t.body)}</div>`:''}
+      </div>
+      <button onclick="deleteTask('${t.id}')" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px;padding:0 4px;line-height:1" title="Delete">×</button>
+    </div>`;
+  }).join('');
+}
+function toggleTask(id, dotEl){
+  const done = JSON.parse(localStorage.getItem('3ll_tasks_done')||'{}');
+  done[id] = !done[id];
+  localStorage.setItem('3ll_tasks_done', JSON.stringify(done));
+  loadTasks();
+}
+async function deleteTask(id){
+  await sb.from('dispatcher_notes').delete().eq('id',id);
+  loadTasks();
+}
+async function addTask(){
+  const inp = document.getElementById('task-input');
+  const title = inp.value.trim();
+  if(!title) return;
+  inp.value = '';
+  const { error } = await sb.from('dispatcher_notes').insert({ title, body:'', category:'Task' });
+  if(!error) loadTasks();
+  else toast('Error saving task','error');
+}
 
 // ── FMCSA LOOKUP ─────────────────────────────────────────────
 async function fmcsaFetch(query) {
@@ -2374,7 +2438,9 @@ async function loadLeadsPipeline(){
 (async function init(){
   await testConnection();
   await refreshAll();
+  await loadTasks();
   await checkBackend();
+  loadChecklist();
   setInterval(refreshAll,30000);
   setInterval(checkBackend,60000);
 })();
