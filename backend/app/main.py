@@ -22,6 +22,7 @@ from .api import (
     founders_router,
     intake_router,
     leads_router,
+    prospecting_router,
     telemetry_router,
     webhooks_router,
 )
@@ -55,7 +56,8 @@ def create_app() -> FastAPI:
     app.include_router(dashboard_router,      prefix="/api/dashboard",  tags=["dashboard"])
     app.include_router(founders_router,       prefix="/api/founders",   tags=["founders"])
     app.include_router(agents_router,         prefix="/api/agents",     tags=["agents"])
-    app.include_router(webhooks_router,       prefix="/api/webhooks",   tags=["webhooks"])
+    app.include_router(webhooks_router,       prefix="/api/webhooks",     tags=["webhooks"])
+    app.include_router(prospecting_router,    prefix="/api/prospecting",  tags=["prospecting"])
     app.include_router(clm_router,            prefix="/api/clm",          tags=["clm"])
     app.include_router(execution_router,      prefix="/api/execution",    tags=["execution"])
     app.include_router(atomic_ledger_router,  prefix="/api/ledger",       tags=["ledger"])

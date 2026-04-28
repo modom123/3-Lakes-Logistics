@@ -481,6 +481,114 @@ td.td-name{font-weight:600;color:var(--navy);}
 .toast.success{border-left:4px solid var(--green);}
 .toast.error{border-left:4px solid var(--red);}
 
+/* ── AGENT NOTIFICATION BELL ── */
+.notif-bell{
+  position:relative;cursor:pointer;
+  width:36px;height:36px;border-radius:8px;
+  display:flex;align-items:center;justify-content:center;
+  background:transparent;border:1.5px solid var(--border);
+  font-size:16px;transition:all .2s;flex-shrink:0;
+}
+.notif-bell:hover{background:var(--slate);border-color:var(--navy);}
+.notif-bell.has-new{border-color:var(--gold);background:rgba(228,168,48,.08);}
+.notif-count{
+  position:absolute;top:-5px;right:-5px;
+  background:var(--red);color:#fff;
+  font-family:var(--ff-m);font-size:9px;font-weight:700;
+  padding:1px 5px;border-radius:10px;min-width:16px;text-align:center;
+  display:none;
+}
+.notif-count.show{display:block;}
+
+.notif-panel{
+  position:fixed;top:108px;right:20px;width:360px;z-index:1000;
+  background:var(--white);border:1.5px solid var(--border);
+  border-radius:14px;box-shadow:0 12px 48px rgba(11,37,69,.18);
+  display:none;flex-direction:column;max-height:480px;overflow:hidden;
+}
+.notif-panel.open{display:flex;}
+.notif-panel-hd{
+  padding:14px 18px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;flex-shrink:0;
+}
+.notif-panel-title{font-family:var(--ff-h);font-size:15px;font-weight:800;color:var(--navy);}
+.notif-panel-sub{font-family:var(--ff-m);font-size:9px;color:var(--muted);letter-spacing:1.5px;text-transform:uppercase;margin-top:2px;}
+.notif-clear{font-family:var(--ff-m);font-size:10px;color:var(--muted);cursor:pointer;letter-spacing:.5px;padding:3px 8px;border-radius:5px;border:1px solid var(--border);}
+.notif-clear:hover{color:var(--navy);border-color:var(--navy);}
+.notif-list{overflow-y:auto;flex:1;}
+.notif-item{
+  display:flex;gap:10px;padding:11px 16px;
+  border-bottom:1px solid var(--border);
+  cursor:pointer;transition:background .15s;
+  animation:notifIn .25s ease;
+}
+@keyframes notifIn{from{opacity:0;transform:translateX(10px);}to{opacity:1;transform:translateX(0);}}
+.notif-item:last-child{border-bottom:none;}
+.notif-item:hover{background:var(--off);}
+.notif-item.unread{background:rgba(228,168,48,.04);}
+.notif-dot{
+  width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-top:5px;
+}
+.notif-dot.success{background:var(--green);}
+.notif-dot.error{background:var(--red);}
+.notif-dot.running{background:var(--orange);}
+.notif-dot.info{background:var(--blue);}
+.notif-body{flex:1;min-width:0;}
+.notif-agent{font-weight:700;font-size:12px;color:var(--navy);text-transform:capitalize;}
+.notif-action{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.notif-time{font-family:var(--ff-m);font-size:10px;color:var(--muted);margin-top:2px;letter-spacing:.3px;}
+.notif-empty{padding:28px 18px;text-align:center;color:var(--muted);font-size:13px;}
+.notif-panel-ft{
+  padding:10px 16px;border-top:1px solid var(--border);flex-shrink:0;
+  display:flex;justify-content:center;
+}
+.notif-panel-ft a{font-family:var(--ff-m);font-size:10px;color:var(--gold);letter-spacing:.5px;cursor:pointer;text-decoration:none;}
+.notif-panel-ft a:hover{color:var(--navy);}
+
+/* ── LEAD MACHINE PANEL ── */
+.lm-card{
+  background:linear-gradient(135deg,var(--navy) 0%,var(--navy2) 100%);
+  border-radius:14px;padding:24px;margin-bottom:20px;
+  color:var(--white);position:relative;overflow:hidden;
+}
+.lm-card::before{
+  content:"";position:absolute;top:-40px;right:-40px;
+  width:200px;height:200px;border-radius:50%;
+  background:rgba(228,168,48,.08);
+}
+.lm-title{font-family:var(--ff-h);font-size:22px;font-weight:900;color:var(--gold2);margin-bottom:4px;}
+.lm-sub{font-size:13px;color:rgba(255,255,255,.6);margin-bottom:18px;}
+.lm-controls{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;}
+.lm-fg{display:flex;flex-direction:column;gap:4px;}
+.lm-label{font-family:var(--ff-m);font-size:9px;color:rgba(255,255,255,.45);letter-spacing:2px;text-transform:uppercase;}
+.lm-sel{
+  background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);
+  color:var(--white);font-family:var(--ff-b);font-size:12px;
+  padding:6px 10px;border-radius:7px;outline:none;cursor:pointer;
+}
+.lm-sel option{background:var(--navy);color:var(--white);}
+.btn-launch{
+  display:inline-flex;align-items:center;gap:7px;
+  padding:10px 22px;border-radius:8px;
+  background:var(--gold);color:var(--navy);
+  font-size:13px;font-weight:700;font-family:var(--ff-b);
+  border:none;cursor:pointer;transition:all .2s;
+  box-shadow:0 3px 14px rgba(200,144,42,.4);
+}
+.btn-launch:hover{background:var(--gold2);transform:translateY(-1px);box-shadow:0 6px 20px rgba(200,144,42,.5);}
+.btn-launch:disabled{opacity:.55;cursor:not-allowed;transform:none;}
+.lm-result{
+  margin-top:16px;padding:14px 16px;
+  background:rgba(255,255,255,.07);border-radius:10px;
+  border:1px solid rgba(255,255,255,.12);
+  display:none;
+}
+.lm-result.show{display:block;}
+.lm-result-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
+.lm-stat{text-align:center;}
+.lm-stat-val{font-family:var(--ff-h);font-size:26px;font-weight:800;color:var(--gold2);}
+.lm-stat-lbl{font-family:var(--ff-m);font-size:9px;color:rgba(255,255,255,.45);letter-spacing:1.5px;text-transform:uppercase;margin-top:2px;}
+
 /* ── REV TICKER STRIP ── */
 .ticker-strip{
   background:var(--gold);padding:9px 0;overflow:hidden;flex-shrink:0;
@@ -651,7 +759,29 @@ td.td-name{font-weight:600;color:var(--navy);}
     <div class="tb-title" id="page-title">Dashboard</div>
     <div class="tb-date" id="topbar-date"></div>
     <div class="tb-live">Live</div>
+    <!-- AI Agent Notification Bell -->
+    <div class="notif-bell" id="notif-bell" onclick="toggleNotifPanel()" title="AI Agent Activity">
+      🤖
+      <span class="notif-count" id="notif-count">0</span>
+    </div>
     <button class="btn-sync" onclick="refreshAll()">↻ Sync</button>
+  </div>
+
+  <!-- Notification Panel (outside topbar so it overlays content) -->
+  <div class="notif-panel" id="notif-panel">
+    <div class="notif-panel-hd">
+      <div>
+        <div class="notif-panel-title">AI Agent Activity</div>
+        <div class="notif-panel-sub">Live · Supabase Realtime</div>
+      </div>
+      <span class="notif-clear" onclick="clearNotifs()">Clear all</span>
+    </div>
+    <div class="notif-list" id="notif-list">
+      <div class="notif-empty">No agent activity yet.<br>Workers fire automatically when configured.</div>
+    </div>
+    <div class="notif-panel-ft">
+      <a onclick="toggleNotifPanel();nav('agents')">View full agent log →</a>
+    </div>
   </div>
 
   <!-- CONTENT -->
@@ -1026,22 +1156,36 @@ td.td-name{font-weight:600;color:var(--navy);}
         </div>
       </div>
 
-      <div class="metrics" style="margin-bottom:16px">
+      <div class="g4" style="margin-bottom:16px">
         <div class="mc"><div class="mc-label">Registered Agents</div><div class="mc-val gold" id="agent-count">—</div><div class="mc-sub">14 personas live</div></div>
         <div class="mc"><div class="mc-label">Actions Today</div><div class="mc-val green" id="agent-actions-today">—</div></div>
         <div class="mc"><div class="mc-label">Errors (24h)</div><div class="mc-val red" id="agent-errors-24h">—</div></div>
         <div class="mc"><div class="mc-label">Backend</div><div class="mc-val blue" id="agent-backend-env">—</div></div>
       </div>
 
+      <!-- Integration Status -->
+      <div class="card" style="margin-bottom:16px;border-top:3px solid var(--gold)">
+        <div class="card-hd">
+          <div class="card-title">Integration Status</div>
+          <span class="card-chip">Live Configuration</span>
+        </div>
+        <div id="integration-status-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px">
+          <div class="loading"><div class="spin"></div>Checking backend…</div>
+        </div>
+      </div>
+
       <div class="card" style="margin-bottom:16px">
-        <div class="card-hd"><div class="card-title">Run Agent</div></div>
+        <div class="card-hd"><div class="card-title">Run Agent Manually</div><span class="card-chip">14 Workers</span></div>
         <div id="agent-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px">
           <div class="loading"><div class="spin"></div>Loading agents…</div>
         </div>
       </div>
 
       <div class="card">
-        <div class="card-hd"><div class="card-title">Recent Agent Log</div></div>
+        <div class="card-hd">
+          <div class="card-title">Recent Agent Log</div>
+          <span class="badge badge-green" style="font-size:9px;letter-spacing:1px">🔴 LIVE</span>
+        </div>
         <div id="agent-log-list"><div class="loading"><div class="spin"></div>Loading…</div></div>
       </div>
     </div>
@@ -1080,11 +1224,60 @@ td.td-name{font-weight:600;color:var(--navy);}
         </div>
         <div class="page-hdr-r" style="display:flex;gap:8px">
           <button class="btn-out" onclick="loadLeadsPipeline()">Refresh</button>
-          <button class="btn-navy" onclick="runAgent('vance', {})">🎤 Run Vance (Outbound)</button>
         </div>
       </div>
 
-      <div class="metrics" style="margin-bottom:16px">
+      <!-- LEAD MACHINE -->
+      <div class="lm-card">
+        <div class="lm-title">🚀 Lead Machine</div>
+        <div class="lm-sub">Source new owner-operators from FMCSA · Score with AI · Queue Vance outbound calls</div>
+        <div class="lm-controls">
+          <div class="lm-fg">
+            <div class="lm-label">Source</div>
+            <select class="lm-sel" id="lm-source">
+              <option value="auto">Auto (FMCSA if configured, demo otherwise)</option>
+              <option value="fmcsa">FMCSA New Entrants (live)</option>
+              <option value="demo">Demo / Seed Data</option>
+            </select>
+          </div>
+          <div class="lm-fg">
+            <div class="lm-label">Min Score</div>
+            <select class="lm-sel" id="lm-minscore">
+              <option value="6">6+ (broad)</option>
+              <option value="7" selected>7+ (recommended)</option>
+              <option value="8">8+ (high-intent)</option>
+              <option value="9">9–10 (best only)</option>
+            </select>
+          </div>
+          <div class="lm-fg">
+            <div class="lm-label">Limit</div>
+            <select class="lm-sel" id="lm-limit">
+              <option value="10">10 leads</option>
+              <option value="20" selected>20 leads</option>
+              <option value="50">50 leads</option>
+            </select>
+          </div>
+          <div class="lm-fg">
+            <div class="lm-label">Auto-Call (Vapi)</div>
+            <select class="lm-sel" id="lm-autocall">
+              <option value="false" selected>Off — queue only</option>
+              <option value="true">On — Vance dials 8+ leads</option>
+            </select>
+          </div>
+          <button class="btn-launch" id="lm-btn" onclick="launchLeadMachine()">⚡ Launch Lead Machine</button>
+        </div>
+        <div class="lm-result" id="lm-result">
+          <div class="lm-result-grid">
+            <div class="lm-stat"><div class="lm-stat-val" id="lm-r-sourced">—</div><div class="lm-stat-lbl">Sourced</div></div>
+            <div class="lm-stat"><div class="lm-stat-val" id="lm-r-inserted">—</div><div class="lm-stat-lbl">New Leads</div></div>
+            <div class="lm-stat"><div class="lm-stat-val" id="lm-r-skipped">—</div><div class="lm-stat-lbl">Skipped</div></div>
+            <div class="lm-stat"><div class="lm-stat-val" id="lm-r-calls">—</div><div class="lm-stat-lbl">Calls Queued</div></div>
+          </div>
+          <div id="lm-r-detail" style="margin-top:10px;font-family:var(--ff-m);font-size:10px;color:rgba(255,255,255,.5);letter-spacing:.3px;"></div>
+        </div>
+      </div>
+
+      <div class="g4" style="margin-bottom:16px">
         <div class="mc"><div class="mc-label">New</div><div class="mc-val blue" id="lp-new">—</div></div>
         <div class="mc"><div class="mc-label">Contacted</div><div class="mc-val orange" id="lp-contacted">—</div></div>
         <div class="mc"><div class="mc-label">Qualified</div><div class="mc-val gold" id="lp-qualified">—</div></div>
@@ -1092,7 +1285,7 @@ td.td-name{font-weight:600;color:var(--navy);}
       </div>
 
       <div class="card">
-        <div class="card-hd"><div class="card-title">Top Scored Leads</div></div>
+        <div class="card-hd"><div class="card-title">Top Scored Leads</div><span class="card-chip" id="lp-count-chip">Loading…</span></div>
         <div id="lp-table"><div class="loading"><div class="spin"></div>Loading leads…</div></div>
       </div>
     </div>
@@ -2533,6 +2726,280 @@ async function loadExecutionSteps(){
       </tr>`).join('')}</tbody></table>`;
   }catch(e){t.innerHTML=`<div style="padding:20px;color:var(--red)">Error: ${e.message}</div>`;}
 }
+
+// ══════════════════════════════════════════════════════
+// AI AGENT REAL-TIME NOTIFICATIONS
+// ══════════════════════════════════════════════════════
+
+let _notifQueue = [];     // {id, agent, action, result, error, ts, read}
+let _unreadCount = 0;
+let _notifPanelOpen = false;
+
+function _agentIcon(name) {
+  const icons = {vance:'🎤',sonny:'🎯',shield:'🛡️',scout:'📄',penny:'💳',settler:'💵',
+    audit:'📋',nova:'📧',signal:'🚨',echo:'💬',atlas:'🧭',beacon:'📣',orbit:'🛰️',pulse:'❤️'};
+  return icons[name] || '🤖';
+}
+
+function _notifDotClass(row) {
+  if (row.error) return 'error';
+  if (row.result === 'stub') return 'info';
+  if (row.action?.includes('fail') || row.action?.includes('error')) return 'error';
+  return 'success';
+}
+
+function _timeAgo(ts) {
+  const diff = Math.floor((Date.now() - new Date(ts)) / 1000);
+  if (diff < 60) return diff + 's ago';
+  if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
+  if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
+  return new Date(ts).toLocaleDateString();
+}
+
+function _renderNotifList() {
+  const list = document.getElementById('notif-list');
+  if (!list) return;
+  if (!_notifQueue.length) {
+    list.innerHTML = '<div class="notif-empty">No agent activity yet.<br>Workers fire automatically when configured.</div>';
+    return;
+  }
+  list.innerHTML = _notifQueue.slice(0, 40).map(n =>
+    `<div class="notif-item${n.read ? '' : ' unread'}" onclick="markNotifRead('${n.id}')">
+      <div class="notif-dot ${_notifDotClass(n)}"></div>
+      <div class="notif-body">
+        <div class="notif-agent">${_agentIcon(n.agent)} ${n.agent}</div>
+        <div class="notif-action">${esc(n.action || '')}${n.result && n.result !== 'stub' ? ' · ' + esc(String(n.result).slice(0,60)) : ''}${n.error ? ' · ⚠ ' + esc(String(n.error).slice(0,50)) : ''}</div>
+        <div class="notif-time">${_timeAgo(n.ts)}</div>
+      </div>
+    </div>`
+  ).join('');
+}
+
+function _pushNotif(row) {
+  const id = row.id || (row.agent + '_' + row.ts);
+  if (_notifQueue.find(n => n.id === id)) return; // dedupe
+  _notifQueue.unshift({ ...row, id, read: _notifPanelOpen });
+  if (!_notifPanelOpen) {
+    _unreadCount++;
+    _updateBell();
+  }
+  _renderNotifList();
+
+  // Also show a sidebar badge on the AI Agents nav item
+  const badge = document.getElementById('agents-notif');
+  if (badge) { badge.style.display = 'inline'; badge.textContent = '●'; }
+
+  // Brief toast for non-stub activity
+  if (row.result !== 'stub' || row.error) {
+    const icon = _agentIcon(row.agent);
+    const label = row.error ? `${icon} ${row.agent} error` : `${icon} ${row.agent} → ${row.action}`;
+    toast(label, row.error ? 'error' : 'success');
+  }
+}
+
+function _updateBell() {
+  const bell = document.getElementById('notif-bell');
+  const cnt = document.getElementById('notif-count');
+  if (!bell || !cnt) return;
+  if (_unreadCount > 0) {
+    cnt.textContent = _unreadCount > 99 ? '99+' : _unreadCount;
+    cnt.classList.add('show');
+    bell.classList.add('has-new');
+  } else {
+    cnt.classList.remove('show');
+    bell.classList.remove('has-new');
+  }
+}
+
+function markNotifRead(id) {
+  const n = _notifQueue.find(x => x.id === id);
+  if (n && !n.read) { n.read = true; _unreadCount = Math.max(0, _unreadCount - 1); _updateBell(); }
+  _renderNotifList();
+}
+
+function clearNotifs() {
+  _notifQueue = []; _unreadCount = 0;
+  _updateBell(); _renderNotifList();
+  const badge = document.getElementById('agents-notif');
+  if (badge) badge.style.display = 'none';
+}
+
+function toggleNotifPanel() {
+  _notifPanelOpen = !_notifPanelOpen;
+  const panel = document.getElementById('notif-panel');
+  if (!panel) return;
+  panel.classList.toggle('open', _notifPanelOpen);
+  if (_notifPanelOpen) {
+    // mark all read
+    _notifQueue.forEach(n => n.read = true);
+    _unreadCount = 0; _updateBell();
+    _renderNotifList();
+  }
+}
+
+// Close panel when clicking outside
+document.addEventListener('click', e => {
+  if (!_notifPanelOpen) return;
+  const panel = document.getElementById('notif-panel');
+  const bell = document.getElementById('notif-bell');
+  if (panel && !panel.contains(e.target) && bell && !bell.contains(e.target)) {
+    _notifPanelOpen = false;
+    panel.classList.remove('open');
+  }
+});
+
+// ── Supabase Realtime subscription on agent_log ──────────────────────────────
+function startAgentRealtime() {
+  try {
+    sb.channel('agent-live')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'agent_log' }, payload => {
+        if (payload.new) _pushNotif(payload.new);
+      })
+      .subscribe(status => {
+        const bellTitle = status === 'SUBSCRIBED'
+          ? 'AI Agent Activity — Live' : 'AI Agent Activity';
+        const bell = document.getElementById('notif-bell');
+        if (bell) bell.title = bellTitle;
+      });
+  } catch(e) {
+    // Realtime not available (e.g. anon key lacks replication); fall back to polling
+    setInterval(pollAgentLog, 15000);
+  }
+}
+
+let _lastPollTs = null;
+async function pollAgentLog() {
+  try {
+    const q = sb.table('agent_log').select('*').order('ts', {ascending:false}).limit(5);
+    if (_lastPollTs) q.gt('ts', _lastPollTs);
+    const { data } = await q;
+    if (data?.length) {
+      _lastPollTs = data[0].ts;
+      data.reverse().forEach(_pushNotif);
+    }
+  } catch(e) { /* silent */ }
+}
+
+// ── Seed notif panel from recent log on page load ────────────────────────────
+async function seedRecentNotifs() {
+  try {
+    const { data } = await sb.from('agent_log').select('*').order('ts', {ascending:false}).limit(8);
+    if (data?.length) {
+      _lastPollTs = data[0].ts;
+      // Add silently (no toasts, no unread bump) so panel feels populated on first open
+      data.reverse().forEach(row => {
+        const id = row.id || (row.agent + '_' + row.ts);
+        if (!_notifQueue.find(n => n.id === id)) _notifQueue.unshift({ ...row, id, read: true });
+      });
+      _renderNotifList();
+    }
+  } catch(e) { /* silent */ }
+}
+
+// ══════════════════════════════════════════════════════
+// LEAD MACHINE
+// ══════════════════════════════════════════════════════
+
+async function launchLeadMachine() {
+  const btn = document.getElementById('lm-btn');
+  const resultEl = document.getElementById('lm-result');
+  btn.disabled = true; btn.textContent = '⏳ Running…';
+
+  const source    = document.getElementById('lm-source')?.value    || 'auto';
+  const minScore  = document.getElementById('lm-minscore')?.value  || '7';
+  const limit     = document.getElementById('lm-limit')?.value     || '20';
+  const autoCall  = document.getElementById('lm-autocall')?.value  === 'true';
+
+  // Push a "running" notification immediately
+  _pushNotif({ id:'lm_run_'+Date.now(), agent:'sonny', action:'pipeline_source', result:'running', ts: new Date().toISOString() });
+
+  try {
+    const qs = `?source=${source}&min_score=${minScore}&limit=${limit}&auto_call=${autoCall}`;
+    const res = await API.post('/api/prospecting/run' + qs.replace('?','') , {});
+    // Actually use query params via GET-style post
+    const r = await fetch(
+      `${API_BASE}/api/prospecting/run?source=${source}&min_score=${minScore}&limit=${limit}&auto_call=${autoCall}`,
+      { method:'POST', headers:{'Authorization':'Bearer '+API_TOKEN, 'Content-Type':'application/json'} }
+    );
+    if (!r.ok) throw new Error(await r.text());
+    const data = await r.json();
+
+    // Update result panel
+    document.getElementById('lm-r-sourced').textContent  = data.sourced  ?? '—';
+    document.getElementById('lm-r-inserted').textContent = data.inserted ?? '—';
+    document.getElementById('lm-r-skipped').textContent  = data.skipped_low_score_or_dupe ?? '—';
+    document.getElementById('lm-r-calls').textContent    = data.calls_queued ?? '—';
+    const detail = [
+      `Source: ${data.source}`,
+      `Min score: ${data.min_score_used}`,
+      data.fmcsa_configured ? '✅ FMCSA live' : '⚠ FMCSA key not set — used demo data',
+      data.vapi_configured  ? '✅ Vapi ready' : '⚠ Vapi not configured — calls disabled',
+    ].join('  ·  ');
+    document.getElementById('lm-r-detail').textContent = detail;
+    resultEl.classList.add('show');
+
+    toast(`✅ Lead Machine: ${data.inserted} new leads sourced`, 'success');
+    _pushNotif({ id:'lm_done_'+Date.now(), agent:'atlas', action:'pipeline_complete',
+      result:`${data.inserted} leads · ${data.calls_queued} calls`, ts: new Date().toISOString() });
+
+    // Refresh leads table
+    await loadLeadsPipeline();
+  } catch(e) {
+    toast('Lead Machine error: ' + e.message, 'error');
+    _pushNotif({ id:'lm_err_'+Date.now(), agent:'sonny', action:'pipeline_error',
+      error: e.message, ts: new Date().toISOString() });
+  }
+  btn.disabled = false; btn.textContent = '⚡ Launch Lead Machine';
+}
+
+// ══════════════════════════════════════════════════════
+// INTEGRATION STATUS (Agents page)
+// ══════════════════════════════════════════════════════
+
+async function loadIntegrationStatus() {
+  const grid = document.getElementById('integration-status-grid');
+  if (!grid) return;
+  let health = null;
+  try { health = await API.health(); } catch(e) { /* backend offline */ }
+
+  const integrations = [
+    { name:'Backend API',     key:'api',      icon:'⚙️',  ok: !!health },
+    { name:'Supabase DB',     key:'supabase', icon:'🗄️',  ok: true }, // if we got here, it's up
+    { name:'Vapi (Vance)',    key:'vapi',     icon:'🎤',  ok: null, note:'Set VAPI_API_KEY' },
+    { name:'Twilio (Echo)',   key:'twilio',   icon:'💬',  ok: null, note:'Set TWILIO_ACCOUNT_SID' },
+    { name:'FMCSA API',       key:'fmcsa',    icon:'🛡️',  ok: null, note:'Set FMCSA_WEBKEY' },
+    { name:'Postmark Email',  key:'postmark', icon:'📧',  ok: null, note:'Set POSTMARK_SERVER_TOKEN' },
+    { name:'Stripe',          key:'stripe',   icon:'💳',  ok: null, note:'Set STRIPE_SECRET_KEY' },
+    { name:'ELD / Motive',    key:'eld',      icon:'🛰️',  ok: null, note:'Set MOTIVE_API_KEY' },
+  ];
+
+  grid.innerHTML = integrations.map(int => {
+    const statusColor = int.ok === true ? 'var(--green)' : int.ok === false ? 'var(--red)' : 'var(--muted)';
+    const statusText  = int.ok === true ? '✅ Connected' : int.ok === false ? '⚠ Offline' : '○ Not configured';
+    const badgeClass  = int.ok === true ? 'badge-green' : int.ok === false ? 'badge-red' : 'badge-ghost';
+    return `<div style="background:var(--off);border:1.5px solid var(--border);border-radius:10px;padding:14px 16px;">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+        <span style="font-size:18px">${int.icon}</span>
+        <div style="font-weight:700;font-size:13px;color:var(--navy)">${int.name}</div>
+      </div>
+      <span class="badge ${badgeClass}">${statusText}</span>
+      ${int.ok === null && int.note ? `<div style="font-family:var(--ff-m);font-size:9px;color:var(--muted);margin-top:6px;letter-spacing:.5px">${int.note}</div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+// Patch nav to load integration status when agents page opens
+(function patchNavForAgents(){
+  const orig = window.nav;
+  window.nav = function(id) {
+    orig(id);
+    if (id === 'agents') loadIntegrationStatus();
+  };
+})();
+
+// ── Init realtime + seed notifications ───────────────────────────────────────
+startAgentRealtime();
+seedRecentNotifs();
 </script>
 </body>
 </html>
