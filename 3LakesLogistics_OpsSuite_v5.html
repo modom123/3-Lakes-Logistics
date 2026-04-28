@@ -1316,6 +1316,18 @@ const API = {
   telemetryLatest(){ return this.get('/api/telemetry/latest'); },
 };
 
+// apiFetch — used by CLM, Vault, Ledger, Execution Engine sections.
+// Returns the raw Response so callers can do `await res.json()`.
+async function apiFetch(path, method='GET', body){
+  const r = await fetch(API_BASE+path, {
+    method,
+    headers:{'Content-Type':'application/json','Authorization':'Bearer '+API_TOKEN},
+    body: body ? JSON.stringify(body) : undefined
+  });
+  if(!r.ok) throw new Error(r.status+': '+(await r.text()));
+  return r;
+}
+
 function nav(id){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.sb-item').forEach(n=>n.classList.remove('active'));
@@ -1565,8 +1577,7 @@ async function saveLoad(){
 function populateDriverSelect(){
   const sel=document.getElementById('load-driver-select');if(!sel)return;
   const dbN=allCarriers.map(c=>c.full_name).filter(Boolean);
-  const st=['John Williams','Marcus Davis','Ray Thompson','James Parker','DeShawn Harris','Tony Reed'];
-  sel.innerHTML='<option value="">Select driver…</option>'+[...new Set([...st,...dbN])].map(d=>'<option>'+esc(d)+'</option>').join('');
+  sel.innerHTML='<option value="">Select driver…</option>'+dbN.map(d=>'<option>'+esc(d)+'</option>').join('');
 }
 
 // ── INVOICES ──
@@ -1790,10 +1801,9 @@ function renderCarrierCompliance(){
   }
   const insTable=document.getElementById('insurance-carrier-table');
   if(insTable){
-    const st='<tr><td class="td-name">John Williams</td><td>Progressive</td><td>$1,000,000</td><td><span class="badge badge-ghost">Manual</span></td><td><span class="badge badge-green">Current</span></td></tr>'+
-      '<tr><td class="td-name">Marcus Davis</td><td>Progressive</td><td>$1,000,000</td><td><span class="badge badge-ghost">Manual</span></td><td><span class="badge badge-red">⚠ Expiring</span></td></tr>'+
-      '<tr><td class="td-name">Ray Thompson</td><td>Canal Insurance</td><td>$1,000,000</td><td><span class="badge badge-ghost">Manual</span></td><td><span class="badge badge-green">Current</span></td></tr>';
-    insTable.innerHTML=st+allCarriers.map(c=>'<tr><td class="td-name">'+esc(c.full_name)+'</td><td>'+esc(c.insurance_provider||'—')+'</td><td>$1,000,000</td><td><span class="badge badge-blue">Supabase</span></td><td><span class="badge badge-orange">Verify COI</span></td></tr>').join('');
+    insTable.innerHTML=allCarriers.length
+      ? allCarriers.map(c=>'<tr><td class="td-name">'+esc(c.full_name)+'</td><td>'+esc(c.insurance_provider||'—')+'</td><td>$1,000,000</td><td><span class="badge badge-blue">Supabase</span></td><td><span class="badge badge-orange">Verify COI</span></td></tr>').join('')
+      : '<tr><td colspan="5" style="color:var(--muted);text-align:center;padding:12px">No carriers yet — add carriers to track COIs.</td></tr>';
   }
 }
 
