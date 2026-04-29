@@ -211,6 +211,36 @@
     .load-actions { display: flex; gap: 8px; margin-top: 10px; }
     .load-actions .btn { margin-bottom: 0; flex: 1; padding: 12px; }
 
+    /* ── PROFILE EDIT FIELD ── */
+    .profile-field { margin-bottom: 10px; }
+    .profile-field label { display: block; font-size: 11px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .6px; margin-bottom: 6px; }
+    .profile-input {
+      width: 100%; background: var(--surface); border: 1px solid var(--border);
+      border-radius: 10px; padding: 12px 14px; color: var(--text);
+      font-size: 15px; outline: none;
+    }
+    .profile-input:focus { border-color: var(--accent); }
+    .btn-save { background: var(--accent); color: #fff; }
+
+    /* ── LOADS TABLE ── */
+    .loads-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .loads-table th {
+      text-align: left; font-size: 10px; font-weight: 700; color: var(--muted);
+      text-transform: uppercase; letter-spacing: .6px;
+      padding: 8px 10px; border-bottom: 1px solid var(--border);
+    }
+    .loads-table td { padding: 12px 10px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+    .loads-table tr:last-child td { border-bottom: none; }
+    .loads-table tr:active td { background: var(--surface); }
+    .tbl-route { font-weight: 700; font-size: 14px; line-height: 1.3; }
+    .tbl-sub   { font-size: 11px; color: var(--muted); margin-top: 2px; }
+    .tbl-rate  { font-size: 15px; font-weight: 700; color: var(--green); white-space: nowrap; }
+    .tbl-rpm   { font-size: 11px; color: var(--muted); }
+    .tbl-actions { display: flex; flex-direction: column; gap: 5px; min-width: 72px; }
+    .tbl-accept  { background: var(--green);   color: #fff; border: none; border-radius: 8px; padding: 7px 10px; font-size: 12px; font-weight: 700; cursor: pointer; }
+    .tbl-pass    { background: var(--surface); color: var(--muted); border: 1px solid var(--border); border-radius: 8px; padding: 7px 10px; font-size: 12px; font-weight: 600; cursor: pointer; }
+    .loads-table-wrap { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; margin-bottom: 10px; }
+
     /* ── EMPTY STATE ── */
     .empty-state { text-align: center; padding: 48px 20px; color: var(--muted); }
     .empty-state .empty-icon { font-size: 40px; margin-bottom: 12px; }
@@ -310,8 +340,11 @@
 
     <!-- ── LOADS VIEW ── -->
     <div class="view" id="view-loads">
-      <div class="section-header">Available Loads</div>
-      <div style="font-size:12px;color:var(--muted);margin-bottom:10px">Tap a load to accept. Dispatch will confirm and send details via SMS.</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <div class="section-header" style="margin:0">Available Loads</div>
+        <button onclick="loadAvailableLoads()" style="background:none;border:none;color:var(--accent);font-size:13px;cursor:pointer;padding:4px 8px">↻ Refresh</button>
+      </div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:10px">Accept a load below — dispatch confirms and sends full details by SMS.</div>
       <div id="available-loads-list">
         <div class="empty-state"><div class="empty-icon">🚛</div><p>No loads available right now.<br>Check back soon or watch for an SMS offer.</p></div>
       </div>
@@ -434,6 +467,21 @@
         </div>
       </div>
 
+      <div class="card">
+        <div class="card-title">Contact &amp; Messaging</div>
+        <div class="profile-field">
+          <label>My Cell Phone (for SMS dispatches)</label>
+          <input class="profile-input" id="phone-input" type="tel" placeholder="+1 (312) 555-0000"
+            inputmode="tel" autocomplete="tel"
+            value="" oninput="previewPhone(this)" />
+        </div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:12px">
+          This is the number 3 Lakes will text load offers to. Reply YES or NO by SMS to accept or decline.
+        </div>
+        <button class="btn btn-save" onclick="savePhone()">💾 Save Phone Number</button>
+        <div id="phone-saved-msg" style="display:none;font-size:12px;color:var(--green);margin-top:8px;text-align:center">✓ Saved — Messages tab is now active</div>
+      </div>
+
       <button class="btn btn-ghost" onclick="logout()" style="margin-top:8px">Sign Out</button>
     </div>
 
@@ -539,42 +587,54 @@ function renderNoLoad() {
     .forEach(id => { document.getElementById(id).textContent = '—'; });
 }
 
-// ── AVAILABLE LOADS (internal load board) ─────────────────────────────────────
+// ── AVAILABLE LOADS (internal load board — table layout) ──────────────────────
 async function loadAvailableLoads() {
   const list = document.getElementById('available-loads-list');
   list.innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted)">Loading…</div>';
   try {
-    const res = await apiFetch('/api/fleet?status=booked&limit=20');
+    const res   = await apiFetch('/api/fleet?status=booked&limit=30');
     const loads = await res.json();
     if (!loads || loads.length === 0) {
       list.innerHTML = '<div class="empty-state"><div class="empty-icon">🚛</div><p>No loads available right now.<br>Check back soon or watch for an SMS offer.</p></div>';
       return;
     }
-    list.innerHTML = loads.map(l => {
-      const rpm = (l.rate_total && l.miles) ? '$' + (l.rate_total / l.miles).toFixed(2) + '/mi' : '—';
+
+    const rows = loads.map(l => {
+      const rpm     = (l.rate_total && l.miles) ? '$' + (l.rate_total / l.miles).toFixed(2) : '—';
+      const pickup  = l.pickup_at ? new Date(l.pickup_at).toLocaleDateString('en-US',{month:'short',day:'numeric'}) : '—';
+      const origin  = [l.origin_city, l.origin_state].filter(Boolean).join(', ') || '?';
+      const dest    = [l.dest_city,   l.dest_state  ].filter(Boolean).join(', ') || '?';
       return `
-      <div class="load-card">
-        <div class="load-header">
-          <div class="load-number">${esc(l.load_number || l.id.slice(0,8))}</div>
-          <span class="pill pill-blue"><span class="dot"></span>Available</span>
-        </div>
-        <div class="route">
-          <div class="city"><div class="city-name">${esc(l.origin_city||'?')}</div><div class="city-state">${esc(l.origin_state||'')}</div></div>
-          <div class="arrow">→</div>
-          <div class="city" style="text-align:right"><div class="city-name">${esc(l.dest_city||'?')}</div><div class="city-state">${esc(l.dest_state||'')}</div></div>
-        </div>
-        <div class="load-meta">
-          <div class="meta-item"><div class="meta-label">Rate</div><div class="meta-value">${l.rate_total ? '$'+Number(l.rate_total).toLocaleString() : '—'}</div></div>
-          <div class="meta-item"><div class="meta-label">Miles</div><div class="meta-value">${l.miles||'—'}</div></div>
-          <div class="meta-item"><div class="meta-label">RPM</div><div class="meta-value">${rpm}</div></div>
-        </div>
-        ${l.pickup_at ? `<div style="font-size:12px;color:var(--muted);margin-top:8px">📅 Pickup: ${new Date(l.pickup_at).toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'})}</div>` : ''}
-        <div class="load-actions">
-          <button class="btn btn-success" onclick="acceptLoad('${l.id}','${esc(l.load_number||'')}')">✅ Accept</button>
-          <button class="btn btn-ghost"   onclick="declineLoad('${l.id}')">✗ Pass</button>
-        </div>
-      </div>`;
+        <tr>
+          <td>
+            <div class="tbl-route">${esc(origin)}</div>
+            <div class="tbl-sub">→ ${esc(dest)}</div>
+            <div class="tbl-sub">${esc(l.load_number || l.id.slice(0,8))} · ${l.miles ? l.miles.toLocaleString() + ' mi' : '—'} · ${pickup}</div>
+          </td>
+          <td>
+            <div class="tbl-rate">${l.rate_total ? '$' + Number(l.rate_total).toLocaleString() : '—'}</div>
+            <div class="tbl-rpm">${rpm}/mi</div>
+          </td>
+          <td>
+            <div class="tbl-actions">
+              <button class="tbl-accept" onclick="acceptLoad('${l.id}','${esc(l.load_number||'')}')">✅ Accept</button>
+              <button class="tbl-pass"   onclick="declineLoad('${l.id}')">Pass</button>
+            </div>
+          </td>
+        </tr>`;
     }).join('');
+
+    list.innerHTML = `
+      <div class="loads-table-wrap">
+        <table class="loads-table">
+          <thead><tr>
+            <th>Route / Load</th>
+            <th>Rate</th>
+            <th></th>
+          </tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>`;
   } catch {
     list.innerHTML = '<div class="empty-state"><div class="empty-icon">⚠️</div><p>Could not load. Check connection.</p></div>';
   }
@@ -705,6 +765,35 @@ function msgKeydown(e) {
   if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
 }
 
+// ── PHONE / PROFILE SAVE ──────────────────────────────────────────────────────
+function previewPhone(input) {
+  // strip non-digits for display feedback
+  const digits = input.value.replace(/\D/g,'');
+  if (digits.length === 10 || digits.length === 11) {
+    input.style.borderColor = 'var(--green)';
+  } else {
+    input.style.borderColor = '';
+  }
+}
+
+function savePhone() {
+  const raw    = document.getElementById('phone-input').value.trim();
+  const digits = raw.replace(/\D/g,'');
+  let e164;
+  if (digits.length === 10)                      e164 = '+1' + digits;
+  else if (digits.length === 11 && digits[0]==='1') e164 = '+' + digits;
+  else if (raw.startsWith('+'))                  e164 = raw;
+  else { showToast('⚠️ Enter a valid 10-digit US number'); return; }
+
+  localStorage.setItem('3ll_phone', e164);
+  document.getElementById('phone-saved-msg').style.display = 'block';
+  showToast('✅ Phone saved — SMS dispatches will come to this number');
+  // restart polling with new phone
+  if (_msgPollTimer) clearInterval(_msgPollTimer);
+  Object.defineProperty(window, 'MY_PHONE', { value: e164, writable: true, configurable: true });
+  startMsgPolling();
+}
+
 // ── PROFILE ───────────────────────────────────────────────────────────────────
 async function loadProfile() {
   const cdl = JSON.parse(localStorage.getItem('3ll_cdl') || '{}');
@@ -716,6 +805,11 @@ async function loadProfile() {
   document.getElementById('carrier-name').textContent   = localStorage.getItem('3ll_company') || '—';
   document.getElementById('carrier-mc').textContent     = localStorage.getItem('3ll_mc')      || '—';
   document.getElementById('eld-provider').textContent   = localStorage.getItem('3ll_eld')     || '—';
+  const savedPhone = localStorage.getItem('3ll_phone') || '';
+  if (savedPhone) {
+    document.getElementById('phone-input').value = savedPhone;
+    document.getElementById('phone-saved-msg').style.display = 'block';
+  }
 
   if (cdl.cdl_expiry) {
     const days = Math.ceil((new Date(cdl.cdl_expiry) - new Date()) / 86400000);
