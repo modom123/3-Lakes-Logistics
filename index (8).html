@@ -2,7 +2,12 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover"/>
+<meta name="theme-color" content="#0B2545"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="mobile-web-app-capable" content="yes"/>
+<meta name="format-detection" content="telephone=no"/>
 <title>3 Lakes Logistics — Delivering Trust Across America</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
@@ -543,6 +548,73 @@ footer{background:var(--navy);padding:60px 60px 34px;}
   .lb-table th:nth-child(3),.lb-table td:nth-child(3){display:none;}
   .lb-rate{font-size:15px;}
 }
+
+/* ── GLOBAL MOBILE POLISH ── */
+*{-webkit-tap-highlight-color:transparent;}
+button,a,[onclick]{cursor:pointer;}
+
+/* iOS input zoom fix — font-size must be ≥16px on mobile or Safari zooms */
+@media(max-width:960px){
+  input,select,textarea{font-size:16px !important;}
+  /* Ensure touch targets are at least 44px */
+  .nav-a,.mob-a,.bpbtn,.btn-gold,.btn-wht-out,.btn-navy,.btn-out-navy,.lb-cta,
+  .nav-cta,.ob-nxt,.ob-bk,.fndb-link,.cb-prim,.cb-sec{min-height:44px;}
+  /* iOS select fix — remove default appearance */
+  select{-webkit-appearance:none;-moz-appearance:none;appearance:none;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%235A6A82' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat:no-repeat;background-position:right 14px center;padding-right:36px;}
+}
+
+/* ── MOBILE HERO IMPROVEMENTS ── */
+@media(max-width:480px){
+  .hero-h1{font-size:clamp(32px,9vw,48px);}
+  .hero-desc{font-size:14px;}
+  .h-stat-v{font-size:22px;}
+  .hero-btns{flex-direction:column;gap:10px;}
+  .hero-btns .btn-gold,.hero-btns .btn-wht-out{width:100%;justify-content:center;}
+  .btn-gold,.btn-wht-out,.btn-navy{padding:14px 20px;font-size:14px;}
+  .ph-h{font-size:clamp(28px,8vw,42px);}
+}
+
+/* ── LOAD BOARD — CARD LAYOUT ON PHONES ── */
+@media(max-width:520px){
+  .lb-table thead{display:none;}
+  .lb-table,.lb-table tbody,.lb-table tr,.lb-table td{display:block;width:100%;}
+  .lb-table tr{background:#111827;border-bottom:1px solid #2a3550;padding:14px;}
+  .lb-table td{padding:0;border:none;}
+  .lb-table td:nth-child(3){display:none;}
+  .lb-table td:nth-child(2){margin:6px 0;}
+  .lb-table td:last-child{margin-top:10px;}
+  .lb-cta{width:100%;padding:12px;font-size:14px;}
+  .lb-wrap{border-radius:12px;}
+}
+
+/* ── PLAN CARDS ON SMALL PHONES ── */
+@media(max-width:400px){
+  .pb-dollar{font-size:42px;}
+  .pb-name{font-size:20px;}
+  .pb-feats{padding:14px 16px;}
+  .pb-act{padding:14px 16px;}
+}
+
+/* ── FOOTER MOBILE ── */
+@media(max-width:480px){
+  .f-g{gap:28px;}
+  .f-bot{flex-direction:column;gap:8px;text-align:center;}
+  .f-leg{flex-wrap:wrap;justify-content:center;}
+}
+
+/* ── ONBOARDING FORM MOBILE ── */
+@media(max-width:480px){
+  .ob-steps{gap:4px;}
+  .ob-st-ico{width:28px;height:28px;font-size:11px;}
+  .ob-st-conn{width:16px;}
+  .ob-st-lbl{display:none;}
+  .ob-bd{padding:20px 14px;}
+}
+
+/* ── MOBILE NAV CTA ── */
+.mob-cta{display:block;margin:8px 20px 16px;padding:14px;background:linear-gradient(135deg,var(--gold),var(--gold2));color:var(--navy);font-weight:700;font-size:14px;text-align:center;border-radius:9px;cursor:pointer;}
 </style>
 </head>
 <body>
@@ -574,7 +646,7 @@ footer{background:var(--navy);padding:60px 60px 34px;}
   <div class="mob-a" onclick="showPage('services');toggleMob();setTimeout(()=>{const el=document.getElementById('plans-anchor');if(el)el.scrollIntoView({behavior:'smooth',block:'start'});},160)">Pricing</div>
   <div class="mob-a" onclick="showPage('loads');toggleMob()">Load Board</div>
   <div class="mob-a" onclick="showPage('contact');toggleMob()">Contact</div>
-  <div class="mob-a" onclick="showPage('onboard');toggleMob()" style="color:var(--gold);font-weight:700;">→ Claim Founders Spot</div>
+  <div class="mob-cta" onclick="showPage('onboard');toggleMob()">⚡ Claim Founders Spot — $200/mo</div>
 </div>
 
 <!-- ═══════════════ HOME ═══════════════ -->
