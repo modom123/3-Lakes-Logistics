@@ -272,7 +272,13 @@ nav{
 .bp-out2:hover{border-color:var(--navy);background:var(--off);}
 
 /* SUBSCRIPTION PLANS ($-based pricing) */
-.price-g.sub-g{grid-template-columns:repeat(2,1fr);max-width:880px;margin-left:auto;margin-right:auto;gap:26px;}
+.price-g.sub-g{grid-template-columns:repeat(3,1fr);max-width:1160px;margin-left:auto;margin-right:auto;gap:22px;}
+.pb.paygo{border-color:#3b82f6;box-shadow:0 10px 44px rgba(59,130,246,.18);}
+.pb.paygo::before{content:"✦ NO MONTHLY FEE";position:absolute;top:-14px;left:50%;transform:translateX(-50%);background:linear-gradient(90deg,#2563eb,#3b82f6);color:#fff;font-family:var(--ff-m);font-size:10px;letter-spacing:2px;font-weight:800;padding:6px 16px;border-radius:100px;box-shadow:0 4px 14px rgba(59,130,246,.35);white-space:nowrap;}
+.bp-blue{background:linear-gradient(135deg,#2563eb,#3b82f6);color:#fff;}
+.bp-blue:hover{opacity:.88;}
+.pb-sublabel-blue{display:inline-block;margin-top:6px;padding:5px 10px;border-radius:6px;background:rgba(59,130,246,.12);color:#3b82f6;font-family:var(--ff-m);font-size:10px;letter-spacing:1.6px;text-transform:uppercase;font-weight:600;}
+@media(max-width:900px){.price-g.sub-g{grid-template-columns:1fr;}}
 .pb-sub .pb-top{padding:30px 28px 22px;}
 .pb-dollar{font-family:var(--ff-h);font-size:54px;line-height:1;color:var(--navy);font-weight:900;margin:10px 0 4px;display:flex;align-items:flex-start;gap:4px;}
 .pb-dollar .ds{font-size:22px;color:var(--gold);margin-top:10px;font-weight:800;}
@@ -518,6 +524,25 @@ footer{background:var(--navy);padding:60px 60px 34px;}
   .fndb{padding:14px 20px;}
   .fndb-txt{font-size:13.5px;}
 }
+
+/* ── LOAD BOARD ── */
+.lb-table{width:100%;border-collapse:collapse;}
+.lb-table th{text-align:left;font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.6px;padding:10px 14px;border-bottom:1px solid #2a3550;}
+.lb-table td{padding:14px;border-bottom:1px solid #1e2d45;vertical-align:middle;}
+.lb-table tr:last-child td{border-bottom:none;}
+.lb-table tr:hover td{background:#1e2d45;}
+.lb-wrap{background:#111827;border:1px solid #2a3550;border-radius:16px;overflow:hidden;margin-bottom:16px;}
+.lb-route{font-size:15px;font-weight:700;color:#f1f5f9;line-height:1.3;}
+.lb-sub{font-size:12px;color:#64748b;margin-top:3px;}
+.lb-rate{font-size:17px;font-weight:800;color:#22c55e;white-space:nowrap;}
+.lb-rpm{font-size:11px;color:#64748b;margin-top:2px;}
+.lb-pill{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:99px;font-size:11px;font-weight:600;background:#14532d44;color:#22c55e;border:1px solid #22c55e44;}
+.lb-cta{background:#3b82f6;color:#fff;border:none;padding:9px 16px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;}
+.lb-cta:hover{opacity:.88;}
+@media(max-width:640px){
+  .lb-table th:nth-child(3),.lb-table td:nth-child(3){display:none;}
+  .lb-rate{font-size:15px;}
+}
 </style>
 </head>
 <body>
@@ -536,6 +561,7 @@ footer{background:var(--navy);padding:60px 60px 34px;}
     <button class="nav-a" id="nl-about" onclick="showPage('about')">About</button>
     <button class="nav-a" id="nl-services" onclick="showPage('services')">Services</button>
     <button class="nav-a" id="nl-pricing" onclick="showPage('services');setTimeout(()=>{const el=document.getElementById('plans-anchor');if(el)el.scrollIntoView({behavior:'smooth',block:'start'});},120)">Pricing</button>
+    <button class="nav-a" id="nl-loads" onclick="showPage('loads')" style="position:relative">Load Board<span id="nav-loads-badge" style="display:none;position:absolute;top:2px;right:-4px;background:#22c55e;color:#fff;border-radius:99px;font-size:9px;font-weight:700;padding:1px 5px;"></span></button>
     <button class="nav-a" id="nl-contact" onclick="showPage('contact')">Contact</button>
     <button class="nav-cta" onclick="showPage('onboard')">Claim Founders Spot</button>
   </div>
@@ -546,6 +572,7 @@ footer{background:var(--navy);padding:60px 60px 34px;}
   <div class="mob-a" onclick="showPage('about');toggleMob()">About</div>
   <div class="mob-a" onclick="showPage('services');toggleMob()">Services</div>
   <div class="mob-a" onclick="showPage('services');toggleMob();setTimeout(()=>{const el=document.getElementById('plans-anchor');if(el)el.scrollIntoView({behavior:'smooth',block:'start'});},160)">Pricing</div>
+  <div class="mob-a" onclick="showPage('loads');toggleMob()">Load Board</div>
   <div class="mob-a" onclick="showPage('contact');toggleMob()">Contact</div>
   <div class="mob-a" onclick="showPage('onboard');toggleMob()" style="color:var(--gold);font-weight:700;">→ Claim Founders Spot</div>
 </div>
@@ -574,7 +601,7 @@ footer{background:var(--navy);padding:60px 60px 34px;}
         <div class="hcard"><div class="hc-lbl">AI Dispatch · Live</div><div class="hc-val">Chicago → Atlanta</div><div class="hc-sub">Dry Van · 42,000 lbs · 722 mi · $3.12 RPM</div><div class="live">Auto-Booked · Rate Con Sent</div></div>
         <div class="hcard-row">
           <div class="hcard"><div class="hc-lbl">Avg Network RPM</div><div class="hc-val">$2.91</div><div class="hc-sub">↑ 22¢ vs. market (AI-negotiated)</div></div>
-          <div class="hcard"><div class="hc-lbl">Founders Joined</div><div class="hc-val">127</div><div class="hc-sub">of 1,000 cap</div></div>
+          <div class="hcard"><div class="hc-lbl">Founders Joined</div><div class="hc-val" id="hero-founders-count">—</div><div class="hc-sub">of 1,000 cap</div></div>
         </div>
         <div class="hcard"><div class="hc-lbl">Shield Status · All Trucks</div><div class="hc-val">100% Compliant</div><div class="hc-sub">ELD · CSA · Insurance · IFTA</div><div class="live">0 alerts in last 24h</div></div>
       </div>
@@ -730,7 +757,7 @@ footer{background:var(--navy);padding:60px 60px 34px;}
 
   <div class="cta-s rev"><div class="cta-dec"></div><div class="cta-inner"><div class="cta-h">Ready to Partner With Us?</div><p class="cta-p">Join a growing network of carriers who earn more per mile, spend less time on paperwork, and have real support on the road.</p><div class="cta-btns"><button class="btn-gold" onclick="showPage('onboard')">Start Carrier Onboarding</button><button class="btn-wht-out" onclick="showPage('contact')">Get in Touch</button></div></div></div>
 
-  <footer><div class="f-inner"><div class="f-g"><div><div class="f-name">3 Lakes Logistics</div><div class="f-tag">Delivering Trust Across America</div><div class="f-p">FMCSA licensed freight logistics and dispatching company serving owner-operators and small fleets nationwide.</div></div><div><div class="f-hd">Navigate</div><ul class="f-ls"><li onclick="showPage('home')">Home</li><li onclick="showPage('about')">About</li><li onclick="showPage('services')">Services</li><li onclick="showPage('contact')">Contact</li><li onclick="showPage('onboard')" style="color:var(--gold2);">Carrier Onboarding</li></ul></div><div><div class="f-hd">Plans</div><ul class="f-ls"><li>Founders — $200/mo</li><li>Pro — $400/mo</li><li>First 1,000 Trucks Only</li></ul></div><div><div class="f-hd">Contact</div><div class="f-ci"><span class="f-ci-ico">📞</span>(555) 000-1234</div><div class="f-ci"><span class="f-ci-ico">✉️</span>dispatch@3lakeslogistics.com</div><div class="f-ci"><span class="f-ci-ico">⏰</span>24/7 Available</div></div></div><div class="f-bot"><div class="f-copy">© 2025 3 Lakes Logistics LLC.</div><div class="f-mc">MC#: PENDING · USDOT#: PENDING</div><div class="f-leg"><a href="#">Privacy</a><a href="#">Terms</a></div></div></div></footer>
+  <footer><div class="f-inner"><div class="f-g"><div><div class="f-name">3 Lakes Logistics</div><div class="f-tag">Delivering Trust Across America</div><div class="f-p">FMCSA licensed freight logistics and dispatching company serving owner-operators and small fleets nationwide.</div></div><div><div class="f-hd">Navigate</div><ul class="f-ls"><li onclick="showPage('home')">Home</li><li onclick="showPage('about')">About</li><li onclick="showPage('services')">Services</li><li onclick="showPage('contact')">Contact</li><li onclick="showPage('onboard')" style="color:var(--gold2);">Carrier Onboarding</li></ul></div><div><div class="f-hd">Plans</div><ul class="f-ls"><li>Founders — $200/mo</li><li>Pro — $400/mo</li><li>Pay-As-You-Go — 8%/load</li><li onclick="showPage('loads')" style="cursor:pointer;color:var(--gold2);">View Load Board →</li></ul></div><div><div class="f-hd">Contact</div><div class="f-ci"><span class="f-ci-ico">📞</span>(555) 000-1234</div><div class="f-ci"><span class="f-ci-ico">✉️</span>dispatch@3lakeslogistics.com</div><div class="f-ci"><span class="f-ci-ico">⏰</span>24/7 Available</div></div></div><div class="f-bot"><div class="f-copy">© 2025 3 Lakes Logistics LLC.</div><div class="f-mc">MC#: PENDING · USDOT#: PENDING</div><div class="f-leg"><a href="#">Privacy</a><a href="#">Terms</a></div></div></div></footer>
 </div>
 
 <!-- ═══════════════ SERVICES ═══════════════ -->
@@ -810,19 +837,64 @@ footer{background:var(--navy);padding:60px 60px 34px;}
 
   <div class="price-s"><div class="price-s-inner">
     <div id="plans-anchor"></div>
-    <div class="rev" style="text-align:center;"><span class="chip">Membership Plans</span><h2 class="sh">One Flat Fee. Zero Commission.<br/>All of 3 Lakes.</h2><div class="rule" style="margin:18px auto;"></div><p class="sp" style="margin:0 auto;text-align:center;">Every plan includes our full 155+ automation stack — AI dispatch, paperless compliance, Shield safety, and revenue recovery. Pick your tier.</p></div>
+    <div class="rev" style="text-align:center;"><span class="chip">Membership Plans</span><h2 class="sh">Three Ways to Roll<br/>with 3 Lakes.</h2><div class="rule" style="margin:18px auto;"></div><p class="sp" style="margin:0 auto;text-align:center;">Every plan runs the same full automation stack — AI dispatch, compliance, revenue recovery. Pick the structure that fits your operation.</p></div>
 
     <div class="price-g sub-g">
-      <div class="pb pb-sub founders rev"><div class="pb-bar" style="background:linear-gradient(90deg,var(--gold),var(--gold3))"></div><div class="pb-top"><span class="pb-badge bpop">Once-in-a-Lifetime</span><div class="pb-name">Founders</div><div class="pb-dollar"><span class="ds">$</span>200<span class="dper">/month</span></div><div class="pb-desc">First 1,000 trucks only · Locked for the life of your authority</div><div class="pb-sublabel">★ <span id="pb-founders-remaining">1,000</span> of 1,000 spots open</div></div><ul class="pb-feats"><li>Full AI dispatch &amp; automated load matching</li><li>24/7 AI voice check-calls &amp; broker confirmations</li><li>Automated rate con, BOL, POD &amp; invoice processing</li><li>Shield continuous compliance monitoring (ELD, CSA, insurance)</li><li>Automated detention, TONU &amp; lumper claim recovery</li><li>IFTA mileage &amp; fuel tax auto-reporting</li><li>Carrier performance dashboard &amp; monthly reports</li><li>Priority onboarding &amp; dedicated launch support</li><li>Rate locked at $200/month — forever</li></ul><div class="pb-act"><button class="bpbtn bp-gold" onclick="showPage('onboard')">Claim Founders Spot</button></div></div>
-      <div class="pb pb-sub rev"><div class="pb-bar" style="background:linear-gradient(90deg,var(--navy),var(--navy3))"></div><div class="pb-top"><span class="pb-badge bstd">Standard</span><div class="pb-name">Pro</div><div class="pb-dollar"><span class="ds">$</span>400<span class="dper">/month</span></div><div class="pb-desc">Month-to-month · Available to all carriers</div><div class="pb-sublabel" style="background:rgba(11,37,69,.08);color:var(--navy);">Open to all carriers</div></div><ul class="pb-feats"><li>Full AI dispatch &amp; automated load matching</li><li>24/7 AI voice check-calls &amp; broker confirmations</li><li>Automated rate con, BOL, POD &amp; invoice processing</li><li>Shield continuous compliance monitoring</li><li>Automated detention, TONU &amp; lumper claim recovery</li><li>IFTA mileage &amp; fuel tax auto-reporting</li><li>Carrier performance dashboard &amp; monthly reports</li><li>Dedicated account manager &amp; priority queue</li><li>Month-to-month — cancel anytime</li></ul><div class="pb-act"><button class="bpbtn bp-fill" onclick="showPage('onboard')">Start Pro Plan</button></div></div>
+      <div class="pb pb-sub founders rev" style="position:relative;overflow:visible;"><div class="pb-bar" style="background:linear-gradient(90deg,var(--gold),var(--gold3))"></div><div class="pb-top"><span class="pb-badge bpop">Once-in-a-Lifetime</span><div class="pb-name">Founders</div><div class="pb-dollar"><span class="ds">$</span>200<span class="dper">/month</span></div><div class="pb-desc">First 1,000 trucks only · Locked for the life of your authority</div><div class="pb-sublabel">★ <span id="pb-founders-remaining">1,000</span> of 1,000 spots open</div></div><ul class="pb-feats"><li>Full AI dispatch &amp; automated load matching</li><li>24/7 AI voice check-calls &amp; broker confirmations</li><li>Automated rate con, BOL, POD &amp; invoice processing</li><li>Shield continuous compliance monitoring (ELD, CSA, insurance)</li><li>Automated detention, TONU &amp; lumper claim recovery</li><li>IFTA mileage &amp; fuel tax auto-reporting</li><li>Carrier performance dashboard &amp; monthly reports</li><li>Priority onboarding &amp; dedicated launch support</li><li>Rate locked at $200/month — forever</li></ul><div class="pb-act"><button class="bpbtn bp-gold" onclick="showPage('onboard')">Claim Founders Spot</button></div></div>
+
+      <div class="pb pb-sub rev"><div class="pb-bar" style="background:linear-gradient(90deg,var(--navy),var(--navy3))"></div><div class="pb-top"><span class="pb-badge bstd">Standard</span><div class="pb-name">Pro</div><div class="pb-dollar"><span class="ds">$</span>400<span class="dper">/month</span></div><div class="pb-desc">Month-to-month · Available to all carriers</div><div class="pb-sublabel" style="background:rgba(11,37,69,.08);color:var(--navy);">Open enrollment</div></div><ul class="pb-feats"><li>Full AI dispatch &amp; automated load matching</li><li>24/7 AI voice check-calls &amp; broker confirmations</li><li>Automated rate con, BOL, POD &amp; invoice processing</li><li>Shield continuous compliance monitoring</li><li>Automated detention, TONU &amp; lumper claim recovery</li><li>IFTA mileage &amp; fuel tax auto-reporting</li><li>Carrier performance dashboard &amp; monthly reports</li><li>Dedicated account manager &amp; priority queue</li><li>Month-to-month — cancel anytime</li></ul><div class="pb-act"><button class="bpbtn bp-fill" onclick="showPage('onboard')">Start Pro Plan</button></div></div>
+
+      <div class="pb pb-sub paygo rev" style="position:relative;overflow:visible;"><div class="pb-bar" style="background:linear-gradient(90deg,#2563eb,#3b82f6)"></div><div class="pb-top"><span class="pb-badge" style="background:rgba(59,130,246,.12);color:#3b82f6;">Flexible</span><div class="pb-name">Pay-As-You-Go</div><div class="pb-dollar" style="align-items:baseline;"><span class="ds" style="color:#3b82f6;">8</span><span style="font-size:54px;font-family:var(--ff-h);font-weight:900;color:var(--navy);line-height:1;">%</span><span class="dper" style="margin-top:0;align-self:center;">&nbsp;per load</span></div><div class="pb-desc">No monthly fee · Only pay when you haul</div><div class="pb-sublabel-blue">Zero commitment</div></div><ul class="pb-feats"><li>AI dispatch on every load you accept</li><li>Automated rate con, BOL &amp; POD processing</li><li>Check-call &amp; broker confirmation on each load</li><li>Detention &amp; accessorial claim filing</li><li>Driver app access (load board, SMS, docs)</li><li>Apply directly from the Load Board</li><li>No monthly contract — haul when you want</li><li>Upgrade to Founders or Pro anytime</li><li>8% dispatch fee deducted from gross load rate</li></ul><div class="pb-act"><button class="bpbtn bp-blue" onclick="applyPayAsYouGo()">Apply to Haul →</button></div></div>
     </div>
 
-    <div style="text-align:center;margin-top:38px;font-size:13px;color:var(--muted);max-width:720px;margin-left:auto;margin-right:auto;">Both plans include every automation. <strong style="color:var(--navy);">Founders</strong> simply locks in a once-in-a-lifetime rate for our first 1,000 trucks — thank-you pricing for the carriers who build the platform with us.</div>
+    <div style="text-align:center;margin-top:38px;font-size:13px;color:var(--muted);max-width:780px;margin-left:auto;margin-right:auto;"><strong style="color:var(--navy);">Founders &amp; Pro</strong> are flat monthly fees with zero commission — you keep 100% of every load above the monthly rate. <strong style="color:#3b82f6;">Pay-As-You-Go</strong> charges 8% per load dispatched with no monthly fee — perfect if you run occasionally or want to try the platform before committing.</div>
   </div></div>
 
   <div class="cta-s rev"><div class="cta-dec"></div><div class="cta-inner"><div class="cta-h">Ready to Start?</div><p class="cta-p">Most carriers are approved within 24 hours and running their first load within 48. Your dispatcher is waiting.</p><div class="cta-btns"><button class="btn-gold" onclick="showPage('onboard')">Apply as a Carrier Partner</button><button class="btn-wht-out" onclick="showPage('contact')">Have Questions?</button></div></div></div>
 
-  <footer><div class="f-inner"><div class="f-g"><div><div class="f-name">3 Lakes Logistics</div><div class="f-tag">Delivering Trust Across America</div><div class="f-p">FMCSA licensed freight logistics and dispatching company serving owner-operators nationwide.</div></div><div><div class="f-hd">Navigate</div><ul class="f-ls"><li onclick="showPage('home')">Home</li><li onclick="showPage('about')">About</li><li onclick="showPage('services')">Services</li><li onclick="showPage('contact')">Contact</li><li onclick="showPage('onboard')" style="color:var(--gold2);">Carrier Onboarding</li></ul></div><div><div class="f-hd">Plans</div><ul class="f-ls"><li>Founders — $200/mo</li><li>Pro — $400/mo</li><li>First 1,000 Trucks Only</li></ul></div><div><div class="f-hd">Contact</div><div class="f-ci"><span class="f-ci-ico">📞</span>(555) 000-1234</div><div class="f-ci"><span class="f-ci-ico">✉️</span>dispatch@3lakeslogistics.com</div></div></div><div class="f-bot"><div class="f-copy">© 2025 3 Lakes Logistics LLC.</div><div class="f-mc">MC#: PENDING · USDOT#: PENDING</div><div class="f-leg"><a href="#">Privacy</a><a href="#">Terms</a></div></div></div></footer>
+  <footer><div class="f-inner"><div class="f-g"><div><div class="f-name">3 Lakes Logistics</div><div class="f-tag">Delivering Trust Across America</div><div class="f-p">FMCSA licensed freight logistics and dispatching company serving owner-operators nationwide.</div></div><div><div class="f-hd">Navigate</div><ul class="f-ls"><li onclick="showPage('home')">Home</li><li onclick="showPage('about')">About</li><li onclick="showPage('services')">Services</li><li onclick="showPage('contact')">Contact</li><li onclick="showPage('onboard')" style="color:var(--gold2);">Carrier Onboarding</li></ul></div><div><div class="f-hd">Plans</div><ul class="f-ls"><li>Founders — $200/mo</li><li>Pro — $400/mo</li><li>Pay-As-You-Go — 8%/load</li><li onclick="showPage('loads')" style="cursor:pointer;color:var(--gold2);">View Load Board →</li></ul></div><div><div class="f-hd">Contact</div><div class="f-ci"><span class="f-ci-ico">📞</span>(555) 000-1234</div><div class="f-ci"><span class="f-ci-ico">✉️</span>dispatch@3lakeslogistics.com</div></div></div><div class="f-bot"><div class="f-copy">© 2025 3 Lakes Logistics LLC.</div><div class="f-mc">MC#: PENDING · USDOT#: PENDING</div><div class="f-leg"><a href="#">Privacy</a><a href="#">Terms</a></div></div></div></footer>
+</div>
+
+<!-- ═══════════════ LOAD BOARD ═══════════════ -->
+<div class="page" id="page-loads">
+  <div class="ph"><div class="ph-dec"></div><div class="ph-inner"><span class="chip">Open Loads</span><h1 class="ph-h">Available Freight.</h1><p class="ph-p">Live loads posted by our dispatch team. See a load that fits your truck and lane? Tap to apply — our dispatcher will contact you within the hour.</p></div></div>
+
+  <div style="max-width:1100px;margin:0 auto;padding:40px 20px">
+
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px">
+      <div>
+        <div id="lb-count-label" style="font-size:14px;color:#64748b">Loading available loads…</div>
+      </div>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <select id="lb-equip-filter" onchange="filterLoads()" style="background:#1a2235;border:1px solid #2a3550;color:#f1f5f9;padding:8px 14px;border-radius:8px;font-size:13px;cursor:pointer">
+          <option value="">All Equipment</option>
+          <option value="Dry Van">Dry Van</option>
+          <option value="Reefer">Reefer</option>
+          <option value="Flatbed">Flatbed</option>
+          <option value="Step Deck">Step Deck</option>
+          <option value="Box Truck">Box Truck</option>
+          <option value="Hot Shot">Hot Shot</option>
+        </select>
+        <button onclick="loadPublicLoads()" style="background:#3b82f6;color:#fff;border:none;padding:8px 18px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">↻ Refresh</button>
+      </div>
+    </div>
+
+    <div id="lb-grid">
+      <div style="text-align:center;padding:60px 20px;color:#64748b">
+        <div style="font-size:36px;margin-bottom:12px">🚛</div>
+        <div style="font-size:15px">Loading loads…</div>
+      </div>
+    </div>
+
+    <div style="margin-top:40px;background:#1a2235;border:1px solid #2a3550;border-radius:16px;padding:28px;text-align:center">
+      <div style="font-size:18px;font-weight:700;margin-bottom:8px">Don't see a load that fits your lane?</div>
+      <p style="color:#94a3b8;font-size:14px;margin-bottom:18px">We post new loads daily. No monthly commitment required — our Pay-As-You-Go plan charges just 8% per load with zero upfront cost.</p>
+      <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+        <button class="btn-gold" onclick="applyPayAsYouGo()">Apply to Haul — 8% / Load →</button>
+        <button class="btn-wht-out" onclick="showPage('onboard')">See All Plans</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <!-- ═══════════════ CONTACT ═══════════════ -->
@@ -858,7 +930,7 @@ footer{background:var(--navy);padding:60px 60px 34px;}
     </div>
   </div>
 
-  <footer><div class="f-inner"><div class="f-g"><div><div class="f-name">3 Lakes Logistics</div><div class="f-tag">Delivering Trust Across America</div><div class="f-p">FMCSA licensed freight logistics and dispatching company serving owner-operators nationwide.</div></div><div><div class="f-hd">Navigate</div><ul class="f-ls"><li onclick="showPage('home')">Home</li><li onclick="showPage('about')">About</li><li onclick="showPage('services')">Services</li><li onclick="showPage('contact')">Contact</li><li onclick="showPage('onboard')" style="color:var(--gold2);">Carrier Onboarding</li></ul></div><div><div class="f-hd">Plans</div><ul class="f-ls"><li>Founders — $200/mo</li><li>Pro — $400/mo</li><li>First 1,000 Trucks Only</li></ul></div><div><div class="f-hd">Contact</div><div class="f-ci"><span class="f-ci-ico">📞</span>(555) 000-1234</div><div class="f-ci"><span class="f-ci-ico">✉️</span>dispatch@3lakeslogistics.com</div><div class="f-ci"><span class="f-ci-ico">⏰</span>24/7 Available</div></div></div><div class="f-bot"><div class="f-copy">© 2025 3 Lakes Logistics LLC.</div><div class="f-mc">MC#: PENDING · USDOT#: PENDING</div><div class="f-leg"><a href="#">Privacy</a><a href="#">Terms</a></div></div></div></footer>
+  <footer><div class="f-inner"><div class="f-g"><div><div class="f-name">3 Lakes Logistics</div><div class="f-tag">Delivering Trust Across America</div><div class="f-p">FMCSA licensed freight logistics and dispatching company serving owner-operators nationwide.</div></div><div><div class="f-hd">Navigate</div><ul class="f-ls"><li onclick="showPage('home')">Home</li><li onclick="showPage('about')">About</li><li onclick="showPage('services')">Services</li><li onclick="showPage('contact')">Contact</li><li onclick="showPage('onboard')" style="color:var(--gold2);">Carrier Onboarding</li></ul></div><div><div class="f-hd">Plans</div><ul class="f-ls"><li>Founders — $200/mo</li><li>Pro — $400/mo</li><li>Pay-As-You-Go — 8%/load</li><li onclick="showPage('loads')" style="cursor:pointer;color:var(--gold2);">View Load Board →</li></ul></div><div><div class="f-hd">Contact</div><div class="f-ci"><span class="f-ci-ico">📞</span>(555) 000-1234</div><div class="f-ci"><span class="f-ci-ico">✉️</span>dispatch@3lakeslogistics.com</div><div class="f-ci"><span class="f-ci-ico">⏰</span>24/7 Available</div></div></div><div class="f-bot"><div class="f-copy">© 2025 3 Lakes Logistics LLC.</div><div class="f-mc">MC#: PENDING · USDOT#: PENDING</div><div class="f-leg"><a href="#">Privacy</a><a href="#">Terms</a></div></div></div></footer>
 </div>
 
 <!-- ═══════════════ ONBOARDING ═══════════════ -->
@@ -1058,7 +1130,7 @@ footer{background:var(--navy);padding:60px 60px 34px;}
           <div class="ob-row"><div class="ob-g"><label class="ob-lbl">Fuel Card Provider</label><select class="ob-sel" id="fuel_card" name="fuel_card"><option value="">Select</option><option>None</option><option>EFS</option><option>RTS Fuel Card</option><option>Comdata</option><option>TCH</option><option>Pilot / Flying J</option><option>Other</option></select></div><div class="ob-g"><label class="ob-lbl">Advance Requests Allowed</label><select class="ob-sel" id="advances_allowed" name="advances_allowed"><option value="">Select</option><option>Yes — up to 50%</option><option>Yes — up to 25%</option><option>No advances</option></select></div></div>
 
           <div class="ob-sub">Membership Plan</div>
-          <div class="ob-row full"><div class="ob-g"><label class="ob-lbl">Subscription Plan <span>*</span></label><select class="ob-sel" id="plan" name="plan"><option value="">Select</option><option value="founders">Founders — $200/month (First 1,000 Trucks, Locked for Life)</option><option value="pro">Pro — $400/month</option><option value="discuss">Not Sure — Want to Discuss on Call</option></select></div></div>
+          <div class="ob-row full"><div class="ob-g"><label class="ob-lbl">Subscription Plan <span>*</span></label><select class="ob-sel" id="plan" name="plan"><option value="">Select</option><option value="founders">Founders — $200/month (First 1,000 Trucks, Locked for Life)</option><option value="pro">Pro — $400/month (Month-to-Month)</option><option value="pay_as_you_go">Pay-As-You-Go — 8% per load dispatched (No Monthly Fee)</option><option value="discuss">Not Sure — Want to Discuss on Call</option></select></div></div>
 
           <div class="ob-nav"><button class="ob-bk" onclick="oBack(5)">← Back</button><button class="ob-nx" onclick="oNext(5)">Next: Documents &amp; Sign →</button></div>
         </div>
@@ -1144,7 +1216,7 @@ footer{background:var(--navy);padding:60px 60px 34px;}
     </div>
   </div></div>
 
-  <footer><div class="f-inner"><div class="f-g"><div><div class="f-name">3 Lakes Logistics</div><div class="f-tag">Delivering Trust Across America</div><div class="f-p">FMCSA licensed freight logistics and dispatching company serving owner-operators and small fleets nationwide.</div></div><div><div class="f-hd">Navigate</div><ul class="f-ls"><li onclick="showPage('home')">Home</li><li onclick="showPage('about')">About</li><li onclick="showPage('services')">Services</li><li onclick="showPage('contact')">Contact</li></ul></div><div><div class="f-hd">Plans</div><ul class="f-ls"><li>Founders — $200/mo</li><li>Pro — $400/mo</li><li>First 1,000 Trucks Only</li></ul></div><div><div class="f-hd">Contact</div><div class="f-ci"><span class="f-ci-ico">📞</span>(555) 000-1234</div><div class="f-ci"><span class="f-ci-ico">✉️</span>dispatch@3lakeslogistics.com</div><div class="f-ci"><span class="f-ci-ico">⏰</span>24/7 Available</div><div class="f-ci" style="margin-top:8px;"><a href="data:application/pdf;base64,JVBERi0xLjMKJeLjz9MKMSAwIG9iago8PC9BdXRob3IgKGFub255bW91cykgL0NyZWF0aW9uRGF0ZSAoRDoyMDI1MDgyMDAzNDYzOCswMCcwMCcpIC9DcmVhdG9yCiAgKFJlcG9ydExhYiBQREYgTGlicmFyeSAtIHd3dy5yZXBvcnRsYWIuY29tKSAvS2V5d29yZHMgKCkgL01vZERhdGUKICAoRDoyMDI1MDgyMDAzNDYzOCswMCcwMCcpIC9Qcm9kdWNlcgogIChSZXBvcnRMYWIgUERGIExpYnJhcnkgLSB3d3cucmVwb3J0bGFiLmNvbSkgL1N1YmplY3QgKHVuc3BlY2lmaWVkKQogIC9UaXRsZSAodW50aXRsZWQpIC9UcmFwcGVkIC9GYWxzZT4+CmVuZG9iagoyIDAgb2JqCjw8L1BhZ2VNb2RlIC9Vc2VOb25lIC9QYWdlcyAzIDAgUiAvVHlwZSAvQ2F0YWxvZz4+CmVuZG9iagozIDAgb2JqCjw8L0NvdW50IDEgL0tpZHMgWzQgMCBSXSAvVHlwZSAvUGFnZXM+PgplbmRvYmoKNCAwIG9iago8PC9Bbm5vdHMKICBbNSAwIFIgNiAwIFIgNyAwIFIgOCAwIFIgOSAwIFIgMTAgMCBSIDExIDAgUiAxMiAwIFIgMTMgMCBSIDE0IDAgUiAxNSAwIFIgMTYgMCBSXQogIC9Db250ZW50cyAxNyAwIFIgL01lZGlhQm94IFswIDAgNjEyIDc5Ml0gL1BhcmVudCAzIDAgUiAvUmVzb3VyY2VzCiAgPDwvRm9udCAxOCAwIFIgL1Byb2NTZXQgWy9QREYgL1RleHQgL0ltYWdlQiAvSW1hZ2VDIC9JbWFnZUldPj4gL1JvdGF0ZQogIDAgL1RyYW5zIDw8Pj4gL1R5cGUgL1BhZ2U+PgplbmRvYmoKNSAwIG9iago8PC9EQSAoL0hlbHYgMCBUZiAwIGcpIC9GVCAvVHggL0ZmIDAgL1JlY3QgWzE1MCA2NzcgMzAwIDY5N10gL1N1YnR5cGUKICAvV2lkZ2V0IC9UIChEaXNwYXRjaGVyQ29tcGFueSkgL1R5cGUgL0Fubm90IC9WIDw+Pj4KZW5kb2JqCjYgMCBvYmoKPDwvREEgKC9IZWx2IDAgVGYgMCBnKSAvRlQgL1R4IC9GZiAwIC9SZWN0IFs0MDAgNjc3IDU1MCA2OTddIC9TdWJ0eXBlCiAgL1dpZGdldCAvVCAoRGlzcGF0Y2hlckFkZHJlc3MpIC9UeXBlIC9Bbm5vdCAvViA8Pj4+CmVuZG9iago3IDAgb2JqCjw8L0RBICgvSGVsdiAwIFRmIDAgZykgL0ZUIC9UeCAvRmYgMCAvUmVjdCBbMTUwIDY1NyAzMDAgNjc3XSAvU3VidHlwZQogIC9XaWRnZXQgL1QgKENhcnJpZXJDb21wYW55KSAvVHlwZSAvQW5ub3QgL1YgPD4+PgplbmRvYmoKOCAwIG9iago8PC9EQSAoL0hlbHYgMCBUZiAwIGcpIC9GVCAvVHggL0ZmIDAgL1JlY3QgWzQwMCA2NTcgNTUwIDY3N10gL1N1YnR5cGUKICAvV2lkZ2V0IC9UIChDYXJyaWVyRE9UTUMpIC9UeXBlIC9Bbm5vdCAvViA8Pj4+CmVuZG9iago5IDAgb2JqCjw8L0RBICgvSGVsdiAwIFRmIDAgZykgL0ZUIC9UeCAvRmYgMCAvUmVjdCBbMTUwIDE5MCAyODAgMjEwXSAvU3VidHlwZQogIC9XaWRnZXQgL1QgKERpc3BhdGNoZXJTaWduYXR1cmUpIC9UeXBlIC9Bbm5vdCAvViA8Pj4+CmVuZG9iagoxMCAwIG9iago8PC9EQSAoL0hlbHYgMCBUZiAwIGcpIC9GVCAvVHggL0ZmIDAgL1JlY3QgWzQwMCAxOTAgNTMwIDIxMF0gL1N1YnR5cGUKICAvV2lkZ2V0IC9UIChDYXJyaWVyU2lnbmF0dXJlKSAvVHlwZSAvQW5ub3QgL1YgPD4+PgplbmRvYmoKMTEgMCBvYmoKPDwvREEgKC9IZWx2IDAgVGYgMCBnKSAvRlQgL1R4IC9GZiAwIC9SZWN0IFsxNTAgMTYwIDI4MCAxODBdIC9TdWJ0eXBlCiAgL1dpZGdldCAvVCAoRGlzcGF0Y2hlck5hbWUpIC9UeXBlIC9Bbm5vdCAvViA8Pj4+CmVuZG9iagoxMiAwIG9iago8PC9EQSAoL0hlbHYgMCBUZiAwIGcpIC9GVCAvVHggL0ZmIDAgL1JlY3QgWzQwMCAxNjAgNTMwIDE4MF0gL1N1YnR5cGUKICAvV2lkZ2V0IC9UIChDYXJyaWVyTmFtZSkgL1R5cGUgL0Fubm90IC9WIDw+Pj4KZW5kb2JqCjEzIDAgb2JqCjw8L0RBICgvSGVsdiAwIFRmIDAgZykgL0ZUIC9UeCAvRmYgMCAvUmVjdCBbMTUwIDEzMCAyODAgMTUwXSAvU3VidHlwZQogIC9XaWRnZXQgL1QgKERpc3BhdGNoZXJUaXRsZSkgL1R5cGUgL0Fubm90IC9WIDw+Pj4KZW5kb2JqCjE0IDAgb2JqCjw8L0RBICgvSGVsdiAwIFRmIDAgZykgL0ZUIC9UeCAvRmYgMCAvUmVjdCBbNDAwIDEzMCA1MzAgMTUwXSAvU3VidHlwZQogIC9XaWRnZXQgL1QgKENhcnJpZXJUaXRsZSkgL1R5cGUgL0Fubm90IC9WIDw+Pj4KZW5kb2JqCjE1IDAgb2JqCjw8L0RBICgvSGVsdiAwIFRmIDAgZykgL0ZUIC9UeCAvRmYgMCAvUmVjdCBbMTUwIDEwMCAyODAgMTIwXSAvU3VidHlwZQogIC9XaWRnZXQgL1QgKERpc3BhdGNoZXJEYXRlKSAvVHlwZSAvQW5ub3QgL1YgPD4+PgplbmRvYmoKMTYgMCBvYmoKPDwvREEgKC9IZWx2IDAgVGYgMCBnKSAvRlQgL1R4IC9GZiAwIC9SZWN0IFs0MDAgMTAwIDUzMCAxMjBdIC9TdWJ0eXBlCiAgL1dpZGdldCAvVCAoQ2FycmllckRhdGUpIC9UeXBlIC9Bbm5vdCAvViA8Pj4+CmVuZG9iagoxNyAwIG9iago8PC9GaWx0ZXIgWy9BU0NJSTg1RGVjb2RlIC9GbGF0ZURlY29kZV0gL0xlbmd0aCA0NDE+PgpzdHJlYW0KR2F0JV47LDtmdSdTWUg9LyddQHFML0dybVtQbj89LG46QUBxQjNlIkU4PDRiJSEzRWZdY0dqcC1CbF07MXFBcm9eSmRtOTBcIiMqNGlyNl9ObnUmYTFWbUc2L0RVQkJKXjZFI2haVTpPcl5dIUJJQztRdUInVCoqYG1AVTpGKGcuKSE3cU9wTScnYTdCbVonLWNKZTFLLCFXYDRcMz9GYGQuYUdlXnE4Ty5pK0olLzY1ZDJVIUwmKGMrZmtGPzUrOUotPVRwSVpoTSJXPUxvQzZtJnFWbm1NL2sna0BTTjliUnAkUC1na0QxbyJkUDtyLyolPmQhZnJxN29RNixIKElYQnA3ZTJiQSkiLnM0bTYlPGVqMS9fJTo3QEpKPFVJKUhsXGAhbE5eTEthaE9EKF48cikqTHBuKWljclFUYVo2a0U2J29uYitjJzsuckhZPmdHbSxyL1s/KCJpQEA3cl9XMW1JUHNEKUZkSFY3dHJGXShJRzhzKUJZUjkpdUhtVywiSDoxJyx0Z1khZzBzUzpRVlxlZWpkVjdxOjgvIjYrPWs9RCRvUkNDODpfTjZnI0Q1QyVsS34+CmVuZHN0cmVhbQplbmRvYmoKMTggMCBvYmoKPDwvRjEgMTkgMCBSIC9GMiAyMCAwIFI+PgplbmRvYmoKMTkgMCBvYmoKPDwvQmFzZUZvbnQgL0hlbHZldGljYSAvRW5jb2RpbmcgL1dpbkFuc2lFbmNvZGluZyAvTmFtZSAvRjEgL1N1YnR5cGUKICAvVHlwZTEgL1R5cGUgL0ZvbnQ+PgplbmRvYmoKMjAgMCBvYmoKPDwvQmFzZUZvbnQgL0hlbHZldGljYS1Cb2xkIC9FbmNvZGluZyAvV2luQW5zaUVuY29kaW5nIC9OYW1lIC9GMgogIC9TdWJ0eXBlIC9UeXBlMSAvVHlwZSAvRm9udD4+CmVuZG9iagp4cmVmCjAgMjEKMDAwMDAwMDAwMCA2NTUzNSBmDQowMDAwMDAwMDE1IDAwMDAwIG4NCjAwMDAwMDAzMTQgMDAwMDAgbg0KMDAwMDAwMDM4MCAwMDAwMCBuDQowMDAwMDAwNDM1IDAwMDAwIG4NCjAwMDAwMDA3MTQgMDAwMDAgbg0KMDAwMDAwMDg1MyAwMDAwMCBuDQowMDAwMDAwOTkyIDAwMDAwIG4NCjAwMDAwMDExMjggMDAwMDAgbg0KMDAwMDAwMTI2MiAwMDAwMCBuDQowMDAwMDAxNDAzIDAwMDAwIG4NCjAwMDAwMDE1NDIgMDAwMDAgbg0KMDAwMDAwMTY3OSAwMDAwMCBuDQowMDAwMDAxODEzIDAwMDAwIG4NCjAwMDAwMDE5NTEgMDAwMDAgbg0KMDAwMDAwMjA4NiAwMDAwMCBuDQowMDAwMDAyMjIzIDAwMDAwIG4NCjAwMDAwMDIzNTcgMDAwMDAgbg0KMDAwMDAwMjg4NiAwMDAwMCBuDQowMDAwMDAyOTI4IDAwMDAwIG4NCjAwMDAwMDMwMzYgMDAwMDAgbg0KdHJhaWxlcgoKPDwvSUQKICBbPGVmZWQ5YzkyYjZhZjM5ODExOWM1MjRiMDkxMzY0NTk3PiA8ZWZlZDljOTJiNmFmMzk4MTE5YzUyNGIwOTEzNjQ1OTc+XQogIC9JbmZvIDEgMCBSIC9Sb290IDIgMCBSIC9TaXplIDIxPj4Kc3RhcnR4cmVmCjMxNDkKJSVFT0YK" download="3LakesLogistics_CarrierDispatchAgreement.pdf" style="color:var(--gold2);font-size:12px;text-decoration:none;">⬇ Download Dispatch Agreement</a></div></div></div><div class="f-bot"><div class="f-copy">© 2025 3 Lakes Logistics LLC. All rights reserved.</div><div class="f-mc">MC#: PENDING · USDOT#: PENDING · FMCSA Licensed &amp; Bonded</div><div class="f-leg"><a href="#">Privacy</a><a href="#">Terms</a><a href="data:application/pdf;base64,JVBERi0xLjMKJeLjz9MKMSAwIG9iago8PC9BdXRob3IgKGFub255bW91cykgL0NyZWF0aW9uRGF0ZSAoRDoyMDI1MDgyMDAzNDYzOCswMCcwMCcpIC9DcmVhdG9yCiAgKFJlcG9ydExhYiBQREYgTGlicmFyeSAtIHd3dy5yZXBvcnRsYWIuY29tKSAvS2V5d29yZHMgKCkgL01vZERhdGUKICAoRDoyMDI1MDgyMDAzNDYzOCswMCcwMCcpIC9Qcm9kdWNlcgogIChSZXBvcnRMYWIgUERGIExpYnJhcnkgLSB3d3cucmVwb3J0bGFiLmNvbSkgL1N1YmplY3QgKHVuc3BlY2lmaWVkKQogIC9UaXRsZSAodW50aXRsZWQpIC9UcmFwcGVkIC9GYWxzZT4+CmVuZG9iagoyIDAgb2JqCjw8L1BhZ2VNb2RlIC9Vc2VOb25lIC9QYWdlcyAzIDAgUiAvVHlwZSAvQ2F0YWxvZz4+CmVuZG9iagozIDAgb2JqCjw8L0NvdW50IDEgL0tpZHMgWzQgMCBSXSAvVHlwZSAvUGFnZXM+PgplbmRvYmoKNCAwIG9iago8PC9Bbm5vdHMKICBbNSAwIFIgNiAwIFIgNyAwIFIgOCAwIFIgOSAwIFIgMTAgMCBSIDExIDAgUiAxMiAwIFIgMTMgMCBSIDE0IDAgUiAxNSAwIFIgMTYgMCBSXQogIC9Db250ZW50cyAxNyAwIFIgL01lZGlhQm94IFswIDAgNjEyIDc5Ml0gL1BhcmVudCAzIDAgUiAvUmVzb3VyY2VzCiAgPDwvRm9udCAxOCAwIFIgL1Byb2NTZXQgWy9QREYgL1RleHQgL0ltYWdlQiAvSW1hZ2VDIC9JbWFnZUldPj4gL1JvdGF0ZQogIDAgL1RyYW5zIDw8Pj4gL1R5cGUgL1BhZ2U+PgplbmRvYmoKNSAwIG9iago8PC9EQSAoL0hlbHYgMCBUZiAwIGcpIC9GVCAvVHggL0ZmIDAgL1JlY3QgWzE1MCA2NzcgMzAwIDY5N10gL1N1YnR5cGUKICAvV2lkZ2V0IC9UIChEaXNwYXRjaGVyQ29tcGFueSkgL1R5cGUgL0Fubm90IC9WIDw+Pj4KZW5kb2JqCjYgMCBvYmoKPDwvREEgKC9IZWx2IDAgVGYgMCBnKSAvRlQgL1R4IC9GZiAwIC9SZWN0IFs0MDAgNjc3IDU1MCA2OTddIC9TdWJ0eXBlCiAgL1dpZGdldCAvVCAoRGlzcGF0Y2hlckFkZHJlc3MpIC9UeXBlIC9Bbm5vdCAvViA8Pj4+CmVuZG9iago3IDAgb2JqCjw8L0RBICgvSGVsdiAwIFRmIDAgZykgL0ZUIC9UeCAvRmYgMCAvUmVjdCBbMTUwIDY1NyAzMDAgNjc3XSAvU3VidHlwZQogIC9XaWRnZXQgL1QgKENhcnJpZXJDb21wYW55KSAvVHlwZSAvQW5ub3QgL1YgPD4+PgplbmRvYmoKOCAwIG9iago8PC9EQSAoL0hlbHYgMCBUZiAwIGcpIC9GVCAvVHggL0ZmIDAgL1JlY3QgWzQwMCA2NTcgNTUwIDY3N10gL1N1YnR5cGUKICAvV2lkZ2V0IC9UIChDYXJyaWVyRE9UTUMpIC9UeXBlIC9Bbm5vdCAvViA8Pj4+CmVuZG9iago5IDAgb2JqCjw8L0RBICgvSGVsdiAwIFRmIDAgZykgL0ZUIC9UeCAvRmYgMCAvUmVjdCBbMTUwIDE5MCAyODAgMjEwXSAvU3VidHlwZQogIC9XaWRnZXQgL1QgKERpc3BhdGNoZXJTaWduYXR1cmUpIC9UeXBlIC9Bbm5vdCAvViA8Pj4+CmVuZG9iagoxMCAwIG9iago8PC9EQSAoL0hlbHYgMCBUZiAwIGcpIC9GVCAvVHggL0ZmIDAgL1JlY3QgWzQwMCAxOTAgNTMwIDIxMF0gL1N1YnR5cGUKICAvV2lkZ2V0IC9UIChDYXJyaWVyU2lnbmF0dXJlKSAvVHlwZSAvQW5ub3QgL1YgPD4+PgplbmRvYmoKMTEgMCBvYmoKPDwvREEgKC9IZWx2IDAgVGYgMCBnKSAvRlQgL1R4IC9GZiAwIC9SZWN0IFsxNTAgMTYwIDI4MCAxODBdIC9TdWJ0eXBlCiAgL1dpZGdldCAvVCAoRGlzcGF0Y2hlck5hbWUpIC9UeXBlIC9Bbm5vdCAvViA8Pj4+CmVuZG9iagoxMiAwIG9iago8PC9EQSAoL0hlbHYgMCBUZiAwIGcpIC9GVCAvVHggL0ZmIDAgL1JlY3QgWzQwMCAxNjAgNTMwIDE4MF0gL1N1YnR5cGUKICAvV2lkZ2V0IC9UIChDYXJyaWVyTmFtZSkgL1R5cGUgL0Fubm90IC9WIDw+Pj4KZW5kb2JqCjEzIDAgb2JqCjw8L0RBICgvSGVsdiAwIFRmIDAgZykgL0ZUIC9UeCAvRmYgMCAvUmVjdCBbMTUwIDEzMCAyODAgMTUwXSAvU3VidHlwZQogIC9XaWRnZXQgL1QgKERpc3BhdGNoZXJUaXRsZSkgL1R5cGUgL0Fubm90IC9WIDw+Pj4KZW5kb2JqCjE0IDAgb2JqCjw8L0RBICgvSGVsdiAwIFRmIDAgZykgL0ZUIC9UeCAvRmYgMCAvUmVjdCBbNDAwIDEzMCA1MzAgMTUwXSAvU3VidHlwZQogIC9XaWRnZXQgL1QgKENhcnJpZXJUaXRsZSkgL1R5cGUgL0Fubm90IC9WIDw+Pj4KZW5kb2JqCjE1IDAgb2JqCjw8L0RBICgvSGVsdiAwIFRmIDAgZykgL0ZUIC9UeCAvRmYgMCAvUmVjdCBbMTUwIDEwMCAyODAgMTIwXSAvU3VidHlwZQogIC9XaWRnZXQgL1QgKERpc3BhdGNoZXJEYXRlKSAvVHlwZSAvQW5ub3QgL1YgPD4+PgplbmRvYmoKMTYgMCBvYmoKPDwvREEgKC9IZWx2IDAgVGYgMCBnKSAvRlQgL1R4IC9GZiAwIC9SZWN0IFs0MDAgMTAwIDUzMCAxMjBdIC9TdWJ0eXBlCiAgL1dpZGdldCAvVCAoQ2FycmllckRhdGUpIC9UeXBlIC9Bbm5vdCAvViA8Pj4+CmVuZG9iagoxNyAwIG9iago8PC9GaWx0ZXIgWy9BU0NJSTg1RGVjb2RlIC9GbGF0ZURlY29kZV0gL0xlbmd0aCA0NDE+PgpzdHJlYW0KR2F0JV47LDtmdSdTWUg9LyddQHFML0dybVtQbj89LG46QUBxQjNlIkU4PDRiJSEzRWZdY0dqcC1CbF07MXFBcm9eSmRtOTBcIiMqNGlyNl9ObnUmYTFWbUc2L0RVQkJKXjZFI2haVTpPcl5dIUJJQztRdUInVCoqYG1AVTpGKGcuKSE3cU9wTScnYTdCbVonLWNKZTFLLCFXYDRcMz9GYGQuYUdlXnE4Ty5pK0olLzY1ZDJVIUwmKGMrZmtGPzUrOUotPVRwSVpoTSJXPUxvQzZtJnFWbm1NL2sna0BTTjliUnAkUC1na0QxbyJkUDtyLyolPmQhZnJxN29RNixIKElYQnA3ZTJiQSkiLnM0bTYlPGVqMS9fJTo3QEpKPFVJKUhsXGAhbE5eTEthaE9EKF48cikqTHBuKWljclFUYVo2a0U2J29uYitjJzsuckhZPmdHbSxyL1s/KCJpQEA3cl9XMW1JUHNEKUZkSFY3dHJGXShJRzhzKUJZUjkpdUhtVywiSDoxJyx0Z1khZzBzUzpRVlxlZWpkVjdxOjgvIjYrPWs9RCRvUkNDODpfTjZnI0Q1QyVsS34+CmVuZHN0cmVhbQplbmRvYmoKMTggMCBvYmoKPDwvRjEgMTkgMCBSIC9GMiAyMCAwIFI+PgplbmRvYmoKMTkgMCBvYmoKPDwvQmFzZUZvbnQgL0hlbHZldGljYSAvRW5jb2RpbmcgL1dpbkFuc2lFbmNvZGluZyAvTmFtZSAvRjEgL1N1YnR5cGUKICAvVHlwZTEgL1R5cGUgL0ZvbnQ+PgplbmRvYmoKMjAgMCBvYmoKPDwvQmFzZUZvbnQgL0hlbHZldGljYS1Cb2xkIC9FbmNvZGluZyAvV2luQW5zaUVuY29kaW5nIC9OYW1lIC9GMgogIC9TdWJ0eXBlIC9UeXBlMSAvVHlwZSAvRm9udD4+CmVuZG9iagp4cmVmCjAgMjEKMDAwMDAwMDAwMCA2NTUzNSBmDQowMDAwMDAwMDE1IDAwMDAwIG4NCjAwMDAwMDAzMTQgMDAwMDAgbg0KMDAwMDAwMDM4MCAwMDAwMCBuDQowMDAwMDAwNDM1IDAwMDAwIG4NCjAwMDAwMDA3MTQgMDAwMDAgbg0KMDAwMDAwMDg1MyAwMDAwMCBuDQowMDAwMDAwOTkyIDAwMDAwIG4NCjAwMDAwMDExMjggMDAwMDAgbg0KMDAwMDAwMTI2MiAwMDAwMCBuDQowMDAwMDAxNDAzIDAwMDAwIG4NCjAwMDAwMDE1NDIgMDAwMDAgbg0KMDAwMDAwMTY3OSAwMDAwMCBuDQowMDAwMDAxODEzIDAwMDAwIG4NCjAwMDAwMDE5NTEgMDAwMDAgbg0KMDAwMDAwMjA4NiAwMDAwMCBuDQowMDAwMDAyMjIzIDAwMDAwIG4NCjAwMDAwMDIzNTcgMDAwMDAgbg0KMDAwMDAwMjg4NiAwMDAwMCBuDQowMDAwMDAyOTI4IDAwMDAwIG4NCjAwMDAwMDMwMzYgMDAwMDAgbg0KdHJhaWxlcgoKPDwvSUQKICBbPGVmZWQ5YzkyYjZhZjM5ODExOWM1MjRiMDkxMzY0NTk3PiA8ZWZlZDljOTJiNmFmMzk4MTE5YzUyNGIwOTEzNjQ1OTc+XQogIC9JbmZvIDEgMCBSIC9Sb290IDIgMCBSIC9TaXplIDIxPj4Kc3RhcnR4cmVmCjMxNDkKJSVFT0YK" download="3LakesLogistics_CarrierDispatchAgreement.pdf">Dispatch Agreement</a></div></div></div></footer>
+  <footer><div class="f-inner"><div class="f-g"><div><div class="f-name">3 Lakes Logistics</div><div class="f-tag">Delivering Trust Across America</div><div class="f-p">FMCSA licensed freight logistics and dispatching company serving owner-operators and small fleets nationwide.</div></div><div><div class="f-hd">Navigate</div><ul class="f-ls"><li onclick="showPage('home')">Home</li><li onclick="showPage('about')">About</li><li onclick="showPage('services')">Services</li><li onclick="showPage('contact')">Contact</li></ul></div><div><div class="f-hd">Plans</div><ul class="f-ls"><li>Founders — $200/mo</li><li>Pro — $400/mo</li><li>Pay-As-You-Go — 8%/load</li><li onclick="showPage('loads')" style="cursor:pointer;color:var(--gold2);">View Load Board →</li></ul></div><div><div class="f-hd">Contact</div><div class="f-ci"><span class="f-ci-ico">📞</span>(555) 000-1234</div><div class="f-ci"><span class="f-ci-ico">✉️</span>dispatch@3lakeslogistics.com</div><div class="f-ci"><span class="f-ci-ico">⏰</span>24/7 Available</div><div class="f-ci" style="margin-top:8px;"><a href="data:application/pdf;base64,JVBERi0xLjMKJeLjz9MKMSAwIG9iago8PC9BdXRob3IgKGFub255bW91cykgL0NyZWF0aW9uRGF0ZSAoRDoyMDI1MDgyMDAzNDYzOCswMCcwMCcpIC9DcmVhdG9yCiAgKFJlcG9ydExhYiBQREYgTGlicmFyeSAtIHd3dy5yZXBvcnRsYWIuY29tKSAvS2V5d29yZHMgKCkgL01vZERhdGUKICAoRDoyMDI1MDgyMDAzNDYzOCswMCcwMCcpIC9Qcm9kdWNlcgogIChSZXBvcnRMYWIgUERGIExpYnJhcnkgLSB3d3cucmVwb3J0bGFiLmNvbSkgL1N1YmplY3QgKHVuc3BlY2lmaWVkKQogIC9UaXRsZSAodW50aXRsZWQpIC9UcmFwcGVkIC9GYWxzZT4+CmVuZG9iagoyIDAgb2JqCjw8L1BhZ2VNb2RlIC9Vc2VOb25lIC9QYWdlcyAzIDAgUiAvVHlwZSAvQ2F0YWxvZz4+CmVuZG9iagozIDAgb2JqCjw8L0NvdW50IDEgL0tpZHMgWzQgMCBSXSAvVHlwZSAvUGFnZXM+PgplbmRvYmoKNCAwIG9iago8PC9Bbm5vdHMKICBbNSAwIFIgNiAwIFIgNyAwIFIgOCAwIFIgOSAwIFIgMTAgMCBSIDExIDAgUiAxMiAwIFIgMTMgMCBSIDE0IDAgUiAxNSAwIFIgMTYgMCBSXQogIC9Db250ZW50cyAxNyAwIFIgL01lZGlhQm94IFswIDAgNjEyIDc5Ml0gL1BhcmVudCAzIDAgUiAvUmVzb3VyY2VzCiAgPDwvRm9udCAxOCAwIFIgL1Byb2NTZXQgWy9QREYgL1RleHQgL0ltYWdlQiAvSW1hZ2VDIC9JbWFnZUldPj4gL1JvdGF0ZQogIDAgL1RyYW5zIDw8Pj4gL1R5cGUgL1BhZ2U+PgplbmRvYmoKNSAwIG9iago8PC9EQSAoL0hlbHYgMCBUZiAwIGcpIC9GVCAvVHggL0ZmIDAgL1JlY3QgWzE1MCA2NzcgMzAwIDY5N10gL1N1YnR5cGUKICAvV2lkZ2V0IC9UIChEaXNwYXRjaGVyQ29tcGFueSkgL1R5cGUgL0Fubm90IC9WIDw+Pj4KZW5kb2JqCjYgMCBvYmoKPDwvREEgKC9IZWx2IDAgVGYgMCBnKSAvRlQgL1R4IC9GZiAwIC9SZWN0IFs0MDAgNjc3IDU1MCA2OTddIC9TdWJ0eXBlCiAgL1dpZGdldCAvVCAoRGlzcGF0Y2hlckFkZHJlc3MpIC9UeXBlIC9Bbm5vdCAvViA8Pj4+CmVuZG9iago3IDAgb2JqCjw8L0RBICgvSGVsdiAwIFRmIDAgZykgL0ZUIC9UeCAvRmYgMCAvUmVjdCBbMTUwIDY1NyAzMDAgNjc3XSAvU3VidHlwZQogIC9XaWRnZXQgL1QgKENhcnJpZXJDb21wYW55KSAvVHlwZSAvQW5ub3QgL1YgPD4+PgplbmRvYmoKOCAwIG9iago8PC9EQSAoL0hlbHYgMCBUZiAwIGcpIC9GVCAvVHggL0ZmIDAgL1JlY3QgWzQwMCA2NTcgNTUwIDY3N10gL1N1YnR5cGUKICAvV2lkZ2V0IC9UIChDYXJyaWVyRE9UTUMpIC9UeXBlIC9Bbm5vdCAvViA8Pj4+CmVuZG9iago5IDAgb2JqCjw8L0RBICgvSGVsdiAwIFRmIDAgZykgL0ZUIC9UeCAvRmYgMCAvUmVjdCBbMTUwIDE5MCAyODAgMjEwXSAvU3VidHlwZQogIC9XaWRnZXQgL1QgKERpc3BhdGNoZXJTaWduYXR1cmUpIC9UeXBlIC9Bbm5vdCAvViA8Pj4+CmVuZG9iagoxMCAwIG9iago8PC9EQSAoL0hlbHYgMCBUZiAwIGcpIC9GVCAvVHggL0ZmIDAgL1JlY3QgWzQwMCAxOTAgNTMwIDIxMF0gL1N1YnR5cGUKICAvV2lkZ2V0IC9UIChDYXJyaWVyU2lnbmF0dXJlKSAvVHlwZSAvQW5ub3QgL1YgPD4+PgplbmRvYmoKMTEgMCBvYmoKPDwvREEgKC9IZWx2IDAgVGYgMCBnKSAvRlQgL1R4IC9GZiAwIC9SZWN0IFsxNTAgMTYwIDI4MCAxODBdIC9TdWJ0eXBlCiAgL1dpZGdldCAvVCAoRGlzcGF0Y2hlck5hbWUpIC9UeXBlIC9Bbm5vdCAvViA8Pj4+CmVuZG9iagoxMiAwIG9iago8PC9EQSAoL0hlbHYgMCBUZiAwIGcpIC9GVCAvVHggL0ZmIDAgL1JlY3QgWzQwMCAxNjAgNTMwIDE4MF0gL1N1YnR5cGUKICAvV2lkZ2V0IC9UIChDYXJyaWVyTmFtZSkgL1R5cGUgL0Fubm90IC9WIDw+Pj4KZW5kb2JqCjEzIDAgb2JqCjw8L0RBICgvSGVsdiAwIFRmIDAgZykgL0ZUIC9UeCAvRmYgMCAvUmVjdCBbMTUwIDEzMCAyODAgMTUwXSAvU3VidHlwZQogIC9XaWRnZXQgL1QgKERpc3BhdGNoZXJUaXRsZSkgL1R5cGUgL0Fubm90IC9WIDw+Pj4KZW5kb2JqCjE0IDAgb2JqCjw8L0RBICgvSGVsdiAwIFRmIDAgZykgL0ZUIC9UeCAvRmYgMCAvUmVjdCBbNDAwIDEzMCA1MzAgMTUwXSAvU3VidHlwZQogIC9XaWRnZXQgL1QgKENhcnJpZXJUaXRsZSkgL1R5cGUgL0Fubm90IC9WIDw+Pj4KZW5kb2JqCjE1IDAgb2JqCjw8L0RBICgvSGVsdiAwIFRmIDAgZykgL0ZUIC9UeCAvRmYgMCAvUmVjdCBbMTUwIDEwMCAyODAgMTIwXSAvU3VidHlwZQogIC9XaWRnZXQgL1QgKERpc3BhdGNoZXJEYXRlKSAvVHlwZSAvQW5ub3QgL1YgPD4+PgplbmRvYmoKMTYgMCBvYmoKPDwvREEgKC9IZWx2IDAgVGYgMCBnKSAvRlQgL1R4IC9GZiAwIC9SZWN0IFs0MDAgMTAwIDUzMCAxMjBdIC9TdWJ0eXBlCiAgL1dpZGdldCAvVCAoQ2FycmllckRhdGUpIC9UeXBlIC9Bbm5vdCAvViA8Pj4+CmVuZG9iagoxNyAwIG9iago8PC9GaWx0ZXIgWy9BU0NJSTg1RGVjb2RlIC9GbGF0ZURlY29kZV0gL0xlbmd0aCA0NDE+PgpzdHJlYW0KR2F0JV47LDtmdSdTWUg9LyddQHFML0dybVtQbj89LG46QUBxQjNlIkU4PDRiJSEzRWZdY0dqcC1CbF07MXFBcm9eSmRtOTBcIiMqNGlyNl9ObnUmYTFWbUc2L0RVQkJKXjZFI2haVTpPcl5dIUJJQztRdUInVCoqYG1AVTpGKGcuKSE3cU9wTScnYTdCbVonLWNKZTFLLCFXYDRcMz9GYGQuYUdlXnE4Ty5pK0olLzY1ZDJVIUwmKGMrZmtGPzUrOUotPVRwSVpoTSJXPUxvQzZtJnFWbm1NL2sna0BTTjliUnAkUC1na0QxbyJkUDtyLyolPmQhZnJxN29RNixIKElYQnA3ZTJiQSkiLnM0bTYlPGVqMS9fJTo3QEpKPFVJKUhsXGAhbE5eTEthaE9EKF48cikqTHBuKWljclFUYVo2a0U2J29uYitjJzsuckhZPmdHbSxyL1s/KCJpQEA3cl9XMW1JUHNEKUZkSFY3dHJGXShJRzhzKUJZUjkpdUhtVywiSDoxJyx0Z1khZzBzUzpRVlxlZWpkVjdxOjgvIjYrPWs9RCRvUkNDODpfTjZnI0Q1QyVsS34+CmVuZHN0cmVhbQplbmRvYmoKMTggMCBvYmoKPDwvRjEgMTkgMCBSIC9GMiAyMCAwIFI+PgplbmRvYmoKMTkgMCBvYmoKPDwvQmFzZUZvbnQgL0hlbHZldGljYSAvRW5jb2RpbmcgL1dpbkFuc2lFbmNvZGluZyAvTmFtZSAvRjEgL1N1YnR5cGUKICAvVHlwZTEgL1R5cGUgL0ZvbnQ+PgplbmRvYmoKMjAgMCBvYmoKPDwvQmFzZUZvbnQgL0hlbHZldGljYS1Cb2xkIC9FbmNvZGluZyAvV2luQW5zaUVuY29kaW5nIC9OYW1lIC9GMgogIC9TdWJ0eXBlIC9UeXBlMSAvVHlwZSAvRm9udD4+CmVuZG9iagp4cmVmCjAgMjEKMDAwMDAwMDAwMCA2NTUzNSBmDQowMDAwMDAwMDE1IDAwMDAwIG4NCjAwMDAwMDAzMTQgMDAwMDAgbg0KMDAwMDAwMDM4MCAwMDAwMCBuDQowMDAwMDAwNDM1IDAwMDAwIG4NCjAwMDAwMDA3MTQgMDAwMDAgbg0KMDAwMDAwMDg1MyAwMDAwMCBuDQowMDAwMDAwOTkyIDAwMDAwIG4NCjAwMDAwMDExMjggMDAwMDAgbg0KMDAwMDAwMTI2MiAwMDAwMCBuDQowMDAwMDAxNDAzIDAwMDAwIG4NCjAwMDAwMDE1NDIgMDAwMDAgbg0KMDAwMDAwMTY3OSAwMDAwMCBuDQowMDAwMDAxODEzIDAwMDAwIG4NCjAwMDAwMDE5NTEgMDAwMDAgbg0KMDAwMDAwMjA4NiAwMDAwMCBuDQowMDAwMDAyMjIzIDAwMDAwIG4NCjAwMDAwMDIzNTcgMDAwMDAgbg0KMDAwMDAwMjg4NiAwMDAwMCBuDQowMDAwMDAyOTI4IDAwMDAwIG4NCjAwMDAwMDMwMzYgMDAwMDAgbg0KdHJhaWxlcgoKPDwvSUQKICBbPGVmZWQ5YzkyYjZhZjM5ODExOWM1MjRiMDkxMzY0NTk3PiA8ZWZlZDljOTJiNmFmMzk4MTE5YzUyNGIwOTEzNjQ1OTc+XQogIC9JbmZvIDEgMCBSIC9Sb290IDIgMCBSIC9TaXplIDIxPj4Kc3RhcnR4cmVmCjMxNDkKJSVFT0YK" download="3LakesLogistics_CarrierDispatchAgreement.pdf" style="color:var(--gold2);font-size:12px;text-decoration:none;">⬇ Download Dispatch Agreement</a></div></div></div><div class="f-bot"><div class="f-copy">© 2025 3 Lakes Logistics LLC. All rights reserved.</div><div class="f-mc">MC#: PENDING · USDOT#: PENDING · FMCSA Licensed &amp; Bonded</div><div class="f-leg"><a href="#">Privacy</a><a href="#">Terms</a><a href="data:application/pdf;base64,JVBERi0xLjMKJeLjz9MKMSAwIG9iago8PC9BdXRob3IgKGFub255bW91cykgL0NyZWF0aW9uRGF0ZSAoRDoyMDI1MDgyMDAzNDYzOCswMCcwMCcpIC9DcmVhdG9yCiAgKFJlcG9ydExhYiBQREYgTGlicmFyeSAtIHd3dy5yZXBvcnRsYWIuY29tKSAvS2V5d29yZHMgKCkgL01vZERhdGUKICAoRDoyMDI1MDgyMDAzNDYzOCswMCcwMCcpIC9Qcm9kdWNlcgogIChSZXBvcnRMYWIgUERGIExpYnJhcnkgLSB3d3cucmVwb3J0bGFiLmNvbSkgL1N1YmplY3QgKHVuc3BlY2lmaWVkKQogIC9UaXRsZSAodW50aXRsZWQpIC9UcmFwcGVkIC9GYWxzZT4+CmVuZG9iagoyIDAgb2JqCjw8L1BhZ2VNb2RlIC9Vc2VOb25lIC9QYWdlcyAzIDAgUiAvVHlwZSAvQ2F0YWxvZz4+CmVuZG9iagozIDAgb2JqCjw8L0NvdW50IDEgL0tpZHMgWzQgMCBSXSAvVHlwZSAvUGFnZXM+PgplbmRvYmoKNCAwIG9iago8PC9Bbm5vdHMKICBbNSAwIFIgNiAwIFIgNyAwIFIgOCAwIFIgOSAwIFIgMTAgMCBSIDExIDAgUiAxMiAwIFIgMTMgMCBSIDE0IDAgUiAxNSAwIFIgMTYgMCBSXQogIC9Db250ZW50cyAxNyAwIFIgL01lZGlhQm94IFswIDAgNjEyIDc5Ml0gL1BhcmVudCAzIDAgUiAvUmVzb3VyY2VzCiAgPDwvRm9udCAxOCAwIFIgL1Byb2NTZXQgWy9QREYgL1RleHQgL0ltYWdlQiAvSW1hZ2VDIC9JbWFnZUldPj4gL1JvdGF0ZQogIDAgL1RyYW5zIDw8Pj4gL1R5cGUgL1BhZ2U+PgplbmRvYmoKNSAwIG9iago8PC9EQSAoL0hlbHYgMCBUZiAwIGcpIC9GVCAvVHggL0ZmIDAgL1JlY3QgWzE1MCA2NzcgMzAwIDY5N10gL1N1YnR5cGUKICAvV2lkZ2V0IC9UIChEaXNwYXRjaGVyQ29tcGFueSkgL1R5cGUgL0Fubm90IC9WIDw+Pj4KZW5kb2JqCjYgMCBvYmoKPDwvREEgKC9IZWx2IDAgVGYgMCBnKSAvRlQgL1R4IC9GZiAwIC9SZWN0IFs0MDAgNjc3IDU1MCA2OTddIC9TdWJ0eXBlCiAgL1dpZGdldCAvVCAoRGlzcGF0Y2hlckFkZHJlc3MpIC9UeXBlIC9Bbm5vdCAvViA8Pj4+CmVuZG9iago3IDAgb2JqCjw8L0RBICgvSGVsdiAwIFRmIDAgZykgL0ZUIC9UeCAvRmYgMCAvUmVjdCBbMTUwIDY1NyAzMDAgNjc3XSAvU3VidHlwZQogIC9XaWRnZXQgL1QgKENhcnJpZXJDb21wYW55KSAvVHlwZSAvQW5ub3QgL1YgPD4+PgplbmRvYmoKOCAwIG9iago8PC9EQSAoL0hlbHYgMCBUZiAwIGcpIC9GVCAvVHggL0ZmIDAgL1JlY3QgWzQwMCA2NTcgNTUwIDY3N10gL1N1YnR5cGUKICAvV2lkZ2V0IC9UIChDYXJyaWVyRE9UTUMpIC9UeXBlIC9Bbm5vdCAvViA8Pj4+CmVuZG9iago5IDAgb2JqCjw8L0RBICgvSGVsdiAwIFRmIDAgZykgL0ZUIC9UeCAvRmYgMCAvUmVjdCBbMTUwIDE5MCAyODAgMjEwXSAvU3VidHlwZQogIC9XaWRnZXQgL1QgKERpc3BhdGNoZXJTaWduYXR1cmUpIC9UeXBlIC9Bbm5vdCAvViA8Pj4+CmVuZG9iagoxMCAwIG9iago8PC9EQSAoL0hlbHYgMCBUZiAwIGcpIC9GVCAvVHggL0ZmIDAgL1JlY3QgWzQwMCAxOTAgNTMwIDIxMF0gL1N1YnR5cGUKICAvV2lkZ2V0IC9UIChDYXJyaWVyU2lnbmF0dXJlKSAvVHlwZSAvQW5ub3QgL1YgPD4+PgplbmRvYmoKMTEgMCBvYmoKPDwvREEgKC9IZWx2IDAgVGYgMCBnKSAvRlQgL1R4IC9GZiAwIC9SZWN0IFsxNTAgMTYwIDI4MCAxODBdIC9TdWJ0eXBlCiAgL1dpZGdldCAvVCAoRGlzcGF0Y2hlck5hbWUpIC9UeXBlIC9Bbm5vdCAvViA8Pj4+CmVuZG9iagoxMiAwIG9iago8PC9EQSAoL0hlbHYgMCBUZiAwIGcpIC9GVCAvVHggL0ZmIDAgL1JlY3QgWzQwMCAxNjAgNTMwIDE4MF0gL1N1YnR5cGUKICAvV2lkZ2V0IC9UIChDYXJyaWVyTmFtZSkgL1R5cGUgL0Fubm90IC9WIDw+Pj4KZW5kb2JqCjEzIDAgb2JqCjw8L0RBICgvSGVsdiAwIFRmIDAgZykgL0ZUIC9UeCAvRmYgMCAvUmVjdCBbMTUwIDEzMCAyODAgMTUwXSAvU3VidHlwZQogIC9XaWRnZXQgL1QgKERpc3BhdGNoZXJUaXRsZSkgL1R5cGUgL0Fubm90IC9WIDw+Pj4KZW5kb2JqCjE0IDAgb2JqCjw8L0RBICgvSGVsdiAwIFRmIDAgZykgL0ZUIC9UeCAvRmYgMCAvUmVjdCBbNDAwIDEzMCA1MzAgMTUwXSAvU3VidHlwZQogIC9XaWRnZXQgL1QgKENhcnJpZXJUaXRsZSkgL1R5cGUgL0Fubm90IC9WIDw+Pj4KZW5kb2JqCjE1IDAgb2JqCjw8L0RBICgvSGVsdiAwIFRmIDAgZykgL0ZUIC9UeCAvRmYgMCAvUmVjdCBbMTUwIDEwMCAyODAgMTIwXSAvU3VidHlwZQogIC9XaWRnZXQgL1QgKERpc3BhdGNoZXJEYXRlKSAvVHlwZSAvQW5ub3QgL1YgPD4+PgplbmRvYmoKMTYgMCBvYmoKPDwvREEgKC9IZWx2IDAgVGYgMCBnKSAvRlQgL1R4IC9GZiAwIC9SZWN0IFs0MDAgMTAwIDUzMCAxMjBdIC9TdWJ0eXBlCiAgL1dpZGdldCAvVCAoQ2FycmllckRhdGUpIC9UeXBlIC9Bbm5vdCAvViA8Pj4+CmVuZG9iagoxNyAwIG9iago8PC9GaWx0ZXIgWy9BU0NJSTg1RGVjb2RlIC9GbGF0ZURlY29kZV0gL0xlbmd0aCA0NDE+PgpzdHJlYW0KR2F0JV47LDtmdSdTWUg9LyddQHFML0dybVtQbj89LG46QUBxQjNlIkU4PDRiJSEzRWZdY0dqcC1CbF07MXFBcm9eSmRtOTBcIiMqNGlyNl9ObnUmYTFWbUc2L0RVQkJKXjZFI2haVTpPcl5dIUJJQztRdUInVCoqYG1AVTpGKGcuKSE3cU9wTScnYTdCbVonLWNKZTFLLCFXYDRcMz9GYGQuYUdlXnE4Ty5pK0olLzY1ZDJVIUwmKGMrZmtGPzUrOUotPVRwSVpoTSJXPUxvQzZtJnFWbm1NL2sna0BTTjliUnAkUC1na0QxbyJkUDtyLyolPmQhZnJxN29RNixIKElYQnA3ZTJiQSkiLnM0bTYlPGVqMS9fJTo3QEpKPFVJKUhsXGAhbE5eTEthaE9EKF48cikqTHBuKWljclFUYVo2a0U2J29uYitjJzsuckhZPmdHbSxyL1s/KCJpQEA3cl9XMW1JUHNEKUZkSFY3dHJGXShJRzhzKUJZUjkpdUhtVywiSDoxJyx0Z1khZzBzUzpRVlxlZWpkVjdxOjgvIjYrPWs9RCRvUkNDODpfTjZnI0Q1QyVsS34+CmVuZHN0cmVhbQplbmRvYmoKMTggMCBvYmoKPDwvRjEgMTkgMCBSIC9GMiAyMCAwIFI+PgplbmRvYmoKMTkgMCBvYmoKPDwvQmFzZUZvbnQgL0hlbHZldGljYSAvRW5jb2RpbmcgL1dpbkFuc2lFbmNvZGluZyAvTmFtZSAvRjEgL1N1YnR5cGUKICAvVHlwZTEgL1R5cGUgL0ZvbnQ+PgplbmRvYmoKMjAgMCBvYmoKPDwvQmFzZUZvbnQgL0hlbHZldGljYS1Cb2xkIC9FbmNvZGluZyAvV2luQW5zaUVuY29kaW5nIC9OYW1lIC9GMgogIC9TdWJ0eXBlIC9UeXBlMSAvVHlwZSAvRm9udD4+CmVuZG9iagp4cmVmCjAgMjEKMDAwMDAwMDAwMCA2NTUzNSBmDQowMDAwMDAwMDE1IDAwMDAwIG4NCjAwMDAwMDAzMTQgMDAwMDAgbg0KMDAwMDAwMDM4MCAwMDAwMCBuDQowMDAwMDAwNDM1IDAwMDAwIG4NCjAwMDAwMDA3MTQgMDAwMDAgbg0KMDAwMDAwMDg1MyAwMDAwMCBuDQowMDAwMDAwOTkyIDAwMDAwIG4NCjAwMDAwMDExMjggMDAwMDAgbg0KMDAwMDAwMTI2MiAwMDAwMCBuDQowMDAwMDAxNDAzIDAwMDAwIG4NCjAwMDAwMDE1NDIgMDAwMDAgbg0KMDAwMDAwMTY3OSAwMDAwMCBuDQowMDAwMDAxODEzIDAwMDAwIG4NCjAwMDAwMDE5NTEgMDAwMDAgbg0KMDAwMDAwMjA4NiAwMDAwMCBuDQowMDAwMDAyMjIzIDAwMDAwIG4NCjAwMDAwMDIzNTcgMDAwMDAgbg0KMDAwMDAwMjg4NiAwMDAwMCBuDQowMDAwMDAyOTI4IDAwMDAwIG4NCjAwMDAwMDMwMzYgMDAwMDAgbg0KdHJhaWxlcgoKPDwvSUQKICBbPGVmZWQ5YzkyYjZhZjM5ODExOWM1MjRiMDkxMzY0NTk3PiA8ZWZlZDljOTJiNmFmMzk4MTE5YzUyNGIwOTEzNjQ1OTc+XQogIC9JbmZvIDEgMCBSIC9Sb290IDIgMCBSIC9TaXplIDIxPj4Kc3RhcnR4cmVmCjMxNDkKJSVFT0YK" download="3LakesLogistics_CarrierDispatchAgreement.pdf">Dispatch Agreement</a></div></div></div></footer>
 </div>
 
 
@@ -1292,9 +1364,110 @@ function syncFoundersCounter(){
   }
 }
 setTimeout(syncFoundersCounter,220);
+
+// ── REAL STATS from backend ────────────────────────────────────────────────────
+(function fetchRealStats(){
+  const base=(window.__3LL_API_BASE||'').replace(/\/$/,'');
+  fetch(base+'/api/fleet/public/stats').then(r=>r.ok?r.json():null).then(d=>{
+    if(!d)return;
+    // Update hero "Founders Joined" card
+    const heroEl=document.getElementById('hero-founders-count');
+    if(heroEl){
+      if(d.founders_joined>0){
+        heroEl.textContent=d.founders_joined.toLocaleString();
+      } else {
+        // Fall back to total carriers if no founders-specific count
+        heroEl.textContent=(d.total_carriers||0).toLocaleString();
+      }
+    }
+    // Show load board badge if loads are posted
+    const badge=document.getElementById('nav-loads-badge');
+    if(badge&&d.loads_posted>0){badge.textContent=d.loads_posted;badge.style.display='inline';}
+  }).catch(()=>{
+    // API offline — show 0 rather than stale 127
+    const heroEl=document.getElementById('hero-founders-count');
+    if(heroEl)heroEl.textContent='0';
+  });
+})();
+
+// ── LOAD BOARD ────────────────────────────────────────────────────────────────
+let _allLoads=[];
+async function loadPublicLoads(){
+  const grid=document.getElementById('lb-grid');
+  const lbl=document.getElementById('lb-count-label');
+  if(grid)grid.innerHTML='<div style="text-align:center;padding:60px;color:#64748b"><div style="font-size:32px;margin-bottom:12px">⏳</div>Loading loads…</div>';
+  try{
+    const base=(window.__3LL_API_BASE||'').replace(/\/$/,'');
+    const res=await fetch(base+'/api/fleet/public/loads?limit=50');
+    const data=res.ok?await res.json():{loads:[]};
+    _allLoads=data.loads||[];
+    renderLoads(_allLoads);
+  }catch(e){
+    if(grid)grid.innerHTML='<div style="text-align:center;padding:60px;color:#64748b"><div style="font-size:32px;margin-bottom:12px">📡</div>No loads posted right now. Check back soon or <a href="#" onclick="showPage(\'onboard\');return false;" style="color:#3b82f6">join as a partner</a>.</div>';
+    if(lbl)lbl.textContent='No loads available right now';
+  }
+}
+function filterLoads(){
+  const eq=document.getElementById('lb-equip-filter')?.value||'';
+  const filtered=eq?_allLoads.filter(l=>(l.equipment_type||'').toLowerCase().includes(eq.toLowerCase())):_allLoads;
+  renderLoads(filtered);
+}
+function renderLoads(loads){
+  const grid=document.getElementById('lb-grid');
+  const lbl=document.getElementById('lb-count-label');
+  if(!grid)return;
+  if(!loads.length){
+    grid.innerHTML='<div style="text-align:center;padding:60px;color:#64748b"><div style="font-size:32px;margin-bottom:12px">🚛</div>No loads match your filter. <a href="#" onclick="document.getElementById(\'lb-equip-filter\').value=\'\';filterLoads();return false;" style="color:#3b82f6">Clear filter</a></div>';
+    if(lbl)lbl.textContent='0 loads available';
+    return;
+  }
+  if(lbl)lbl.textContent=loads.length+' load'+(loads.length===1?'':'s')+' available now';
+  const esc=s=>String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const rows=loads.map(l=>{
+    const origin=[l.origin_city,l.origin_state].filter(Boolean).join(', ')||l.origin||'—';
+    const dest  =[l.dest_city,  l.dest_state  ].filter(Boolean).join(', ')||l.destination||'—';
+    const rate  =l.rate_total?'$'+Number(l.rate_total).toLocaleString():'Call';
+    const rpm   =(l.rate_total&&l.miles)?'$'+(l.rate_total/l.miles).toFixed(2)+'/mi':'';
+    const miles =l.miles?l.miles.toLocaleString()+' mi':'—';
+    const pickup=l.pickup_at?new Date(l.pickup_at).toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'}):'ASAP';
+    const equip =l.equipment_type||'Any';
+    return `<tr>
+      <td><div class="lb-route">${esc(origin)} → ${esc(dest)}</div><div class="lb-sub">${esc(l.load_number||'')} · ${miles} · Pickup ${pickup}</div></td>
+      <td><div class="lb-rate">${esc(rate)}</div>${rpm?'<div class="lb-rpm">'+esc(rpm)+'</div>':''}</td>
+      <td><span class="lb-pill">🚛 ${esc(equip)}</span></td>
+      <td><button class="lb-cta" onclick="applyForLoad('${esc(l.load_number||l.id||'')}','${esc(origin)}','${esc(dest)}')">Apply to Haul</button></td>
+    </tr>`;
+  }).join('');
+  grid.innerHTML=`<div class="lb-wrap"><table class="lb-table"><thead><tr><th>Route</th><th>Rate</th><th>Equipment</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`;
+}
+function applyForLoad(loadNum,origin,dest){
+  showPage('onboard');
+  setTimeout(()=>{
+    window.scrollTo({top:0,behavior:'smooth'});
+    // Pre-select Pay-As-You-Go plan
+    const planEl=document.getElementById('plan');
+    if(planEl)planEl.value='pay_as_you_go';
+    // Pre-fill load preference in dispatcher notes if field exists
+    const notesEl=document.getElementById('dispatcher_notes')||document.getElementById('ob_notes');
+    if(notesEl)notesEl.value='Interested in load '+loadNum+': '+origin+' → '+dest;
+  },200);
+}
+function applyPayAsYouGo(){
+  showPage('onboard');
+  setTimeout(()=>{
+    window.scrollTo({top:0,behavior:'smooth'});
+    const planEl=document.getElementById('plan');
+    if(planEl)planEl.value='pay_as_you_go';
+  },200);
+}
+
 // Re-run counter sync whenever user navigates back to home or services page
 const _origShowPage=showPage;
-showPage=function(n){_origShowPage(n);if(n==='home'||n==='services')setTimeout(syncFoundersCounter,200);};
+showPage=function(n){
+  _origShowPage(n);
+  if(n==='home'||n==='services')setTimeout(syncFoundersCounter,200);
+  if(n==='loads')loadPublicLoads();
+};
 // onboarding
 let oStep=1;
 function oNext(f){
@@ -1336,6 +1509,7 @@ function oSub(){
   let planLabel='Pro Membership — $400/month',planFee='$400/month flat';
   if(planSel==='founders'){planLabel='Founders Membership — $200/month (locked for life)';planFee='$200/month flat';}
   else if(planSel==='pro'){planLabel='Pro Membership — $400/month';planFee='$400/month flat';}
+  else if(planSel==='pay_as_you_go'){planLabel='Pay-As-You-Go — 8% per load dispatched';planFee='8% of gross load rate per dispatch';}
 
   const coverage=g('liability_limit')||'$1,000,000 Liability';
   const eld=(g('eld_provider')?g('eld_provider').toUpperCase():'___________');

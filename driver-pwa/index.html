@@ -149,6 +149,102 @@
     .cdl-row:last-child { border-bottom: none; }
     .cdl-label { font-size: 12px; color: var(--muted); }
     .cdl-value { font-size: 13px; font-weight: 600; }
+
+    /* ── MESSAGES ── */
+    #view-messages { display: none; flex-direction: column; height: 100%; }
+    #view-messages.active { display: flex; }
+    #msg-list {
+      flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch;
+      padding: 12px; display: flex; flex-direction: column; gap: 10px;
+    }
+    .bubble-wrap { display: flex; flex-direction: column; }
+    .bubble-wrap.out { align-items: flex-end; }
+    .bubble-wrap.in  { align-items: flex-start; }
+    .bubble {
+      max-width: 78%; padding: 10px 14px; border-radius: 18px;
+      font-size: 14px; line-height: 1.45; word-break: break-word;
+    }
+    .bubble.out { background: var(--accent); color: #fff; border-bottom-right-radius: 4px; }
+    .bubble.in  { background: var(--card); color: var(--text); border: 1px solid var(--border); border-bottom-left-radius: 4px; }
+    .bubble-time { font-size: 10px; color: var(--muted); margin-top: 3px; padding: 0 4px; }
+    .offer-card {
+      background: var(--card); border: 1px solid var(--accent); border-radius: var(--radius);
+      padding: 14px; max-width: 88%; margin: 4px 0;
+    }
+    .offer-label { font-size: 10px; color: var(--accent); font-weight: 700; text-transform: uppercase; letter-spacing: .8px; margin-bottom: 8px; }
+    .offer-route { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
+    .offer-meta { font-size: 12px; color: var(--muted); margin-bottom: 10px; }
+    .offer-btns { display: flex; gap: 8px; }
+    .offer-btns button { flex: 1; padding: 10px; border: none; border-radius: 10px; font-size: 13px; font-weight: 700; cursor: pointer; }
+    .btn-accept { background: var(--green); color: #fff; }
+    .btn-decline { background: var(--surface); color: var(--muted); border: 1px solid var(--border) !important; }
+    #msg-input-bar {
+      display: flex; align-items: center; gap: 8px;
+      padding: 10px 12px calc(10px + var(--safe-bot));
+      background: var(--surface); border-top: 1px solid var(--border);
+    }
+    #msg-input {
+      flex: 1; background: var(--card); border: 1px solid var(--border);
+      border-radius: 22px; padding: 10px 16px; color: var(--text);
+      font-size: 15px; outline: none; resize: none; max-height: 100px;
+    }
+    #msg-input::placeholder { color: var(--muted); }
+    #msg-send-btn {
+      width: 42px; height: 42px; border-radius: 50%; border: none;
+      background: var(--accent); color: #fff; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; transition: opacity .15s;
+    }
+    #msg-send-btn:active { opacity: .7; }
+
+    /* ── UNREAD BADGE ── */
+    .nav-badge {
+      position: absolute; top: 6px; right: calc(50% - 18px);
+      background: var(--red); color: #fff; border-radius: 99px;
+      font-size: 9px; font-weight: 700; min-width: 16px; height: 16px;
+      display: flex; align-items: center; justify-content: center;
+      padding: 0 4px; pointer-events: none;
+    }
+    .nav-btn { position: relative; }
+
+    /* ── LOAD OFFER ACTIONS on load card ── */
+    .load-actions { display: flex; gap: 8px; margin-top: 10px; }
+    .load-actions .btn { margin-bottom: 0; flex: 1; padding: 12px; }
+
+    /* ── PROFILE EDIT FIELD ── */
+    .profile-field { margin-bottom: 10px; }
+    .profile-field label { display: block; font-size: 11px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .6px; margin-bottom: 6px; }
+    .profile-input {
+      width: 100%; background: var(--surface); border: 1px solid var(--border);
+      border-radius: 10px; padding: 12px 14px; color: var(--text);
+      font-size: 15px; outline: none;
+    }
+    .profile-input:focus { border-color: var(--accent); }
+    .btn-save { background: var(--accent); color: #fff; }
+
+    /* ── LOADS TABLE ── */
+    .loads-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .loads-table th {
+      text-align: left; font-size: 10px; font-weight: 700; color: var(--muted);
+      text-transform: uppercase; letter-spacing: .6px;
+      padding: 8px 10px; border-bottom: 1px solid var(--border);
+    }
+    .loads-table td { padding: 12px 10px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+    .loads-table tr:last-child td { border-bottom: none; }
+    .loads-table tr:active td { background: var(--surface); }
+    .tbl-route { font-weight: 700; font-size: 14px; line-height: 1.3; }
+    .tbl-sub   { font-size: 11px; color: var(--muted); margin-top: 2px; }
+    .tbl-rate  { font-size: 15px; font-weight: 700; color: var(--green); white-space: nowrap; }
+    .tbl-rpm   { font-size: 11px; color: var(--muted); }
+    .tbl-actions { display: flex; flex-direction: column; gap: 5px; min-width: 72px; }
+    .tbl-accept  { background: var(--green);   color: #fff; border: none; border-radius: 8px; padding: 7px 10px; font-size: 12px; font-weight: 700; cursor: pointer; }
+    .tbl-pass    { background: var(--surface); color: var(--muted); border: 1px solid var(--border); border-radius: 8px; padding: 7px 10px; font-size: 12px; font-weight: 600; cursor: pointer; }
+    .loads-table-wrap { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; margin-bottom: 10px; }
+
+    /* ── EMPTY STATE ── */
+    .empty-state { text-align: center; padding: 48px 20px; color: var(--muted); }
+    .empty-state .empty-icon { font-size: 40px; margin-bottom: 12px; }
+    .empty-state p { font-size: 14px; }
   </style>
 </head>
 <body>
@@ -244,9 +340,26 @@
 
     <!-- ── LOADS VIEW ── -->
     <div class="view" id="view-loads">
-      <div class="section-header">Available Loads</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <div class="section-header" style="margin:0">Available Loads</div>
+        <button onclick="loadAvailableLoads()" style="background:none;border:none;color:var(--accent);font-size:13px;cursor:pointer;padding:4px 8px">↻ Refresh</button>
+      </div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:10px">Accept a load below — dispatch confirms and sends full details by SMS.</div>
       <div id="available-loads-list">
-        <div style="text-align:center;padding:40px;color:var(--muted)">No loads available right now</div>
+        <div class="empty-state"><div class="empty-icon">🚛</div><p>No loads available right now.<br>Check back soon or watch for an SMS offer.</p></div>
+      </div>
+    </div>
+
+    <!-- ── MESSAGES VIEW ── -->
+    <div class="view" id="view-messages">
+      <div id="msg-list">
+        <div class="empty-state"><div class="empty-icon">💬</div><p>No messages yet.<br>Dispatch will reach you here and via SMS.</p></div>
+      </div>
+      <div id="msg-input-bar">
+        <textarea id="msg-input" rows="1" placeholder="Message dispatch…" oninput="autoResize(this)" onkeydown="msgKeydown(event)"></textarea>
+        <button id="msg-send-btn" onclick="sendMessage()">
+          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+        </button>
       </div>
     </div>
 
@@ -354,6 +467,21 @@
         </div>
       </div>
 
+      <div class="card">
+        <div class="card-title">Contact &amp; Messaging</div>
+        <div class="profile-field">
+          <label>My Cell Phone (for SMS dispatches)</label>
+          <input class="profile-input" id="phone-input" type="tel" placeholder="+1 (312) 555-0000"
+            inputmode="tel" autocomplete="tel"
+            value="" oninput="previewPhone(this)" />
+        </div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:12px">
+          This is the number 3 Lakes will text load offers to. Reply YES or NO by SMS to accept or decline.
+        </div>
+        <button class="btn btn-save" onclick="savePhone()">💾 Save Phone Number</button>
+        <div id="phone-saved-msg" style="display:none;font-size:12px;color:var(--green);margin-top:8px;text-align:center">✓ Saved — Messages tab is now active</div>
+      </div>
+
       <button class="btn btn-ghost" onclick="logout()" style="margin-top:8px">Sign Out</button>
     </div>
 
@@ -370,6 +498,11 @@
     <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
     Loads
   </button>
+  <button class="nav-btn" id="nav-messages" onclick="showView('messages')">
+    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+    Messages
+    <span class="nav-badge" id="msg-badge" style="display:none">0</span>
+  </button>
   <button class="nav-btn" id="nav-docs" onclick="showView('docs')">
     <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
     Docs
@@ -385,40 +518,44 @@
 
 <script>
 const API = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
-  ? 'http://localhost:8080'
-  : '';
-const TOKEN = localStorage.getItem('3ll_token') || '';
-const DRIVER_ID = localStorage.getItem('3ll_driver_id') || 'DRV-001';
+  ? 'http://localhost:8080' : '';
+const TOKEN     = localStorage.getItem('3ll_token')       || '';
+const DRIVER_ID = localStorage.getItem('3ll_driver_id')   || 'DRV-001';
+const MY_PHONE  = localStorage.getItem('3ll_phone')        || '';
 
-// ── INIT ──────────────────────────────────────────────────────────────────────
+let _msgPollTimer = null;
+let _unreadCount  = 0;
+let _lastMsgTs    = null;
+
+// ── INIT ─────────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('driver-name').textContent = localStorage.getItem('3ll_driver_name') || 'Driver';
   loadCurrentLoad();
   loadProfile();
   setInterval(pollHOS, 30000);
+  startMsgPolling();
   registerServiceWorker();
 });
 
 function registerServiceWorker() {
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('sw.js').catch(() => {});
-  }
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
 }
 
-// ── VIEW NAVIGATION ──────────────────────────────────────────────────────────
+// ── VIEW NAVIGATION ───────────────────────────────────────────────────────────
 function showView(name) {
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('view-' + name).classList.add('active');
   document.getElementById('nav-' + name).classList.add('active');
-  if (name === 'loads') loadAvailableLoads();
-  if (name === 'docs') loadDocs();
+  if (name === 'loads')    loadAvailableLoads();
+  if (name === 'docs')     loadDocs();
+  if (name === 'messages') { loadMessages(true); markRead(); }
 }
 
-// ── LOAD DATA ────────────────────────────────────────────────────────────────
+// ── CURRENT LOAD ──────────────────────────────────────────────────────────────
 async function loadCurrentLoad() {
   try {
-    const res = await apiFetch(`/api/fleet?status=in_transit&limit=1`);
+    const res = await apiFetch('/api/fleet?status=in_transit&limit=1');
     const loads = await res.json();
     if (loads && loads.length > 0) renderCurrentLoad(loads[0]);
     else renderNoLoad();
@@ -426,202 +563,366 @@ async function loadCurrentLoad() {
 }
 
 function renderCurrentLoad(load) {
-  document.getElementById('load-number').textContent = load.load_number || load.id?.slice(0,8) || 'LOAD-001';
-  document.getElementById('load-status-pill').textContent = (load.status || 'dispatched').replace('_', ' ').toUpperCase();
-  document.getElementById('origin-city').textContent = load.origin_city || '—';
-  document.getElementById('origin-state').textContent = load.origin_state || '';
-  document.getElementById('dest-city').textContent = load.dest_city || '—';
-  document.getElementById('dest-state').textContent = load.dest_state || '';
-  document.getElementById('load-rate').textContent = load.rate_total ? '$' + Number(load.rate_total).toLocaleString() : '—';
-  document.getElementById('load-miles').textContent = load.miles ? load.miles.toLocaleString() : '—';
-  document.getElementById('load-pickup').textContent = load.pickup_at ? new Date(load.pickup_at).toLocaleDateString('en-US',{month:'short',day:'numeric'}) : '—';
-  document.getElementById('miles-today').textContent = load.miles ? load.miles.toLocaleString() : '—';
-  document.getElementById('est-pay').textContent = load.rate_total ? '$' + (load.rate_total * 0.72).toFixed(0) : '—';
+  document.getElementById('load-number').textContent      = load.load_number || load.id?.slice(0,8) || 'LOAD-001';
+  document.getElementById('load-status-pill').textContent = (load.status || 'dispatched').replace('_',' ').toUpperCase();
+  document.getElementById('origin-city').textContent      = load.origin_city  || '—';
+  document.getElementById('origin-state').textContent     = load.origin_state || '';
+  document.getElementById('dest-city').textContent        = load.dest_city    || '—';
+  document.getElementById('dest-state').textContent       = load.dest_state   || '';
+  document.getElementById('load-rate').textContent        = load.rate_total   ? '$' + Number(load.rate_total).toLocaleString() : '—';
+  document.getElementById('load-miles').textContent       = load.miles        ? load.miles.toLocaleString() : '—';
+  document.getElementById('load-pickup').textContent      = load.pickup_at    ? new Date(load.pickup_at).toLocaleDateString('en-US',{month:'short',day:'numeric'}) : '—';
+  document.getElementById('miles-today').textContent      = load.miles        ? load.miles.toLocaleString() : '—';
+  document.getElementById('est-pay').textContent          = load.rate_total   ? '$' + (load.rate_total * 0.72).toFixed(0) : '—';
   if (load.status === 'in_transit') {
-    document.getElementById('btn-pickup').style.display = 'none';
+    document.getElementById('btn-pickup').style.display   = 'none';
     document.getElementById('btn-delivery').style.display = 'flex';
   }
 }
 
 function renderNoLoad() {
-  document.getElementById('load-number').textContent = 'No Active Load';
+  document.getElementById('load-number').textContent      = 'No Active Load';
   document.getElementById('load-status-pill').textContent = 'AVAILABLE';
-  ['origin-city','dest-city','load-rate','load-miles','load-pickup','miles-today','est-pay'].forEach(id => {
-    document.getElementById(id).textContent = '—';
-  });
+  ['origin-city','dest-city','load-rate','load-miles','load-pickup','miles-today','est-pay']
+    .forEach(id => { document.getElementById(id).textContent = '—'; });
 }
 
+// ── AVAILABLE LOADS (internal load board — table layout) ──────────────────────
 async function loadAvailableLoads() {
   const list = document.getElementById('available-loads-list');
-  list.innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted)">Loading loads...</div>';
+  list.innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted)">Loading…</div>';
   try {
-    const res = await apiFetch('/api/fleet?status=booked&limit=10');
+    const res   = await apiFetch('/api/fleet?status=booked&limit=30');
     const loads = await res.json();
     if (!loads || loads.length === 0) {
-      list.innerHTML = '<div style="text-align:center;padding:40px;color:var(--muted)">No loads available right now</div>';
+      list.innerHTML = '<div class="empty-state"><div class="empty-icon">🚛</div><p>No loads available right now.<br>Check back soon or watch for an SMS offer.</p></div>';
       return;
     }
-    list.innerHTML = loads.map(l => `
-      <div class="load-card">
-        <div class="load-header">
-          <div class="load-number">${l.load_number || l.id.slice(0,8)}</div>
-          <span class="pill pill-blue"><span class="dot"></span>Available</span>
-        </div>
-        <div class="route">
-          <div class="city"><div class="city-name">${l.origin_city||'?'}</div><div class="city-state">${l.origin_state||''}</div></div>
-          <div class="arrow">→</div>
-          <div class="city" style="text-align:right"><div class="city-name">${l.dest_city||'?'}</div><div class="city-state">${l.dest_state||''}</div></div>
-        </div>
-        <div class="load-meta">
-          <div class="meta-item"><div class="meta-label">Rate</div><div class="meta-value">${l.rate_total ? '$'+Number(l.rate_total).toLocaleString() : '—'}</div></div>
-          <div class="meta-item"><div class="meta-label">Miles</div><div class="meta-value">${l.miles||'—'}</div></div>
-          <div class="meta-item"><div class="meta-label">RPM</div><div class="meta-value">${l.rate_per_mile ? '$'+Number(l.rate_per_mile).toFixed(2) : '—'}</div></div>
-        </div>
-        <button class="btn btn-primary" style="margin-top:10px;margin-bottom:0" onclick="acceptLoad('${l.id}')">Accept Load</button>
-      </div>`).join('');
-  } catch { list.innerHTML = '<div style="text-align:center;padding:40px;color:var(--muted)">Unable to load</div>'; }
+
+    const rows = loads.map(l => {
+      const rpm     = (l.rate_total && l.miles) ? '$' + (l.rate_total / l.miles).toFixed(2) : '—';
+      const pickup  = l.pickup_at ? new Date(l.pickup_at).toLocaleDateString('en-US',{month:'short',day:'numeric'}) : '—';
+      const origin  = [l.origin_city, l.origin_state].filter(Boolean).join(', ') || '?';
+      const dest    = [l.dest_city,   l.dest_state  ].filter(Boolean).join(', ') || '?';
+      return `
+        <tr>
+          <td>
+            <div class="tbl-route">${esc(origin)}</div>
+            <div class="tbl-sub">→ ${esc(dest)}</div>
+            <div class="tbl-sub">${esc(l.load_number || l.id.slice(0,8))} · ${l.miles ? l.miles.toLocaleString() + ' mi' : '—'} · ${pickup}</div>
+          </td>
+          <td>
+            <div class="tbl-rate">${l.rate_total ? '$' + Number(l.rate_total).toLocaleString() : '—'}</div>
+            <div class="tbl-rpm">${rpm}/mi</div>
+          </td>
+          <td>
+            <div class="tbl-actions">
+              <button class="tbl-accept" onclick="acceptLoad('${l.id}','${esc(l.load_number||'')}')">✅ Accept</button>
+              <button class="tbl-pass"   onclick="declineLoad('${l.id}')">Pass</button>
+            </div>
+          </td>
+        </tr>`;
+    }).join('');
+
+    list.innerHTML = `
+      <div class="loads-table-wrap">
+        <table class="loads-table">
+          <thead><tr>
+            <th>Route / Load</th>
+            <th>Rate</th>
+            <th></th>
+          </tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>`;
+  } catch {
+    list.innerHTML = '<div class="empty-state"><div class="empty-icon">⚠️</div><p>Could not load. Check connection.</p></div>';
+  }
 }
 
+// ── MESSAGES ──────────────────────────────────────────────────────────────────
+async function loadMessages(scrollToBottom = false) {
+  if (!MY_PHONE) return;
+  try {
+    const res  = await apiFetch(`/api/comms/thread/${encodeURIComponent(MY_PHONE)}`);
+    const data = await res.json();
+    renderMessages(data.messages || [], scrollToBottom);
+  } catch {}
+}
+
+function renderMessages(messages, scrollToBottom) {
+  const list = document.getElementById('msg-list');
+  if (!messages.length) {
+    list.innerHTML = '<div class="empty-state"><div class="empty-icon">💬</div><p>No messages yet.<br>Dispatch will reach you here and via SMS.</p></div>';
+    return;
+  }
+  list.innerHTML = messages.map(m => {
+    const isOut      = m.direction === 'outbound';
+    const timeStr    = m.created_at ? new Date(m.created_at).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'}) : '';
+
+    if (m.msg_type === 'load_offer') {
+      const lines = m.body.split('\n');
+      const route  = lines[2] || '';
+      const rate   = lines[3] || '';
+      const pickup = lines[4] || '';
+      return `
+        <div class="bubble-wrap in">
+          <div class="offer-card">
+            <div class="offer-label">🚛 Load Offer</div>
+            <div class="offer-route">${esc(route)}</div>
+            <div class="offer-meta">${esc(rate)} · ${esc(pickup)}</div>
+            <div class="offer-btns">
+              <button class="btn-accept"  onclick="replyOffer('YES', '${esc(m.load_id||'')}')">✅ Accept</button>
+              <button class="btn-decline" onclick="replyOffer('NO',  '${esc(m.load_id||'')}')">✗ Decline</button>
+            </div>
+          </div>
+          <div class="bubble-time">${timeStr}</div>
+        </div>`;
+    }
+
+    return `
+      <div class="bubble-wrap ${isOut ? 'out' : 'in'}">
+        <div class="bubble ${isOut ? 'out' : 'in'}">${esc(m.body)}</div>
+        <div class="bubble-time">${isOut ? 'Dispatch · ' : ''}${timeStr}</div>
+      </div>`;
+  }).join('');
+
+  if (scrollToBottom) list.scrollTop = list.scrollHeight;
+  if (messages.length) _lastMsgTs = messages[messages.length - 1].created_at;
+}
+
+async function sendMessage() {
+  const input = document.getElementById('msg-input');
+  const text  = input.value.trim();
+  if (!text || !MY_PHONE) { if (!MY_PHONE) showToast('⚠️ Phone number not set in profile'); return; }
+  input.value = '';
+  autoResize(input);
+  try {
+    await apiFetch('/api/comms/send', 'POST', { to: MY_PHONE, body: text, driver_id: DRIVER_ID });
+    loadMessages(true);
+  } catch { showToast('Failed to send — check connection'); }
+}
+
+async function replyOffer(reply, loadId) {
+  if (!MY_PHONE) return;
+  await apiFetch('/api/comms/send', 'POST', { to: MY_PHONE, body: reply, driver_id: DRIVER_ID, load_id: loadId || undefined });
+  if (reply === 'YES' && loadId) {
+    showToast('✅ Accepted! Dispatcher will confirm shortly.');
+  } else {
+    showToast('Passed on this load.');
+  }
+  loadMessages(true);
+}
+
+function startMsgPolling() {
+  if (!MY_PHONE) return;
+  _msgPollTimer = setInterval(async () => {
+    try {
+      const res  = await apiFetch(`/api/comms/thread/${encodeURIComponent(MY_PHONE)}`);
+      const data = await res.json();
+      const msgs = data.messages || [];
+      const latest = msgs.length ? msgs[msgs.length - 1].created_at : null;
+      if (latest && latest !== _lastMsgTs) {
+        const newInbound = msgs.filter(m => m.direction === 'inbound' || (m.direction === 'outbound' && m.created_at > (_lastMsgTs || '')));
+        const view = document.getElementById('view-messages');
+        if (view.classList.contains('active')) {
+          renderMessages(msgs, true);
+          markRead();
+        } else {
+          _unreadCount += msgs.filter(m => m.direction === 'inbound' && m.created_at > (_lastMsgTs || '')).length;
+          updateBadge();
+          if (_unreadCount > 0) showToast('💬 New message from Dispatch');
+        }
+        _lastMsgTs = latest;
+      }
+    } catch {}
+  }, 12000);
+}
+
+async function markRead() {
+  if (!MY_PHONE) return;
+  _unreadCount = 0;
+  updateBadge();
+  try { await apiFetch(`/api/comms/read/${encodeURIComponent(MY_PHONE)}`, 'PATCH'); } catch {}
+}
+
+function updateBadge() {
+  const badge = document.getElementById('msg-badge');
+  if (_unreadCount > 0) {
+    badge.textContent = _unreadCount > 9 ? '9+' : _unreadCount;
+    badge.style.display = 'flex';
+  } else {
+    badge.style.display = 'none';
+  }
+}
+
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 100) + 'px';
+}
+
+function msgKeydown(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+}
+
+// ── PHONE / PROFILE SAVE ──────────────────────────────────────────────────────
+function previewPhone(input) {
+  // strip non-digits for display feedback
+  const digits = input.value.replace(/\D/g,'');
+  if (digits.length === 10 || digits.length === 11) {
+    input.style.borderColor = 'var(--green)';
+  } else {
+    input.style.borderColor = '';
+  }
+}
+
+function savePhone() {
+  const raw    = document.getElementById('phone-input').value.trim();
+  const digits = raw.replace(/\D/g,'');
+  let e164;
+  if (digits.length === 10)                      e164 = '+1' + digits;
+  else if (digits.length === 11 && digits[0]==='1') e164 = '+' + digits;
+  else if (raw.startsWith('+'))                  e164 = raw;
+  else { showToast('⚠️ Enter a valid 10-digit US number'); return; }
+
+  localStorage.setItem('3ll_phone', e164);
+  document.getElementById('phone-saved-msg').style.display = 'block';
+  showToast('✅ Phone saved — SMS dispatches will come to this number');
+  // restart polling with new phone
+  if (_msgPollTimer) clearInterval(_msgPollTimer);
+  Object.defineProperty(window, 'MY_PHONE', { value: e164, writable: true, configurable: true });
+  startMsgPolling();
+}
+
+// ── PROFILE ───────────────────────────────────────────────────────────────────
 async function loadProfile() {
-  // Populate CDL fields from localStorage or API
   const cdl = JSON.parse(localStorage.getItem('3ll_cdl') || '{}');
-  document.getElementById('cdl-number').textContent   = cdl.cdl_number || '—';
-  document.getElementById('cdl-class').textContent    = cdl.cdl_class  || '—';
-  document.getElementById('cdl-state').textContent    = cdl.cdl_state  || '—';
-  document.getElementById('cdl-expiry').textContent   = cdl.cdl_expiry || '—';
+  document.getElementById('cdl-number').textContent     = cdl.cdl_number         || '—';
+  document.getElementById('cdl-class').textContent      = cdl.cdl_class          || '—';
+  document.getElementById('cdl-state').textContent      = cdl.cdl_state          || '—';
+  document.getElementById('cdl-expiry').textContent     = cdl.cdl_expiry         || '—';
   document.getElementById('medical-expiry').textContent = cdl.medical_card_expiry || '—';
-  document.getElementById('carrier-name').textContent = localStorage.getItem('3ll_company') || '—';
-  document.getElementById('carrier-mc').textContent   = localStorage.getItem('3ll_mc') || '—';
-  document.getElementById('eld-provider').textContent = localStorage.getItem('3ll_eld') || '—';
+  document.getElementById('carrier-name').textContent   = localStorage.getItem('3ll_company') || '—';
+  document.getElementById('carrier-mc').textContent     = localStorage.getItem('3ll_mc')      || '—';
+  document.getElementById('eld-provider').textContent   = localStorage.getItem('3ll_eld')     || '—';
+  const savedPhone = localStorage.getItem('3ll_phone') || '';
+  if (savedPhone) {
+    document.getElementById('phone-input').value = savedPhone;
+    document.getElementById('phone-saved-msg').style.display = 'block';
+  }
 
   if (cdl.cdl_expiry) {
     const days = Math.ceil((new Date(cdl.cdl_expiry) - new Date()) / 86400000);
     const pill = document.getElementById('cdl-status-pill');
-    if (days < 0)       { pill.className = 'pill pill-red';    pill.innerHTML = '<span class="dot"></span> EXPIRED'; }
-    else if (days <= 7) { pill.className = 'pill pill-red';    pill.innerHTML = `<span class="dot"></span> ${days}d left`; }
-    else if (days <= 30){ pill.className = 'pill pill-yellow'; pill.innerHTML = `<span class="dot"></span> ${days}d left`; }
+    if (days < 0)        { pill.className = 'pill pill-red';    pill.innerHTML = '<span class="dot"></span> EXPIRED'; }
+    else if (days <= 7)  { pill.className = 'pill pill-red';    pill.innerHTML = `<span class="dot"></span> ${days}d left`; }
+    else if (days <= 30) { pill.className = 'pill pill-yellow'; pill.innerHTML = `<span class="dot"></span> ${days}d left`; }
   }
 }
 
-function loadDocs() {
-  // Future: pull from /api/clm/vault/docs?carrier_id=...
-}
+function loadDocs() {}
 
-// ── ACTIONS ──────────────────────────────────────────────────────────────────
+// ── ACTIONS ───────────────────────────────────────────────────────────────────
 async function confirmPickup() {
-  showToast('📍 Pickup confirmed — uploading position...');
   navigator.geolocation?.getCurrentPosition(pos => {
-    apiFetch('/api/telemetry/ping', 'POST', {
-      driver_id: DRIVER_ID,
-      lat: pos.coords.latitude,
-      lng: pos.coords.longitude,
-      event: 'pickup_confirmed',
-    });
+    apiFetch('/api/telemetry/ping', 'POST', { driver_id: DRIVER_ID, lat: pos.coords.latitude, lng: pos.coords.longitude, event: 'pickup_confirmed' });
   });
-  document.getElementById('btn-pickup').style.display = 'none';
+  document.getElementById('btn-pickup').style.display   = 'none';
   document.getElementById('btn-delivery').style.display = 'flex';
-  showToast('✅ Pickup confirmed — BOL upload required');
+  showToast('✅ Pickup confirmed — upload BOL now');
 }
 
 async function confirmDelivery() {
-  showToast('📦 Confirming delivery...');
   navigator.geolocation?.getCurrentPosition(pos => {
-    apiFetch('/api/telemetry/ping', 'POST', {
-      driver_id: DRIVER_ID,
-      lat: pos.coords.latitude,
-      lng: pos.coords.longitude,
-      event: 'delivery_confirmed',
-    });
+    apiFetch('/api/telemetry/ping', 'POST', { driver_id: DRIVER_ID, lat: pos.coords.latitude, lng: pos.coords.longitude, event: 'delivery_confirmed' });
   });
-  showToast('✅ Delivery confirmed — upload POD now');
+  showToast('📦 Delivery confirmed — upload POD now');
   showView('docs');
 }
 
-async function acceptLoad(loadId) {
-  await apiFetch(`/api/fleet/${loadId}`, 'PATCH', { status: 'dispatched' });
-  showToast('✅ Load accepted!');
-  showView('home');
-  loadCurrentLoad();
+async function acceptLoad(loadId, loadNumber) {
+  try {
+    await apiFetch(`/api/fleet/${loadId}`, 'PATCH', { status: 'dispatched' });
+    showToast('✅ Load accepted! Dispatcher will confirm.');
+    if (MY_PHONE && loadNumber) {
+      await apiFetch('/api/comms/send', 'POST', { to: MY_PHONE, body: `YES - accepting load ${loadNumber}`, driver_id: DRIVER_ID, load_id: loadId });
+    }
+    showView('home');
+    loadCurrentLoad();
+  } catch { showToast('Error accepting load — try again'); }
+}
+
+async function declineLoad(loadId) {
+  showToast('Passed on load.');
+  loadAvailableLoads();
 }
 
 function reportIssue() {
   const issue = prompt('Describe the issue (breakdown, accident, delay):');
   if (!issue) return;
-  apiFetch('/api/webhooks/driver_issue', 'POST', {
-    driver_id: DRIVER_ID,
-    issue,
-    ts: new Date().toISOString(),
-  });
-  showToast('⚠️ Issue reported to Commander');
+  apiFetch('/api/webhooks/driver_issue', 'POST', { driver_id: DRIVER_ID, issue, ts: new Date().toISOString() });
+  showToast('⚠️ Issue reported to Dispatch');
 }
 
-function triggerUpload(inputId) {
-  document.getElementById(inputId).click();
-}
+function triggerUpload(inputId) { document.getElementById(inputId).click(); }
 
 async function handleUpload(docType, input) {
   const file = input.files[0];
   if (!file) return;
-  showToast(`📤 Uploading ${docType.toUpperCase()}...`);
-  // Stub — full implementation posts to Supabase Storage via /api/clm/vault
+  showToast(`📤 Uploading ${docType.toUpperCase()}…`);
   setTimeout(() => {
-    const statusEl = document.getElementById(docType + '-status');
-    if (statusEl) { statusEl.style.display = 'inline-flex'; }
-    showToast(`✅ ${docType.toUpperCase()} uploaded successfully`);
+    const el = document.getElementById(docType + '-status');
+    if (el) el.style.display = 'inline-flex';
+    showToast(`✅ ${docType.toUpperCase()} uploaded`);
   }, 1500);
 }
 
-// ── HOS POLLING ──────────────────────────────────────────────────────────────
+// ── HOS ───────────────────────────────────────────────────────────────────────
 async function pollHOS() {
   try {
     const res = await apiFetch(`/api/telemetry/hos?driver_id=${DRIVER_ID}`);
     const hos = await res.json();
-    if (!hos || !hos.drive_remaining) return;
-    renderHOS(hos);
+    if (hos?.drive_remaining) renderHOS(hos);
   } catch {}
 }
 
 function renderHOS(hos) {
-  const fmtMins = m => `${Math.floor(m/60)}:${String(m%60).padStart(2,'0')}`;
-  const setBar = (id, barId, value, max, dangerPct) => {
-    const el = document.getElementById(id);
-    const bar = document.getElementById(barId);
-    if (!el || !bar) return;
-    const pct = Math.max(0, Math.min(100, value/max*100));
-    el.textContent = fmtMins(value);
-    bar.style.width = pct + '%';
+  const fmt = m => `${Math.floor(m/60)}:${String(m%60).padStart(2,'0')}`;
+  const bar = (id, barId, val, max) => {
+    const el = document.getElementById(id), b = document.getElementById(barId);
+    if (!el || !b) return;
+    const pct = Math.max(0, Math.min(100, val/max*100));
     const color = pct > 25 ? 'var(--green)' : pct > 10 ? 'var(--yellow)' : 'var(--red)';
-    bar.style.background = color;
-    el.style.color = color;
+    el.textContent = fmt(val); el.style.color = color;
+    b.style.width = pct + '%'; b.style.background = color;
   };
-  setBar('hos-drive',  'hos-drive-bar',  (hos.drive_remaining||0)*60,  660, 25);
-  setBar('hos-shift',  'hos-shift-bar',  (hos.shift_remaining||0)*60,  840, 15);
-  setBar('hos-cycle',  'hos-cycle-bar',  (hos.cycle_remaining||0)*60, 4200, 10);
+  bar('hos-drive', 'hos-drive-bar', (hos.drive_remaining||0)*60,  660);
+  bar('hos-shift', 'hos-shift-bar', (hos.shift_remaining||0)*60,  840);
+  bar('hos-cycle', 'hos-cycle-bar', (hos.cycle_remaining||0)*60, 4200);
 }
 
-// ── HELPERS ──────────────────────────────────────────────────────────────────
+// ── HELPERS ───────────────────────────────────────────────────────────────────
 async function apiFetch(path, method = 'GET', body = null) {
-  const opts = {
-    method,
-    headers: { 'Authorization': `Bearer ${TOKEN}`, 'Content-Type': 'application/json' },
-  };
+  const opts = { method, headers: { 'Authorization': `Bearer ${TOKEN}`, 'Content-Type': 'application/json' } };
   if (body) opts.body = JSON.stringify(body);
   return fetch(API + path, opts);
+}
+
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
 let _toastTimer;
 function showToast(msg) {
   const el = document.getElementById('toast');
-  el.textContent = msg;
-  el.classList.add('show');
+  el.textContent = msg; el.classList.add('show');
   clearTimeout(_toastTimer);
-  _toastTimer = setTimeout(() => el.classList.remove('show'), 3000);
+  _toastTimer = setTimeout(() => el.classList.remove('show'), 3200);
 }
 
 function logout() {
   if (!confirm('Sign out?')) return;
-  localStorage.clear();
-  location.reload();
+  localStorage.clear(); location.reload();
 }
 </script>
 </body>

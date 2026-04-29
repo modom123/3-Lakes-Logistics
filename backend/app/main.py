@@ -17,9 +17,12 @@ from .api import (
     atomic_ledger_router,
     carriers_router,
     clm_router,
+    comms_public_router,
+    comms_router,
     compliance_router,
     dashboard_router,
     execution_router,
+    fleet_public_router,
     fleet_router,
     founders_router,
     intake_router,
@@ -103,6 +106,7 @@ def create_app() -> FastAPI:
     app.include_router(intake_router,         prefix="/api/carriers",     tags=["intake"])
     app.include_router(carriers_router,       prefix="/api/carriers",     tags=["carriers"])
     app.include_router(fleet_router,          prefix="/api/fleet",        tags=["fleet"])
+    app.include_router(fleet_public_router,   prefix="/api/fleet",        tags=["fleet-public"])
     app.include_router(telemetry_router,      prefix="/api/telemetry",    tags=["telemetry"])
     app.include_router(leads_router,          prefix="/api/leads",        tags=["leads"])
     app.include_router(dashboard_router,      prefix="/api/dashboard",    tags=["dashboard"])
@@ -115,6 +119,8 @@ def create_app() -> FastAPI:
     app.include_router(execution_router,      prefix="/api/execution",    tags=["execution"])
     app.include_router(atomic_ledger_router,  prefix="/api/ledger",       tags=["ledger"])
     app.include_router(compliance_router,     prefix="/api/compliance",   tags=["compliance"])
+    app.include_router(comms_router,          prefix="/api/comms",        tags=["comms"])
+    app.include_router(comms_public_router,   prefix="/api/comms",        tags=["comms"])
 
     @app.get("/api/health", tags=["meta"])
     def health() -> dict:
