@@ -518,6 +518,25 @@ footer{background:var(--navy);padding:60px 60px 34px;}
   .fndb{padding:14px 20px;}
   .fndb-txt{font-size:13.5px;}
 }
+
+/* ── LOAD BOARD ── */
+.lb-table{width:100%;border-collapse:collapse;}
+.lb-table th{text-align:left;font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.6px;padding:10px 14px;border-bottom:1px solid #2a3550;}
+.lb-table td{padding:14px;border-bottom:1px solid #1e2d45;vertical-align:middle;}
+.lb-table tr:last-child td{border-bottom:none;}
+.lb-table tr:hover td{background:#1e2d45;}
+.lb-wrap{background:#111827;border:1px solid #2a3550;border-radius:16px;overflow:hidden;margin-bottom:16px;}
+.lb-route{font-size:15px;font-weight:700;color:#f1f5f9;line-height:1.3;}
+.lb-sub{font-size:12px;color:#64748b;margin-top:3px;}
+.lb-rate{font-size:17px;font-weight:800;color:#22c55e;white-space:nowrap;}
+.lb-rpm{font-size:11px;color:#64748b;margin-top:2px;}
+.lb-pill{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:99px;font-size:11px;font-weight:600;background:#14532d44;color:#22c55e;border:1px solid #22c55e44;}
+.lb-cta{background:#3b82f6;color:#fff;border:none;padding:9px 16px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;}
+.lb-cta:hover{opacity:.88;}
+@media(max-width:640px){
+  .lb-table th:nth-child(3),.lb-table td:nth-child(3){display:none;}
+  .lb-rate{font-size:15px;}
+}
 </style>
 </head>
 <body>
@@ -536,6 +555,7 @@ footer{background:var(--navy);padding:60px 60px 34px;}
     <button class="nav-a" id="nl-about" onclick="showPage('about')">About</button>
     <button class="nav-a" id="nl-services" onclick="showPage('services')">Services</button>
     <button class="nav-a" id="nl-pricing" onclick="showPage('services');setTimeout(()=>{const el=document.getElementById('plans-anchor');if(el)el.scrollIntoView({behavior:'smooth',block:'start'});},120)">Pricing</button>
+    <button class="nav-a" id="nl-loads" onclick="showPage('loads')" style="position:relative">Load Board<span id="nav-loads-badge" style="display:none;position:absolute;top:2px;right:-4px;background:#22c55e;color:#fff;border-radius:99px;font-size:9px;font-weight:700;padding:1px 5px;"></span></button>
     <button class="nav-a" id="nl-contact" onclick="showPage('contact')">Contact</button>
     <button class="nav-cta" onclick="showPage('onboard')">Claim Founders Spot</button>
   </div>
@@ -546,6 +566,7 @@ footer{background:var(--navy);padding:60px 60px 34px;}
   <div class="mob-a" onclick="showPage('about');toggleMob()">About</div>
   <div class="mob-a" onclick="showPage('services');toggleMob()">Services</div>
   <div class="mob-a" onclick="showPage('services');toggleMob();setTimeout(()=>{const el=document.getElementById('plans-anchor');if(el)el.scrollIntoView({behavior:'smooth',block:'start'});},160)">Pricing</div>
+  <div class="mob-a" onclick="showPage('loads');toggleMob()">Load Board</div>
   <div class="mob-a" onclick="showPage('contact');toggleMob()">Contact</div>
   <div class="mob-a" onclick="showPage('onboard');toggleMob()" style="color:var(--gold);font-weight:700;">→ Claim Founders Spot</div>
 </div>
@@ -574,7 +595,7 @@ footer{background:var(--navy);padding:60px 60px 34px;}
         <div class="hcard"><div class="hc-lbl">AI Dispatch · Live</div><div class="hc-val">Chicago → Atlanta</div><div class="hc-sub">Dry Van · 42,000 lbs · 722 mi · $3.12 RPM</div><div class="live">Auto-Booked · Rate Con Sent</div></div>
         <div class="hcard-row">
           <div class="hcard"><div class="hc-lbl">Avg Network RPM</div><div class="hc-val">$2.91</div><div class="hc-sub">↑ 22¢ vs. market (AI-negotiated)</div></div>
-          <div class="hcard"><div class="hc-lbl">Founders Joined</div><div class="hc-val">127</div><div class="hc-sub">of 1,000 cap</div></div>
+          <div class="hcard"><div class="hc-lbl">Founders Joined</div><div class="hc-val" id="hero-founders-count">—</div><div class="hc-sub">of 1,000 cap</div></div>
         </div>
         <div class="hcard"><div class="hc-lbl">Shield Status · All Trucks</div><div class="hc-val">100% Compliant</div><div class="hc-sub">ELD · CSA · Insurance · IFTA</div><div class="live">0 alerts in last 24h</div></div>
       </div>
@@ -823,6 +844,45 @@ footer{background:var(--navy);padding:60px 60px 34px;}
   <div class="cta-s rev"><div class="cta-dec"></div><div class="cta-inner"><div class="cta-h">Ready to Start?</div><p class="cta-p">Most carriers are approved within 24 hours and running their first load within 48. Your dispatcher is waiting.</p><div class="cta-btns"><button class="btn-gold" onclick="showPage('onboard')">Apply as a Carrier Partner</button><button class="btn-wht-out" onclick="showPage('contact')">Have Questions?</button></div></div></div>
 
   <footer><div class="f-inner"><div class="f-g"><div><div class="f-name">3 Lakes Logistics</div><div class="f-tag">Delivering Trust Across America</div><div class="f-p">FMCSA licensed freight logistics and dispatching company serving owner-operators nationwide.</div></div><div><div class="f-hd">Navigate</div><ul class="f-ls"><li onclick="showPage('home')">Home</li><li onclick="showPage('about')">About</li><li onclick="showPage('services')">Services</li><li onclick="showPage('contact')">Contact</li><li onclick="showPage('onboard')" style="color:var(--gold2);">Carrier Onboarding</li></ul></div><div><div class="f-hd">Plans</div><ul class="f-ls"><li>Founders — $200/mo</li><li>Pro — $400/mo</li><li>First 1,000 Trucks Only</li></ul></div><div><div class="f-hd">Contact</div><div class="f-ci"><span class="f-ci-ico">📞</span>(555) 000-1234</div><div class="f-ci"><span class="f-ci-ico">✉️</span>dispatch@3lakeslogistics.com</div></div></div><div class="f-bot"><div class="f-copy">© 2025 3 Lakes Logistics LLC.</div><div class="f-mc">MC#: PENDING · USDOT#: PENDING</div><div class="f-leg"><a href="#">Privacy</a><a href="#">Terms</a></div></div></div></footer>
+</div>
+
+<!-- ═══════════════ LOAD BOARD ═══════════════ -->
+<div class="page" id="page-loads">
+  <div class="ph"><div class="ph-dec"></div><div class="ph-inner"><span class="chip">Open Loads</span><h1 class="ph-h">Available Freight.</h1><p class="ph-p">Live loads posted by our dispatch team. See a load that fits your truck and lane? Tap to apply — our dispatcher will contact you within the hour.</p></div></div>
+
+  <div style="max-width:1100px;margin:0 auto;padding:40px 20px">
+
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px">
+      <div>
+        <div id="lb-count-label" style="font-size:14px;color:#64748b">Loading available loads…</div>
+      </div>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <select id="lb-equip-filter" onchange="filterLoads()" style="background:#1a2235;border:1px solid #2a3550;color:#f1f5f9;padding:8px 14px;border-radius:8px;font-size:13px;cursor:pointer">
+          <option value="">All Equipment</option>
+          <option value="Dry Van">Dry Van</option>
+          <option value="Reefer">Reefer</option>
+          <option value="Flatbed">Flatbed</option>
+          <option value="Step Deck">Step Deck</option>
+          <option value="Box Truck">Box Truck</option>
+          <option value="Hot Shot">Hot Shot</option>
+        </select>
+        <button onclick="loadPublicLoads()" style="background:#3b82f6;color:#fff;border:none;padding:8px 18px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">↻ Refresh</button>
+      </div>
+    </div>
+
+    <div id="lb-grid">
+      <div style="text-align:center;padding:60px 20px;color:#64748b">
+        <div style="font-size:36px;margin-bottom:12px">🚛</div>
+        <div style="font-size:15px">Loading loads…</div>
+      </div>
+    </div>
+
+    <div style="margin-top:40px;background:#1a2235;border:1px solid #2a3550;border-radius:16px;padding:28px;text-align:center">
+      <div style="font-size:18px;font-weight:700;margin-bottom:8px">Don't see a load that fits your lane?</div>
+      <p style="color:#94a3b8;font-size:14px;margin-bottom:18px">We post new loads daily. Join as a Founders partner and get first access to every load we book — plus dedicated dispatch.</p>
+      <button class="btn-gold" onclick="showPage('onboard')">Join as a Carrier Partner →</button>
+    </div>
+  </div>
 </div>
 
 <!-- ═══════════════ CONTACT ═══════════════ -->
@@ -1292,9 +1352,101 @@ function syncFoundersCounter(){
   }
 }
 setTimeout(syncFoundersCounter,220);
+
+// ── REAL STATS from backend ────────────────────────────────────────────────────
+(function fetchRealStats(){
+  const base=(window.__3LL_API_BASE||'').replace(/\/$/,'');
+  fetch(base+'/api/fleet/public/stats').then(r=>r.ok?r.json():null).then(d=>{
+    if(!d)return;
+    // Update hero "Founders Joined" card
+    const heroEl=document.getElementById('hero-founders-count');
+    if(heroEl){
+      if(d.founders_joined>0){
+        heroEl.textContent=d.founders_joined.toLocaleString();
+      } else {
+        // Fall back to total carriers if no founders-specific count
+        heroEl.textContent=(d.total_carriers||0).toLocaleString();
+      }
+    }
+    // Show load board badge if loads are posted
+    const badge=document.getElementById('nav-loads-badge');
+    if(badge&&d.loads_posted>0){badge.textContent=d.loads_posted;badge.style.display='inline';}
+  }).catch(()=>{
+    // API offline — show 0 rather than stale 127
+    const heroEl=document.getElementById('hero-founders-count');
+    if(heroEl)heroEl.textContent='0';
+  });
+})();
+
+// ── LOAD BOARD ────────────────────────────────────────────────────────────────
+let _allLoads=[];
+async function loadPublicLoads(){
+  const grid=document.getElementById('lb-grid');
+  const lbl=document.getElementById('lb-count-label');
+  if(grid)grid.innerHTML='<div style="text-align:center;padding:60px;color:#64748b"><div style="font-size:32px;margin-bottom:12px">⏳</div>Loading loads…</div>';
+  try{
+    const base=(window.__3LL_API_BASE||'').replace(/\/$/,'');
+    const res=await fetch(base+'/api/fleet/public/loads?limit=50');
+    const data=res.ok?await res.json():{loads:[]};
+    _allLoads=data.loads||[];
+    renderLoads(_allLoads);
+  }catch(e){
+    if(grid)grid.innerHTML='<div style="text-align:center;padding:60px;color:#64748b"><div style="font-size:32px;margin-bottom:12px">📡</div>No loads posted right now. Check back soon or <a href="#" onclick="showPage(\'onboard\');return false;" style="color:#3b82f6">join as a partner</a>.</div>';
+    if(lbl)lbl.textContent='No loads available right now';
+  }
+}
+function filterLoads(){
+  const eq=document.getElementById('lb-equip-filter')?.value||'';
+  const filtered=eq?_allLoads.filter(l=>(l.equipment_type||'').toLowerCase().includes(eq.toLowerCase())):_allLoads;
+  renderLoads(filtered);
+}
+function renderLoads(loads){
+  const grid=document.getElementById('lb-grid');
+  const lbl=document.getElementById('lb-count-label');
+  if(!grid)return;
+  if(!loads.length){
+    grid.innerHTML='<div style="text-align:center;padding:60px;color:#64748b"><div style="font-size:32px;margin-bottom:12px">🚛</div>No loads match your filter. <a href="#" onclick="document.getElementById(\'lb-equip-filter\').value=\'\';filterLoads();return false;" style="color:#3b82f6">Clear filter</a></div>';
+    if(lbl)lbl.textContent='0 loads available';
+    return;
+  }
+  if(lbl)lbl.textContent=loads.length+' load'+(loads.length===1?'':'s')+' available now';
+  const esc=s=>String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const rows=loads.map(l=>{
+    const origin=[l.origin_city,l.origin_state].filter(Boolean).join(', ')||l.origin||'—';
+    const dest  =[l.dest_city,  l.dest_state  ].filter(Boolean).join(', ')||l.destination||'—';
+    const rate  =l.rate_total?'$'+Number(l.rate_total).toLocaleString():'Call';
+    const rpm   =(l.rate_total&&l.miles)?'$'+(l.rate_total/l.miles).toFixed(2)+'/mi':'';
+    const miles =l.miles?l.miles.toLocaleString()+' mi':'—';
+    const pickup=l.pickup_at?new Date(l.pickup_at).toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'}):'ASAP';
+    const equip =l.equipment_type||'Any';
+    return `<tr>
+      <td><div class="lb-route">${esc(origin)} → ${esc(dest)}</div><div class="lb-sub">${esc(l.load_number||'')} · ${miles} · Pickup ${pickup}</div></td>
+      <td><div class="lb-rate">${esc(rate)}</div>${rpm?'<div class="lb-rpm">'+esc(rpm)+'</div>':''}</td>
+      <td><span class="lb-pill">🚛 ${esc(equip)}</span></td>
+      <td><button class="lb-cta" onclick="applyForLoad('${esc(l.load_number||l.id||'')}','${esc(origin)}','${esc(dest)}')">Apply to Haul</button></td>
+    </tr>`;
+  }).join('');
+  grid.innerHTML=`<div class="lb-wrap"><table class="lb-table"><thead><tr><th>Route</th><th>Rate</th><th>Equipment</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`;
+}
+function applyForLoad(loadNum,origin,dest){
+  // Pre-fill contact page with load info and navigate to onboard
+  showPage('onboard');
+  // Scroll to top after navigation
+  setTimeout(()=>{
+    window.scrollTo({top:0,behavior:'smooth'});
+    // Try to pre-fill load preference note if there's a notes field
+    const notesEl=document.getElementById('dispatcher_notes')||document.getElementById('notes');
+    if(notesEl)notesEl.value='Interested in load '+loadNum+': '+origin+' → '+dest;
+  },200);
+}
+
 // Re-run counter sync whenever user navigates back to home or services page
 const _origShowPage=showPage;
-showPage=function(n){_origShowPage(n);if(n==='home'||n==='services')setTimeout(syncFoundersCounter,200);};
+showPage=function(n){
+  _origShowPage(n);
+  if(n==='home'||n==='services')setTimeout(syncFoundersCounter,200);
+  if(n==='loads')loadPublicLoads();
+};
 // onboarding
 let oStep=1;
 function oNext(f){

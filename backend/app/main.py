@@ -22,6 +22,7 @@ from .api import (
     compliance_router,
     dashboard_router,
     execution_router,
+    fleet_public_router,
     fleet_router,
     founders_router,
     intake_router,
@@ -105,6 +106,7 @@ def create_app() -> FastAPI:
     app.include_router(intake_router,         prefix="/api/carriers",     tags=["intake"])
     app.include_router(carriers_router,       prefix="/api/carriers",     tags=["carriers"])
     app.include_router(fleet_router,          prefix="/api/fleet",        tags=["fleet"])
+    app.include_router(fleet_public_router,   prefix="/api/fleet",        tags=["fleet-public"])
     app.include_router(telemetry_router,      prefix="/api/telemetry",    tags=["telemetry"])
     app.include_router(leads_router,          prefix="/api/leads",        tags=["leads"])
     app.include_router(dashboard_router,      prefix="/api/dashboard",    tags=["dashboard"])

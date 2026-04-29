@@ -1492,6 +1492,10 @@ td.td-name{font-weight:600;color:var(--navy);}
         <div class="fg"><label class="fl">Commodity</label><input class="fi" id="load-commodity" placeholder="e.g. General Freight"></div>
         <div class="fg"><label class="fl">Status</label><select class="fsel" id="load-status"><option>Booked</option><option>En Route</option><option>Delivered</option><option>POD Needed</option></select></div>
       </div>
+      <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--border);margin-top:4px">
+        <input type="checkbox" id="load-post-website" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer">
+        <label for="load-post-website" style="font-size:13px;cursor:pointer;color:var(--text)">Post this load on the public carrier website (load board)</label>
+      </div>
       <div class="fee-prev" id="fee-preview">Enter rate to calculate dispatch fee</div>
     </div>
     <div class="modal-footer">
@@ -1919,18 +1923,21 @@ async function saveLoad(){
   btn.disabled=true;btn.textContent='Saving…';
   const fee=Math.round(rate*pct/100);
   const rpm=miles?parseFloat((rate/miles).toFixed(2)):null;
+  const postToWeb=document.getElementById('load-post-website')?.checked||false;
   const{error}=await sb.from('loads').insert({
     load_number:'#'+loadCounter++,driver_name:driver,origin,destination:dest,miles,rate,
     dispatch_pct:pct,dispatch_fee:fee,rpm,
     status:document.getElementById('load-status').value,
     pickup_date:document.getElementById('load-pickup').value||null,
     commodity:document.getElementById('load-commodity').value.trim(),
-    notes:document.getElementById('load-broker').value.trim()
+    notes:document.getElementById('load-broker').value.trim(),
+    post_to_website:postToWeb
   });
   btn.disabled=false;btn.textContent='Save Load';
   if(error){toast('Error: '+error.message,'error');return;}
   closeModal('add-load-modal');
   ['load-origin','load-dest','load-miles','load-rate','load-pickup','load-broker','load-commodity'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  const pwCb=document.getElementById('load-post-website');if(pwCb)pwCb.checked=false;
   const prev=document.getElementById('fee-preview');if(prev)prev.textContent='Enter rate to calculate dispatch fee';
   await loadLoads();updateDashboard();toast('Load saved!');
   // Fire dispatch execution domain in background
