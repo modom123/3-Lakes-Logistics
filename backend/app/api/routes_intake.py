@@ -132,7 +132,7 @@ async def carrier_intake(payload: CarrierIntake, request: Request,
 
     # 8. Kick Shield + Penny
     log_agent("atlas", "intake_received", carrier_id=carrier_id, payload={"plan": payload.plan})
-    checkout_url = penny.create_checkout_session(carrier_id, payload.plan, str(payload.email))
+    checkout_url = penny.create_checkout_session(carrier_id, payload.plan, str(payload.email), payload.founders_truck_count)
     shield.enqueue_safety_check(carrier_id, payload.dot_number, payload.mc_number)
 
     # 9. Fire all 30 onboarding steps in background (non-blocking)

@@ -1204,6 +1204,10 @@ button,a,[onclick]{cursor:pointer;}
           <div class="ob-sub">Membership Plan</div>
           <div class="ob-row full"><div class="ob-g"><label class="ob-lbl">Subscription Plan <span>*</span></label><select class="ob-sel" id="plan" name="plan"><option value="">Select</option><option value="founders">Founders — $200/month (First 1,000 Trucks, Locked for Life)</option><option value="pro">Pro — $400/month (Month-to-Month)</option><option value="pay_as_you_go">Pay-As-You-Go — 8% per load dispatched (No Monthly Fee)</option><option value="discuss">Not Sure — Want to Discuss on Call</option></select></div></div>
 
+          <div id="founders_truck_section" style="display:none;">
+            <div class="ob-row full"><div class="ob-g"><label class="ob-lbl">Number of Trucks for Founders Program <span>*</span></label><select class="ob-sel" id="founders_truck_count" name="founders_truck_count"><option value="">Select</option><option value="1">1 Truck — $200/month</option><option value="2">2 Trucks — $400/month</option><option value="3">3 Trucks — $600/month</option><option value="4">4 Trucks — $800/month</option><option value="5">5 Trucks — $1,000/month</option><option value="6">6 Trucks — $1,200/month</option><option value="7">7 Trucks — $1,400/month</option><option value="8">8 Trucks — $1,600/month</option><option value="9">9 Trucks — $1,800/month</option><option value="10">10 Trucks — $2,000/month</option><option value="10+">10+ Trucks — Contact Sales</option></select><div class="ob-hint">Select how many trucks from your fleet will be enrolled in the Founders program. Each truck is $200/month locked for life.</div></div></div>
+          </div>
+
           <div class="ob-nav"><button class="ob-bk" onclick="oBack(5)">← Back</button><button class="ob-nx" onclick="oNext(5)">Next: Documents &amp; Sign →</button></div>
         </div>
 
@@ -1542,12 +1546,29 @@ showPage=function(n){
 };
 // onboarding
 let oStep=1;
+// Show/hide founders truck count field based on plan selection
+document.addEventListener('DOMContentLoaded',function(){
+  const planEl=document.getElementById('plan');
+  const foundersSection=document.getElementById('founders_truck_section');
+  function updateFoundersSection(){
+    if(planEl&&foundersSection){
+      foundersSection.style.display=planEl.value==='founders'?'block':'none';
+      if(planEl.value==='founders'&&!document.getElementById('founders_truck_count').value){
+        document.getElementById('founders_truck_count').value='';
+      }
+    }
+  }
+  if(planEl){
+    planEl.addEventListener('change',updateFoundersSection);
+    updateFoundersSection();
+  }
+});
 function oNext(f){
   if(f===1&&(!v('o1fn')||!v('o1ph')||!v('o1em')||!v('o1ct'))){shk('obBd');return;}
   if(f===2&&(!v('dot_number')||!v('o2mc')||!document.getElementById('authority_status').value||!document.getElementById('authority_type').value||!document.getElementById('years_operating').value||!document.getElementById('boc3_filed').value||!document.getElementById('ucr_current').value||!document.getElementById('fmcsa_consent').checked)){shk('obBd');return;}
   if(f===3&&(!document.getElementById('o2tr').value||!v('truck_id')||!v('truck_year_make')||!v('vin')||!document.getElementById('trailer_type').value||!v('max_weight')||!v('cdl_number')||!v('cdl_state')||!document.getElementById('cdl_class').value||!v('cdl_expiration')||!document.getElementById('years_experience').value)){shk('obBd');return;}
   if(f===4&&(!document.getElementById('eld_provider').value||!v('eld_account_email')||!v('eld_api_token')||!document.getElementById('gps_tracking').value||!document.getElementById('tracking_method').value)){shk('obBd');return;}
-  if(f===5&&(!v('o4ins')||!v('policy_number')||!document.getElementById('liability_limit').value||!document.getElementById('cargo_limit').value||!v('policy_expiration')||!document.getElementById('use_factoring').value||!document.getElementById('payout_method').value||!v('payee_name')||!v('bank_name')||!document.getElementById('account_type').value||!v('bank_routing')||!v('bank_account')||!document.getElementById('plan').value||!document.getElementById('target_rpm').value||!document.getElementById('miles_per_week').value||!document.getElementById('home_time').value)){shk('obBd');return;}
+  if(f===5&&(!v('o4ins')||!v('policy_number')||!document.getElementById('liability_limit').value||!document.getElementById('cargo_limit').value||!v('policy_expiration')||!document.getElementById('use_factoring').value||!document.getElementById('payout_method').value||!v('payee_name')||!v('bank_name')||!document.getElementById('account_type').value||!v('bank_routing')||!v('bank_account')||!document.getElementById('plan').value||!document.getElementById('target_rpm').value||!document.getElementById('miles_per_week').value||!document.getElementById('home_time').value||(document.getElementById('plan').value==='founders'&&!document.getElementById('founders_truck_count').value))){shk('obBd');return;}
   document.getElementById('ost'+f).classList.remove('cur');
   oStep=f+1;document.getElementById('ost'+oStep).classList.add('cur');
   updO();document.getElementById('obBd').scrollIntoView({behavior:'smooth',block:'start'});
@@ -1566,6 +1587,15 @@ function fileLbl(input,wrapId,lblId){
 function oSub(){
   if(!v('o4ins')||!v('esign_name')||!v('esign_date')||!document.getElementById('o4ag').checked){shk('obBd');return;}
 
+  // Handle 10+ trucks — contact sales instead of normal signup
+  const planSel=document.getElementById('plan').value;
+  const foundersCount=document.getElementById('founders_truck_count').value;
+  if(planSel==='founders'&&foundersCount==='10+'){
+    alert('Thank you! For 10+ trucks in the Founders program, please contact our sales team for custom pricing.\n\nCall: (555) 000-0000\nEmail: sales@3lakeslogistics.com');
+    showPage('home');
+    return;
+  }
+
   const g=id=>{const e=document.getElementById(id);return e?(e.value||'').trim():'';};
   const gv=id=>g(id)||'___________';
   const fn=g('o1fn'),ln=g('o1ln'),ph=g('o1ph'),em=g('o1em'),city=g('o1ct');
@@ -1578,8 +1608,18 @@ function oSub(){
   const regions=[...document.querySelectorAll('#ost5 #region_cb .cb-i input:checked')].map(cb=>cb.closest('.cb-i').querySelector('.cb-tx').textContent.replace(/[^\w\s\/]/g,'').trim()).join(', ')||'___________';
 
   const planSel=g('plan');
+  const foundersCount=parseInt(g('founders_truck_count'))||1;
   let planLabel='Pro Membership — $400/month',planFee='$400/month flat';
-  if(planSel==='founders'){planLabel='Founders Membership — $200/month (locked for life)';planFee='$200/month flat';}
+  if(planSel==='founders'){
+    if(g('founders_truck_count')==='10+'){
+      planLabel='Founders Membership — Contact Sales (10+ trucks)';
+      planFee='Contact Sales for custom pricing';
+    }else{
+      const totalFee=foundersCount*200;
+      planLabel=`Founders Membership — $${totalFee}/month (${foundersCount} truck${foundersCount>1?'s':''}) (locked for life)`;
+      planFee=`$${totalFee}/month flat`;
+    }
+  }
   else if(planSel==='pro'){planLabel='Pro Membership — $400/month';planFee='$400/month flat';}
   else if(planSel==='pay_as_you_go'){planLabel='Pay-As-You-Go — 8% per load dispatched';planFee='8% of gross load rate per dispatch';}
 
@@ -1625,7 +1665,7 @@ function oSub(){
     payout_method:g('payout_method'),payee_name:g('payee_name'),bank_name:g('bank_name'),account_type:g('account_type'),
     bank_routing:g('bank_routing'),bank_account:g('bank_account'),fuel_card:g('fuel_card'),advances_allowed:g('advances_allowed'),
     // plan + meta
-    plan:planSel,referral_source:g('referral_source'),referral_name:g('referral_name'),operation_notes:g('operation_notes'),
+    plan:planSel,founders_truck_count:parseInt(g('founders_truck_count'))||1,referral_source:g('referral_source'),referral_name:g('referral_name'),operation_notes:g('operation_notes'),
     esign_name:g('esign_name'),esign_date:g('esign_date'),agreement_number:agreeNum,submitted_at:new Date().toISOString()
   };
   window.__3LL_LAST_PAYLOAD=payload;
