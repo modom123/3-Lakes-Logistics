@@ -57,12 +57,12 @@ async def upload_document(
 
     # Upload to Supabase Storage bucket "documents"
     try:
-        sb.storage.from_("documents").upload(
+        sb.storage.from_("carrier documents").upload(
             path=storage_path,
             file=content,
             file_options={"content-type": mime},
         )
-        public_url = sb.storage.from_("documents").get_public_url(storage_path)
+        public_url = sb.storage.from_("carrier documents").get_public_url(storage_path)
     except Exception as exc:
         # If storage bucket not yet created, fall back to storing path only
         public_url = storage_path
