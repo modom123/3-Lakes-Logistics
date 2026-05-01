@@ -57,6 +57,30 @@ class Settings(BaseSettings):
     sendgrid_api_key: str = ""
     sendgrid_inbound_secret: str = ""
 
+    # --- Load Board API Keys (Sonny) ---
+    dat_client_id: str = ""
+    dat_client_secret: str = ""
+    truckstop_username: str = ""
+    truckstop_password: str = ""
+    truckstop_partner_id: str = ""
+    loadboard_123_api_key: str = ""
+    truckerpath_api_key: str = ""
+    direct_freight_username: str = ""
+    direct_freight_password: str = ""
+    uber_freight_client_id: str = ""
+    uber_freight_client_secret: str = ""
+    loadsmart_api_key: str = ""
+    newtrul_api_key: str = ""
+    flock_freight_api_key: str = ""
+    jbhunt_client_id: str = ""
+    jbhunt_client_secret: str = ""
+    coyote_client_id: str = ""
+    coyote_client_secret: str = ""
+    arrive_client_id: str = ""
+    arrive_client_secret: str = ""
+    echo_global_api_key: str = ""
+    cargo_chief_api_key: str = ""
+
     @property
     def cors_list(self) -> list[str]:
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
