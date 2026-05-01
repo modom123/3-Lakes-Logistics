@@ -20,6 +20,7 @@ from .api import (
     comms_public_router,
     comms_router,
     compliance_router,
+    documents_router,
     dashboard_router,
     execution_router,
     fleet_public_router,
@@ -121,6 +122,7 @@ def create_app() -> FastAPI:
     app.include_router(compliance_router,     prefix="/api/compliance",   tags=["compliance"])
     app.include_router(comms_router,          prefix="/api/comms",        tags=["comms"])
     app.include_router(comms_public_router,   prefix="/api/comms",        tags=["comms"])
+    app.include_router(documents_router,                                  tags=["documents"])
 
     @app.get("/api/health", tags=["meta"])
     def health() -> dict:

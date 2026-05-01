@@ -1359,16 +1359,101 @@ td.td-name{font-weight:600;color:var(--navy);}
     <div class="page" id="page-vault">
       <div class="page-hdr">
         <div class="page-hdr-l">
-          <div class="chip">CLM</div>
+          <div class="chip">Document Management</div>
           <h2>Document Vault</h2>
         </div>
-        <div class="page-hdr-r">
+        <div class="page-hdr-r" style="display:flex;gap:8px">
           <button class="btn-out" onclick="loadVault()">Refresh</button>
+          <button class="btn-navy" onclick="openUploadModal()">+ Upload Document</button>
         </div>
       </div>
+
+      <!-- Stats row -->
+      <div class="metrics" style="margin-bottom:16px">
+        <div class="mc"><div class="mc-label">Total Documents</div><div class="mc-val blue" id="vault-total">—</div></div>
+        <div class="mc"><div class="mc-label">Load Documents</div><div class="mc-val green" id="vault-load-docs">—</div></div>
+        <div class="mc"><div class="mc-label">Compliance Docs</div><div class="mc-val gold" id="vault-compliance-docs">—</div></div>
+        <div class="mc"><div class="mc-label">Pending Scan</div><div class="mc-val orange" id="vault-pending">—</div></div>
+      </div>
+
+      <!-- Filter bar -->
+      <div class="card" style="margin-bottom:12px;padding:14px 18px">
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+          <input class="fi" id="vault-search" placeholder="Search filename, carrier…" style="flex:1;min-width:200px;max-width:300px" oninput="filterVault()">
+          <select class="fsel" id="vault-type-filter" onchange="filterVault()" style="width:170px">
+            <option value="">All Types</option>
+            <option value="bol">Bill of Lading (BOL)</option>
+            <option value="pod">Proof of Delivery (POD)</option>
+            <option value="rate_confirmation">Rate Confirmation</option>
+            <option value="carrier_agreement">Carrier Agreement</option>
+            <option value="coi">Certificate of Insurance</option>
+            <option value="cdl">Driver License (CDL)</option>
+            <option value="inspection">Inspection Report</option>
+            <option value="medical_cert">Medical Certificate</option>
+            <option value="other">Other</option>
+          </select>
+          <select class="fsel" id="vault-status-filter" onchange="filterVault()" style="width:150px">
+            <option value="">All Statuses</option>
+            <option value="complete">Scanned</option>
+            <option value="pending">Pending Scan</option>
+            <option value="failed">Scan Failed</option>
+          </select>
+          <button class="btn-out" style="font-size:12px;padding:7px 14px" onclick="clearVaultFilters()">Clear</button>
+        </div>
+      </div>
+
+      <!-- Document table -->
       <div class="card">
-        <div class="card-hd"><div class="card-title">All Documents</div></div>
+        <div class="card-hd" style="display:flex;justify-content:space-between;align-items:center">
+          <div class="card-title">All Documents</div>
+          <div id="vault-count" style="font-family:var(--ff-m);font-size:11px;color:var(--muted)"></div>
+        </div>
         <div id="vault-table"><div class="loading"><div class="spin"></div>Loading vault…</div></div>
+      </div>
+    </div>
+
+    <!-- Upload Modal -->
+    <div id="upload-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:2000;align-items:center;justify-content:center">
+      <div style="background:var(--white);border-radius:14px;padding:28px;width:100%;max-width:480px;box-shadow:var(--shadow-lg)">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+          <h3 style="font-family:var(--ff-h);font-size:18px;color:var(--navy)">Upload Document</h3>
+          <button onclick="closeUploadModal()" style="border:none;background:none;font-size:20px;cursor:pointer;color:var(--muted)">×</button>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:14px">
+          <div class="fg">
+            <label class="fl">Document Type *</label>
+            <select class="fi" id="upload-doc-type">
+              <option value="">— Select Type —</option>
+              <option value="bol">Bill of Lading (BOL)</option>
+              <option value="pod">Proof of Delivery (POD)</option>
+              <option value="rate_confirmation">Rate Confirmation</option>
+              <option value="carrier_agreement">Carrier Agreement</option>
+              <option value="coi">Certificate of Insurance (COI)</option>
+              <option value="cdl">Driver License (CDL)</option>
+              <option value="inspection">Inspection Report</option>
+              <option value="medical_cert">Medical Certificate</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+          <div class="fg">
+            <label class="fl">Carrier ID (optional)</label>
+            <input class="fi" id="upload-carrier-id" placeholder="carrier_abc123">
+          </div>
+          <div class="fg">
+            <label class="fl">Load ID (optional)</label>
+            <input class="fi" id="upload-load-id" placeholder="uuid of load">
+          </div>
+          <div class="fg">
+            <label class="fl">File *</label>
+            <input type="file" id="upload-file" accept=".pdf,.jpg,.jpeg,.png,.heic" style="padding:8px;border:1.5px solid var(--border);border-radius:7px;font-size:13px;width:100%">
+            <div style="font-size:11px;color:var(--muted);margin-top:4px">PDF, JPG, PNG accepted. Scout will OCR automatically.</div>
+          </div>
+        </div>
+        <div id="upload-msg" style="margin-top:12px;font-size:13px;display:none"></div>
+        <div style="display:flex;gap:10px;margin-top:20px;justify-content:flex-end">
+          <button class="btn-out" onclick="closeUploadModal()">Cancel</button>
+          <button class="btn-navy" id="upload-submit-btn" onclick="submitUpload()">Upload</button>
+        </div>
       </div>
     </div>
 
@@ -2695,22 +2780,116 @@ async function runCLMScan(){
 // ══════════════════════════════════════════════════════
 // DOCUMENT VAULT
 // ══════════════════════════════════════════════════════
+let _vaultData=[];
+const DOC_LABELS={
+  bol:'Bill of Lading',pod:'Proof of Delivery',rate_confirmation:'Rate Confirmation',
+  carrier_agreement:'Carrier Agreement',coi:'Insurance (COI)',cdl:'Driver License',
+  inspection:'Inspection Report',medical_cert:'Medical Certificate',folder:'Folder',other:'Other'
+};
+const LOAD_TYPES=new Set(['bol','pod','rate_confirmation']);
+const COMPLIANCE_TYPES=new Set(['coi','cdl','inspection','medical_cert','carrier_agreement']);
+
 async function loadVault(){
   const t=document.getElementById('vault-table');
   t.innerHTML='<div class="loading"><div class="spin"></div>Loading…</div>';
   try{
     const res=await apiFetch('/api/clm/vault/docs');
-    const data=await res.json();
-    if(!data.length){t.innerHTML='<div style="padding:20px;color:var(--muted);text-align:center">Vault is empty. Docs upload automatically when drivers submit BOL/POD from the Driver App.</div>';return;}
-    t.innerHTML=`<table class="tbl"><thead><tr><th>Type</th><th>Filename</th><th>Size</th><th>Scan Status</th><th>Uploaded</th></tr></thead>
-      <tbody>${data.map(d=>`<tr>
-        <td><span class="badge badge-blue">${d.doc_type}</span></td>
-        <td>${d.filename}</td>
-        <td style="color:var(--muted)">${d.file_size_kb?d.file_size_kb+'KB':'—'}</td>
-        <td><span class="badge badge-${d.scan_status==='complete'?'green':d.scan_status==='failed'?'red':'orange'}">${d.scan_status}</span></td>
-        <td style="color:var(--muted)">${d.uploaded_at?new Date(d.uploaded_at).toLocaleDateString():''}</td>
-      </tr>`).join('')}</tbody></table>`;
+    _vaultData=await res.json();
+    renderVault(_vaultData);
   }catch(e){t.innerHTML=`<div style="padding:20px;color:var(--red)">Error: ${e.message}</div>`;}
+}
+
+function renderVault(data){
+  const t=document.getElementById('vault-table');
+  document.getElementById('vault-total').textContent=data.length;
+  document.getElementById('vault-load-docs').textContent=data.filter(d=>LOAD_TYPES.has(d.doc_type)).length;
+  document.getElementById('vault-compliance-docs').textContent=data.filter(d=>COMPLIANCE_TYPES.has(d.doc_type)).length;
+  document.getElementById('vault-pending').textContent=data.filter(d=>d.scan_status==='pending').length;
+  document.getElementById('vault-count').textContent=data.length+' document'+(data.length===1?'':'s');
+  if(!data.length){
+    t.innerHTML='<div style="padding:32px;color:var(--muted);text-align:center">No documents yet. Upload manually or drivers will submit BOL/POD from the Driver App.</div>';
+    return;
+  }
+  t.innerHTML=`<table class="tbl"><thead><tr>
+    <th>Type</th><th>Filename</th><th>Carrier</th><th>Size</th><th>Scan Status</th><th>Uploaded</th><th>View</th>
+  </tr></thead><tbody>${data.map(d=>{
+    const label=DOC_LABELS[d.doc_type]||d.doc_type||'—';
+    const badgeColor=LOAD_TYPES.has(d.doc_type)?'blue':COMPLIANCE_TYPES.has(d.doc_type)?'green':'orange';
+    const statusColor=d.scan_status==='complete'?'green':d.scan_status==='failed'?'red':'orange';
+    const scanLabel=d.scan_status==='complete'?'Scanned':d.scan_status==='failed'?'Failed':'Pending';
+    const sizeStr=d.file_size_kb?Math.round(d.file_size_kb)+' KB':'—';
+    const dateStr=d.uploaded_at?new Date(d.uploaded_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}):'—';
+    const viewBtn=d.storage_path?`<a href="${esc(d.storage_path)}" target="_blank" style="color:var(--gold);font-size:12px;text-decoration:none">Open ↗</a>`:'—';
+    return`<tr>
+      <td><span class="badge badge-${badgeColor}">${esc(label)}</span></td>
+      <td style="font-size:12px;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(d.filename||'')}"><strong>${esc(d.filename||'—')}</strong></td>
+      <td style="font-size:11px;color:var(--muted);font-family:var(--ff-m)">${esc(d.carrier_id||'—')}</td>
+      <td style="color:var(--muted);font-size:11px">${sizeStr}</td>
+      <td><span class="badge badge-${statusColor}">${scanLabel}</span></td>
+      <td style="color:var(--muted);font-size:11px;white-space:nowrap">${dateStr}</td>
+      <td>${viewBtn}</td>
+    </tr>`;
+  }).join('')}</tbody></table>`;
+}
+
+function filterVault(){
+  const q=(document.getElementById('vault-search').value||'').toLowerCase();
+  const type=document.getElementById('vault-type-filter').value;
+  const status=document.getElementById('vault-status-filter').value;
+  const filtered=_vaultData.filter(d=>{
+    const matchQ=!q||(d.filename||'').toLowerCase().includes(q)||(d.carrier_id||'').toLowerCase().includes(q);
+    const matchType=!type||d.doc_type===type;
+    const matchStatus=!status||d.scan_status===status;
+    return matchQ&&matchType&&matchStatus;
+  });
+  renderVault(filtered);
+}
+
+function clearVaultFilters(){
+  document.getElementById('vault-search').value='';
+  document.getElementById('vault-type-filter').value='';
+  document.getElementById('vault-status-filter').value='';
+  renderVault(_vaultData);
+}
+
+function openUploadModal(){
+  const m=document.getElementById('upload-modal');
+  m.style.display='flex';
+  document.getElementById('upload-msg').style.display='none';
+  document.getElementById('upload-doc-type').value='';
+  document.getElementById('upload-carrier-id').value='';
+  document.getElementById('upload-load-id').value='';
+  document.getElementById('upload-file').value='';
+}
+
+function closeUploadModal(){
+  document.getElementById('upload-modal').style.display='none';
+}
+
+async function submitUpload(){
+  const docType=document.getElementById('upload-doc-type').value;
+  const carrierId=document.getElementById('upload-carrier-id').value.trim();
+  const loadId=document.getElementById('upload-load-id').value.trim();
+  const fileInput=document.getElementById('upload-file');
+  const msg=document.getElementById('upload-msg');
+  if(!docType){msg.style.display='block';msg.style.color='var(--red)';msg.textContent='Please select a document type.';return;}
+  if(!fileInput.files.length){msg.style.display='block';msg.style.color='var(--red)';msg.textContent='Please choose a file to upload.';return;}
+  const btn=document.getElementById('upload-submit-btn');
+  btn.disabled=true;btn.textContent='Uploading…';
+  msg.style.display='none';
+  try{
+    const fd=new FormData();
+    fd.append('file',fileInput.files[0]);
+    fd.append('doc_type',docType);
+    if(carrierId)fd.append('carrier_id',carrierId);
+    if(loadId)fd.append('load_id',loadId);
+    const token=localStorage.getItem('ops_token')||'';
+    const res=await fetch(API_BASE+'/api/documents/upload',{method:'POST',headers:{'Authorization':'Bearer '+token},body:fd});
+    if(!res.ok){const err=await res.json().catch(()=>({}));throw new Error(err.detail||'Upload failed');}
+    msg.style.display='block';msg.style.color='var(--green)';msg.textContent='✅ Document uploaded and queued for OCR scan.';
+    setTimeout(()=>{closeUploadModal();loadVault();},1500);
+  }catch(e){msg.style.display='block';msg.style.color='var(--red)';msg.textContent='Error: '+e.message;}
+  btn.disabled=false;btn.textContent='Upload';
 }
 
 // ══════════════════════════════════════════════════════
