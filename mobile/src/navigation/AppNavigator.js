@@ -1,73 +1,112 @@
 import React from 'react';
+import { View, Text, StyleSheet, Platform } from 'react-native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { View, Text, StyleSheet } from 'react-native';
-import { useAuth, useBadge } from '../context';
-import { colors } from '../theme';
+import { Ionicons } from '@expo/vector-icons';
 
-import LoginScreen from '../screens/LoginScreen';
-import HomeScreen from '../screens/HomeScreen';
-import LoadsScreen from '../screens/LoadsScreen';
-import MessagesScreen from '../screens/MessagesScreen';
-import DocumentsScreen from '../screens/DocumentsScreen';
-import ProfileScreen from '../screens/ProfileScreen';
+import { useAuth, useBadge } from '../context';
+import { colors, font, radius, space } from '../theme';
+
+import LoginScreen      from '../screens/LoginScreen';
+import HomeScreen       from '../screens/HomeScreen';
+import LoadsScreen      from '../screens/LoadsScreen';
+import LoadDetailScreen from '../screens/LoadDetailScreen';
+import MessagesScreen   from '../screens/MessagesScreen';
+import DocumentsScreen  from '../screens/DocumentsScreen';
+import ProfileScreen    from '../screens/ProfileScreen';
 
 const Stack = createNativeStackNavigator();
-const Tab = createBottomTabNavigator();
+const Tab   = createBottomTabNavigator();
 
-function TabIcon({ name, focused }) {
-  const icons = {
-    Home: focused
-      ? '🏠' : '🏠',
-    Loads: focused ? '🚛' : '🚛',
-    Messages: focused ? '💬' : '💬',
-    Docs: focused ? '📄' : '📄',
-    Profile: focused ? '👤' : '👤',
-  };
+const TAB_CONFIG = [
+  { name: 'Home',     icon: 'home',              label: 'Home'     },
+  { name: 'Loads',    icon: 'cube',               label: 'Loads'    },
+  { name: 'Messages', icon: 'chatbubble-ellipses', label: 'Messages' },
+  { name: 'Docs',     icon: 'document-text',      label: 'Docs'     },
+  { name: 'Profile',  icon: 'person-circle',      label: 'Profile'  },
+];
+
+function TabBarIcon({ name, focused, badge }) {
   return (
-    <Text style={{ fontSize: 22, opacity: focused ? 1 : 0.45 }}>
-      {icons[name]}
-    </Text>
+    <View style={styles.iconWrap}>
+      <Ionicons
+        name={focused ? name : `${name}-outline`}
+        size={24}
+        color={focused ? colors.primary : colors.textMuted}
+      />
+      {badge > 0 && (
+        <View style={styles.badge}>
+          <Text style={styles.badgeText}>{badge > 99 ? '99+' : badge}</Text>
+        </View>
+      )}
+    </View>
   );
 }
 
+// Loads sub-stack (Loads list → Load detail) ────────────────────────────────
+function LoadsStack() {
+  return (
+    <Stack.Navigator
+      screenOptions={{
+        headerShown: true,
+        headerStyle:      { backgroundColor: colors.card },
+        headerTintColor:  colors.primary,
+        headerTitleStyle: { fontSize: font.md, fontWeight: font.bold, color: colors.textPrimary },
+        headerShadowVisible: true,
+        contentStyle: { backgroundColor: colors.bg },
+      }}
+    >
+      <Stack.Screen name="LoadsList"   component={LoadsScreen}      options={{ headerShown: false }} />
+      <Stack.Screen name="LoadDetail"  component={LoadDetailScreen}  options={{ title: 'Load Details', headerBackTitle: 'Loads' }} />
+    </Stack.Navigator>
+  );
+}
+
+// Main tab navigator ─────────────────────────────────────────────────────────
 function MainTabs() {
   const { unread } = useBadge();
+
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
         headerShown: false,
-        tabBarActiveTintColor: colors.navActive,
-        tabBarInactiveTintColor: colors.navInactive,
-        tabBarStyle: styles.tabBar,
-        tabBarLabelStyle: styles.tabLabel,
-        tabBarIcon: ({ focused }) => (
-          <TabIcon name={route.name} focused={focused} />
-        ),
+        tabBarActiveTintColor:   colors.primary,
+        tabBarInactiveTintColor: colors.textMuted,
+        tabBarStyle:             styles.tabBar,
+        tabBarLabelStyle:        styles.tabLabel,
+        tabBarIcon: ({ focused }) => {
+          const cfg = TAB_CONFIG.find(t => t.name === route.name);
+          const badge = route.name === 'Messages' ? unread : 0;
+          return <TabBarIcon name={cfg.icon} focused={focused} badge={badge} />;
+        },
       })}
     >
-      <Tab.Screen name="Home" component={HomeScreen} />
-      <Tab.Screen name="Loads" component={LoadsScreen} />
-      <Tab.Screen
-        name="Messages"
-        component={MessagesScreen}
-        options={{
-          tabBarBadge: unread > 0 ? (unread > 9 ? '9+' : unread) : undefined,
-          tabBarBadgeStyle: styles.badge,
-        }}
-      />
-      <Tab.Screen name="Docs" component={DocumentsScreen} />
-      <Tab.Screen name="Profile" component={ProfileScreen} />
+      {TAB_CONFIG.map(({ name, label }) => (
+        <Tab.Screen
+          key={name}
+          name={name}
+          component={name === 'Loads' ? LoadsStack : SCREEN_MAP[name]}
+          options={{ tabBarLabel: label }}
+        />
+      ))}
     </Tab.Navigator>
   );
 }
 
+const SCREEN_MAP = {
+  Home:     HomeScreen,
+  Messages: MessagesScreen,
+  Docs:     DocumentsScreen,
+  Profile:  ProfileScreen,
+};
+
+// Root navigator ─────────────────────────────────────────────────────────────
 export default function AppNavigator() {
   const { auth } = useAuth();
   return (
     <Stack.Navigator screenOptions={{ headerShown: false, animation: 'fade' }}>
       {auth ? (
-        <Stack.Screen name="Main" component={MainTabs} />
+        <Stack.Screen name="Main"  component={MainTabs}    />
       ) : (
         <Stack.Screen name="Login" component={LoginScreen} />
       )}
@@ -76,26 +115,43 @@ export default function AppNavigator() {
 }
 
 const styles = StyleSheet.create({
+  iconWrap: { alignItems: 'center', justifyContent: 'center' },
+  badge: {
+    position:  'absolute',
+    top:       -5,
+    right:     -8,
+    minWidth:  17,
+    height:    17,
+    borderRadius: radius.full,
+    backgroundColor: colors.dangerMid,
+    alignItems:      'center',
+    justifyContent:  'center',
+    paddingHorizontal: 3,
+    borderWidth: 1.5,
+    borderColor: colors.card,
+  },
+  badgeText: {
+    color:      colors.white,
+    fontSize:   9,
+    fontWeight: font.bold,
+    lineHeight: 13,
+  },
   tabBar: {
-    backgroundColor: colors.white,
-    borderTopColor: colors.border,
-    borderTopWidth: 1,
-    elevation: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    height: 64,
-    paddingBottom: 8,
-    paddingTop: 4,
+    backgroundColor:  colors.card,
+    borderTopWidth:   1,
+    borderTopColor:   colors.border,
+    height:           Platform.select({ ios: 82, android: 64 }),
+    paddingBottom:    Platform.select({ ios: 22, android: 8 }),
+    paddingTop:       8,
+    elevation:        8,
+    shadowColor:      colors.shadow,
+    shadowOffset:     { width: 0, height: -3 },
+    shadowOpacity:    0.07,
+    shadowRadius:     8,
   },
   tabLabel: {
-    fontSize: 11,
-    fontWeight: '600',
-  },
-  badge: {
-    backgroundColor: colors.error,
-    fontSize: 10,
-    fontWeight: '700',
+    fontSize:   10,
+    fontWeight: font.semibold,
+    marginTop:  2,
   },
 });

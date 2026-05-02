@@ -1,71 +1,129 @@
 import React, { useState, useCallback } from 'react';
 import {
   View, Text, FlatList, TouchableOpacity, StyleSheet,
-  Alert, ActivityIndicator, RefreshControl,
+  RefreshControl, ActivityIndicator, Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
-import { api } from '../api';
-import { colors, typography, spacing, radius } from '../theme';
+import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
 
-function LoadRow({ item, onAccept, onPass }) {
-  const origin = [item.origin_city, item.origin_state].filter(Boolean).join(', ') || '?';
-  const dest   = [item.dest_city, item.dest_state].filter(Boolean).join(', ') || '?';
+import { useToast } from '../context';
+import { fleetService } from '../services/fleet';
+import { commsService }  from '../services/comms';
+import { storage }       from '../storage';
+import { SkeletonLoadRow } from '../components/Skeleton';
+import { colors, font, space, radius, shadow } from '../theme';
+
+// ── Load Row Card ─────────────────────────────────────────────────────────────
+
+function LoadCard({ item, onAccept, onViewDetail, accepting }) {
+  const origin = [item.origin_city, item.origin_state].filter(Boolean).join(', ') || 'Unknown';
+  const dest   = [item.dest_city,   item.dest_state  ].filter(Boolean).join(', ') || 'Unknown';
   const rpm    = (item.rate_total && item.miles)
-    ? `$${(item.rate_total / item.miles).toFixed(2)}/mi`
+    ? (item.rate_total / item.miles).toFixed(2)
     : null;
   const pickup = item.pickup_at
     ? new Date(item.pickup_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
     : '—';
   const loadNum = item.load_number || item.id?.slice(0, 8) || '—';
 
+  // Color-code by $/mile: >$3 = green, $2-$3 = amber, <$2 = default
+  const rpmVal   = parseFloat(rpm);
+  const rpmColor = !rpm ? colors.textSecondary : rpmVal >= 3 ? colors.success : rpmVal >= 2 ? colors.warning : colors.textSecondary;
+  const accentBg = !rpm ? colors.border : rpmVal >= 3 ? colors.successMid : rpmVal >= 2 ? colors.warningMid : colors.border;
+
   return (
-    <View style={s.row}>
-      <View style={s.rowLeft}>
+    <TouchableOpacity
+      style={[s.card, shadow.xs]}
+      onPress={() => onViewDetail(item)}
+      activeOpacity={0.9}
+    >
+      {/* Left accent bar */}
+      <View style={[s.accentBar, { backgroundColor: accentBg }]} />
+
+      <View style={s.cardBody}>
+        {/* Top row */}
+        <View style={s.topRow}>
+          <Text style={s.loadNum}>Load #{loadNum}</Text>
+          <View style={s.distanceBadge}>
+            <Ionicons name="navigate-outline" size={11} color={colors.textSecondary} />
+            <Text style={s.distanceText}>
+              {item.miles ? `${Number(item.miles).toLocaleString()} mi` : '—'}
+            </Text>
+          </View>
+        </View>
+
+        {/* Route */}
         <View style={s.routeWrap}>
-          <Text style={s.originText}>{origin}</Text>
-          <Text style={s.arrowText}>→</Text>
-          <Text style={s.destText}>{dest}</Text>
+          <Text style={s.routeOrigin} numberOfLines={1}>{origin}</Text>
+          <Ionicons name="arrow-forward" size={14} color={colors.textMuted} style={s.routeArrow} />
+          <Text style={s.routeDest} numberOfLines={1}>{dest}</Text>
         </View>
-        <Text style={s.rowMeta}>
-          {loadNum}{item.miles ? ` · ${Number(item.miles).toLocaleString()} mi` : ''}  ·  {pickup}
-        </Text>
-        <View style={s.rateRow}>
-          <Text style={s.rate}>
-            {item.rate_total ? `$${Number(item.rate_total).toLocaleString()}` : '—'}
-          </Text>
-          {rpm && <Text style={s.rpm}>{rpm}</Text>}
+
+        {/* Meta row */}
+        <View style={s.metaRow}>
+          <Ionicons name="calendar-outline" size={12} color={colors.textMuted} />
+          <Text style={s.metaText}>{pickup}</Text>
+        </View>
+
+        {/* Rate + actions */}
+        <View style={s.bottomRow}>
+          <View>
+            <Text style={s.rate}>
+              {item.rate_total ? `$${Number(item.rate_total).toLocaleString()}` : '—'}
+            </Text>
+            {rpm && (
+              <Text style={[s.rpm, { color: rpmColor }]}>${rpm}/mi</Text>
+            )}
+          </View>
+          <View style={s.actions}>
+            {accepting === item.id ? (
+              <ActivityIndicator size="small" color={colors.primary} style={{ marginRight: space.base }} />
+            ) : (
+              <TouchableOpacity
+                style={s.acceptBtn}
+                onPress={() => onAccept(item)}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="checkmark" size={14} color={colors.white} />
+                <Text style={s.acceptText}>Accept</Text>
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity
+              style={s.detailBtn}
+              onPress={() => onViewDetail(item)}
+              activeOpacity={0.8}
+            >
+              <Text style={s.detailText}>Details</Text>
+              <Ionicons name="chevron-forward" size={14} color={colors.primary} />
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
-      <View style={s.rowActions}>
-        <TouchableOpacity style={s.acceptBtn} onPress={() => onAccept(item)} activeOpacity={0.8}>
-          <Text style={s.acceptText}>Accept</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={s.passBtn} onPress={() => onPass(item)} activeOpacity={0.8}>
-          <Text style={s.passText}>Pass</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
+    </TouchableOpacity>
   );
 }
 
+// ── Main Screen ───────────────────────────────────────────────────────────────
+
 export default function LoadsScreen() {
-  const navigation = useNavigation();
-  const [loads, setLoads] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
+  const { showToast } = useToast();
+  const navigation    = useNavigation();
+  const [loads,     setLoads]     = useState([]);
+  const [loading,   setLoading]   = useState(true);
+  const [refreshing,setRefreshing]= useState(false);
   const [accepting, setAccepting] = useState(null);
 
   const fetchLoads = useCallback(async () => {
     try {
-      const data = await api.getAvailableLoads();
-      setLoads(Array.isArray(data) ? data : []);
+      const data = await fleetService.getAvailableLoads();
+      setLoads(data);
     } catch {
       setLoads([]);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+      showToast('Could not load available loads.', 'error');
+    } finally { setLoading(false); }
+  }, [showToast]);
 
   useFocusEffect(
     useCallback(() => {
@@ -81,80 +139,75 @@ export default function LoadsScreen() {
   }
 
   async function handleAccept(item) {
+    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    const origin   = [item.origin_city, item.origin_state].filter(Boolean).join(', ') || '?';
+    const dest     = [item.dest_city,   item.dest_state  ].filter(Boolean).join(', ') || '?';
+    const rateStr  = item.rate_total ? `$${Number(item.rate_total).toLocaleString()}` : '';
+    const milesStr = item.miles ? `${Number(item.miles).toLocaleString()} mi` : '';
+
     Alert.alert(
-      'Accept Load',
-      `Accept load from ${item.origin_city || '?'} → ${item.dest_city || '?'}?\n\n${
-        item.rate_total ? `$${Number(item.rate_total).toLocaleString()}` : ''
-      }${item.miles ? ` · ${Number(item.miles).toLocaleString()} mi` : ''}`,
+      'Accept This Load?',
+      `${origin} → ${dest}\n${[rateStr, milesStr].filter(Boolean).join(' · ')}`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
-          text: 'Accept',
+          text: 'Accept Load',
           onPress: async () => {
             setAccepting(item.id);
             try {
-              await api.acceptLoad(item.id);
-              // send SMS confirmation if phone configured
+              await fleetService.acceptLoad(item.id);
+              // Notify dispatch via comms
+              const phone   = await storage.getPhone();
               const loadNum = item.load_number || item.id.slice(0, 8);
-              if (api.phone) {
-                api.replyOffer(`YES - accepting load ${loadNum}`, item.id).catch(() => {});
+              if (phone) {
+                commsService.send({
+                  phone,
+                  body:     `YES - accepting load ${loadNum}`,
+                  driverId: '',
+                  loadId:   item.id,
+                }).catch(() => {});
               }
-              Alert.alert(
-                '✅ Load Accepted',
-                'Dispatch will confirm details shortly. Check the Home tab for your load.',
-                [{ text: 'Go to Home', onPress: () => navigation.navigate('Home') }, { text: 'OK' }]
-              );
-              fetchLoads();
+              await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+              showToast('Load accepted! Dispatch will confirm shortly.', 'success');
+              setLoads(prev => prev.filter(l => l.id !== item.id));
+              navigation.navigate('Home');
             } catch {
-              Alert.alert('Error', 'Could not accept load. Please try again or contact dispatch.');
-            } finally {
-              setAccepting(null);
-            }
+              showToast('Could not accept load — try again.', 'error');
+            } finally { setAccepting(null); }
           },
         },
       ]
     );
   }
 
-  function handlePass(item) {
-    Alert.alert('Passed', 'Load skipped.', [{ text: 'OK' }]);
-    setLoads(prev => prev.filter(l => l.id !== item.id));
+  function handleViewDetail(item) {
+    navigation.navigate('LoadDetail', { load: item });
   }
+
+  // ── Render ────────────────────────────────────────────────────────────────
 
   if (loading) {
     return (
-      <SafeAreaView style={s.safe}>
-        <View style={s.header}>
-          <Text style={s.headerTitle}>Available Loads</Text>
-        </View>
-        <View style={s.center}>
-          <ActivityIndicator size="large" color={colors.primary} />
+      <SafeAreaView style={s.safe} edges={['top']}>
+        <Header count={0} onRefresh={onRefresh} />
+        <View style={s.skeletonList}>
+          {[0,1,2,3].map(i => <SkeletonLoadRow key={i} />)}
         </View>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={s.safe}>
-      {/* Header */}
-      <View style={s.header}>
-        <Text style={s.headerTitle}>Available Loads</Text>
-        <TouchableOpacity onPress={onRefresh} activeOpacity={0.7}>
-          <Text style={s.refreshBtn}>↻ Refresh</Text>
-        </TouchableOpacity>
-      </View>
-
-      <Text style={s.hint}>
-        Accept a load — dispatch confirms and sends details via SMS.
-      </Text>
-
+    <SafeAreaView style={s.safe} edges={['top']}>
+      <Header count={loads.length} onRefresh={onRefresh} />
       {loads.length === 0 ? (
         <View style={s.empty}>
-          <Text style={s.emptyIcon}>🚛</Text>
-          <Text style={s.emptyTitle}>No loads right now</Text>
+          <Ionicons name="cube-outline" size={56} color={colors.border} />
+          <Text style={s.emptyTitle}>No Loads Available</Text>
           <Text style={s.emptyText}>Check back soon or watch for an SMS offer from dispatch.</Text>
-          <TouchableOpacity style={s.emptyBtn} onPress={onRefresh}>
-            <Text style={s.emptyBtnText}>Refresh</Text>
+          <TouchableOpacity style={s.refreshBtn} onPress={onRefresh}>
+            <Ionicons name="refresh" size={16} color={colors.white} />
+            <Text style={s.refreshBtnText}>Refresh</Text>
           </TouchableOpacity>
         </View>
       ) : (
@@ -162,103 +215,86 @@ export default function LoadsScreen() {
           data={loads}
           keyExtractor={item => item.id}
           renderItem={({ item }) => (
-            <View style={accepting === item.id ? { opacity: 0.5 } : {}}>
-              <LoadRow
-                item={item}
-                onAccept={handleAccept}
-                onPass={handlePass}
-              />
-            </View>
+            <LoadCard
+              item={item}
+              onAccept={handleAccept}
+              onViewDetail={handleViewDetail}
+              accepting={accepting}
+            />
           )}
           contentContainerStyle={s.list}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
-          }
-          ItemSeparatorComponent={() => <View style={s.separator} />}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
           showsVerticalScrollIndicator={false}
+          ItemSeparatorComponent={() => <View style={{ height: space.sm }} />}
         />
       )}
     </SafeAreaView>
   );
 }
 
+function Header({ count, onRefresh }) {
+  return (
+    <View style={s.header}>
+      <View>
+        <Text style={s.headerTitle}>Available Loads</Text>
+        {count > 0 && <Text style={s.headerCount}>{count} load{count !== 1 ? 's' : ''} available</Text>}
+      </View>
+      <TouchableOpacity onPress={onRefresh} style={s.headerRefresh} activeOpacity={0.7}>
+        <Ionicons name="refresh" size={18} color={colors.primary} />
+      </TouchableOpacity>
+    </View>
+  );
+}
+
 const s = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.background },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  safe: { flex: 1, backgroundColor: colors.bg },
   header: {
-    backgroundColor: colors.white,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    backgroundColor: colors.card, paddingHorizontal: space.base, paddingVertical: space.md,
+    borderBottomWidth: 1, borderBottomColor: colors.border,
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
   },
-  headerTitle: { fontSize: typography.lg, fontWeight: '800', color: colors.textPrimary },
-  refreshBtn: { fontSize: typography.sm, color: colors.primary, fontWeight: '600' },
-  hint: {
-    fontSize: typography.xs,
-    color: colors.textSecondary,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
-    backgroundColor: colors.white,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+  headerTitle: { fontSize: font.lg, fontWeight: font.extrabold, color: colors.textPrimary },
+  headerCount: { fontSize: font.xs, color: colors.textSecondary, marginTop: 2 },
+  headerRefresh: { padding: space.xs },
+  skeletonList: { padding: space.base },
+  list: { padding: space.base, paddingBottom: space.xxxl },
+
+  // Card
+  card: {
+    backgroundColor: colors.card, borderRadius: radius.lg, flexDirection: 'row',
+    overflow: 'hidden', borderWidth: 1, borderColor: colors.border,
   },
-  list: { padding: spacing.md },
-  separator: { height: spacing.sm },
-  row: {
-    backgroundColor: colors.white,
-    borderRadius: radius.md,
-    padding: spacing.md,
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: colors.border,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 3,
-    elevation: 1,
-  },
-  rowLeft: { flex: 1, paddingRight: spacing.sm },
-  routeWrap: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', marginBottom: 4 },
-  originText: { fontSize: typography.sm, fontWeight: '700', color: colors.textPrimary },
-  arrowText: { fontSize: typography.sm, color: colors.textMuted, marginHorizontal: 4 },
-  destText: { fontSize: typography.sm, fontWeight: '700', color: colors.textPrimary },
-  rowMeta: { fontSize: typography.xs, color: colors.textSecondary, marginBottom: 4 },
-  rateRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  rate: { fontSize: typography.lg, fontWeight: '800', color: colors.success },
-  rpm: { fontSize: typography.xs, color: colors.textSecondary },
-  rowActions: { gap: spacing.xs },
+  accentBar: { width: 4 },
+  cardBody:  { flex: 1, padding: space.base },
+  topRow:    { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: space.sm },
+  loadNum:   { fontSize: font.sm, fontWeight: font.bold, color: colors.textPrimary },
+  distanceBadge: { flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: colors.surface, paddingHorizontal: 7, paddingVertical: 3, borderRadius: radius.full },
+  distanceText:  { fontSize: 11, color: colors.textSecondary, fontWeight: font.medium },
+
+  routeWrap:   { flexDirection: 'row', alignItems: 'center', marginBottom: space.xs },
+  routeOrigin: { flex: 1, fontSize: font.md, fontWeight: font.bold, color: colors.textPrimary },
+  routeArrow:  { marginHorizontal: space.xs },
+  routeDest:   { flex: 1, fontSize: font.md, fontWeight: font.bold, color: colors.textPrimary, textAlign: 'right' },
+
+  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: space.md },
+  metaText: { fontSize: font.xs, color: colors.textMuted },
+
+  bottomRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' },
+  rate: { fontSize: font.xl, fontWeight: font.extrabold, color: colors.success, letterSpacing: -0.5 },
+  rpm:  { fontSize: font.xs, fontWeight: font.semibold, marginTop: 1 },
+  actions: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
   acceptBtn: {
-    backgroundColor: colors.success,
-    borderRadius: radius.sm,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    alignItems: 'center',
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    backgroundColor: colors.success, borderRadius: radius.md,
+    paddingHorizontal: 14, paddingVertical: 9,
   },
-  acceptText: { color: colors.white, fontSize: typography.xs, fontWeight: '700' },
-  passBtn: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.sm,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  passText: { color: colors.textSecondary, fontSize: typography.xs, fontWeight: '600' },
-  empty: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.xl },
-  emptyIcon: { fontSize: 48, marginBottom: spacing.md },
-  emptyTitle: { fontSize: typography.lg, fontWeight: '700', color: colors.textPrimary, marginBottom: spacing.xs },
-  emptyText: { fontSize: typography.sm, color: colors.textSecondary, textAlign: 'center', marginBottom: spacing.lg },
-  emptyBtn: {
-    backgroundColor: colors.primary,
-    borderRadius: radius.md,
-    paddingVertical: 12,
-    paddingHorizontal: spacing.xl,
-  },
-  emptyBtnText: { color: colors.white, fontWeight: '700', fontSize: typography.base },
+  acceptText: { color: colors.white, fontSize: font.sm, fontWeight: font.bold },
+  detailBtn:  { flexDirection: 'row', alignItems: 'center', gap: 2, paddingVertical: 9 },
+  detailText: { fontSize: font.sm, color: colors.primary, fontWeight: font.semibold },
+
+  empty: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: space.xxl },
+  emptyTitle: { fontSize: font.lg, fontWeight: font.bold, color: colors.textPrimary, marginTop: space.base, marginBottom: space.xs },
+  emptyText:  { fontSize: font.sm, color: colors.textSecondary, textAlign: 'center', lineHeight: 20, marginBottom: space.lg },
+  refreshBtn:  { flexDirection: 'row', alignItems: 'center', gap: space.xs, backgroundColor: colors.primary, borderRadius: radius.md, paddingHorizontal: space.lg, paddingVertical: 12 },
+  refreshBtnText: { color: colors.white, fontWeight: font.bold, fontSize: font.sm },
 });

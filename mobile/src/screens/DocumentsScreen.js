@@ -1,330 +1,298 @@
 import React, { useState, useCallback } from 'react';
 import {
-  View, Text, TouchableOpacity, StyleSheet, ScrollView,
-  Alert, ActivityIndicator,
+  View, Text, ScrollView, TouchableOpacity, StyleSheet,
+  Alert, ActivityIndicator, Animated,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useFocusEffect } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
-import { colors, typography, spacing, radius } from '../theme';
+import * as Haptics from 'expo-haptics';
+
+import { useToast } from '../context';
+import { colors, font, space, radius, shadow } from '../theme';
 
 const DOC_TYPES = [
   {
-    key: 'bol',
-    label: 'Bill of Lading (BOL)',
-    icon: '📄',
-    hint: 'Take a photo or choose PDF',
+    key:      'bol',
+    label:    'Bill of Lading',
+    short:    'BOL',
+    icon:     'document-text',
+    hint:     'Required — photograph or scan the BOL before departing.',
     required: true,
+    color:    colors.primary,
+    bg:       colors.primaryLight,
   },
   {
-    key: 'pod',
-    label: 'Proof of Delivery (POD)',
-    icon: '✍️',
-    hint: 'Get receiver signature then upload',
+    key:      'pod',
+    label:    'Proof of Delivery',
+    short:    'POD',
+    icon:     'checkmark-done',
+    hint:     'Required — get receiver signature then upload.',
     required: true,
+    color:    colors.success,
+    bg:       colors.successLight,
   },
   {
-    key: 'lumper',
-    label: 'Lumper Receipt',
-    icon: '🧾',
-    hint: 'Required for reimbursement',
+    key:      'lumper',
+    label:    'Lumper Receipt',
+    short:    'Receipt',
+    icon:     'receipt',
+    hint:     'Optional — required only if lumper service was used.',
     required: false,
+    color:    colors.warning,
+    bg:       colors.warningLight,
   },
 ];
 
-function UploadCard({ docType, uploaded, uploading, onCamera, onFile }) {
+// ── Upload Card ───────────────────────────────────────────────────────────────
+
+function UploadCard({ dt, uploaded, uploading, progress, onCamera, onFile, onRemove }) {
   return (
-    <View style={s.card}>
+    <View style={[s.card, shadow.xs]}>
+      {/* Header */}
       <View style={s.cardHeader}>
-        <Text style={s.cardTitle}>{docType.label}</Text>
-        {docType.required && <Text style={s.required}>Required</Text>}
+        <View style={[s.iconCircle, { backgroundColor: dt.bg }]}>
+          <Ionicons name={dt.icon} size={20} color={dt.color} />
+        </View>
+        <View style={s.cardHeaderText}>
+          <Text style={s.cardLabel}>{dt.label}</Text>
+          <Text style={s.cardHint}>{dt.hint}</Text>
+        </View>
+        {dt.required && (
+          <View style={s.reqBadge}>
+            <Text style={s.reqText}>Required</Text>
+          </View>
+        )}
       </View>
 
-      {uploaded ? (
-        <View style={s.uploadedRow}>
-          <Text style={s.uploadedIcon}>✅</Text>
-          <Text style={s.uploadedText}>{docType.label} uploaded successfully</Text>
-        </View>
-      ) : uploading ? (
+      {/* State */}
+      {uploading ? (
         <View style={s.uploadingRow}>
-          <ActivityIndicator size="small" color={colors.primary} />
-          <Text style={s.uploadingText}>Uploading…</Text>
+          <ActivityIndicator size="small" color={dt.color} />
+          <View style={s.progressTrack}>
+            <View style={[s.progressFill, { width: `${progress}%`, backgroundColor: dt.color }]} />
+          </View>
+          <Text style={[s.uploadingLabel, { color: dt.color }]}>{progress}%</Text>
+        </View>
+      ) : uploaded ? (
+        <View style={[s.doneRow, { backgroundColor: dt.bg }]}>
+          <Ionicons name="checkmark-circle" size={18} color={dt.color} />
+          <Text style={[s.doneText, { color: dt.color }]}>{dt.short} uploaded successfully</Text>
+          <TouchableOpacity onPress={onRemove} style={s.removeBtn} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <Ionicons name="refresh" size={15} color={dt.color} />
+          </TouchableOpacity>
         </View>
       ) : (
-        <>
-          <Text style={s.hint}>{docType.hint}</Text>
-          <View style={s.btnRow}>
-            <TouchableOpacity style={s.uploadBtn} onPress={onCamera} activeOpacity={0.8}>
-              <Text style={s.uploadBtnIcon}>📷</Text>
-              <Text style={s.uploadBtnText}>Take Photo</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={[s.uploadBtn, s.uploadBtnSecondary]} onPress={onFile} activeOpacity={0.8}>
-              <Text style={s.uploadBtnIcon}>📁</Text>
-              <Text style={[s.uploadBtnText, { color: colors.primary }]}>Choose File</Text>
-            </TouchableOpacity>
-          </View>
-        </>
+        <View style={s.btnRow}>
+          <TouchableOpacity style={[s.uploadBtn, { backgroundColor: dt.color }]} onPress={onCamera} activeOpacity={0.85}>
+            <Ionicons name="camera" size={16} color={colors.white} />
+            <Text style={s.uploadBtnText}>Camera</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[s.uploadBtn, s.uploadBtnOutline, { borderColor: dt.color }]} onPress={onFile} activeOpacity={0.85}>
+            <Ionicons name="folder-open" size={16} color={dt.color} />
+            <Text style={[s.uploadBtnText, { color: dt.color }]}>Choose File</Text>
+          </TouchableOpacity>
+        </View>
       )}
     </View>
   );
 }
 
-export default function DocumentsScreen() {
-  const [uploaded, setUploaded] = useState({ bol: false, pod: false, lumper: false });
-  const [uploading, setUploading] = useState({ bol: false, pod: false, lumper: false });
-  const [uploadedDocs, setUploadedDocs] = useState([]);
+// ── Uploaded doc row ──────────────────────────────────────────────────────────
 
-  useFocusEffect(
-    useCallback(() => {
-      // Reset on each focus so driver can upload fresh docs per load
-    }, [])
+function DocRow({ doc }) {
+  const isImage = ['jpg','jpeg','png','heic','webp'].some(ext =>
+    doc.name?.toLowerCase().endsWith(ext)
   );
+  return (
+    <View style={s.docRow}>
+      <View style={[s.docIconWrap, { backgroundColor: colors.successLight }]}>
+        <Ionicons name={isImage ? 'image' : 'document'} size={16} color={colors.success} />
+      </View>
+      <View style={s.docInfo}>
+        <Text style={s.docType}>{doc.type}</Text>
+        <Text style={s.docName} numberOfLines={1}>{doc.name}</Text>
+      </View>
+      <Text style={s.docTime}>{doc.time}</Text>
+    </View>
+  );
+}
 
-  async function requestCameraPermission() {
+// ── Main Screen ───────────────────────────────────────────────────────────────
+
+export default function DocumentsScreen() {
+  const { showToast } = useToast();
+  const [uploaded,  setUploaded]  = useState({ bol: false, pod: false, lumper: false });
+  const [uploading, setUploading] = useState({ bol: false, pod: false, lumper: false });
+  const [progress,  setProgress]  = useState({ bol: 0,    pod: 0,    lumper: 0    });
+  const [history,   setHistory]   = useState([]);
+
+  async function reqCamera() {
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert(
-        'Camera Permission Required',
-        'Please enable camera access in your device settings to take photos.',
-      );
+      Alert.alert('Camera Permission', 'Enable camera access in Settings to photograph documents.');
       return false;
     }
     return true;
   }
 
-  async function requestMediaPermission() {
+  async function reqMedia() {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert(
-        'Photo Library Permission Required',
-        'Please enable photo library access in your device settings.',
-      );
+      Alert.alert('Photo Library', 'Enable photo library access in Settings to upload documents.');
       return false;
     }
     return true;
+  }
+
+  async function doUpload(key, label, asset) {
+    setUploading(p => ({ ...p, [key]: true }));
+    setProgress(p => ({ ...p, [key]: 0 }));
+
+    // Simulated progress — replace with real FormData upload to your backend
+    for (const pct of [20, 45, 70, 90, 100]) {
+      await new Promise(r => setTimeout(r, 280));
+      setProgress(p => ({ ...p, [key]: pct }));
+    }
+
+    const name = asset.fileName || asset.name || `${key}-${Date.now()}.jpg`;
+    setUploaded(p  => ({ ...p,  [key]: true }));
+    setUploading(p => ({ ...p,  [key]: false }));
+    setHistory(h => [...h, { type: label, name, time: new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) }]);
+    await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    showToast(`${label} uploaded successfully.`, 'success');
   }
 
   async function handleCamera(key, label) {
-    const ok = await requestCameraPermission();
+    const ok = await reqCamera();
     if (!ok) return;
-
-    const result = await ImagePicker.launchCameraAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      quality: 0.85,
-      allowsEditing: false,
-    });
-
-    if (result.canceled) return;
-    await uploadFile(key, label, result.assets[0]);
+    const res = await ImagePicker.launchCameraAsync({ quality: 0.85, allowsEditing: false });
+    if (res.canceled) return;
+    doUpload(key, label, res.assets[0]);
   }
 
-  async function handleFilePicker(key, label) {
-    let result;
+  async function handleFile(key, label) {
+    let asset = null;
     try {
-      result = await DocumentPicker.getDocumentAsync({
-        type: ['image/*', 'application/pdf'],
-        copyToCacheDirectory: true,
-      });
+      const res = await DocumentPicker.getDocumentAsync({ type: ['image/*', 'application/pdf'], copyToCacheDirectory: true });
+      if (res.canceled) return;
+      asset = res.assets?.[0];
     } catch {
-      // Try image picker as fallback
-      const mediaOk = await requestMediaPermission();
-      if (!mediaOk) return;
-      const imgResult = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        quality: 0.85,
-      });
-      if (imgResult.canceled) return;
-      await uploadFile(key, label, imgResult.assets[0]);
-      return;
+      const ok = await reqMedia();
+      if (!ok) return;
+      const res = await ImagePicker.launchImageLibraryAsync({ quality: 0.85 });
+      if (res.canceled) return;
+      asset = res.assets?.[0];
     }
-
-    if (result.canceled) return;
-    const asset = result.assets?.[0];
-    if (!asset) return;
-    await uploadFile(key, label, asset);
+    if (asset) doUpload(key, label, asset);
   }
 
-  async function uploadFile(key, label, asset) {
-    setUploading(prev => ({ ...prev, [key]: true }));
-    try {
-      // Simulate upload — in production, use FormData with fetch to your backend
-      await new Promise(resolve => setTimeout(resolve, 1500));
-
-      setUploaded(prev => ({ ...prev, [key]: true }));
-      const name = asset.fileName || asset.name || `${key}-${Date.now()}.jpg`;
-      setUploadedDocs(prev => [
-        ...prev,
-        {
-          type: label,
-          name,
-          ts: new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
-        },
-      ]);
-    } catch {
-      Alert.alert('Upload Failed', 'Could not upload the document. Check your connection and try again.');
-    } finally {
-      setUploading(prev => ({ ...prev, [key]: false }));
-    }
-  }
-
-  const allRequired = uploaded.bol && uploaded.pod;
+  const allDone   = uploaded.bol && uploaded.pod;
+  const doneCount = Object.values(uploaded).filter(Boolean).length;
 
   return (
-    <SafeAreaView style={s.safe}>
+    <SafeAreaView style={s.safe} edges={['top']}>
+      {/* Header */}
       <View style={s.header}>
-        <Text style={s.headerTitle}>Documents</Text>
-        {allRequired && <Text style={s.allGood}>✓ All required docs uploaded</Text>}
+        <View>
+          <Text style={s.headerTitle}>Documents</Text>
+          <Text style={s.headerSub}>{doneCount} of 3 uploaded this load</Text>
+        </View>
+        {allDone && (
+          <View style={s.allDoneBadge}>
+            <Ionicons name="checkmark-circle" size={14} color={colors.success} />
+            <Text style={s.allDoneText}>Complete</Text>
+          </View>
+        )}
       </View>
 
-      <ScrollView
-        contentContainerStyle={s.scroll}
-        showsVerticalScrollIndicator={false}
-      >
-        <Text style={s.sectionTitle}>Upload Documents</Text>
+      {/* Progress bar */}
+      <View style={s.overallTrack}>
+        <View style={[s.overallFill, { width: `${Math.round((doneCount / 3) * 100)}%` }]} />
+      </View>
+
+      <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
 
         {DOC_TYPES.map(dt => (
           <UploadCard
             key={dt.key}
-            docType={dt}
+            dt={dt}
             uploaded={uploaded[dt.key]}
             uploading={uploading[dt.key]}
+            progress={progress[dt.key]}
             onCamera={() => handleCamera(dt.key, dt.label)}
-            onFile={() => handleFilePicker(dt.key, dt.label)}
+            onFile={()   => handleFile(dt.key,   dt.label)}
+            onRemove={()  => setUploaded(p => ({ ...p, [dt.key]: false }))}
           />
         ))}
 
-        {/* Uploaded list */}
+        {/* History */}
         <Text style={s.sectionTitle}>Uploaded This Load</Text>
-        {uploadedDocs.length === 0 ? (
-          <View style={s.noDocsWrap}>
-            <Text style={s.noDocs}>No documents uploaded yet for this load.</Text>
+        {history.length === 0 ? (
+          <View style={[s.emptyHistory, shadow.xs]}>
+            <Ionicons name="cloud-upload-outline" size={28} color={colors.border} />
+            <Text style={s.emptyHistoryText}>No documents uploaded yet.</Text>
           </View>
         ) : (
-          uploadedDocs.map((doc, i) => (
-            <View key={i} style={s.docRow}>
-              <Text style={s.docIcon}>✅</Text>
-              <View style={s.docInfo}>
-                <Text style={s.docType}>{doc.type}</Text>
-                <Text style={s.docName} numberOfLines={1}>{doc.name}</Text>
-              </View>
-              <Text style={s.docTime}>{doc.ts}</Text>
-            </View>
-          ))
+          history.map((doc, i) => <DocRow key={i} doc={doc} />)
         )}
 
-        <View style={{ height: 24 }} />
+        <View style={{ height: space.xxl }} />
       </ScrollView>
     </SafeAreaView>
   );
 }
 
 const s = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.background },
-  header: {
-    backgroundColor: colors.white,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+  safe:  { flex: 1, backgroundColor: colors.bg },
+  header:{
+    backgroundColor: colors.card, paddingHorizontal: space.base, paddingVertical: space.md,
+    borderBottomWidth: 1, borderBottomColor: colors.border,
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
   },
-  headerTitle: { fontSize: typography.lg, fontWeight: '800', color: colors.textPrimary },
-  allGood: { fontSize: typography.xs, color: colors.success, fontWeight: '700' },
-  scroll: { padding: spacing.md },
-  sectionTitle: {
-    fontSize: typography.xs,
-    fontWeight: '700',
-    color: colors.textSecondary,
-    textTransform: 'uppercase',
-    letterSpacing: 0.8,
-    marginTop: spacing.md,
-    marginBottom: spacing.sm,
-  },
+  headerTitle:  { fontSize: font.lg, fontWeight: font.extrabold, color: colors.textPrimary },
+  headerSub:    { fontSize: font.xs, color: colors.textSecondary, marginTop: 2 },
+  allDoneBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: colors.successLight, paddingHorizontal: 10, paddingVertical: 5, borderRadius: radius.full },
+  allDoneText:  { fontSize: font.xs, color: colors.success, fontWeight: font.bold },
+  overallTrack: { height: 3, backgroundColor: colors.border },
+  overallFill:  { height: '100%', backgroundColor: colors.success },
+  scroll: { padding: space.base },
+  sectionTitle: { fontSize: font.xs, fontWeight: font.bold, color: colors.textMuted, textTransform: 'uppercase', letterSpacing: 1, marginTop: space.base, marginBottom: space.sm },
+
   card: {
-    backgroundColor: colors.white,
-    borderRadius: radius.md,
-    padding: spacing.lg,
-    marginBottom: spacing.sm,
-    borderWidth: 1,
-    borderColor: colors.border,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 3,
-    elevation: 1,
+    backgroundColor: colors.card, borderRadius: radius.lg, padding: space.base,
+    marginBottom: space.sm, borderWidth: 1, borderColor: colors.border,
   },
-  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm },
-  cardTitle: { fontSize: typography.base, fontWeight: '700', color: colors.textPrimary },
-  required: {
-    fontSize: typography.xs,
-    color: colors.error,
-    fontWeight: '700',
-    backgroundColor: colors.errorLight,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: radius.full,
-  },
-  hint: { fontSize: typography.sm, color: colors.textSecondary, marginBottom: spacing.md },
-  btnRow: { flexDirection: 'row', gap: spacing.sm },
-  uploadBtn: {
-    flex: 1,
-    backgroundColor: colors.primary,
-    borderRadius: radius.sm,
-    paddingVertical: 12,
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: spacing.xs,
-  },
-  uploadBtnSecondary: {
-    backgroundColor: colors.primaryLight,
-    borderWidth: 1,
-    borderColor: colors.primary,
-  },
-  uploadBtnIcon: { fontSize: 16 },
-  uploadBtnText: { fontSize: typography.sm, fontWeight: '700', color: colors.white },
-  uploadedRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    backgroundColor: colors.successLight,
-    borderRadius: radius.sm,
-    padding: spacing.md,
-  },
-  uploadedIcon: { fontSize: 18 },
-  uploadedText: { fontSize: typography.sm, color: colors.success, fontWeight: '600' },
-  uploadingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    padding: spacing.md,
-  },
-  uploadingText: { fontSize: typography.sm, color: colors.textSecondary },
-  noDocsWrap: {
-    backgroundColor: colors.white,
-    borderRadius: radius.md,
-    padding: spacing.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  noDocs: { fontSize: typography.sm, color: colors.textSecondary, textAlign: 'center' },
-  docRow: {
-    backgroundColor: colors.white,
-    borderRadius: radius.md,
-    padding: spacing.md,
-    marginBottom: spacing.sm,
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: colors.border,
-    gap: spacing.sm,
-  },
-  docIcon: { fontSize: 20 },
-  docInfo: { flex: 1 },
-  docType: { fontSize: typography.sm, fontWeight: '700', color: colors.textPrimary },
-  docName: { fontSize: typography.xs, color: colors.textSecondary, marginTop: 2 },
-  docTime: { fontSize: typography.xs, color: colors.textMuted },
+  cardHeader:     { flexDirection: 'row', alignItems: 'flex-start', marginBottom: space.md, gap: space.md },
+  iconCircle:     { width: 40, height: 40, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  cardHeaderText: { flex: 1 },
+  cardLabel:      { fontSize: font.base, fontWeight: font.bold, color: colors.textPrimary, marginBottom: 2 },
+  cardHint:       { fontSize: font.xs, color: colors.textSecondary, lineHeight: 17 },
+  reqBadge:       { backgroundColor: colors.dangerLight, borderRadius: radius.full, paddingHorizontal: 7, paddingVertical: 3, alignSelf: 'flex-start', flexShrink: 0 },
+  reqText:        { fontSize: 10, fontWeight: font.bold, color: colors.danger },
+
+  uploadingRow:  { flexDirection: 'row', alignItems: 'center', gap: space.sm, padding: space.sm, backgroundColor: colors.surface, borderRadius: radius.sm },
+  progressTrack: { flex: 1, height: 4, backgroundColor: colors.border, borderRadius: 2, overflow: 'hidden' },
+  progressFill:  { height: '100%', borderRadius: 2 },
+  uploadingLabel:{ fontSize: font.xs, fontWeight: font.bold, width: 30, textAlign: 'right' },
+
+  doneRow: { flexDirection: 'row', alignItems: 'center', gap: space.sm, padding: space.md, borderRadius: radius.sm },
+  doneText:{ flex: 1, fontSize: font.sm, fontWeight: font.semibold },
+  removeBtn:{ padding: 4 },
+
+  btnRow:       { flexDirection: 'row', gap: space.sm },
+  uploadBtn:    { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: space.xs, borderRadius: radius.md, paddingVertical: 12 },
+  uploadBtnOutline: { backgroundColor: 'transparent', borderWidth: 1.5 },
+  uploadBtnText:{ fontSize: font.sm, fontWeight: font.bold, color: colors.white },
+
+  docRow:     { flexDirection: 'row', alignItems: 'center', gap: space.md, backgroundColor: colors.card, borderRadius: radius.md, padding: space.md, marginBottom: space.sm, borderWidth: 1, borderColor: colors.border },
+  docIconWrap:{ width: 34, height: 34, borderRadius: radius.sm, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  docInfo:    { flex: 1 },
+  docType:    { fontSize: font.sm, fontWeight: font.bold, color: colors.textPrimary },
+  docName:    { fontSize: font.xs, color: colors.textSecondary, marginTop: 1 },
+  docTime:    { fontSize: font.xs, color: colors.textMuted },
+
+  emptyHistory: { backgroundColor: colors.card, borderRadius: radius.md, padding: space.xl, alignItems: 'center', gap: space.sm, borderWidth: 1, borderColor: colors.border },
+  emptyHistoryText: { fontSize: font.sm, color: colors.textMuted },
 });

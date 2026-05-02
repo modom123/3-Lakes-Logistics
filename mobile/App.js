@@ -1,33 +1,75 @@
-import React, { useState, useEffect } from 'react';
-import { View, ActivityIndicator } from 'react-native';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { View, StyleSheet, AppState } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
-import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { AuthContext, BadgeContext } from './src/context';
-import { storage } from './src/storage';
-import { api } from './src/api';
+import { StatusBar } from 'expo-status-bar';
+import * as Notifications from 'expo-notifications';
+
+import { AuthContext, ToastContext, BadgeContext, NetworkContext } from './src/context';
+import { authService } from './src/services/auth';
+import { initHttp, invalidateToken } from './src/services/http';
+import { EventEmitter } from './src/services/events';
 import AppNavigator from './src/navigation/AppNavigator';
+import Toast from './src/components/Toast';
+import NetworkBanner from './src/components/NetworkBanner';
 import { colors } from './src/theme';
 
-export default function App() {
-  const [auth, setAuth] = useState(null);
-  const [booting, setBooting] = useState(true);
-  const [unread, setUnread] = useState(0);
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge:  true,
+  }),
+});
 
+export default function App() {
+  const [auth,     setAuth]     = useState(null);
+  const [booting,  setBooting]  = useState(true);
+  const [unread,   setUnread]   = useState(0);
+  const [isOnline, setIsOnline] = useState(true);
+
+  const toastRef = useRef(null);
+
+  const showToast = useCallback((message, type = 'info') => {
+    toastRef.current?.show(message, type);
+  }, []);
+
+  // Boot: load credentials from SecureStore ─────────────────────────────────
   useEffect(() => {
-    storage.getAuth().then(a => {
+    authService.load().then(a => {
       if (a) {
-        api.init(a);
+        initHttp({ baseUrl: a.baseUrl, token: a.token });
         setAuth(a);
       }
       setBooting(false);
     });
   }, []);
 
+  // Handle 401 from any API call ─────────────────────────────────────────────
+  useEffect(() => {
+    const off = EventEmitter.on('auth:unauthorized', async () => {
+      invalidateToken();
+      await authService.clear();
+      setAuth(null);
+      showToast('Session expired — please sign in again.', 'error');
+    });
+    return off;
+  }, [showToast]);
+
+  // Push notification permission ─────────────────────────────────────────────
+  useEffect(() => {
+    (async () => {
+      const { status } = await Notifications.requestPermissionsAsync();
+      if (status !== 'granted') return;
+      const token = await Notifications.getExpoPushTokenAsync().catch(() => null);
+      if (token) console.log('[Push Token]', token.data);
+    })();
+  }, []);
+
   if (booting) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.white }}>
-        <ActivityIndicator size="large" color={colors.primary} />
+      <View style={styles.boot}>
+        <StatusBar style="light" backgroundColor={colors.primary} />
       </View>
     );
   }
@@ -35,13 +77,23 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <AuthContext.Provider value={{ auth, setAuth }}>
-        <BadgeContext.Provider value={{ unread, setUnread }}>
-          <NavigationContainer>
-            <StatusBar style="dark" backgroundColor={colors.white} />
-            <AppNavigator />
-          </NavigationContainer>
-        </BadgeContext.Provider>
+        <ToastContext.Provider value={{ showToast }}>
+          <BadgeContext.Provider value={{ unread, setUnread }}>
+            <NetworkContext.Provider value={{ isOnline, setIsOnline }}>
+              <NavigationContainer>
+                <StatusBar style="dark" backgroundColor={colors.card} />
+                <NetworkBanner onStatusChange={setIsOnline} />
+                <AppNavigator />
+                <Toast ref={toastRef} />
+              </NavigationContainer>
+            </NetworkContext.Provider>
+          </BadgeContext.Provider>
+        </ToastContext.Provider>
       </AuthContext.Provider>
     </SafeAreaProvider>
   );
 }
+
+const styles = StyleSheet.create({
+  boot: { flex: 1, backgroundColor: colors.primary },
+});
