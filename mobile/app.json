@@ -6,23 +6,48 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
+    "newArchEnabled": false,
+    "scheme": "threelakesdriver",
+
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
+
+    "updates": {
+      "url": "https://u.expo.dev/REPLACE_WITH_PROJECT_ID",
+      "fallbackToCacheTimeout": 0,
+      "checkAutomatically": "ON_LOAD"
+    },
+
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+
     "assetBundlePatterns": ["**/*"],
+
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.threelakeslogistics.driver"
+      "bundleIdentifier": "com.threelakeslogistics.driver",
+      "buildNumber": "1",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "3 Lakes Driver uses your location to confirm pickup and delivery with GPS coordinates.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "3 Lakes Driver uses your location for load tracking.",
+        "NSCameraUsageDescription": "3 Lakes Driver needs camera access to photograph BOL, POD, and receipts.",
+        "NSPhotoLibraryUsageDescription": "3 Lakes Driver needs photo library access to upload documents.",
+        "NSMicrophoneUsageDescription": "Required by the camera component."
+      }
     },
+
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#1565C0"
+        "backgroundColor": "#1652A0"
       },
       "package": "com.threelakeslogistics.driver",
       "versionCode": 1,
+      "googleServicesFile": "./google-services.json",
       "permissions": [
         "android.permission.ACCESS_FINE_LOCATION",
         "android.permission.ACCESS_COARSE_LOCATION",
@@ -31,35 +56,54 @@
         "android.permission.WRITE_EXTERNAL_STORAGE",
         "android.permission.RECEIVE_BOOT_COMPLETED",
         "android.permission.VIBRATE",
-        "android.permission.POST_NOTIFICATIONS"
+        "android.permission.POST_NOTIFICATIONS",
+        "android.permission.USE_BIOMETRIC",
+        "android.permission.USE_FINGERPRINT"
       ]
     },
+
     "plugins": [
+      "expo-secure-store",
+      [
+        "expo-updates",
+        {
+          "username": "REPLACE_WITH_EXPO_USERNAME"
+        }
+      ],
       [
         "expo-notifications",
         {
           "icon": "./assets/notification-icon.png",
-          "color": "#1565C0",
-          "defaultChannel": "dispatch"
+          "color": "#1652A0",
+          "defaultChannel": "dispatch",
+          "sounds": []
         }
       ],
       [
         "expo-location",
         {
-          "locationAlwaysAndWhenInUsePermission": "Allow 3 Lakes Driver to use your location for pickup and delivery confirmation."
+          "locationAlwaysAndWhenInUsePermission": "Allow 3 Lakes Driver to use your location for pickup and delivery confirmation.",
+          "locationWhenInUsePermission": "Allow 3 Lakes Driver to use your location for pickup and delivery confirmation."
         }
       ],
       [
         "expo-image-picker",
         {
-          "photosPermission": "Allow 3 Lakes Driver to access your photos for document uploads.",
-          "cameraPermission": "Allow 3 Lakes Driver to use your camera to photograph BOL, POD, and receipts."
+          "photosPermission": "Allow 3 Lakes Driver to access your photos for BOL, POD, and receipt uploads.",
+          "cameraPermission": "Allow 3 Lakes Driver to use your camera to photograph shipping documents."
+        }
+      ],
+      [
+        "expo-document-picker",
+        {
+          "iCloudContainerEnvironment": "Production"
         }
       ]
     ],
+
     "extra": {
       "eas": {
-        "projectId": "3-lakes-driver"
+        "projectId": "REPLACE_WITH_PROJECT_ID"
       }
     }
   }

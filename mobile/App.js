@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { View, StyleSheet, AppState } from 'react-native';
+import { View, StyleSheet, Alert } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import * as Notifications from 'expo-notifications';
+import * as Updates from 'expo-updates';
 
 import { AuthContext, ToastContext, BadgeContext, NetworkContext } from './src/context';
 import { authService } from './src/services/auth';
@@ -55,6 +56,28 @@ export default function App() {
     });
     return off;
   }, [showToast]);
+
+  // OTA update check ──────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (__DEV__) return; // skip in development
+    (async () => {
+      try {
+        const update = await Updates.checkForUpdateAsync();
+        if (!update.isAvailable) return;
+        await Updates.fetchUpdateAsync();
+        Alert.alert(
+          'Update Ready',
+          'A new version of 3 Lakes Driver has been downloaded. Restart to apply it.',
+          [
+            { text: 'Later' },
+            { text: 'Restart Now', onPress: () => Updates.reloadAsync() },
+          ]
+        );
+      } catch {
+        // Silent fail — update checks are non-critical
+      }
+    })();
+  }, []);
 
   // Push notification permission ─────────────────────────────────────────────
   useEffect(() => {
