@@ -122,6 +122,7 @@
 
     /* ── SECTION HEADER ── */
     .section-header { font-size: 13px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .8px; margin: 16px 0 8px; }
+    .cdl-row .profile-input { font-size: 13px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px; color: var(--text); width: 140px; }
 
     /* ── TOAST ── */
     #toast {
@@ -288,6 +289,45 @@
           <div class="meta-item"><div class="meta-label">Rate</div><div class="meta-value" id="load-rate">—</div></div>
           <div class="meta-item"><div class="meta-label">Miles</div><div class="meta-value" id="load-miles">—</div></div>
           <div class="meta-item"><div class="meta-label">Pickup</div><div class="meta-value" id="load-pickup">—</div></div>
+          <div class="meta-item"><div class="meta-label">RPM</div><div class="meta-value" id="load-rpm">—</div></div>
+          <div class="meta-item"><div class="meta-label">Commodity</div><div class="meta-value" id="load-commodity">—</div></div>
+          <div class="meta-item"><div class="meta-label">Weight</div><div class="meta-value" id="load-weight">—</div></div>
+        </div>
+
+        <!-- Addresses + Navigation -->
+        <div id="load-addresses" style="display:none;margin-top:12px;border-top:1px solid var(--border);padding-top:12px">
+          <div style="margin-bottom:10px">
+            <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px">Pickup Address</div>
+            <div id="pickup-address" style="font-size:13px;color:var(--text)">—</div>
+            <a id="pickup-maps-link" href="#" target="_blank" style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--accent);margin-top:4px;text-decoration:none">
+              🗺 Navigate to Pickup
+            </a>
+          </div>
+          <div>
+            <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px">Delivery Address</div>
+            <div id="delivery-address" style="font-size:13px;color:var(--text)">—</div>
+            <a id="delivery-maps-link" href="#" target="_blank" style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--accent);margin-top:4px;text-decoration:none">
+              🗺 Navigate to Delivery
+            </a>
+          </div>
+        </div>
+
+        <!-- Broker Contact -->
+        <div id="load-broker" style="display:none;margin-top:10px;border-top:1px solid var(--border);padding-top:10px;display:none">
+          <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px">Broker Contact</div>
+          <div style="display:flex;align-items:center;justify-content:space-between">
+            <div>
+              <div id="broker-name" style="font-size:13px;font-weight:600">—</div>
+              <div id="broker-phone-text" style="font-size:12px;color:var(--muted)">—</div>
+            </div>
+            <a id="broker-call-btn" href="#" style="background:var(--green);color:#fff;padding:8px 14px;border-radius:8px;font-size:12px;font-weight:700;text-decoration:none">📞 Call</a>
+          </div>
+        </div>
+
+        <!-- Special Instructions -->
+        <div id="load-instructions-wrap" style="display:none;margin-top:10px;border-top:1px solid var(--border);padding-top:10px">
+          <div style="font-size:10px;font-weight:700;color:var(--yellow);text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px">⚠ Special Instructions</div>
+          <div id="load-instructions" style="font-size:12px;color:var(--text);line-height:1.5">—</div>
         </div>
       </div>
 
@@ -347,6 +387,62 @@
       <div style="font-size:12px;color:var(--muted);margin-bottom:10px">Accept a load below — dispatch confirms and sends full details by SMS.</div>
       <div id="available-loads-list">
         <div class="empty-state"><div class="empty-icon">🚛</div><p>No loads available right now.<br>Check back soon or watch for an SMS offer.</p></div>
+      </div>
+
+      <div class="section-header" style="margin-top:16px">Load History</div>
+      <div id="load-history-list">
+        <div style="text-align:center;padding:16px;color:var(--muted);font-size:13px">Loading history…</div>
+      </div>
+    </div>
+
+    <!-- ── PAY VIEW ── -->
+    <div class="view" id="view-pay">
+      <div class="section-header">This Week</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
+        <div class="card">
+          <div class="card-title">Gross Pay</div>
+          <div class="card-value" style="color:var(--green)" id="pay-week-gross">—</div>
+        </div>
+        <div class="card">
+          <div class="card-title">Miles</div>
+          <div class="card-value" id="pay-week-miles">—</div>
+        </div>
+        <div class="card">
+          <div class="card-title">Loads</div>
+          <div class="card-value" id="pay-week-loads">—</div>
+        </div>
+        <div class="card">
+          <div class="card-title">RPM Avg</div>
+          <div class="card-value" id="pay-week-rpm">—</div>
+        </div>
+      </div>
+
+      <div class="section-header">Deductions This Week</div>
+      <div class="card" id="deductions-card">
+        <div class="cdl-row"><div class="cdl-label">Dispatch Fee (8%)</div><div class="cdl-value" id="ded-dispatch" style="color:var(--red)">—</div></div>
+        <div class="cdl-row"><div class="cdl-label">Fuel Advance</div><div class="cdl-value" id="ded-fuel" style="color:var(--red)">—</div></div>
+        <div class="cdl-row"><div class="cdl-label">Insurance</div><div class="cdl-value" id="ded-insurance" style="color:var(--red)">—</div></div>
+        <div class="cdl-row" style="border-top:1px solid var(--border);padding-top:10px;margin-top:6px">
+          <div class="cdl-label" style="font-weight:700;color:var(--text)">Net Pay</div>
+          <div class="cdl-value" id="pay-net" style="color:var(--green);font-size:18px;font-weight:700">—</div>
+        </div>
+      </div>
+
+      <div class="section-header">Settlement History</div>
+      <div id="settlement-list">
+        <div style="text-align:center;padding:16px;color:var(--muted);font-size:13px">Loading settlements…</div>
+      </div>
+
+      <div class="section-header">Year To Date</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
+        <div class="card">
+          <div class="card-title">YTD Gross</div>
+          <div class="card-value" style="color:var(--green)" id="pay-ytd-gross">—</div>
+        </div>
+        <div class="card">
+          <div class="card-title">YTD Miles</div>
+          <div class="card-value" id="pay-ytd-miles">—</div>
+        </div>
       </div>
     </div>
 
@@ -452,6 +548,27 @@
       </div>
 
       <div class="card">
+        <div class="card-title">Equipment</div>
+        <div class="cdl-row">
+          <div class="cdl-label">Truck #</div>
+          <div class="cdl-value"><input class="profile-input" id="truck-number" type="text" placeholder="e.g. T-104" /></div>
+        </div>
+        <div class="cdl-row">
+          <div class="cdl-label">Trailer #</div>
+          <div class="cdl-value"><input class="profile-input" id="trailer-number" type="text" placeholder="e.g. TRL-22" /></div>
+        </div>
+        <div class="cdl-row">
+          <div class="cdl-label">Trailer Type</div>
+          <div class="cdl-value"><input class="profile-input" id="trailer-type" type="text" placeholder="e.g. Dry Van 53'" /></div>
+        </div>
+        <div class="cdl-row">
+          <div class="cdl-label">Fuel Card #</div>
+          <div class="cdl-value"><input class="profile-input" id="fuel-card" type="text" placeholder="Last 4 digits" /></div>
+        </div>
+        <button class="btn btn-save" onclick="saveEquipment()" style="margin-top:10px">💾 Save Equipment</button>
+      </div>
+
+      <div class="card">
         <div class="card-title">Carrier Info</div>
         <div class="cdl-row">
           <div class="cdl-label">Company</div>
@@ -464,6 +581,24 @@
         <div class="cdl-row">
           <div class="cdl-label">ELD Provider</div>
           <div class="cdl-value" id="eld-provider">—</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Emergency &amp; Quick Contacts</div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <a href="tel:+18005551234" style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:var(--surface);border:1px solid var(--border);border-radius:10px;text-decoration:none">
+            <div><div style="font-size:13px;font-weight:600;color:var(--text)">🚨 Breakdown / Roadside</div><div style="font-size:11px;color:var(--muted)">24/7 Emergency</div></div>
+            <div style="background:var(--red);color:#fff;padding:6px 12px;border-radius:8px;font-size:12px;font-weight:700">Call</div>
+          </a>
+          <a href="tel:+18005550911" style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:var(--surface);border:1px solid var(--border);border-radius:10px;text-decoration:none">
+            <div><div style="font-size:13px;font-weight:600;color:var(--text)">📞 Dispatch Office</div><div style="font-size:11px;color:var(--muted)">Mon–Fri 6am–8pm CT</div></div>
+            <div style="background:var(--accent);color:#fff;padding:6px 12px;border-radius:8px;font-size:12px;font-weight:700">Call</div>
+          </a>
+          <a href="tel:+18005550100" style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:var(--surface);border:1px solid var(--border);border-radius:10px;text-decoration:none">
+            <div><div style="font-size:13px;font-weight:600;color:var(--text)">🏥 Insurance Claims</div><div style="font-size:11px;color:var(--muted)">Report accidents / cargo claims</div></div>
+            <div style="background:var(--yellow);color:#0a0f1e;padding:6px 12px;border-radius:8px;font-size:12px;font-weight:700">Call</div>
+          </a>
         </div>
       </div>
 
@@ -507,6 +642,10 @@
     <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
     Docs
   </button>
+  <button class="nav-btn" id="nav-pay" onclick="showView('pay')">
+    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+    Pay
+  </button>
   <button class="nav-btn" id="nav-profile" onclick="showView('profile')">
     <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
     Profile
@@ -547,9 +686,10 @@ function showView(name) {
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('view-' + name).classList.add('active');
   document.getElementById('nav-' + name).classList.add('active');
-  if (name === 'loads')    loadAvailableLoads();
+  if (name === 'loads')    { loadAvailableLoads(); loadLoadHistory(); }
   if (name === 'docs')     loadDocs();
   if (name === 'messages') { loadMessages(true); markRead(); }
+  if (name === 'pay')      loadPayData();
 }
 
 // ── CURRENT LOAD ──────────────────────────────────────────────────────────────
@@ -572,8 +712,37 @@ function renderCurrentLoad(load) {
   document.getElementById('load-rate').textContent        = load.rate_total   ? '$' + Number(load.rate_total).toLocaleString() : '—';
   document.getElementById('load-miles').textContent       = load.miles        ? load.miles.toLocaleString() : '—';
   document.getElementById('load-pickup').textContent      = load.pickup_at    ? new Date(load.pickup_at).toLocaleDateString('en-US',{month:'short',day:'numeric'}) : '—';
+  document.getElementById('load-rpm').textContent         = (load.rate_total && load.miles) ? '$' + (load.rate_total / load.miles).toFixed(2) + '/mi' : '—';
+  document.getElementById('load-commodity').textContent   = load.commodity    || '—';
+  document.getElementById('load-weight').textContent      = load.weight       ? Number(load.weight).toLocaleString() + ' lbs' : '—';
   document.getElementById('miles-today').textContent      = load.miles        ? load.miles.toLocaleString() : '—';
   document.getElementById('est-pay').textContent          = load.rate_total   ? '$' + (load.rate_total * 0.72).toFixed(0) : '—';
+
+  // Full addresses + navigation
+  const pickupAddr   = [load.pickup_address, load.origin_city, load.origin_state].filter(Boolean).join(', ');
+  const deliveryAddr = [load.delivery_address, load.dest_city, load.dest_state].filter(Boolean).join(', ');
+  if (pickupAddr || deliveryAddr) {
+    document.getElementById('load-addresses').style.display = 'block';
+    document.getElementById('pickup-address').textContent   = pickupAddr || '—';
+    document.getElementById('delivery-address').textContent = deliveryAddr || '—';
+    if (pickupAddr)   document.getElementById('pickup-maps-link').href   = 'https://maps.google.com/?q=' + encodeURIComponent(pickupAddr);
+    if (deliveryAddr) document.getElementById('delivery-maps-link').href = 'https://maps.google.com/?q=' + encodeURIComponent(deliveryAddr);
+  }
+
+  // Broker contact
+  if (load.broker_name || load.broker_phone) {
+    document.getElementById('load-broker').style.display = 'block';
+    document.getElementById('broker-name').textContent       = load.broker_name  || 'Broker';
+    document.getElementById('broker-phone-text').textContent = load.broker_phone || '—';
+    if (load.broker_phone) document.getElementById('broker-call-btn').href = 'tel:' + load.broker_phone;
+  }
+
+  // Special instructions
+  if (load.special_instructions) {
+    document.getElementById('load-instructions-wrap').style.display = 'block';
+    document.getElementById('load-instructions').textContent = load.special_instructions;
+  }
+
   if (load.status === 'in_transit') {
     document.getElementById('btn-pickup').style.display   = 'none';
     document.getElementById('btn-delivery').style.display = 'flex';
@@ -805,6 +974,10 @@ async function loadProfile() {
   document.getElementById('carrier-name').textContent   = localStorage.getItem('3ll_company') || '—';
   document.getElementById('carrier-mc').textContent     = localStorage.getItem('3ll_mc')      || '—';
   document.getElementById('eld-provider').textContent   = localStorage.getItem('3ll_eld')     || '—';
+  document.getElementById('truck-number').value    = localStorage.getItem('3ll_truck')        || '';
+  document.getElementById('trailer-number').value  = localStorage.getItem('3ll_trailer')      || '';
+  document.getElementById('trailer-type').value    = localStorage.getItem('3ll_trailer_type') || '';
+  document.getElementById('fuel-card').value       = localStorage.getItem('3ll_fuel_card')    || '';
   const savedPhone = localStorage.getItem('3ll_phone') || '';
   if (savedPhone) {
     document.getElementById('phone-input').value = savedPhone;
@@ -821,6 +994,118 @@ async function loadProfile() {
 }
 
 function loadDocs() {}
+
+// ── LOAD HISTORY ──────────────────────────────────────────────────────────────
+async function loadLoadHistory() {
+  const el = document.getElementById('load-history-list');
+  try {
+    const res   = await apiFetch('/api/fleet?status=delivered&limit=20');
+    const loads = await res.json();
+    if (!loads || !loads.length) {
+      el.innerHTML = '<div style="text-align:center;padding:12px;color:var(--muted);font-size:13px">No completed loads yet.</div>';
+      return;
+    }
+    el.innerHTML = loads.map(l => {
+      const origin = [l.origin_city, l.origin_state].filter(Boolean).join(', ') || '?';
+      const dest   = [l.dest_city,   l.dest_state  ].filter(Boolean).join(', ') || '?';
+      const date   = l.delivered_at ? new Date(l.delivered_at).toLocaleDateString('en-US',{month:'short',day:'numeric'}) : (l.pickup_at ? new Date(l.pickup_at).toLocaleDateString('en-US',{month:'short',day:'numeric'}) : '—');
+      const rate   = l.rate_total ? '$' + Number(l.rate_total).toLocaleString() : '—';
+      const rpm    = (l.rate_total && l.miles) ? '$' + (l.rate_total/l.miles).toFixed(2) + '/mi' : '';
+      return `
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:12px;margin-bottom:8px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+            <div style="font-size:12px;font-weight:700;color:var(--text)">${esc(l.load_number||l.id?.slice(0,8)||'—')}</div>
+            <div style="display:flex;gap:8px;align-items:center">
+              <span style="font-size:14px;font-weight:700;color:var(--green)">${rate}</span>
+              <span class="pill pill-green" style="font-size:10px">✓ Delivered</span>
+            </div>
+          </div>
+          <div style="font-size:12px;color:var(--muted)">${esc(origin)} → ${esc(dest)}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:4px">${date}${l.miles ? ' · ' + l.miles.toLocaleString() + ' mi' : ''}${rpm ? ' · ' + rpm : ''}</div>
+        </div>`;
+    }).join('');
+  } catch {
+    el.innerHTML = '<div style="text-align:center;padding:12px;color:var(--muted);font-size:13px">Could not load history.</div>';
+  }
+}
+
+// ── PAY / EARNINGS ────────────────────────────────────────────────────────────
+async function loadPayData() {
+  try {
+    const res   = await apiFetch(`/api/fleet?status=delivered&driver_id=${DRIVER_ID}&limit=100`);
+    const loads = await res.json();
+    if (!loads) return;
+
+    const now       = new Date();
+    const weekStart = new Date(now); weekStart.setDate(now.getDate() - now.getDay());
+    weekStart.setHours(0,0,0,0);
+    const yearStart = new Date(now.getFullYear(), 0, 1);
+
+    const weekLoads = loads.filter(l => l.pickup_at && new Date(l.pickup_at) >= weekStart);
+    const ytdLoads  = loads.filter(l => l.pickup_at && new Date(l.pickup_at) >= yearStart);
+
+    const sum = arr => arr.reduce((a,l) => a + (Number(l.rate_total)||0), 0);
+    const mi  = arr => arr.reduce((a,l) => a + (Number(l.miles)||0), 0);
+
+    const weekGross = sum(weekLoads), weekMi = mi(weekLoads);
+    const ytdGross  = sum(ytdLoads),  ytdMi  = mi(ytdLoads);
+
+    const dispatch   = weekGross * 0.08;
+    const insurance  = weekLoads.length * 45;
+    const fuelAdv    = 0;
+    const net        = weekGross - dispatch - insurance - fuelAdv;
+
+    document.getElementById('pay-week-gross').textContent = weekGross ? '$' + weekGross.toLocaleString() : '—';
+    document.getElementById('pay-week-miles').textContent = weekMi    ? weekMi.toLocaleString()          : '—';
+    document.getElementById('pay-week-loads').textContent = weekLoads.length || '—';
+    document.getElementById('pay-week-rpm').textContent   = (weekGross && weekMi) ? '$' + (weekGross/weekMi).toFixed(2) : '—';
+    document.getElementById('ded-dispatch').textContent   = dispatch  ? '-$' + dispatch.toFixed(2)  : '—';
+    document.getElementById('ded-fuel').textContent       = fuelAdv   ? '-$' + fuelAdv.toFixed(2)   : '$0';
+    document.getElementById('ded-insurance').textContent  = insurance ? '-$' + insurance.toFixed(2) : '—';
+    document.getElementById('pay-net').textContent        = net       ? '$' + net.toFixed(2)         : '—';
+    document.getElementById('pay-ytd-gross').textContent  = ytdGross  ? '$' + ytdGross.toLocaleString() : '—';
+    document.getElementById('pay-ytd-miles').textContent  = ytdMi     ? ytdMi.toLocaleString()          : '—';
+
+    // Settlement history by week
+    const byWeek = {};
+    loads.forEach(l => {
+      if (!l.pickup_at) return;
+      const d = new Date(l.pickup_at);
+      const wk = new Date(d); wk.setDate(d.getDate() - d.getDay()); wk.setHours(0,0,0,0);
+      const key = wk.toISOString().slice(0,10);
+      if (!byWeek[key]) byWeek[key] = { gross:0, loads:0, miles:0, label: wk.toLocaleDateString('en-US',{month:'short',day:'numeric'}) };
+      byWeek[key].gross += Number(l.rate_total)||0;
+      byWeek[key].loads += 1;
+      byWeek[key].miles += Number(l.miles)||0;
+    });
+    const weeks = Object.entries(byWeek).sort((a,b) => b[0].localeCompare(a[0])).slice(0,8);
+    const settEl = document.getElementById('settlement-list');
+    if (!weeks.length) {
+      settEl.innerHTML = '<div style="text-align:center;padding:12px;color:var(--muted);font-size:13px">No settlements yet.</div>';
+    } else {
+      settEl.innerHTML = weeks.map(([,w]) => `
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:12px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center">
+          <div>
+            <div style="font-size:13px;font-weight:600;color:var(--text)">Week of ${w.label}</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:2px">${w.loads} load${w.loads!==1?'s':''} · ${w.miles.toLocaleString()} mi</div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-size:16px;font-weight:700;color:var(--green)">$${w.gross.toLocaleString()}</div>
+            <div style="font-size:11px;color:var(--muted)">gross</div>
+          </div>
+        </div>`).join('');
+    }
+  } catch {}
+}
+
+// ── EQUIPMENT ────────────────────────────────────────────────────────────────
+function saveEquipment() {
+  localStorage.setItem('3ll_truck',   document.getElementById('truck-number').value.trim());
+  localStorage.setItem('3ll_trailer', document.getElementById('trailer-number').value.trim());
+  localStorage.setItem('3ll_trailer_type', document.getElementById('trailer-type').value.trim());
+  localStorage.setItem('3ll_fuel_card',    document.getElementById('fuel-card').value.trim());
+  showToast('✅ Equipment info saved');
+}
 
 // ── ACTIONS ───────────────────────────────────────────────────────────────────
 async function confirmPickup() {
