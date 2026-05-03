@@ -24,6 +24,7 @@ from .api import (
     driver_auth_router,
     driver_router,
     execution_router,
+    notifications_router,
     payout_router,
     fleet_public_router,
     fleet_router,
@@ -127,6 +128,7 @@ def create_app() -> FastAPI:
     app.include_router(driver_auth_router,    prefix="/api",              tags=["driver-auth"])
     app.include_router(driver_router,         prefix="/api",              tags=["driver"])
     app.include_router(payout_router,         prefix="/api",              tags=["payout"])
+    app.include_router(notifications_router,  prefix="/api",              tags=["notifications"])
 
     @app.get("/api/health", tags=["meta"])
     def health() -> dict:

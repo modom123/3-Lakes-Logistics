@@ -13,6 +13,7 @@ from .routes_comms         import router as comms_public_router, router_auth as 
 from .routes_driver_auth   import router as driver_auth_router
 from .routes_driver        import router as driver_router
 from .routes_payout        import router as payout_router
+from .routes_notifications import router as notifications_router
 
 from ..clm             import clm_router
 from ..execution_engine import execution_router
@@ -37,6 +38,7 @@ __all__ = [
     "driver_auth_router",
     "driver_router",
     "payout_router",
+    "notifications_router",
     "clm_router",
     "execution_router",
     "atomic_ledger_router",
