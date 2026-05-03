@@ -11,6 +11,7 @@ from .routes_prospecting   import router as prospecting_router
 from .routes_triggers      import router as triggers_router
 from .routes_comms         import router as comms_public_router, router_auth as comms_router
 from .routes_driver_auth   import router as driver_auth_router
+from .routes_driver        import router as driver_router
 
 from ..clm             import clm_router
 from ..execution_engine import execution_router
@@ -33,6 +34,7 @@ __all__ = [
     "comms_router",
     "comms_public_router",
     "driver_auth_router",
+    "driver_router",
     "clm_router",
     "execution_router",
     "atomic_ledger_router",

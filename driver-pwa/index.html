@@ -17,6 +17,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <title>3 Lakes Driver</title>
   <link rel="manifest" href="manifest.json" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.41.0"></script>
   <style>
     :root {
       --bg:       #0a0f1e;
@@ -666,21 +667,127 @@
 <script>
 const API = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
   ? 'http://localhost:8080' : '';
+const SUPABASE_URL = (window.location.hostname === 'localhost')
+  ? 'https://your-project.supabase.co'
+  : window.location.origin.replace('localhost:8080', 'your-project.supabase.co');
+const SUPABASE_KEY = localStorage.getItem('3ll_supabase_key') || 'your-anon-key';
+
 const TOKEN     = localStorage.getItem('3ll_token')       || '';
 const DRIVER_ID = localStorage.getItem('3ll_driver_id')   || 'DRV-001';
 const MY_PHONE  = localStorage.getItem('3ll_phone')        || '';
 
+// Supabase Realtime client
+let supabaseClient = null;
+let realtime = {
+  loadsChannel: null,
+  messagesChannel: null,
+  isConnected: false
+};
+
 let _msgPollTimer = null;
 let _unreadCount  = 0;
 let _lastMsgTs    = null;
+let _gpsTimer = null;
+let _tracking = false;
 
 // ── INIT ─────────────────────────────────────────────────────────────────────
+// ── SUPABASE REALTIME ────────────────────────────────────────────────────────────
+function initSupabaseRealtime() {
+  try {
+    // Initialize Supabase client (Note: in production, use real Supabase credentials)
+    // This is a placeholder — you'll need to set SUPABASE_URL and SUPABASE_KEY
+    if (!window.supabase) return;
+
+    supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    if (!supabaseClient) return;
+
+    subscribeToLoads();
+    subscribeToMessages();
+    monitorConnection();
+  } catch (err) {
+    console.log('Realtime init deferred (use HTTP polling fallback)');
+  }
+}
+
+function subscribeToLoads() {
+  try {
+    if (!supabaseClient) return;
+    // Listen to booked loads table for load board updates
+    realtime.loadsChannel = supabaseClient
+      .channel('loads:status=eq.booked')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'loads' }, payload => {
+        console.log('Load board update:', payload);
+        if (document.getElementById('view-loads').classList.contains('active')) {
+          loadAvailableLoads();
+        }
+      })
+      .subscribe(status => {
+        realtime.isConnected = status === 'SUBSCRIBED';
+        updateConnectionStatus();
+      });
+  } catch {}
+}
+
+function subscribeToMessages() {
+  try {
+    if (!supabaseClient) return;
+    // Listen to driver messages for instant delivery
+    const driverPhone = MY_PHONE;
+    if (!driverPhone) return;
+
+    realtime.messagesChannel = supabaseClient
+      .channel(`messages:driver_phone=eq.${driverPhone}`)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'driver_messages' }, payload => {
+        console.log('New message:', payload);
+        const msg = payload.new;
+        if (msg.direction === 'inbound') {
+          _unreadCount++;
+          updateBadge();
+          showToast('💬 New message from Dispatch');
+          if (document.getElementById('view-messages').classList.contains('active')) {
+            loadMessages(true);
+          }
+        }
+      })
+      .subscribe(status => {
+        realtime.isConnected = status === 'SUBSCRIBED';
+        updateConnectionStatus();
+      });
+  } catch {}
+}
+
+function monitorConnection() {
+  // Check connection every 30 seconds
+  setInterval(() => {
+    if (supabaseClient && realtime.loadsChannel) {
+      const status = realtime.loadsChannel.state;
+      realtime.isConnected = status === 'SUBSCRIBED';
+      updateConnectionStatus();
+    }
+  }, 30000);
+}
+
+function updateConnectionStatus() {
+  const dot = document.getElementById('online-dot');
+  const label = document.getElementById('conn-label');
+  if (realtime.isConnected) {
+    dot.style.background = 'var(--green)';
+    dot.style.boxShadow = '0 0 6px var(--green)';
+    label.textContent = 'Online';
+  } else {
+    dot.style.background = 'var(--yellow)';
+    dot.style.boxShadow = '0 0 6px var(--yellow)';
+    label.textContent = 'Polling';
+  }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('driver-name').textContent = localStorage.getItem('3ll_driver_name') || 'Driver';
   loadCurrentLoad();
   loadProfile();
   setInterval(pollHOS, 30000);
-  startMsgPolling();
+  initSupabaseRealtime();
+  startMsgPolling();  // Fallback polling (12s)
   registerServiceWorker();
 });
 
@@ -754,6 +861,9 @@ function renderCurrentLoad(load) {
   if (load.status === 'in_transit') {
     document.getElementById('btn-pickup').style.display   = 'none';
     document.getElementById('btn-delivery').style.display = 'flex';
+    startGpsTracking();  // Start continuous tracking
+  } else {
+    stopGpsTracking();
   }
 }
 
@@ -1168,6 +1278,52 @@ async function handleUpload(docType, input) {
     if (el) el.style.display = 'inline-flex';
     showToast(`✅ ${docType.toUpperCase()} uploaded`);
   }, 1500);
+}
+
+// ── GPS TRACKING ──────────────────────────────────────────────────────────────────
+function startGpsTracking() {
+  if (_tracking || !navigator.geolocation) return;
+  _tracking = true;
+
+  // Send location immediately
+  sendDriverLocation();
+
+  // Then every 30 seconds while driving
+  _gpsTimer = setInterval(sendDriverLocation, 30000);
+  console.log('GPS tracking started');
+}
+
+function stopGpsTracking() {
+  if (!_tracking) return;
+  _tracking = false;
+  if (_gpsTimer) {
+    clearInterval(_gpsTimer);
+    _gpsTimer = null;
+  }
+  console.log('GPS tracking stopped');
+}
+
+async function sendDriverLocation() {
+  if (!navigator.geolocation) return;
+
+  navigator.geolocation.getCurrentPosition(
+    pos => {
+      const { latitude, longitude, accuracy, speed, heading } = pos.coords;
+      const ts = new Date().toISOString();
+
+      // Send to backend (non-blocking)
+      apiFetch('/api/telemetry/location', 'POST', {
+        driver_id: DRIVER_ID,
+        lat: latitude,
+        lng: longitude,
+        accuracy,
+        speed_mph: speed ? (speed * 2.237).toFixed(1) : 0,
+        heading: heading || 0,
+        ts
+      }).catch(() => {});
+    },
+    () => {} // Silent error
+  );
 }
 
 // ── HOS ───────────────────────────────────────────────────────────────────────
