@@ -1,6 +1,14 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <script>
+    // Auth check — redirect to login if no token
+    const token = localStorage.getItem('3ll_token');
+    const expiresAt = localStorage.getItem('3ll_expires_at');
+    if (!token || (expiresAt && new Date(expiresAt) < new Date())) {
+      window.location.href = './login.html';
+    }
+  </script>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <meta name="theme-color" content="#0a0f1e" />
@@ -1188,7 +1196,8 @@ function renderHOS(hos) {
 
 // ── HELPERS ───────────────────────────────────────────────────────────────────
 async function apiFetch(path, method = 'GET', body = null) {
-  const opts = { method, headers: { 'Authorization': `Bearer ${TOKEN}`, 'Content-Type': 'application/json' } };
+  const token = localStorage.getItem('3ll_token') || TOKEN;
+  const opts = { method, headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' } };
   if (body) opts.body = JSON.stringify(body);
   return fetch(API + path, opts);
 }
@@ -1205,9 +1214,13 @@ function showToast(msg) {
   _toastTimer = setTimeout(() => el.classList.remove('show'), 3200);
 }
 
-function logout() {
+async function logout() {
   if (!confirm('Sign out?')) return;
-  localStorage.clear(); location.reload();
+  try {
+    await apiFetch('/api/driver-auth/logout', 'POST');
+  } catch {}
+  localStorage.clear();
+  window.location.href = './login.html';
 }
 </script>
 </body>

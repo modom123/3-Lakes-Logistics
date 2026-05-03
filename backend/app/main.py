@@ -21,6 +21,7 @@ from .api import (
     comms_router,
     compliance_router,
     dashboard_router,
+    driver_auth_router,
     execution_router,
     fleet_public_router,
     fleet_router,
@@ -121,6 +122,7 @@ def create_app() -> FastAPI:
     app.include_router(compliance_router,     prefix="/api/compliance",   tags=["compliance"])
     app.include_router(comms_router,          prefix="/api/comms",        tags=["comms"])
     app.include_router(comms_public_router,   prefix="/api/comms",        tags=["comms"])
+    app.include_router(driver_auth_router,    prefix="/api",              tags=["driver-auth"])
 
     @app.get("/api/health", tags=["meta"])
     def health() -> dict:
