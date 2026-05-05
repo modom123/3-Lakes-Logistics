@@ -6,7 +6,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from ..supabase_client import get_supabase
 from .deps import require_bearer
 
-router = APIRouter(dependencies=[Depends(require_bearer)])
+router        = APIRouter(dependencies=[Depends(require_bearer)])
+public_router = APIRouter()  # no auth — used by public carrier website
 
 
 @router.get("/")
@@ -34,3 +35,41 @@ def set_status(fleet_id: str, new_status: str) -> dict:
         raise HTTPException(400, "invalid status")
     get_supabase().table("fleet_assets").update({"status": new_status}).eq("id", fleet_id).execute()
     return {"ok": True}
+
+
+# ── Public endpoints (no auth) — used by carrier-facing website ───────────────
+
+@public_router.get("/public/loads")
+def public_loads(limit: int = 20) -> dict:
+    """Return loads marked post_to_website=true. No auth required."""
+    try:
+        res = (
+            get_supabase()
+            .table("loads")
+            .select("load_number,origin,destination,origin_city,origin_state,dest_city,dest_state,rate_total,miles,rate_per_mile,pickup_at,equipment_type,weight")
+            .eq("post_to_website", True)
+            .in_("status", ["booked", "open", "available"])
+            .order("created_at", desc=True)
+            .limit(limit)
+            .execute()
+        )
+        return {"loads": res.data or [], "count": len(res.data or [])}
+    except Exception:
+        return {"loads": [], "count": 0}
+
+
+@public_router.get("/public/stats")
+def public_stats() -> dict:
+    """Return live stats for the public site (founders joined, active trucks, loads posted)."""
+    try:
+        sb = get_supabase()
+        carriers = sb.table("active_carriers").select("id", count="exact").execute()
+        founders = sb.table("active_carriers").select("id", count="exact").eq("plan", "founders").execute()
+        loads    = sb.table("loads").select("id", count="exact").eq("post_to_website", True).execute()
+        return {
+            "founders_joined":  getattr(founders,  "count", 0) or 0,
+            "total_carriers":   getattr(carriers,  "count", 0) or 0,
+            "loads_posted":     getattr(loads,     "count", 0) or 0,
+        }
+    except Exception:
+        return {"founders_joined": 0, "total_carriers": 0, "loads_posted": 0}

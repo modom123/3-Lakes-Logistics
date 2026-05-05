@@ -18,7 +18,7 @@ def _sk() -> str:
     return s
 
 
-def create_checkout_session(carrier_id: str, plan: str, email: str) -> str | None:
+def create_checkout_session(carrier_id: str, plan: str, email: str, founders_truck_count: int = 1) -> str | None:
     """Step 17: after intake we hand the carrier a Stripe checkout URL."""
     s = get_settings()
     if not s.stripe_secret_key or not s.stripe_price_founders:
@@ -26,13 +26,14 @@ def create_checkout_session(carrier_id: str, plan: str, email: str) -> str | Non
         return None
     try:
         _sk()
+        quantity = founders_truck_count if plan == "founders" else 1
         session = stripe.checkout.Session.create(
             mode="subscription",
             customer_email=email,
-            line_items=[{"price": s.stripe_price_founders, "quantity": 1}],
+            line_items=[{"price": s.stripe_price_founders, "quantity": quantity}],
             success_url="https://3lakeslogistics.com/welcome?cid=" + carrier_id,
             cancel_url="https://3lakeslogistics.com/?cid=" + carrier_id,
-            metadata={"carrier_id": carrier_id, "plan": plan},
+            metadata={"carrier_id": carrier_id, "plan": plan, "founders_truck_count": str(founders_truck_count)},
         )
         get_supabase().table("active_carriers").update(
             {"stripe_customer_id": session.customer or None}

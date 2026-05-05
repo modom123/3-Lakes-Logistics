@@ -106,6 +106,15 @@ class CarrierIntake(BaseModel):
     clearinghouse_consent: bool = False
     psp_consent: bool = False
 
+    # --- Step 4b: CDL / Driver License (Shield CDL monitoring) ---
+    driver_name: str | None = None
+    cdl_number: str | None = None
+    cdl_state: str | None = None
+    cdl_class: Literal["A", "B", "C"] | None = None
+    cdl_expiry: str | None = None          # ISO date — triggers Shield step 157
+    medical_card_expiry: str | None = None  # DOT physical (2-yr cycle)
+    clearinghouse_enrolled: bool = False
+
     # --- Step 5: Banking (Settler) ---
     bank_routing: str | None = None   # last 4 stored; token kept in provider
     bank_account: str | None = None   # last 4 stored
@@ -115,6 +124,7 @@ class CarrierIntake(BaseModel):
 
     # --- Step 6: Plan + e-sign ---
     plan: Plan = "founders"
+    founders_truck_count: int = 1  # How many trucks for founders program (if plan == "founders")
     esign_name: str
     esign_ip: str | None = None
     esign_user_agent: str | None = None

@@ -14,12 +14,13 @@ Steps executed on one submission:
 """
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException, Request, status
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Request, status
 
 from ..agents import penny, shield
 from ..logging_service import get_logger, log_agent
 from ..models.intake import CarrierIntake, IntakeResponse
 from ..supabase_client import get_supabase
+from ..triggers import fire_onboarding
 
 log = get_logger("route.intake")
 router = APIRouter()
@@ -33,7 +34,8 @@ def _last4(s: str | None) -> str | None:
 
 
 @router.post("/intake", response_model=IntakeResponse, status_code=status.HTTP_201_CREATED)
-async def carrier_intake(payload: CarrierIntake, request: Request) -> IntakeResponse:
+async def carrier_intake(payload: CarrierIntake, request: Request,
+                         bg: BackgroundTasks = BackgroundTasks()) -> IntakeResponse:
     sb = get_supabase()
     ip = request.client.host if request.client else None
     ua = request.headers.get("user-agent")
@@ -130,8 +132,12 @@ async def carrier_intake(payload: CarrierIntake, request: Request) -> IntakeResp
 
     # 8. Kick Shield + Penny
     log_agent("atlas", "intake_received", carrier_id=carrier_id, payload={"plan": payload.plan})
-    checkout_url = penny.create_checkout_session(carrier_id, payload.plan, str(payload.email))
+    checkout_url = penny.create_checkout_session(carrier_id, payload.plan, str(payload.email), payload.founders_truck_count)
     shield.enqueue_safety_check(carrier_id, payload.dot_number, payload.mc_number)
+
+    # 9. Fire all 30 onboarding steps in background (non-blocking)
+    bg.add_task(fire_onboarding, carrier_id)
+    log_agent("atlas", "trigger.onboarding", carrier_id=carrier_id, result="queued")
 
     return IntakeResponse(
         ok=True,
