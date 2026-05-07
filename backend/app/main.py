@@ -23,6 +23,8 @@ from .api import (
     dashboard_router,
     driver_auth_router,
     driver_router,
+    email_router,
+    email_ingest_router,
     executives_router,
     execution_router,
     notifications_router,
@@ -119,6 +121,7 @@ def create_app() -> FastAPI:
     app.include_router(founders_router,       prefix="/api/founders",     tags=["founders"])
     app.include_router(agents_router,         prefix="/api/agents",       tags=["agents"])
     app.include_router(webhooks_router,       prefix="/api/webhooks",     tags=["webhooks"])
+    app.include_router(email_ingest_router,   prefix="/api",              tags=["webhooks"])
     app.include_router(prospecting_router,    prefix="/api/prospecting",  tags=["prospecting"])
     app.include_router(triggers_router,       prefix="/api/triggers",     tags=["triggers"])
     app.include_router(clm_router,            prefix="/api/clm",          tags=["clm"])
@@ -131,6 +134,7 @@ def create_app() -> FastAPI:
     app.include_router(driver_router,         prefix="/api",              tags=["driver"])
     app.include_router(payout_router,         prefix="/api",              tags=["payout"])
     app.include_router(notifications_router,  prefix="/api",              tags=["notifications"])
+    app.include_router(email_router,          prefix="/api",              tags=["email"])
     app.include_router(executives_router,      prefix="/api",              tags=["executives"])
     app.include_router(health_router,                                     tags=["health"])
 

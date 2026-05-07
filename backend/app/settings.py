@@ -34,6 +34,9 @@ class Settings(BaseSettings):
     postmark_server_token: str = ""
     postmark_from_email: str = "ops@3lakeslogistics.com"
 
+    # Email ingest pipeline
+    sendgrid_inbound_email: str = "loads@3lakes.logistics"
+
     fmcsa_webkey: str = ""
 
     google_maps_api_key: str = ""
