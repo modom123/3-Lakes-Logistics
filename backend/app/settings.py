@@ -50,6 +50,10 @@ class Settings(BaseSettings):
 
     sentry_dsn: str = ""
 
+    # Reliability — Redis cache + backup API failover
+    redis_url: str = ""
+    backup_api_url: str = ""
+
     # Claude AI — CLM contract scanner + autonomous agents
     anthropic_api_key: str = ""
 

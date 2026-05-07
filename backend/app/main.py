@@ -29,6 +29,7 @@ from .api import (
     fleet_public_router,
     fleet_router,
     founders_router,
+    health_router,
     intake_router,
     leads_router,
     prospecting_router,
@@ -129,10 +130,7 @@ def create_app() -> FastAPI:
     app.include_router(driver_router,         prefix="/api",              tags=["driver"])
     app.include_router(payout_router,         prefix="/api",              tags=["payout"])
     app.include_router(notifications_router,  prefix="/api",              tags=["notifications"])
-
-    @app.get("/api/health", tags=["meta"])
-    def health() -> dict:
-        return {"ok": True, "env": s.env}
+    app.include_router(health_router,                                     tags=["health"])
 
     log.info("3 Lakes Logistics API ready (env=%s)", s.env)
     return app

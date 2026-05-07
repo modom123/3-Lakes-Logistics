@@ -1,0 +1,49 @@
+# Primary region — us-west (California)
+# Deploy: fly deploy --config deploy/fly.toml
+
+app = "3lakes-api-primary"
+primary_region = "lax"
+
+[build]
+  dockerfile = "backend/Dockerfile"
+
+[http_service]
+  internal_port = 8080
+  force_https   = true
+  auto_stop_machines  = false
+  auto_start_machines = true
+  min_machines_running = 2    # Always 2 machines minimum (high availability)
+
+  [http_service.concurrency]
+    type       = "requests"
+    hard_limit = 250
+    soft_limit = 200
+
+[[vm]]
+  memory = "1gb"
+  cpus   = 1
+
+[env]
+  ENV            = "production"
+  LOG_LEVEL      = "INFO"
+  PRIMARY_REGION = "lax"
+  BACKUP_API_URL = "https://3lakes-api-backup.fly.dev"
+
+# Health check — Fly.io restarts machine if this fails
+[[services.tcp_checks]]
+  interval    = "10s"
+  timeout     = "5s"
+  grace_period = "30s"
+
+[[services.http_checks]]
+  interval    = "15s"
+  timeout     = "5s"
+  grace_period = "30s"
+  method      = "GET"
+  path        = "/api/health/ping"
+  protocol    = "https"
+
+# Auto-scale: add machines when traffic spikes (1000 drivers)
+[metrics]
+  port = 9091
+  path = "/metrics"

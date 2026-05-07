@@ -665,8 +665,38 @@
 <div id="toast"></div>
 
 <script>
-const API = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
-  ? 'http://localhost:8080' : '';
+// ── API Failover — primary + backup ─────────────────────────────────────────
+const API_PRIMARY = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+  ? 'http://localhost:8080'
+  : 'https://3lakes-api-primary.fly.dev';
+const API_BACKUP  = 'https://3lakes-api-backup.fly.dev';
+
+let _apiBase       = API_PRIMARY;
+let _failoverCount = 0;
+let _lastHealthCheck = 0;
+
+async function _checkApiHealth() {
+  const now = Date.now();
+  if (now - _lastHealthCheck < 30000) return; // check at most every 30s
+  _lastHealthCheck = now;
+  try {
+    const r = await fetch(_apiBase + '/api/health/ping', { method: 'GET', signal: AbortSignal.timeout(4000) });
+    if (r.ok) { _failoverCount = 0; return; }
+    throw new Error('unhealthy');
+  } catch {
+    if (_apiBase === API_PRIMARY) {
+      console.warn('[API] Primary down — switching to backup');
+      _apiBase = API_BACKUP;
+      _failoverCount++;
+      showToast('Switched to backup server — service continues');
+    } else {
+      console.error('[API] Backup also unreachable');
+    }
+  }
+}
+setInterval(_checkApiHealth, 30000);
+
+const API = '';
 const SUPABASE_URL = (window.location.hostname === 'localhost')
   ? 'https://your-project.supabase.co'
   : window.location.origin.replace('localhost:8080', 'your-project.supabase.co');
@@ -1353,9 +1383,28 @@ function renderHOS(hos) {
 // ── HELPERS ───────────────────────────────────────────────────────────────────
 async function apiFetch(path, method = 'GET', body = null) {
   const token = localStorage.getItem('3ll_token') || TOKEN;
-  const opts = { method, headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' } };
+  const opts = {
+    method,
+    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+    signal: AbortSignal.timeout(10000)
+  };
   if (body) opts.body = JSON.stringify(body);
-  return fetch(API + path, opts);
+
+  // Try primary, automatically fall back to backup on failure
+  try {
+    const res = await fetch(_apiBase + path, opts);
+    if (res.ok || res.status < 500) return res;
+    throw new Error(`HTTP ${res.status}`);
+  } catch (err) {
+    if (_apiBase === API_PRIMARY) {
+      console.warn('[API] Primary failed, retrying on backup:', err.message);
+      _apiBase = API_BACKUP;
+      showToast('Reconnecting via backup server…');
+      const res2 = await fetch(_apiBase + path, { ...opts, signal: AbortSignal.timeout(10000) });
+      return res2;
+    }
+    throw err;
+  }
 }
 
 function esc(s) {

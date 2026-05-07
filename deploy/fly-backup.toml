@@ -1,0 +1,38 @@
+# Backup region — eu-central (Amsterdam)
+# Deploy: fly deploy --config deploy/fly-backup.toml
+
+app = "3lakes-api-backup"
+primary_region = "ams"
+
+[build]
+  dockerfile = "backend/Dockerfile"
+
+[http_service]
+  internal_port = 8080
+  force_https   = true
+  auto_stop_machines  = false
+  auto_start_machines = true
+  min_machines_running = 1
+
+  [http_service.concurrency]
+    type       = "requests"
+    hard_limit = 250
+    soft_limit = 200
+
+[[vm]]
+  memory = "1gb"
+  cpus   = 1
+
+[env]
+  ENV            = "production"
+  LOG_LEVEL      = "INFO"
+  PRIMARY_REGION = "ams"
+  IS_BACKUP      = "true"
+
+[[services.http_checks]]
+  interval    = "15s"
+  timeout     = "5s"
+  grace_period = "30s"
+  method      = "GET"
+  path        = "/api/health/ping"
+  protocol    = "https"

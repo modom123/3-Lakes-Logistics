@@ -14,6 +14,7 @@ from .routes_driver_auth   import router as driver_auth_router
 from .routes_driver        import router as driver_router
 from .routes_payout        import router as payout_router
 from .routes_notifications import router as notifications_router
+from .routes_health        import router as health_router
 
 from ..clm             import clm_router
 from ..execution_engine import execution_router
@@ -43,4 +44,5 @@ __all__ = [
     "execution_router",
     "atomic_ledger_router",
     "compliance_router",
+    "health_router",
 ]
