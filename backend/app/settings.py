@@ -29,6 +29,11 @@ class Settings(BaseSettings):
     vapi_assistant_id_vance: str = ""
     vapi_phone_number_id: str = ""
 
+    # Bland AI — outbound prospecting calls (Vance agent)
+    # Much cheaper than Vapi (~$0.06/min base + Claude LLM)
+    # Better for high-volume calling (1000+ calls/month)
+    bland_ai_api_key: str = ""
+
     elevenlabs_api_key: str = ""
 
     postmark_server_token: str = ""

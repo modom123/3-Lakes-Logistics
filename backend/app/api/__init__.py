@@ -6,8 +6,9 @@ from .routes_leads         import router as leads_router
 from .routes_dashboard     import router as dashboard_router
 from .routes_founders      import router as founders_router
 from .routes_agents        import router as agents_router
-from .routes_webhooks      import router as webhooks_router
-from .routes_prospecting   import router as prospecting_router
+from .routes_webhooks           import router as webhooks_router
+from .routes_bland_webhooks     import router as bland_webhooks_router
+from .routes_prospecting        import router as prospecting_router
 from .routes_triggers      import router as triggers_router
 from .routes_comms         import router as comms_public_router, router_auth as comms_router
 from .routes_driver_auth   import router as driver_auth_router
@@ -35,6 +36,7 @@ __all__ = [
     "founders_router",
     "agents_router",
     "webhooks_router",
+    "bland_webhooks_router",
     "prospecting_router",
     "triggers_router",
     "comms_router",
