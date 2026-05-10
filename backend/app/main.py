@@ -15,6 +15,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from .api import (
     agents_router,
     atomic_ledger_router,
+    bland_webhooks_router,
     carriers_router,
     clm_router,
     comms_public_router,
@@ -121,6 +122,7 @@ def create_app() -> FastAPI:
     app.include_router(founders_router,       prefix="/api/founders",     tags=["founders"])
     app.include_router(agents_router,         prefix="/api/agents",       tags=["agents"])
     app.include_router(webhooks_router,       prefix="/api/webhooks",     tags=["webhooks"])
+    app.include_router(bland_webhooks_router, prefix="/api",              tags=["webhooks"])
     app.include_router(email_ingest_router,   prefix="/api",              tags=["webhooks"])
     app.include_router(prospecting_router,    prefix="/api/prospecting",  tags=["prospecting"])
     app.include_router(triggers_router,       prefix="/api/triggers",     tags=["triggers"])
