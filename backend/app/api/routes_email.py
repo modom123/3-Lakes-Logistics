@@ -329,3 +329,94 @@ async def get_email_stats() -> dict:
                 "error": 0,
             },
         }
+
+
+@router.post("/email/imap/poll", dependencies=[require_bearer()])
+async def trigger_imap_poll() -> dict:
+    """Manually trigger IMAP polling for internal emails.
+
+    Polls Hostinger IMAP (or configured IMAP server) for unseen emails
+    and processes them through the same CLM pipeline as SendGrid.
+    """
+    from ..imap_poller import run_imap_poll
+
+    try:
+        result = await run_imap_poll()
+        return {
+            "ok": result.get("ok", False),
+            "status": result.get("status"),
+            "emails_processed": result.get("emails_processed", 0),
+            "error": result.get("error"),
+        }
+    except Exception as e:  # noqa: BLE001
+        log.error(f"IMAP poll endpoint error: {e}")
+        raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, str(e))
+
+
+@router.get("/email/sources", dependencies=[require_bearer()])
+async def get_email_sources() -> dict:
+    """Get email sources breakdown (SendGrid vs Hostinger IMAP)."""
+    try:
+        sb = get_supabase()
+
+        # Count emails by source
+        result = (
+            sb.table("email_log")
+            .select("source")
+            .execute()
+        )
+
+        if not result.data:
+            return {
+                "ok": True,
+                "data": {
+                    "sendgrid": 0,
+                    "hostinger_imap": 0,
+                    "unknown": 0,
+                }
+            }
+
+        source_counts = {"sendgrid": 0, "hostinger_imap": 0, "unknown": 0}
+        for record in result.data:
+            source = record.get("source", "unknown")
+            if source in source_counts:
+                source_counts[source] += 1
+            else:
+                source_counts["unknown"] += 1
+
+        return {
+            "ok": True,
+            "data": source_counts,
+        }
+    except Exception as e:  # noqa: BLE001
+        log.error(f"Failed to fetch email sources: {e}")
+        raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, str(e))
+
+
+@router.get("/email-log/source/{source_type}", dependencies=[require_bearer()])
+async def get_emails_by_source(
+    source_type: str,
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
+) -> dict:
+    """Get emails filtered by source (sendgrid or hostinger_imap)."""
+    try:
+        sb = get_supabase()
+
+        result = (
+            sb.table("email_log")
+            .select("*")
+            .eq("source", source_type)
+            .order("received_at", desc=True)
+            .range(offset, offset + limit - 1)
+            .execute()
+        )
+
+        return {
+            "ok": True,
+            "count": len(result.data),
+            "data": result.data,
+        }
+    except Exception as e:  # noqa: BLE001
+        log.error(f"Failed to fetch emails by source: {e}")
+        raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, str(e))

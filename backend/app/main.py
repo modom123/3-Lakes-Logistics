@@ -52,7 +52,9 @@ def _start_scheduler(app: FastAPI) -> None:
     try:
         from apscheduler.schedulers.background import BackgroundScheduler
         from apscheduler.triggers.cron import CronTrigger
+        from apscheduler.triggers.interval import IntervalTrigger
         from .triggers import fire_compliance_sweep, fire_analytics_update
+        from .imap_poller import run_imap_poll
 
         scheduler = BackgroundScheduler(timezone="UTC")
 
@@ -71,6 +73,18 @@ def _start_scheduler(app: FastAPI) -> None:
             id="analytics_daily",
             replace_existing=True,
         )
+
+        # IMAP polling for internal emails (every 5 minutes by default)
+        s = get_settings()
+        poll_interval = s.hostinger_imap_poll_interval_seconds
+        if s.hostinger_imap_enabled:
+            scheduler.add_job(
+                run_imap_poll,
+                IntervalTrigger(seconds=poll_interval),
+                id="imap_poll",
+                replace_existing=True,
+            )
+            log.info(f"IMAP polling enabled — interval: {poll_interval}s")
 
         scheduler.start()
         app.state.scheduler = scheduler

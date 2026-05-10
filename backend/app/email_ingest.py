@@ -123,6 +123,7 @@ async def receive_inbound_email(request: Request) -> dict[str, Any]:
             "body_html": html[:5000] if html else "",
             "attachment_count": 0,
             "status": "received",
+            "source": "sendgrid",
             "received_at": datetime.now(timezone.utc).isoformat(),
             "created_at": datetime.now(timezone.utc).isoformat(),
         }

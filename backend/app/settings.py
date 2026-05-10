@@ -64,6 +64,14 @@ class Settings(BaseSettings):
     sendgrid_api_key: str = ""
     sendgrid_inbound_secret: str = ""
 
+    # Hostinger IMAP — internal team communications & carrier emails
+    hostinger_imap_host: str = "imap.hostinger.com"
+    hostinger_imap_port: int = 993
+    hostinger_imap_username: str = ""
+    hostinger_imap_password: str = ""
+    hostinger_imap_enabled: bool = False
+    hostinger_imap_poll_interval_seconds: int = 300  # 5 minutes default
+
     # --- Load Board API Keys (Sonny) ---
     dat_client_id: str = ""
     dat_client_secret: str = ""
