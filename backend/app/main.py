@@ -14,7 +14,9 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .api import (
     agents_router,
+    analytics_router,
     atomic_ledger_router,
+    automations_router,
     carriers_router,
     clm_router,
     comms_public_router,
@@ -27,6 +29,7 @@ from .api import (
     email_ingest_router,
     executives_router,
     execution_router,
+    invoices_router,
     notifications_router,
     payout_router,
     fleet_public_router,
@@ -149,6 +152,9 @@ def create_app() -> FastAPI:
     app.include_router(payout_router,         prefix="/api",              tags=["payout"])
     app.include_router(notifications_router,  prefix="/api",              tags=["notifications"])
     app.include_router(email_router,          prefix="/api",              tags=["email"])
+    app.include_router(invoices_router,        prefix="/api/invoices",     tags=["invoices"])
+    app.include_router(automations_router,     prefix="/api/automations",  tags=["automations"])
+    app.include_router(analytics_router,       prefix="/api/analytics",    tags=["analytics"])
     app.include_router(executives_router,      prefix="/api",              tags=["executives"])
     app.include_router(health_router,                                     tags=["health"])
 

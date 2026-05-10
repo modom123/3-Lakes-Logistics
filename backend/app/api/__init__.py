@@ -17,6 +17,9 @@ from .routes_notifications import router as notifications_router
 from .routes_health        import router as health_router
 from .routes_executives    import router as executives_router
 from .routes_email         import router as email_router
+from .routes_invoices      import router as invoices_router
+from .routes_automations   import router as automations_router
+from .routes_analytics     import router as analytics_router
 
 from ..clm             import clm_router
 from ..email_ingest    import router as email_ingest_router
@@ -44,6 +47,9 @@ __all__ = [
     "payout_router",
     "notifications_router",
     "email_router",
+    "invoices_router",
+    "automations_router",
+    "analytics_router",
     "email_ingest_router",
     "clm_router",
     "execution_router",
