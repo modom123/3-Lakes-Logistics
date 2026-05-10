@@ -245,10 +245,37 @@ nav{
 .svc-ul li::before{content:"▸";color:var(--gold);font-weight:700;flex-shrink:0;margin-top:1px;}
 .comp-panel{background:var(--off);border-radius:16px;border:1px solid var(--border);padding:28px;display:flex;flex-direction:column;gap:10px;}
 .comp-item{background:var(--white);border:1px solid var(--border);border-radius:11px;padding:14px 16px;display:flex;gap:12px;align-items:center;transition:all .2s;border-left:3px solid var(--gold);}
+.comp-item{cursor:pointer;}
 .comp-item:hover{box-shadow:var(--shadow);transform:translateX(2px);}
+.comp-item::after{content:'→';margin-left:auto;color:var(--gold2);font-weight:700;opacity:0;transition:opacity .2s;}
+.comp-item:hover::after{opacity:1;}
 .comp-ico{font-size:19px;flex-shrink:0;}
 .comp-t{font-family:var(--ff-h);font-size:14px;color:var(--navy);font-weight:700;}
 .comp-s{font-size:11px;color:var(--muted);margin-top:2px;}
+/* Modals */
+.modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:100;opacity:0;pointer-events:none;transition:opacity .3s;}
+.modal-overlay.active{opacity:1;pointer-events:auto;}
+.modal-content{background:var(--white);border-radius:16px;padding:40px;max-width:500px;width:90%;max-height:80vh;overflow-y:auto;box-shadow:var(--shadow-lg);}
+.modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;}
+.modal-header h3{font-family:var(--ff-h);font-size:24px;color:var(--navy);font-weight:800;margin:0;}
+.modal-header button{background:none;border:none;font-size:28px;color:var(--muted);cursor:pointer;padding:0;width:30px;height:30px;}
+.modal-header button:hover{color:var(--navy);}
+.modal-body h4{font-family:var(--ff-h);font-size:16px;color:var(--navy);font-weight:700;margin:0 0 14px;}
+.modal-body ul{list-style:none;padding:0;margin:0 0 18px;}
+.modal-body li{padding:8px 0;padding-left:24px;position:relative;color:var(--text);font-size:14px;line-height:1.6;}
+.modal-body li::before{content:'✓';position:absolute;left:0;color:var(--green);font-weight:700;}
+.modal-body p{color:var(--text);font-size:14px;line-height:1.6;margin:0;}
+.modal-body strong{color:var(--navy);}
+/* Sticky Button */
+.sticky-cta{position:fixed;bottom:24px;right:24px;z-index:50;}
+.sticky-cta button{background:var(--gold2);color:var(--navy);padding:14px 24px;border:none;border-radius:50px;font-weight:600;cursor:pointer;box-shadow:0 4px 16px rgba(200,144,42,0.3);transition:all .2s;font-size:15px;}
+.sticky-cta button:hover{background:var(--gold3);transform:translateY(-3px);box-shadow:0 6px 24px rgba(200,144,42,0.4);}
+/* Calendar Widget */
+.calendar-section{background:var(--off);padding:60px;text-align:center;margin:40px 0;}
+.calendar-section h3{font-family:var(--ff-h);font-size:28px;color:var(--navy);font-weight:800;margin-bottom:12px;}
+.calendar-section p{color:var(--muted);font-size:15px;margin-bottom:28px;max-width:600px;margin-left:auto;margin-right:auto;}
+.calendar-iframe-wrap{max-width:900px;margin:0 auto;height:600px;border-radius:12px;overflow:hidden;box-shadow:var(--shadow);}
+.calendar-iframe-wrap iframe{width:100%;height:100%;border:none;}
 /* Pricing */
 .price-s{background:var(--off);padding:80px 60px;}
 .price-s-inner{max-width:1060px;margin:0 auto;}
@@ -875,11 +902,11 @@ button,a,[onclick]{cursor:pointer;}
       <div class="comp-panel">
         <div style="font-family:var(--ff-h);font-size:17px;color:var(--navy);font-weight:800;margin-bottom:4px;text-align:center;">Compliance Suite</div>
         <div style="font-size:11px;color:var(--muted);text-align:center;margin-bottom:14px;font-family:var(--ff-m);">EVERYTHING INCLUDED</div>
-        <div class="comp-item"><span class="comp-ico">📱</span><div><div class="comp-t">ELD Monitoring</div><div class="comp-s">Real-time HOS alerts</div></div></div>
-        <div class="comp-item"><span class="comp-ico">📊</span><div><div class="comp-t">IFTA Assistance</div><div class="comp-s">Quarterly report support</div></div></div>
-        <div class="comp-item"><span class="comp-ico">📋</span><div><div class="comp-t">Document Management</div><div class="comp-s">BOLs, PODs, rate confirmations</div></div></div>
-        <div class="comp-item"><span class="comp-ico">💳</span><div><div class="comp-t">Factoring Support</div><div class="comp-s">Same-day payment options</div></div></div>
-        <div class="comp-item"><span class="comp-ico">⚖️</span><div><div class="comp-t">FMCSA Compliance</div><div class="comp-s">Regulatory updates &amp; monitoring</div></div></div>
+        <div class="comp-item" onclick="openComplianceModal('eld')"><span class="comp-ico">📱</span><div><div class="comp-t">ELD Monitoring</div><div class="comp-s">Real-time HOS alerts</div></div></div>
+        <div class="comp-item" onclick="openComplianceModal('ifta')"><span class="comp-ico">📊</span><div><div class="comp-t">IFTA Assistance</div><div class="comp-s">Quarterly report support</div></div></div>
+        <div class="comp-item" onclick="openComplianceModal('docs')"><span class="comp-ico">📋</span><div><div class="comp-t">Document Management</div><div class="comp-s">BOLs, PODs, rate confirmations</div></div></div>
+        <div class="comp-item" onclick="openComplianceModal('factoring')"><span class="comp-ico">💳</span><div><div class="comp-t">Factoring Support</div><div class="comp-s">Same-day payment options</div></div></div>
+        <div class="comp-item" onclick="openComplianceModal('fmcsa')"><span class="comp-ico">⚖️</span><div><div class="comp-t">FMCSA Compliance</div><div class="comp-s">Regulatory updates &amp; monitoring</div></div></div>
       </div>
     </div>
   </div></div>
@@ -1003,6 +1030,14 @@ button,a,[onclick]{cursor:pointer;}
         </div>
         <div class="cf-ok" id="cfOK"><div class="cf-ok-ico">✉️</div><div class="cf-ok-t">Message Sent!</div><p class="cf-ok-p">Thanks! The 3 Lakes team will reply within 2 business hours.</p></div>
       </div>
+    </div>
+  </div>
+
+  <div class="calendar-section">
+    <h3>Schedule a Consultation Call</h3>
+    <p>Have questions about your operation or want to explore if we're the right fit? Book a 15-minute call with our team — no pressure, just helpful advice.</p>
+    <div class="calendar-iframe-wrap">
+      <iframe src="https://calendly.com/your-calendly-link/15min" frameborder="0"></iframe>
     </div>
   </div>
 
@@ -2922,6 +2957,145 @@ function closePDF(){
 }
 document.getElementById('pdfMod').addEventListener('click',function(e){if(e.target===this)closePDF();});
 document.getElementById('agMod').addEventListener('click',function(e){if(e.target===this)closeAg();});
+
+// Compliance Modal Functions
+const complianceContent = {
+  eld: {
+    title: 'How Our ELD Monitoring Works',
+    content: `
+      <h4>Our Process:</h4>
+      <ul>
+        <li>24/7 automated monitoring of your ELD data</li>
+        <li>Real-time HOS violation alerts before they happen</li>
+        <li>Automatic notification to you + our compliance team</li>
+        <li>We help resolve violations within 2 hours</li>
+        <li>Monthly HOS trend reports and coaching</li>
+      </ul>
+      <p><strong>Result:</strong> Zero surprise FMCSA violations. Your drivers stay compliant automatically.</p>
+    `
+  },
+  ifta: {
+    title: 'How Our IFTA Assistance Works',
+    content: `
+      <h4>Our Process:</h4>
+      <ul>
+        <li>Automated mileage tracking by state from your ELD</li>
+        <li>Quarterly filing deadline reminders (January, April, July, October)</li>
+        <li>Preparation of quarterly IFTA report with fuel consumption data</li>
+        <li>Tax credit calculation and filing support</li>
+        <li>Payment amount estimates before each filing</li>
+      </ul>
+      <p><strong>Result:</strong> IFTA filings never missed. You know exactly what you owe before the deadline.</p>
+    `
+  },
+  docs: {
+    title: 'How Our Document Management Works',
+    content: `
+      <h4>Our Process:</h4>
+      <ul>
+        <li>BOLs, rate cons, and PODs automatically organized by load</li>
+        <li>Intelligent OCR scans documents and extracts key data</li>
+        <li>Files securely stored and searchable by load number, date, or broker</li>
+        <li>Automatic forwarding to your accountant or factoring company</li>
+        <li>Complete audit trail for every document</li>
+      </ul>
+      <p><strong>Result:</strong> No lost paperwork. Every document is filed, organized, and audit-ready.</p>
+    `
+  },
+  factoring: {
+    title: 'How Our Factoring Support Works',
+    content: `
+      <h4>Our Process:</h4>
+      <ul>
+        <li>Invoice preparation with all required documentation</li>
+        <li>Direct submission to your preferred factoring company</li>
+        <li>Same-day payment options available through our partnerships</li>
+        <li>Tracking of factoring status and advance fees</li>
+        <li>Direct communication with factoring companies for quick approvals</li>
+      </ul>
+      <p><strong>Result:</strong> Cash flow in 24 hours. You never wait for shipper payment.</p>
+    `
+  },
+  fmcsa: {
+    title: 'How Our FMCSA Compliance Works',
+    content: `
+      <h4>Our Process:</h4>
+      <ul>
+        <li>Real-time monitoring of your FMCSA SAFER profile</li>
+        <li>CSA BASIC score alerts when thresholds approach violations</li>
+        <li>Regulatory update notifications (new hours rules, weight limits, hazmat changes)</li>
+        <li>Safety Light status (green/yellow/red) updated daily</li>
+        <li>Pre-emptive coaching before violations occur</li>
+      </ul>
+      <p><strong>Result:</strong> You stay ahead of FMCSA changes. Authority protected, safety record clean.</p>
+    `
+  }
+};
+
+function openComplianceModal(type) {
+  const modal = document.getElementById('complianceModal');
+  const data = complianceContent[type];
+  if(!data) return;
+
+  document.querySelector('.modal-header h3').textContent = data.title;
+  document.querySelector('.modal-body').innerHTML = data.content;
+  modal.classList.add('active');
+}
+
+function closeComplianceModal() {
+  document.getElementById('complianceModal').classList.remove('active');
+}
+
+// Modal close on background click
+document.getElementById('complianceModal')?.addEventListener('click', function(e) {
+  if(e.target === this) closeComplianceModal();
+});
+
+// Sticky button toggle
+function toggleCalendarWidget() {
+  document.getElementById('calendarOverlay').classList.add('active');
+}
+
+function closeCalendarWidget() {
+  document.getElementById('calendarOverlay').classList.remove('active');
+}
+
+// Close calendar on background click
+document.getElementById('calendarOverlay')?.addEventListener('click', function(e) {
+  if(e.target === this) closeCalendarWidget();
+});
 </script>
+
+<!-- Compliance Modal -->
+<div id="complianceModal" class="modal-overlay">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3>Modal Title</h3>
+      <button onclick="closeComplianceModal()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <!-- Content inserted by JavaScript -->
+    </div>
+  </div>
+</div>
+
+<!-- Sticky Call-to-Action Button -->
+<div class="sticky-cta">
+  <button onclick="toggleCalendarWidget()">📞 Book a Call</button>
+</div>
+
+<!-- Calendar Widget Overlay -->
+<div id="calendarOverlay" class="modal-overlay">
+  <div class="modal-content" style="max-width:900px;padding:0;overflow:hidden;">
+    <div style="padding:20px;background:var(--navy);display:flex;justify-content:space-between;align-items:center;">
+      <h3 style="color:var(--white);margin:0;">Schedule a Call</h3>
+      <button onclick="closeCalendarWidget()" style="background:none;border:none;color:var(--white);font-size:28px;cursor:pointer;">&times;</button>
+    </div>
+    <div style="height:600px;">
+      <iframe src="https://calendly.com/your-calendly-link/15min" width="100%" height="100%" frameborder="0" style="border:none;"></iframe>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
