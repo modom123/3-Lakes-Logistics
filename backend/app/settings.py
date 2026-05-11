@@ -33,6 +33,7 @@ class Settings(BaseSettings):
     # Much cheaper than Vapi (~$0.06/min base + Claude LLM)
     # Better for high-volume calling (1000+ calls/month)
     bland_ai_api_key: str = ""
+    bland_ai_webhook_secret: str = ""
 
     elevenlabs_api_key: str = ""
 

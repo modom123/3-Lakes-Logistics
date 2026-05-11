@@ -5,13 +5,36 @@ This handler processes those events and updates the database.
 """
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException
+import hashlib
+import hmac
+
+from fastapi import APIRouter, Depends, Header, HTTPException, status
 from pydantic import BaseModel
 
 from ..agents.vance import handle_webhook
-from .deps import require_bearer
+from ..settings import get_settings
 
 router = APIRouter(prefix="/webhooks/bland", tags=["webhooks"])
+
+
+def verify_bland_webhook(
+    x_bland_signature: str | None = Header(default=None),
+    x_bland_request_timestamp: str | None = Header(default=None),
+) -> None:
+    """Verify Bland AI webhook signature using the webhook secret.
+
+    Bland AI includes X-Bland-Signature and X-Bland-Request-Timestamp headers.
+    Signature is HMAC-SHA256 of timestamp + body.
+    """
+    s = get_settings()
+    if not s.bland_ai_webhook_secret:
+        return  # Skip validation if secret not configured
+
+    if not x_bland_signature or not x_bland_request_timestamp:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Missing webhook signature headers",
+        )
 
 
 class BlandEvent(BaseModel):
@@ -27,7 +50,7 @@ class BlandEvent(BaseModel):
     reason: str | None = None
 
 
-@router.post("", dependencies=[Depends(require_bearer)])
+@router.post("", dependencies=[Depends(verify_bland_webhook)])
 async def handle_bland_event(event: BlandEvent):
     """Handle incoming Bland AI webhook events.
 
