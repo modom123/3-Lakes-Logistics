@@ -19,6 +19,7 @@ def run(payload: dict[str, Any]) -> dict[str, Any]:
         "lead_id": "lead_123",
         "phone": "+15551234567",
         "prospect_name": "John Smith",
+        "prospect_email": "john@smithtrucking.com",  # needed for follow-up
         "company_name": "Smith Trucking",
         "dot_number": "1234567",  # optional
         "current_pain": "manual dispatch",  # optional
@@ -28,6 +29,7 @@ def run(payload: dict[str, Any]) -> dict[str, Any]:
     lead_id = payload.get("lead_id", "")
     phone = payload.get("phone", "")
     prospect_name = payload.get("prospect_name", "Friend")
+    prospect_email = payload.get("prospect_email", "")
     company_name = payload.get("company_name", "")
     dot_number = payload.get("dot_number", "")
     current_pain = payload.get("current_pain", "")
@@ -40,6 +42,7 @@ def run(payload: dict[str, Any]) -> dict[str, Any]:
         lead_id=lead_id,
         phone=phone,
         prospect_name=prospect_name,
+        prospect_email=prospect_email,
         company_name=company_name,
         dot_number=dot_number,
         current_pain=current_pain,

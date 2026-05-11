@@ -47,6 +47,7 @@ def start_outbound_call(
     lead_id: str,
     phone: str,
     prospect_name: str = "Friend",
+    prospect_email: str = "",
     company_name: str = "",
     dot_number: str = "",
     current_pain: str = "",
@@ -58,6 +59,7 @@ def start_outbound_call(
         lead_id: Your internal lead ID for tracking
         phone: Phone number to call (e.g., "+15551234567")
         prospect_name: Prospect's name
+        prospect_email: Prospect's email (for follow-up)
         company_name: Their company (if known)
         dot_number: DOT number (if known)
         current_pain: Known pain point (e.g., "manual dispatch", "high fuel costs")
@@ -88,6 +90,7 @@ Goal: Qualify and offer demo call with Commander."""
             "metadata": {
                 "lead_id": lead_id,
                 "prospect_name": prospect_name,
+                "prospect_email": prospect_email,
                 "company_name": company_name,
                 "dot_number": dot_number,
             },
@@ -148,11 +151,19 @@ def handle_bland_webhook(event: dict[str, Any]) -> dict[str, Any]:
     - call.completed: Call finished, includes transcript + analysis
     - call.failed: Call couldn't connect
     - call.transferred: Call transferred to human (if enabled)
+
+    For interested prospects, triggers follow-up sequence (email + SMS reminder).
     """
+    from .vance_follow_up import run as run_follow_up
+
     event_type = event.get("event") or event.get("type")
     call_id = event.get("call_id")
+    phone_number = event.get("phone_number", "")
     metadata = event.get("metadata") or {}
     lead_id = metadata.get("lead_id")
+    prospect_name = metadata.get("prospect_name", "")
+    prospect_email = metadata.get("prospect_email", "")
+    company_name = metadata.get("company_name", "")
 
     if event_type == "call.completed":
         transcript = event.get("transcript", "")
@@ -177,16 +188,31 @@ def handle_bland_webhook(event: dict[str, Any]) -> dict[str, Any]:
         # Parse Bland's analysis for decision signals
         success = analysis.get("success", False)
         reason = analysis.get("reason", "unknown")
+        outcome = "interested" if success else "not_interested"
+
+        # Trigger follow-up sequence if interested
+        follow_up_result = None
+        if outcome == "interested" and prospect_email and phone_number:
+            follow_up_result = run_follow_up({
+                "lead_id": lead_id,
+                "prospect_name": prospect_name,
+                "prospect_email": prospect_email,
+                "company_name": company_name,
+                "phone_number": phone_number,
+                "call_outcome": "interested",
+                "call_id": call_id,
+            })
 
         return {
             "status": "processed",
             "lead_id": lead_id,
             "call_id": call_id,
-            "outcome": "interested" if success else "not_interested",
+            "outcome": outcome,
             "reason": reason,
             "duration": duration,
             "cost": round(cost, 2),
             "transcript": transcript,
+            "follow_up": follow_up_result,
         }
 
     elif event_type == "call.failed":
