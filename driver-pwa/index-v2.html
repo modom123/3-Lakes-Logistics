@@ -1,0 +1,1042 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script>
+    const token = localStorage.getItem('3ll_token');
+    const expiresAt = localStorage.getItem('3ll_expires_at');
+    if (!token || (expiresAt && new Date(expiresAt) < new Date())) {
+      window.location.href = './login.html';
+    }
+  </script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#0a0f1e" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>3 Lakes Driver — Founders Program</title>
+  <link rel="manifest" href="manifest.json" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.41.0"></script>
+  <style>
+    :root {
+      --bg:       #0a0f1e;
+      --surface:  #111827;
+      --card:     #1a2235;
+      --border:   #2a3550;
+      --accent:   #3b82f6;
+      --green:    #22c55e;
+      --yellow:   #f59e0b;
+      --red:      #ef4444;
+      --text:     #f1f5f9;
+      --muted:    #64748b;
+      --radius:   14px;
+      --safe-top: env(safe-area-inset-top, 0px);
+      --safe-bot: env(safe-area-inset-bottom, 0px);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    html, body { height: 100%; background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; overflow: hidden; }
+
+    /* ── HEADER ── */
+    #header {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      padding: calc(var(--safe-top) + 12px) 16px 12px;
+      background: var(--surface); border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    #header .logo { font-size: 18px; font-weight: 700; color: var(--accent); letter-spacing: -.5px; }
+    #header .logo span { color: var(--text); }
+    #header .info { display: flex; flex-direction: column; gap: 2px; }
+    #driver-name { font-size: 12px; color: var(--muted); }
+    #program-badge { font-size: 9px; background: #22c55e44; color: var(--green); padding: 2px 6px; border-radius: 4px; border: 1px solid #22c55e44; font-weight: 700; }
+    #online-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); box-shadow: 0 0 6px var(--green); }
+
+    /* ── MAIN SCROLL AREA ── */
+    #main {
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      padding-top: calc(var(--safe-top) + 58px);
+      padding-bottom: calc(var(--safe-bot) + 68px);
+      overflow-y: auto; -webkit-overflow-scrolling: touch;
+    }
+    .scroll-inner { padding: 12px 12px 0; }
+
+    /* ── BOTTOM NAV ── */
+    #bottom-nav {
+      position: fixed; bottom: 0; left: 0; right: 0; z-index: 100;
+      padding: 0 0 var(--safe-bot);
+      background: var(--surface); border-top: 1px solid var(--border);
+      display: flex;
+    }
+    .nav-btn {
+      flex: 1; display: flex; flex-direction: column; align-items: center;
+      padding: 10px 4px; gap: 3px; border: none; background: none;
+      color: var(--muted); font-size: 10px; cursor: pointer;
+      transition: color .15s;
+    }
+    .nav-btn.active { color: var(--accent); }
+    .nav-btn svg { width: 22px; height: 22px; }
+
+    /* ── VIEWS ── */
+    .view { display: none; }
+    .view.active { display: block; }
+
+    /* ── CARDS ── */
+    .card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 16px; margin-bottom: 10px;
+    }
+    .card-title { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .8px; margin-bottom: 10px; }
+    .card-value { font-size: 28px; font-weight: 700; }
+    .card-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+    /* ── ALERT CARD (Compliance, Maintenance) ── */
+    .alert-card {
+      background: linear-gradient(135deg, #7f1d1d44 0%, #5f0f0f44 100%);
+      border: 1px solid #ef444444;
+      border-radius: var(--radius);
+      padding: 14px;
+      margin-bottom: 10px;
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+    }
+    .alert-icon { font-size: 20px; flex-shrink: 0; }
+    .alert-content { flex: 1; }
+    .alert-title { font-size: 13px; font-weight: 700; color: var(--red); margin-bottom: 2px; }
+    .alert-text { font-size: 12px; color: var(--muted); line-height: 1.4; }
+
+    /* ── STATUS PILL ── */
+    .pill {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 4px 10px; border-radius: 99px; font-size: 11px; font-weight: 600;
+    }
+    .pill-green  { background: #14532d44; color: var(--green);  border: 1px solid #22c55e44; }
+    .pill-yellow { background: #78350f44; color: var(--yellow); border: 1px solid #f59e0b44; }
+    .pill-red    { background: #7f1d1d44; color: var(--red);    border: 1px solid #ef444444; }
+    .pill-blue   { background: #1e3a5f44; color: var(--accent); border: 1px solid #3b82f644; }
+    .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+
+    /* ── LOAD CARD ── */
+    .load-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; margin-bottom: 10px; }
+    .load-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
+    .load-number { font-size: 16px; font-weight: 700; }
+    .route { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+    .city { flex: 1; }
+    .city-name { font-size: 15px; font-weight: 600; }
+    .city-state { font-size: 11px; color: var(--muted); }
+    .arrow { color: var(--muted); font-size: 16px; }
+    .load-meta { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .meta-item { background: var(--surface); border-radius: 8px; padding: 8px 10px; }
+    .meta-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 2px; }
+    .meta-value { font-size: 14px; font-weight: 600; }
+
+    /* ── ACTION BUTTONS ── */
+    .btn { width: 100%; padding: 14px; border-radius: var(--radius); border: none; font-size: 15px; font-weight: 600; cursor: pointer; transition: opacity .15s; margin-bottom: 8px; display: flex; align-items: center; justify-content: center; gap: 8px; }
+    .btn:active { opacity: .7; }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-success { background: var(--green); color: #fff; }
+    .btn-warning { background: var(--yellow); color: #000; }
+    .btn-danger  { background: var(--red);   color: #fff; }
+    .btn-ghost   { background: var(--surface); color: var(--text); border: 1px solid var(--border); }
+
+    /* ── HOS GAUGE ── */
+    .hos-row { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin-bottom: 10px; }
+    .hos-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 10px; text-align: center; }
+    .hos-hours { font-size: 22px; font-weight: 700; }
+    .hos-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; margin-top: 2px; }
+    .hos-bar { height: 4px; border-radius: 2px; background: var(--border); margin-top: 6px; overflow: hidden; }
+    .hos-fill { height: 100%; border-radius: 2px; transition: width .3s; }
+
+    /* ── SECTION HEADER ── */
+    .section-header { font-size: 13px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .8px; margin: 16px 0 8px; }
+
+    /* ── TOAST ── */
+    #toast {
+      position: fixed; bottom: calc(var(--safe-bot) + 80px); left: 50%; transform: translateX(-50%) translateY(20px);
+      background: #1e293b; border: 1px solid var(--border); border-radius: 99px;
+      padding: 10px 20px; font-size: 13px; font-weight: 500;
+      opacity: 0; transition: opacity .2s, transform .2s; pointer-events: none; white-space: nowrap; z-index: 999;
+    }
+    #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    /* ── STATS GRID ── */
+    .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
+    .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 12px; text-align: center; }
+    .stat-label { font-size: 10px; color: var(--muted); margin-bottom: 4px; }
+    .stat-value { font-size: 18px; font-weight: 700; color: var(--green); }
+
+    /* ── EARNINGS BREAKDOWN ── */
+    .earning-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 12px; }
+    .earning-row:last-child { border-bottom: none; }
+    .earning-label { color: var(--muted); }
+    .earning-value { font-weight: 600; }
+    .earning-value.net { font-size: 14px; color: var(--green); font-weight: 700; }
+
+    /* ── NOTIFICATION ── */
+    .notification-item {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 12px; margin-bottom: 8px;
+      display: flex; gap: 10px; align-items: flex-start;
+    }
+    .notification-icon { font-size: 18px; flex-shrink: 0; }
+    .notification-content { flex: 1; }
+    .notification-title { font-size: 12px; font-weight: 600; color: var(--text); }
+    .notification-time { font-size: 10px; color: var(--muted); }
+
+    /* ── MODAL ── */
+    .modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); z-index: 999; }
+    .modal.show { display: flex; align-items: flex-end; }
+    .modal-content {
+      background: var(--surface); width: 100%; border-radius: 20px 20px 0 0;
+      padding: 24px 16px calc(16px + var(--safe-bot));
+      max-height: 80vh; overflow-y: auto;
+    }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+    .modal-title { font-size: 18px; font-weight: 700; }
+    .modal-close { background: none; border: none; color: var(--muted); font-size: 20px; cursor: pointer; }
+  </style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div id="header">
+  <div class="info">
+    <div class="logo">3 Lakes <span>Driver</span></div>
+    <div id="driver-name">Loading...</div>
+  </div>
+  <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">
+    <span id="program-badge">FOUNDERS $300/mo</span>
+    <div style="display:flex;align-items:center;gap:8px;">
+      <div id="online-dot"></div>
+      <span style="font-size:11px;color:var(--muted)" id="conn-label">Online</span>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div id="main">
+  <div class="scroll-inner">
+
+    <!-- ── HOME VIEW ── -->
+    <div class="view active" id="view-home">
+      <!-- ALERTS SECTION -->
+      <div id="alerts-section" style="display:none">
+        <div id="alerts-list"></div>
+      </div>
+
+      <!-- CURRENT LOAD -->
+      <div class="section-header">Today's Load</div>
+      <div class="load-card" id="current-load-card">
+        <div class="load-header">
+          <div class="load-number" id="load-number">No Active Load</div>
+          <span class="pill pill-blue"><span class="dot"></span><span id="load-status-pill">Available</span></span>
+        </div>
+        <div class="route">
+          <div class="city">
+            <div class="city-name" id="origin-city">—</div>
+            <div class="city-state" id="origin-state"></div>
+          </div>
+          <div class="arrow">→</div>
+          <div class="city" style="text-align:right">
+            <div class="city-name" id="dest-city">—</div>
+            <div class="city-state" id="dest-state"></div>
+          </div>
+        </div>
+        <div class="load-meta">
+          <div class="meta-item"><div class="meta-label">Rate</div><div class="meta-value" id="load-rate">—</div></div>
+          <div class="meta-item"><div class="meta-label">Miles</div><div class="meta-value" id="load-miles">—</div></div>
+          <div class="meta-item"><div class="meta-label">Your Cut</div><div class="meta-value" style="color:var(--green)" id="load-your-cut">—</div></div>
+          <div class="meta-item"><div class="meta-label">RPM</div><div class="meta-value" id="load-rpm">—</div></div>
+          <div class="meta-item"><div class="meta-label">Commodity</div><div class="meta-value" id="load-commodity">—</div></div>
+          <div class="meta-item"><div class="meta-label">Weight</div><div class="meta-value" id="load-weight">—</div></div>
+        </div>
+
+        <div id="load-addresses" style="display:none;margin-top:12px;border-top:1px solid var(--border);padding-top:12px">
+          <div style="margin-bottom:10px">
+            <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase">Pickup Address</div>
+            <div id="pickup-address" style="font-size:13px">—</div>
+            <a id="pickup-maps-link" href="#" target="_blank" style="font-size:11px;color:var(--accent);text-decoration:none">🗺 Navigate</a>
+          </div>
+          <div>
+            <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase">Delivery Address</div>
+            <div id="delivery-address" style="font-size:13px">—</div>
+            <a id="delivery-maps-link" href="#" target="_blank" style="font-size:11px;color:var(--accent);text-decoration:none">🗺 Navigate</a>
+          </div>
+        </div>
+      </div>
+
+      <div id="action-area">
+        <button class="btn btn-success" id="btn-pickup" onclick="confirmPickup()">✅ Confirm Pickup</button>
+        <button class="btn btn-primary" id="btn-delivery" onclick="confirmDelivery()" style="display:none">📦 Confirm Delivery</button>
+        <button class="btn btn-warning" onclick="showView('docs')">📎 Upload BOL / POD</button>
+        <button class="btn btn-ghost" onclick="reportIssue()">⚠️ Report Issue</button>
+      </div>
+
+      <div class="section-header">Hours of Service (HOS)</div>
+      <div class="hos-row">
+        <div class="hos-card">
+          <div class="hos-hours" id="hos-drive">10:59</div>
+          <div class="hos-label">Drive</div>
+          <div class="hos-bar"><div class="hos-fill" id="hos-drive-bar" style="width:91%;background:var(--green)"></div></div>
+        </div>
+        <div class="hos-card">
+          <div class="hos-hours" id="hos-shift">12:45</div>
+          <div class="hos-label">Shift</div>
+          <div class="hos-bar"><div class="hos-fill" id="hos-shift-bar" style="width:80%;background:var(--accent)"></div></div>
+        </div>
+        <div class="hos-card">
+          <div class="hos-hours" id="hos-cycle">68:30</div>
+          <div class="hos-label">70hr Cycle</div>
+          <div class="hos-bar"><div class="hos-fill" id="hos-cycle-bar" style="width:98%;background:var(--yellow)"></div></div>
+        </div>
+      </div>
+
+      <div class="section-header">Today's Earnings</div>
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-label">Miles</div>
+          <div class="stat-value" id="miles-today">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Your Earnings</div>
+          <div class="stat-value" id="est-pay">—</div>
+        </div>
+      </div>
+
+      <div class="card" style="background:linear-gradient(135deg,#1e40af44,#0c2340ff)">
+        <div class="card-title">Founders Program Benefit</div>
+        <div style="font-size:13px;color:var(--text);line-height:1.6">
+          🎯 <strong>$300/month lifetime lock</strong> — One price forever<br>
+          💯 <strong>100% of load earnings</strong> — No commission<br>
+          ⚡ <strong>Full automation</strong> — Loads come to you<br>
+          💬 <strong>Direct dispatch support</strong> — Always available
+        </div>
+      </div>
+    </div>
+
+    <!-- ── LOADS VIEW ── -->
+    <div class="view" id="view-loads">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <div class="section-header" style="margin:0">Available Loads</div>
+        <button onclick="loadAvailableLoads()" style="background:none;border:none;color:var(--accent);font-size:13px;cursor:pointer">↻ Refresh</button>
+      </div>
+      <div id="available-loads-list"></div>
+
+      <div class="section-header" style="margin-top:16px">Recent Loads</div>
+      <div id="load-history-list"></div>
+    </div>
+
+    <!-- ── EARNINGS VIEW ── -->
+    <div class="view" id="view-earnings">
+      <div class="section-header">This Week</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
+        <div class="card">
+          <div class="card-title">Gross Pay</div>
+          <div class="card-value" style="color:var(--green)" id="week-gross">—</div>
+        </div>
+        <div class="card">
+          <div class="card-title">Loads</div>
+          <div class="card-value" id="week-loads">—</div>
+        </div>
+        <div class="card">
+          <div class="card-title">Miles</div>
+          <div class="card-value" id="week-miles">—</div>
+        </div>
+        <div class="card">
+          <div class="card-title">Avg RPM</div>
+          <div class="card-value" id="week-rpm">—</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Your Take-Home (Founders $300/mo)</div>
+        <div class="earning-row">
+          <div class="earning-label">Gross Earnings</div>
+          <div class="earning-value" id="breakdown-gross">—</div>
+        </div>
+        <div class="earning-row">
+          <div class="earning-label">Founders Fee (Flat)</div>
+          <div class="earning-value" id="breakdown-fee" style="color:var(--yellow)">$300</div>
+        </div>
+        <div class="earning-row">
+          <div class="earning-label">Insurance</div>
+          <div class="earning-value" id="breakdown-insurance">—</div>
+        </div>
+        <div class="earning-row">
+          <div class="earning-label">Fuel Advance</div>
+          <div class="earning-value" id="breakdown-fuel">$0</div>
+        </div>
+        <div class="earning-row">
+          <div class="earning-label earning-value net">Your Take-Home</div>
+          <div class="earning-value net" id="breakdown-net">—</div>
+        </div>
+      </div>
+
+      <div class="section-header">Year To Date</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
+        <div class="card">
+          <div class="card-title">YTD Earnings</div>
+          <div class="card-value" style="color:var(--green)" id="ytd-gross">—</div>
+        </div>
+        <div class="card">
+          <div class="card-title">YTD Miles</div>
+          <div class="card-value" id="ytd-miles">—</div>
+        </div>
+      </div>
+
+      <div class="section-header">Payment History</div>
+      <div id="settlement-list"></div>
+    </div>
+
+    <!-- ── MESSAGES VIEW ── -->
+    <div class="view" id="view-messages">
+      <div style="height:calc(100vh - 180px);overflow-y:auto;border:1px solid var(--border);border-radius:var(--radius);padding:12px;background:var(--card);margin-bottom:10px">
+        <div id="msg-list" style="display:flex;flex-direction:column;gap:10px">
+          <div style="text-align:center;color:var(--muted);padding:20px;font-size:13px">💬 Messages will appear here</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <input id="msg-input" type="text" placeholder="Message dispatch…" style="flex:1;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px;color:var(--text)" />
+        <button onclick="sendMessage()" style="background:var(--accent);color:#fff;border:none;border-radius:8px;padding:10px 16px;cursor:pointer;font-weight:600">Send</button>
+      </div>
+    </div>
+
+    <!-- ── DOCUMENTS VIEW ── -->
+    <div class="view" id="view-docs">
+      <div class="section-header">Upload Documents</div>
+      <div class="card">
+        <div class="card-title">Bill of Lading (BOL)</div>
+        <div style="background:var(--surface);border:2px dashed var(--border);border-radius:10px;padding:20px;text-align:center;cursor:pointer" onclick="triggerUpload('bol-upload')">
+          <input type="file" id="bol-upload" style="display:none" accept="image/*,application/pdf" onchange="handleUpload('bol',this)" />
+          <div style="font-size:24px;margin-bottom:8px">📄</div>
+          <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:2px">Tap to Upload</div>
+          <div style="font-size:11px;color:var(--muted)">Take photo or upload PDF</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Proof of Delivery (POD)</div>
+        <div style="background:var(--surface);border:2px dashed var(--border);border-radius:10px;padding:20px;text-align:center;cursor:pointer" onclick="triggerUpload('pod-upload')">
+          <input type="file" id="pod-upload" style="display:none" accept="image/*,application/pdf" onchange="handleUpload('pod',this)" />
+          <div style="font-size:24px;margin-bottom:8px">✍️</div>
+          <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:2px">Tap to Upload</div>
+          <div style="font-size:11px;color:var(--muted)">Get signature then upload</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── COMPLIANCE & MAINTENANCE VIEW ── -->
+    <div class="view" id="view-compliance">
+      <div class="section-header">Compliance Status</div>
+      <div id="compliance-list"></div>
+
+      <div class="section-header" style="margin-top:24px">Maintenance Schedule</div>
+      <div id="maintenance-list"></div>
+
+      <div class="section-header" style="margin-top:24px">Insurance & Documents</div>
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)">
+          <div>
+            <div style="font-size:13px;font-weight:600;color:var(--text)">🛡 Liability Insurance</div>
+            <div style="font-size:11px;color:var(--muted)">Annual policy</div>
+          </div>
+          <span class="pill pill-green">✓ Active</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0">
+          <div>
+            <div style="font-size:13px;font-weight:600;color:var(--text)">📋 Authority License</div>
+            <div style="font-size:11px;color:var(--muted)">USDOT & MC#</div>
+          </div>
+          <span class="pill pill-green">✓ Valid</span>
+        </div>
+      </div>
+
+      <div class="card" style="background:linear-gradient(135deg,#78350f44,#5a2d0c44)">
+        <div style="display:flex;gap:10px;align-items:flex-start">
+          <div style="font-size:20px">⚠️</div>
+          <div>
+            <div style="font-size:12px;font-weight:700;color:var(--yellow);margin-bottom:4px">Roadside Assistance</div>
+            <div style="font-size:12px;color:var(--muted);line-height:1.4">
+              24/7 breakdown support included with your Founders membership. Call anytime.
+            </div>
+            <a href="tel:+18005551234" style="display:inline-flex;align-items:center;gap:6px;color:var(--accent);font-size:12px;font-weight:700;margin-top:8px;text-decoration:none">
+              📞 (800) 555-1234
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── PROFILE VIEW ── -->
+    <div class="view" id="view-profile">
+      <div class="section-header">CDL & Credentials</div>
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">
+          <div style="font-size:12px;color:var(--muted)">CDL Number</div>
+          <div style="font-size:13px;font-weight:600" id="cdl-number">—</div>
+        </div>
+        <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">
+          <div style="font-size:12px;color:var(--muted)">Expiry Date</div>
+          <div style="font-size:13px;font-weight:600" id="cdl-expiry">—</div>
+        </div>
+        <div style="display:flex;justify-content:space-between;padding:8px 0">
+          <div style="font-size:12px;color:var(--muted)">Status</div>
+          <span class="pill pill-green" id="cdl-status-pill"><span class="dot"></span> Valid</span>
+        </div>
+      </div>
+
+      <div class="section-header">Equipment</div>
+      <div class="card">
+        <div style="margin-bottom:12px">
+          <label style="font-size:10px;color:var(--muted);font-weight:700">Truck Number</label>
+          <input type="text" id="truck-number" placeholder="e.g. T-104" style="width:100%;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px;color:var(--text);margin-top:4px" />
+        </div>
+        <div style="margin-bottom:12px">
+          <label style="font-size:10px;color:var(--muted);font-weight:700">Trailer</label>
+          <input type="text" id="trailer-number" placeholder="e.g. TRL-22 (53' Dry Van)" style="width:100%;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px;color:var(--text);margin-top:4px" />
+        </div>
+        <button class="btn btn-primary" onclick="saveEquipment()" style="margin-bottom:0">💾 Save Equipment</button>
+      </div>
+
+      <div class="section-header">Quick Support</div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <a href="tel:+18005551234" style="display:flex;align-items:center;justify-content:space-between;padding:12px;background:var(--card);border:1px solid var(--border);border-radius:10px;text-decoration:none">
+          <div>
+            <div style="font-size:13px;font-weight:600;color:var(--text)">🚨 Breakdown / Roadside</div>
+            <div style="font-size:11px;color:var(--muted)">24/7 Emergency</div>
+          </div>
+          <div style="background:var(--red);color:#fff;padding:6px 12px;border-radius:8px;font-size:12px;font-weight:700">Call</div>
+        </a>
+        <a href="tel:+18005550911" style="display:flex;align-items:center;justify-content:space-between;padding:12px;background:var(--card);border:1px solid var(--border);border-radius:10px;text-decoration:none">
+          <div>
+            <div style="font-size:13px;font-weight:600;color:var(--text)">📞 Dispatch Office</div>
+            <div style="font-size:11px;color:var(--muted)">Mon–Fri 6am–8pm CT</div>
+          </div>
+          <div style="background:var(--accent);color:#fff;padding:6px 12px;border-radius:8px;font-size:12px;font-weight:700">Call</div>
+        </a>
+      </div>
+
+      <button class="btn btn-ghost" onclick="logout()" style="margin-top:16px">Sign Out</button>
+    </div>
+
+  </div>
+</div>
+
+<!-- BOTTOM NAV -->
+<div id="bottom-nav">
+  <button class="nav-btn active" id="nav-home" onclick="showView('home')">
+    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+    Home
+  </button>
+  <button class="nav-btn" id="nav-loads" onclick="showView('loads')">
+    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+    Loads
+  </button>
+  <button class="nav-btn" id="nav-messages" onclick="showView('messages')">
+    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+    Messages
+  </button>
+  <button class="nav-btn" id="nav-earnings" onclick="showView('earnings')">
+    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+    Earnings
+  </button>
+  <button class="nav-btn" id="nav-compliance" onclick="showView('compliance')">
+    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 12l2 2 4-4m7 6a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+    Compliance
+  </button>
+  <button class="nav-btn" id="nav-profile" onclick="showView('profile')">
+    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+    Profile
+  </button>
+</div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<script>
+// ──────────────────────────────────────────────────────────────────────────────
+// CONFIGURATION
+// ──────────────────────────────────────────────────────────────────────────────
+const API_PRIMARY = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+  ? 'http://localhost:8080'
+  : 'https://3lakes-api-primary.fly.dev';
+const API_BACKUP  = 'https://3lakes-api-backup.fly.dev';
+
+let _apiBase       = API_PRIMARY;
+let _failoverCount = 0;
+let _lastHealthCheck = 0;
+
+const DRIVER_ID = localStorage.getItem('3ll_driver_id')   || 'DRV-001';
+const TOKEN     = localStorage.getItem('3ll_token')       || '';
+let MY_PHONE    = localStorage.getItem('3ll_phone')       || '';
+
+// ──────────────────────────────────────────────────────────────────────────────
+// INIT
+// ──────────────────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('driver-name').textContent = localStorage.getItem('3ll_driver_name') || 'Driver';
+  loadCurrentLoad();
+  loadProfile();
+  loadComplianceStatus();
+  setInterval(pollHOS, 30000);
+  registerServiceWorker();
+  startMsgPolling();
+});
+
+function registerServiceWorker() {
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// VIEW NAVIGATION
+// ──────────────────────────────────────────────────────────────────────────────
+function showView(name) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('view-' + name).classList.add('active');
+  document.getElementById('nav-' + name).classList.add('active');
+
+  if (name === 'loads')    { loadAvailableLoads(); loadLoadHistory(); }
+  if (name === 'earnings') { loadEarningsData(); }
+  if (name === 'messages') { loadMessages(true); }
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// CURRENT LOAD
+// ──────────────────────────────────────────────────────────────────────────────
+async function loadCurrentLoad() {
+  try {
+    const res = await apiFetch('/api/fleet?status=in_transit&limit=1');
+    const loads = await res.json();
+    if (loads && loads.length > 0) renderCurrentLoad(loads[0]);
+    else renderNoLoad();
+  } catch { renderNoLoad(); }
+}
+
+function renderCurrentLoad(load) {
+  document.getElementById('load-number').textContent      = load.load_number || load.id?.slice(0,8) || 'LOAD-001';
+  document.getElementById('load-status-pill').textContent = (load.status || 'dispatched').replace('_',' ').toUpperCase();
+  document.getElementById('origin-city').textContent      = load.origin_city  || '—';
+  document.getElementById('origin-state').textContent     = load.origin_state || '';
+  document.getElementById('dest-city').textContent        = load.dest_city    || '—';
+  document.getElementById('dest-state').textContent       = load.dest_state   || '';
+  document.getElementById('load-rate').textContent        = load.rate_total   ? '$' + Number(load.rate_total).toLocaleString() : '—';
+  document.getElementById('load-miles').textContent       = load.miles        ? load.miles.toLocaleString() : '—';
+  document.getElementById('load-rpm').textContent         = (load.rate_total && load.miles) ? '$' + (load.rate_total / load.miles).toFixed(2) + '/mi' : '—';
+  document.getElementById('load-commodity').textContent   = load.commodity    || '—';
+  document.getElementById('load-weight').textContent      = load.weight       ? Number(load.weight).toLocaleString() + ' lbs' : '—';
+  document.getElementById('miles-today').textContent      = load.miles        ? load.miles.toLocaleString() : '—';
+
+  // Founders program: 100% of earnings (no commission)
+  const yourCut = load.rate_total || 0;
+  document.getElementById('load-your-cut').textContent    = yourCut ? '$' + Number(yourCut).toLocaleString() : '—';
+  document.getElementById('est-pay').textContent          = yourCut ? '$' + Number(yourCut).toLocaleString() : '—';
+
+  const pickupAddr   = [load.pickup_address, load.origin_city, load.origin_state].filter(Boolean).join(', ');
+  const deliveryAddr = [load.delivery_address, load.dest_city, load.dest_state].filter(Boolean).join(', ');
+  if (pickupAddr || deliveryAddr) {
+    document.getElementById('load-addresses').style.display = 'block';
+    document.getElementById('pickup-address').textContent   = pickupAddr || '—';
+    document.getElementById('delivery-address').textContent = deliveryAddr || '—';
+    if (pickupAddr)   document.getElementById('pickup-maps-link').href   = 'https://maps.google.com/?q=' + encodeURIComponent(pickupAddr);
+    if (deliveryAddr) document.getElementById('delivery-maps-link').href = 'https://maps.google.com/?q=' + encodeURIComponent(deliveryAddr);
+  }
+
+  if (load.status === 'in_transit') {
+    document.getElementById('btn-pickup').style.display   = 'none';
+    document.getElementById('btn-delivery').style.display = 'flex';
+    startGpsTracking();
+  } else {
+    stopGpsTracking();
+  }
+}
+
+function renderNoLoad() {
+  document.getElementById('load-number').textContent = 'No Active Load';
+  document.getElementById('load-status-pill').textContent = 'AVAILABLE';
+  ['origin-city','dest-city','load-rate','load-miles','load-your-cut','miles-today','est-pay']
+    .forEach(id => { document.getElementById(id).textContent = '—'; });
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// AVAILABLE LOADS
+// ──────────────────────────────────────────────────────────────────────────────
+async function loadAvailableLoads() {
+  const list = document.getElementById('available-loads-list');
+  list.innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted)">Loading…</div>';
+  try {
+    const res   = await apiFetch('/api/fleet?status=booked&limit=30');
+    const loads = await res.json();
+    if (!loads || loads.length === 0) {
+      list.innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted);font-size:13px">No loads available right now. Check back soon!</div>';
+      return;
+    }
+
+    list.innerHTML = loads.map(l => {
+      const rpm     = (l.rate_total && l.miles) ? '$' + (l.rate_total / l.miles).toFixed(2) : '—';
+      const origin  = [l.origin_city, l.origin_state].filter(Boolean).join(', ') || '?';
+      const dest    = [l.dest_city,   l.dest_state  ].filter(Boolean).join(', ') || '?';
+      return `
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:12px;margin-bottom:8px">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
+            <div>
+              <div style="font-size:14px;font-weight:700;color:var(--text)">${esc(origin)} → ${esc(dest)}</div>
+              <div style="font-size:11px;color:var(--muted);margin-top:2px">${esc(l.load_number || l.id.slice(0,8))}</div>
+            </div>
+            <div style="text-align:right">
+              <div style="font-size:16px;font-weight:700;color:var(--green)">$${Number(l.rate_total||0).toLocaleString()}</div>
+              <div style="font-size:10px;color:var(--muted)">${rpm}/mi</div>
+            </div>
+          </div>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-success" onclick="acceptLoad('${l.id}','${esc(l.load_number||'')}')">✅ Accept</button>
+            <button class="btn btn-ghost" onclick="declineLoad('${l.id}')">Pass</button>
+          </div>
+        </div>`;
+    }).join('');
+  } catch {
+    list.innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted)">Could not load. Check connection.</div>';
+  }
+}
+
+async function loadLoadHistory() {
+  const el = document.getElementById('load-history-list');
+  try {
+    const res   = await apiFetch('/api/fleet?status=delivered&limit=10');
+    const loads = await res.json();
+    if (!loads || !loads.length) {
+      el.innerHTML = '<div style="text-align:center;padding:12px;color:var(--muted);font-size:13px">No completed loads yet.</div>';
+      return;
+    }
+    el.innerHTML = loads.map(l => {
+      const origin = [l.origin_city, l.origin_state].filter(Boolean).join(', ') || '?';
+      const dest   = [l.dest_city,   l.dest_state  ].filter(Boolean).join(', ') || '?';
+      return `
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px;margin-bottom:6px">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div style="font-size:12px">${esc(origin)} → ${esc(dest)}</div>
+            <span class="pill pill-green" style="font-size:10px">✓ Delivered</span>
+          </div>
+          <div style="font-size:11px;color:var(--green);font-weight:700;margin-top:4px">$${Number(l.rate_total||0).toLocaleString()}</div>
+        </div>`;
+    }).join('');
+  } catch {
+    el.innerHTML = '';
+  }
+}
+
+async function acceptLoad(loadId, loadNumber) {
+  try {
+    await apiFetch(`/api/fleet/${loadId}`, 'PATCH', { status: 'dispatched' });
+    showToast('✅ Load accepted!');
+    showView('home');
+    loadCurrentLoad();
+  } catch { showToast('Error accepting load'); }
+}
+
+function declineLoad(loadId) {
+  showToast('Passed on load.');
+  loadAvailableLoads();
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// EARNINGS
+// ──────────────────────────────────────────────────────────────────────────────
+async function loadEarningsData() {
+  try {
+    const res   = await apiFetch(`/api/fleet?status=delivered&driver_id=${DRIVER_ID}&limit=100`);
+    const loads = await res.json();
+    if (!loads) return;
+
+    const now       = new Date();
+    const weekStart = new Date(now); weekStart.setDate(now.getDate() - now.getDay()); weekStart.setHours(0,0,0,0);
+    const yearStart = new Date(now.getFullYear(), 0, 1);
+
+    const weekLoads = loads.filter(l => l.pickup_at && new Date(l.pickup_at) >= weekStart);
+    const ytdLoads  = loads.filter(l => l.pickup_at && new Date(l.pickup_at) >= yearStart);
+
+    const sum = arr => arr.reduce((a,l) => a + (Number(l.rate_total)||0), 0);
+    const mi  = arr => arr.reduce((a,l) => a + (Number(l.miles)||0), 0);
+
+    const weekGross = sum(weekLoads), weekMi = mi(weekLoads);
+    const ytdGross  = sum(ytdLoads),  ytdMi  = mi(ytdLoads);
+
+    // Founders: $300/month flat (not weekly), insurance ~$45/load
+    const foundersMonthly = 300;
+    const insurance  = weekLoads.length * 45;
+    const net        = weekGross - foundersMonthly - insurance;
+
+    document.getElementById('week-gross').textContent = weekGross ? '$' + weekGross.toLocaleString() : '—';
+    document.getElementById('week-miles').textContent = weekMi    ? weekMi.toLocaleString()          : '—';
+    document.getElementById('week-loads').textContent = weekLoads.length || '—';
+    document.getElementById('week-rpm').textContent   = (weekGross && weekMi) ? '$' + (weekGross/weekMi).toFixed(2) : '—';
+
+    document.getElementById('breakdown-gross').textContent = weekGross ? '$' + weekGross.toLocaleString() : '—';
+    document.getElementById('breakdown-insurance').textContent = insurance ? '-$' + insurance.toFixed(2) : '—';
+    document.getElementById('breakdown-net').textContent = net ? '$' + net.toFixed(2) : '—';
+
+    document.getElementById('ytd-gross').textContent  = ytdGross  ? '$' + ytdGross.toLocaleString() : '—';
+    document.getElementById('ytd-miles').textContent  = ytdMi     ? ytdMi.toLocaleString()          : '—';
+  } catch {}
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// COMPLIANCE & MAINTENANCE
+// ──────────────────────────────────────────────────────────────────────────────
+async function loadComplianceStatus() {
+  const list = document.getElementById('compliance-list');
+
+  // Get CDL expiry from localStorage
+  const cdl = JSON.parse(localStorage.getItem('3ll_cdl') || '{}');
+  const expiryDate = cdl.cdl_expiry ? new Date(cdl.cdl_expiry) : null;
+  const daysToExpiry = expiryDate ? Math.ceil((expiryDate - new Date()) / 86400000) : null;
+
+  let html = '';
+
+  // CDL Status
+  if (expiryDate && daysToExpiry !== null) {
+    if (daysToExpiry < 0) {
+      html += `<div class="alert-card"><div class="alert-icon">🚫</div><div class="alert-content"><div class="alert-title">CDL EXPIRED</div><div class="alert-text">Your CDL expired ${Math.abs(daysToExpiry)} days ago. Renew immediately.</div></div></div>`;
+    } else if (daysToExpiry <= 30) {
+      html += `<div class="alert-card" style="background:linear-gradient(135deg,#78350f44,#5a2d0c44);border-color:#f59e0b44"><div class="alert-icon">⚠️</div><div class="alert-content"><div class="alert-title" style="color:var(--yellow)">CDL EXPIRING SOON</div><div class="alert-text">Your CDL expires in ${daysToExpiry} days. Plan to renew before ${expiryDate.toLocaleDateString()}.</div></div></div>`;
+    } else {
+      html += `<div class="card" style="background:linear-gradient(135deg,#14532d44,#0f3d20ff);border-color:#22c55e44"><div style="display:flex;align-items:center;gap:8px"><div style="font-size:16px">✓</div><div><div style="font-size:12px;font-weight:700;color:var(--green)">CDL Valid</div><div style="font-size:11px;color:var(--muted)">Expires ${expiryDate.toLocaleDateString()}</div></div></div></div>`;
+    }
+  }
+
+  // Maintenance items
+  const maintenance = [
+    { name: 'Oil Change', interval: '15,000 miles', status: 'due' },
+    { name: 'Tire Rotation', interval: '10,000 miles', status: 'done' },
+    { name: 'Pre-trip Inspection', interval: 'Daily', status: 'done' }
+  ];
+
+  const maintHtml = maintenance.map(m => {
+    const isDue = m.status === 'due';
+    return `
+      <div class="notification-item">
+        <div class="notification-icon">${isDue ? '⚠️' : '✓'}</div>
+        <div style="flex:1">
+          <div class="notification-title">${m.name}</div>
+          <div style="font-size:10px;color:var(--muted)">${m.interval} · ${isDue ? 'DUE SOON' : 'Completed'}</div>
+        </div>
+        ${isDue ? '<button class="btn btn-warning" style="width:auto;padding:6px 12px;margin:0;font-size:11px" onclick="scheduleService()">Schedule</button>' : ''}
+      </div>`;
+  }).join('');
+
+  list.innerHTML = html;
+  document.getElementById('maintenance-list').innerHTML = maintHtml;
+}
+
+function scheduleService() {
+  showToast('📅 Contact your mechanic to schedule service.');
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// MESSAGES
+// ──────────────────────────────────────────────────────────────────────────────
+async function loadMessages(scrollToBottom = false) {
+  if (!MY_PHONE) return;
+  try {
+    const res  = await apiFetch(`/api/comms/thread/${encodeURIComponent(MY_PHONE)}`);
+    const data = await res.json();
+    renderMessages(data.messages || [], scrollToBottom);
+  } catch {}
+}
+
+function renderMessages(messages, scrollToBottom) {
+  const list = document.getElementById('msg-list');
+  if (!messages.length) {
+    list.innerHTML = '<div style="text-align:center;color:var(--muted);padding:20px;font-size:13px">💬 Messages will appear here</div>';
+    return;
+  }
+  list.innerHTML = messages.map(m => {
+    const isOut = m.direction === 'outbound';
+    const timeStr = m.created_at ? new Date(m.created_at).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'}) : '';
+    const bubble = `<div style="background:${isOut ? 'var(--accent)' : 'var(--surface)'};color:${isOut ? '#fff' : 'var(--text)'};padding:10px 14px;border-radius:12px;max-width:80%;word-break:break-word">${esc(m.body)}</div>`;
+    return `<div style="display:flex;flex-direction:${isOut ? 'row-reverse' : 'row'};gap:8px;margin-bottom:8px">
+      <div style="flex:1;display:flex;flex-direction:column;align-items:${isOut ? 'flex-end' : 'flex-start'}">${bubble}<div style="font-size:10px;color:var(--muted);margin-top:2px">${timeStr}</div></div>
+    </div>`;
+  }).join('');
+  if (scrollToBottom) list.parentElement.scrollTop = list.parentElement.scrollHeight;
+}
+
+async function sendMessage() {
+  const input = document.getElementById('msg-input');
+  const text  = input.value.trim();
+  if (!text || !MY_PHONE) return;
+  input.value = '';
+  try {
+    await apiFetch('/api/comms/send', 'POST', { to: MY_PHONE, body: text, driver_id: DRIVER_ID });
+    loadMessages(true);
+  } catch { showToast('Failed to send'); }
+}
+
+function startMsgPolling() {
+  if (!MY_PHONE) return;
+  setInterval(async () => {
+    try {
+      const res  = await apiFetch(`/api/comms/thread/${encodeURIComponent(MY_PHONE)}`);
+      const data = await res.json();
+      if (document.getElementById('view-messages').classList.contains('active')) {
+        renderMessages(data.messages || [], true);
+      }
+    } catch {}
+  }, 12000);
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// PROFILE
+// ──────────────────────────────────────────────────────────────────────────────
+async function loadProfile() {
+  const cdl = JSON.parse(localStorage.getItem('3ll_cdl') || '{}');
+  document.getElementById('cdl-number').textContent = cdl.cdl_number || '—';
+  document.getElementById('cdl-expiry').textContent = cdl.cdl_expiry  || '—';
+  document.getElementById('truck-number').value  = localStorage.getItem('3ll_truck') || '';
+  document.getElementById('trailer-number').value = localStorage.getItem('3ll_trailer') || '';
+
+  if (cdl.cdl_expiry) {
+    const days = Math.ceil((new Date(cdl.cdl_expiry) - new Date()) / 86400000);
+    const pill = document.getElementById('cdl-status-pill');
+    if (days < 0)        pill.className = 'pill pill-red';
+    else if (days <= 30) pill.className = 'pill pill-yellow';
+  }
+}
+
+function saveEquipment() {
+  localStorage.setItem('3ll_truck', document.getElementById('truck-number').value.trim());
+  localStorage.setItem('3ll_trailer', document.getElementById('trailer-number').value.trim());
+  showToast('✅ Equipment saved');
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// ACTIONS
+// ──────────────────────────────────────────────────────────────────────────────
+async function confirmPickup() {
+  navigator.geolocation?.getCurrentPosition(pos => {
+    apiFetch('/api/telemetry/ping', 'POST', { driver_id: DRIVER_ID, lat: pos.coords.latitude, lng: pos.coords.longitude, event: 'pickup_confirmed' });
+  });
+  document.getElementById('btn-pickup').style.display = 'none';
+  document.getElementById('btn-delivery').style.display = 'flex';
+  showToast('✅ Pickup confirmed');
+}
+
+async function confirmDelivery() {
+  navigator.geolocation?.getCurrentPosition(pos => {
+    apiFetch('/api/telemetry/ping', 'POST', { driver_id: DRIVER_ID, lat: pos.coords.latitude, lng: pos.coords.longitude, event: 'delivery_confirmed' });
+  });
+  showToast('📦 Delivery confirmed');
+  showView('docs');
+}
+
+function reportIssue() {
+  const issue = prompt('Describe the issue:');
+  if (!issue) return;
+  apiFetch('/api/webhooks/driver_issue', 'POST', { driver_id: DRIVER_ID, issue, ts: new Date().toISOString() });
+  showToast('⚠️ Issue reported');
+}
+
+function triggerUpload(inputId) { document.getElementById(inputId).click(); }
+
+async function handleUpload(docType, input) {
+  const file = input.files[0];
+  if (!file) return;
+  showToast(`📤 Uploading ${docType.toUpperCase()}…`);
+  setTimeout(() => {
+    showToast(`✅ ${docType.toUpperCase()} uploaded`);
+  }, 1500);
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// GPS & HOS
+// ──────────────────────────────────────────────────────────────────────────────
+let _tracking = false;
+let _gpsTimer = null;
+
+function startGpsTracking() {
+  if (_tracking) return;
+  _tracking = true;
+  sendDriverLocation();
+  _gpsTimer = setInterval(sendDriverLocation, 30000);
+}
+
+function stopGpsTracking() {
+  if (!_tracking) return;
+  _tracking = false;
+  if (_gpsTimer) clearInterval(_gpsTimer);
+}
+
+async function sendDriverLocation() {
+  if (!navigator.geolocation) return;
+  navigator.geolocation.getCurrentPosition(
+    pos => {
+      apiFetch('/api/telemetry/location', 'POST', {
+        driver_id: DRIVER_ID,
+        lat: pos.coords.latitude,
+        lng: pos.coords.longitude,
+        accuracy: pos.coords.accuracy,
+        speed_mph: pos.coords.speed ? (pos.coords.speed * 2.237).toFixed(1) : 0,
+        heading: pos.coords.heading || 0,
+        ts: new Date().toISOString()
+      }).catch(() => {});
+    }
+  );
+}
+
+async function pollHOS() {
+  try {
+    const res = await apiFetch(`/api/telemetry/hos?driver_id=${DRIVER_ID}`);
+    const hos = await res.json();
+    if (hos?.drive_remaining) {
+      const fmt = m => `${Math.floor(m/60)}:${String(m%60).padStart(2,'0')}`;
+      document.getElementById('hos-drive').textContent = fmt((hos.drive_remaining||0)*60);
+      document.getElementById('hos-shift').textContent = fmt((hos.shift_remaining||0)*60);
+      document.getElementById('hos-cycle').textContent = fmt((hos.cycle_remaining||0)*60);
+    }
+  } catch {}
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// HELPERS
+// ──────────────────────────────────────────────────────────────────────────────
+async function apiFetch(path, method = 'GET', body = null) {
+  const opts = {
+    method,
+    headers: { 'Authorization': `Bearer ${TOKEN}`, 'Content-Type': 'application/json' },
+    signal: AbortSignal.timeout(10000)
+  };
+  if (body) opts.body = JSON.stringify(body);
+
+  try {
+    const res = await fetch(_apiBase + path, opts);
+    if (res.ok || res.status < 500) return res;
+    throw new Error(`HTTP ${res.status}`);
+  } catch (err) {
+    if (_apiBase === API_PRIMARY) {
+      _apiBase = API_BACKUP;
+      const res2 = await fetch(_apiBase + path, { ...opts, signal: AbortSignal.timeout(10000) });
+      return res2;
+    }
+    throw err;
+  }
+}
+
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+let _toastTimer;
+function showToast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.classList.add('show');
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => el.classList.remove('show'), 3200);
+}
+
+async function logout() {
+  if (!confirm('Sign out?')) return;
+  localStorage.clear();
+  window.location.href = './login.html';
+}
+</script>
+</body>
+</html>
