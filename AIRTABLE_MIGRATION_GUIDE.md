@@ -13,10 +13,8 @@ Visit your Airtable workspace:
    - Create or copy an existing API token
    - Copy the token value
 
-2. **Base ID:**
-   - Open your leads base
-   - Click the "?ⓘ" icon (top right)
-   - Copy the Base ID (looks like: `appXXXXXXXXXXXXXX`)
+2. **Base ID:** `appyRkym1i9mXEnzP` (3 Lakes Logistics Business Hub)
+   - Already discovered from your Airtable workspace
 
 3. **Table Name:**
    - Note the name of your leads table (usually "Leads" or "table 1")
@@ -28,7 +26,7 @@ Create `.env` in the project root with:
 ```bash
 # Airtable
 AIRTABLE_API_KEY=your_api_token_here
-AIRTABLE_BASE_ID=appXXXXXXXXXXXXXX
+AIRTABLE_BASE_ID=appyRkym1i9mXEnzP
 
 # Supabase (already configured)
 SUPABASE_URL=https://zngipootstubwvgdmckt.supabase.co

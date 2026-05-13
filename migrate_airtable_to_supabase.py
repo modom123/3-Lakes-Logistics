@@ -57,7 +57,7 @@ try:
     import urllib.request
     import urllib.error
 
-    url = f"https://api.airtable.com/v0/{AIRTABLE_BASE_ID}/table%201?pageSize=1"
+    url = f"https://api.airtable.com/v0/{AIRTABLE_BASE_ID}/Carrier%20Leads?pageSize=1"
     req = urllib.request.Request(
         url,
         headers={'Authorization': f'Bearer {AIRTABLE_API_KEY}'}

@@ -15,7 +15,7 @@ def migrate_airtable_leads() -> dict:
     if not s.airtable_api_key or not s.airtable_base_id:
         raise HTTPException(400, "Airtable credentials not configured")
 
-    url = f"https://api.airtable.com/v0/{s.airtable_base_id}/table%201"
+    url = f"https://api.airtable.com/v0/{s.airtable_base_id}/Carrier%20Leads"
 
     try:
         r = httpx.get(
