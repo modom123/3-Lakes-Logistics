@@ -28,6 +28,7 @@ from .api import (
     email_ingest_router,
     executives_router,
     execution_router,
+    migration_router,
     notifications_router,
     payout_router,
     fleet_public_router,
@@ -138,6 +139,7 @@ def create_app() -> FastAPI:
     app.include_router(notifications_router,  prefix="/api",              tags=["notifications"])
     app.include_router(email_router,          prefix="/api",              tags=["email"])
     app.include_router(executives_router,      prefix="/api",              tags=["executives"])
+    app.include_router(migration_router,       prefix="/api",              tags=["migration"])
     app.include_router(health_router,                                     tags=["health"])
 
     log.info("3 Lakes Logistics API ready (env=%s)", s.env)
