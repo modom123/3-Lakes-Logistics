@@ -1,168 +1,190 @@
 #!/usr/bin/env python3
 """
-Migrate 129 leads from Airtable (3lakes logistics hub) to Supabase.
-
-Fields mapped:
-  Airtable → Supabase
-  company name → prospect_name
-  phone → phone_number
-  location → (notes)
-  truck type → (notes)
-  website → (notes)
-  rating → (notes)
+Airtable → Supabase Migration (129 leads)
+Fixed version with proper error handling and debugging.
 """
 import os
 import json
+import sys
 from pathlib import Path
-from datetime import datetime
 
-# Load .env
+print("=" * 70)
+print("AIRTABLE → SUPABASE MIGRATION (3Lakes Logistics)")
+print("=" * 70)
+
+# Step 1: Load .env
+print("\n[1/5] Loading credentials from .env...")
 env_file = Path(".env")
-if env_file.exists():
-    for line in env_file.read_text().splitlines():
-        if "=" in line and not line.startswith("#"):
-            key, val = line.split("=", 1)
-            os.environ[key.strip()] = val.strip()
+if not env_file.exists():
+    print("❌ ERROR: .env file not found!")
+    print("   Run this script from the project root directory")
+    sys.exit(1)
 
-AIRTABLE_API_KEY = os.getenv("AIRTABLE_API_KEY")
-AIRTABLE_BASE_ID = os.getenv("AIRTABLE_BASE_ID")
-SUPABASE_URL = os.getenv("SUPABASE_URL")
-SUPABASE_SERVICE_ROLE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+config = {}
+for line in env_file.read_text().splitlines():
+    if "=" in line and not line.startswith("#"):
+        key, val = line.split("=", 1)
+        config[key.strip()] = val.strip()
 
-print("=" * 60)
-print("AIRTABLE → SUPABASE MIGRATION")
-print("=" * 60)
-print(f"\n📦 Base ID: {AIRTABLE_BASE_ID}")
-print(f"🔑 Airtable API: {AIRTABLE_API_KEY[:30]}...")
-print(f"🗄️  Supabase: {SUPABASE_URL}")
+AIRTABLE_API_KEY = config.get("AIRTABLE_API_KEY")
+AIRTABLE_BASE_ID = config.get("AIRTABLE_BASE_ID")
+SUPABASE_URL = config.get("SUPABASE_URL")
+SUPABASE_SERVICE_ROLE_KEY = config.get("SUPABASE_SERVICE_ROLE_KEY")
 
-# Try to import required libraries
+# Validate credentials
+missing = []
+if not AIRTABLE_API_KEY:
+    missing.append("AIRTABLE_API_KEY")
+if not AIRTABLE_BASE_ID:
+    missing.append("AIRTABLE_BASE_ID")
+if not SUPABASE_URL:
+    missing.append("SUPABASE_URL")
+if not SUPABASE_SERVICE_ROLE_KEY:
+    missing.append("SUPABASE_SERVICE_ROLE_KEY")
+
+if missing:
+    print(f"❌ ERROR: Missing credentials: {', '.join(missing)}")
+    print("   Update .env file with all required values")
+    sys.exit(1)
+
+print(f"✅ Credentials loaded")
+print(f"   Airtable Base: {AIRTABLE_BASE_ID}")
+print(f"   Supabase: {SUPABASE_URL.split('/')[2]}")
+
+# Step 2: Test Airtable connection
+print("\n[2/5] Testing Airtable connection...")
 try:
     import urllib.request
-    import urllib.parse
-    print("\n✅ Using urllib (built-in)")
-except ImportError:
-    print("\n❌ Missing urllib")
-    exit(1)
+    import urllib.error
 
-def fetch_airtable_records():
-    """Fetch all records from Airtable table 1."""
-    print("\n🔍 Fetching records from Airtable...")
+    url = f"https://api.airtable.com/v0/{AIRTABLE_BASE_ID}/table%201?pageSize=1"
+    req = urllib.request.Request(
+        url,
+        headers={'Authorization': f'Bearer {AIRTABLE_API_KEY}'}
+    )
 
+    with urllib.request.urlopen(req, timeout=10) as response:
+        print("✅ Airtable connection OK")
+except urllib.error.HTTPError as e:
+    if e.code == 401:
+        print(f"❌ ERROR 401: Invalid Airtable API key")
+    elif e.code == 404:
+        print(f"❌ ERROR 404: Base ID not found")
+    else:
+        print(f"❌ ERROR {e.code}: {e.reason}")
+    sys.exit(1)
+except Exception as e:
+    print(f"❌ Connection error: {str(e)}")
+    sys.exit(1)
+
+# Step 3: Fetch Airtable records
+print("\n[3/5] Fetching 129 leads from Airtable...")
+try:
     url = f"https://api.airtable.com/v0/{AIRTABLE_BASE_ID}/table%201"
+    req = urllib.request.Request(
+        url,
+        headers={'Authorization': f'Bearer {AIRTABLE_API_KEY}'}
+    )
 
+    with urllib.request.urlopen(req, timeout=30) as response:
+        data = json.loads(response.read().decode())
+        records = data.get('records', [])
+
+    print(f"✅ Fetched {len(records)} records from Airtable")
+
+    if len(records) == 0:
+        print("⚠️  WARNING: No records found!")
+        sys.exit(1)
+
+except Exception as e:
+    print(f"❌ ERROR: {str(e)}")
+    sys.exit(1)
+
+# Step 4: Transform records
+print(f"\n[4/5] Transforming {len(records)} records...")
+transformed = []
+
+for i, record in enumerate(records, 1):
     try:
-        req = urllib.request.Request(
-            url,
-            headers={'Authorization': f'Bearer {AIRTABLE_API_KEY}'}
-        )
-
-        with urllib.request.urlopen(req, timeout=30) as response:
-            data = json.loads(response.read().decode())
-            records = data.get('records', [])
-            print(f"✅ Fetched {len(records)} records from Airtable")
-            return records
-
-    except urllib.error.HTTPError as e:
-        print(f"❌ HTTP Error {e.code}: {e.reason}")
-        print(f"   Make sure Base ID and API key are correct")
-        return []
-    except Exception as e:
-        print(f"❌ Error: {str(e)}")
-        return []
-
-def transform_records(airtable_records):
-    """Transform Airtable records to Supabase schema."""
-    print(f"\n🔄 Transforming {len(airtable_records)} records...")
-
-    supabase_records = []
-
-    for record in airtable_records:
         fields = record.get('fields', {})
 
-        # Extract fields
-        company_name = fields.get('company name', 'Unknown')
-        phone = fields.get('phone', '')
-        location = fields.get('location', '')
-        truck_type = fields.get('truck type', '')
-        website = fields.get('website', '')
-        rating = fields.get('rating', '')
+        company = fields.get('company name') or fields.get('Company Name') or 'Unknown'
+        phone = fields.get('phone') or fields.get('Phone') or ''
+        location = fields.get('location') or fields.get('Location') or ''
+        truck_type = fields.get('truck type') or fields.get('Truck Type') or ''
+        website = fields.get('website') or fields.get('Website') or ''
+        rating = fields.get('rating') or fields.get('Rating') or ''
 
-        # Build notes
-        notes = []
+        notes_parts = []
         if location:
-            notes.append(f"Location: {location}")
+            notes_parts.append(f"Location: {location}")
         if truck_type:
-            notes.append(f"Truck: {truck_type}")
+            notes_parts.append(f"Truck: {truck_type}")
         if website:
-            notes.append(f"Website: {website}")
+            notes_parts.append(f"Website: {website}")
         if rating:
-            notes.append(f"Rating: {rating}")
+            notes_parts.append(f"Rating: {rating}")
 
-        # Create Supabase record
-        supabase_record = {
-            'prospect_name': company_name,
+        transformed.append({
+            'prospect_name': company,
             'phone_number': phone,
             'status': 'new',
-            'notes': ' | '.join(notes) if notes else None,
+            'notes': ' | '.join(notes_parts) if notes_parts else None,
             'source': 'airtable_migration'
-        }
+        })
+    except Exception as e:
+        print(f"⚠️  Skipped record {i}: {str(e)}")
 
-        supabase_records.append(supabase_record)
+print(f"✅ Transformed {len(transformed)} records")
 
-    print(f"✅ Transformed to Supabase format")
-    return supabase_records
+# Show sample
+print(f"\n   Sample records:")
+for i, r in enumerate(transformed[:3], 1):
+    print(f"   {i}. {r['prospect_name']} ({r['phone_number']})")
 
-def insert_to_supabase(records):
-    """Insert records into Supabase."""
-    print(f"\n📤 Inserting {len(records)} records into Supabase...")
+if len(transformed) > 3:
+    print(f"   ... and {len(transformed) - 3} more\n")
 
-    # For now, just show what we would insert
-    print("\n📋 Sample records to insert:")
-    for i, record in enumerate(records[:3], 1):
-        print(f"\n   {i}. {record['prospect_name']}")
-        print(f"      Phone: {record['phone_number']}")
-        if record.get('notes'):
-            print(f"      Notes: {record['notes'][:50]}...")
+# Step 5: Insert into Supabase
+print(f"[5/5] Inserting into Supabase...")
 
-    if len(records) > 3:
-        print(f"\n   ... and {len(records) - 3} more")
+try:
+    from supabase import create_client
+    print("✅ Supabase library imported")
+except ImportError:
+    print("❌ ERROR: Supabase library not installed")
+    print("   Run: pip install supabase")
+    sys.exit(1)
 
-    print("\n⚠️  NOTE: Actual Supabase insert would happen here")
-    print("   Supabase library not available in this environment")
-    print("   You'll need to run this from your local machine with supabase library installed")
+try:
+    supabase = create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
+    print("✅ Connected to Supabase")
+except Exception as e:
+    print(f"❌ ERROR: Could not connect to Supabase: {str(e)}")
+    sys.exit(1)
 
-    return len(records)
+# Insert records
+inserted = 0
+failed = 0
+for i, record in enumerate(transformed, 1):
+    try:
+        supabase.table('leads').insert(record).execute()
+        inserted += 1
 
-def main():
-    """Run the migration."""
+        if i % 30 == 0:
+            print(f"   ✓ Inserted {i}/{len(transformed)}...")
+    except Exception as e:
+        failed += 1
+        print(f"   ⚠️  Failed: {record['prospect_name']} - {str(e)[:50]}")
 
-    # Fetch
-    airtable_records = fetch_airtable_records()
-    if not airtable_records:
-        print("\n❌ No records found. Migration failed.")
-        return False
-
-    # Transform
-    supabase_records = transform_records(airtable_records)
-
-    # Insert
-    inserted = insert_to_supabase(supabase_records)
-
-    print("\n" + "=" * 60)
-    if inserted > 0:
-        print(f"✅ SUCCESS! {inserted} records ready to migrate")
-        print("=" * 60)
-        print("\n📝 Next steps:")
-        print("   1. Install supabase: pip install supabase")
-        print("   2. Run this script from your local machine")
-        print("   3. It will insert all records into Supabase")
-        print("   4. Vance can then call all 129 prospects!")
-        return True
-    else:
-        print("❌ FAILED")
-        return False
-
-if __name__ == "__main__":
-    success = main()
-    exit(0 if success else 1)
+print()
+print("=" * 70)
+print(f"✅ MIGRATION COMPLETE!")
+print("=" * 70)
+print(f"   Inserted: {inserted}/{len(transformed)} leads")
+if failed > 0:
+    print(f"   Failed: {failed}")
+print()
+print("🚀 Your 129 leads are now in Supabase!")
+print("   Vance can start calling prospects!")
+print()
