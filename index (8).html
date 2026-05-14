@@ -267,15 +267,28 @@ nav{
 .modal-body p{color:var(--text);font-size:14px;line-height:1.6;margin:0;}
 .modal-body strong{color:var(--navy);}
 /* Sticky Button */
+@keyframes stickypulse{0%,100%{box-shadow:0 4px 16px rgba(200,144,42,0.4),0 0 0 0 rgba(228,168,48,0.5);}70%{box-shadow:0 4px 16px rgba(200,144,42,0.4),0 0 0 14px rgba(228,168,48,0);}}
 .sticky-cta{position:fixed;bottom:24px;right:24px;z-index:50;}
-.sticky-cta button{background:var(--gold2);color:var(--navy);padding:14px 24px;border:none;border-radius:50px;font-weight:600;cursor:pointer;box-shadow:0 4px 16px rgba(200,144,42,0.3);transition:all .2s;font-size:15px;}
-.sticky-cta button:hover{background:var(--gold3);transform:translateY(-3px);box-shadow:0 6px 24px rgba(200,144,42,0.4);}
-/* Calendar Widget */
-.calendar-section{background:var(--off);padding:60px;text-align:center;margin:40px 0;}
-.calendar-section h3{font-family:var(--ff-h);font-size:28px;color:var(--navy);font-weight:800;margin-bottom:12px;}
-.calendar-section p{color:var(--muted);font-size:15px;margin-bottom:28px;max-width:600px;margin-left:auto;margin-right:auto;}
-.calendar-iframe-wrap{max-width:900px;margin:0 auto;height:600px;border-radius:12px;overflow:hidden;box-shadow:var(--shadow);}
-.calendar-iframe-wrap iframe{width:100%;height:100%;border:none;}
+.sticky-cta button{background:var(--gold2);color:var(--navy);padding:14px 26px;border:none;border-radius:50px;font-weight:700;cursor:pointer;box-shadow:0 4px 16px rgba(200,144,42,0.4);transition:all .2s;font-size:15px;animation:stickypulse 2.4s ease-in-out infinite;display:flex;align-items:center;gap:8px;}
+.sticky-cta button:hover{background:var(--gold3);transform:translateY(-3px);animation:none;box-shadow:0 8px 28px rgba(200,144,42,0.5);}
+/* Book a Call — Contact page section */
+.book-call-section{background:linear-gradient(135deg,var(--navy) 0%,var(--navy2) 60%,var(--navy3) 100%);padding:72px 60px;position:relative;overflow:hidden;}
+.book-call-section::before{content:'';position:absolute;top:-60px;right:-60px;width:320px;height:320px;border-radius:50%;background:rgba(200,144,42,.08);pointer-events:none;}
+.book-call-inner{max-width:1200px;margin:0 auto;display:grid;grid-template-columns:1fr 1.6fr;gap:60px;align-items:start;}
+.book-call-left .bc-chip{display:inline-flex;align-items:center;gap:8px;background:rgba(200,144,42,.18);border:1px solid rgba(200,144,42,.35);color:var(--gold2);padding:5px 16px;border-radius:100px;font-size:10px;letter-spacing:2px;text-transform:uppercase;font-family:var(--ff-m);margin-bottom:20px;}
+.book-call-left h2{font-family:var(--ff-h);font-size:clamp(28px,3.5vw,46px);color:#fff;font-weight:900;line-height:1.1;margin-bottom:16px;}
+.book-call-left p{color:rgba(255,255,255,.7);font-size:15px;line-height:1.7;margin-bottom:32px;max-width:440px;}
+.bc-perks{display:flex;flex-direction:column;gap:14px;margin-bottom:36px;}
+.bc-perk{display:flex;align-items:center;gap:12px;color:rgba(255,255,255,.85);font-size:14px;}
+.bc-perk-ico{width:32px;height:32px;border-radius:8px;background:rgba(200,144,42,.2);border:1px solid rgba(200,144,42,.3);display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;}
+.bc-book-btn{display:inline-flex;align-items:center;gap:10px;background:linear-gradient(135deg,var(--gold),var(--gold2));color:var(--navy);padding:16px 32px;border:none;border-radius:12px;font-weight:700;font-size:16px;cursor:pointer;transition:all .2s;box-shadow:0 4px 20px rgba(200,144,42,.35);}
+.bc-book-btn:hover{transform:translateY(-2px);box-shadow:0 8px 32px rgba(200,144,42,.5);}
+.book-call-right{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:20px;overflow:hidden;box-shadow:0 24px 60px rgba(0,0,0,.3);}
+.bc-iframe-hdr{background:rgba(255,255,255,.07);padding:16px 24px;display:flex;align-items:center;gap:10px;border-bottom:1px solid rgba(255,255,255,.08);}
+.bc-iframe-hdr span{color:rgba(255,255,255,.9);font-size:13px;font-weight:600;}
+.bc-iframe-hdr .bc-dot{width:8px;height:8px;border-radius:50%;background:var(--gold2);}
+.book-call-right iframe{width:100%;height:640px;border:none;display:block;}
+@media(max-width:768px){.book-call-inner{grid-template-columns:1fr;}.book-call-section{padding:48px 20px;}}
 /* Pricing */
 .price-s{background:var(--off);padding:80px 60px;}
 .price-s-inner{max-width:1060px;margin:0 auto;}
@@ -663,6 +676,7 @@ button,a,[onclick]{cursor:pointer;}
     <button class="nav-a" id="nl-pricing" onclick="showPage('services');setTimeout(()=>{const el=document.getElementById('plans-anchor');if(el)el.scrollIntoView({behavior:'smooth',block:'start'});},120)">Pricing</button>
     <button class="nav-a" id="nl-loads" onclick="showPage('loads')" style="position:relative">Load Board<span id="nav-loads-badge" style="display:none;position:absolute;top:2px;right:-4px;background:#22c55e;color:#fff;border-radius:99px;font-size:9px;font-weight:700;padding:1px 5px;"></span></button>
     <button class="nav-a" id="nl-contact" onclick="showPage('contact')">Contact</button>
+    <button class="nav-a" onclick="showPage('contact');setTimeout(()=>{const el=document.getElementById('book-call-anchor');if(el)el.scrollIntoView({behavior:'smooth',block:'start'});},120)" style="color:var(--gold2);font-weight:700;">📞 Book a Call</button>
     <button class="nav-cta" onclick="showPage('onboard')">Claim Founders Spot</button>
   </div>
   <div class="hamburger" onclick="toggleMob()"><span></span><span></span><span></span></div>
@@ -674,6 +688,7 @@ button,a,[onclick]{cursor:pointer;}
   <div class="mob-a" onclick="showPage('services');toggleMob();setTimeout(()=>{const el=document.getElementById('plans-anchor');if(el)el.scrollIntoView({behavior:'smooth',block:'start'});},160)">Pricing</div>
   <div class="mob-a" onclick="showPage('loads');toggleMob()">Load Board</div>
   <div class="mob-a" onclick="showPage('contact');toggleMob()">Contact</div>
+  <div class="mob-a" onclick="showPage('contact');toggleMob();setTimeout(()=>{const el=document.getElementById('book-call-anchor');if(el)el.scrollIntoView({behavior:'smooth',block:'start'});},200)" style="color:var(--gold2);font-weight:700;">📞 Book a Call</div>
   <div class="mob-cta" onclick="showPage('onboard');toggleMob()">⚡ Claim Founders Spot — $300/mo</div>
 </div>
 
@@ -688,10 +703,10 @@ button,a,[onclick]{cursor:pointer;}
         <p class="hero-desc">3 Lakes Logistics is the fully automated logistics platform for owner-operators and small fleets — AI dispatch, paperless compliance, 24/7 safety monitoring, and revenue recovery, all for a flat monthly rate. No commissions. No surprises.</p>
         <div class="hero-btns">
           <button class="btn-gold" onclick="showPage('onboard')">&#x25B6; Claim Founders Spot — $300/mo</button>
-          <button class="btn-wht-out" onclick="showPage('services');setTimeout(()=>{const el=document.getElementById('plans-anchor');if(el)el.scrollIntoView({behavior:'smooth',block:'start'});},120)">See Plans &#x2193;</button>
+          <button class="btn-wht-out" onclick="showPage('contact');setTimeout(()=>{const el=document.getElementById('book-call-anchor');if(el)el.scrollIntoView({behavior:'smooth',block:'start'});},120)">📞 Book a Discovery Call</button>
         </div>
         <div class="hero-row">
-          <div class="h-stat"><div class="h-stat-v">$200</div><div class="h-stat-l">Founders / Mo</div></div>
+          <div class="h-stat"><div class="h-stat-v">$300</div><div class="h-stat-l">Founders / Mo</div></div>
           <div class="h-stat"><div class="h-stat-v">1,000</div><div class="h-stat-l">Trucks Only</div></div>
           <div class="h-stat"><div class="h-stat-v">$0</div><div class="h-stat-l">Commission</div></div>
           <div class="h-stat"><div class="h-stat-v">24/7</div><div class="h-stat-l">AI Dispatch</div></div>
@@ -1030,11 +1045,27 @@ button,a,[onclick]{cursor:pointer;}
     </div>
   </div>
 
-  <div class="calendar-section">
-    <h3>Schedule a Consultation Call</h3>
-    <p>Have questions about your operation or want to explore if we're the right fit? Book a 15-minute call with our team — no pressure, just helpful advice.</p>
-    <div class="calendar-iframe-wrap">
-      <iframe src="https://calendly.com/your-calendly-link/15min" frameborder="0"></iframe>
+  <!-- BOOK A CALL — Replace YOUR-CALENDLY-LINK below with your actual Calendly URL -->
+  <div class="book-call-section" id="book-call-anchor">
+    <div class="book-call-inner">
+      <div class="book-call-left">
+        <div class="bc-chip"><span class="bc-dot"></span> Free · No Obligation</div>
+        <h2>Talk to a Real<br/>Dispatcher Today</h2>
+        <p>Not ready to fill out a form? Schedule a free 15-minute discovery call. We'll answer your questions, walk you through how dispatch works, and tell you if we're the right fit — no pressure.</p>
+        <div class="bc-perks">
+          <div class="bc-perk"><div class="bc-perk-ico">⏱️</div> 15-minute call — we respect your time</div>
+          <div class="bc-perk"><div class="bc-perk-ico">🚛</div> Dispatch experts, not sales reps</div>
+          <div class="bc-perk"><div class="bc-perk-ico">📋</div> Get your rate & lane questions answered</div>
+          <div class="bc-perk"><div class="bc-perk-ico">💰</div> Learn how Founders pricing works</div>
+          <div class="bc-perk"><div class="bc-perk-ico">🔒</div> No commitment, no pressure</div>
+        </div>
+        <button class="bc-book-btn" onclick="document.getElementById('bc-iframe').scrollIntoView({behavior:'smooth',block:'center'})">📅 Pick a Time Below ↓</button>
+      </div>
+      <div class="book-call-right">
+        <div class="bc-iframe-hdr"><div class="bc-dot"></div><span>Schedule a Free Discovery Call</span></div>
+        <!-- REPLACE the src URL below with your actual Calendly link, e.g. https://calendly.com/3lakeslogistics/15min -->
+        <iframe id="bc-iframe" src="https://calendly.com/your-calendly-link/15min" frameborder="0" allow="camera; microphone; fullscreen"></iframe>
+      </div>
     </div>
   </div>
 
@@ -2115,20 +2146,7 @@ document.getElementById('calendarOverlay')?.addEventListener('click', function(e
 
 <!-- Sticky Call-to-Action Button -->
 <div class="sticky-cta">
-  <button onclick="toggleCalendarWidget()">📞 Book a Call</button>
-</div>
-
-<!-- Calendar Widget Overlay -->
-<div id="calendarOverlay" class="modal-overlay">
-  <div class="modal-content" style="max-width:900px;padding:0;overflow:hidden;">
-    <div style="padding:20px;background:var(--navy);display:flex;justify-content:space-between;align-items:center;">
-      <h3 style="color:var(--white);margin:0;">Schedule a Call</h3>
-      <button onclick="closeCalendarWidget()" style="background:none;border:none;color:var(--white);font-size:28px;cursor:pointer;">&times;</button>
-    </div>
-    <div style="height:600px;">
-      <iframe src="https://calendly.com/your-calendly-link/15min" width="100%" height="100%" frameborder="0" style="border:none;"></iframe>
-    </div>
-  </div>
+  <button onclick="showPage('contact');setTimeout(()=>{const el=document.getElementById('book-call-anchor');if(el)el.scrollIntoView({behavior:'smooth',block:'start'});},150)">📞 Book a Call</button>
 </div>
 
 </body>
