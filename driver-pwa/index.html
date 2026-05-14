@@ -865,32 +865,49 @@ function showView(name) {
 async function loadCurrentLoad() {
   if (DEMO_MODE) { renderCurrentLoad(DEMO_LOAD); return; }
   try {
-    const res = await apiFetch('/api/fleet?status=in_transit&limit=1');
-    const loads = await res.json();
-    if (loads && loads.length > 0) renderCurrentLoad(loads[0]);
-    else renderNoLoad();
+    if (!supabaseClient) return renderNoLoad();
+    const driverCode = localStorage.getItem('3ll_driver_code') || '';
+    if (!driverCode) return renderNoLoad();
+
+    // Query loads where driver_code matches and status indicates active
+    const { data: loads, error } = await supabaseClient
+      .from('loads')
+      .select('*')
+      .eq('driver_code', driverCode)
+      .in('status', ['in_transit', 'dispatched', 'booked'])
+      .order('created_at', { ascending: false })
+      .limit(1);
+
+    if (error || !loads || loads.length === 0) return renderNoLoad();
+    renderCurrentLoad(loads[0]);
   } catch { renderNoLoad(); }
 }
 
 function renderCurrentLoad(load) {
+  // Map field names from actual schema: gross_rate instead of rate_total, etc.
+  const rate = load.gross_rate || load.rate_total || 0;
   document.getElementById('load-number').textContent      = load.load_number || load.id?.slice(0,8) || 'LOAD-001';
   document.getElementById('load-status-pill').textContent = (load.status || 'dispatched').replace('_',' ').toUpperCase();
-  document.getElementById('origin-city').textContent      = load.origin_city  || '—';
-  document.getElementById('origin-state').textContent     = load.origin_state || '';
-  document.getElementById('dest-city').textContent        = load.dest_city    || '—';
-  document.getElementById('dest-state').textContent       = load.dest_state   || '';
-  document.getElementById('load-rate').textContent        = load.rate_total   ? '$' + Number(load.rate_total).toLocaleString() : '—';
+  document.getElementById('origin-city').textContent      = load.origin_city  || load.pickup_city || '—';
+  document.getElementById('origin-state').textContent     = load.origin_state || load.pickup_state || '';
+  document.getElementById('dest-city').textContent        = load.dest_city    || load.delivery_city || '—';
+  document.getElementById('dest-state').textContent       = load.dest_state   || load.delivery_state || '';
+  document.getElementById('load-rate').textContent        = rate ? '$' + Number(rate).toLocaleString() : '—';
   document.getElementById('load-miles').textContent       = load.miles        ? load.miles.toLocaleString() : '—';
   document.getElementById('load-pickup').textContent      = load.pickup_at    ? new Date(load.pickup_at).toLocaleDateString('en-US',{month:'short',day:'numeric'}) : '—';
-  document.getElementById('load-rpm').textContent         = (load.rate_total && load.miles) ? '$' + (load.rate_total / load.miles).toFixed(2) + '/mi' : '—';
+  document.getElementById('load-rpm').textContent         = (rate && load.miles) ? '$' + (rate / load.miles).toFixed(2) + '/mi' : '—';
   document.getElementById('load-commodity').textContent   = load.commodity    || '—';
-  document.getElementById('load-weight').textContent      = load.weight       ? Number(load.weight).toLocaleString() + ' lbs' : '—';
+  document.getElementById('load-weight').textContent      = load.weight_lbs   ? Number(load.weight_lbs).toLocaleString() + ' lbs' : (load.weight ? Number(load.weight).toLocaleString() + ' lbs' : '—');
   document.getElementById('miles-today').textContent      = load.miles        ? load.miles.toLocaleString() : '—';
-  document.getElementById('est-pay').textContent          = load.rate_total   ? '$' + (load.rate_total * 0.72).toFixed(0) : '—';
+  document.getElementById('est-pay').textContent          = rate ? '$' + (rate * 0.72).toFixed(0) : '—';
 
   // Full addresses + navigation
-  const pickupAddr   = [load.pickup_address, load.origin_city, load.origin_state].filter(Boolean).join(', ');
-  const deliveryAddr = [load.delivery_address, load.dest_city, load.dest_state].filter(Boolean).join(', ');
+  const pickupCity = load.origin_city || load.pickup_city || '';
+  const pickupState = load.origin_state || load.pickup_state || '';
+  const deliveryCity = load.dest_city || load.delivery_city || '';
+  const deliveryState = load.dest_state || load.delivery_state || '';
+  const pickupAddr   = [load.pickup_address, pickupCity, pickupState].filter(Boolean).join(', ');
+  const deliveryAddr = [load.delivery_address, deliveryCity, deliveryState].filter(Boolean).join(', ');
   if (pickupAddr || deliveryAddr) {
     document.getElementById('load-addresses').style.display = 'block';
     document.getElementById('pickup-address').textContent   = pickupAddr || '—';
@@ -935,40 +952,28 @@ async function loadAvailableLoads() {
   list.innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted)">Loading…</div>';
   if (DEMO_MODE) { renderAvailableLoads(DEMO_AVAILABLE_LOADS); return; }
   try {
-    const res   = await apiFetch('/api/fleet?status=booked&limit=30');
-    const loads = await res.json();
-    if (!loads || loads.length === 0) {
+    if (!supabaseClient) {
+      list.innerHTML = '<div class="empty-state"><div class="empty-icon">⚠️</div><p>Supabase not connected.</p></div>';
+      return;
+    }
+
+    // Query loads where status = 'booked' and not assigned to a driver yet
+    const { data: loads, error } = await supabaseClient
+      .from('loads')
+      .select('*')
+      .eq('status', 'booked')
+      .is('driver_code', null)
+      .order('pickup_at', { ascending: true })
+      .limit(30);
+
+    if (error || !loads || loads.length === 0) {
       list.innerHTML = '<div class="empty-state"><div class="empty-icon">🚛</div><p>No loads available right now.<br>Check back soon or watch for an SMS offer.</p></div>';
       return;
     }
 
-    const rows = loads.map(l => {
-      const rpm     = (l.rate_total && l.miles) ? '$' + (l.rate_total / l.miles).toFixed(2) : '—';
-      const pickup  = l.pickup_at ? new Date(l.pickup_at).toLocaleDateString('en-US',{month:'short',day:'numeric'}) : '—';
-      const origin  = [l.origin_city, l.origin_state].filter(Boolean).join(', ') || '?';
-      const dest    = [l.dest_city,   l.dest_state  ].filter(Boolean).join(', ') || '?';
-      return `
-        <tr>
-          <td>
-            <div class="tbl-route">${esc(origin)}</div>
-            <div class="tbl-sub">→ ${esc(dest)}</div>
-            <div class="tbl-sub">${esc(l.load_number || l.id.slice(0,8))} · ${l.miles ? l.miles.toLocaleString() + ' mi' : '—'} · ${pickup}</div>
-          </td>
-          <td>
-            <div class="tbl-rate">${l.rate_total ? '$' + Number(l.rate_total).toLocaleString() : '—'}</div>
-            <div class="tbl-rpm">${rpm}/mi</div>
-          </td>
-          <td>
-            <div class="tbl-actions">
-              <button class="tbl-accept" onclick="acceptLoad('${l.id}','${esc(l.load_number||'')}')">✅ Accept</button>
-              <button class="tbl-pass"   onclick="declineLoad('${l.id}')">Pass</button>
-            </div>
-          </td>
-        </tr>`;
-    }).join('');
-
     renderAvailableLoads(loads);
-  } catch {
+  } catch (err) {
+    console.error('loadAvailableLoads error:', err);
     list.innerHTML = '<div class="empty-state"><div class="empty-icon">⚠️</div><p>Could not load. Check connection.</p></div>';
   }
 }
@@ -980,10 +985,11 @@ function renderAvailableLoads(loads) {
     return;
   }
   const rows = loads.map(l => {
-    const rpm    = (l.rate_total && l.miles) ? '$' + (l.rate_total / l.miles).toFixed(2) : '—';
+    const rate   = l.gross_rate || l.rate_total || 0;
+    const rpm    = (rate && l.miles) ? '$' + (rate / l.miles).toFixed(2) : '—';
     const pickup = l.pickup_at ? new Date(l.pickup_at).toLocaleDateString('en-US',{month:'short',day:'numeric'}) : '—';
-    const origin = [l.origin_city, l.origin_state].filter(Boolean).join(', ') || '?';
-    const dest   = [l.dest_city,   l.dest_state  ].filter(Boolean).join(', ') || '?';
+    const origin = [l.origin_city || l.pickup_city, l.origin_state || l.pickup_state].filter(Boolean).join(', ') || '?';
+    const dest   = [l.dest_city || l.delivery_city, l.dest_state || l.delivery_state].filter(Boolean).join(', ') || '?';
     return `
       <tr>
         <td>
@@ -992,7 +998,7 @@ function renderAvailableLoads(loads) {
           <div class="tbl-sub">${esc(l.load_number||l.id)} · ${l.miles ? l.miles.toLocaleString() + ' mi' : '—'} · ${pickup}</div>
         </td>
         <td>
-          <div class="tbl-rate">${l.rate_total ? '$' + Number(l.rate_total).toLocaleString() : '—'}</div>
+          <div class="tbl-rate">${rate ? '$' + Number(rate).toLocaleString() : '—'}</div>
           <div class="tbl-rpm">${rpm}/mi</div>
         </td>
         <td>
@@ -1015,12 +1021,24 @@ function renderAvailableLoads(loads) {
 // ── MESSAGES ──────────────────────────────────────────────────────────────────
 async function loadMessages(scrollToBottom = false) {
   if (DEMO_MODE) { renderMessages(DEMO_MESSAGES, scrollToBottom); return; }
-  if (!MY_PHONE) return;
+  if (!MY_PHONE || !supabaseClient) return;
   try {
-    const res  = await apiFetch(`/api/comms/thread/${encodeURIComponent(MY_PHONE)}`);
-    const data = await res.json();
-    renderMessages(data.messages || [], scrollToBottom);
-  } catch {}
+    // Query driver_messages where driver_phone matches
+    const { data: messages, error } = await supabaseClient
+      .from('driver_messages')
+      .select('*')
+      .eq('driver_phone', MY_PHONE)
+      .order('created_at', { ascending: true })
+      .limit(100);
+
+    if (error) {
+      console.error('loadMessages error:', error);
+      return;
+    }
+    renderMessages(messages || [], scrollToBottom);
+  } catch (err) {
+    console.error('loadMessages exception:', err);
+  }
 }
 
 function renderMessages(messages, scrollToBottom) {
@@ -1068,32 +1086,58 @@ async function sendMessage() {
   const input = document.getElementById('msg-input');
   const text  = input.value.trim();
   if (!text || !MY_PHONE) { if (!MY_PHONE) showToast('⚠️ Phone number not set in profile'); return; }
+  if (!supabaseClient) { showToast('Not connected to database'); return; }
+
   input.value = '';
   autoResize(input);
   try {
-    await apiFetch('/api/comms/send', 'POST', { to: MY_PHONE, body: text, driver_id: DRIVER_ID });
+    await supabaseClient.from('driver_messages').insert({
+      driver_phone: MY_PHONE,
+      direction: 'outbound',
+      body: text,
+      msg_type: 'text'
+    });
     loadMessages(true);
-  } catch { showToast('Failed to send — check connection'); }
+  } catch (err) {
+    console.error('sendMessage error:', err);
+    showToast('Failed to send — check connection');
+  }
 }
 
 async function replyOffer(reply, loadId) {
-  if (!MY_PHONE) return;
-  await apiFetch('/api/comms/send', 'POST', { to: MY_PHONE, body: reply, driver_id: DRIVER_ID, load_id: loadId || undefined });
-  if (reply === 'YES' && loadId) {
-    showToast('✅ Accepted! Dispatcher will confirm shortly.');
-  } else {
-    showToast('Passed on this load.');
+  if (!MY_PHONE || !supabaseClient) return;
+  try {
+    await supabaseClient.from('driver_messages').insert({
+      driver_phone: MY_PHONE,
+      direction: 'outbound',
+      body: reply,
+      msg_type: 'acceptance',
+      load_id: loadId || null
+    });
+    if (reply === 'YES' && loadId) {
+      showToast('✅ Accepted! Dispatcher will confirm shortly.');
+    } else {
+      showToast('Passed on this load.');
+    }
+    loadMessages(true);
+  } catch (err) {
+    console.error('replyOffer error:', err);
   }
-  loadMessages(true);
 }
 
 function startMsgPolling() {
-  if (!MY_PHONE) return;
+  if (!MY_PHONE || !supabaseClient) return;
   _msgPollTimer = setInterval(async () => {
     try {
-      const res  = await apiFetch(`/api/comms/thread/${encodeURIComponent(MY_PHONE)}`);
-      const data = await res.json();
-      const msgs = data.messages || [];
+      // Query driver_messages where driver_phone matches
+      const { data: msgs, error } = await supabaseClient
+        .from('driver_messages')
+        .select('*')
+        .eq('driver_phone', MY_PHONE)
+        .order('created_at', { ascending: true });
+
+      if (error || !msgs) return;
+
       const latest = msgs.length ? msgs[msgs.length - 1].created_at : null;
       if (latest && latest !== _lastMsgTs) {
         const newInbound = msgs.filter(m => m.direction === 'inbound' || (m.direction === 'outbound' && m.created_at > (_lastMsgTs || '')));
@@ -1108,15 +1152,26 @@ function startMsgPolling() {
         }
         _lastMsgTs = latest;
       }
-    } catch {}
+    } catch (err) {
+      console.error('Message polling error:', err);
+    }
   }, 12000);
 }
 
 async function markRead() {
-  if (!MY_PHONE) return;
+  if (!MY_PHONE || !supabaseClient) return;
   _unreadCount = 0;
   updateBadge();
-  try { await apiFetch(`/api/comms/read/${encodeURIComponent(MY_PHONE)}`, 'PATCH'); } catch {}
+  try {
+    // Mark all inbound messages as read
+    await supabaseClient
+      .from('driver_messages')
+      .update({ read: true })
+      .eq('driver_phone', MY_PHONE)
+      .eq('direction', 'inbound');
+  } catch (err) {
+    console.error('markRead error:', err);
+  }
 }
 
 function updateBadge() {
@@ -1169,6 +1224,7 @@ function savePhone() {
 
 // ── PROFILE ───────────────────────────────────────────────────────────────────
 async function loadProfile() {
+  // Load from localStorage first (cached data)
   const cdl = JSON.parse(localStorage.getItem('3ll_cdl') || '{}');
   document.getElementById('cdl-number').textContent     = cdl.cdl_number         || '—';
   document.getElementById('cdl-class').textContent      = cdl.cdl_class          || '—';
@@ -1188,6 +1244,37 @@ async function loadProfile() {
     document.getElementById('phone-saved-msg').style.display = 'block';
   }
 
+  // Query driver from Supabase to get fresh data
+  if (!DEMO_MODE && supabaseClient) {
+    try {
+      const driverId = localStorage.getItem('3ll_driver_id') || '';
+      if (!driverId) return;
+
+      const { data: driver, error } = await supabaseClient
+        .from('drivers')
+        .select('*')
+        .eq('id', driverId)
+        .single();
+
+      if (!error && driver) {
+        // Store CDL info in localStorage
+        localStorage.setItem('3ll_cdl', JSON.stringify({
+          cdl_number: driver.cdl_number || '',
+          cdl_state: driver.cdl_state || '',
+          cdl_expiry: driver.cdl_expires || '',
+          medical_card_expiry: driver.medical_card_expires || ''
+        }));
+        // Update CDL display
+        document.getElementById('cdl-number').textContent     = driver.cdl_number || '—';
+        document.getElementById('cdl-state').textContent      = driver.cdl_state || '—';
+        document.getElementById('cdl-expiry').textContent     = driver.cdl_expires || '—';
+        document.getElementById('medical-expiry').textContent = driver.medical_card_expires || '—';
+      }
+    } catch (err) {
+      console.log('Profile sync deferred:', err);
+    }
+  }
+
   if (cdl.cdl_expiry) {
     const days = Math.ceil((new Date(cdl.cdl_expiry) - new Date()) / 86400000);
     const pill = document.getElementById('cdl-status-pill');
@@ -1197,7 +1284,38 @@ async function loadProfile() {
   }
 }
 
-function loadDocs() {}
+// ── DOCUMENTS ────────────────────────────────────────────────────────────────
+async function loadDocs() {
+  if (!supabaseClient) return;
+  try {
+    const driverId = localStorage.getItem('3ll_driver_id') || '';
+    if (!driverId) return;
+
+    // Query driver_documents for this driver
+    const { data: docs, error } = await supabaseClient
+      .from('driver_documents')
+      .select('*')
+      .eq('driver_id', driverId)
+      .order('uploaded_at', { ascending: false })
+      .limit(50);
+
+    if (error || !docs) {
+      console.error('loadDocs error:', error);
+      return;
+    }
+    renderDocuments(docs);
+  } catch (err) {
+    console.error('loadDocs exception:', err);
+  }
+}
+
+function renderDocuments(docs) {
+  // Documents tab content would be rendered here
+  // For now this is a placeholder — implement based on your docs UI design
+  if (docs && docs.length > 0) {
+    console.log('Loaded documents:', docs);
+  }
+}
 
 // ── LOAD HISTORY ──────────────────────────────────────────────────────────────
 async function loadLoadHistory() {
@@ -1223,18 +1341,36 @@ async function loadLoadHistory() {
     return;
   }
   try {
-    const res   = await apiFetch('/api/fleet?status=delivered&limit=20');
-    const loads = await res.json();
-    if (!loads || !loads.length) {
+    if (!supabaseClient) {
+      el.innerHTML = '<div style="text-align:center;padding:12px;color:var(--muted);font-size:13px">Supabase not connected.</div>';
+      return;
+    }
+    const driverCode = localStorage.getItem('3ll_driver_code') || '';
+    if (!driverCode) {
+      el.innerHTML = '<div style="text-align:center;padding:12px;color:var(--muted);font-size:13px">Driver not identified.</div>';
+      return;
+    }
+
+    // Query loads where driver_code matches and status = 'delivered'
+    const { data: loads, error } = await supabaseClient
+      .from('loads')
+      .select('*')
+      .eq('driver_code', driverCode)
+      .eq('status', 'delivered')
+      .order('delivery_at', { ascending: false })
+      .limit(20);
+
+    if (error || !loads || !loads.length) {
       el.innerHTML = '<div style="text-align:center;padding:12px;color:var(--muted);font-size:13px">No completed loads yet.</div>';
       return;
     }
     el.innerHTML = loads.map(l => {
-      const origin = [l.origin_city, l.origin_state].filter(Boolean).join(', ') || '?';
-      const dest   = [l.dest_city,   l.dest_state  ].filter(Boolean).join(', ') || '?';
-      const date   = l.delivered_at ? new Date(l.delivered_at).toLocaleDateString('en-US',{month:'short',day:'numeric'}) : (l.pickup_at ? new Date(l.pickup_at).toLocaleDateString('en-US',{month:'short',day:'numeric'}) : '—');
-      const rate   = l.rate_total ? '$' + Number(l.rate_total).toLocaleString() : '—';
-      const rpm    = (l.rate_total && l.miles) ? '$' + (l.rate_total/l.miles).toFixed(2) + '/mi' : '';
+      const origin = [l.origin_city || l.pickup_city, l.origin_state || l.pickup_state].filter(Boolean).join(', ') || '?';
+      const dest   = [l.dest_city || l.delivery_city, l.dest_state || l.delivery_state].filter(Boolean).join(', ') || '?';
+      const date   = l.delivery_at ? new Date(l.delivery_at).toLocaleDateString('en-US',{month:'short',day:'numeric'}) : (l.pickup_at ? new Date(l.pickup_at).toLocaleDateString('en-US',{month:'short',day:'numeric'}) : '—');
+      const rate   = (l.gross_rate || l.rate_total) ? '$' + Number(l.gross_rate || l.rate_total).toLocaleString() : '—';
+      const rateVal = l.gross_rate || l.rate_total || 0;
+      const rpm    = (rateVal && l.miles) ? '$' + (rateVal/l.miles).toFixed(2) + '/mi' : '';
       return `
         <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:12px;margin-bottom:8px">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
@@ -1248,7 +1384,8 @@ async function loadLoadHistory() {
           <div style="font-size:11px;color:var(--muted);margin-top:4px">${date}${l.miles ? ' · ' + l.miles.toLocaleString() + ' mi' : ''}${rpm ? ' · ' + rpm : ''}</div>
         </div>`;
     }).join('');
-  } catch {
+  } catch (err) {
+    console.error('loadLoadHistory error:', err);
     el.innerHTML = '<div style="text-align:center;padding:12px;color:var(--muted);font-size:13px">Could not load history.</div>';
   }
 }
@@ -1279,9 +1416,23 @@ async function loadPayData() {
     return;
   }
   try {
-    const res   = await apiFetch(`/api/fleet?status=delivered&driver_id=${DRIVER_ID}&limit=100`);
-    const loads = await res.json();
-    if (!loads) return;
+    if (!supabaseClient) return;
+    const driverCode = localStorage.getItem('3ll_driver_code') || '';
+    if (!driverCode) return;
+
+    // Query loads where driver_code matches and status = 'delivered'
+    const { data: loads, error } = await supabaseClient
+      .from('loads')
+      .select('*')
+      .eq('driver_code', driverCode)
+      .eq('status', 'delivered')
+      .order('pickup_at', { ascending: false })
+      .limit(100);
+
+    if (error || !loads) {
+      console.error('loadPayData error:', error);
+      return;
+    }
 
     const now       = new Date();
     const weekStart = new Date(now); weekStart.setDate(now.getDate() - now.getDay());
@@ -1291,13 +1442,13 @@ async function loadPayData() {
     const weekLoads = loads.filter(l => l.pickup_at && new Date(l.pickup_at) >= weekStart);
     const ytdLoads  = loads.filter(l => l.pickup_at && new Date(l.pickup_at) >= yearStart);
 
-    const sum = arr => arr.reduce((a,l) => a + (Number(l.rate_total)||0), 0);
+    const sum = arr => arr.reduce((a,l) => a + (Number(l.gross_rate || l.rate_total)||0), 0);
     const mi  = arr => arr.reduce((a,l) => a + (Number(l.miles)||0), 0);
 
     const weekGross = sum(weekLoads), weekMi = mi(weekLoads);
     const ytdGross  = sum(ytdLoads),  ytdMi  = mi(ytdLoads);
 
-    const dispatch   = weekGross * 0.08;
+    const dispatch   = weekLoads.reduce((a,l) => a + (Number(l.dispatch_fee)||0), 0);
     const insurance  = weekLoads.length * 45;
     const fuelAdv    = 0;
     const net        = weekGross - dispatch - insurance - fuelAdv;
@@ -1306,7 +1457,7 @@ async function loadPayData() {
     document.getElementById('pay-week-miles').textContent = weekMi    ? weekMi.toLocaleString()          : '—';
     document.getElementById('pay-week-loads').textContent = weekLoads.length || '—';
     document.getElementById('pay-week-rpm').textContent   = (weekGross && weekMi) ? '$' + (weekGross/weekMi).toFixed(2) : '—';
-    document.getElementById('ded-dispatch').textContent   = dispatch  ? '-$' + dispatch.toFixed(2)  : '—';
+    document.getElementById('ded-dispatch').textContent   = dispatch  ? '-$' + dispatch.toFixed(2)  : '$0';
     document.getElementById('ded-fuel').textContent       = fuelAdv   ? '-$' + fuelAdv.toFixed(2)   : '$0';
     document.getElementById('ded-insurance').textContent  = insurance ? '-$' + insurance.toFixed(2) : '—';
     document.getElementById('pay-net').textContent        = net       ? '$' + net.toFixed(2)         : '—';
@@ -1320,8 +1471,9 @@ async function loadPayData() {
       const d = new Date(l.pickup_at);
       const wk = new Date(d); wk.setDate(d.getDate() - d.getDay()); wk.setHours(0,0,0,0);
       const key = wk.toISOString().slice(0,10);
+      const rate = l.gross_rate || l.rate_total || 0;
       if (!byWeek[key]) byWeek[key] = { gross:0, loads:0, miles:0, label: wk.toLocaleDateString('en-US',{month:'short',day:'numeric'}) };
-      byWeek[key].gross += Number(l.rate_total)||0;
+      byWeek[key].gross += Number(rate);
       byWeek[key].loads += 1;
       byWeek[key].miles += Number(l.miles)||0;
     });
@@ -1342,7 +1494,9 @@ async function loadPayData() {
           </div>
         </div>`).join('');
     }
-  } catch {}
+  } catch (err) {
+    console.error('loadPayData exception:', err);
+  }
 }
 
 // ── EQUIPMENT ────────────────────────────────────────────────────────────────
@@ -1356,8 +1510,20 @@ function saveEquipment() {
 
 // ── ACTIONS ───────────────────────────────────────────────────────────────────
 async function confirmPickup() {
-  navigator.geolocation?.getCurrentPosition(pos => {
-    apiFetch('/api/telemetry/ping', 'POST', { driver_id: DRIVER_ID, lat: pos.coords.latitude, lng: pos.coords.longitude, event: 'pickup_confirmed' });
+  navigator.geolocation?.getCurrentPosition(async pos => {
+    if (supabaseClient) {
+      try {
+        await supabaseClient.from('truck_telemetry').insert({
+          driver_id: DRIVER_ID,
+          latitude: pos.coords.latitude,
+          longitude: pos.coords.longitude,
+          event: 'pickup_confirmed',
+          ts: new Date().toISOString()
+        });
+      } catch (err) {
+        console.error('Telemetry error:', err);
+      }
+    }
   });
   document.getElementById('btn-pickup').style.display   = 'none';
   document.getElementById('btn-delivery').style.display = 'flex';
@@ -1365,8 +1531,20 @@ async function confirmPickup() {
 }
 
 async function confirmDelivery() {
-  navigator.geolocation?.getCurrentPosition(pos => {
-    apiFetch('/api/telemetry/ping', 'POST', { driver_id: DRIVER_ID, lat: pos.coords.latitude, lng: pos.coords.longitude, event: 'delivery_confirmed' });
+  navigator.geolocation?.getCurrentPosition(async pos => {
+    if (supabaseClient) {
+      try {
+        await supabaseClient.from('truck_telemetry').insert({
+          driver_id: DRIVER_ID,
+          latitude: pos.coords.latitude,
+          longitude: pos.coords.longitude,
+          event: 'delivery_confirmed',
+          ts: new Date().toISOString()
+        });
+      } catch (err) {
+        console.error('Telemetry error:', err);
+      }
+    }
   });
   showToast('📦 Delivery confirmed — upload POD now');
   showView('docs');
@@ -1374,14 +1552,42 @@ async function confirmDelivery() {
 
 async function acceptLoad(loadId, loadNumber) {
   try {
-    await apiFetch(`/api/fleet/${loadId}`, 'PATCH', { status: 'dispatched' });
+    const driverCode = localStorage.getItem('3ll_driver_code') || '';
+    if (!supabaseClient || !driverCode) {
+      showToast('Driver not identified');
+      return;
+    }
+
+    // Update load with driver_code
+    const { error } = await supabaseClient
+      .from('loads')
+      .update({ driver_code: driverCode, status: 'dispatched' })
+      .eq('id', loadId);
+
+    if (error) {
+      console.error('Accept load error:', error);
+      showToast('Error accepting load — try again');
+      return;
+    }
+
     showToast('✅ Load accepted! Dispatcher will confirm.');
+
+    // Send acceptance message
     if (MY_PHONE && loadNumber) {
-      await apiFetch('/api/comms/send', 'POST', { to: MY_PHONE, body: `YES - accepting load ${loadNumber}`, driver_id: DRIVER_ID, load_id: loadId });
+      await supabaseClient.from('driver_messages').insert({
+        driver_phone: MY_PHONE,
+        direction: 'outbound',
+        body: `YES - accepting load ${loadNumber}`,
+        msg_type: 'acceptance',
+        load_id: loadId
+      });
     }
     showView('home');
     loadCurrentLoad();
-  } catch { showToast('Error accepting load — try again'); }
+  } catch (err) {
+    console.error('acceptLoad exception:', err);
+    showToast('Error accepting load — try again');
+  }
 }
 
 async function declineLoad(loadId) {
@@ -1389,11 +1595,22 @@ async function declineLoad(loadId) {
   loadAvailableLoads();
 }
 
-function reportIssue() {
+async function reportIssue() {
   const issue = prompt('Describe the issue (breakdown, accident, delay):');
-  if (!issue) return;
-  apiFetch('/api/webhooks/driver_issue', 'POST', { driver_id: DRIVER_ID, issue, ts: new Date().toISOString() });
-  showToast('⚠️ Issue reported to Dispatch');
+  if (!issue || !supabaseClient) return;
+  try {
+    // Send issue as a message to dispatch
+    await supabaseClient.from('driver_messages').insert({
+      driver_phone: MY_PHONE,
+      direction: 'outbound',
+      body: `🚨 ISSUE REPORT: ${issue}`,
+      msg_type: 'issue_report'
+    });
+    showToast('⚠️ Issue reported to Dispatch');
+  } catch (err) {
+    console.error('reportIssue error:', err);
+    showToast('Failed to report issue');
+  }
 }
 
 function triggerUpload(inputId) { document.getElementById(inputId).click(); }
@@ -1433,23 +1650,28 @@ function stopGpsTracking() {
 }
 
 async function sendDriverLocation() {
-  if (!navigator.geolocation) return;
+  if (!navigator.geolocation || !supabaseClient) return;
 
   navigator.geolocation.getCurrentPosition(
-    pos => {
+    async pos => {
       const { latitude, longitude, accuracy, speed, heading } = pos.coords;
       const ts = new Date().toISOString();
 
-      // Send to backend (non-blocking)
-      apiFetch('/api/telemetry/location', 'POST', {
-        driver_id: DRIVER_ID,
-        lat: latitude,
-        lng: longitude,
-        accuracy,
-        speed_mph: speed ? (speed * 2.237).toFixed(1) : 0,
-        heading: heading || 0,
-        ts
-      }).catch(() => {});
+      try {
+        // Send to Supabase truck_telemetry table
+        await supabaseClient.from('truck_telemetry').insert({
+          driver_id: DRIVER_ID,
+          latitude,
+          longitude,
+          accuracy,
+          speed_mph: speed ? (speed * 2.237).toFixed(1) : 0,
+          heading: heading || 0,
+          ts
+        });
+      } catch (err) {
+        // Silent failure for location tracking
+        console.debug('Location tracking error:', err);
+      }
     },
     () => {} // Silent error
   );
@@ -1457,11 +1679,34 @@ async function sendDriverLocation() {
 
 // ── HOS ───────────────────────────────────────────────────────────────────────
 async function pollHOS() {
+  if (!supabaseClient) return;
   try {
-    const res = await apiFetch(`/api/telemetry/hos?driver_id=${DRIVER_ID}`);
-    const hos = await res.json();
-    if (hos?.drive_remaining) renderHOS(hos);
-  } catch {}
+    const driverId = localStorage.getItem('3ll_driver_id') || '';
+    if (!driverId) return;
+
+    // Query driver_hos_status where driver_id matches
+    const { data: hos, error } = await supabaseClient
+      .from('driver_hos_status')
+      .select('*')
+      .eq('driver_id', driverId)
+      .order('ts', { ascending: false })
+      .limit(1);
+
+    if (error || !hos || !hos.length) {
+      console.log('HOS data not available');
+      return;
+    }
+
+    const hosData = hos[0];
+    // Convert minutes to hours for rendering (schema uses minutes, app expects hours)
+    renderHOS({
+      drive_remaining: (hosData.drive_remaining_min || 0) / 60,
+      shift_remaining: (hosData.shift_remaining_min || 0) / 60,
+      cycle_remaining: (hosData.cycle_remaining_min || 0) / 60
+    });
+  } catch (err) {
+    console.error('pollHOS error:', err);
+  }
 }
 
 function renderHOS(hos) {
