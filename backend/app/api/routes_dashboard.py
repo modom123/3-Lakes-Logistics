@@ -1,4 +1,4 @@
-"""Dashboard aggregates — powers the command center home page KPI tiles."""
+"""Dashboard aggregates — powers the EAGLE EYE home page KPI tiles."""
 from __future__ import annotations
 
 from datetime import datetime, timezone

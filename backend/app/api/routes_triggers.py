@@ -1,4 +1,4 @@
-"""Event-driven trigger endpoints — called by the ops suite after Supabase writes.
+"""Event-driven trigger endpoints — called by the EAGLE EYE after Supabase writes.
 
 The frontend saves loads/status changes directly to Supabase via the JS client.
 After each write, it hits one of these endpoints so the execution engine fires
@@ -95,7 +95,7 @@ def trigger_delivered(req: LoadTrigger, bg: BackgroundTasks) -> dict:
 
 @router.post("/compliance")
 def trigger_compliance(req: ComplianceTrigger, bg: BackgroundTasks) -> dict:
-    """Fire compliance sweep — daily cron or manual trigger from the ops suite."""
+    """Fire compliance sweep — daily cron or manual trigger from the EAGLE EYE."""
     bg.add_task(fire_compliance_sweep)
     log_agent("atlas", "trigger.compliance", carrier_id=req.carrier_id,
               result="queued")

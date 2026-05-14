@@ -1,4 +1,4 @@
-"""Fleet assets — powers the command center `Dispatch` page."""
+"""Fleet assets — powers the EAGLE EYE `Dispatch` page."""
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException

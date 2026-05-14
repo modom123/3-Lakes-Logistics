@@ -1,5 +1,5 @@
-"""FastAPI entrypoint — mounts every route group exposed to the
-command center (3LakesLogistics_OpsSuite_v5.html) and the public
+"""FastAPI entrypoint — mounts every route group exposed to
+EAGLE EYE (3LakesLogistics_OpsSuite_v5.html) and the public
 intake form (index (7).html).
 
 Run locally:

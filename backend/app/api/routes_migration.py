@@ -1,4 +1,4 @@
-"""Airtable → Supabase migration endpoints for Ops Suite."""
+"""Airtable → Supabase migration endpoints for EAGLE EYE."""
 from fastapi import APIRouter, Depends, HTTPException
 import httpx
 from ..supabase_client import get_supabase

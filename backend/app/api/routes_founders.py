@@ -1,5 +1,5 @@
 """Founders inventory — read by index (7).html's countdown table and the
-command center `Subscriptions` page. Public GET, bearer-guarded writes.
+EAGLE EYE `Subscriptions` page. Public GET, bearer-guarded writes.
 """
 from __future__ import annotations
 

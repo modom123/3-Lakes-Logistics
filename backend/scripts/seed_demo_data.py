@@ -1,4 +1,4 @@
-"""Seed demo data for local dev + command center screenshots."""
+"""Seed demo data for local dev + EAGLE EYE screenshots."""
 from __future__ import annotations
 
 from datetime import datetime, timezone

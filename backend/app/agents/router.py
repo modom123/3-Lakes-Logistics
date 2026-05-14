@@ -1,4 +1,4 @@
-"""Step 22: agent_router. Command center buttons call
+"""Step 22: agent_router. EAGLE EYE buttons call
 POST /api/agents/{agent}/run which dispatches here.
 """
 from __future__ import annotations

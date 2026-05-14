@@ -1,4 +1,4 @@
-"""Agent control surface — the command center's buttons that manually
+"""Agent control surface — the EAGLE EYE's buttons that manually
 trigger specific AI-agent actions. Routes delegate to app/agents/*.
 """
 from __future__ import annotations

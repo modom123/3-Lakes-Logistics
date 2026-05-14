@@ -1,4 +1,4 @@
-"""Read models returned to the command center."""
+"""Read models returned to the EAGLE EYE."""
 from __future__ import annotations
 
 from datetime import datetime

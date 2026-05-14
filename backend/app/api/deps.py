@@ -7,7 +7,7 @@ from ..settings import get_settings
 
 
 def require_bearer(authorization: str | None = Header(default=None)) -> None:
-    """Simple bearer-token guard for the command center + internal calls.
+    """Simple bearer-token guard for the EAGLE EYE + internal calls.
 
     Production should swap this for proper Supabase JWT verification.
     """

@@ -1,4 +1,4 @@
-"""Telemetry + HOS — powers the command center live map and HOS widgets."""
+"""Telemetry + HOS — powers the EAGLE EYE live map and HOS widgets."""
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends

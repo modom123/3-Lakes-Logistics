@@ -1,4 +1,4 @@
-"""Leads — powers the command center `Leads` page and Vance outbound."""
+"""Leads — powers the EAGLE EYE `Leads` page and Vance outbound."""
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException

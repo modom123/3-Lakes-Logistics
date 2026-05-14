@@ -1,4 +1,4 @@
-"""Carriers CRUD — powers the command center `Carriers` page."""
+"""Carriers CRUD — powers the EAGLE EYE `Carriers` page."""
 from __future__ import annotations
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
