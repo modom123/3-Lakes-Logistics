@@ -1,11 +1,7 @@
--- ============================================================
 -- 3 Lakes Logistics — Full Sync Migration
--- Run this once in Supabase SQL Editor to create all tables.
--- All 4 parts (Website, Ops Suite, Driver App, Backend) share
--- this single Supabase database.
--- ============================================================
+-- Run this in Supabase SQL Editor to ensure all tables exist
 
--- ── team_reports (Ops Suite → Team Reports section) ──────────
+-- team_reports table (for ops suite Team Reports section)
 CREATE TABLE IF NOT EXISTS team_reports (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     submitter_name text NOT NULL,
@@ -16,11 +12,10 @@ CREATE TABLE IF NOT EXISTS team_reports (
     created_at timestamptz DEFAULT now()
 );
 ALTER TABLE team_reports ENABLE ROW LEVEL SECURITY;
-CREATE POLICY IF NOT EXISTS "Service role full access on team_reports"
-    ON team_reports FOR ALL TO service_role USING (true);
-CREATE POLICY IF NOT EXISTS "Anon can insert team_reports"
-    ON team_reports FOR INSERT TO anon WITH CHECK (true);
+CREATE POLICY "Service role full access on team_reports" ON team_reports FOR ALL TO service_role USING (true);
 
+-- Include executive schema (idempotent)
+-- executives, executive_kpi_snapshots, triage_escalations, daily_briefs, contingency_plans
 -- ============================================================
 -- IEBC Executive Command Schema
 -- 18 executives (5 cabinet + 13 expansion), KPI engine,
