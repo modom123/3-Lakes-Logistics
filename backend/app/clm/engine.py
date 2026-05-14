@@ -84,6 +84,20 @@ def trigger_invoice(contract_id: UUID) -> dict:
         },
     }).execute()
 
+    # Write invoice record to document vault so it appears in EAGLE EYE
+    load_num = contract.get("load_number") or str(contract_id)[:8]
+    try:
+        sb.table("document_vault").insert({
+            "carrier_id": contract.get("carrier_id"),
+            "contract_id": str(contract_id),
+            "doc_type": "invoice",
+            "filename": f"invoice_{load_num}.pdf",
+            "storage_path": f"invoices/{str(contract_id)}/invoice_{load_num}.pdf",
+            "scan_status": "complete",
+        }).execute()
+    except Exception as exc:  # noqa: BLE001
+        log.warning("document_vault insert failed for invoice contract=%s: %s", contract_id, exc)
+
     post_contract_event(
         contract_id, "invoiced", "clm.engine",
         {"rate_total": contract.get("rate_total")},

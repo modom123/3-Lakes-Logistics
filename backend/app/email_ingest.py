@@ -160,6 +160,18 @@ async def receive_inbound_email(request: Request) -> dict[str, Any]:
                 try:
                     pdf_bytes = await file.read()
 
+                    # Log attachment to document vault immediately (regardless of extraction result)
+                    try:
+                        sb.table("document_vault").insert({
+                            "doc_type": "rate_con",
+                            "filename": file.filename,
+                            "storage_path": f"email_ingest/{email_id}/{file.filename}",
+                            "file_size_kb": round(len(pdf_bytes) / 1024, 1),
+                            "scan_status": "pending",
+                        }).execute()
+                    except Exception as _ve:  # noqa: BLE001
+                        log.warning("document_vault insert failed for email attachment: %s", _ve)
+
                     # Extract text from PDF
                     ocr_text = extract_pdf_text(pdf_bytes)
                     if not ocr_text:
@@ -168,6 +180,14 @@ async def receive_inbound_email(request: Request) -> dict[str, Any]:
 
                     # Run CLM scanner to extract contract variables
                     extracted, confidence, warnings = scan_contract(ocr_text, "rate_confirmation")
+
+                    # Update vault record to complete now that OCR succeeded
+                    try:
+                        sb.table("document_vault").update({"scan_status": "complete"}).eq(
+                            "storage_path", f"email_ingest/{email_id}/{file.filename}"
+                        ).execute()
+                    except Exception:  # noqa: BLE001
+                        pass
 
                     if warnings:
                         log.info(f"CLM scanner warnings for {file.filename}: {warnings}")
