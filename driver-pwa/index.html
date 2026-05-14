@@ -671,36 +671,41 @@
 <div id="toast"></div>
 
 <script>
+// ── DEMO MODE ────────────────────────────────────────────────────────────────
+const DEMO_MODE = localStorage.getItem('3ll_token') === 'demo-token-3lakes';
+
+const DEMO_LOAD = {
+  id: 'LOAD-2847', load_number: 'LD-2847', status: 'in_transit',
+  origin_city: 'Chicago', origin_state: 'IL',
+  dest_city: 'Los Angeles', dest_state: 'CA',
+  rate_total: 3200, miles: 2015, pickup_at: new Date().toISOString(),
+  commodity: 'Dry Goods', weight: 42000,
+  pickup_address: '1234 W Lake St, Chicago, IL 60607',
+  delivery_address: '5678 S Alameda St, Los Angeles, CA 90058',
+  broker_name: 'Echo Global Logistics', broker_phone: '(800) 354-7993',
+  rpm: 1.59
+};
+
+const DEMO_AVAILABLE_LOADS = [
+  { id: 'L001', load_number: 'LD-2848', origin_city: 'Dallas', origin_state: 'TX', dest_city: 'Atlanta', dest_state: 'GA', rate_total: 1850, miles: 781, pickup_at: new Date(Date.now()+86400000).toISOString(), commodity: 'Electronics' },
+  { id: 'L002', load_number: 'LD-2849', origin_city: 'Denver', origin_state: 'CO', dest_city: 'Phoenix', dest_state: 'AZ', rate_total: 980, miles: 602, pickup_at: new Date(Date.now()+172800000).toISOString(), commodity: 'Auto Parts' },
+  { id: 'L003', load_number: 'LD-2850', origin_city: 'Memphis', origin_state: 'TN', dest_city: 'Miami', dest_state: 'FL', rate_total: 2340, miles: 1100, pickup_at: new Date(Date.now()+259200000).toISOString(), commodity: 'Produce' },
+];
+
+const DEMO_MESSAGES = [
+  { direction:'inbound',  body:'Good morning James! Load LD-2847 is confirmed. Pickup at 8am sharp.',          created_at: new Date(Date.now()-7200000).toISOString() },
+  { direction:'outbound', body:'On my way to Chicago pickup now.',                                              created_at: new Date(Date.now()-5400000).toISOString() },
+  { direction:'inbound',  body:'Great. Broker is Echo Global, contact (800) 354-7993 if any issues at dock.',  created_at: new Date(Date.now()-3600000).toISOString() },
+  { direction:'outbound', body:'Got it, picked up no issues. Heading to LA.',                                   created_at: new Date(Date.now()-1800000).toISOString() },
+  { direction:'inbound',  body:'Perfect. ETA for delivery?',                                                   created_at: new Date(Date.now()-900000).toISOString() },
+];
+
+const DEMO_EARNINGS = { gross: 3200, dispatch_fee: 256, insurance: 45, fuel_advance: 0, net: 2899 };
+
 // ── API Failover — primary + backup ─────────────────────────────────────────
-const API_PRIMARY = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
-  ? 'http://localhost:8080'
-  : 'https://3lakes-api-primary.fly.dev';
+const API_PRIMARY = 'https://3lakes-api-primary.fly.dev';
 const API_BACKUP  = 'https://3lakes-api-backup.fly.dev';
-
-let _apiBase       = API_PRIMARY;
-let _failoverCount = 0;
-let _lastHealthCheck = 0;
-
-async function _checkApiHealth() {
-  const now = Date.now();
-  if (now - _lastHealthCheck < 30000) return; // check at most every 30s
-  _lastHealthCheck = now;
-  try {
-    const r = await fetch(_apiBase + '/api/health/ping', { method: 'GET', signal: AbortSignal.timeout(4000) });
-    if (r.ok) { _failoverCount = 0; return; }
-    throw new Error('unhealthy');
-  } catch {
-    if (_apiBase === API_PRIMARY) {
-      console.warn('[API] Primary down — switching to backup');
-      _apiBase = API_BACKUP;
-      _failoverCount++;
-      showToast('Switched to backup server — service continues');
-    } else {
-      console.error('[API] Backup also unreachable');
-    }
-  }
-}
-setInterval(_checkApiHealth, 30000);
+let _apiBase = API_PRIMARY;
 
 const API = '';
 const SUPABASE_URL = (window.location.hostname === 'localhost')
@@ -821,9 +826,24 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('driver-name').textContent = localStorage.getItem('3ll_driver_name') || 'Driver';
   loadCurrentLoad();
   loadProfile();
-  setInterval(pollHOS, 30000);
-  initSupabaseRealtime();
-  startMsgPolling();  // Fallback polling (12s)
+  if (DEMO_MODE) {
+    document.getElementById('miles-today').textContent = '2,015';
+    document.getElementById('est-pay').textContent     = '$2,304';
+    document.getElementById('hos-drive').textContent   = '8:42';
+    document.getElementById('hos-drive').style.color   = 'var(--green)';
+    document.getElementById('hos-drive-bar').style.width      = '87%';
+    document.getElementById('hos-drive-bar').style.background = 'var(--green)';
+    document.getElementById('hos-shift').textContent   = '10:15';
+    document.getElementById('hos-shift-bar').style.width      = '73%';
+    document.getElementById('hos-shift-bar').style.background = 'var(--accent)';
+    document.getElementById('hos-cycle').textContent   = '62:18';
+    document.getElementById('hos-cycle-bar').style.width      = '89%';
+    document.getElementById('hos-cycle-bar').style.background = 'var(--yellow)';
+  } else {
+    setInterval(pollHOS, 30000);
+    initSupabaseRealtime();
+    startMsgPolling();
+  }
   registerServiceWorker();
 });
 
@@ -845,6 +865,7 @@ function showView(name) {
 
 // ── CURRENT LOAD ──────────────────────────────────────────────────────────────
 async function loadCurrentLoad() {
+  if (DEMO_MODE) { renderCurrentLoad(DEMO_LOAD); return; }
   try {
     const res = await apiFetch('/api/fleet?status=in_transit&limit=1');
     const loads = await res.json();
@@ -914,6 +935,7 @@ function renderNoLoad() {
 async function loadAvailableLoads() {
   const list = document.getElementById('available-loads-list');
   list.innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted)">Loading…</div>';
+  if (DEMO_MODE) { renderAvailableLoads(DEMO_AVAILABLE_LOADS); return; }
   try {
     const res   = await apiFetch('/api/fleet?status=booked&limit=30');
     const loads = await res.json();
@@ -947,24 +969,54 @@ async function loadAvailableLoads() {
         </tr>`;
     }).join('');
 
-    list.innerHTML = `
-      <div class="loads-table-wrap">
-        <table class="loads-table">
-          <thead><tr>
-            <th>Route / Load</th>
-            <th>Rate</th>
-            <th></th>
-          </tr></thead>
-          <tbody>${rows}</tbody>
-        </table>
-      </div>`;
+    renderAvailableLoads(loads);
   } catch {
     list.innerHTML = '<div class="empty-state"><div class="empty-icon">⚠️</div><p>Could not load. Check connection.</p></div>';
   }
 }
 
+function renderAvailableLoads(loads) {
+  const list = document.getElementById('available-loads-list');
+  if (!loads || loads.length === 0) {
+    list.innerHTML = '<div class="empty-state"><div class="empty-icon">🚛</div><p>No loads available right now.</p></div>';
+    return;
+  }
+  const rows = loads.map(l => {
+    const rpm    = (l.rate_total && l.miles) ? '$' + (l.rate_total / l.miles).toFixed(2) : '—';
+    const pickup = l.pickup_at ? new Date(l.pickup_at).toLocaleDateString('en-US',{month:'short',day:'numeric'}) : '—';
+    const origin = [l.origin_city, l.origin_state].filter(Boolean).join(', ') || '?';
+    const dest   = [l.dest_city,   l.dest_state  ].filter(Boolean).join(', ') || '?';
+    return `
+      <tr>
+        <td>
+          <div class="tbl-route">${esc(origin)}</div>
+          <div class="tbl-sub">→ ${esc(dest)}</div>
+          <div class="tbl-sub">${esc(l.load_number||l.id)} · ${l.miles ? l.miles.toLocaleString() + ' mi' : '—'} · ${pickup}</div>
+        </td>
+        <td>
+          <div class="tbl-rate">${l.rate_total ? '$' + Number(l.rate_total).toLocaleString() : '—'}</div>
+          <div class="tbl-rpm">${rpm}/mi</div>
+        </td>
+        <td>
+          <div class="tbl-actions">
+            <button class="tbl-accept" onclick="acceptLoad('${l.id}','${esc(l.load_number||'')}')">✅ Accept</button>
+            <button class="tbl-pass"   onclick="declineLoad('${l.id}')">Pass</button>
+          </div>
+        </td>
+      </tr>`;
+  }).join('');
+  list.innerHTML = `
+    <div class="loads-table-wrap">
+      <table class="loads-table">
+        <thead><tr><th>Route / Load</th><th>Rate</th><th></th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
+}
+
 // ── MESSAGES ──────────────────────────────────────────────────────────────────
 async function loadMessages(scrollToBottom = false) {
+  if (DEMO_MODE) { renderMessages(DEMO_MESSAGES, scrollToBottom); return; }
   if (!MY_PHONE) return;
   try {
     const res  = await apiFetch(`/api/comms/thread/${encodeURIComponent(MY_PHONE)}`);
@@ -1152,6 +1204,26 @@ function loadDocs() {}
 // ── LOAD HISTORY ──────────────────────────────────────────────────────────────
 async function loadLoadHistory() {
   const el = document.getElementById('load-history-list');
+  if (DEMO_MODE) {
+    el.innerHTML = `
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px;margin-bottom:8px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+          <div style="font-size:12px;font-weight:700;color:var(--text)">LD-2845</div>
+          <div style="display:flex;gap:8px;align-items:center"><span style="font-size:14px;font-weight:700;color:var(--green)">$2,400</span><span class="pill pill-green" style="font-size:10px">✓ Delivered</span></div>
+        </div>
+        <div style="font-size:12px;color:var(--muted)">Houston, TX → Nashville, TN</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:4px">May 10 · 1,088 mi · $2.21/mi</div>
+      </div>
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px;margin-bottom:8px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+          <div style="font-size:12px;font-weight:700;color:var(--text)">LD-2843</div>
+          <div style="display:flex;gap:8px;align-items:center"><span style="font-size:14px;font-weight:700;color:var(--green)">$2,400</span><span class="pill pill-green" style="font-size:10px">✓ Delivered</span></div>
+        </div>
+        <div style="font-size:12px;color:var(--muted)">Kansas City, MO → Charlotte, NC</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:4px">May 7 · 1,122 mi · $2.14/mi</div>
+      </div>`;
+    return;
+  }
   try {
     const res   = await apiFetch('/api/fleet?status=delivered&limit=20');
     const loads = await res.json();
@@ -1185,6 +1257,29 @@ async function loadLoadHistory() {
 
 // ── PAY / EARNINGS ────────────────────────────────────────────────────────────
 async function loadPayData() {
+  if (DEMO_MODE) {
+    const e = DEMO_EARNINGS;
+    document.getElementById('pay-week-gross').textContent = '$' + e.gross.toLocaleString();
+    document.getElementById('pay-week-miles').textContent = '2,015';
+    document.getElementById('pay-week-loads').textContent = '1';
+    document.getElementById('pay-week-rpm').textContent   = '$1.59';
+    document.getElementById('ded-dispatch').textContent   = '-$' + e.dispatch_fee;
+    document.getElementById('ded-fuel').textContent       = '$0';
+    document.getElementById('ded-insurance').textContent  = '-$' + e.insurance;
+    document.getElementById('pay-net').textContent        = '$' + e.net.toLocaleString();
+    document.getElementById('pay-ytd-gross').textContent  = '$18,450';
+    document.getElementById('pay-ytd-miles').textContent  = '11,230';
+    document.getElementById('settlement-list').innerHTML  = `
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center">
+        <div><div style="font-size:13px;font-weight:600;color:var(--text)">Week of May 5</div><div style="font-size:11px;color:var(--muted);margin-top:2px">2 loads · 3,210 mi</div></div>
+        <div style="text-align:right"><div style="font-size:16px;font-weight:700;color:var(--green)">$4,800</div><div style="font-size:11px;color:var(--muted)">gross</div></div>
+      </div>
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center">
+        <div><div style="font-size:13px;font-weight:600;color:var(--text)">Week of Apr 28</div><div style="font-size:11px;color:var(--muted);margin-top:2px">3 loads · 4,005 mi</div></div>
+        <div style="text-align:right"><div style="font-size:16px;font-weight:700;color:var(--green)">$6,200</div><div style="font-size:11px;color:var(--muted)">gross</div></div>
+      </div>`;
+    return;
+  }
   try {
     const res   = await apiFetch(`/api/fleet?status=delivered&driver_id=${DRIVER_ID}&limit=100`);
     const loads = await res.json();
