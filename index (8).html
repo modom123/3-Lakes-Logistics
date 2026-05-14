@@ -467,6 +467,7 @@ nav{
 .ob-g{display:flex;flex-direction:column;gap:6px;}
 .ob-lbl{font-size:11px;font-weight:600;color:var(--navy);letter-spacing:1px;text-transform:uppercase;}
 .ob-lbl span{color:var(--gold);}
+.ob-opt{color:#64748b;font-size:11px;font-weight:400;}
 .ob-in,.ob-sel,.ob-ta{width:100%;padding:11px 13px;border-radius:8px;border:1.5px solid var(--border);background:var(--off);font-family:var(--ff-b);font-size:13px;color:var(--text);outline:none;transition:all .2s;}
 .ob-in:focus,.ob-sel:focus,.ob-ta:focus{border-color:var(--gold);background:white;box-shadow:0 0 0 3px rgba(200,144,42,.1);}
 .ob-ta{min-height:88px;resize:vertical;}
@@ -1071,7 +1072,7 @@ button,a,[onclick]{cursor:pointer;}
 
           <div class="ob-sub">Legal Entity</div>
           <div class="ob-row"><div class="ob-g"><label class="ob-lbl">Legal Company Name <span>*</span></label><input class="ob-in" id="company_name" name="company_name" placeholder="Smith Transport LLC"/></div><div class="ob-g"><label class="ob-lbl">DBA / Trade Name</label><input class="ob-in" id="dba_name" name="dba_name" placeholder="If different from legal name"/></div></div>
-          <div class="ob-row"><div class="ob-g"><label class="ob-lbl">Entity Type <span>*</span></label><select class="ob-sel" id="entity_type" name="entity_type"><option value="">Select</option><option>LLC</option><option>S-Corp</option><option>C-Corp</option><option>Sole Proprietor</option><option>Partnership</option></select></div><div class="ob-g"><label class="ob-lbl">EIN / Tax ID <span>*</span></label><input class="ob-in" id="ein" name="ein" placeholder="XX-XXXXXXX"/></div></div>
+          <div class="ob-row"><div class="ob-g"><label class="ob-lbl">Entity Type <span>*</span></label><select class="ob-sel" id="entity_type" name="entity_type"><option value="">Select</option><option>LLC</option><option>S-Corp</option><option>C-Corp</option><option>Sole Proprietor</option><option>Partnership</option></select></div><div class="ob-g"><label class="ob-lbl">EIN / Tax ID <span class="ob-opt">(optional)</span></label><input class="ob-in" id="ein" name="ein" placeholder="XX-XXXXXXX"/></div></div>
 
           <div class="ob-sub">Primary Owner / Point of Contact</div>
           <div class="ob-row"><div class="ob-g"><label class="ob-lbl">First Name <span>*</span></label><input class="ob-in" id="o1fn" name="owner_first_name" placeholder="John"/></div><div class="ob-g"><label class="ob-lbl">Last Name <span>*</span></label><input class="ob-in" id="o1ln" name="owner_last_name" placeholder="Smith"/></div></div>
@@ -1100,7 +1101,7 @@ button,a,[onclick]{cursor:pointer;}
           <div class="ob-st-p">FMCSA credentials — Shield will pull SAFER, CSA, and insurance records from these IDs.</div>
 
           <div class="ob-sub">FMCSA Authority</div>
-          <div class="ob-row"><div class="ob-g"><label class="ob-lbl">USDOT Number <span>*</span></label><input class="ob-in" id="dot_number" name="dot_number" placeholder="1234567"/><div class="ob-hint">Numeric only. Used to pull SAFER + CSA scores.</div></div><div class="ob-g"><label class="ob-lbl">MC / FF Number <span>*</span></label><input class="ob-in" id="o2mc" name="mc_number" placeholder="MC-123456"/></div></div>
+          <div class="ob-row"><div class="ob-g"><label class="ob-lbl">USDOT Number <span class="ob-opt">(optional)</span></label><input class="ob-in" id="dot_number" name="dot_number" placeholder="1234567"/><div class="ob-hint">Numeric only. Used to pull SAFER + CSA scores.</div></div><div class="ob-g"><label class="ob-lbl">MC / FF Number <span class="ob-opt">(optional)</span></label><input class="ob-in" id="o2mc" name="mc_number" placeholder="MC-123456"/></div></div>
           <div class="ob-row"><div class="ob-g"><label class="ob-lbl">Authority Status <span>*</span></label><select class="ob-sel" id="authority_status" name="authority_status"><option value="">Select</option><option>Active</option><option>Pending (awaiting grant)</option><option>New (&lt;30 days)</option><option>Reinstating</option></select></div><div class="ob-g"><label class="ob-lbl">Authority Granted Date</label><input class="ob-in" type="date" id="authority_granted_date" name="authority_granted_date"/></div></div>
           <div class="ob-row"><div class="ob-g"><label class="ob-lbl">Authority Type <span>*</span></label><select class="ob-sel" id="authority_type" name="authority_type"><option value="">Select</option><option>Common Carrier</option><option>Contract Carrier</option><option>Common + Contract</option><option>Broker (with carrier)</option></select></div><div class="ob-g"><label class="ob-lbl">Years in Business <span>*</span></label><select class="ob-sel" id="years_operating" name="years_operating"><option value="">Select</option><option>New Authority</option><option>Less than 1 year</option><option>1–2 Years</option><option>3–5 Years</option><option>5–10 Years</option><option>10+ Years</option></select></div></div>
 
@@ -1221,7 +1222,7 @@ button,a,[onclick]{cursor:pointer;}
           <div class="ob-row"><div class="ob-g"><label class="ob-lbl">Preferred Load Type</label><select class="ob-sel" id="preferred_load_type" name="preferred_load_type"><option value="">Select</option><option>No preference</option><option>General Freight</option><option>Manufacturing / Industrial</option><option>Food &amp; Beverage</option><option>Building Materials</option><option>Auto Parts</option><option>Paper / Packaging</option><option>Beverage / Dairy</option><option>Hazmat</option></select></div><div class="ob-g"><label class="ob-lbl">Deadhead Tolerance</label><select class="ob-sel" id="deadhead_tolerance" name="deadhead_tolerance"><option value="">Select</option><option>0–50 mi</option><option>50–100 mi</option><option>100–200 mi</option><option>200+ mi OK</option></select></div></div>
 
           <div class="ob-sub">Insurance Coverage</div>
-          <div class="ob-row"><div class="ob-g"><label class="ob-lbl">Insurance Carrier <span>*</span></label><input class="ob-in" id="o4ins" name="insurance_carrier" placeholder="e.g. Progressive Commercial"/></div><div class="ob-g"><label class="ob-lbl">Policy Number <span>*</span></label><input class="ob-in" id="policy_number" name="policy_number" placeholder="Policy #"/></div></div>
+          <div class="ob-row"><div class="ob-g"><label class="ob-lbl">Insurance Carrier <span class="ob-opt">(optional)</span></label><input class="ob-in" id="o4ins" name="insurance_carrier" placeholder="e.g. Progressive Commercial"/></div><div class="ob-g"><label class="ob-lbl">Policy Number <span class="ob-opt">(optional)</span></label><input class="ob-in" id="policy_number" name="policy_number" placeholder="Policy #"/></div></div>
           <div class="ob-row"><div class="ob-g"><label class="ob-lbl">Liability Limit <span>*</span></label><select class="ob-sel" id="liability_limit" name="liability_limit"><option value="">Select</option><option>$750,000</option><option>$1,000,000</option><option>$1,500,000</option><option>$2,000,000+</option></select></div><div class="ob-g"><label class="ob-lbl">Cargo Coverage <span>*</span></label><select class="ob-sel" id="cargo_limit" name="cargo_limit"><option value="">Select</option><option>$100,000</option><option>$150,000</option><option>$200,000</option><option>$250,000+</option></select></div></div>
           <div class="ob-row"><div class="ob-g"><label class="ob-lbl">Trailer Interchange</label><select class="ob-sel" id="trailer_interchange" name="trailer_interchange"><option value="">Select</option><option>$0 (none)</option><option>$25,000</option><option>$50,000</option><option>$75,000+</option></select></div><div class="ob-g"><label class="ob-lbl">Policy Expiration <span>*</span></label><input class="ob-in" type="date" id="policy_expiration" name="policy_expiration"/></div></div>
           <div class="ob-row"><div class="ob-g"><label class="ob-lbl">Insurance Agent Name</label><input class="ob-in" id="agent_name" name="agent_name" placeholder="Agent contact"/></div><div class="ob-g"><label class="ob-lbl">Agent Phone</label><input class="ob-in" type="tel" id="agent_phone" name="agent_phone" placeholder="(555) 000-0000"/></div></div>
@@ -1236,8 +1237,8 @@ button,a,[onclick]{cursor:pointer;}
             <div class="ob-api-p">Settler automation runs weekly settlements every Friday 9am CT. Payouts land via ACH Monday. Banking info is stored with AES-256 encryption, never exposed to dispatchers.</div>
           </div>
           <div class="ob-row"><div class="ob-g"><label class="ob-lbl">Payout Method <span>*</span></label><select class="ob-sel" id="payout_method" name="payout_method"><option value="">Select</option><option>ACH (direct deposit)</option><option>Wire</option><option>Paper Check</option><option>Pay via Factoring Company</option></select></div><div class="ob-g"><label class="ob-lbl">Payee Name (on bank account) <span>*</span></label><input class="ob-in" id="payee_name" name="payee_name" placeholder="Legal name on account"/></div></div>
-          <div class="ob-row"><div class="ob-g"><label class="ob-lbl">Bank Name <span>*</span></label><input class="ob-in" id="bank_name" name="bank_name" placeholder="e.g. Chase, Wells Fargo"/></div><div class="ob-g"><label class="ob-lbl">Account Type <span>*</span></label><select class="ob-sel" id="account_type" name="account_type"><option value="">Select</option><option>Business Checking</option><option>Business Savings</option><option>Personal Checking</option><option>Personal Savings</option></select></div></div>
-          <div class="ob-row"><div class="ob-g"><label class="ob-lbl">Routing Number <span>*</span></label><input class="ob-in" id="bank_routing" name="bank_routing" type="password" placeholder="9-digit ABA" maxlength="9"/></div><div class="ob-g"><label class="ob-lbl">Account Number <span>*</span></label><input class="ob-in" id="bank_account" name="bank_account" type="password" placeholder="Account #"/></div></div>
+          <div class="ob-row"><div class="ob-g"><label class="ob-lbl">Bank Name <span class="ob-opt">(optional)</span></label><input class="ob-in" id="bank_name" name="bank_name" placeholder="e.g. Chase, Wells Fargo"/></div><div class="ob-g"><label class="ob-lbl">Account Type <span class="ob-opt">(optional)</span></label><select class="ob-sel" id="account_type" name="account_type"><option value="">Select</option><option>Business Checking</option><option>Business Savings</option><option>Personal Checking</option><option>Personal Savings</option></select></div></div>
+          <div class="ob-row"><div class="ob-g"><label class="ob-lbl">Routing Number <span class="ob-opt">(optional)</span></label><input class="ob-in" id="bank_routing" name="bank_routing" type="password" placeholder="9-digit ABA" maxlength="9"/></div><div class="ob-g"><label class="ob-lbl">Account Number <span class="ob-opt">(optional)</span></label><input class="ob-in" id="bank_account" name="bank_account" type="password" placeholder="Account #"/></div></div>
           <div class="ob-row"><div class="ob-g"><label class="ob-lbl">Fuel Card Provider</label><select class="ob-sel" id="fuel_card" name="fuel_card"><option value="">Select</option><option>None</option><option>EFS</option><option>RTS Fuel Card</option><option>Comdata</option><option>TCH</option><option>Pilot / Flying J</option><option>Other</option></select></div><div class="ob-g"><label class="ob-lbl">Advance Requests Allowed</label><select class="ob-sel" id="advances_allowed" name="advances_allowed"><option value="">Select</option><option>Yes — up to 50%</option><option>Yes — up to 25%</option><option>No advances</option></select></div></div>
 
           <div class="ob-sub">Membership Plan</div>
@@ -1314,7 +1315,7 @@ button,a,[onclick]{cursor:pointer;}
           </div>
           <div class="ob-nav">
             <button class="ob-bk" onclick="oBack(6)">← Back</button>
-            <button class="ob-nx" onclick="oSub()" style="background:linear-gradient(135deg,var(--gold),var(--gold2));color:var(--navy);font-size:15px;padding:13px 34px;box-shadow:0 4px 18px rgba(200,144,42,.38);">🚛 Submit Application</button>
+            <div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:12px 16px;margin-bottom:16px;font-size:13px;color:#0369a1;"><strong>✓ You can submit now</strong> — any fields left blank (EIN, DOT, insurance, banking) can be completed later. We'll email you a secure link to finish your profile.</div><button class="ob-nx" onclick="oSub()" style="background:linear-gradient(135deg,var(--gold),var(--gold2));color:var(--navy);font-size:15px;padding:13px 34px;box-shadow:0 4px 18px rgba(200,144,42,.38);">🚛 Submit Application</button>
           </div>
         </div>
       </div>
@@ -2567,10 +2568,10 @@ document.addEventListener('DOMContentLoaded',function(){
 });
 function oNext(f){
   if(f===1&&(!v('o1fn')||!v('o1ph')||!v('o1em')||!v('o1ct'))){shk('obBd');return;}
-  if(f===2&&(!v('dot_number')||!v('o2mc')||!document.getElementById('authority_status').value||!document.getElementById('authority_type').value||!document.getElementById('years_operating').value||!document.getElementById('boc3_filed').value||!document.getElementById('ucr_current').value||!document.getElementById('fmcsa_consent').checked)){shk('obBd');return;}
-  if(f===3&&(!document.getElementById('o2tr').value||!v('truck_id')||!v('truck_year_make')||!v('vin')||!document.getElementById('trailer_type').value||!v('max_weight')||!v('cdl_number')||!v('cdl_state')||!document.getElementById('cdl_class').value||!v('cdl_expiration')||!document.getElementById('years_experience').value)){shk('obBd');return;}
+  if(f===2&&!document.getElementById('fmcsa_consent').checked){shk('obBd');return;}
+  if(f===3&&!document.getElementById('o2tr').value){shk('obBd');return;}
   if(f===4&&(!document.getElementById('eld_provider').value||!v('eld_account_email')||!v('eld_api_token')||!document.getElementById('gps_tracking').value||!document.getElementById('tracking_method').value)){shk('obBd');return;}
-  if(f===5&&(!v('o4ins')||!v('policy_number')||!document.getElementById('liability_limit').value||!document.getElementById('cargo_limit').value||!v('policy_expiration')||!document.getElementById('use_factoring').value||!document.getElementById('payout_method').value||!v('payee_name')||!v('bank_name')||!document.getElementById('account_type').value||!v('bank_routing')||!v('bank_account')||!document.getElementById('plan').value||!document.getElementById('target_rpm').value||!document.getElementById('miles_per_week').value||!document.getElementById('home_time').value||(document.getElementById('plan').value==='founders'&&!document.getElementById('founders_truck_count').value))){shk('obBd');return;}
+  if(f===5&&!document.getElementById('plan').value){shk('obBd');return;}
   document.getElementById('ost'+f).classList.remove('cur');
   oStep=f+1;document.getElementById('ost'+oStep).classList.add('cur');
   updO();document.getElementById('obBd').scrollIntoView({behavior:'smooth',block:'start'});
@@ -2587,19 +2588,20 @@ function fileLbl(input,wrapId,lblId){
   else{w.classList.remove('has-file');}
 }
 function oSub(){
-  if(!v('o4ins')||!v('esign_name')||!v('esign_date')||!document.getElementById('o4ag').checked){shk('obBd');return;}
+  if(!v('esign_name')||!v('esign_date')||!document.getElementById('o4ag').checked){shk('obBd');return;}
+
+  const g=id=>{const e=document.getElementById(id);return e?(e.value||'').trim():'';};
+  const gv=id=>g(id)||'___________';
 
   // Handle 25+ trucks — contact sales instead of normal signup
-  const planSel=document.getElementById('plan').value;
-  const foundersCount=document.getElementById('founders_truck_count').value;
-  if(planSel==='founders'&&foundersCount==='25+'){
+  const planSel=g('plan');
+  const foundersCount=parseInt(g('founders_truck_count'))||1;
+  if(planSel==='founders'&&g('founders_truck_count')==='25+'){
     alert('Thank you! For 25+ trucks in the Founders program, please contact our sales team for enterprise pricing.\n\nCall: (555) 000-0000\nEmail: sales@3lakeslogistics.com');
     showPage('home');
     return;
   }
 
-  const g=id=>{const e=document.getElementById(id);return e?(e.value||'').trim():'';};
-  const gv=id=>g(id)||'___________';
   const fn=g('o1fn'),ln=g('o1ln'),ph=g('o1ph'),em=g('o1em'),city=g('o1ct');
   const mc=g('o2mc'),dot=gv('dot_number'),ins=g('o4ins');
   const trucks=gv('o2tr');
@@ -2609,8 +2611,6 @@ function oSub(){
   const equip=[...document.querySelectorAll('#ost3 #equip_cb .cb-i input:checked')].map(cb=>cb.closest('.cb-i').querySelector('.cb-tx').textContent.replace(/[^\w\s\/]/g,'').trim()).join(', ')||'___________';
   const regions=[...document.querySelectorAll('#ost5 #region_cb .cb-i input:checked')].map(cb=>cb.closest('.cb-i').querySelector('.cb-tx').textContent.replace(/[^\w\s\/]/g,'').trim()).join(', ')||'___________';
 
-  const planSel=g('plan');
-  const foundersCount=parseInt(g('founders_truck_count'))||1;
   let planLabel='Pro Membership — $500/month',planFee='$500/month flat';
   if(planSel==='founders'){
     if(g('founders_truck_count')==='25+'){

@@ -1,10 +1,12 @@
-"""Email management API routes — email log queries, template management, test emails."""
+"""Email management API routes — email log queries, template management, test emails, rate confirmation parsing."""
 from __future__ import annotations
 
+import re
 from fastapi import APIRouter, HTTPException, Query, status
 
 from ..logging_service import get_logger
 from ..supabase_client import get_supabase
+from ..utils.load_transformer import transform_rate_confirmation_email
 from .deps import require_bearer
 
 log = get_logger("email.routes")
@@ -329,3 +331,160 @@ async def get_email_stats() -> dict:
                 "error": 0,
             },
         }
+
+
+@router.post("/email/{email_id}/parse-rate-confirmation", dependencies=[require_bearer()])
+async def parse_rate_confirmation(email_id: str) -> dict:
+    """Extract rate confirmation data from email and create/update load record."""
+    try:
+        sb = get_supabase()
+
+        # Fetch email record
+        email_result = (
+            sb.table("email_log")
+            .select("*")
+            .eq("id", email_id)
+            .execute()
+        )
+
+        if not email_result.data:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "email not found")
+
+        email = email_result.data[0]
+
+        # Extract fields from email body using regex patterns
+        extracted = _extract_rate_confirmation_fields(email)
+
+        if not extracted:
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, "no rate confirmation data found in email")
+
+        # Transform to loads schema
+        load_data = transform_rate_confirmation_email(email, extracted)
+
+        # Insert or update load
+        if load_data.get("load_number"):
+            existing = (
+                sb.table("loads")
+                .select("id")
+                .eq("load_number", load_data["load_number"])
+                .execute()
+            )
+
+            if existing.data:
+                # Update existing load
+                result = (
+                    sb.table("loads")
+                    .update(load_data)
+                    .eq("id", existing.data[0]["id"])
+                    .execute()
+                )
+                load_id = existing.data[0]["id"]
+            else:
+                # Create new load
+                result = sb.table("loads").insert(load_data).execute()
+                load_id = result.data[0]["id"] if result.data else None
+        else:
+            # No load_number — cannot insert
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, "load_number not found in email")
+
+        # Update email_log to mark as processed
+        sb.table("email_log").update({
+            "status": "load_created",
+            "load_id": load_id,
+            "processed_at": "now()",
+            "extracted_data": extracted,
+        }).eq("id", email_id).execute()
+
+        return {
+            "ok": True,
+            "load_id": load_id,
+            "extracted_fields": extracted,
+            "message": f"Rate confirmation parsed: load {load_data.get('load_number')}",
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:  # noqa: BLE001
+        log.error(f"Failed to parse rate confirmation: {e}")
+        raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, str(e))
+
+
+def _extract_rate_confirmation_fields(email: dict) -> dict:
+    """Extract rate confirmation fields from email body using regex patterns."""
+    body = email.get("body_text", "") or email.get("body_html", "")
+    if not body:
+        return {}
+
+    extracted = {}
+
+    # Load Number patterns: "Load #123", "Load 123", "Reference: 123456"
+    load_match = re.search(r"(?:load\s*#?|reference:?)\s*([A-Z0-9\-]{6,})", body, re.IGNORECASE)
+    if load_match:
+        extracted["load_number"] = load_match.group(1).strip()
+
+    # Rate pattern: "$2500", "$2,500.00", "Rate: $2500"
+    rate_match = re.search(r"(?:rate:?\s*)?[\$]?([\d,]+(?:\.\d{2})?)", body, re.IGNORECASE)
+    if rate_match:
+        rate_str = rate_match.group(1).replace(",", "")
+        extracted["rate"] = float(rate_str)
+        extracted["gross_rate"] = float(rate_str)
+
+    # Miles pattern: "1250 miles", "1,250 mi", "Distance: 1250"
+    miles_match = re.search(r"(?:miles?|distance:?)\s*([\d,]+)", body, re.IGNORECASE)
+    if miles_match:
+        extracted["miles"] = float(miles_match.group(1).replace(",", ""))
+
+    # Equipment type: "Dry Van", "Flatbed", "Reefer", "Tanker"
+    equipment_match = re.search(
+        r"(?:equipment|trailer|type):?\s*(dry\s*van|flatbed|reefer|tanker|specialized)",
+        body,
+        re.IGNORECASE,
+    )
+    if equipment_match:
+        extracted["equipment_type"] = equipment_match.group(1).lower().replace(" ", "_")
+
+    # Commodity: "Furniture", "Machinery", "General Cargo"
+    commodity_match = re.search(r"(?:commodity|freight):?\s*([A-Za-z\s]+?)(?:\n|$)", body, re.IGNORECASE)
+    if commodity_match:
+        extracted["commodity"] = commodity_match.group(1).strip()
+
+    # Shipper name: "Shipper: ACME Corp"
+    shipper_match = re.search(r"shipper:?\s*([A-Za-z\s,\.&]+?)(?:\n|$)", body, re.IGNORECASE)
+    if shipper_match:
+        extracted["shipper_name"] = shipper_match.group(1).strip()
+
+    # Origin city/state: "Los Angeles, CA" or "From: Los Angeles, CA"
+    origin_match = re.search(
+        r"(?:origin|from|pickup):?\s*([A-Za-z\s]+),\s*([A-Z]{2})",
+        body,
+        re.IGNORECASE,
+    )
+    if origin_match:
+        extracted["origin_city"] = origin_match.group(1).strip()
+        extracted["origin_state"] = origin_match.group(2).upper()
+
+    # Destination city/state: "Chicago, IL" or "To: Chicago, IL"
+    dest_match = re.search(
+        r"(?:destination|to|delivery):?\s*([A-Za-z\s]+),\s*([A-Z]{2})",
+        body,
+        re.IGNORECASE,
+    )
+    if dest_match:
+        extracted["dest_city"] = dest_match.group(1).strip()
+        extracted["dest_state"] = dest_match.group(2).upper()
+
+    # Pickup date: "Pickup: 05/15/2026", "Ready: May 15"
+    pickup_match = re.search(
+        r"(?:pickup|ready):?\s*(\d{1,2}[/-]\d{1,2}[/-]\d{4})",
+        body,
+        re.IGNORECASE,
+    )
+    if pickup_match:
+        extracted["pickup_date"] = pickup_match.group(1)
+
+    # Broker name from email domain or "Broker: ACME Freight"
+    broker_match = re.search(r"broker:?\s*([A-Za-z\s&,\.]+?)(?:\n|$)", body, re.IGNORECASE)
+    if broker_match:
+        extracted["broker_name"] = broker_match.group(1).strip()
+
+    return extracted

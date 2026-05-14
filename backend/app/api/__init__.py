@@ -21,6 +21,7 @@ from .routes_email         import router as email_router
 from .routes_migration     import router as migration_router
 from .routes_adobe_webhooks import router as adobe_webhooks_router
 from .routes_adobe_intake   import router as adobe_intake_router
+from .routes_dat           import router as dat_router
 
 from ..clm             import clm_router
 from ..email_ingest    import router as email_ingest_router
@@ -59,4 +60,5 @@ __all__ = [
     "compliance_router",
     "health_router",
     "executives_router",
+    "dat_router",
 ]
