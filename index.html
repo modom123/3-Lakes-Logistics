@@ -707,6 +707,7 @@ td.td-name{font-weight:600;color:var(--navy);}
     <div class="sb-label">Daily Ops</div>
     <div class="sb-item" onclick="nav('checklist')"><span class="sb-icon">📋</span> Daily Checklist</div>
     <div class="sb-item" onclick="nav('notes')"><span class="sb-icon">📝</span> Dispatcher Notes</div>
+    <div class="sb-item" onclick="nav('reports')"><span class="sb-icon">📊</span> Team Reports <span class="sb-badge" id="reports-notif" style="display:none">●</span></div>
   </div>
   <div class="sb-section">
     <div class="sb-label">Automation</div>
@@ -1143,6 +1144,26 @@ td.td-name{font-weight:600;color:var(--navy);}
           </div>
           <div class="fg" style="margin-bottom:18px"><label class="fl">Notes</label><textarea class="fta" id="note-body" placeholder="Enter dispatcher notes…"></textarea></div>
           <button class="btn-navy" onclick="saveNote()" style="width:100%">Save Note</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- TEAM REPORTS -->
+    <div class="page" id="page-reports">
+      <div class="page-hdr"><div class="page-hdr-l"><div class="chip">Feedback & Issues</div><h2>Team Reports</h2></div><button class="btn-out" onclick="loadTeamReports()">↺ Refresh</button></div>
+      <div class="g2">
+        <div id="reports-container"><div class="loading"><div class="spin"></div>Loading reports…</div></div>
+        <div class="card">
+          <div class="card-hd"><div class="card-title">Submit a Report</div><div class="card-chip">All staff</div></div>
+          <div class="fg" style="margin-bottom:13px"><label class="fl">Your Name</label><input class="fi" id="report-name" placeholder="e.g. John Smith…"></div>
+          <div class="fg" style="margin-bottom:13px"><label class="fl">Department</label>
+            <select class="fsel" id="report-dept"><option>Dispatch</option><option>Driver Support</option><option>Accounting</option><option>Operations</option><option>Maintenance</option><option>Other</option></select>
+          </div>
+          <div class="fg" style="margin-bottom:13px"><label class="fl">Report Type</label>
+            <select class="fsel" id="report-type"><option>Issue / Bug</option><option>Suggestion</option><option>Performance Update</option><option>Equipment Report</option><option>Safety Concern</option><option>Other</option></select>
+          </div>
+          <div class="fg" style="margin-bottom:18px"><label class="fl">Description</label><textarea class="fta" id="report-body" placeholder="Describe the issue, suggestion, or update…" style="min-height:100px"></textarea></div>
+          <button class="btn-navy" onclick="saveTeamReport()" style="width:100%">Submit Report</button>
         </div>
       </div>
     </div>
@@ -1644,7 +1665,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 let allCarriers=[], allLoads=[], allInvoices=[], currentInvFilter='all', loadCounter=3849;
 
-const pageNames={dashboard:'Dashboard',dispatch:'Dispatch Board',carriers:'Carriers',loads:'Load Manager',invoices:'Invoices & Billing',compliance:'DOT Compliance',ifta:'IFTA / Permits',insurance:'Insurance',revenue:'Revenue Tracker',providers:'Compliance Providers',checklist:'Daily Checklist',notes:'Dispatcher Notes',agents:'AI Agents',founders:'Founders Program',leads:'Lead Pipeline',execution:'Execution Engine'};
+const pageNames={dashboard:'Dashboard',dispatch:'Dispatch Board',carriers:'Carriers',loads:'Load Manager',invoices:'Invoices & Billing',compliance:'DOT Compliance',ifta:'IFTA / Permits',insurance:'Insurance',revenue:'Revenue Tracker',providers:'Compliance Providers',checklist:'Daily Checklist',notes:'Dispatcher Notes',reports:'Team Reports',agents:'AI Agents',founders:'Founders Program',leads:'Lead Pipeline',execution:'Execution Engine'};
 
 // ── 3 Lakes Logistics Backend API (FastAPI) ──
 const API_BASE = (window.__3LL_API_BASE || 'http://localhost:8080').replace(/\/$/,'');
@@ -1711,6 +1732,7 @@ function nav(id){
   if(id==='carriers'){const n=document.getElementById('carrier-notif');if(n)n.style.display='none';}
   if(id==='invoices'){const n=document.getElementById('invoice-notif');if(n)n.style.display='none';renderInvoices();}
   if(id==='notes')loadNotes();
+  if(id==='reports')loadTeamReports();
   if(id==='compliance'||id==='insurance')renderCarrierCompliance();
   if(id==='clm')loadCLMList();
   if(id==='vault')loadVault();
@@ -2226,6 +2248,40 @@ async function saveNote(){
   if(error){toast('Error: '+error.message,'error');return;}
   document.getElementById('note-title').value='';document.getElementById('note-body').value='';
   await loadNotes();toast('Note saved!');
+}
+
+// ── TEAM REPORTS ──
+async function loadTeamReports(){
+  const container=document.getElementById('reports-container');if(!container)return;
+  const{data,error}=await sb.from('team_reports').select('*').order('created_at',{ascending:false});
+  const typeMap={'Issue / Bug':['#fee2e2','var(--red)'],'Suggestion':['rgba(37,99,235,.06)','var(--blue)'],'Performance Update':['rgba(34,197,94,.06)','var(--green)'],'Equipment Report':['#fff7ed','var(--orange)'],'Safety Concern':['#fef3c7','#d97706'],'Other':['var(--off)','var(--muted)']};
+  if(error||!data||data.length===0){
+    container.innerHTML='<div class="card" style="margin-bottom:12px;border-left:3px solid var(--muted)"><div class="flex-b" style="margin-bottom:8px"><span class="t-sm t-muted" style="font-weight:600;font-family:var(--ff-m)">No reports yet</span></div><div class="t-sm t-muted" style="line-height:1.7">Team members can submit reports using the form on the right. Reports will appear here once submitted.</div></div>';
+    return;
+  }
+  container.innerHTML=data.map(r=>{
+    const[bg,color]=typeMap[r.report_type]||['var(--off)','var(--muted)'];
+    const date=new Date(r.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'2-digit'});
+    return '<div class="card" style="margin-bottom:12px;border-left:3px solid '+color+';background:'+bg+'">'+
+      '<div class="flex-b" style="margin-bottom:8px">'+
+        '<div><span class="t-sm" style="color:'+color+';font-weight:600">'+esc(r.report_type)+'</span><span class="t-sm t-muted" style="margin-left:8px">· '+esc(r.department)+'</span></div>'+
+        '<span class="t-sm t-muted t-mono">'+date+'</span>'+
+      '</div>'+
+      '<div class="t-sm t-muted" style="margin-bottom:6px">From: <strong>'+esc(r.submitter_name)+'</strong></div>'+
+      '<div class="t-sm" style="line-height:1.7">'+esc(r.body)+'</div></div>';
+  }).join('');
+}
+
+async function saveTeamReport(){
+  const name=document.getElementById('report-name').value.trim();
+  const dept=document.getElementById('report-dept').value;
+  const type=document.getElementById('report-type').value;
+  const body=document.getElementById('report-body').value.trim();
+  if(!name||!body){toast('Name and description required','error');return;}
+  const{error}=await sb.from('team_reports').insert({submitter_name:name,department:dept,report_type:type,body:body});
+  if(error){toast('Error: '+error.message,'error');return;}
+  document.getElementById('report-name').value='';document.getElementById('report-body').value='';
+  await loadTeamReports();toast('Report submitted! Thank you.');
 }
 
 // ── HELPERS ──
