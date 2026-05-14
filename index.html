@@ -1399,13 +1399,36 @@ td.td-name{font-weight:600;color:var(--navy);}
         <div class="page-hdr-l">
           <div class="chip">CLM</div>
           <h2>Document Vault</h2>
+          <p style="margin-top:4px;font-size:13px;color:var(--muted)">All BOLs, PODs, rate confirmations, invoices & compliance docs uploaded by drivers or emailed in</p>
         </div>
         <div class="page-hdr-r">
-          <button class="btn-out" onclick="loadVault()">Refresh</button>
+          <button class="btn-navy" onclick="loadVault()">↻ Refresh</button>
         </div>
       </div>
+
+      <div class="metrics" style="margin-bottom:20px">
+        <div class="mc"><div class="mc-label">Total Documents</div><div class="mc-val blue" id="vault-total">—</div></div>
+        <div class="mc"><div class="mc-label">PODs</div><div class="mc-val green" id="vault-pods">—</div></div>
+        <div class="mc"><div class="mc-label">Rate Confirmations</div><div class="mc-val gold" id="vault-ratecon">—</div></div>
+        <div class="mc"><div class="mc-label">BOLs</div><div class="mc-val orange" id="vault-bols">—</div></div>
+      </div>
+
       <div class="card">
-        <div class="card-hd"><div class="card-title">All Documents</div></div>
+        <div class="card-hd">
+          <div class="card-title">All Documents</div>
+          <div style="display:flex;gap:12px;align-items:center">
+            <select id="vault-type-filter" onchange="filterVaultDocs()" class="fsel" style="padding:6px 12px;font-size:13px">
+              <option value="">All Types</option>
+              <option value="pod">POD (Proof of Delivery)</option>
+              <option value="rate_con">Rate Confirmation</option>
+              <option value="bol">Bill of Lading</option>
+              <option value="invoice">Invoice</option>
+              <option value="compliance">Compliance Doc</option>
+              <option value="other">Other</option>
+            </select>
+            <input type="text" id="vault-search" placeholder="Search filename…" onkeyup="filterVaultDocs()" style="padding:6px 12px;font-size:13px;border:1px solid var(--border);border-radius:4px;width:240px">
+          </div>
+        </div>
         <div id="vault-table"><div class="loading"><div class="spin"></div>Loading vault…</div></div>
       </div>
     </div>
@@ -3321,22 +3344,43 @@ async function runCLMScan(){
 // ══════════════════════════════════════════════════════
 // DOCUMENT VAULT
 // ══════════════════════════════════════════════════════
-async function loadVault(){
+let _vaultDocs=[];const docTypeLabels={pod:'POD',rate_con:'Rate Con',bol:'BOL',invoice:'Invoice',compliance:'Compliance',other:'Other'};const docTypeIcons={pod:'🚚',rate_con:'💬',bol:'📄',invoice:'🧾',compliance:'✅',other:'📎'};async function loadVault(){
   const t=document.getElementById('vault-table');
   t.innerHTML='<div class="loading"><div class="spin"></div>Loading…</div>';
   try{
     const res=await apiFetch('/api/clm/vault/docs');
-    const data=await res.json();
-    if(!data.length){t.innerHTML='<div style="padding:20px;color:var(--muted);text-align:center">Vault is empty. Docs upload automatically when drivers submit BOL/POD from the Driver App.</div>';return;}
-    t.innerHTML=`<table class="tbl"><thead><tr><th>Type</th><th>Filename</th><th>Size</th><th>Scan Status</th><th>Uploaded</th></tr></thead>
-      <tbody>${data.map(d=>`<tr>
-        <td><span class="badge badge-blue">${d.doc_type}</span></td>
-        <td>${d.filename}</td>
-        <td style="color:var(--muted)">${d.file_size_kb?d.file_size_kb+'KB':'—'}</td>
-        <td><span class="badge badge-${d.scan_status==='complete'?'green':d.scan_status==='failed'?'red':'orange'}">${d.scan_status}</span></td>
-        <td style="color:var(--muted)">${d.uploaded_at?new Date(d.uploaded_at).toLocaleDateString():''}</td>
-      </tr>`).join('')}</tbody></table>`;
+    _vaultDocs=await res.json();
+    if(!_vaultDocs.length){t.innerHTML='<div style="padding:20px;color:var(--muted);text-align:center">Vault is empty. Docs upload automatically when drivers submit BOL/POD from the Driver App.</div>';updateVaultMetrics([]);return;}
+    updateVaultMetrics(_vaultDocs);
+    renderVaultDocs(_vaultDocs);
   }catch(e){t.innerHTML=`<div style="padding:20px;color:var(--red)">Error: ${e.message}</div>`;}
+}function updateVaultMetrics(docs){
+  const total=docs.length;const pods=docs.filter(d=>d.doc_type==='pod').length;const ratcons=docs.filter(d=>d.doc_type==='rate_con').length;const bols=docs.filter(d=>d.doc_type==='bol').length;
+  document.getElementById('vault-total').textContent=total;
+  document.getElementById('vault-pods').textContent=pods;
+  document.getElementById('vault-ratecon').textContent=ratcons;
+  document.getElementById('vault-bols').textContent=bols;
+}function filterVaultDocs(){
+  const typeFilter=document.getElementById('vault-type-filter')?.value||'';
+  const searchFilter=document.getElementById('vault-search')?.value||'';
+  const filtered=_vaultDocs.filter(d=>{
+    const typeMatch=!typeFilter||d.doc_type===typeFilter;
+    const searchMatch=!searchFilter||d.filename?.toLowerCase().includes(searchFilter.toLowerCase());
+    return typeMatch&&searchMatch;
+  });
+  renderVaultDocs(filtered);
+}function renderVaultDocs(docs){
+  const t=document.getElementById('vault-table');
+  if(!docs.length){t.innerHTML='<div style="padding:40px 20px;text-align:center;color:var(--muted)">No documents match your filter</div>';return;}
+  const statusBadge=s=>`<span class="badge badge-${s==='complete'?'green':s==='failed'?'red':'orange'}">${s}</span>`;
+  t.innerHTML=`<table class="tbl"><thead><tr><th style="width:12%">Type</th><th style="width:40%">Filename</th><th style="width:10%">Size</th><th style="width:15%">Status</th><th style="width:23%">Uploaded</th></tr></thead>
+    <tbody>${docs.map(d=>{const icon=docTypeIcons[d.doc_type]||'📎';const label=docTypeLabels[d.doc_type]||d.doc_type;return`<tr>
+      <td><span style="font-size:18px">${icon}</span> <span class="badge" style="background:rgba(59,130,246,.1);color:#3b82f6;font-size:11px;font-weight:600">${label}</span></td>
+      <td style="font-size:14px;font-weight:500;word-break:break-word">${d.filename||'—'}</td>
+      <td style="color:var(--muted);font-size:12px">${d.file_size_kb?d.file_size_kb+'KB':'—'}</td>
+      <td>${statusBadge(d.scan_status)}</td>
+      <td style="color:var(--muted);font-size:12px;white-space:nowrap">${d.uploaded_at?new Date(d.uploaded_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}):'—'}</td>
+    </tr>`}).join('')}</tbody></table>`;
 }
 
 // ══════════════════════════════════════════════════════
