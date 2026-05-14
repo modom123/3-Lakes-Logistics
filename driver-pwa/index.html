@@ -18,18 +18,19 @@
   <title>3 Lakes Driver</title>
   <link rel="manifest" href="manifest.json" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.41.0"></script>
+  <script src="../shared/config.js"></script>
   <style>
     :root {
       --bg:       #0a0f1e;
       --surface:  #111827;
       --card:     #1a2235;
-      --border:   #2a3550;
+      --border:   #2d3748;
       --accent:   #3b82f6;
       --green:    #22c55e;
       --yellow:   #f59e0b;
       --red:      #ef4444;
       --text:     #f1f5f9;
-      --muted:    #64748b;
+      --muted:    #94a3b8;
       --radius:   14px;
       --safe-top: env(safe-area-inset-top, 0px);
       --safe-bot: env(safe-area-inset-bottom, 0px);
@@ -43,11 +44,12 @@
       padding: calc(var(--safe-top) + 12px) 16px 12px;
       background: var(--surface); border-bottom: 1px solid var(--border);
       display: flex; align-items: center; justify-content: space-between;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
     }
     #header .logo { font-size: 18px; font-weight: 700; color: var(--accent); letter-spacing: -.5px; }
-    #header .logo span { color: var(--text); }
+    #header .logo span { color: #ef6b35; }
     #driver-name { font-size: 12px; color: var(--muted); }
-    #online-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); box-shadow: 0 0 6px var(--green); }
+    #online-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); box-shadow: 0 0 6px rgba(34, 197, 94, 0.4); }
 
     /* ── MAIN SCROLL AREA ── */
     #main {
@@ -80,8 +82,9 @@
 
     /* ── CARDS ── */
     .card {
-      background: var(--card); border: 1px solid var(--border);
+      background: var(--surface); border: 1px solid var(--border);
       border-radius: var(--radius); padding: 16px; margin-bottom: 10px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
     }
     .card-title { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .8px; margin-bottom: 10px; }
     .card-value { font-size: 28px; font-weight: 700; }
@@ -92,41 +95,41 @@
       display: inline-flex; align-items: center; gap: 5px;
       padding: 4px 10px; border-radius: 99px; font-size: 11px; font-weight: 600;
     }
-    .pill-green  { background: #14532d44; color: var(--green);  border: 1px solid #22c55e44; }
-    .pill-yellow { background: #78350f44; color: var(--yellow); border: 1px solid #f59e0b44; }
-    .pill-red    { background: #7f1d1d44; color: var(--red);    border: 1px solid #ef444444; }
-    .pill-blue   { background: #1e3a5f44; color: var(--accent); border: 1px solid #3b82f644; }
+    .pill-green  { background: #d1fae533; color: #059669;  border: 1px solid #86efac88; }
+    .pill-yellow { background: #fef08a33; color: #b45309; border: 1px solid #fde04b88; }
+    .pill-red    { background: #fee2e233; color: #dc2626;    border: 1px solid #fca5a588; }
+    .pill-blue   { background: #dbeafe33; color: #0284c7; border: 1px solid #7dd3fc88; }
     .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
 
     /* ── LOAD CARD ── */
-    .load-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; margin-bottom: 10px; }
+    .load-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; margin-bottom: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
     .load-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
-    .load-number { font-size: 16px; font-weight: 700; }
+    .load-number { font-size: 16px; font-weight: 700; color: var(--text); }
     .route { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
     .city { flex: 1; }
-    .city-name { font-size: 15px; font-weight: 600; }
+    .city-name { font-size: 15px; font-weight: 600; color: var(--text); }
     .city-state { font-size: 11px; color: var(--muted); }
-    .arrow { color: var(--muted); font-size: 16px; }
+    .arrow { color: #d1d5db; font-size: 16px; }
     .load-meta { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-    .meta-item { background: var(--surface); border-radius: 8px; padding: 8px 10px; }
+    .meta-item { background: var(--card); border-radius: 8px; padding: 8px 10px; border: 1px solid var(--border); }
     .meta-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 2px; }
-    .meta-value { font-size: 14px; font-weight: 600; }
+    .meta-value { font-size: 14px; font-weight: 600; color: var(--text); }
 
     /* ── ACTION BUTTONS ── */
-    .btn { width: 100%; padding: 14px; border-radius: var(--radius); border: none; font-size: 15px; font-weight: 600; cursor: pointer; transition: opacity .15s; margin-bottom: 8px; display: flex; align-items: center; justify-content: center; gap: 8px; }
-    .btn:active { opacity: .7; }
-    .btn-primary { background: var(--accent); color: #fff; }
-    .btn-success { background: var(--green); color: #fff; }
-    .btn-warning { background: var(--yellow); color: #000; }
-    .btn-danger  { background: var(--red);   color: #fff; }
-    .btn-ghost   { background: var(--surface); color: var(--text); border: 1px solid var(--border); }
+    .btn { width: 100%; padding: 14px; border-radius: var(--radius); border: none; font-size: 15px; font-weight: 600; cursor: pointer; transition: opacity .15s, transform .1s; margin-bottom: 8px; display: flex; align-items: center; justify-content: center; gap: 8px; }
+    .btn:active { opacity: .85; transform: scale(0.98); }
+    .btn-primary { background: var(--accent); color: #fff; box-shadow: 0 2px 8px rgba(59, 130, 246, 0.2); }
+    .btn-success { background: var(--green); color: #fff; box-shadow: 0 2px 8px rgba(34, 197, 94, 0.2); }
+    .btn-warning { background: var(--yellow); color: #000; box-shadow: 0 2px 8px rgba(245, 158, 11, 0.2); }
+    .btn-danger  { background: var(--red);   color: #fff; box-shadow: 0 2px 8px rgba(239, 68, 68, 0.2); }
+    .btn-ghost   { background: #fff; color: var(--text); border: 1px solid var(--border); box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
 
     /* ── HOS GAUGE ── */
     .hos-row { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin-bottom: 10px; }
-    .hos-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 10px; text-align: center; }
+    .hos-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 10px; text-align: center; box-shadow: 0 1px 2px rgba(0,0,0,0.03); }
     .hos-hours { font-size: 22px; font-weight: 700; }
     .hos-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; margin-top: 2px; }
-    .hos-bar { height: 4px; border-radius: 2px; background: var(--border); margin-top: 6px; overflow: hidden; }
+    .hos-bar { height: 4px; border-radius: 2px; background: #e5e7eb; margin-top: 6px; overflow: hidden; }
     .hos-fill { height: 100%; border-radius: 2px; transition: width .3s; }
 
     /* ── SECTION HEADER ── */
@@ -144,11 +147,12 @@
 
     /* ── UPLOAD ZONE ── */
     .upload-zone {
-      border: 2px dashed var(--border); border-radius: var(--radius);
+      border: 2px dashed #bfdbfe; border-radius: var(--radius);
       padding: 24px 16px; text-align: center; cursor: pointer;
-      transition: border-color .15s; margin-bottom: 10px;
+      transition: border-color .15s, background-color .15s; margin-bottom: 10px;
+      background: #f0f9ff;
     }
-    .upload-zone:hover, .upload-zone.drag-over { border-color: var(--accent); }
+    .upload-zone:hover, .upload-zone.drag-over { border-color: var(--accent); background: #eff6ff; }
     .upload-zone input { display: none; }
     .upload-icon { font-size: 32px; margin-bottom: 8px; }
     .upload-text { font-size: 13px; color: var(--muted); }
@@ -158,7 +162,7 @@
     .cdl-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border); }
     .cdl-row:last-child { border-bottom: none; }
     .cdl-label { font-size: 12px; color: var(--muted); }
-    .cdl-value { font-size: 13px; font-weight: 600; }
+    .cdl-value { font-size: 13px; font-weight: 600; color: var(--text); }
 
     /* ── MESSAGES ── */
     #view-messages { display: none; flex-direction: column; height: 100%; }
@@ -174,12 +178,12 @@
       max-width: 78%; padding: 10px 14px; border-radius: 18px;
       font-size: 14px; line-height: 1.45; word-break: break-word;
     }
-    .bubble.out { background: var(--accent); color: #fff; border-bottom-right-radius: 4px; }
-    .bubble.in  { background: var(--card); color: var(--text); border: 1px solid var(--border); border-bottom-left-radius: 4px; }
+    .bubble.out { background: var(--accent); color: #fff; border-bottom-right-radius: 4px; box-shadow: 0 2px 6px rgba(59, 130, 246, 0.2); }
+    .bubble.in  { background: var(--card); color: var(--text); border: 1px solid var(--border); border-bottom-left-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
     .bubble-time { font-size: 10px; color: var(--muted); margin-top: 3px; padding: 0 4px; }
     .offer-card {
-      background: var(--card); border: 1px solid var(--accent); border-radius: var(--radius);
-      padding: 14px; max-width: 88%; margin: 4px 0;
+      background: #eff6ff; border: 1px solid #bfdbfe; border-radius: var(--radius);
+      padding: 14px; max-width: 88%; margin: 4px 0; box-shadow: 0 1px 3px rgba(59, 130, 246, 0.1);
     }
     .offer-label { font-size: 10px; color: var(--accent); font-weight: 700; text-transform: uppercase; letter-spacing: .8px; margin-bottom: 8px; }
     .offer-route { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
@@ -192,13 +196,15 @@
       display: flex; align-items: center; gap: 8px;
       padding: 10px 12px calc(10px + var(--safe-bot));
       background: var(--surface); border-top: 1px solid var(--border);
+      box-shadow: 0 -1px 3px rgba(0,0,0,0.05);
     }
     #msg-input {
       flex: 1; background: var(--card); border: 1px solid var(--border);
       border-radius: 22px; padding: 10px 16px; color: var(--text);
       font-size: 15px; outline: none; resize: none; max-height: 100px;
     }
-    #msg-input::placeholder { color: var(--muted); }
+    #msg-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); }
+    #msg-input::placeholder { color: #d1d5db; }
     #msg-send-btn {
       width: 42px; height: 42px; border-radius: 50%; border: none;
       background: var(--accent); color: #fff; cursor: pointer;
@@ -225,11 +231,11 @@
     .profile-field { margin-bottom: 10px; }
     .profile-field label { display: block; font-size: 11px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .6px; margin-bottom: 6px; }
     .profile-input {
-      width: 100%; background: var(--surface); border: 1px solid var(--border);
+      width: 100%; background: var(--card); border: 1px solid var(--border);
       border-radius: 10px; padding: 12px 14px; color: var(--text);
       font-size: 15px; outline: none;
     }
-    .profile-input:focus { border-color: var(--accent); }
+    .profile-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); }
     .btn-save { background: var(--accent); color: #fff; }
 
     /* ── LOADS TABLE ── */
@@ -238,21 +244,22 @@
       text-align: left; font-size: 10px; font-weight: 700; color: var(--muted);
       text-transform: uppercase; letter-spacing: .6px;
       padding: 8px 10px; border-bottom: 1px solid var(--border);
+      background: var(--card);
     }
-    .loads-table td { padding: 12px 10px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+    .loads-table td { padding: 12px 10px; border-bottom: 1px solid var(--border); vertical-align: middle; color: var(--text); }
     .loads-table tr:last-child td { border-bottom: none; }
-    .loads-table tr:active td { background: var(--surface); }
-    .tbl-route { font-weight: 700; font-size: 14px; line-height: 1.3; }
+    .loads-table tr:active td { background: #f9fafb; }
+    .tbl-route { font-weight: 700; font-size: 14px; line-height: 1.3; color: var(--text); }
     .tbl-sub   { font-size: 11px; color: var(--muted); margin-top: 2px; }
     .tbl-rate  { font-size: 15px; font-weight: 700; color: var(--green); white-space: nowrap; }
     .tbl-rpm   { font-size: 11px; color: var(--muted); }
     .tbl-actions { display: flex; flex-direction: column; gap: 5px; min-width: 72px; }
-    .tbl-accept  { background: var(--green);   color: #fff; border: none; border-radius: 8px; padding: 7px 10px; font-size: 12px; font-weight: 700; cursor: pointer; }
-    .tbl-pass    { background: var(--surface); color: var(--muted); border: 1px solid var(--border); border-radius: 8px; padding: 7px 10px; font-size: 12px; font-weight: 600; cursor: pointer; }
-    .loads-table-wrap { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; margin-bottom: 10px; }
+    .tbl-accept  { background: var(--green);   color: #fff; border: none; border-radius: 8px; padding: 7px 10px; font-size: 12px; font-weight: 700; cursor: pointer; box-shadow: 0 2px 6px rgba(34, 197, 94, 0.2); }
+    .tbl-pass    { background: #fff; color: var(--text); border: 1px solid var(--border); border-radius: 8px; padding: 7px 10px; font-size: 12px; font-weight: 600; cursor: pointer; }
+    .loads-table-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; margin-bottom: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
 
     /* ── EMPTY STATE ── */
-    .empty-state { text-align: center; padding: 48px 20px; color: var(--muted); }
+    .empty-state { text-align: center; padding: 48px 20px; color: var(--muted); background: var(--card); border-radius: var(--radius); border: 1px dashed var(--border); }
     .empty-state .empty-icon { font-size: 40px; margin-bottom: 12px; }
     .empty-state p { font-size: 14px; }
   </style>
@@ -665,42 +672,45 @@
 <div id="toast"></div>
 
 <script>
+// ── DEMO MODE ────────────────────────────────────────────────────────────────
+const DEMO_MODE = localStorage.getItem('3ll_token') === 'demo-token-3lakes';
+
+const DEMO_LOAD = {
+  id: 'LOAD-2847', load_number: 'LD-2847', status: 'in_transit',
+  origin_city: 'Chicago', origin_state: 'IL',
+  dest_city: 'Los Angeles', dest_state: 'CA',
+  rate_total: 3200, miles: 2015, pickup_at: new Date().toISOString(),
+  commodity: 'Dry Goods', weight: 42000,
+  pickup_address: '1234 W Lake St, Chicago, IL 60607',
+  delivery_address: '5678 S Alameda St, Los Angeles, CA 90058',
+  broker_name: 'Echo Global Logistics', broker_phone: '(800) 354-7993',
+  rpm: 1.59
+};
+
+const DEMO_AVAILABLE_LOADS = [
+  { id: 'L001', load_number: 'LD-2848', origin_city: 'Dallas', origin_state: 'TX', dest_city: 'Atlanta', dest_state: 'GA', rate_total: 1850, miles: 781, pickup_at: new Date(Date.now()+86400000).toISOString(), commodity: 'Electronics' },
+  { id: 'L002', load_number: 'LD-2849', origin_city: 'Denver', origin_state: 'CO', dest_city: 'Phoenix', dest_state: 'AZ', rate_total: 980, miles: 602, pickup_at: new Date(Date.now()+172800000).toISOString(), commodity: 'Auto Parts' },
+  { id: 'L003', load_number: 'LD-2850', origin_city: 'Memphis', origin_state: 'TN', dest_city: 'Miami', dest_state: 'FL', rate_total: 2340, miles: 1100, pickup_at: new Date(Date.now()+259200000).toISOString(), commodity: 'Produce' },
+];
+
+const DEMO_MESSAGES = [
+  { direction:'inbound',  body:'Good morning James! Load LD-2847 is confirmed. Pickup at 8am sharp.',          created_at: new Date(Date.now()-7200000).toISOString() },
+  { direction:'outbound', body:'On my way to Chicago pickup now.',                                              created_at: new Date(Date.now()-5400000).toISOString() },
+  { direction:'inbound',  body:'Great. Broker is Echo Global, contact (800) 354-7993 if any issues at dock.',  created_at: new Date(Date.now()-3600000).toISOString() },
+  { direction:'outbound', body:'Got it, picked up no issues. Heading to LA.',                                   created_at: new Date(Date.now()-1800000).toISOString() },
+  { direction:'inbound',  body:'Perfect. ETA for delivery?',                                                   created_at: new Date(Date.now()-900000).toISOString() },
+];
+
+const DEMO_EARNINGS = { gross: 3200, dispatch_fee: 256, insurance: 45, fuel_advance: 0, net: 2899 };
+
 // ── API Failover — primary + backup ─────────────────────────────────────────
-const API_PRIMARY = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
-  ? 'http://localhost:8080'
-  : 'https://3lakes-api-primary.fly.dev';
+const API_PRIMARY = 'https://3lakes-api-primary.fly.dev';
 const API_BACKUP  = 'https://3lakes-api-backup.fly.dev';
-
-let _apiBase       = API_PRIMARY;
-let _failoverCount = 0;
-let _lastHealthCheck = 0;
-
-async function _checkApiHealth() {
-  const now = Date.now();
-  if (now - _lastHealthCheck < 30000) return; // check at most every 30s
-  _lastHealthCheck = now;
-  try {
-    const r = await fetch(_apiBase + '/api/health/ping', { method: 'GET', signal: AbortSignal.timeout(4000) });
-    if (r.ok) { _failoverCount = 0; return; }
-    throw new Error('unhealthy');
-  } catch {
-    if (_apiBase === API_PRIMARY) {
-      console.warn('[API] Primary down — switching to backup');
-      _apiBase = API_BACKUP;
-      _failoverCount++;
-      showToast('Switched to backup server — service continues');
-    } else {
-      console.error('[API] Backup also unreachable');
-    }
-  }
-}
-setInterval(_checkApiHealth, 30000);
+let _apiBase = API_PRIMARY;
 
 const API = '';
-const SUPABASE_URL = (window.location.hostname === 'localhost')
-  ? 'https://your-project.supabase.co'
-  : window.location.origin.replace('localhost:8080', 'your-project.supabase.co');
-const SUPABASE_KEY = localStorage.getItem('3ll_supabase_key') || 'your-anon-key';
+const SUPABASE_URL = 'https://zngipootstubwvgdmckt.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpuZ2lwb290c3R1Ynd2Z2RtY2t0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMxMjk3ODUsImV4cCI6MjA4ODcwNTc4NX0.6MXR8q-CKVuiiJaJKuckxABAUQ-siuyP0-KoaLkt33g';
 
 const TOKEN     = localStorage.getItem('3ll_token')       || '';
 const DRIVER_ID = localStorage.getItem('3ll_driver_id')   || 'DRV-001';
@@ -815,9 +825,55 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('driver-name').textContent = localStorage.getItem('3ll_driver_name') || 'Driver';
   loadCurrentLoad();
   loadProfile();
-  setInterval(pollHOS, 30000);
-  initSupabaseRealtime();
-  startMsgPolling();  // Fallback polling (12s)
+  if (DEMO_MODE) {
+    document.getElementById('miles-today').textContent = '2,015';
+    document.getElementById('est-pay').textContent     = '$2,304';
+    document.getElementById('hos-drive').textContent   = '8:42';
+    document.getElementById('hos-drive').style.color   = 'var(--green)';
+    document.getElementById('hos-drive-bar').style.width      = '87%';
+    document.getElementById('hos-drive-bar').style.background = 'var(--green)';
+    document.getElementById('hos-shift').textContent   = '10:15';
+    document.getElementById('hos-shift-bar').style.width      = '73%';
+    document.getElementById('hos-shift-bar').style.background = 'var(--accent)';
+    document.getElementById('hos-cycle').textContent   = '62:18';
+    document.getElementById('hos-cycle-bar').style.width      = '89%';
+    document.getElementById('hos-cycle-bar').style.background = 'var(--yellow)';
+    // Demo profile performance stats
+    const perfOntime = document.getElementById('perf-ontime');
+    const perfLoads  = document.getElementById('perf-loads');
+    const perfMiles  = document.getElementById('perf-miles');
+    if (perfOntime) perfOntime.textContent = '94%';
+    if (perfLoads)  perfLoads.textContent  = '7';
+    if (perfMiles)  perfMiles.textContent  = '8,240 mi';
+    // Demo CDL data
+    document.getElementById('cdl-number').textContent  = 'CDL-IL-182736';
+    document.getElementById('cdl-class').textContent   = 'Class A';
+    document.getElementById('cdl-state').textContent   = 'IL';
+    document.getElementById('cdl-expiry').textContent  = '2026-08-14';
+    document.getElementById('medical-expiry').textContent = '2025-11-30';
+    document.getElementById('carrier-name').textContent = '3 Lakes Logistics';
+    document.getElementById('carrier-mc').textContent   = 'MC-987654';
+    document.getElementById('eld-provider').textContent = 'KeepTruckin';
+    // Demo docs list
+    const docsList = document.getElementById('docs-list');
+    if (docsList) docsList.innerHTML = `
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border)">
+        <div><div style="font-size:13px;font-weight:600;color:var(--text)">📄 BOL - LD-2847</div><div style="font-size:11px;color:var(--muted)">Uploaded May 14 · 1.2 MB</div></div>
+        <span class="pill pill-green" style="font-size:10px">✓ Verified</span>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border)">
+        <div><div style="font-size:13px;font-weight:600;color:var(--text)">✍️ POD - LD-2845</div><div style="font-size:11px;color:var(--muted)">Uploaded May 10 · 842 KB</div></div>
+        <span class="pill pill-green" style="font-size:10px">✓ Verified</span>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0">
+        <div><div style="font-size:13px;font-weight:600;color:var(--text)">🧾 Lumper Receipt - LD-2843</div><div style="font-size:11px;color:var(--muted)">Uploaded May 7 · 560 KB</div></div>
+        <span class="pill pill-yellow" style="font-size:10px">⏳ Pending</span>
+      </div>`;
+  } else {
+    setInterval(pollHOS, 30000);
+    initSupabaseRealtime();
+    startMsgPolling();
+  }
   registerServiceWorker();
 });
 
@@ -839,33 +895,51 @@ function showView(name) {
 
 // ── CURRENT LOAD ──────────────────────────────────────────────────────────────
 async function loadCurrentLoad() {
+  if (DEMO_MODE) { renderCurrentLoad(DEMO_LOAD); return; }
   try {
-    const res = await apiFetch('/api/fleet?status=in_transit&limit=1');
-    const loads = await res.json();
-    if (loads && loads.length > 0) renderCurrentLoad(loads[0]);
-    else renderNoLoad();
+    if (!supabaseClient) return renderNoLoad();
+    const driverCode = localStorage.getItem('3ll_driver_code') || '';
+    if (!driverCode) return renderNoLoad();
+
+    // Query loads where driver_code matches and status indicates active
+    const { data: loads, error } = await supabaseClient
+      .from('loads')
+      .select('*')
+      .eq('driver_code', driverCode)
+      .in('status', ['in_transit', 'dispatched', 'booked'])
+      .order('created_at', { ascending: false })
+      .limit(1);
+
+    if (error || !loads || loads.length === 0) return renderNoLoad();
+    renderCurrentLoad(loads[0]);
   } catch { renderNoLoad(); }
 }
 
 function renderCurrentLoad(load) {
+  // Map field names from actual schema: gross_rate instead of rate_total, etc.
+  const rate = load.gross_rate || load.rate_total || 0;
   document.getElementById('load-number').textContent      = load.load_number || load.id?.slice(0,8) || 'LOAD-001';
   document.getElementById('load-status-pill').textContent = (load.status || 'dispatched').replace('_',' ').toUpperCase();
-  document.getElementById('origin-city').textContent      = load.origin_city  || '—';
-  document.getElementById('origin-state').textContent     = load.origin_state || '';
-  document.getElementById('dest-city').textContent        = load.dest_city    || '—';
-  document.getElementById('dest-state').textContent       = load.dest_state   || '';
-  document.getElementById('load-rate').textContent        = load.rate_total   ? '$' + Number(load.rate_total).toLocaleString() : '—';
+  document.getElementById('origin-city').textContent      = load.origin_city  || load.pickup_city || '—';
+  document.getElementById('origin-state').textContent     = load.origin_state || load.pickup_state || '';
+  document.getElementById('dest-city').textContent        = load.dest_city    || load.delivery_city || '—';
+  document.getElementById('dest-state').textContent       = load.dest_state   || load.delivery_state || '';
+  document.getElementById('load-rate').textContent        = rate ? '$' + Number(rate).toLocaleString() : '—';
   document.getElementById('load-miles').textContent       = load.miles        ? load.miles.toLocaleString() : '—';
   document.getElementById('load-pickup').textContent      = load.pickup_at    ? new Date(load.pickup_at).toLocaleDateString('en-US',{month:'short',day:'numeric'}) : '—';
-  document.getElementById('load-rpm').textContent         = (load.rate_total && load.miles) ? '$' + (load.rate_total / load.miles).toFixed(2) + '/mi' : '—';
+  document.getElementById('load-rpm').textContent         = (rate && load.miles) ? '$' + (rate / load.miles).toFixed(2) + '/mi' : '—';
   document.getElementById('load-commodity').textContent   = load.commodity    || '—';
-  document.getElementById('load-weight').textContent      = load.weight       ? Number(load.weight).toLocaleString() + ' lbs' : '—';
+  document.getElementById('load-weight').textContent      = load.weight_lbs   ? Number(load.weight_lbs).toLocaleString() + ' lbs' : (load.weight ? Number(load.weight).toLocaleString() + ' lbs' : '—');
   document.getElementById('miles-today').textContent      = load.miles        ? load.miles.toLocaleString() : '—';
-  document.getElementById('est-pay').textContent          = load.rate_total   ? '$' + (load.rate_total * 0.72).toFixed(0) : '—';
+  document.getElementById('est-pay').textContent          = rate ? '$' + (rate * 0.72).toFixed(0) : '—';
 
   // Full addresses + navigation
-  const pickupAddr   = [load.pickup_address, load.origin_city, load.origin_state].filter(Boolean).join(', ');
-  const deliveryAddr = [load.delivery_address, load.dest_city, load.dest_state].filter(Boolean).join(', ');
+  const pickupCity = load.origin_city || load.pickup_city || '';
+  const pickupState = load.origin_state || load.pickup_state || '';
+  const deliveryCity = load.dest_city || load.delivery_city || '';
+  const deliveryState = load.dest_state || load.delivery_state || '';
+  const pickupAddr   = [load.pickup_address, pickupCity, pickupState].filter(Boolean).join(', ');
+  const deliveryAddr = [load.delivery_address, deliveryCity, deliveryState].filter(Boolean).join(', ');
   if (pickupAddr || deliveryAddr) {
     document.getElementById('load-addresses').style.display = 'block';
     document.getElementById('pickup-address').textContent   = pickupAddr || '—';
@@ -908,63 +982,95 @@ function renderNoLoad() {
 async function loadAvailableLoads() {
   const list = document.getElementById('available-loads-list');
   list.innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted)">Loading…</div>';
+  if (DEMO_MODE) { renderAvailableLoads(DEMO_AVAILABLE_LOADS); return; }
   try {
-    const res   = await apiFetch('/api/fleet?status=booked&limit=30');
-    const loads = await res.json();
-    if (!loads || loads.length === 0) {
+    if (!supabaseClient) {
+      list.innerHTML = '<div class="empty-state"><div class="empty-icon">⚠️</div><p>Supabase not connected.</p></div>';
+      return;
+    }
+
+    // Query loads where status = 'booked' and not assigned to a driver yet
+    const { data: loads, error } = await supabaseClient
+      .from('loads')
+      .select('*')
+      .eq('status', 'booked')
+      .is('driver_code', null)
+      .order('pickup_at', { ascending: true })
+      .limit(30);
+
+    if (error || !loads || loads.length === 0) {
       list.innerHTML = '<div class="empty-state"><div class="empty-icon">🚛</div><p>No loads available right now.<br>Check back soon or watch for an SMS offer.</p></div>';
       return;
     }
 
-    const rows = loads.map(l => {
-      const rpm     = (l.rate_total && l.miles) ? '$' + (l.rate_total / l.miles).toFixed(2) : '—';
-      const pickup  = l.pickup_at ? new Date(l.pickup_at).toLocaleDateString('en-US',{month:'short',day:'numeric'}) : '—';
-      const origin  = [l.origin_city, l.origin_state].filter(Boolean).join(', ') || '?';
-      const dest    = [l.dest_city,   l.dest_state  ].filter(Boolean).join(', ') || '?';
-      return `
-        <tr>
-          <td>
-            <div class="tbl-route">${esc(origin)}</div>
-            <div class="tbl-sub">→ ${esc(dest)}</div>
-            <div class="tbl-sub">${esc(l.load_number || l.id.slice(0,8))} · ${l.miles ? l.miles.toLocaleString() + ' mi' : '—'} · ${pickup}</div>
-          </td>
-          <td>
-            <div class="tbl-rate">${l.rate_total ? '$' + Number(l.rate_total).toLocaleString() : '—'}</div>
-            <div class="tbl-rpm">${rpm}/mi</div>
-          </td>
-          <td>
-            <div class="tbl-actions">
-              <button class="tbl-accept" onclick="acceptLoad('${l.id}','${esc(l.load_number||'')}')">✅ Accept</button>
-              <button class="tbl-pass"   onclick="declineLoad('${l.id}')">Pass</button>
-            </div>
-          </td>
-        </tr>`;
-    }).join('');
-
-    list.innerHTML = `
-      <div class="loads-table-wrap">
-        <table class="loads-table">
-          <thead><tr>
-            <th>Route / Load</th>
-            <th>Rate</th>
-            <th></th>
-          </tr></thead>
-          <tbody>${rows}</tbody>
-        </table>
-      </div>`;
-  } catch {
+    renderAvailableLoads(loads);
+  } catch (err) {
+    console.error('loadAvailableLoads error:', err);
     list.innerHTML = '<div class="empty-state"><div class="empty-icon">⚠️</div><p>Could not load. Check connection.</p></div>';
   }
 }
 
+function renderAvailableLoads(loads) {
+  const list = document.getElementById('available-loads-list');
+  if (!loads || loads.length === 0) {
+    list.innerHTML = '<div class="empty-state"><div class="empty-icon">🚛</div><p>No loads available right now.</p></div>';
+    return;
+  }
+  const rows = loads.map(l => {
+    const rate   = l.gross_rate || l.rate_total || 0;
+    const rpm    = (rate && l.miles) ? '$' + (rate / l.miles).toFixed(2) : '—';
+    const pickup = l.pickup_at ? new Date(l.pickup_at).toLocaleDateString('en-US',{month:'short',day:'numeric'}) : '—';
+    const origin = [l.origin_city || l.pickup_city, l.origin_state || l.pickup_state].filter(Boolean).join(', ') || '?';
+    const dest   = [l.dest_city || l.delivery_city, l.dest_state || l.delivery_state].filter(Boolean).join(', ') || '?';
+    return `
+      <tr>
+        <td>
+          <div class="tbl-route">${esc(origin)}</div>
+          <div class="tbl-sub">→ ${esc(dest)}</div>
+          <div class="tbl-sub">${esc(l.load_number||l.id)} · ${l.miles ? l.miles.toLocaleString() + ' mi' : '—'} · ${pickup}</div>
+        </td>
+        <td>
+          <div class="tbl-rate">${rate ? '$' + Number(rate).toLocaleString() : '—'}</div>
+          <div class="tbl-rpm">${rpm}/mi</div>
+        </td>
+        <td>
+          <div class="tbl-actions">
+            <button class="tbl-accept" onclick="acceptLoad('${l.id}','${esc(l.load_number||'')}')">✅ Accept</button>
+            <button class="tbl-pass"   onclick="declineLoad('${l.id}')">Pass</button>
+          </div>
+        </td>
+      </tr>`;
+  }).join('');
+  list.innerHTML = `
+    <div class="loads-table-wrap">
+      <table class="loads-table">
+        <thead><tr><th>Route / Load</th><th>Rate</th><th></th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
+}
+
 // ── MESSAGES ──────────────────────────────────────────────────────────────────
 async function loadMessages(scrollToBottom = false) {
-  if (!MY_PHONE) return;
+  if (DEMO_MODE) { renderMessages(DEMO_MESSAGES, scrollToBottom); return; }
+  if (!MY_PHONE || !supabaseClient) return;
   try {
-    const res  = await apiFetch(`/api/comms/thread/${encodeURIComponent(MY_PHONE)}`);
-    const data = await res.json();
-    renderMessages(data.messages || [], scrollToBottom);
-  } catch {}
+    // Query driver_messages where driver_phone matches
+    const { data: messages, error } = await supabaseClient
+      .from('driver_messages')
+      .select('*')
+      .eq('driver_phone', MY_PHONE)
+      .order('created_at', { ascending: true })
+      .limit(100);
+
+    if (error) {
+      console.error('loadMessages error:', error);
+      return;
+    }
+    renderMessages(messages || [], scrollToBottom);
+  } catch (err) {
+    console.error('loadMessages exception:', err);
+  }
 }
 
 function renderMessages(messages, scrollToBottom) {
@@ -1012,32 +1118,71 @@ async function sendMessage() {
   const input = document.getElementById('msg-input');
   const text  = input.value.trim();
   if (!text || !MY_PHONE) { if (!MY_PHONE) showToast('⚠️ Phone number not set in profile'); return; }
+
+  if (DEMO_MODE) {
+    input.value = '';
+    autoResize(input);
+    DEMO_MESSAGES.push({ direction: 'outbound', body: text, created_at: new Date().toISOString() });
+    renderMessages(DEMO_MESSAGES, true);
+    return;
+  }
+  if (!supabaseClient) { showToast('Not connected to database'); return; }
+
   input.value = '';
   autoResize(input);
   try {
-    await apiFetch('/api/comms/send', 'POST', { to: MY_PHONE, body: text, driver_id: DRIVER_ID });
+    await supabaseClient.from('driver_messages').insert({
+      driver_phone: MY_PHONE,
+      direction: 'outbound',
+      body: text,
+      msg_type: 'text'
+    });
     loadMessages(true);
-  } catch { showToast('Failed to send — check connection'); }
+  } catch (err) {
+    console.error('sendMessage error:', err);
+    showToast('Failed to send — check connection');
+  }
 }
 
 async function replyOffer(reply, loadId) {
-  if (!MY_PHONE) return;
-  await apiFetch('/api/comms/send', 'POST', { to: MY_PHONE, body: reply, driver_id: DRIVER_ID, load_id: loadId || undefined });
-  if (reply === 'YES' && loadId) {
-    showToast('✅ Accepted! Dispatcher will confirm shortly.');
-  } else {
-    showToast('Passed on this load.');
+  if (DEMO_MODE) {
+    if (reply === 'YES') showToast('✅ Accepted! Dispatcher will confirm shortly. (demo)');
+    else showToast('Passed on this load. (demo)');
+    return;
   }
-  loadMessages(true);
+  if (!MY_PHONE || !supabaseClient) return;
+  try {
+    await supabaseClient.from('driver_messages').insert({
+      driver_phone: MY_PHONE,
+      direction: 'outbound',
+      body: reply,
+      msg_type: 'acceptance',
+      load_id: loadId || null
+    });
+    if (reply === 'YES' && loadId) {
+      showToast('✅ Accepted! Dispatcher will confirm shortly.');
+    } else {
+      showToast('Passed on this load.');
+    }
+    loadMessages(true);
+  } catch (err) {
+    console.error('replyOffer error:', err);
+  }
 }
 
 function startMsgPolling() {
-  if (!MY_PHONE) return;
+  if (!MY_PHONE || !supabaseClient) return;
   _msgPollTimer = setInterval(async () => {
     try {
-      const res  = await apiFetch(`/api/comms/thread/${encodeURIComponent(MY_PHONE)}`);
-      const data = await res.json();
-      const msgs = data.messages || [];
+      // Query driver_messages where driver_phone matches
+      const { data: msgs, error } = await supabaseClient
+        .from('driver_messages')
+        .select('*')
+        .eq('driver_phone', MY_PHONE)
+        .order('created_at', { ascending: true });
+
+      if (error || !msgs) return;
+
       const latest = msgs.length ? msgs[msgs.length - 1].created_at : null;
       if (latest && latest !== _lastMsgTs) {
         const newInbound = msgs.filter(m => m.direction === 'inbound' || (m.direction === 'outbound' && m.created_at > (_lastMsgTs || '')));
@@ -1052,15 +1197,26 @@ function startMsgPolling() {
         }
         _lastMsgTs = latest;
       }
-    } catch {}
+    } catch (err) {
+      console.error('Message polling error:', err);
+    }
   }, 12000);
 }
 
 async function markRead() {
-  if (!MY_PHONE) return;
+  if (!MY_PHONE || !supabaseClient) return;
   _unreadCount = 0;
   updateBadge();
-  try { await apiFetch(`/api/comms/read/${encodeURIComponent(MY_PHONE)}`, 'PATCH'); } catch {}
+  try {
+    // Mark all inbound messages as read
+    await supabaseClient
+      .from('driver_messages')
+      .update({ read: true })
+      .eq('driver_phone', MY_PHONE)
+      .eq('direction', 'inbound');
+  } catch (err) {
+    console.error('markRead error:', err);
+  }
 }
 
 function updateBadge() {
@@ -1113,6 +1269,7 @@ function savePhone() {
 
 // ── PROFILE ───────────────────────────────────────────────────────────────────
 async function loadProfile() {
+  // Load from localStorage first (cached data)
   const cdl = JSON.parse(localStorage.getItem('3ll_cdl') || '{}');
   document.getElementById('cdl-number').textContent     = cdl.cdl_number         || '—';
   document.getElementById('cdl-class').textContent      = cdl.cdl_class          || '—';
@@ -1132,6 +1289,37 @@ async function loadProfile() {
     document.getElementById('phone-saved-msg').style.display = 'block';
   }
 
+  // Query driver from Supabase to get fresh data
+  if (!DEMO_MODE && supabaseClient) {
+    try {
+      const driverId = localStorage.getItem('3ll_driver_id') || '';
+      if (!driverId) return;
+
+      const { data: driver, error } = await supabaseClient
+        .from('drivers')
+        .select('*')
+        .eq('id', driverId)
+        .single();
+
+      if (!error && driver) {
+        // Store CDL info in localStorage
+        localStorage.setItem('3ll_cdl', JSON.stringify({
+          cdl_number: driver.cdl_number || '',
+          cdl_state: driver.cdl_state || '',
+          cdl_expiry: driver.cdl_expires || '',
+          medical_card_expiry: driver.medical_card_expires || ''
+        }));
+        // Update CDL display
+        document.getElementById('cdl-number').textContent     = driver.cdl_number || '—';
+        document.getElementById('cdl-state').textContent      = driver.cdl_state || '—';
+        document.getElementById('cdl-expiry').textContent     = driver.cdl_expires || '—';
+        document.getElementById('medical-expiry').textContent = driver.medical_card_expires || '—';
+      }
+    } catch (err) {
+      console.log('Profile sync deferred:', err);
+    }
+  }
+
   if (cdl.cdl_expiry) {
     const days = Math.ceil((new Date(cdl.cdl_expiry) - new Date()) / 86400000);
     const pill = document.getElementById('cdl-status-pill');
@@ -1141,24 +1329,93 @@ async function loadProfile() {
   }
 }
 
-function loadDocs() {}
+// ── DOCUMENTS ────────────────────────────────────────────────────────────────
+async function loadDocs() {
+  if (!supabaseClient) return;
+  try {
+    const driverId = localStorage.getItem('3ll_driver_id') || '';
+    if (!driverId) return;
+
+    // Query driver_documents for this driver
+    const { data: docs, error } = await supabaseClient
+      .from('driver_documents')
+      .select('*')
+      .eq('driver_id', driverId)
+      .order('uploaded_at', { ascending: false })
+      .limit(50);
+
+    if (error || !docs) {
+      console.error('loadDocs error:', error);
+      return;
+    }
+    renderDocuments(docs);
+  } catch (err) {
+    console.error('loadDocs exception:', err);
+  }
+}
+
+function renderDocuments(docs) {
+  // Documents tab content would be rendered here
+  // For now this is a placeholder — implement based on your docs UI design
+  if (docs && docs.length > 0) {
+    console.log('Loaded documents:', docs);
+  }
+}
 
 // ── LOAD HISTORY ──────────────────────────────────────────────────────────────
 async function loadLoadHistory() {
   const el = document.getElementById('load-history-list');
+  if (DEMO_MODE) {
+    el.innerHTML = `
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px;margin-bottom:8px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+          <div style="font-size:12px;font-weight:700;color:var(--text)">LD-2845</div>
+          <div style="display:flex;gap:8px;align-items:center"><span style="font-size:14px;font-weight:700;color:var(--green)">$2,400</span><span class="pill pill-green" style="font-size:10px">✓ Delivered</span></div>
+        </div>
+        <div style="font-size:12px;color:var(--muted)">Houston, TX → Nashville, TN</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:4px">May 10 · 1,088 mi · $2.21/mi</div>
+      </div>
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px;margin-bottom:8px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+          <div style="font-size:12px;font-weight:700;color:var(--text)">LD-2843</div>
+          <div style="display:flex;gap:8px;align-items:center"><span style="font-size:14px;font-weight:700;color:var(--green)">$2,400</span><span class="pill pill-green" style="font-size:10px">✓ Delivered</span></div>
+        </div>
+        <div style="font-size:12px;color:var(--muted)">Kansas City, MO → Charlotte, NC</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:4px">May 7 · 1,122 mi · $2.14/mi</div>
+      </div>`;
+    return;
+  }
   try {
-    const res   = await apiFetch('/api/fleet?status=delivered&limit=20');
-    const loads = await res.json();
-    if (!loads || !loads.length) {
+    if (!supabaseClient) {
+      el.innerHTML = '<div style="text-align:center;padding:12px;color:var(--muted);font-size:13px">Supabase not connected.</div>';
+      return;
+    }
+    const driverCode = localStorage.getItem('3ll_driver_code') || '';
+    if (!driverCode) {
+      el.innerHTML = '<div style="text-align:center;padding:12px;color:var(--muted);font-size:13px">Driver not identified.</div>';
+      return;
+    }
+
+    // Query loads where driver_code matches and status = 'delivered'
+    const { data: loads, error } = await supabaseClient
+      .from('loads')
+      .select('*')
+      .eq('driver_code', driverCode)
+      .eq('status', 'delivered')
+      .order('delivery_at', { ascending: false })
+      .limit(20);
+
+    if (error || !loads || !loads.length) {
       el.innerHTML = '<div style="text-align:center;padding:12px;color:var(--muted);font-size:13px">No completed loads yet.</div>';
       return;
     }
     el.innerHTML = loads.map(l => {
-      const origin = [l.origin_city, l.origin_state].filter(Boolean).join(', ') || '?';
-      const dest   = [l.dest_city,   l.dest_state  ].filter(Boolean).join(', ') || '?';
-      const date   = l.delivered_at ? new Date(l.delivered_at).toLocaleDateString('en-US',{month:'short',day:'numeric'}) : (l.pickup_at ? new Date(l.pickup_at).toLocaleDateString('en-US',{month:'short',day:'numeric'}) : '—');
-      const rate   = l.rate_total ? '$' + Number(l.rate_total).toLocaleString() : '—';
-      const rpm    = (l.rate_total && l.miles) ? '$' + (l.rate_total/l.miles).toFixed(2) + '/mi' : '';
+      const origin = [l.origin_city || l.pickup_city, l.origin_state || l.pickup_state].filter(Boolean).join(', ') || '?';
+      const dest   = [l.dest_city || l.delivery_city, l.dest_state || l.delivery_state].filter(Boolean).join(', ') || '?';
+      const date   = l.delivery_at ? new Date(l.delivery_at).toLocaleDateString('en-US',{month:'short',day:'numeric'}) : (l.pickup_at ? new Date(l.pickup_at).toLocaleDateString('en-US',{month:'short',day:'numeric'}) : '—');
+      const rate   = (l.gross_rate || l.rate_total) ? '$' + Number(l.gross_rate || l.rate_total).toLocaleString() : '—';
+      const rateVal = l.gross_rate || l.rate_total || 0;
+      const rpm    = (rateVal && l.miles) ? '$' + (rateVal/l.miles).toFixed(2) + '/mi' : '';
       return `
         <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:12px;margin-bottom:8px">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
@@ -1172,17 +1429,55 @@ async function loadLoadHistory() {
           <div style="font-size:11px;color:var(--muted);margin-top:4px">${date}${l.miles ? ' · ' + l.miles.toLocaleString() + ' mi' : ''}${rpm ? ' · ' + rpm : ''}</div>
         </div>`;
     }).join('');
-  } catch {
+  } catch (err) {
+    console.error('loadLoadHistory error:', err);
     el.innerHTML = '<div style="text-align:center;padding:12px;color:var(--muted);font-size:13px">Could not load history.</div>';
   }
 }
 
 // ── PAY / EARNINGS ────────────────────────────────────────────────────────────
 async function loadPayData() {
+  if (DEMO_MODE) {
+    const e = DEMO_EARNINGS;
+    document.getElementById('pay-week-gross').textContent = '$' + e.gross.toLocaleString();
+    document.getElementById('pay-week-miles').textContent = '2,015';
+    document.getElementById('pay-week-loads').textContent = '1';
+    document.getElementById('pay-week-rpm').textContent   = '$1.59';
+    document.getElementById('ded-dispatch').textContent   = '-$' + e.dispatch_fee;
+    document.getElementById('ded-fuel').textContent       = '$0';
+    document.getElementById('ded-insurance').textContent  = '-$' + e.insurance;
+    document.getElementById('pay-net').textContent        = '$' + e.net.toLocaleString();
+    document.getElementById('pay-ytd-gross').textContent  = '$18,450';
+    document.getElementById('pay-ytd-miles').textContent  = '11,230';
+    document.getElementById('settlement-list').innerHTML  = `
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center">
+        <div><div style="font-size:13px;font-weight:600;color:var(--text)">Week of May 5</div><div style="font-size:11px;color:var(--muted);margin-top:2px">2 loads · 3,210 mi</div></div>
+        <div style="text-align:right"><div style="font-size:16px;font-weight:700;color:var(--green)">$4,800</div><div style="font-size:11px;color:var(--muted)">gross</div></div>
+      </div>
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center">
+        <div><div style="font-size:13px;font-weight:600;color:var(--text)">Week of Apr 28</div><div style="font-size:11px;color:var(--muted);margin-top:2px">3 loads · 4,005 mi</div></div>
+        <div style="text-align:right"><div style="font-size:16px;font-weight:700;color:var(--green)">$6,200</div><div style="font-size:11px;color:var(--muted)">gross</div></div>
+      </div>`;
+    return;
+  }
   try {
-    const res   = await apiFetch(`/api/fleet?status=delivered&driver_id=${DRIVER_ID}&limit=100`);
-    const loads = await res.json();
-    if (!loads) return;
+    if (!supabaseClient) return;
+    const driverCode = localStorage.getItem('3ll_driver_code') || '';
+    if (!driverCode) return;
+
+    // Query loads where driver_code matches and status = 'delivered'
+    const { data: loads, error } = await supabaseClient
+      .from('loads')
+      .select('*')
+      .eq('driver_code', driverCode)
+      .eq('status', 'delivered')
+      .order('pickup_at', { ascending: false })
+      .limit(100);
+
+    if (error || !loads) {
+      console.error('loadPayData error:', error);
+      return;
+    }
 
     const now       = new Date();
     const weekStart = new Date(now); weekStart.setDate(now.getDate() - now.getDay());
@@ -1192,13 +1487,13 @@ async function loadPayData() {
     const weekLoads = loads.filter(l => l.pickup_at && new Date(l.pickup_at) >= weekStart);
     const ytdLoads  = loads.filter(l => l.pickup_at && new Date(l.pickup_at) >= yearStart);
 
-    const sum = arr => arr.reduce((a,l) => a + (Number(l.rate_total)||0), 0);
+    const sum = arr => arr.reduce((a,l) => a + (Number(l.gross_rate || l.rate_total)||0), 0);
     const mi  = arr => arr.reduce((a,l) => a + (Number(l.miles)||0), 0);
 
     const weekGross = sum(weekLoads), weekMi = mi(weekLoads);
     const ytdGross  = sum(ytdLoads),  ytdMi  = mi(ytdLoads);
 
-    const dispatch   = weekGross * 0.08;
+    const dispatch   = weekLoads.reduce((a,l) => a + (Number(l.dispatch_fee)||0), 0);
     const insurance  = weekLoads.length * 45;
     const fuelAdv    = 0;
     const net        = weekGross - dispatch - insurance - fuelAdv;
@@ -1207,7 +1502,7 @@ async function loadPayData() {
     document.getElementById('pay-week-miles').textContent = weekMi    ? weekMi.toLocaleString()          : '—';
     document.getElementById('pay-week-loads').textContent = weekLoads.length || '—';
     document.getElementById('pay-week-rpm').textContent   = (weekGross && weekMi) ? '$' + (weekGross/weekMi).toFixed(2) : '—';
-    document.getElementById('ded-dispatch').textContent   = dispatch  ? '-$' + dispatch.toFixed(2)  : '—';
+    document.getElementById('ded-dispatch').textContent   = dispatch  ? '-$' + dispatch.toFixed(2)  : '$0';
     document.getElementById('ded-fuel').textContent       = fuelAdv   ? '-$' + fuelAdv.toFixed(2)   : '$0';
     document.getElementById('ded-insurance').textContent  = insurance ? '-$' + insurance.toFixed(2) : '—';
     document.getElementById('pay-net').textContent        = net       ? '$' + net.toFixed(2)         : '—';
@@ -1221,8 +1516,9 @@ async function loadPayData() {
       const d = new Date(l.pickup_at);
       const wk = new Date(d); wk.setDate(d.getDate() - d.getDay()); wk.setHours(0,0,0,0);
       const key = wk.toISOString().slice(0,10);
+      const rate = l.gross_rate || l.rate_total || 0;
       if (!byWeek[key]) byWeek[key] = { gross:0, loads:0, miles:0, label: wk.toLocaleDateString('en-US',{month:'short',day:'numeric'}) };
-      byWeek[key].gross += Number(l.rate_total)||0;
+      byWeek[key].gross += Number(rate);
       byWeek[key].loads += 1;
       byWeek[key].miles += Number(l.miles)||0;
     });
@@ -1243,7 +1539,9 @@ async function loadPayData() {
           </div>
         </div>`).join('');
     }
-  } catch {}
+  } catch (err) {
+    console.error('loadPayData exception:', err);
+  }
 }
 
 // ── EQUIPMENT ────────────────────────────────────────────────────────────────
@@ -1257,8 +1555,20 @@ function saveEquipment() {
 
 // ── ACTIONS ───────────────────────────────────────────────────────────────────
 async function confirmPickup() {
-  navigator.geolocation?.getCurrentPosition(pos => {
-    apiFetch('/api/telemetry/ping', 'POST', { driver_id: DRIVER_ID, lat: pos.coords.latitude, lng: pos.coords.longitude, event: 'pickup_confirmed' });
+  navigator.geolocation?.getCurrentPosition(async pos => {
+    if (supabaseClient) {
+      try {
+        await supabaseClient.from('truck_telemetry').insert({
+          driver_id: DRIVER_ID,
+          latitude: pos.coords.latitude,
+          longitude: pos.coords.longitude,
+          event: 'pickup_confirmed',
+          ts: new Date().toISOString()
+        });
+      } catch (err) {
+        console.error('Telemetry error:', err);
+      }
+    }
   });
   document.getElementById('btn-pickup').style.display   = 'none';
   document.getElementById('btn-delivery').style.display = 'flex';
@@ -1266,23 +1576,68 @@ async function confirmPickup() {
 }
 
 async function confirmDelivery() {
-  navigator.geolocation?.getCurrentPosition(pos => {
-    apiFetch('/api/telemetry/ping', 'POST', { driver_id: DRIVER_ID, lat: pos.coords.latitude, lng: pos.coords.longitude, event: 'delivery_confirmed' });
+  navigator.geolocation?.getCurrentPosition(async pos => {
+    if (supabaseClient) {
+      try {
+        await supabaseClient.from('truck_telemetry').insert({
+          driver_id: DRIVER_ID,
+          latitude: pos.coords.latitude,
+          longitude: pos.coords.longitude,
+          event: 'delivery_confirmed',
+          ts: new Date().toISOString()
+        });
+      } catch (err) {
+        console.error('Telemetry error:', err);
+      }
+    }
   });
   showToast('📦 Delivery confirmed — upload POD now');
   showView('docs');
 }
 
 async function acceptLoad(loadId, loadNumber) {
+  if (DEMO_MODE) {
+    showToast('✅ Load accepted! Dispatcher will confirm. (demo)');
+    showView('home');
+    return;
+  }
   try {
-    await apiFetch(`/api/fleet/${loadId}`, 'PATCH', { status: 'dispatched' });
+    const driverCode = localStorage.getItem('3ll_driver_code') || '';
+    if (!supabaseClient || !driverCode) {
+      showToast('Driver not identified');
+      return;
+    }
+
+    // Update load with driver_code
+    const { error } = await supabaseClient
+      .from('loads')
+      .update({ driver_code: driverCode, status: 'dispatched' })
+      .eq('id', loadId);
+
+    if (error) {
+      console.error('Accept load error:', error);
+      showToast('Error accepting load — try again');
+      return;
+    }
+
     showToast('✅ Load accepted! Dispatcher will confirm.');
+
+    // Send acceptance message
     if (MY_PHONE && loadNumber) {
-      await apiFetch('/api/comms/send', 'POST', { to: MY_PHONE, body: `YES - accepting load ${loadNumber}`, driver_id: DRIVER_ID, load_id: loadId });
+      await supabaseClient.from('driver_messages').insert({
+        driver_phone: MY_PHONE,
+        direction: 'outbound',
+        body: `YES - accepting load ${loadNumber}`,
+        msg_type: 'acceptance',
+        load_id: loadId
+      });
     }
     showView('home');
     loadCurrentLoad();
-  } catch { showToast('Error accepting load — try again'); }
+  } catch (err) {
+    console.error('acceptLoad exception:', err);
+    showToast('Error accepting load — try again');
+  }
 }
 
 async function declineLoad(loadId) {
@@ -1290,11 +1645,24 @@ async function declineLoad(loadId) {
   loadAvailableLoads();
 }
 
-function reportIssue() {
+async function reportIssue() {
   const issue = prompt('Describe the issue (breakdown, accident, delay):');
   if (!issue) return;
-  apiFetch('/api/webhooks/driver_issue', 'POST', { driver_id: DRIVER_ID, issue, ts: new Date().toISOString() });
-  showToast('⚠️ Issue reported to Dispatch');
+  if (DEMO_MODE) { showToast('⚠️ Issue reported to Dispatch (demo)'); return; }
+  if (!supabaseClient) return;
+  try {
+    // Send issue as a message to dispatch
+    await supabaseClient.from('driver_messages').insert({
+      driver_phone: MY_PHONE,
+      direction: 'outbound',
+      body: `🚨 ISSUE REPORT: ${issue}`,
+      msg_type: 'issue_report'
+    });
+    showToast('⚠️ Issue reported to Dispatch');
+  } catch (err) {
+    console.error('reportIssue error:', err);
+    showToast('Failed to report issue');
+  }
 }
 
 function triggerUpload(inputId) { document.getElementById(inputId).click(); }
@@ -1334,23 +1702,28 @@ function stopGpsTracking() {
 }
 
 async function sendDriverLocation() {
-  if (!navigator.geolocation) return;
+  if (!navigator.geolocation || !supabaseClient) return;
 
   navigator.geolocation.getCurrentPosition(
-    pos => {
+    async pos => {
       const { latitude, longitude, accuracy, speed, heading } = pos.coords;
       const ts = new Date().toISOString();
 
-      // Send to backend (non-blocking)
-      apiFetch('/api/telemetry/location', 'POST', {
-        driver_id: DRIVER_ID,
-        lat: latitude,
-        lng: longitude,
-        accuracy,
-        speed_mph: speed ? (speed * 2.237).toFixed(1) : 0,
-        heading: heading || 0,
-        ts
-      }).catch(() => {});
+      try {
+        // Send to Supabase truck_telemetry table
+        await supabaseClient.from('truck_telemetry').insert({
+          driver_id: DRIVER_ID,
+          latitude,
+          longitude,
+          accuracy,
+          speed_mph: speed ? (speed * 2.237).toFixed(1) : 0,
+          heading: heading || 0,
+          ts
+        });
+      } catch (err) {
+        // Silent failure for location tracking
+        console.debug('Location tracking error:', err);
+      }
     },
     () => {} // Silent error
   );
@@ -1358,11 +1731,34 @@ async function sendDriverLocation() {
 
 // ── HOS ───────────────────────────────────────────────────────────────────────
 async function pollHOS() {
+  if (!supabaseClient) return;
   try {
-    const res = await apiFetch(`/api/telemetry/hos?driver_id=${DRIVER_ID}`);
-    const hos = await res.json();
-    if (hos?.drive_remaining) renderHOS(hos);
-  } catch {}
+    const driverId = localStorage.getItem('3ll_driver_id') || '';
+    if (!driverId) return;
+
+    // Query driver_hos_status where driver_id matches
+    const { data: hos, error } = await supabaseClient
+      .from('driver_hos_status')
+      .select('*')
+      .eq('driver_id', driverId)
+      .order('ts', { ascending: false })
+      .limit(1);
+
+    if (error || !hos || !hos.length) {
+      console.log('HOS data not available');
+      return;
+    }
+
+    const hosData = hos[0];
+    // Convert minutes to hours for rendering (schema uses minutes, app expects hours)
+    renderHOS({
+      drive_remaining: (hosData.drive_remaining_min || 0) / 60,
+      shift_remaining: (hosData.shift_remaining_min || 0) / 60,
+      cycle_remaining: (hosData.cycle_remaining_min || 0) / 60
+    });
+  } catch (err) {
+    console.error('pollHOS error:', err);
+  }
 }
 
 function renderHOS(hos) {
