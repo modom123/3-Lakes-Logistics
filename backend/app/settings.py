@@ -42,7 +42,7 @@ class Settings(BaseSettings):
     postmark_from_email: str = "ops@3lakeslogistics.com"
 
     # Email ingest pipeline
-    sendgrid_inbound_email: str = "loads@3lakes.logistics"
+    sendgrid_inbound_email: str = "loads@3lakeslogistics.com"
 
     fmcsa_webkey: str = ""
 
