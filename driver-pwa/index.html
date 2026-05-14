@@ -837,6 +837,37 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('hos-cycle').textContent   = '62:18';
     document.getElementById('hos-cycle-bar').style.width      = '89%';
     document.getElementById('hos-cycle-bar').style.background = 'var(--yellow)';
+    // Demo profile performance stats
+    const perfOntime = document.getElementById('perf-ontime');
+    const perfLoads  = document.getElementById('perf-loads');
+    const perfMiles  = document.getElementById('perf-miles');
+    if (perfOntime) perfOntime.textContent = '94%';
+    if (perfLoads)  perfLoads.textContent  = '7';
+    if (perfMiles)  perfMiles.textContent  = '8,240 mi';
+    // Demo CDL data
+    document.getElementById('cdl-number').textContent  = 'CDL-IL-182736';
+    document.getElementById('cdl-class').textContent   = 'Class A';
+    document.getElementById('cdl-state').textContent   = 'IL';
+    document.getElementById('cdl-expiry').textContent  = '2026-08-14';
+    document.getElementById('medical-expiry').textContent = '2025-11-30';
+    document.getElementById('carrier-name').textContent = '3 Lakes Logistics';
+    document.getElementById('carrier-mc').textContent   = 'MC-987654';
+    document.getElementById('eld-provider').textContent = 'KeepTruckin';
+    // Demo docs list
+    const docsList = document.getElementById('docs-list');
+    if (docsList) docsList.innerHTML = `
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border)">
+        <div><div style="font-size:13px;font-weight:600;color:var(--text)">📄 BOL - LD-2847</div><div style="font-size:11px;color:var(--muted)">Uploaded May 14 · 1.2 MB</div></div>
+        <span class="pill pill-green" style="font-size:10px">✓ Verified</span>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border)">
+        <div><div style="font-size:13px;font-weight:600;color:var(--text)">✍️ POD - LD-2845</div><div style="font-size:11px;color:var(--muted)">Uploaded May 10 · 842 KB</div></div>
+        <span class="pill pill-green" style="font-size:10px">✓ Verified</span>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0">
+        <div><div style="font-size:13px;font-weight:600;color:var(--text)">🧾 Lumper Receipt - LD-2843</div><div style="font-size:11px;color:var(--muted)">Uploaded May 7 · 560 KB</div></div>
+        <span class="pill pill-yellow" style="font-size:10px">⏳ Pending</span>
+      </div>`;
   } else {
     setInterval(pollHOS, 30000);
     initSupabaseRealtime();
@@ -1086,6 +1117,14 @@ async function sendMessage() {
   const input = document.getElementById('msg-input');
   const text  = input.value.trim();
   if (!text || !MY_PHONE) { if (!MY_PHONE) showToast('⚠️ Phone number not set in profile'); return; }
+
+  if (DEMO_MODE) {
+    input.value = '';
+    autoResize(input);
+    DEMO_MESSAGES.push({ direction: 'outbound', body: text, created_at: new Date().toISOString() });
+    renderMessages(DEMO_MESSAGES, true);
+    return;
+  }
   if (!supabaseClient) { showToast('Not connected to database'); return; }
 
   input.value = '';
@@ -1105,6 +1144,11 @@ async function sendMessage() {
 }
 
 async function replyOffer(reply, loadId) {
+  if (DEMO_MODE) {
+    if (reply === 'YES') showToast('✅ Accepted! Dispatcher will confirm shortly. (demo)');
+    else showToast('Passed on this load. (demo)');
+    return;
+  }
   if (!MY_PHONE || !supabaseClient) return;
   try {
     await supabaseClient.from('driver_messages').insert({
@@ -1551,6 +1595,11 @@ async function confirmDelivery() {
 }
 
 async function acceptLoad(loadId, loadNumber) {
+  if (DEMO_MODE) {
+    showToast('✅ Load accepted! Dispatcher will confirm. (demo)');
+    showView('home');
+    return;
+  }
   try {
     const driverCode = localStorage.getItem('3ll_driver_code') || '';
     if (!supabaseClient || !driverCode) {
@@ -1597,7 +1646,9 @@ async function declineLoad(loadId) {
 
 async function reportIssue() {
   const issue = prompt('Describe the issue (breakdown, accident, delay):');
-  if (!issue || !supabaseClient) return;
+  if (!issue) return;
+  if (DEMO_MODE) { showToast('⚠️ Issue reported to Dispatch (demo)'); return; }
+  if (!supabaseClient) return;
   try {
     // Send issue as a message to dispatch
     await supabaseClient.from('driver_messages').insert({
