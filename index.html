@@ -715,6 +715,7 @@ td.td-name{font-weight:600;color:var(--navy);}
     <div class="sb-item" onclick="nav('execution')"><span class="sb-icon">⚙️</span> Execution Engine</div>
     <div class="sb-item" onclick="nav('founders')"><span class="sb-icon">🏁</span> Founders Program</div>
     <div class="sb-item" onclick="nav('leads')"><span class="sb-icon">🎯</span> Lead Pipeline</div>
+    <div class="sb-item" onclick="nav('exec-command')"><span class="sb-icon">🎖️</span> Exec Command <span class="sb-badge" id="exec-esc-notif" style="display:none">●</span></div>
   </div>
 
   <div class="sb-section">
@@ -1493,8 +1494,229 @@ td.td-name{font-weight:600;color:var(--navy);}
       </div>
     </div>
 
+    <!-- ── IEBC EXECUTIVE COMMAND ── -->
+    <div class="page" id="page-exec-command">
+      <style>
+        .ec-hero{background:linear-gradient(135deg,#0B2545 0%,#1B3E75 60%,#0B2545 100%);border-radius:18px;padding:30px 36px;margin-bottom:24px;display:flex;align-items:center;justify-content:space-between;gap:24px;flex-wrap:wrap;}
+        .ec-badge{display:inline-flex;align-items:center;gap:8px;background:rgba(200,144,42,.18);border:1px solid rgba(200,144,42,.35);color:#F5C842;padding:5px 16px;border-radius:100px;font-size:10px;letter-spacing:2px;text-transform:uppercase;font-family:var(--ff-m);margin-bottom:12px;}
+        .ec-badge::before{content:"";width:6px;height:6px;border-radius:50%;background:#F5C842;animation:ecpulse 2s ease infinite;}
+        @keyframes ecpulse{0%,100%{opacity:1}50%{opacity:.3}}
+        .ec-hero h2{font-family:var(--ff-h);font-size:clamp(22px,3vw,34px);color:#fff;font-weight:900;line-height:1.05;margin-bottom:6px;}
+        .ec-hero p{color:rgba(255,255,255,.6);font-size:13px;max-width:520px;line-height:1.6;}
+        .ec-hero-stats{display:flex;gap:18px;flex-wrap:wrap;}
+        .ec-stat{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:14px 22px;text-align:center;min-width:80px;}
+        .ec-stat-n{font-family:var(--ff-m);font-size:26px;font-weight:700;color:#F5C842;}
+        .ec-stat-l{font-size:10px;color:rgba(255,255,255,.55);letter-spacing:1px;text-transform:uppercase;margin-top:3px;}
+        .ec-scores-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;margin-bottom:24px;}
+        .ec-score-card{border-radius:14px;padding:24px 26px;position:relative;}
+        .ec-score-card.growth{background:linear-gradient(135deg,#0B3B22,#1A6B3C);border:1px solid #2D9B59;}
+        .ec-score-card.margin{background:linear-gradient(135deg,#1A2B4E,#1B3E75);border:1px solid #2D5FA0;}
+        .ec-score-card.integrity{background:linear-gradient(135deg,#3B1A1A,#7B1D1D);border:1px solid #A03030;}
+        .ec-score-label{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,.6);font-family:var(--ff-m);margin-bottom:8px;}
+        .ec-score-value{font-family:var(--ff-m);font-size:48px;font-weight:700;color:#fff;line-height:1;}
+        .ec-score-bar-wrap{margin:12px 0 8px;background:rgba(255,255,255,.15);border-radius:4px;height:4px;}
+        .ec-score-bar{height:4px;border-radius:4px;transition:width .8s ease;}
+        .ec-score-card.growth .ec-score-bar{background:#4ADE80;}
+        .ec-score-card.margin .ec-score-bar{background:#60A5FA;}
+        .ec-score-card.integrity .ec-score-bar{background:#F87171;}
+        .ec-score-trend{font-size:12px;color:rgba(255,255,255,.65);}
+        .ec-score-trend .up{color:#4ADE80;}.ec-score-trend .stable{color:#FBBF24;}
+        .ec-score-owners{font-size:11px;color:rgba(255,255,255,.4);margin-top:5px;}
+        .ec-sec-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+        .ec-sec-hd h3{font-family:var(--ff-h);font-size:19px;font-weight:800;color:var(--navy);}
+        .ec-count-badge{background:var(--navy);color:#F5C842;border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700;font-family:var(--ff-m);}
+        .ec-table{width:100%;border-collapse:collapse;font-size:13px;}
+        .ec-table th{background:var(--slate);padding:9px 12px;text-align:left;font-weight:700;font-size:11px;letter-spacing:.5px;text-transform:uppercase;color:var(--muted);border-bottom:2px solid var(--border);}
+        .ec-table td{padding:10px 12px;border-bottom:1px solid var(--border);vertical-align:middle;}
+        .ec-table tr:last-child td{border-bottom:none;}
+        .ec-table tr:hover td{background:var(--off);}
+        .ec-avatar{width:32px;height:32px;border-radius:7px;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#fff;font-family:var(--ff-m);flex-shrink:0;}
+        .ec-name-cell{display:flex;align-items:center;gap:9px;}
+        .ec-title-text{font-weight:600;color:var(--text);}
+        .ec-dept-pill{display:inline-block;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;}
+        .dept-operations{background:#E0F2FE;color:#0369A1;}.dept-finance{background:#DCFCE7;color:#15803D;}.dept-growth{background:#FEF3C7;color:#92400E;}.dept-technical{background:#EDE9FE;color:#6D28D9;}.dept-carrier_experience{background:#FCE7F3;color:#9D174D;}.dept-security{background:#FEE2E2;color:#B91C1C;}.dept-process{background:#FFF7ED;color:#C2410C;}
+        .ec-cabinet-badge{background:var(--navy);color:#F5C842;font-size:9px;font-weight:700;padding:2px 6px;border-radius:3px;text-transform:uppercase;letter-spacing:.8px;margin-left:6px;}
+        .esc-tier1{color:var(--green);font-weight:700;}.esc-tier2{color:var(--orange);font-weight:700;}.esc-tier3{color:var(--red);font-weight:700;}
+        .ec-status-pill{display:inline-block;padding:2px 9px;border-radius:20px;font-size:10px;font-weight:600;text-transform:uppercase;}
+        .status-open{background:#FEE2E2;color:#B91C1C;}.status-in_review{background:#FEF3C7;color:#92400E;}.status-resolved{background:#DCFCE7;color:#15803D;}.status-escalated{background:#EDE9FE;color:#6D28D9;}
+        .ec-brief-card{background:linear-gradient(135deg,var(--navy),var(--navy2));border-radius:14px;padding:26px 30px;color:#fff;margin-bottom:20px;}
+        .ec-brief-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px;}
+        .ec-brief-title{font-family:var(--ff-h);font-size:19px;font-weight:900;}
+        .ec-brief-date{font-family:var(--ff-m);font-size:11px;color:rgba(255,255,255,.5);letter-spacing:1px;}
+        .ec-brief-author{font-size:12px;color:#F5C842;font-weight:600;margin-bottom:14px;}
+        .ec-brief-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:12px;margin-bottom:16px;}
+        .ec-bs{background:rgba(255,255,255,.08);border-radius:9px;padding:12px 16px;}
+        .ec-bs-n{font-family:var(--ff-m);font-size:20px;color:#F5C842;font-weight:700;}
+        .ec-bs-l{font-size:10px;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.8px;margin-top:2px;}
+        .ec-brief-summary{color:rgba(255,255,255,.7);font-size:13px;line-height:1.7;border-top:1px solid rgba(255,255,255,.1);padding-top:14px;}
+        .ec-actions{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:24px;}
+        .ec-btn{padding:10px 18px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:all .15s;letter-spacing:.2px;}
+        .ec-btn-primary{background:var(--navy);color:#F5C842;}.ec-btn-primary:hover{background:var(--navy2);}
+        .ec-btn-outline{background:transparent;color:var(--navy);border:2px solid var(--navy);}.ec-btn-outline:hover{background:var(--navy);color:#F5C842;}
+        .ec-btn-danger{background:#FEE2E2;color:#B91C1C;border:1px solid #FECACA;}.ec-btn-danger:hover{background:#B91C1C;color:#fff;}
+        .ec-cont-lead{font-size:11px;color:var(--muted);font-weight:600;}
+        .ec-cont-step{font-family:var(--ff-m);font-size:11px;color:var(--gold);}
+        .ec-cont-count{background:var(--slate);border-radius:4px;padding:2px 7px;font-family:var(--ff-m);font-size:11px;font-weight:700;color:var(--navy);}
+        .ec-empty{text-align:center;padding:28px 20px;color:var(--muted);font-size:14px;}
+      </style>
+
+      <!-- Hero Banner -->
+      <div class="ec-hero">
+        <div>
+          <div class="ec-badge">IEBC Executive Command</div>
+          <h2>Commander Dashboard</h2>
+          <p>18-executive org structure — 5 cabinet + 13 expansion. KPI engine, 3-tier triage, contingency plans, daily State of the Fleet brief.</p>
+        </div>
+        <div class="ec-hero-stats">
+          <div class="ec-stat"><div class="ec-stat-n">18</div><div class="ec-stat-l">Executives</div></div>
+          <div class="ec-stat"><div class="ec-stat-n">5</div><div class="ec-stat-l">Cabinet</div></div>
+          <div class="ec-stat"><div class="ec-stat-n">5</div><div class="ec-stat-l">Contingencies</div></div>
+          <div class="ec-stat"><div class="ec-stat-n">200</div><div class="ec-stat-l">Auto Steps</div></div>
+        </div>
+      </div>
+
+      <!-- Master Scores -->
+      <div class="ec-scores-row">
+        <div class="ec-score-card growth">
+          <div class="ec-score-label">Growth Velocity</div>
+          <div class="ec-score-value" id="ec-score-growth">87</div>
+          <div class="ec-score-bar-wrap"><div class="ec-score-bar" id="ec-bar-growth" style="width:87%"></div></div>
+          <div class="ec-score-trend">Trend: <span class="up">↑ Up</span></div>
+          <div class="ec-score-owners">Sterling Pierce · Benjamin Mercer</div>
+        </div>
+        <div class="ec-score-card margin">
+          <div class="ec-score-label">Operational Margin</div>
+          <div class="ec-score-value" id="ec-score-margin">94</div>
+          <div class="ec-score-bar-wrap"><div class="ec-score-bar" id="ec-bar-margin" style="width:94%"></div></div>
+          <div class="ec-score-trend">Trend: <span class="stable">→ Stable</span></div>
+          <div class="ec-score-owners">Eleanor Wei · Dr. Anika Patel</div>
+        </div>
+        <div class="ec-score-card integrity">
+          <div class="ec-score-label">System Integrity</div>
+          <div class="ec-score-value" id="ec-score-integrity">99</div>
+          <div class="ec-score-bar-wrap"><div class="ec-score-bar" id="ec-bar-integrity" style="width:99%"></div></div>
+          <div class="ec-score-trend">Trend: <span class="up">↑ Up</span></div>
+          <div class="ec-score-owners">Marcus Reid · Jamie Park</div>
+        </div>
+      </div>
+
+      <!-- Quick Actions -->
+      <div class="ec-actions">
+        <button class="ec-btn ec-btn-primary" onclick="ecRefreshDashboard()">↺ Refresh Dashboard</button>
+        <button class="ec-btn ec-btn-outline" onclick="ecShowEscModal()">+ Create Escalation</button>
+        <button class="ec-btn ec-btn-outline" onclick="ecShowKpiModal()">+ Record KPI</button>
+        <button class="ec-btn ec-btn-outline" onclick="ecLoadBrief()">📋 View Today's Brief</button>
+        <button class="ec-btn ec-btn-danger" onclick="ecLoadEscalations()">⚠ Reload Escalations</button>
+      </div>
+
+      <!-- Today's Brief -->
+      <div class="ec-sec-hd"><h3>State of the Fleet Brief</h3><span class="ec-count-badge">Today</span></div>
+      <div class="ec-brief-card">
+        <div class="ec-brief-header">
+          <div class="ec-brief-title">Daily Intelligence Report</div>
+          <div class="ec-brief-date" id="ec-brief-date">—</div>
+        </div>
+        <div class="ec-brief-author">Authored by Dr. Evelyn Sterling, COO</div>
+        <div class="ec-brief-stats">
+          <div class="ec-bs"><div class="ec-bs-n" id="ec-brief-t1">—</div><div class="ec-bs-l">Tier 1 Resolved</div></div>
+          <div class="ec-bs"><div class="ec-bs-n" id="ec-brief-t2">—</div><div class="ec-bs-l">Tier 2 Resolved</div></div>
+          <div class="ec-bs"><div class="ec-bs-n" id="ec-brief-t3">—</div><div class="ec-bs-l">Tier 3 Items</div></div>
+          <div class="ec-bs"><div class="ec-bs-n" id="ec-brief-uptime">—</div><div class="ec-bs-l">Fleet Uptime</div></div>
+          <div class="ec-bs"><div class="ec-bs-n" id="ec-brief-loads">—</div><div class="ec-bs-l">Active Loads</div></div>
+          <div class="ec-bs"><div class="ec-bs-n" id="ec-brief-rev">—</div><div class="ec-bs-l">Revenue Today</div></div>
+        </div>
+        <div class="ec-brief-summary" id="ec-brief-summary">Brief not yet generated for today. Click "View Today's Brief" or run the scheduler endpoint to generate.</div>
+      </div>
+
+      <!-- Active Triage Escalations -->
+      <div class="card" style="margin-bottom:20px">
+        <div class="ec-sec-hd"><h3>Active Triage Escalations</h3><span class="ec-count-badge" id="ec-esc-count">0</span></div>
+        <div style="overflow-x:auto">
+          <table class="ec-table">
+            <thead><tr><th>Tier</th><th>Event Type</th><th>Description</th><th>Assigned To</th><th>Status</th><th>Created</th></tr></thead>
+            <tbody id="ec-esc-tbody"><tr><td colspan="6" class="ec-empty">Loading escalations…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Org Chart -->
+      <div class="card" style="margin-bottom:20px">
+        <div class="ec-sec-hd"><h3>Org Chart — 18 Executives</h3><span class="ec-count-badge">IEBC Workforce</span></div>
+        <div style="overflow-x:auto">
+          <table class="ec-table">
+            <thead><tr><th>Executive</th><th>Title</th><th>Department</th><th>Reports To</th><th>Primary KPI</th><th>Target</th></tr></thead>
+            <tbody id="ec-org-tbody"><tr><td colspan="6" class="ec-empty">Click "Refresh Dashboard" to load org chart from API.</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Contingency Plans -->
+      <div class="card">
+        <div class="ec-sec-hd"><h3>Contingency Plans</h3><span class="ec-count-badge">5 Active</span></div>
+        <div style="overflow-x:auto">
+          <table class="ec-table">
+            <thead><tr><th>Plan</th><th>IEBC Lead</th><th>Trigger Condition</th><th>Step</th><th>Triggers</th><th>Action</th></tr></thead>
+            <tbody>
+              <tr><td><strong>OCR Verification &amp; AI-Refinement Loop</strong></td><td class="ec-cont-lead">Katerina Rostova</td><td style="font-size:12px;color:var(--muted)">OCR confidence &lt; 95%</td><td class="ec-cont-step">Step 27</td><td><span class="ec-cont-count" id="ec-cont-1-count">0</span></td><td><button class="ec-btn ec-btn-outline" style="padding:5px 10px;font-size:11px" onclick="ecTriggerCont('OCR Verification & AI-Refinement Loop')">Trigger</button></td></tr>
+              <tr><td><strong>API Resilience &amp; Polling Fallback</strong></td><td class="ec-cont-lead">Marcus Reid</td><td style="font-size:12px;color:var(--muted)">Webhook 5xx or timeout &gt; 10s</td><td class="ec-cont-step">Step 45</td><td><span class="ec-cont-count" id="ec-cont-2-count">0</span></td><td><button class="ec-btn ec-btn-outline" style="padding:5px 10px;font-size:11px" onclick="ecTriggerCont('API Resilience & Polling Fallback')">Trigger</button></td></tr>
+              <tr><td><strong>Triage Escalation Hierarchy</strong></td><td class="ec-cont-lead">Dr. Evelyn Sterling</td><td style="font-size:12px;color:var(--muted)">Safety red, tier-2 unresolved &gt; 1hr</td><td class="ec-cont-step">Step 1</td><td><span class="ec-cont-count" id="ec-cont-3-count">0</span></td><td><button class="ec-btn ec-btn-outline" style="padding:5px 10px;font-size:11px" onclick="ecTriggerCont('Triage Escalation Hierarchy')">Trigger</button></td></tr>
+              <tr><td><strong>Dynamic Geo-Fencing &amp; Delta Tracking</strong></td><td class="ec-cont-lead">Arthur Vance</td><td style="font-size:12px;color:var(--muted)">GPS delta &gt; 15 miles or geo-fence breach</td><td class="ec-cont-step">Step 61</td><td><span class="ec-cont-count" id="ec-cont-4-count">0</span></td><td><button class="ec-btn ec-btn-outline" style="padding:5px 10px;font-size:11px" onclick="ecTriggerCont('Dynamic Geo-Fencing & Delta Tracking')">Trigger</button></td></tr>
+              <tr><td><strong>Financial Variance Thresholds</strong></td><td class="ec-cont-lead">Eleanor Wei</td><td style="font-size:12px;color:var(--muted)">Invoice variance &gt; 5% or RPM delta &gt; 15%</td><td class="ec-cont-step">Step 112</td><td><span class="ec-cont-count" id="ec-cont-5-count">0</span></td><td><button class="ec-btn ec-btn-outline" style="padding:5px 10px;font-size:11px" onclick="ecTriggerCont('Financial Variance Thresholds')">Trigger</button></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div><!-- /page-exec-command -->
+
   </div><!-- /content -->
 </div><!-- /main -->
+
+<!-- EC: Create Escalation Modal -->
+<div id="ec-esc-modal" style="display:none;position:fixed;inset:0;background:rgba(11,37,69,.8);z-index:4000;align-items:center;justify-content:center;backdrop-filter:blur(4px);">
+  <div style="background:white;border-radius:16px;width:92%;max-width:520px;overflow:hidden;box-shadow:0 24px 80px rgba(0,0,0,.4);">
+    <div style="background:var(--navy);padding:18px 24px;display:flex;justify-content:space-between;align-items:center;">
+      <div style="color:#F5C842;font-family:var(--ff-m);font-size:13px;font-weight:700;letter-spacing:1px;">CREATE TRIAGE ESCALATION</div>
+      <button onclick="document.getElementById('ec-esc-modal').style.display='none'" style="background:transparent;color:rgba(255,255,255,.6);border:none;cursor:pointer;font-size:18px;">&times;</button>
+    </div>
+    <div style="padding:26px;display:grid;gap:14px;">
+      <div><label class="fl">Tier *</label><select class="fsel" id="ec-new-tier"><option value="1">Tier 1 — AI Auto-Resolve (15 min SLA)</option><option value="2">Tier 2 — Executive Review (1hr SLA)</option><option value="3">Tier 3 — Commander War Room</option></select></div>
+      <div><label class="fl">Event Type *</label><select class="fsel" id="ec-new-type"><option value="ocr_failure">OCR Failure</option><option value="safety_red">Safety Red</option><option value="api_down">API Down</option><option value="fraud_alert">Fraud Alert</option><option value="dispute">Dispute</option><option value="gps_lag">GPS Lag</option><option value="rate_variance">Rate Variance</option></select></div>
+      <div><label class="fl">Assigned To</label><input class="fi" id="ec-new-assigned" placeholder="Executive name, ai_agent, or commander"></div>
+      <div><label class="fl">Description</label><textarea class="fta" id="ec-new-desc" placeholder="Describe the issue…" style="min-height:80px"></textarea></div>
+      <div style="display:flex;gap:10px;margin-top:4px">
+        <button onclick="ecSubmitEscalation()" class="btn-navy" style="flex:1">Create Escalation</button>
+        <button onclick="document.getElementById('ec-esc-modal').style.display='none'" class="btn-out">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- EC: Record KPI Modal -->
+<div id="ec-kpi-modal" style="display:none;position:fixed;inset:0;background:rgba(11,37,69,.8);z-index:4000;align-items:center;justify-content:center;backdrop-filter:blur(4px);">
+  <div style="background:white;border-radius:16px;width:92%;max-width:520px;overflow:hidden;box-shadow:0 24px 80px rgba(0,0,0,.4);">
+    <div style="background:var(--navy);padding:18px 24px;display:flex;justify-content:space-between;align-items:center;">
+      <div style="color:#F5C842;font-family:var(--ff-m);font-size:13px;font-weight:700;letter-spacing:1px;">RECORD KPI SNAPSHOT</div>
+      <button onclick="document.getElementById('ec-kpi-modal').style.display='none'" style="background:transparent;color:rgba(255,255,255,.6);border:none;cursor:pointer;font-size:18px;">&times;</button>
+    </div>
+    <div style="padding:26px;display:grid;gap:14px;">
+      <div><label class="fl">Executive ID *</label><input class="fi" id="ec-kpi-exec-id" placeholder="UUID from executives table"></div>
+      <div><label class="fl">KPI Name *</label><input class="fi" id="ec-kpi-name" placeholder="e.g. 200-Step Uptime"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div><label class="fl">Current Value</label><input class="fi" type="number" step="0.01" id="ec-kpi-current" placeholder="e.g. 99.97"></div>
+        <div><label class="fl">Target Value</label><input class="fi" type="number" step="0.01" id="ec-kpi-target" placeholder="e.g. 99.99"></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div><label class="fl">Unit</label><select class="fsel" id="ec-kpi-unit"><option value="percent">percent</option><option value="dollars">dollars</option><option value="hours">hours</option><option value="ms">ms</option><option value="score">score</option></select></div>
+        <div><label class="fl">Status</label><select class="fsel" id="ec-kpi-status"><option value="on_track">On Track</option><option value="at_risk">At Risk</option><option value="critical">Critical</option></select></div>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:4px">
+        <button onclick="ecSubmitKpi()" class="btn-navy" style="flex:1">Record Snapshot</button>
+        <button onclick="document.getElementById('ec-kpi-modal').style.display='none'" class="btn-out">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <!-- ── MODALS ── -->
 
@@ -1665,7 +1887,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 let allCarriers=[], allLoads=[], allInvoices=[], currentInvFilter='all', loadCounter=3849;
 
-const pageNames={dashboard:'Dashboard',dispatch:'Dispatch Board',carriers:'Carriers',loads:'Load Manager',invoices:'Invoices & Billing',compliance:'DOT Compliance',ifta:'IFTA / Permits',insurance:'Insurance',revenue:'Revenue Tracker',providers:'Compliance Providers',checklist:'Daily Checklist',notes:'Dispatcher Notes',reports:'Team Reports',agents:'AI Agents',founders:'Founders Program',leads:'Lead Pipeline',execution:'Execution Engine'};
+const pageNames={dashboard:'Dashboard',dispatch:'Dispatch Board',carriers:'Carriers',loads:'Load Manager',invoices:'Invoices & Billing',compliance:'DOT Compliance',ifta:'IFTA / Permits',insurance:'Insurance',revenue:'Revenue Tracker',providers:'Compliance Providers',checklist:'Daily Checklist',notes:'Dispatcher Notes',reports:'Team Reports','exec-command':'Exec Command',agents:'AI Agents',founders:'Founders Program',leads:'Lead Pipeline',execution:'Execution Engine'};
 
 // ── 3 Lakes Logistics Backend API (FastAPI) ──
 const API_BASE = (window.__3LL_API_BASE || 'http://localhost:8080').replace(/\/$/,'');
@@ -1733,6 +1955,7 @@ function nav(id){
   if(id==='invoices'){const n=document.getElementById('invoice-notif');if(n)n.style.display='none';renderInvoices();}
   if(id==='notes')loadNotes();
   if(id==='reports')loadTeamReports();
+  if(id==='exec-command'){const n=document.getElementById('exec-esc-notif');if(n)n.style.display='none';ecRefreshDashboard();}
   if(id==='compliance'||id==='insurance')renderCarrierCompliance();
   if(id==='clm')loadCLMList();
   if(id==='vault')loadVault();
@@ -2282,6 +2505,120 @@ async function saveTeamReport(){
   if(error){toast('Error: '+error.message,'error');return;}
   document.getElementById('report-name').value='';document.getElementById('report-body').value='';
   await loadTeamReports();toast('Report submitted! Thank you.');
+}
+
+// ── IEBC EXECUTIVE COMMAND ──
+async function ecRefreshDashboard(){
+  await Promise.all([ecLoadDashboard(),ecLoadEscalations(),ecLoadBrief(),ecLoadExecutives(),ecLoadContingencies()]);
+}
+async function ecLoadDashboard(){
+  try{
+    const d=await API.get('/executives/dashboard');
+    const ms=d.master_scores||{};
+    if(ms.growth_velocity){setText('ec-score-growth',ms.growth_velocity.score||87);document.getElementById('ec-bar-growth').style.width=(ms.growth_velocity.score||87)+'%';}
+    if(ms.operational_margin){setText('ec-score-margin',ms.operational_margin.score||94);document.getElementById('ec-bar-margin').style.width=(ms.operational_margin.score||94)+'%';}
+    if(ms.system_integrity){setText('ec-score-integrity',ms.system_integrity.score||99);document.getElementById('ec-bar-integrity').style.width=(ms.system_integrity.score||99)+'%';}
+  }catch(e){console.warn('[EC] dashboard offline');}
+}
+async function ecLoadExecutives(){
+  const tbody=document.getElementById('ec-org-tbody');if(!tbody)return;
+  try{
+    const d=await API.get('/executives');
+    const all=(d.all||[]).sort((a,b)=>{const ac=a.reports_to==='commander'?0:1,bc=b.reports_to==='commander'?0:1;return ac-bc||(a.department||'').localeCompare(b.department||'');});
+    if(!all.length){tbody.innerHTML='<tr><td colspan="6" class="ec-empty">No executive data found — check API.</td></tr>';return;}
+    tbody.innerHTML=all.map(ex=>{
+      const isCab=ex.reports_to==='commander';
+      return '<tr><td><div class="ec-name-cell"><div class="ec-avatar" style="background:'+(ex.avatar_color||'#0B2545')+'">'+esc(ex.avatar_initials||'?')+'</div><span class="ec-title-text">'+esc(ex.name)+(isCab?'<span class="ec-cabinet-badge">Cabinet</span>':'')+'</span></div></td>'+
+        '<td style="font-size:12px;color:var(--muted)">'+esc(ex.title||'')+'</td>'+
+        '<td><span class="ec-dept-pill dept-'+(ex.department||'operations')+'">'+esc(ex.department||'—')+'</span></td>'+
+        '<td style="font-size:12px;color:var(--muted)">'+(ex.reports_to==='commander'?'Commander':esc(ex.reports_to||'—'))+'</td>'+
+        '<td style="font-size:12px;font-weight:600">'+esc(ex.primary_kpi||'—')+'</td>'+
+        '<td style="font-family:var(--ff-m);font-size:11px;color:var(--muted)">'+esc(ex.kpi_target||'—')+'</td></tr>';
+    }).join('');
+  }catch(e){tbody.innerHTML='<tr><td colspan="6" class="ec-empty">Backend offline — connect API to view org chart.</td></tr>';}
+}
+async function ecLoadEscalations(){
+  const tbody=document.getElementById('ec-esc-tbody');if(!tbody)return;
+  try{
+    const d=await API.get('/executives/escalations');
+    const open=(d.items||[]).filter(i=>i.status==='open'||i.status==='in_review');
+    setText('ec-esc-count',open.length);
+    const notif=document.getElementById('exec-esc-notif');
+    if(notif)notif.style.display=open.length?'':'none';
+    if(!open.length){tbody.innerHTML='<tr><td colspan="6" class="ec-empty">No active escalations — all clear</td></tr>';return;}
+    tbody.innerHTML=open.map(e=>{
+      const created=e.created_at?new Date(e.created_at).toLocaleDateString():'—';
+      return '<tr><td><span class="esc-tier'+(e.tier||1)+'">T'+(e.tier||1)+'</span></td>'+
+        '<td style="font-weight:600;font-size:12px">'+(e.event_type||'—').replace(/_/g,' ').toUpperCase()+'</td>'+
+        '<td style="font-size:12px;color:var(--muted);max-width:200px">'+esc(e.description||'—')+'</td>'+
+        '<td style="font-size:12px;font-weight:600">'+esc(e.assigned_to||'unassigned')+'</td>'+
+        '<td><span class="ec-status-pill status-'+(e.status||'open')+'">'+esc(e.status||'open')+'</span></td>'+
+        '<td style="font-size:11px;color:var(--muted)">'+created+'</td></tr>';
+    }).join('');
+  }catch(e){tbody.innerHTML='<tr><td colspan="6" class="ec-empty">Backend offline — connect API to view escalations.</td></tr>';}
+}
+async function ecLoadBrief(){
+  try{
+    const d=await API.get('/executives/brief/today');
+    const b=d.brief||{};
+    setText('ec-brief-date',b.date||new Date().toLocaleDateString());
+    setText('ec-brief-t1',b.tier1_resolved||0);
+    setText('ec-brief-t2',b.tier2_resolved||0);
+    setText('ec-brief-t3',(b.tier3_items||[]).length);
+    setText('ec-brief-uptime',(b.fleet_uptime_pct||99.99)+'%');
+    setText('ec-brief-loads',b.active_loads||0);
+    setText('ec-brief-rev',b.revenue_today?'$'+Number(b.revenue_today).toLocaleString():'$0');
+    setText('ec-brief-summary',b.summary||'No summary provided.');
+  }catch(e){
+    setText('ec-brief-date',new Date().toLocaleDateString());
+    setText('ec-brief-summary','No brief yet for today. POST /api/executives/brief to generate one.');
+  }
+}
+async function ecLoadContingencies(){
+  try{
+    const d=await API.get('/executives/contingencies');
+    const countMap={'OCR Verification & AI-Refinement Loop':'ec-cont-1-count','API Resilience & Polling Fallback':'ec-cont-2-count','Triage Escalation Hierarchy':'ec-cont-3-count','Dynamic Geo-Fencing & Delta Tracking':'ec-cont-4-count','Financial Variance Thresholds':'ec-cont-5-count'};
+    window._ecContIds={};
+    (d.plans||[]).forEach(p=>{
+      const el=document.getElementById(countMap[p.name]);if(el)el.textContent=p.trigger_count||0;
+      window._ecContIds[p.name]=p.id;
+    });
+  }catch(e){}
+}
+function ecShowEscModal(){document.getElementById('ec-esc-modal').style.display='flex';}
+function ecShowKpiModal(){document.getElementById('ec-kpi-modal').style.display='flex';}
+async function ecSubmitEscalation(){
+  const tier=parseInt(document.getElementById('ec-new-tier').value);
+  const type=document.getElementById('ec-new-type').value;
+  const assigned=document.getElementById('ec-new-assigned').value.trim();
+  const desc=document.getElementById('ec-new-desc').value.trim();
+  try{
+    await API.post('/executives/escalations',{tier,event_type:type,assigned_to:assigned||null,description:desc||null});
+    document.getElementById('ec-esc-modal').style.display='none';
+    ['ec-new-assigned','ec-new-desc'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+    await ecLoadEscalations();toast('Escalation created.');
+  }catch(e){toast('Failed to create escalation — check API.','error');}
+}
+async function ecSubmitKpi(){
+  const execId=document.getElementById('ec-kpi-exec-id').value.trim();
+  const kpiName=document.getElementById('ec-kpi-name').value.trim();
+  if(!execId||!kpiName){toast('Executive ID and KPI Name required','error');return;}
+  const current=document.getElementById('ec-kpi-current').value;
+  const target=document.getElementById('ec-kpi-target').value;
+  try{
+    await API.post('/executives/kpis',{executive_id:execId,kpi_name:kpiName,current_value:current?parseFloat(current):null,target_value:target?parseFloat(target):null,unit:document.getElementById('ec-kpi-unit').value,status:document.getElementById('ec-kpi-status').value});
+    document.getElementById('ec-kpi-modal').style.display='none';
+    toast('KPI snapshot recorded.');
+  }catch(e){toast('Failed to record KPI — check executive ID and API.','error');}
+}
+async function ecTriggerCont(name){
+  if(!window._ecContIds||!window._ecContIds[name]){toast('Load contingencies first (Refresh Dashboard)','error');return;}
+  if(!confirm('Trigger contingency plan: '+name+'?'))return;
+  try{
+    const d=await API.post('/executives/contingencies/'+window._ecContIds[name]+'/trigger',{});
+    toast('Contingency triggered. Count: '+d.trigger_count);
+    await ecLoadContingencies();
+  }catch(e){toast('Failed to trigger — check API connection.','error');}
 }
 
 // ── HELPERS ──
