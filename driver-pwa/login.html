@@ -101,7 +101,10 @@
 
   <div class="demo-box">
     <strong>Demo Access</strong>
-    Phone: <code>(312) 555-0100</code>&nbsp;&nbsp;PIN: <code>1234</code>
+    Phone: <code>(312) 555-0100</code>&nbsp;&nbsp;PIN: <code>1234</code><br>
+    <button type="button" onclick="demoLogin()" style="margin-top:10px;width:100%;padding:11px;background:#2563eb;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;">
+      Tap to Auto-Fill Demo &amp; Login →
+    </button>
   </div>
 </div>
 
@@ -156,7 +159,9 @@ async function handleLogin(event) {
       body: JSON.stringify({ phone, pin }),
       signal: AbortSignal.timeout(6000)
     });
-    const data = await res.json();
+    const text = await res.text();
+    let data;
+    try { data = JSON.parse(text); } catch { data = {}; }
     if (!res.ok) throw new Error(data.detail || 'Login failed');
 
     localStorage.setItem('3ll_token',       data.token);
@@ -165,13 +170,20 @@ async function handleLogin(event) {
     localStorage.setItem('3ll_expires_at',  data.expires_at);
     window.location.href = './index.html';
   } catch (err) {
-    errorEl.textContent = err.message.includes('timeout') || err.message.includes('fetch')
-      ? 'Could not reach server. Use demo credentials to preview the app.'
-      : '⚠ ' + err.message;
+    errorEl.innerHTML = 'Backend not connected. Use the blue <strong>Demo</strong> button below to preview the app.';
     errorEl.classList.add('show');
     loadingEl.classList.remove('show');
     btnEl.disabled = false;
   }
+}
+
+function demoLogin() {
+  localStorage.setItem('3ll_token',       'demo-token-3lakes');
+  localStorage.setItem('3ll_driver_id',   'DRV-001');
+  localStorage.setItem('3ll_driver_name', 'James Thompson');
+  localStorage.setItem('3ll_phone',       '+13125550100');
+  localStorage.setItem('3ll_expires_at',  new Date(Date.now() + 86400000 * 30).toISOString());
+  window.location.href = './index.html';
 }
 
 document.getElementById('pin').addEventListener('input', e => {
