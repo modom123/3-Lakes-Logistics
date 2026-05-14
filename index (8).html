@@ -2590,17 +2590,18 @@ function fileLbl(input,wrapId,lblId){
 function oSub(){
   if(!v('esign_name')||!v('esign_date')||!document.getElementById('o4ag').checked){shk('obBd');return;}
 
+  const g=id=>{const e=document.getElementById(id);return e?(e.value||'').trim():'';};
+  const gv=id=>g(id)||'___________';
+
   // Handle 25+ trucks — contact sales instead of normal signup
-  const planSel=document.getElementById('plan').value;
-  const foundersCount=document.getElementById('founders_truck_count').value;
-  if(planSel==='founders'&&foundersCount==='25+'){
+  const planSel=g('plan');
+  const foundersCount=parseInt(g('founders_truck_count'))||1;
+  if(planSel==='founders'&&g('founders_truck_count')==='25+'){
     alert('Thank you! For 25+ trucks in the Founders program, please contact our sales team for enterprise pricing.\n\nCall: (555) 000-0000\nEmail: sales@3lakeslogistics.com');
     showPage('home');
     return;
   }
 
-  const g=id=>{const e=document.getElementById(id);return e?(e.value||'').trim():'';};
-  const gv=id=>g(id)||'___________';
   const fn=g('o1fn'),ln=g('o1ln'),ph=g('o1ph'),em=g('o1em'),city=g('o1ct');
   const mc=g('o2mc'),dot=gv('dot_number'),ins=g('o4ins');
   const trucks=gv('o2tr');
@@ -2610,8 +2611,6 @@ function oSub(){
   const equip=[...document.querySelectorAll('#ost3 #equip_cb .cb-i input:checked')].map(cb=>cb.closest('.cb-i').querySelector('.cb-tx').textContent.replace(/[^\w\s\/]/g,'').trim()).join(', ')||'___________';
   const regions=[...document.querySelectorAll('#ost5 #region_cb .cb-i input:checked')].map(cb=>cb.closest('.cb-i').querySelector('.cb-tx').textContent.replace(/[^\w\s\/]/g,'').trim()).join(', ')||'___________';
 
-  const planSel=g('plan');
-  const foundersCount=parseInt(g('founders_truck_count'))||1;
   let planLabel='Pro Membership — $500/month',planFee='$500/month flat';
   if(planSel==='founders'){
     if(g('founders_truck_count')==='25+'){

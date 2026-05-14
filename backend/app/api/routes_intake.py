@@ -219,15 +219,16 @@ async def _send_welcome_email(email: str, company_name: str, carrier_id: str, mi
             return
 
         completion_url = f"https://3lakeslogistics.com/complete-onboarding?carrier_id={carrier_id}"
-        is_founders = plan in ("founders", "pro", "enterprise")
+        is_founders = plan in ("founders", "pro", "enterprise", "discuss")
 
+        action = "Complete Your Profile" if missing else ("You're All Set!" if is_founders else "You're Activated!")
         if is_founders:
             body_html = _html_founders_email(company_name, carrier_id, missing, completion_url)
-            subject = f"Welcome to 3 Lakes Logistics Founders Program — {'Complete Your Profile' if missing else 'You\\'re All Set!'}"
+            subject = f"Welcome to 3 Lakes Logistics Founders Program — {action}"
             text_body = f"Welcome {company_name}! You're in the Founders Program ($300/month, keep 100% of loads). {'Complete your profile: ' + completion_url if missing else 'All set — activating now.'}\n\nQuestions? dispatch@3lakeslogistics.com"
         else:
             body_html = _html_standard_email(company_name, carrier_id, missing, completion_url)
-            subject = f"Welcome to 3 Lakes Logistics — {'Complete Your Profile' if missing else 'You\\'re Activated!'}"
+            subject = f"Welcome to 3 Lakes Logistics — {action}"
             text_body = f"Welcome {company_name}! You're on the Standard Plan (8% per load, $0/month). {'Complete your profile: ' + completion_url if missing else 'All set — activating now.'}\n\nQuestions? dispatch@3lakeslogistics.com"
 
         async with httpx.AsyncClient(timeout=15) as client:
