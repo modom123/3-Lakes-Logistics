@@ -147,14 +147,13 @@ def run_pipeline(
         # 3. Optionally trigger Vance for high-scoring leads with a phone
         if auto_call and lead.get("phone") and lead["score"] >= 8:
             lead_id = (res.data or [{}])[0].get("id", "")
-            call_res = vance_agent.start_outbound_call(
-                lead_id=lead_id,
-                phone=lead["phone"],
-                script_vars={
-                    "company_name": lead.get("company_name", ""),
-                    "equipment_types": lead.get("equipment_types", []),
-                },
-            )
+            call_res = vance_agent.run({
+                "lead_id": lead_id,
+                "phone": lead["phone"],
+                "prospect_name": lead.get("company_name", "Friend"),
+                "company_name": lead.get("company_name", ""),
+                "dot_number": lead.get("dot_number", ""),
+            })
             calls_queued += 1
             call_results.append({"lead": lead.get("company_name"), **call_res})
 
