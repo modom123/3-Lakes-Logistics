@@ -42,7 +42,175 @@ def _missing_fields(payload: CarrierIntake, email: str | None) -> list[str]:
     return missing
 
 
-async def _send_welcome_email(email: str, company_name: str, carrier_id: str, missing: list[str]) -> None:
+_CONTACT_BLOCK = """
+<div style="border-top:2px solid #C8902A;padding:20px;margin-top:30px;text-align:center;">
+  <p style="color:#0B2545;font-size:14px;margin:0 0 10px;"><strong>Questions? We're Here.</strong></p>
+  <p style="color:#334155;font-size:13px;margin:0;line-height:2;">
+    <strong>📞 Dispatch:</strong> (555) 000-1234<br>
+    <strong>✉️ Email:</strong> <a href="mailto:dispatch@3lakeslogistics.com" style="color:#C8902A;text-decoration:none;">dispatch@3lakeslogistics.com</a>
+  </p>
+</div>"""
+
+_WHAT_HAPPENS_NEXT = """
+<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:20px;margin:20px 0;">
+  <h3 style="color:#0B2545;margin-top:0;">🎯 What Happens Next</h3>
+  <div style="color:#334155;font-size:14px;line-height:1.9;">
+    <p><strong>Today</strong> — Our ops team reviews your application.</p>
+    <p><strong>Within 24 hrs</strong> — Activation confirmation + carrier dashboard access.</p>
+    <p><strong>Within 48 hrs</strong> — Vance (our AI dispatch agent) starts sending pre-negotiated load offers.</p>
+    <p><strong>Day 7</strong> — First loads completed, first payout deposited.</p>
+  </div>
+</div>"""
+
+
+def _html_incomplete_block(missing: list[str], completion_url: str) -> str:
+    missing_html = "".join(f"<li style='margin-bottom:6px;'>{f}</li>" for f in missing)
+    return f"""
+<div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;padding:20px;margin:25px 0;">
+  <h3 style="color:#c2410c;margin-top:0;">📋 One More Step: Complete Your Profile</h3>
+  <p style="color:#334155;font-size:14px;">To activate dispatch and begin booking loads, please provide:</p>
+  <ul style="color:#334155;line-height:1.8;padding-left:20px;">{missing_html}</ul>
+  <p style="color:#334155;font-size:13px;margin-top:12px;"><strong>Why we need this:</strong> These details ensure FMCSA compliance, enable direct payouts, and activate your safety dashboard.</p>
+  <a href="{completion_url}" style="display:inline-block;background:#C8902A;color:#fff;padding:13px 26px;border-radius:6px;text-decoration:none;font-weight:bold;margin-top:14px;font-size:15px;">Complete My Profile →</a>
+  <p style="color:#64748b;font-size:12px;margin-top:12px;">Takes 5–10 minutes · All fields are required for dispatch activation</p>
+</div>"""
+
+
+def _html_complete_block() -> str:
+    return """
+<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:20px;margin:25px 0;">
+  <h3 style="color:#16a34a;margin-top:0;">✅ Profile Complete — You're Activated!</h3>
+  <p style="color:#334155;font-size:14px;">All information received. Our dispatch team is activating your account now.</p>
+</div>"""
+
+
+def _html_founders_email(company_name: str, carrier_id: str, missing: list[str], completion_url: str) -> str:
+    status_block = _html_incomplete_block(missing, completion_url) if missing else _html_complete_block()
+    next_block = "" if missing else _WHAT_HAPPENS_NEXT
+    subject_tag = "FOUNDERS PROGRAM"
+    badge_color = "#C8902A"
+
+    return f"""<html><body style="font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;max-width:650px;margin:0 auto;background:#f5f5f5;">
+<div style="background:#0B2545;padding:28px 20px;text-align:center;border-bottom:4px solid {badge_color};">
+  <h1 style="color:{badge_color};margin:0;font-size:26px;font-weight:700;">Welcome to 3 Lakes Logistics</h1>
+  <p style="color:{badge_color};margin:8px 0 0;font-size:13px;letter-spacing:1.5px;text-transform:uppercase;font-weight:600;">{subject_tag}</p>
+</div>
+<div style="background:#fff;padding:28px 30px;margin:20px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.1);">
+
+  <h2 style="color:#0B2545;margin-top:0;">You're In, {company_name}!</h2>
+  <p style="color:#555;font-size:15px;line-height:1.7;">Your application has been received. Welcome to our exclusive Founders Program — a lifetime commitment that puts you ahead of every future carrier we onboard.</p>
+
+  <div style="background:#FEF3C7;border-left:4px solid #F59E0B;padding:15px;margin:20px 0;border-radius:4px;">
+    <p style="color:#333;margin:0;font-size:14px;font-weight:600;">Founders Program — $300/Month, Locked for Life</p>
+    <p style="color:#555;margin:8px 0 0;font-size:13px;line-height:1.7;">You pay a flat $300/month and keep <strong>100% of every load rate</strong> you book. No percentage cuts. No volume minimums. Even as we raise prices for new carriers, your rate stays $300/month — forever.</p>
+  </div>
+
+  {status_block}
+
+  <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:20px;margin:20px 0;">
+    <h3 style="color:#0B2545;margin-top:0;">💳 How Your Subscription Works</h3>
+    <div style="color:#334155;font-size:14px;line-height:1.9;">
+      <p><strong>Price:</strong> $300/month, billed on the same date each month</p>
+      <p><strong>Billing starts:</strong> On the date your profile is fully activated. First charge is prorated if activated mid-month.</p>
+      <p><strong>What's included:</strong></p>
+      <ul style="margin:8px 0;padding-left:20px;">
+        <li>AI dispatch across 15+ load boards (DAT, Truckstop, 123Loadboard, Loadsmart, JB Hunt, and more)</li>
+        <li>Automated rate negotiation and load booking</li>
+        <li>200+ compliance and safety automations — FMCSA checks, CSA monitoring, CDL expiry alerts, medical card tracking</li>
+        <li>Direct payouts — 100% of load rate deposited after delivery confirmation</li>
+        <li>Real-time load tracking and proof-of-delivery management</li>
+        <li>Priority Founders support (phone, email)</li>
+      </ul>
+      <p><strong>Can you cancel?</strong> Yes — 30 days' notice, no penalties, no surprise fees. The Founders lock-in price ($300/month) is only maintained if you remain active.</p>
+      <p><strong>Growth potential:</strong> Some Founders carriers book 10–15 loads per week at $2,200+ per load. You keep every dollar of every rate — your income scales with the loads you accept.</p>
+    </div>
+  </div>
+
+  <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:20px;margin:20px 0;">
+    <h3 style="color:#0B2545;margin-top:0;">🔑 Your Founders Benefits at a Glance</h3>
+    <div style="color:#334155;font-size:14px;line-height:2;">
+      <p>✅ <strong>100% of Load Rates</strong> — every dollar from the broker goes to you</p>
+      <p>✅ <strong>$300/Month, Locked Forever</strong> — price never increases</p>
+      <p>✅ <strong>Zero Setup or Onboarding Fees</strong></p>
+      <p>✅ <strong>No Long-Term Contract</strong> — cancel with 30 days' notice</p>
+      <p>✅ <strong>200+ Background Automations</strong> — compliance, safety, payouts run on autopilot</p>
+      <p>✅ <strong>15+ Load Boards</strong> — AI dispatcher searches and negotiates across all of them</p>
+      <p>✅ <strong>Priority Founders Support</strong> — direct line to the dispatch team</p>
+    </div>
+  </div>
+
+  {next_block}
+
+  {_CONTACT_BLOCK}
+  <p style="color:#94a3b8;font-size:11px;margin-top:24px;text-align:center;">Carrier ID: {carrier_id}</p>
+</div>
+</body></html>"""
+
+
+def _html_standard_email(company_name: str, carrier_id: str, missing: list[str], completion_url: str) -> str:
+    status_block = _html_incomplete_block(missing, completion_url) if missing else _html_complete_block()
+    next_block = "" if missing else _WHAT_HAPPENS_NEXT
+
+    return f"""<html><body style="font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;max-width:650px;margin:0 auto;background:#f5f5f5;">
+<div style="background:#0B2545;padding:28px 20px;text-align:center;border-bottom:4px solid #3B82F6;">
+  <h1 style="color:#fff;margin:0;font-size:26px;font-weight:700;">Welcome to 3 Lakes Logistics</h1>
+  <p style="color:#93C5FD;margin:8px 0 0;font-size:13px;letter-spacing:1.5px;text-transform:uppercase;font-weight:600;">STANDARD PLAN — 8% PER LOAD</p>
+</div>
+<div style="background:#fff;padding:28px 30px;margin:20px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.1);">
+
+  <h2 style="color:#0B2545;margin-top:0;">You're In, {company_name}!</h2>
+  <p style="color:#555;font-size:15px;line-height:1.7;">Your application has been received. You're on our Standard Plan — full access to our AI dispatch platform with no monthly subscription fee. We earn when you earn.</p>
+
+  <div style="background:#EFF6FF;border-left:4px solid #3B82F6;padding:15px;margin:20px 0;border-radius:4px;">
+    <p style="color:#1E40AF;margin:0;font-size:14px;font-weight:600;">Standard Plan — No Monthly Fee, 8% Per Load</p>
+    <p style="color:#334155;margin:8px 0 0;font-size:13px;line-height:1.7;">You pay <strong>$0/month</strong> upfront. When a load is delivered and payment confirmed, we deduct <strong>8% of the load rate</strong> and deposit the remaining <strong>92%</strong> directly to your bank account. No loads booked = no fees.</p>
+  </div>
+
+  {status_block}
+
+  <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:20px;margin:20px 0;">
+    <h3 style="color:#0B2545;margin-top:0;">💳 How Your Plan Works</h3>
+    <div style="color:#334155;font-size:14px;line-height:1.9;">
+      <p><strong>Monthly fee:</strong> $0 — no subscription, no upfront cost</p>
+      <p><strong>How we're paid:</strong> 8% of each load rate, deducted automatically at payout</p>
+      <p><strong>Your take-home:</strong> 92% of every load rate, direct deposited after delivery confirmation</p>
+      <p><strong>Payout timing:</strong> 3–5 business days after proof of delivery is confirmed</p>
+      <p><strong>Example:</strong> A $2,000 load → 3 Lakes earns $160, you receive $1,840</p>
+      <p><strong>What's included:</strong></p>
+      <ul style="margin:8px 0;padding-left:20px;">
+        <li>AI dispatch across 15+ load boards (DAT, Truckstop, 123Loadboard, Loadsmart, JB Hunt, and more)</li>
+        <li>Automated rate negotiation and load booking</li>
+        <li>200+ compliance and safety automations — FMCSA checks, CSA monitoring, CDL expiry alerts, medical card tracking</li>
+        <li>Direct payouts — 92% of load rate deposited after delivery</li>
+        <li>Real-time load tracking and proof-of-delivery management</li>
+        <li>Standard carrier support (phone, email)</li>
+      </ul>
+      <p><strong>Can you cancel?</strong> Yes — 30 days' notice, anytime. No cancellation fees.</p>
+      <p><strong>Upgrade to Founders?</strong> If spots become available, you can lock in the $300/month Founders rate and keep 100% of loads. Contact us to inquire.</p>
+    </div>
+  </div>
+
+  <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:20px;margin:20px 0;">
+    <h3 style="color:#0B2545;margin-top:0;">✅ Your Plan Benefits at a Glance</h3>
+    <div style="color:#334155;font-size:14px;line-height:2;">
+      <p>✅ <strong>$0/Month Subscription</strong> — no upfront cost, pay only when you earn</p>
+      <p>✅ <strong>92% of Every Load Rate</strong> — deposited after delivery</p>
+      <p>✅ <strong>Zero Setup or Onboarding Fees</strong></p>
+      <p>✅ <strong>No Long-Term Contract</strong> — cancel with 30 days' notice</p>
+      <p>✅ <strong>200+ Background Automations</strong> — compliance, safety, payouts run on autopilot</p>
+      <p>✅ <strong>15+ Load Boards</strong> — AI dispatcher searches and negotiates across all of them</p>
+    </div>
+  </div>
+
+  {next_block}
+
+  {_CONTACT_BLOCK}
+  <p style="color:#94a3b8;font-size:11px;margin-top:24px;text-align:center;">Carrier ID: {carrier_id}</p>
+</div>
+</body></html>"""
+
+
+async def _send_welcome_email(email: str, company_name: str, carrier_id: str, missing: list[str], plan: str = "founders") -> None:
     try:
         import httpx
         from ..settings import get_settings
@@ -51,119 +219,17 @@ async def _send_welcome_email(email: str, company_name: str, carrier_id: str, mi
             return
 
         completion_url = f"https://3lakeslogistics.com/complete-onboarding?carrier_id={carrier_id}"
-        missing_html = "".join(f"<li>{f}</li>" for f in missing)
+        is_founders = plan in ("founders", "pro", "enterprise")
 
-        incomplete_block = f"""
-        <div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;padding:20px;margin:30px 0;">
-          <h3 style="color:#c2410c;margin-top:0;">📋 One More Step: Complete Your Profile</h3>
-          <p style="color:#334155;margin-bottom:15px;">To activate dispatch and begin booking loads, please provide the following information:</p>
-          <ul style="color:#334155;line-height:1.8;margin:10px 0;padding-left:20px;">{missing_html}</ul>
-          <p style="color:#334155;font-size:14px;margin-top:15px;"><strong>Why we need this:</strong> These details ensure compliance with FMCSA regulations, enable direct payouts to your account, and activate your insurance compliance dashboard.</p>
-          <a href="{completion_url}" style="display:inline-block;background:#C8902A;color:#fff;padding:14px 28px;border-radius:6px;text-decoration:none;font-weight:bold;margin-top:15px;font-size:16px;">Complete My Profile →</a>
-          <p style="color:#64748b;font-size:13px;margin-top:15px;">Takes 5–10 minutes • All fields required for dispatch activation</p>
-        </div>""" if missing else """
-        <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:20px;margin:30px 0;">
-          <h3 style="color:#16a34a;margin-top:0;">✅ You're All Set!</h3>
-          <p style="color:#334155;">All information received. Our dispatch team is activating your account now — you'll be booking loads within 24 hours.</p>
-        </div>"""
+        if is_founders:
+            body_html = _html_founders_email(company_name, carrier_id, missing, completion_url)
+            subject = f"Welcome to 3 Lakes Logistics Founders Program — {'Complete Your Profile' if missing else 'You\\'re All Set!'}"
+            text_body = f"Welcome {company_name}! You're in the Founders Program ($300/month, keep 100% of loads). {'Complete your profile: ' + completion_url if missing else 'All set — activating now.'}\n\nQuestions? dispatch@3lakeslogistics.com"
+        else:
+            body_html = _html_standard_email(company_name, carrier_id, missing, completion_url)
+            subject = f"Welcome to 3 Lakes Logistics — {'Complete Your Profile' if missing else 'You\\'re Activated!'}"
+            text_body = f"Welcome {company_name}! You're on the Standard Plan (8% per load, $0/month). {'Complete your profile: ' + completion_url if missing else 'All set — activating now.'}\n\nQuestions? dispatch@3lakeslogistics.com"
 
-        founders_details = """
-        <div style="background:#FEF3C7;border-left:4px solid #F59E0B;padding:15px;margin:20px 0;border-radius:4px;">
-          <p style="color:#333;margin:0;font-size:14px;"><strong>🚀 What You Get in the Founders Program:</strong></p>
-          <p style="color:#555;margin:8px 0 0;font-size:13px;line-height:1.7;">You've been selected for our exclusive Founders Program. This is a lifetime commitment: you pay <strong>$300/month</strong> (locked forever) and you keep <strong>100% of every load rate</strong> you book. No hidden fees. No volume minimums. No long-term contracts (except the Founders lock-in). This offer never increases — even if we raise prices for new carriers, your rate stays $300/month.</p>
-        </div>
-        """
-
-        subscription_details = """
-        <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:20px;margin:20px 0;">
-          <h3 style="color:#0B2545;margin-top:0;margin-bottom:15px;">💳 How Your Subscription Works</h3>
-          <div style="color:#334155;font-size:14px;line-height:1.8;">
-            <p><strong>Pricing:</strong> $300/month (billed on the same date each month)</p>
-            <p><strong>What's included:</strong></p>
-            <ul style="margin:10px 0;padding-left:20px;">
-              <li>AI dispatch across 15+ load boards (DAT, Truckstop, 123Loadboard, Loadsmart, JB Hunt, etc.)</li>
-              <li>Automated rate negotiation and booking</li>
-              <li>200+ compliance & safety automations (FMCSA safety checks, insurance verification, CSA monitoring, driver CDL tracking, medical card alerts)</li>
-              <li>Direct payouts to your bank account (after load completion)</li>
-              <li>Real-time load tracking and proof-of-delivery verification</li>
-              <li>Founder priority support (phone, email, Slack)</li>
-            </ul>
-            <p><strong>When does billing start?</strong> On the date your profile is fully activated (once all required info is submitted). Your first charge will be prorated if we activate mid-month.</p>
-            <p><strong>Can you cancel?</strong> Yes — you can cancel anytime with 30 days' notice. No penalties, no surprise fees. But the Founders lock-in ($300/month forever) is only available if you stay with us.</p>
-            <p><strong>What if you grow?</strong> As you book more loads, you keep 100% of the rate — there's no ceiling or cap. Some Founders carriers book 10–15 loads per week at an average of $2,200/load. The math works in your favor.</p>
-          </div>
-        </div>
-        """
-
-        support_details = """
-        <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:20px;margin:20px 0;">
-          <h3 style="color:#0B2545;margin-top:0;margin-bottom:15px;">🎯 What Happens Next</h3>
-          <div style="color:#334155;font-size:14px;line-height:1.8;">
-            <p><strong>Today:</strong> You've been enrolled in the Founders Program. Our ops team is reviewing your application.</p>
-            <p><strong>Within 24 hours:</strong> You'll receive activation confirmation + your carrier dashboard login.</p>
-            <p><strong>Within 48 hours:</strong> First loads will appear in your dispatch board. Vance (our AI dispatch agent) will start sending you pre-negotiated load offers.</p>
-            <p><strong>Day 7:</strong> You'll have completed your first loads and will have received your first payout.</p>
-          </div>
-        </div>
-        """
-
-        contact_block = """
-        <div style="background:#f8fafc;border-top:2px solid #C8902A;padding:20px;margin:20px 0;text-align:center;">
-          <p style="color:#0B2545;font-size:14px;margin:0 0 12px;"><strong>Questions? We're Here to Help</strong></p>
-          <p style="color:#334155;font-size:13px;margin:8px 0;">
-            <strong>📞 Dispatch Team:</strong> (555) 000-1234<br>
-            <strong>✉️ Email:</strong> <a href="mailto:dispatch@3lakeslogistics.com" style="color:#C8902A;text-decoration:none;">dispatch@3lakeslogistics.com</a><br>
-            <strong>💬 Slack:</strong> Founders-only channel (access after activation)
-          </p>
-        </div>
-        """
-
-        body_html = f"""<html><body style="font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;max-width:650px;margin:0 auto;padding:0;background:#f5f5f5;">
-<div style="background:#0B2545;padding:30px 20px;text-align:center;border-bottom:4px solid #C8902A;">
-  <h1 style="color:#C8902A;margin:0;font-size:28px;font-weight:700;">Welcome to 3 Lakes Logistics</h1>
-  <p style="color:#C8902A;margin:8px 0 0;font-size:14px;letter-spacing:1px;text-transform:uppercase;font-weight:600;">FOUNDERS PROGRAM</p>
-</div>
-
-<div style="background:#fff;padding:30px 30px;margin:20px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.1);">
-  <h2 style="color:#0B2545;margin-top:0;margin-bottom:10px;font-size:22px;">You're In, {company_name}!</h2>
-  <p style="color:#555;font-size:15px;line-height:1.7;margin-bottom:20px;">Your application has been received and reviewed. Welcome to an elite group of carrier partners who've locked in lifetime rates with 3 Lakes Logistics.</p>
-
-  {founders_details}
-
-  {incomplete_block if missing else '<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:20px;margin:30px 0;"><h3 style="color:#16a34a;margin-top:0;">✅ All Set!</h3><p style="color:#334155;">Your profile is complete. Our dispatch team is activating your account now — you\'ll be booking loads within 24 hours.</div>'}
-
-  {subscription_details}
-
-  <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:20px;margin:20px 0;">
-    <h3 style="color:#0B2545;margin-top:0;margin-bottom:15px;">🔑 Founders Program Benefits (Lock-In Terms)</h3>
-    <div style="color:#334155;font-size:14px;line-height:1.9;">
-      <p><strong>✅ 100% of Load Rates</strong> — You negotiate the rate with brokers, and you keep every dollar. No percentage cuts, no hidden deductions.</p>
-      <p><strong>✅ $300/Month Locked for Life</strong> — Your subscription price never increases, even if we raise rates for new carriers.</p>
-      <p><strong>✅ Zero Setup Fees</strong> — No onboarding cost, no hidden charges. You only pay the monthly subscription.</p>
-      <p><strong>✅ No Long-Term Contract</strong> — You can cancel with 30 days' notice (except the Founders program itself, which is locked at $300/month if you stay with us).</p>
-      <p><strong>✅ 200+ Automations</strong> — Compliance checks, safety audits, driver monitoring, payout processing, all running in the background.</p>
-      <p><strong>✅ 15+ Load Boards</strong> — Access to DAT, Truckstop, 123Loadboard, Loadsmart, and more through our AI dispatcher.</p>
-    </div>
-  </div>
-
-  <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:20px;margin:20px 0;">
-    <h3 style="color:#0B2545;margin-top:0;margin-bottom:15px;">💡 Why This Offer Is Special</h3>
-    <div style="color:#334155;font-size:14px;line-height:1.9;">
-      <p>We're not taking a cut of your load revenue. We make money through the $300/month subscription and by helping you book more loads, faster, with less operational overhead. This alignment means we're motivated to help you succeed.</p>
-      <p>The Founders Program is a limited-time offer for early adopters. Once we close it, we won't open it again — new carriers pay higher subscription fees. You've secured your spot.</p>
-    </div>
-  </div>
-
-  {support_details}
-
-  {contact_block}
-
-  <p style="color:#94a3b8;font-size:11px;margin-top:30px;margin-bottom:0;text-align:center;">Carrier ID: <strong>{carrier_id}</strong></p>
-</div>
-
-</body></html>"""
-
-        subject = f"Welcome to 3 Lakes Logistics Founders Program — {'Complete Your Profile' if missing else 'You\'re All Set!'}"
         async with httpx.AsyncClient(timeout=15) as client:
             await client.post(
                 "https://api.postmarkapp.com/email",
@@ -171,11 +237,11 @@ async def _send_welcome_email(email: str, company_name: str, carrier_id: str, mi
                 json={
                     "From": s.postmark_from_email, "To": email,
                     "Subject": subject, "HtmlBody": body_html,
-                    "TextBody": f"Welcome {company_name}! {'Complete your profile: ' + completion_url if missing else 'All set — activating within 24 hours.'}\n\nYou've been accepted into the Founders Program. Keep 100% of every load rate. $300/month, locked for life.\n\nQuestions? dispatch@3lakeslogistics.com or (555) 000-1234",
+                    "TextBody": text_body,
                     "MessageStream": "outbound", "Tag": "carrier-welcome",
                 },
             )
-        log.info(f"Welcome email sent to {email}")
+        log.info(f"Welcome email sent to {email} (plan={plan}, missing={len(missing)})")
     except Exception as e:  # noqa: BLE001
         log.error(f"Welcome email failed: {e}")
 
@@ -285,7 +351,7 @@ async def carrier_intake(payload: CarrierIntake, request: Request,
 
     # 8. Send welcome email (always — includes completion link if fields missing)
     if email:
-        bg.add_task(_send_welcome_email, email, payload.company_name, carrier_id, missing)
+        bg.add_task(_send_welcome_email, email, payload.company_name, carrier_id, missing, payload.plan)
 
     log_agent("atlas", "intake_received", carrier_id=carrier_id,
               payload={"plan": payload.plan, "status": onboarding_status, "missing": missing})

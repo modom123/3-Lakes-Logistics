@@ -10,7 +10,7 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
 
-Plan = Literal["founders", "pro", "enterprise"]
+Plan = Literal["founders", "standard", "pro", "enterprise"]
 
 _TRAILER_ALIASES = {
     "dry van": "dry_van", "dry_van": "dry_van", "dryvan": "dry_van", "van": "dry_van",

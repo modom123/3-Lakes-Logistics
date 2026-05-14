@@ -108,6 +108,9 @@ async def complete_onboarding(carrier_id: str, data: dict, bg: BackgroundTasks =
         checkout_url = penny.create_checkout_session(carrier_id, plan, str(email), 1)
         shield.enqueue_safety_check(carrier_id, merged.get("dot_number"), merged.get("mc_number"))
         bg.add_task(fire_onboarding, carrier_id)
+        if email:
+            from ..api.routes_intake import _send_welcome_email
+            bg.add_task(_send_welcome_email, email, merged.get("company_name", ""), carrier_id, [], plan)
         log_agent("atlas", "onboarding.completed", carrier_id=carrier_id)
         return {"ok": True, "status": "onboarding", "stripe_checkout_url": checkout_url}
 
