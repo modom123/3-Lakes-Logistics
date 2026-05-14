@@ -96,6 +96,9 @@ Goal: Qualify and offer demo call with Commander."""
             },
         }
 
+        if s.bland_ai_org_id:
+            payload["organization_id"] = s.bland_ai_org_id
+
         if webhook_url:
             payload["webhook_url"] = webhook_url
 
