@@ -1227,7 +1227,21 @@ td.td-name{font-weight:600;color:var(--navy);}
           <h2>Lead Pipeline</h2>
         </div>
         <div class="page-hdr-r" style="display:flex;gap:8px">
+          <button class="btn-out" onclick="migrateAirtableLeads()" title="Import 129 leads from Airtable">📥 Import from Airtable</button>
           <button class="btn-out" onclick="loadLeadsPipeline()">Refresh</button>
+        </div>
+      </div>
+
+      <!-- AIRTABLE MIGRATION STATUS -->
+      <div id="airtable-migration-card" style="display:none;margin-bottom:16px">
+        <div class="card" style="border-left:4px solid var(--blue);background:rgba(37,99,235,.05)">
+          <div class="card-hd"><div class="card-title">🔄 Airtable Migration</div></div>
+          <div id="migration-status" style="padding:12px;font-size:13px">
+            <div id="migration-spinner" style="display:flex;align-items:center;gap:8px">
+              <div class="spin" style="width:16px;height:16px"></div>
+              <span>Migrating leads from Airtable...</span>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -3013,6 +3027,76 @@ async function launchLeadMachine() {
       error: e.message, ts: new Date().toISOString() });
   }
   btn.disabled = false; btn.textContent = '⚡ Launch Lead Machine';
+}
+
+async function migrateAirtableLeads() {
+  const btn = event.target;
+  const cardEl = document.getElementById('airtable-migration-card');
+  const statusEl = document.getElementById('migration-status');
+
+  btn.disabled = true;
+  btn.textContent = '⏳ Migrating…';
+  cardEl.style.display = 'block';
+
+  try {
+    const r = await fetch(
+      `${API_BASE}/api/migrate/airtable-leads`,
+      { method: 'POST', headers: { 'Authorization': 'Bearer ' + API_TOKEN, 'Content-Type': 'application/json' } }
+    );
+
+    if (!r.ok) {
+      const err = await r.text();
+      if (err.includes('not configured')) {
+        throw new Error('❌ Airtable credentials not configured. Add AIRTABLE_API_KEY and AIRTABLE_BASE_ID to .env');
+      }
+      throw new Error(err || `HTTP ${r.status}`);
+    }
+
+    const data = await r.json();
+
+    statusEl.innerHTML = `
+      <div style="padding:12px;line-height:1.6">
+        <div style="color:var(--green);font-weight:600">✅ Migration Complete!</div>
+        <div style="margin-top:8px;font-size:12px;color:rgba(255,255,255,.7)">
+          <div>📊 Fetched: <strong>${data.fetched}</strong> records from Airtable</div>
+          <div>📝 Transformed: <strong>${data.transformed}</strong> leads</div>
+          <div>✔️ Inserted: <strong>${data.inserted}</strong> leads into Supabase</div>
+          ${data.failed > 0 ? `<div style="color:var(--orange)">⚠️ Failed: <strong>${data.failed}</strong></div>` : ''}
+        </div>
+      </div>
+    `;
+
+    toast(`✅ Airtable: ${data.inserted} leads imported successfully`, 'success');
+    _pushNotif({ id:'airtable_done_'+Date.now(), agent:'atlas', action:'migration_complete',
+      result:`${data.inserted}/${data.fetched} leads migrated`, ts: new Date().toISOString() });
+
+    // Refresh leads table
+    await new Promise(r => setTimeout(r, 1000));
+    await loadLeadsPipeline();
+
+    // Hide migration card after 5 seconds
+    setTimeout(() => {
+      cardEl.style.display = 'none';
+    }, 5000);
+  } catch(e) {
+    const errMsg = e.message || 'Unknown error';
+    statusEl.innerHTML = `
+      <div style="padding:12px;color:var(--red)">
+        <div style="font-weight:600">❌ Migration Failed</div>
+        <div style="margin-top:8px;font-size:12px">${errMsg}</div>
+        <div style="margin-top:12px;padding:8px;background:rgba(220,38,38,.1);border-radius:4px;font-family:monospace;font-size:11px">
+          Make sure: 1) AIRTABLE_API_KEY is valid 2) AIRTABLE_BASE_ID is correct 3) Table exists in base
+        </div>
+      </div>
+    `;
+
+    toast('Airtable migration failed: ' + errMsg, 'error');
+    _pushNotif({ id:'airtable_err_'+Date.now(), agent:'atlas', action:'migration_error',
+      error: errMsg, ts: new Date().toISOString() });
+  }
+
+  btn.disabled = false;
+  btn.textContent = '📥 Import from Airtable';
 }
 
 // ══════════════════════════════════════════════════════

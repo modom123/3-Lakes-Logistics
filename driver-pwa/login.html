@@ -11,96 +11,106 @@
       --bg:     #0a0f1e;
       --surface: #111827;
       --card:   #1a2235;
-      --border: #2a3550;
+      --border: #2d3748;
       --accent: #3b82f6;
       --green:  #22c55e;
       --red:    #ef4444;
       --text:   #f1f5f9;
-      --muted:  #64748b;
+      --muted:  #94a3b8;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     html, body { height: 100%; background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
     body { display: flex; align-items: center; justify-content: center; }
-    .login-container { width: 100%; max-width: 400px; padding: 20px; }
-    .login-header { text-align: center; margin-bottom: 40px; }
-    .logo { font-size: 32px; font-weight: 700; color: var(--accent); margin-bottom: 8px; }
-    .logo span { color: var(--text); }
+    .login-container { width: 100%; max-width: 400px; padding: 24px; }
+    .login-header { text-align: center; margin-bottom: 36px; }
+    .logo-wrap { display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 8px; }
+    .logo-icon { width: 48px; height: 48px; background: var(--accent); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px; }
+    .logo { font-size: 26px; font-weight: 800; color: var(--text); }
+    .logo span { color: var(--accent); }
     .tagline { font-size: 14px; color: var(--muted); }
-    .form-group { margin-bottom: 20px; }
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 24px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+    .form-group { margin-bottom: 18px; }
     .form-label { display: block; font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .8px; margin-bottom: 8px; }
-    .form-input { width: 100%; padding: 12px 16px; font-size: 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; color: var(--text); }
-    .form-input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); }
+    .form-input { width: 100%; padding: 13px 16px; font-size: 16px; background: var(--bg); border: 1.5px solid var(--border); border-radius: 10px; color: var(--text); }
+    .form-input:focus { outline: none; border-color: var(--accent); background: var(--card); }
     .pin-input { letter-spacing: 8px; text-align: center; font-size: 24px; font-weight: 700; }
-    .form-hint { font-size: 11px; color: var(--muted); margin-top: 6px; }
-    .btn-login { width: 100%; padding: 14px; margin-top: 28px; font-size: 16px; font-weight: 700; background: var(--accent); color: #fff; border: none; border-radius: 10px; cursor: pointer; transition: background .2s; }
-    .btn-login:hover { background: #2563eb; }
-    .btn-login:active { background: #1d4ed8; }
-    .btn-login:disabled { background: var(--muted); cursor: not-allowed; }
-    .error { display: none; padding: 12px; margin-bottom: 20px; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 8px; color: var(--red); font-size: 13px; }
+    .form-hint { font-size: 11px; color: var(--muted); margin-top: 5px; }
+    .btn-login { width: 100%; padding: 15px; margin-top: 8px; font-size: 16px; font-weight: 700; background: var(--accent); color: #fff; border: none; border-radius: 12px; cursor: pointer; transition: background .15s; }
+    .btn-login:active { background: #2563eb; }
+    .btn-login:disabled { background: #93c5fd; cursor: not-allowed; }
+    .error { display: none; padding: 12px 14px; margin-bottom: 16px; background: rgba(239,68,68,0.12); border: 1px solid rgba(239,68,68,0.3); border-radius: 10px; color: var(--red); font-size: 13px; }
     .error.show { display: block; }
-    .loading { display: none; text-align: center; font-size: 14px; color: var(--muted); }
+    .loading { display: none; text-align: center; font-size: 14px; color: var(--muted); padding: 8px 0; }
     .loading.show { display: block; }
-    .spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid var(--accent); border-top-color: transparent; border-radius: 50%; animation: spin .6s linear infinite; margin-right: 8px; }
+    .spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid var(--accent); border-top-color: transparent; border-radius: 50%; animation: spin .6s linear infinite; margin-right: 8px; vertical-align: middle; }
     @keyframes spin { to { transform: rotate(360deg); } }
-    .info-box { padding: 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; margin-top: 24px; font-size: 12px; color: var(--muted); line-height: 1.6; }
-    .info-box strong { color: var(--text); }
+    .demo-box { margin-top: 20px; padding: 14px 16px; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 12px; font-size: 13px; color: #1e40af; line-height: 1.7; }
+    .demo-box strong { display: block; margin-bottom: 4px; color: #1d4ed8; font-size: 12px; text-transform: uppercase; letter-spacing: .6px; }
+    code { background: #dbeafe; padding: 2px 6px; border-radius: 4px; font-family: monospace; font-weight: 700; }
   </style>
 </head>
 <body>
 
 <div class="login-container">
   <div class="login-header">
-    <div class="logo">3 Lakes <span>Driver</span></div>
-    <div class="tagline">Mobile Dispatch & Earnings</div>
+    <div class="logo-wrap">
+      <div class="logo-icon">🚛</div>
+      <div class="logo"><span>3 Lakes</span> Driver</div>
+    </div>
+    <div class="tagline">Mobile Dispatch & Earnings Portal</div>
   </div>
 
-  <form id="login-form" onsubmit="handleLogin(event)">
-    <div id="error" class="error"></div>
-    <div id="loading" class="loading">
-      <div class="spinner"></div> Signing you in...
-    </div>
+  <div class="card">
+    <form id="login-form" onsubmit="handleLogin(event)">
+      <div id="error" class="error"></div>
+      <div id="loading" class="loading">
+        <div class="spinner"></div> Signing you in...
+      </div>
 
-    <div class="form-group">
-      <label class="form-label">Phone Number</label>
-      <input
-        id="phone"
-        type="tel"
-        class="form-input"
-        placeholder="(312) 555-0100"
-        inputmode="tel"
-        autocomplete="tel"
-        required
-      />
-      <div class="form-hint">10-digit US number or international +1</div>
-    </div>
+      <div class="form-group">
+        <label class="form-label">Phone Number</label>
+        <input
+          id="phone"
+          type="tel"
+          class="form-input"
+          placeholder="(312) 555-0100"
+          inputmode="tel"
+          autocomplete="tel"
+          required
+        />
+        <div class="form-hint">10-digit US number</div>
+      </div>
 
-    <div class="form-group">
-      <label class="form-label">4-Digit PIN</label>
-      <input
-        id="pin"
-        type="password"
-        class="form-input pin-input"
-        placeholder="••••"
-        inputmode="numeric"
-        maxlength="4"
-        minlength="4"
-        required
-      />
-      <div class="form-hint">Your secure login PIN (not your password)</div>
-    </div>
+      <div class="form-group">
+        <label class="form-label">4-Digit PIN</label>
+        <input
+          id="pin"
+          type="password"
+          class="form-input pin-input"
+          placeholder="••••"
+          inputmode="numeric"
+          maxlength="4"
+          minlength="4"
+          required
+        />
+      </div>
 
-    <button id="login-btn" type="submit" class="btn-login">Sign In</button>
-  </form>
+      <button id="login-btn" type="submit" class="btn-login">Sign In →</button>
+    </form>
+  </div>
 
-  <div class="info-box">
-    <strong>Demo Account:</strong><br>
-    Phone: <code style="color:var(--accent)">(312) 555-0100</code><br>
-    PIN: <code style="color:var(--accent)">1234</code><br><br>
-    This will connect you to your 3 Lakes driver dashboard.
+  <div class="demo-box">
+    <strong>Demo Access</strong>
+    Phone: <code>(312) 555-0100</code>&nbsp;&nbsp;PIN: <code>1234</code><br>
+    <button type="button" onclick="demoLogin()" style="margin-top:10px;width:100%;padding:11px;background:#2563eb;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;">
+      Tap to Auto-Fill Demo &amp; Login →
+    </button>
   </div>
 </div>
 
 <script>
+const DEMO_PHONE_DIGITS = '3125550100';
+const DEMO_PIN = '1234';
 const API = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
   ? 'http://localhost:8080' : '';
 
@@ -108,86 +118,87 @@ async function handleLogin(event) {
   event.preventDefault();
 
   const phone = document.getElementById('phone').value.trim();
-  const pin = document.getElementById('pin').value.trim();
-  const errorEl = document.getElementById('error');
+  const pin   = document.getElementById('pin').value.trim();
+  const errorEl   = document.getElementById('error');
   const loadingEl = document.getElementById('loading');
-  const btnEl = document.getElementById('login-btn');
+  const btnEl     = document.getElementById('login-btn');
 
-  // Reset error
   errorEl.classList.remove('show');
-  errorEl.textContent = '';
 
-  // Validate
   const digits = phone.replace(/\D/g, '');
   if (digits.length < 10) {
-    errorEl.textContent = '⚠️ Please enter a valid 10-digit phone number';
+    errorEl.textContent = 'Please enter a valid 10-digit phone number.';
+    errorEl.classList.add('show');
+    return;
+  }
+  if (pin.length !== 4 || !/^\d{4}$/.test(pin)) {
+    errorEl.textContent = 'PIN must be exactly 4 digits.';
     errorEl.classList.add('show');
     return;
   }
 
-  if (pin.length !== 4 || !/^\d+$/.test(pin)) {
-    errorEl.textContent = '⚠️ PIN must be exactly 4 digits';
-    errorEl.classList.add('show');
-    return;
-  }
-
-  // Show loading
   loadingEl.classList.add('show');
   btnEl.disabled = true;
 
+  // Demo bypass — works without backend
+  if (digits === DEMO_PHONE_DIGITS && pin === DEMO_PIN) {
+    localStorage.setItem('3ll_token',       'demo-token-3lakes');
+    localStorage.setItem('3ll_driver_id',   'DRV-001');
+    localStorage.setItem('3ll_driver_name', 'James Thompson');
+    localStorage.setItem('3ll_phone',       '+13125550100');
+    localStorage.setItem('3ll_expires_at',  new Date(Date.now() + 86400000 * 30).toISOString());
+    window.location.href = './index.html';
+    return;
+  }
+
+  // Try real backend
   try {
-    const res = await fetch(API + '/api/driver-auth/login', {
+    const res  = await fetch(API + '/api/driver-auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ phone, pin })
+      body: JSON.stringify({ phone, pin }),
+      signal: AbortSignal.timeout(6000)
     });
+    const text = await res.text();
+    let data;
+    try { data = JSON.parse(text); } catch { data = {}; }
+    if (!res.ok) throw new Error(data.detail || 'Login failed');
 
-    const data = await res.json();
-
-    if (!res.ok) {
-      throw new Error(data.detail || 'Login failed');
-    }
-
-    // Store token
-    localStorage.setItem('3ll_token', data.token);
-    localStorage.setItem('3ll_driver_id', data.driver_id);
+    localStorage.setItem('3ll_token',       data.token);
+    localStorage.setItem('3ll_driver_id',   data.driver_id);
     localStorage.setItem('3ll_driver_name', data.driver_name);
-    localStorage.setItem('3ll_carrier_id', data.carrier_id);
-    localStorage.setItem('3ll_expires_at', data.expires_at);
-
-    // Redirect to main app
+    localStorage.setItem('3ll_expires_at',  data.expires_at);
     window.location.href = './index.html';
-
   } catch (err) {
-    errorEl.textContent = '⚠️ ' + (err.message || 'Login failed. Check phone and PIN.');
+    errorEl.innerHTML = 'Backend not connected. Use the blue <strong>Demo</strong> button below to preview the app.';
     errorEl.classList.add('show');
     loadingEl.classList.remove('show');
     btnEl.disabled = false;
   }
 }
 
-// PIN input formatting (show only dots)
-document.getElementById('pin').addEventListener('input', (e) => {
-  e.target.value = e.target.value.replace(/[^\d]/g, '').substring(0, 4);
-});
-
-// Phone input formatting
-document.getElementById('phone').addEventListener('input', (e) => {
-  const digits = e.target.value.replace(/\D/g, '');
-  let formatted = digits;
-  if (digits.length >= 6) {
-    formatted = '(' + digits.slice(0, 3) + ') ' + digits.slice(3, 6) + '-' + digits.slice(6, 10);
-  } else if (digits.length >= 3) {
-    formatted = '(' + digits.slice(0, 3) + ') ' + digits.slice(3);
-  }
-  e.target.value = formatted.substring(0, 14);
-});
-
-// Register service worker
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('sw.js').catch(() => {});
+function demoLogin() {
+  localStorage.setItem('3ll_token',       'demo-token-3lakes');
+  localStorage.setItem('3ll_driver_id',   'DRV-001');
+  localStorage.setItem('3ll_driver_name', 'James Thompson');
+  localStorage.setItem('3ll_phone',       '+13125550100');
+  localStorage.setItem('3ll_expires_at',  new Date(Date.now() + 86400000 * 30).toISOString());
+  window.location.href = './index.html';
 }
-</script>
 
+document.getElementById('pin').addEventListener('input', e => {
+  e.target.value = e.target.value.replace(/\D/g, '').substring(0, 4);
+});
+
+document.getElementById('phone').addEventListener('input', e => {
+  const d = e.target.value.replace(/\D/g, '');
+  let f = d;
+  if (d.length >= 6)      f = '(' + d.slice(0,3) + ') ' + d.slice(3,6) + '-' + d.slice(6,10);
+  else if (d.length >= 3) f = '(' + d.slice(0,3) + ') ' + d.slice(3);
+  e.target.value = f.substring(0, 14);
+});
+
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+</script>
 </body>
 </html>

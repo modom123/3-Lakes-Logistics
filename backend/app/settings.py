@@ -57,6 +57,12 @@ class Settings(BaseSettings):
     airtable_api_key: str = ""
     airtable_base_id: str = ""
 
+    # Adobe Sign — e-signature integration
+    adobe_client_id: str = ""
+    adobe_client_secret: str = ""
+    adobe_account_id: str = ""
+    adobe_api_endpoint: str = "https://api.na1.adobesign.com"
+
     sentry_dsn: str = ""
 
     # Reliability — Redis cache + backup API failover
