@@ -1,16 +1,8 @@
-"""POST /api/carriers/intake — accepts the 6-step form payload from
-index (7).html's oSub() and fans it out to every child table.
+"""POST /api/carriers/intake — accepts the 6-step form payload.
 
-Steps executed on one submission:
-  1. Insert into active_carriers            → carrier_id
-  2. Insert into fleet_assets                 (Step 2 of form)
-  3. Insert into eld_connections              (Step 3)
-  4. Insert into insurance_compliance         (Step 4) — Shield runs async
-  5. Insert into banking_accounts             (Step 5)
-  6. Insert into signatures_audit             (Step 6 e-sign)
-  7. Decrement founders_inventory.claimed+1   (countdown)
-  8. Enqueue Shield safety-light check (agent_log row)
-  9. Return Stripe checkout URL for Penny to confirm
+Supports partial submissions — missing EIN, DOT, banking, or insurance
+sets status to 'onboarding_incomplete' and sends a welcome email with
+a secure link to complete the profile. Full submissions run the entire pipeline.
 """
 from __future__ import annotations
 
@@ -33,6 +25,85 @@ def _last4(s: str | None) -> str | None:
     return digits[-4:] if len(digits) >= 4 else digits
 
 
+def _missing_fields(payload: CarrierIntake, email: str | None) -> list[str]:
+    missing = []
+    if not payload.ein:
+        missing.append("EIN / Tax ID")
+    if not payload.dot_number:
+        missing.append("USDOT Number")
+    if not payload.mc_number:
+        missing.append("MC Number")
+    if not payload.insurance_carrier:
+        missing.append("Insurance Carrier")
+    if not payload.bank_routing:
+        missing.append("Bank Routing Number")
+    if not payload.bank_account:
+        missing.append("Bank Account Number")
+    return missing
+
+
+async def _send_welcome_email(email: str, company_name: str, carrier_id: str, missing: list[str]) -> None:
+    try:
+        import httpx
+        from ..settings import get_settings
+        s = get_settings()
+        if not s.postmark_server_token:
+            return
+
+        completion_url = f"https://3lakeslogistics.com/complete-onboarding?carrier_id={carrier_id}"
+        missing_html = "".join(f"<li>{f}</li>" for f in missing)
+
+        incomplete_block = f"""
+        <div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;padding:20px;margin:20px 0;">
+          <h3 style="color:#c2410c;margin-top:0;">⚠️ Complete Your Profile</h3>
+          <p style="color:#334155;">To activate dispatch and payouts, please provide:</p>
+          <ul style="color:#334155;line-height:1.8;">{missing_html}</ul>
+          <a href="{completion_url}" style="display:inline-block;background:#C8902A;color:#fff;padding:12px 24px;border-radius:6px;text-decoration:none;font-weight:bold;margin-top:12px;">Complete My Profile →</a>
+        </div>""" if missing else """
+        <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:20px;margin:20px 0;">
+          <h3 style="color:#16a34a;margin-top:0;">✅ Profile Complete!</h3>
+          <p style="color:#334155;">All information received. Your account is being fully activated.</p>
+        </div>"""
+
+        body_html = f"""<html><body style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;">
+<div style="background:#0B2545;padding:20px;border-radius:8px 8px 0 0;text-align:center;">
+  <h1 style="color:#C8902A;margin:0;">Welcome to 3 Lakes Logistics</h1>
+  <p style="color:#94a3b8;margin:8px 0 0;">Founders Program</p>
+</div>
+<div style="background:#f8fafc;padding:30px;border-radius:0 0 8px 8px;">
+  <h2 style="color:#0B2545;">You're In, {company_name}!</h2>
+  <p>Your application has been received. Our dispatch team will have you booking loads within 24 hours.</p>
+  <div style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:20px;margin:20px 0;">
+    <h3 style="color:#0B2545;margin-top:0;">Founders Program Benefits</h3>
+    <ul style="color:#334155;line-height:1.8;">
+      <li>✅ 100% of every load rate — you keep it all</li>
+      <li>✅ AI dispatch across 15+ load boards</li>
+      <li>✅ 200-step automation (compliance, safety, payouts)</li>
+      <li>✅ $300/month locked for life</li>
+    </ul>
+  </div>
+  {incomplete_block}
+  <p>Questions? <strong>(555) 000-1234</strong> · <a href="mailto:dispatch@3lakeslogistics.com">dispatch@3lakeslogistics.com</a></p>
+  <p style="color:#94a3b8;font-size:12px;margin-top:24px;">Carrier ID: {carrier_id}</p>
+</div></body></html>"""
+
+        subject = f"Welcome to 3 Lakes Logistics — {'Complete Your Profile' if missing else 'You Are All Set!'}"
+        async with httpx.AsyncClient(timeout=15) as client:
+            await client.post(
+                "https://api.postmarkapp.com/email",
+                headers={"X-Postmark-Server-Token": s.postmark_server_token, "Content-Type": "application/json"},
+                json={
+                    "From": s.postmark_from_email, "To": email,
+                    "Subject": subject, "HtmlBody": body_html,
+                    "TextBody": f"Welcome {company_name}! {'Complete your profile: ' + completion_url if missing else 'All set — activating within 24 hours.'}",
+                    "MessageStream": "outbound", "Tag": "carrier-welcome",
+                },
+            )
+        log.info(f"Welcome email sent to {email}")
+    except Exception as e:  # noqa: BLE001
+        log.error(f"Welcome email failed: {e}")
+
+
 @router.post("/intake", response_model=IntakeResponse, status_code=status.HTTP_201_CREATED)
 async def carrier_intake(payload: CarrierIntake, request: Request,
                          bg: BackgroundTasks = BackgroundTasks()) -> IntakeResponse:
@@ -45,6 +116,10 @@ async def carrier_intake(payload: CarrierIntake, request: Request,
     email = payload.email or payload.owner_email
     address = payload.address or ", ".join(filter(None, [
         payload.address_city, payload.address_state, payload.address_zip]))
+
+    # Detect missing fields — partial submissions get onboarding_incomplete status
+    missing = _missing_fields(payload, email)
+    onboarding_status = "onboarding_incomplete" if missing else "onboarding"
 
     # 1. active_carriers
     carrier_row = {
@@ -63,7 +138,8 @@ async def carrier_intake(payload: CarrierIntake, request: Request,
         "esign_user_agent": payload.esign_user_agent or ua,
         "agreement_pdf_hash": payload.agreement_pdf_hash,
         "esign_timestamp": "now()",
-        "status": "onboarding",
+        "status": onboarding_status,
+        "onboarding_missing_fields": missing or None,
     }
     res = sb.table("active_carriers").insert(carrier_row).execute()
     if not res.data:
@@ -107,14 +183,15 @@ async def carrier_intake(payload: CarrierIntake, request: Request,
         "psp_consent": payload.psp_consent,
     }).execute()
 
-    # 5. banking_accounts (only last4; token provisioned via Stripe/Plaid later)
-    sb.table("banking_accounts").insert({
-        "carrier_id": carrier_id,
-        "bank_routing_last4": _last4(payload.bank_routing),
-        "bank_account_last4": _last4(payload.bank_account),
-        "account_type": payload.account_type,
-        "payee_name": payload.payee_name,
-    }).execute()
+    # 5. banking_accounts — only insert if at least one field provided
+    if payload.bank_routing or payload.bank_account or payload.payee_name:
+        sb.table("banking_accounts").insert({
+            "carrier_id": carrier_id,
+            "bank_routing_last4": _last4(payload.bank_routing),
+            "bank_account_last4": _last4(payload.bank_account),
+            "account_type": payload.account_type,
+            "payee_name": payload.payee_name,
+        }).execute()
 
     # 6. signatures_audit
     sb.table("signatures_audit").insert({
@@ -130,20 +207,28 @@ async def carrier_intake(payload: CarrierIntake, request: Request,
     sb.rpc("claim_founders_slot", {"p_category": payload.trailer_type}).execute() \
         if False else _inc_founders_claimed(sb, payload.trailer_type)
 
-    # 8. Kick Shield + Penny
-    log_agent("atlas", "intake_received", carrier_id=carrier_id, payload={"plan": payload.plan})
-    checkout_url = penny.create_checkout_session(carrier_id, payload.plan, str(payload.email), payload.founders_truck_count)
-    shield.enqueue_safety_check(carrier_id, payload.dot_number, payload.mc_number)
+    # 8. Send welcome email (always — includes completion link if fields missing)
+    if email:
+        bg.add_task(_send_welcome_email, email, payload.company_name, carrier_id, missing)
 
-    # 9. Fire all 30 onboarding steps in background (non-blocking)
-    bg.add_task(fire_onboarding, carrier_id)
-    log_agent("atlas", "trigger.onboarding", carrier_id=carrier_id, result="queued")
+    log_agent("atlas", "intake_received", carrier_id=carrier_id,
+              payload={"plan": payload.plan, "status": onboarding_status, "missing": missing})
+
+    # 9. Only run full pipeline if all required fields provided
+    checkout_url = None
+    if not missing:
+        checkout_url = penny.create_checkout_session(carrier_id, payload.plan, str(email), payload.founders_truck_count)
+        shield.enqueue_safety_check(carrier_id, payload.dot_number, payload.mc_number)
+        bg.add_task(fire_onboarding, carrier_id)
+        log_agent("atlas", "trigger.onboarding", carrier_id=carrier_id, result="queued")
+    else:
+        log.info(f"Partial intake {carrier_id} — missing: {missing}")
 
     return IntakeResponse(
         ok=True,
         carrier_id=carrier_id,
         stripe_checkout_url=checkout_url,
-        next_step="stripe_checkout",
+        next_step="complete_profile" if missing else "stripe_checkout",
     )
 
 
