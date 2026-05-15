@@ -59,10 +59,16 @@ class Settings(BaseSettings):
     airtable_base_id: str = ""
 
     # Adobe Sign — e-signature integration
-    adobe_client_id: str = ""
-    adobe_client_secret: str = ""
+    # Use Integration Key (simpler than OAuth for backend services):
+    #   Adobe Sign admin → Account → Adobe Sign API → API Information → REST API → Integration Key
+    adobe_integration_key: str = ""          # Integration Key (preferred for backend)
+    adobe_client_id: str = ""               # OAuth client_id (alternative)
+    adobe_client_secret: str = ""           # OAuth client_secret (alternative)
     adobe_account_id: str = ""
     adobe_api_endpoint: str = "https://api.na1.adobesign.com"
+    # Template/library doc IDs — create these in Adobe Sign admin as reusable templates
+    adobe_template_carrier_agreement: str = ""   # Library doc ID for Dispatch Agreement
+    adobe_template_w9: str = ""                  # Library doc ID for W9 (if hosting it for carriers)
 
     sentry_dsn: str = ""
 

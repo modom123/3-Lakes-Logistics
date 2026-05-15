@@ -328,38 +328,145 @@ def h13_stripe_attach_subscription(carrier_id, contract_id, payload):
 # ── Step 14: esign.send_agreement ────────────────────────────────────────────
 
 def h14_esign_send_agreement(carrier_id, contract_id, payload):
+    """Send carrier onboarding packet for e-signature via Adobe Sign.
+
+    Sends the Dispatch Agreement (required e-sign).
+    W9 and COI are uploaded separately by the carrier — they are NOT e-signed by us.
+
+    Requires in .env:
+        ADOBE_INTEGRATION_KEY — from Adobe Sign admin → Account → API → Integration Key
+        ADOBE_TEMPLATE_CARRIER_AGREEMENT — library doc ID from Adobe Sign admin templates
+    """
     c = _carrier(carrier_id)
+    s = get_settings()
+
     if payload.get("safety_light") == "red":
         return {"sent": False, "reason": "safety_check_failed"}
-    log_agent("esign", "send_agreement", carrier_id=str(carrier_id) if carrier_id else None,
-              payload={"email": c.get("email")}, result="queued")
+
+    email = c.get("email")
+    name = c.get("company_name", "Carrier")
+
+    if not email:
+        return {"sent": False, "reason": "no_carrier_email"}
+
+    # If Adobe Sign is configured, send a real agreement
+    if s.adobe_integration_key and s.adobe_template_carrier_agreement:
+        try:
+            from ...integrations.adobe_sign import get_adobe_sign_client
+            client = get_adobe_sign_client()
+            result = client.send_template_for_signature(
+                template_id=s.adobe_template_carrier_agreement,
+                agreement_name=f"3 Lakes Logistics — Dispatch Agreement ({name})",
+                recipient_email=email,
+                recipient_name=name,
+                message=(
+                    "Welcome to 3 Lakes Logistics! Please review and sign your "
+                    "Dispatch Agreement to complete your onboarding. "
+                    "This covers our dispatch terms, fees, and your Founders pricing lock."
+                ),
+            )
+            if result:
+                agreement_id = result.get("id")
+                # Store agreement ID on carrier record for step 15 to track
+                sb = _db()
+                if sb and carrier_id:
+                    try:
+                        sb.table("active_carriers").update(
+                            {"adobe_agreement_id": agreement_id}
+                        ).eq("id", str(carrier_id)).execute()
+                    except Exception:  # noqa: BLE001
+                        pass
+                log_agent("esign", "send_agreement",
+                          carrier_id=str(carrier_id) if carrier_id else None,
+                          payload={"email": email, "agreement_id": agreement_id},
+                          result="sent_via_adobe_sign")
+                return {
+                    "sent": True,
+                    "recipient_email": email,
+                    "recipient_name": name,
+                    "doc_type": "dispatch_agreement",
+                    "agreement_id": agreement_id,
+                    "esign_status": "out_for_signature",
+                    "provider": "adobe_sign",
+                }
+            else:
+                return {"sent": False, "reason": "adobe_sign_api_error"}
+        except Exception as e:  # noqa: BLE001
+            log_agent("esign", "send_agreement_error",
+                      carrier_id=str(carrier_id) if carrier_id else None, error=str(e))
+            return {"sent": False, "reason": str(e)}
+
+    # Adobe Sign not yet configured — log what would be sent and return pending state
+    log_agent("esign", "send_agreement",
+              carrier_id=str(carrier_id) if carrier_id else None,
+              payload={"email": email},
+              result="queued_pending_adobe_config")
     return {
-        "sent": True,
-        "recipient_email": c.get("email"),
-        "recipient_name": c.get("company_name"),
-        "doc_type": "carrier_agreement_v1",
-        "esign_status": "pending",
+        "sent": False,
+        "recipient_email": email,
+        "recipient_name": name,
+        "doc_type": "dispatch_agreement",
+        "esign_status": "pending_config",
+        "note": "Set ADOBE_INTEGRATION_KEY + ADOBE_TEMPLATE_CARRIER_AGREEMENT to activate",
     }
 
 
 # ── Step 15: esign.track_completion ──────────────────────────────────────────
 
 def h15_esign_track_completion(carrier_id, contract_id, payload):
+    """Check whether the carrier has signed the agreement in Adobe Sign."""
     if not carrier_id:
         return {"completed": False}
     sb = _db()
     if not sb:
         return {"completed": False, "note": "supabase_not_configured"}
     try:
-        r = sb.table("active_carriers").select("esign_name,esign_ip,esign_timestamp").eq("id", str(carrier_id)).maybe_single().execute()
+        r = sb.table("active_carriers").select(
+            "esign_name,esign_ip,esign_timestamp,adobe_agreement_id"
+        ).eq("id", str(carrier_id)).maybe_single().execute()
         rec = r.data or {}
+    except Exception:  # noqa: BLE001
+        return {"completed": False, "reason": "db_error"}
+
+    # If already marked complete in DB, return that
+    if rec.get("esign_timestamp"):
         return {
-            "completed": bool(rec.get("esign_timestamp")),
+            "completed": True,
             "esign_name": rec.get("esign_name"),
             "esign_timestamp": rec.get("esign_timestamp"),
         }
-    except Exception:  # noqa: BLE001
-        return {"completed": False, "reason": "db_error"}
+
+    # If Adobe Sign is configured, check live status
+    agreement_id = rec.get("adobe_agreement_id") or payload.get("agreement_id")
+    s = get_settings()
+    if agreement_id and s.adobe_integration_key:
+        try:
+            from ...integrations.adobe_sign import get_adobe_sign_client
+            client = get_adobe_sign_client()
+            status = client.get_agreement_status(s.adobe_integration_key, agreement_id)
+            if status:
+                signed = status.get("status") == "SIGNED"
+                if signed and sb:
+                    try:
+                        sb.table("active_carriers").update({
+                            "esign_timestamp": _NOW(),
+                            "esign_name": rec.get("company_name"),
+                        }).eq("id", str(carrier_id)).execute()
+                    except Exception:  # noqa: BLE001
+                        pass
+                return {
+                    "completed": signed,
+                    "adobe_status": status.get("status"),
+                    "agreement_id": agreement_id,
+                }
+        except Exception:  # noqa: BLE001
+            pass
+
+    return {
+        "completed": False,
+        "esign_status": "awaiting_signature",
+        "agreement_id": agreement_id,
+    }
 
 
 # ── Step 16: clm.ingest_agreement ────────────────────────────────────────────

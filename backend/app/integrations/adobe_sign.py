@@ -1,4 +1,13 @@
-"""Adobe Sign API integration — OAuth 2.0 e-signature flow."""
+"""Adobe Sign API integration — Integration Key + OAuth 2.0 e-signature flow.
+
+Preferred setup for backend services:
+  1. Log in to Adobe Sign admin console
+  2. Account → Adobe Sign API → API Information → REST API → Integration Key
+  3. Create a key with scope: agreement_read, agreement_write, agreement_send, library_read
+  4. Set ADOBE_INTEGRATION_KEY in .env
+  5. Create reusable templates in Adobe Sign admin, copy their library doc IDs
+  6. Set ADOBE_TEMPLATE_CARRIER_AGREEMENT (and ADOBE_TEMPLATE_W9 if hosting W9)
+"""
 from __future__ import annotations
 
 import httpx
@@ -11,7 +20,7 @@ log = get_logger("3ll.adobe_sign")
 
 
 class AdobeSignClient:
-    """Handles OAuth 2.0 token exchange and e-signature API calls."""
+    """Handles Integration Key + OAuth 2.0 token exchange and e-signature API calls."""
 
     def __init__(self):
         self.settings = get_settings()
@@ -19,6 +28,60 @@ class AdobeSignClient:
         self.client_id = self.settings.adobe_client_id
         self.client_secret = self.settings.adobe_client_secret
         self.account_id = self.settings.adobe_account_id
+
+    def _auth_headers(self, access_token: str | None = None) -> dict:
+        """Return Authorization headers, preferring Integration Key over OAuth token."""
+        key = self.settings.adobe_integration_key or access_token
+        if not key:
+            raise ValueError("Adobe Sign not configured — set ADOBE_INTEGRATION_KEY in .env")
+        return {"Authorization": f"Bearer {key}", "Accept": "application/json"}
+
+    def send_template_for_signature(
+        self,
+        template_id: str,
+        agreement_name: str,
+        recipient_email: str,
+        recipient_name: str,
+        message: str = "Please review and sign this agreement.",
+        access_token: str | None = None,
+    ) -> Optional[dict]:
+        """Send a saved Adobe Sign library template to a recipient for signature.
+
+        This is the recommended flow — create the template once in Adobe Sign admin,
+        then reference it by library_doc_id for every new agreement send.
+
+        Returns {"id": agreement_id, "name": ..., "status": "OUT_FOR_SIGNATURE"} or None.
+        """
+        url = f"{self.base_url}/api/rest/v6/agreements"
+        try:
+            headers = self._auth_headers(access_token)
+            headers["Content-Type"] = "application/json"
+            payload = {
+                "fileInfos": [{"libraryDocumentId": template_id}],
+                "name": agreement_name,
+                "participantSetsInfo": [{
+                    "memberInfos": [{"email": recipient_email, "name": recipient_name}],
+                    "order": 1,
+                    "role": "SIGNER",
+                }],
+                "signatureType": "ESIGN",
+                "state": "OUT_FOR_SIGNATURE",
+                "message": message,
+            }
+            r = httpx.post(url, headers=headers, json=payload, timeout=30)
+            r.raise_for_status()
+            data = r.json()
+            log.info("Adobe Sign agreement %s sent to %s", data.get("id"), recipient_email)
+            return data
+        except ValueError as e:
+            log.error("Adobe Sign config error: %s", e)
+            return None
+        except httpx.HTTPStatusError as e:
+            log.error("Adobe Sign API error %s: %s", e.response.status_code, e.response.text)
+            return None
+        except Exception as e:  # noqa: BLE001
+            log.error("Adobe Sign send_template_for_signature failed: %s", e)
+            return None
 
     def get_access_token(self, auth_code: str, redirect_uri: str) -> Optional[str]:
         """Exchange authorization code for access token (OAuth 2.0)."""
