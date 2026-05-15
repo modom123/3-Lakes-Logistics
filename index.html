@@ -1202,6 +1202,35 @@ td.td-name{font-weight:600;color:var(--navy);}
         </div>
       </div>
 
+      <!-- Vance Dialer -->
+      <div class="card" style="margin-bottom:16px;border-top:3px solid var(--gold)">
+        <div class="card-hd">
+          <div class="card-title">📞 Vance Dialer</div>
+          <span class="card-chip">Bland AI · Outbound</span>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1.5fr auto;gap:12px;align-items:end;padding:4px 0 12px">
+          <div>
+            <div style="font-size:11px;font-weight:600;color:var(--muted);margin-bottom:4px">NAME</div>
+            <input id="vc-name" type="text" placeholder="Gary Taylor" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px">
+          </div>
+          <div>
+            <div style="font-size:11px;font-weight:600;color:var(--muted);margin-bottom:4px">PHONE</div>
+            <input id="vc-phone" type="tel" placeholder="310-729-2392" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px">
+          </div>
+          <div>
+            <div style="font-size:11px;font-weight:600;color:var(--muted);margin-bottom:4px">NOTES (optional)</div>
+            <input id="vc-notes" type="text" placeholder="e.g. Looking for consistent loads, runs Midwest" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px">
+          </div>
+          <button class="btn-gold" onclick="vanceCall()" id="vc-btn" style="padding:8px 22px;white-space:nowrap">📞 Call Now</button>
+        </div>
+        <div id="vc-result" style="display:none;padding:10px 14px;border-radius:6px;font-size:13px;margin-top:4px"></div>
+
+        <div style="margin-top:8px">
+          <div style="font-size:11px;font-weight:600;color:var(--muted);margin-bottom:8px;letter-spacing:.5px">RECENT CALLS</div>
+          <div id="vc-log"><div class="loading"><div class="spin"></div>Loading…</div></div>
+        </div>
+      </div>
+
       <div class="card" style="margin-bottom:16px">
         <div class="card-hd"><div class="card-title">Run Agent Manually</div><span class="card-chip">14 Workers</span></div>
         <div id="agent-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px">
@@ -3196,6 +3225,49 @@ async function runAgent(name, payload){
   }catch(e){toast('Agent '+name+' failed','error');console.error(e);}
 }
 
+async function vanceCall(){
+  const name=document.getElementById('vc-name').value.trim();
+  const phone=document.getElementById('vc-phone').value.trim();
+  const notes=document.getElementById('vc-notes').value.trim();
+  const res=document.getElementById('vc-result');
+  const btn=document.getElementById('vc-btn');
+  if(!phone){res.style.display='block';res.style.background='rgba(239,68,68,.1)';res.style.color='var(--red)';res.textContent='Phone number is required.';return;}
+  btn.disabled=true;btn.textContent='Dialing…';
+  res.style.display='none';
+  try{
+    const r=await apiFetch('/api/prospecting/call',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,phone,notes})});
+    const d=await r.json();
+    if(d.ok){
+      res.style.display='block';res.style.background='rgba(34,197,94,.1)';res.style.color='var(--green)';
+      res.textContent=`✅ Vance is calling ${name||phone} now. Call ID: ${d.call_id||'—'}`;
+      document.getElementById('vc-name').value='';document.getElementById('vc-phone').value='';document.getElementById('vc-notes').value='';
+      setTimeout(loadVanceCalls,3000);
+    }else{
+      res.style.display='block';res.style.background='rgba(239,68,68,.1)';res.style.color='var(--red)';
+      res.textContent=`❌ Call failed: ${d.result?.error||JSON.stringify(d)}`;
+    }
+  }catch(e){
+    res.style.display='block';res.style.background='rgba(239,68,68,.1)';res.style.color='var(--red)';
+    res.textContent=`❌ Error: ${e.message}`;
+  }finally{btn.disabled=false;btn.textContent='📞 Call Now';}
+}
+async function loadVanceCalls(){
+  const el=document.getElementById('vc-log');
+  try{
+    const r=await apiFetch('/api/prospecting/calls?limit=10');
+    const d=await r.json();
+    const calls=d.calls||[];
+    if(!calls.length){el.innerHTML='<div style="color:var(--muted);font-size:12px;padding:4px 0">No calls yet</div>';return;}
+    el.innerHTML=`<table class="tbl" style="font-size:12px"><thead><tr><th>Who</th><th>Phone</th><th>Status</th><th>Time</th></tr></thead><tbody>${calls.map(c=>{
+      const p=c.payload||{};const ok=c.result==='started';
+      return`<tr>
+        <td style="font-weight:500">${p.name||'—'}</td>
+        <td style="color:var(--muted)">${p.phone||'—'}</td>
+        <td><span class="badge badge-${ok?'green':'orange'}">${c.result||c.action}</span></td>
+        <td style="color:var(--muted);white-space:nowrap">${c.ts?new Date(c.ts).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}):'—'}</td>
+      </tr>`;}).join('')}</tbody></table>`;
+  }catch(e){el.innerHTML=`<div style="color:var(--muted);font-size:12px">Could not load calls</div>`;}
+}
 async function refreshAgentLog(){
   try{
     const {items}=await API.agentLog();
@@ -3270,7 +3342,7 @@ async function loadLeadsPipeline(){
   const orig=window.nav;
   window.nav=function(id){
     orig(id);
-    if(id==='agents'){loadAgents();refreshAgentLog();}
+    if(id==='agents'){loadAgents();refreshAgentLog();loadVanceCalls();}
     else if(id==='founders')loadFoundersInventory();
     else if(id==='leads')loadLeadsPipeline();
   };

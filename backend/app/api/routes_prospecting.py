@@ -190,3 +190,49 @@ def pipeline_status() -> dict:
         .execute()
     ).data or []
     return {"runs": rows}
+
+
+@router.post("/call")
+def manual_call(body: dict) -> dict:
+    """Trigger a single Vance outbound call from EAGLE EYE.
+
+    Body: { name, phone, company?, notes? }
+    """
+    name  = (body.get("name") or "").strip()
+    phone = (body.get("phone") or "").strip()
+    if not phone:
+        from fastapi import HTTPException
+        raise HTTPException(400, "phone is required")
+
+    # Normalise to E.164 — strip spaces/dashes/parens, prepend +1 if needed
+    digits = "".join(c for c in phone if c.isdigit())
+    if len(digits) == 10:
+        digits = "1" + digits
+    e164 = "+" + digits
+
+    lead_id = f"manual-{name.lower().replace(' ','-')}-{digits[-4:]}"
+    result = vance_agent.run({
+        "phone":         e164,
+        "name":          name or "there",
+        "company_name":  body.get("company", ""),
+        "current_pain":  body.get("notes", ""),
+        "lead_id":       lead_id,
+    })
+
+    log_agent("vance", "manual_call", payload={"name": name, "phone": e164}, result=result.get("status"))
+    return {"ok": result.get("status") == "started", "call_id": result.get("call_id"), "phone": e164, "name": name, "result": result}
+
+
+@router.get("/calls")
+def recent_calls(limit: int = 25) -> dict:
+    """Recent manual + pipeline Vance calls from agent_log."""
+    sb = get_supabase()
+    rows = (
+        sb.table("agent_log")
+        .select("*")
+        .eq("agent", "vance")
+        .order("ts", desc=True)
+        .limit(limit)
+        .execute()
+    ).data or []
+    return {"calls": rows}
