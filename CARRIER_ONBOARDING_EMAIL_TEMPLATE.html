@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            padding: 40px;
+        }
+        .header {
+            background: linear-gradient(135deg, #1e40af 0%, #1e3a8a 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 8px 8px 0 0;
+            text-align: center;
+            margin: -40px -40px 30px -40px;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 28px;
+        }
+        .header p {
+            margin: 10px 0 0 0;
+            font-size: 14px;
+            opacity: 0.9;
+        }
+        .section {
+            margin: 30px 0;
+            padding: 20px;
+            background: #f9fafb;
+            border-left: 4px solid #1e40af;
+            border-radius: 4px;
+        }
+        .section h2 {
+            margin-top: 0;
+            color: #1e40af;
+            font-size: 18px;
+        }
+        .step {
+            margin: 16px 0;
+            padding-bottom: 16px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        .step:last-child {
+            border-bottom: none;
+            padding-bottom: 0;
+        }
+        .step strong {
+            color: #1e40af;
+        }
+        .timeline {
+            display: flex;
+            justify-content: space-between;
+            margin: 30px 0;
+            position: relative;
+        }
+        .timeline::before {
+            content: '';
+            position: absolute;
+            top: 20px;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: #e5e7eb;
+        }
+        .timeline-item {
+            flex: 1;
+            text-align: center;
+            position: relative;
+        }
+        .timeline-circle {
+            width: 40px;
+            height: 40px;
+            background: #1e40af;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 10px;
+            font-weight: bold;
+            position: relative;
+            z-index: 1;
+        }
+        .timeline-label {
+            font-size: 13px;
+            color: #666;
+        }
+        .cta-button {
+            display: inline-block;
+            background: #1e40af;
+            color: white;
+            padding: 14px 28px;
+            border-radius: 6px;
+            text-decoration: none;
+            font-weight: bold;
+            text-align: center;
+            margin: 20px 0;
+        }
+        .cta-button:hover {
+            background: #1e3a8a;
+        }
+        .pricing-box {
+            background: #f0f9ff;
+            border: 2px solid #1e40af;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        .pricing-box strong {
+            color: #1e40af;
+        }
+        .benefit-list {
+            list-style: none;
+            padding: 0;
+        }
+        .benefit-list li {
+            padding: 8px 0;
+            padding-left: 24px;
+            position: relative;
+        }
+        .benefit-list li:before {
+            content: '✓';
+            position: absolute;
+            left: 0;
+            color: #10b981;
+            font-weight: bold;
+            font-size: 18px;
+        }
+        .footer {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #e5e7eb;
+            font-size: 12px;
+            color: #666;
+            text-align: center;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 16px 0;
+        }
+        table th {
+            background: #f3f4f6;
+            padding: 12px;
+            text-align: left;
+            border-bottom: 2px solid #1e40af;
+            font-weight: 600;
+        }
+        table td {
+            padding: 12px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Welcome to the Founders Program</h1>
+            <p>Your complete onboarding roadmap</p>
+        </div>
+
+        <p>Hi {{CARRIER_NAME}},</p>
+
+        <p>Thanks for taking Nova's call! We're excited to get {{COMPANY_NAME}} set up in the Founders program.</p>
+
+        <p>Here's exactly what happens next, step by step. The whole process takes about a week, and your active time is just 45 minutes.</p>
+
+        <!-- Timeline -->
+        <div class="timeline">
+            <div class="timeline-item">
+                <div class="timeline-circle">1</div>
+                <div class="timeline-label">Call<br/>Day 0-1</div>
+            </div>
+            <div class="timeline-item">
+                <div class="timeline-circle">2</div>
+                <div class="timeline-label">Book<br/>Day 1-2</div>
+            </div>
+            <div class="timeline-item">
+                <div class="timeline-circle">3</div>
+                <div class="timeline-label">Talk<br/>Day 2-3</div>
+            </div>
+            <div class="timeline-item">
+                <div class="timeline-circle">4</div>
+                <div class="timeline-label">Sign<br/>Day 3-4</div>
+            </div>
+            <div class="timeline-item">
+                <div class="timeline-circle">5</div>
+                <div class="timeline-label">Live<br/>Day 5</div>
+            </div>
+        </div>
+
+        <!-- The 5 Steps -->
+        <div class="section">
+            <h2>Step 1: Founders Call (Just Had It!)</h2>
+            <p>Nova got the basics down — your authority age, fleet size, pain points, lanes. You're all set for step 2.</p>
+        </div>
+
+        <div class="section">
+            <h2>Step 2: This Email (You're Reading It)</h2>
+            <p>We're walking you through the whole process so there are no surprises.</p>
+        </div>
+
+        <div class="section">
+            <h2>Step 3: Commander Call (15 minutes)</h2>
+            <div class="step">
+                <strong>What:</strong> A brief call with our human Commander to understand YOUR specific situation.
+            </div>
+            <div class="step">
+                <strong>We talk about:</strong>
+                <ul>
+                    <li>Your preferred lanes and equipment</li>
+                    <li>Target RPM and home time needs</li>
+                    <li>How the Founders program works</li>
+                </ul>
+            </div>
+            <div class="step">
+                <strong>Schedule here:</strong> <a href="https://calendly.com/3lakes/commander-call" class="cta-button">📅 Book 15-Minute Call</a>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>Step 4: Onboarding Packet (Sign Everything)</h2>
+            <p>You'll receive ONE email from Adobe Sign with your complete packet.</p>
+            <table>
+                <tr>
+                    <th>Document</th>
+                    <th>What You Do</th>
+                    <th>Time</th>
+                </tr>
+                <tr>
+                    <td><strong>Dispatch Agreement</strong></td>
+                    <td>Read, review, e-sign. Your contract with us.</td>
+                    <td>~3 min</td>
+                </tr>
+                <tr>
+                    <td><strong>W9 Form</strong></td>
+                    <td>Fill in your info, e-sign. IRS tax form.</td>
+                    <td>~3 min</td>
+                </tr>
+                <tr>
+                    <td><strong>Insurance COI</strong></td>
+                    <td>Upload from your insurance company.</td>
+                    <td>~2 min</td>
+                </tr>
+            </table>
+            <p><strong>Total time:</strong> ~10 minutes</p>
+        </div>
+
+        <div class="section">
+            <h2>Step 5: You're Live!</h2>
+            <p>We verify everything, flip the switch, and loads start flowing to your app.</p>
+            <p><strong>What you get:</strong></p>
+            <ul class="benefit-list">
+                <li>100% of load earnings (no commission)</li>
+                <li>$300/month lifetime rate (locked in as a Founder)</li>
+                <li>Real-time load dispatch to your app</li>
+                <li>Automated check-calls every 2–4 hours</li>
+                <li>Weekly RPM reports and optimization tips</li>
+                <li>24/7 human support</li>
+            </ul>
+        </div>
+
+        <!-- Pricing -->
+        <div class="pricing-box">
+            <h3 style="margin-top: 0;">Founders Pricing</h3>
+            <p><strong style="font-size: 20px; color: #10b981;">$300/month, forever</strong></p>
+            <p>That covers your Founders tier. Everything else is pure profit.</p>
+            <p><strong>Example:</strong> A typical $2,000 load = $2,000 in your pocket (standard brokers take 20%, leaving you $1,600). Founders costs $71/week, so $1,929 net after the fee.</p>
+        </div>
+
+        <!-- What We Need -->
+        <div class="section">
+            <h2>What We'll Ask For</h2>
+            <table>
+                <tr>
+                    <th>Item</th>
+                    <th>Why</th>
+                </tr>
+                <tr>
+                    <td>DOT Number</td>
+                    <td>Required by law. 30+ years old for Founders.</td>
+                </tr>
+                <tr>
+                    <td>MC Authority Certificate</td>
+                    <td>Proof you can operate as a carrier.</td>
+                </tr>
+                <tr>
+                    <td>Insurance Info</td>
+                    <td>We verify minimum $1.2M cargo liability.</td>
+                </tr>
+                <tr>
+                    <td>Banking Details</td>
+                    <td>Direct deposit for daily pay.</td>
+                </tr>
+            </table>
+        </div>
+
+        <!-- FAQ -->
+        <div class="section">
+            <h2>Quick Questions?</h2>
+            <div class="step">
+                <strong>Q: Can I work with other brokers?</strong><br/>
+                A: Yes. You own your authority. We just ask 3 Lakes be your primary source.
+            </div>
+            <div class="step">
+                <strong>Q: How do I get paid?</strong><br/>
+                A: Direct deposit daily. Loads close → paid within 24 hours.
+            </div>
+            <div class="step">
+                <strong>Q: How many loads per week?</strong><br/>
+                A: Depends on your profile. Typical new Founders see 2–4 loads/week.
+            </div>
+            <div class="step">
+                <strong>Q: What if I need to pause?</strong><br/>
+                A: No problem. Your pricing is locked forever, even if you take a month off.
+            </div>
+        </div>
+
+        <!-- Next Step -->
+        <div style="background: #dbeafe; border: 2px solid #1e40af; padding: 20px; border-radius: 8px; text-align: center; margin: 30px 0;">
+            <p style="margin-top: 0;"><strong>Your next move:</strong></p>
+            <a href="https://calendly.com/3lakes/commander-call" class="cta-button">📅 Book Your Commander Call</a>
+            <p style="margin-bottom: 0; font-size: 13px; color: #666;">Takes 30 seconds. Slots fill up fast.</p>
+        </div>
+
+        <!-- Closing -->
+        <p>We built Founders to reward carriers who want to scale without the chaos. Let's get you rolling.</p>
+
+        <p>Questions? Just reply to this email or call us directly.<br/>
+        <strong style="color: #1e40af;">Nova & the 3 Lakes Team</strong></p>
+
+        <div class="footer">
+            <p>3 Lakes Logistics — Automated dispatch for owner-operators</p>
+            <p>You received this because you spoke with Nova about our Founders program.</p>
+        </div>
+    </div>
+</body>
+</html>
