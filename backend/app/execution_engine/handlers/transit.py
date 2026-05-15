@@ -310,17 +310,82 @@ def h72_atlas_checkcall_3(carrier_id, contract_id, payload):
 def h73_transit_weather_check(carrier_id, contract_id, payload):
     origin_state = payload.get("origin_state")
     dest_state = payload.get("dest_state")
+    origin_lat = payload.get("origin_lat")
+    origin_lon = payload.get("origin_lon")
+    dest_lat = payload.get("dest_lat")
+    dest_lon = payload.get("dest_lon")
     s = get_settings()
-    if s.google_maps_api_key and origin_state and dest_state:
-        # OpenWeatherMap is the standard; fall through to stub if not configured
-        pass
+
+    risk = "low"
+    delays_possible = False
+    weather_alerts = []
+
+    if origin_lat and origin_lon:
+        try:
+            import httpx
+            # Use Open-Meteo free weather API (no key required, no rate limits)
+            r = httpx.get(
+                "https://api.open-meteo.com/v1/forecast",
+                params={
+                    "latitude": origin_lat,
+                    "longitude": origin_lon,
+                    "current": "weather_code,temperature,wind_speed,precipitation",
+                    "hourly": "precipitation_probability",
+                    "timezone": "auto",
+                },
+                timeout=8,
+            )
+            data = r.json()
+            current = data.get("current", {})
+            weather_code = current.get("weather_code", 0)
+            wind_speed = current.get("wind_speed", 0)
+            precipitation = current.get("precipitation", 0)
+
+            # WMO Weather Code interpretation
+            # 80-82: Rain showers (heavy)
+            # 71-75: Snow
+            # 55-56: Freezing rain/drizzle
+            # 40-49: Fog
+            # 61-67: Rain
+            if weather_code >= 80:
+                risk = "high"
+                delays_possible = True
+                weather_alerts.append(f"Heavy rain (code {weather_code})")
+            elif weather_code >= 71:
+                risk = "high"
+                delays_possible = True
+                weather_alerts.append(f"Snow (code {weather_code})")
+            elif weather_code >= 55:
+                risk = "medium"
+                delays_possible = True
+                weather_alerts.append(f"Freezing precipitation (code {weather_code})")
+            elif weather_code >= 40:
+                risk = "medium"
+                weather_alerts.append(f"Fog (code {weather_code})")
+            elif weather_code >= 61:
+                risk = "low"
+                delays_possible = False
+                weather_alerts.append(f"Rain (code {weather_code})")
+
+            if wind_speed > 50:
+                risk = "high"
+                delays_possible = True
+                weather_alerts.append(f"High winds ({wind_speed} km/h)")
+            elif wind_speed > 35:
+                risk = "medium"
+                weather_alerts.append(f"Strong winds ({wind_speed} km/h)")
+
+        except Exception as e:
+            log.warning("weather_check API failed: %s", e)
+
     return {
         "checked": True,
         "origin_state": origin_state,
         "dest_state": dest_state,
-        "risk": "low",
-        "delays_possible": False,
-        "note": "weather_api_not_configured — using low-risk default",
+        "risk": risk,
+        "delays_possible": delays_possible,
+        "alerts": weather_alerts,
+        "note": "weather checked via open-meteo api" if weather_alerts else "clear weather",
     }
 
 

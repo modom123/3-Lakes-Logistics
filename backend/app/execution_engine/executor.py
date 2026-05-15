@@ -72,6 +72,28 @@ from ..compliance.steps import (
     step_179_compliance_score,
     step_180_compliance_complete,
 )
+from ..analytics.steps import (
+    step_181_daily_kpi,
+    step_182_fleet_utilization,
+    step_183_lane_profitability,
+    step_184_broker_performance,
+    step_185_driver_ranking,
+    step_186_revenue_forecast,
+    step_187_fuel_analysis,
+    step_188_dead_head_report,
+    step_189_detention_report,
+    step_190_spot_vs_contract,
+    step_191_cash_flow,
+    step_192_carrier_ltv,
+    step_193_csa_trend,
+    step_194_rate_index,
+    step_195_equipment_demand,
+    step_196_compliance_risk,
+    step_197_weekly_report,
+    step_198_airtable_sync,
+    step_199_sentry_health,
+    step_200_analytics_complete,
+)
 
 log = get_logger("3ll.execution.executor")
 
@@ -141,6 +163,30 @@ _COMPLIANCE_HANDLERS: dict[int, object] = {
     178: step_178_escrow_audit,
     179: step_179_compliance_score,
     180: step_180_compliance_complete,
+}
+
+# Maps step number → concrete handler for analytics domain (181-200)
+_ANALYTICS_HANDLERS: dict[int, object] = {
+    181: step_181_daily_kpi,
+    182: step_182_fleet_utilization,
+    183: step_183_lane_profitability,
+    184: step_184_broker_performance,
+    185: step_185_driver_ranking,
+    186: step_186_revenue_forecast,
+    187: step_187_fuel_analysis,
+    188: step_188_dead_head_report,
+    189: step_189_detention_report,
+    190: step_190_spot_vs_contract,
+    191: step_191_cash_flow,
+    192: step_192_carrier_ltv,
+    193: step_193_csa_trend,
+    194: step_194_rate_index,
+    195: step_195_equipment_demand,
+    196: step_196_compliance_risk,
+    197: step_197_weekly_report,
+    198: step_198_airtable_sync,
+    199: step_199_sentry_health,
+    200: step_200_analytics_complete,
 }
 
 
@@ -249,22 +295,22 @@ def _dispatch(
     contract_id: UUID | None,
     payload: dict,
 ) -> dict:
-    """Route step to its concrete handler, falling back to a structured stub."""
+    """Route step to its concrete handler."""
+    # Try HANDLER_MAP first (onboarding, dispatch, transit, settlement)
     handler = HANDLER_MAP.get(step.number)
     if handler:
         return handler(carrier_id, contract_id, payload)
-    """Route step execution to a concrete handler when available.
 
-    CLM steps 121-150 are fully implemented in clm.steps.
-    All other domains fall back to the metadata stub — concrete handlers
-    for those domains are added in subsequent sprint cycles.
-    """
-    handler = _CLM_HANDLERS.get(step.number) or _COMPLIANCE_HANDLERS.get(step.number)
+    # Then try CLM (121-150), Compliance (151-180), and Analytics (181-200)
+    handler = (
+        _CLM_HANDLERS.get(step.number)
+        or _COMPLIANCE_HANDLERS.get(step.number)
+        or _ANALYTICS_HANDLERS.get(step.number)
+    )
     if handler is not None:
         return handler(carrier_id, contract_id, payload)  # type: ignore[call-arg]
 
-    # Stub for domains not yet implemented (onboarding, dispatch, transit,
-    # settlement, analytics — handled in future sprints)
+    # Fallback stub (should not occur for valid step numbers)
     return {
         "step_number": step.number,
         "step_name": step.name,
@@ -274,6 +320,6 @@ def _dispatch(
         "contract_id": str(contract_id) if contract_id else None,
         "requires_steps": step.requires_steps,
         "executed": True,
-        "note": "handler_not_yet_implemented",
+        "note": "handler_not_found",
         "stub": True,
     }
