@@ -127,8 +127,15 @@ async def receive_inbound_email(request: Request) -> dict[str, Any]:
             "created_at": datetime.now(timezone.utc).isoformat(),
         }
 
-        # Extract attachments
-        files = form.getlist("attachments") if form else []
+        # Extract attachments.
+        # SendGrid Inbound Parse sends files as attachment1, attachment2, ...
+        # The "attachments" key is a JSON metadata string, NOT the actual files.
+        files = []
+        for i in range(1, 1001):
+            f = form.get(f"attachment{i}")
+            if f is None:
+                break
+            files.append(f)
         email_record["attachment_count"] = len(files)
 
         # Insert email record into audit log

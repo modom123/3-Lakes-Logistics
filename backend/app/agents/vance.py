@@ -36,7 +36,7 @@ def run(payload: dict[str, Any]) -> dict[str, Any]:
     webhook_url = payload.get("webhook_url", "")
 
     if not phone:
-        return {"agent": "vance", "status": "error", "error": "phone number required"}
+        return {"agent": "nova", "status": "error", "error": "phone number required"}
 
     result = start_outbound_call(
         lead_id=lead_id,
@@ -49,7 +49,7 @@ def run(payload: dict[str, Any]) -> dict[str, Any]:
         webhook_url=webhook_url,
     )
 
-    return {"agent": "vance", **result}
+    return {"agent": "nova", **result}
 
 
 def handle_webhook(event: dict[str, Any]) -> dict[str, Any]:

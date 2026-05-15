@@ -11,7 +11,9 @@ from typing import Any
 from fastapi import APIRouter, Depends
 
 from ..agents import vance as vance_agent
-from ..logging_service import log_agent
+from ..logging_service import get_logger, log_agent
+
+log = get_logger("3ll.prospecting")
 from ..prospecting import dedupe, scoring
 from ..settings import get_settings
 from ..supabase_client import get_supabase
@@ -141,7 +143,12 @@ def run_pipeline(
             skipped += 1
             continue
 
-        res = sb.table("leads").insert(lead).execute()
+        try:
+            res = sb.table("leads").insert(lead).execute()
+        except Exception as _e:  # noqa: BLE001
+            log.warning("leads insert failed: %s", _e) if False else None
+            skipped += 1
+            continue
         inserted += 1
 
         # 3. Optionally trigger Vance for high-scoring leads with a phone
@@ -208,6 +215,9 @@ def manual_call(body: dict) -> dict:
     digits = "".join(c for c in phone if c.isdigit())
     if len(digits) == 10:
         digits = "1" + digits
+    if len(digits) != 11 or not digits.startswith("1"):
+        from fastapi import HTTPException
+        raise HTTPException(400, f"Invalid US phone number: {phone!r} ({len(digits)} digits)")
     e164 = "+" + digits
 
     lead_id = f"manual-{name.lower().replace(' ','-')}-{digits[-4:]}"
@@ -219,7 +229,7 @@ def manual_call(body: dict) -> dict:
         "lead_id":       lead_id,
     })
 
-    log_agent("vance", "manual_call", payload={"name": name, "phone": e164}, result=result.get("status"))
+    log_agent("nova", "manual_call", payload={"name": name, "phone": e164}, result=result.get("status"))
     return {"ok": result.get("status") == "started", "call_id": result.get("call_id"), "phone": e164, "name": name, "result": result}
 
 
@@ -230,7 +240,7 @@ def recent_calls(limit: int = 25) -> dict:
     rows = (
         sb.table("agent_log")
         .select("*")
-        .eq("agent", "vance")
+        .in_("agent", ["nova", "vance"])   # include old name for historical rows
         .order("ts", desc=True)
         .limit(limit)
         .execute()

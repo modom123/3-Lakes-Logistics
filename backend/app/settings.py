@@ -66,6 +66,7 @@ class Settings(BaseSettings):
     adobe_client_secret: str = ""           # OAuth client_secret (alternative)
     adobe_account_id: str = ""
     adobe_api_endpoint: str = "https://api.na1.adobesign.com"
+    adobe_webhook_secret: str = ""          # Sent as Authorization header on callbacks
     # Template/library doc IDs — create these in Adobe Sign admin as reusable templates
     adobe_template_carrier_agreement: str = ""   # Library doc ID for Dispatch Agreement
     adobe_template_w9: str = ""                  # Library doc ID for W9 (if hosting it for carriers)
