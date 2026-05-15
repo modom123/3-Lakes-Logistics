@@ -16,8 +16,11 @@ from dotenv import load_dotenv
 import psycopg2
 from psycopg2 import sql
 
-# Load environment variables
-load_dotenv(Path(__file__).parent.parent.parent / ".env")
+# Load environment variables (from backend/.env or root/.env)
+env_path = Path(__file__).parent.parent / ".env"
+if not env_path.exists():
+    env_path = Path(__file__).parent.parent.parent / ".env"
+load_dotenv(env_path)
 
 SUPABASE_URL = os.getenv("SUPABASE_URL", "")
 SUPABASE_SERVICE_ROLE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "")
