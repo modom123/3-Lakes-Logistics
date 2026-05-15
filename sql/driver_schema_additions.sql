@@ -82,8 +82,7 @@ CREATE INDEX IF NOT EXISTS idx_loads_driver_id ON loads(driver_id);
 CREATE INDEX IF NOT EXISTS idx_loads_status_pickup_at ON loads(status, pickup_at DESC);
 CREATE INDEX IF NOT EXISTS idx_drivers_phone_e164 ON drivers(phone_e164);
 CREATE INDEX IF NOT EXISTS idx_loads_delivered_at ON loads(delivered_at DESC);
-CREATE INDEX IF NOT EXISTS idx_truck_telemetry_driver_truck_ts ON truck_telemetry(carrier_id, truck_id, ts DESC)
-  WHERE ts > now() - interval '7 days';
+CREATE INDEX IF NOT EXISTS idx_truck_telemetry_driver_truck_ts ON truck_telemetry(carrier_id, truck_id, ts DESC);
 
 -- Enable RLS (Row Level Security) on sensitive tables
 ALTER TABLE driver_sessions ENABLE ROW LEVEL SECURITY;
