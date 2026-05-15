@@ -7,8 +7,18 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
+# Install system dependencies required for building wheels
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    libxml2-dev \
+    libxslt1-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Upgrade pip and install wheel to ensure binary packages are preferred
+RUN pip install --upgrade pip setuptools wheel
+
 COPY requirements.txt .
-RUN pip install -r requirements.txt
+RUN pip install --prefer-binary -r requirements.txt
 
 COPY app ./app
 COPY scripts ./scripts
