@@ -715,6 +715,7 @@ td.td-name{font-weight:600;color:var(--navy);}
     <div class="sb-item" onclick="nav('agents')"><span class="sb-icon">🤖</span> AI Agents <span class="sb-badge" id="agents-notif" style="display:none">●</span></div>
     <div class="sb-item" onclick="nav('execution')"><span class="sb-icon">⚙️</span> Execution Engine</div>
     <div class="sb-item" onclick="nav('founders')"><span class="sb-icon">🏁</span> Founders Program</div>
+    <div class="sb-item" onclick="nav('crm')"><span class="sb-icon">📇</span> Lead CRM</div>
     <div class="sb-item" onclick="nav('leads')"><span class="sb-icon">🎯</span> Lead Pipeline</div>
     <div class="sb-item" onclick="nav('exec-command')"><span class="sb-icon">🎖️</span> Exec Command <span class="sb-badge" id="exec-esc-notif" style="display:none">●</span></div>
     <div class="sb-item" onclick="nav('email')"><span class="sb-icon">📧</span> Email Center</div>
@@ -1459,6 +1460,48 @@ td.td-name{font-weight:600;color:var(--navy);}
           </div>
         </div>
         <div id="vault-table"><div class="loading"><div class="spin"></div>Loading vault…</div></div>
+      </div>
+    </div>
+
+    <!-- ── CRM / LEADS PAGE ── -->
+    <div class="page" id="page-crm">
+      <div class="page-hdr">
+        <div class="page-hdr-l">
+          <div class="chip">CRM</div>
+          <h2>Leads & Calls</h2>
+        </div>
+        <div class="page-hdr-r">
+          <div style="display:flex;gap:8px;align-items:center">
+            <select id="crm-filter-stage" style="padding:6px 10px;border:1px solid var(--border);border-radius:4px;font-size:13px">
+              <option value="">All stages</option>
+              <option value="new">New</option>
+              <option value="contacted">Contacted</option>
+              <option value="interested">Interested</option>
+              <option value="not_interested">Not interested</option>
+              <option value="won">Won</option>
+            </select>
+            <input type="text" id="crm-search" placeholder="Search by company/phone..." style="padding:6px 10px;border:1px solid var(--border);border-radius:4px;font-size:13px;width:200px">
+          </div>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:350px 1fr;gap:16px;padding:16px;height:100%;overflow:hidden">
+        <!-- Left: Leads List -->
+        <div style="display:flex;flex-direction:column;border-right:1px solid var(--border);padding-right:16px">
+          <div style="flex:1;overflow-y:auto;border:1px solid var(--border);border-radius:6px">
+            <div id="crm-leads-list" style="min-height:200px"><div class="loading"><div class="spin"></div>Loading leads…</div></div>
+          </div>
+          <div style="margin-top:12px;font-size:12px;color:var(--muted)">
+            <span id="crm-leads-count">0</span> leads
+          </div>
+        </div>
+
+        <!-- Right: Lead Detail & Call History -->
+        <div style="display:flex;flex-direction:column;overflow:hidden">
+          <div id="crm-detail" style="flex:1;overflow-y:auto;border:1px solid var(--border);border-radius:6px;padding:16px">
+            <div style="text-align:center;color:var(--muted);padding:40px 20px">Select a lead to view details and call history</div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -4540,6 +4583,201 @@ async function loadTriggerStatus() {
     };
   }
 })();
+
+// ──── CRM / LEADS FUNCTIONS ────
+let crmAllLeads = [];
+let crmSelectedLead = null;
+
+async function loadCrmLeads(){
+  try {
+    const r = await apiFetch('/api/leads?limit=500');
+    const d = await r.json();
+    crmAllLeads = d.items || [];
+    document.getElementById('crm-leads-count').textContent = crmAllLeads.length;
+    renderCrmLeadsList();
+  } catch (e) {
+    document.getElementById('crm-leads-list').innerHTML = `<div style="color:var(--red);padding:8px">Error loading leads</div>`;
+  }
+}
+
+function renderCrmLeadsList(){
+  const stage = document.getElementById('crm-filter-stage').value;
+  const search = document.getElementById('crm-search').value.toLowerCase();
+
+  let filtered = crmAllLeads;
+  if (stage) filtered = filtered.filter(l => l.stage === stage);
+  if (search) filtered = filtered.filter(l =>
+    (l.company_name || '').toLowerCase().includes(search) ||
+    (l.phone || '').includes(search) ||
+    (l.email || '').toLowerCase().includes(search)
+  );
+
+  const html = filtered.map(l => `
+    <div class="crm-lead-item ${crmSelectedLead?.id === l.id ? 'active' : ''}" onclick="selectCrmLead('${l.id}')" style="padding:10px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .2s;background:${crmSelectedLead?.id === l.id ? 'rgba(0,0,0,.05)' : 'transparent'}">
+      <div style="font-weight:500;margin-bottom:4px">${l.company_name || 'Unknown'}</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:2px">${l.phone || l.email || 'No contact'}</div>
+      <div style="font-size:11px;display:flex;gap:4px">
+        <span class="badge badge-${l.stage === 'interested' ? 'green' : l.stage === 'not_interested' ? 'red' : 'orange'}">${l.stage || 'new'}</span>
+        <span style="color:var(--muted)">Score: ${l.score || 0}</span>
+      </div>
+    </div>
+  `).join('');
+
+  document.getElementById('crm-leads-list').innerHTML = html || '<div style="padding:8px;color:var(--muted);font-size:12px">No leads</div>';
+}
+
+async function selectCrmLead(leadId){
+  const lead = crmAllLeads.find(l => l.id === leadId);
+  if (!lead) return;
+  crmSelectedLead = lead;
+  renderCrmLeadsList();
+  await renderCrmLeadDetail(lead);
+}
+
+async function renderCrmLeadDetail(lead){
+  const detailEl = document.getElementById('crm-detail');
+
+  let callHistory = [];
+  try {
+    const r = await apiFetch('/api/prospecting/calls?limit=50');
+    const d = await r.json();
+    if (lead.phone) {
+      const normalized = '+1' + lead.phone.replace(/\D/g, '').slice(-10);
+      callHistory = (d.calls || []).filter(c => {
+        const p = c.payload || {};
+        return p.phone === lead.phone || p.phone === normalized;
+      });
+    }
+  } catch (e) {
+    console.error('Error loading call history:', e);
+  }
+
+  const lastTouch = lead.last_touch_at ? new Date(lead.last_touch_at).toLocaleString('en-US', {month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}) : '—';
+  const nextTouch = lead.next_touch_at ? new Date(lead.next_touch_at).toLocaleString('en-US', {month:'short',day:'numeric'}) : '—';
+
+  const html = `
+    <div>
+      <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:16px">
+        <div>
+          <h3 style="margin:0 0 4px 0">${lead.company_name || 'Unknown'}</h3>
+          <div style="font-size:12px;color:var(--muted)">
+            ${lead.contact_name ? `<div>${lead.contact_name}</div>` : ''}
+            ${lead.phone ? `<div>${lead.phone}</div>` : ''}
+            ${lead.email ? `<div>${lead.email}</div>` : ''}
+          </div>
+        </div>
+        <div style="display:flex;gap:4px">
+          ${lead.phone ? `<button class="btn-gold" onclick="vanceCallLead('${lead.company_name}', '${lead.phone}')" style="padding:6px 12px;font-size:12px">📞 Call</button>` : ''}
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;padding:12px;background:rgba(0,0,0,.05);border-radius:6px">
+        <div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:4px">Status</div>
+          <select onchange="updateLeadStage('${lead.id}', this.value)" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:4px;font-size:13px">
+            <option value="new" ${lead.stage === 'new' ? 'selected' : ''}>New</option>
+            <option value="contacted" ${lead.stage === 'contacted' ? 'selected' : ''}>Contacted</option>
+            <option value="interested" ${lead.stage === 'interested' ? 'selected' : ''}>Interested</option>
+            <option value="not_interested" ${lead.stage === 'not_interested' ? 'selected' : ''}>Not interested</option>
+            <option value="won" ${lead.stage === 'won' ? 'selected' : ''}>Won</option>
+          </select>
+        </div>
+        <div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:4px">Score</div>
+          <div style="padding:6px 8px;background:white;border:1px solid var(--border);border-radius:4px;font-weight:500">${lead.score || 0}</div>
+        </div>
+        <div style="grid-column:1/-1">
+          <div style="font-size:11px;color:var(--muted);margin-bottom:4px">Source</div>
+          <div style="font-size:12px">${lead.source || '—'}</div>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;font-size:12px">
+        <div>
+          <div style="color:var(--muted);margin-bottom:2px">Last touch</div>
+          <div>${lastTouch}</div>
+        </div>
+        <div>
+          <div style="color:var(--muted);margin-bottom:2px">Next follow-up</div>
+          <div>${nextTouch}</div>
+        </div>
+      </div>
+
+      ${callHistory.length > 0 ? `
+        <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border)">
+          <h4 style="margin:0 0 8px 0;font-size:13px">Call History (${callHistory.length})</h4>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            ${callHistory.map(c => {
+              const ts = c.ts ? new Date(c.ts).toLocaleString('en-US', {month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}) : '—';
+              const ok = c.result === 'started';
+              return `
+                <div style="padding:8px;background:rgba(0,0,0,.03);border-radius:4px;border-left:3px solid ${ok ? 'var(--green)' : 'var(--orange)'}">
+                  <div style="display:flex;justify-content:space-between;margin-bottom:2px">
+                    <div style="font-weight:500;font-size:12px">${c.payload?.name || c.action || '—'}</div>
+                    <div style="font-size:11px;color:var(--muted)">${ts}</div>
+                  </div>
+                  <div style="font-size:11px;color:var(--muted)">
+                    Status: <span class="badge badge-${ok ? 'green' : 'orange'}">${c.result || 'pending'}</span>
+                  </div>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        </div>
+      ` : '<div style="margin-top:16px;padding:12px;background:rgba(0,0,0,.03);border-radius:4px;color:var(--muted);font-size:12px">No call history yet</div>'}
+    </div>
+  `;
+
+  detailEl.innerHTML = html;
+}
+
+async function updateLeadStage(leadId, newStage){
+  try {
+    await apiFetch(`/api/leads/${leadId}`, {
+      method: 'PATCH',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({stage: newStage, last_touch_at: new Date().toISOString()})
+    });
+    const lead = crmAllLeads.find(l => l.id === leadId);
+    if (lead) {
+      lead.stage = newStage;
+      lead.last_touch_at = new Date().toISOString();
+      renderCrmLeadsList();
+      renderCrmLeadDetail(lead);
+    }
+  } catch (e) {
+    alert('Error updating lead: ' + e.message);
+  }
+}
+
+function vanceCallLead(name, phone){
+  nav('agents');
+  setTimeout(() => {
+    document.getElementById('vc-name').value = name;
+    document.getElementById('vc-phone').value = phone;
+    vanceCall();
+  }, 100);
+}
+
+// Hook nav to load CRM when page is selected
+if (typeof nav === 'function') {
+  const origNav = nav.bind(window);
+  window.nav = function(id) {
+    if (id === 'crm') {
+      loadCrmLeads();
+      setTimeout(() => {
+        const stageFilter = document.getElementById('crm-filter-stage');
+        const searchInput = document.getElementById('crm-search');
+        if (stageFilter && !stageFilter._crmListener) {
+          stageFilter._crmListener = true;
+          stageFilter.addEventListener('change', renderCrmLeadsList);
+          searchInput.addEventListener('input', renderCrmLeadsList);
+        }
+      }, 100);
+    }
+    return origNav(id);
+  };
+}
 </script>
 <!-- END EXECUTIVE COMMAND PANEL -->
 
