@@ -159,12 +159,16 @@ def _schedule_post_call_email(
     company_name: str,
     lead_id: str,
     phone_number: str,
-    delay_seconds: int = 180,
 ) -> None:
-    """Fire post-call intro email after a delay using a daemon thread."""
-    from ..prospecting.follow_up import send_post_call_email
+    """Schedule both follow-up emails after a call ends.
 
-    def _send():
+    Email 1 — 3 minutes:  Brief "How We Work" process intro (Nova's closing promise)
+    Email 2 — 60 minutes: Full onboarding guide with 5-step roadmap, docs needed,
+                           pricing breakdown, benefits, and Calendly CTA
+    """
+    from ..prospecting.follow_up import send_post_call_email, send_onboarding_guide_email
+
+    def _send_intro():
         try:
             send_post_call_email(
                 lead_id=lead_id,
@@ -177,11 +181,30 @@ def _schedule_post_call_email(
             log_agent("nova", "post_call_email_error", carrier_id=None,
                       payload={"lead_id": lead_id}, error=str(exc))
 
-    t = threading.Timer(delay_seconds, _send)
-    t.daemon = True
-    t.start()
-    log_agent("nova", "post_call_email_scheduled",
-              payload={"lead_id": lead_id, "delay_s": delay_seconds, "email": prospect_email})
+    def _send_guide():
+        try:
+            send_onboarding_guide_email(
+                lead_id=lead_id,
+                prospect_name=prospect_name,
+                prospect_email=prospect_email,
+                company_name=company_name,
+                phone_number=phone_number,
+            )
+        except Exception as exc:  # noqa: BLE001
+            log_agent("nova", "onboarding_guide_error", carrier_id=None,
+                      payload={"lead_id": lead_id}, error=str(exc))
+
+    t1 = threading.Timer(180, _send_intro)    # 3 minutes
+    t1.daemon = True
+    t1.start()
+
+    t2 = threading.Timer(3600, _send_guide)   # 1 hour
+    t2.daemon = True
+    t2.start()
+
+    log_agent("nova", "post_call_emails_scheduled",
+              payload={"lead_id": lead_id, "email": prospect_email,
+                       "intro_delay_s": 180, "guide_delay_s": 3600})
 
 
 def handle_bland_webhook(event: dict[str, Any]) -> dict[str, Any]:
