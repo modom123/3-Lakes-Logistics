@@ -330,12 +330,16 @@ def h13_stripe_attach_subscription(carrier_id, contract_id, payload):
 def h14_esign_send_agreement(carrier_id, contract_id, payload):
     """Send carrier onboarding packet for e-signature via Adobe Sign.
 
-    Sends the Dispatch Agreement (required e-sign).
-    W9 and COI are uploaded separately by the carrier — they are NOT e-signed by us.
+    Bundles all required signable documents into one signing session:
+      1. Dispatch Agreement  (required — ADOBE_TEMPLATE_CARRIER_AGREEMENT)
+      2. W9 (blank IRS form) (optional — ADOBE_TEMPLATE_W9, carrier fills out + signs)
+
+    COI is NOT sent — it comes from the carrier's insurance company.
 
     Requires in .env:
-        ADOBE_INTEGRATION_KEY — from Adobe Sign admin → Account → API → Integration Key
-        ADOBE_TEMPLATE_CARRIER_AGREEMENT — library doc ID from Adobe Sign admin templates
+        ADOBE_INTEGRATION_KEY            — Adobe Sign admin → Account → API → Integration Key
+        ADOBE_TEMPLATE_CARRIER_AGREEMENT — library doc ID for Dispatch Agreement template
+        ADOBE_TEMPLATE_W9                — library doc ID for blank W9 template (optional)
     """
     c = _carrier(carrier_id)
     s = get_settings()
@@ -349,25 +353,34 @@ def h14_esign_send_agreement(carrier_id, contract_id, payload):
     if not email:
         return {"sent": False, "reason": "no_carrier_email"}
 
-    # If Adobe Sign is configured, send a real agreement
+    # If Adobe Sign is configured, send real documents
     if s.adobe_integration_key and s.adobe_template_carrier_agreement:
         try:
             from ...integrations.adobe_sign import get_adobe_sign_client
             client = get_adobe_sign_client()
-            result = client.send_template_for_signature(
-                template_id=s.adobe_template_carrier_agreement,
-                agreement_name=f"3 Lakes Logistics — Dispatch Agreement ({name})",
+
+            # Build template list — always include dispatch agreement; add W9 if configured
+            template_ids = [s.adobe_template_carrier_agreement]
+            docs_being_sent = ["dispatch_agreement"]
+            if s.adobe_template_w9:
+                template_ids.append(s.adobe_template_w9)
+                docs_being_sent.append("w9")
+
+            doc_label = " + W9" if s.adobe_template_w9 else ""
+            result = client.send_templates_for_signature(
+                template_ids=template_ids,
+                agreement_name=f"3 Lakes Logistics — Onboarding Packet ({name})",
                 recipient_email=email,
                 recipient_name=name,
                 message=(
-                    "Welcome to 3 Lakes Logistics! Please review and sign your "
-                    "Dispatch Agreement to complete your onboarding. "
-                    "This covers our dispatch terms, fees, and your Founders pricing lock."
+                    f"Welcome to 3 Lakes Logistics! Your onboarding packet is ready to sign.\n\n"
+                    f"This includes your Dispatch Agreement{doc_label}. "
+                    f"Please review each document, fill in your details, and sign. "
+                    f"Takes about 5 minutes. Questions? Reply to this email."
                 ),
             )
             if result:
                 agreement_id = result.get("id")
-                # Store agreement ID on carrier record for step 15 to track
                 sb = _db()
                 if sb and carrier_id:
                     try:
@@ -378,13 +391,14 @@ def h14_esign_send_agreement(carrier_id, contract_id, payload):
                         pass
                 log_agent("esign", "send_agreement",
                           carrier_id=str(carrier_id) if carrier_id else None,
-                          payload={"email": email, "agreement_id": agreement_id},
+                          payload={"email": email, "agreement_id": agreement_id,
+                                   "docs": docs_being_sent},
                           result="sent_via_adobe_sign")
                 return {
                     "sent": True,
                     "recipient_email": email,
                     "recipient_name": name,
-                    "doc_type": "dispatch_agreement",
+                    "docs": docs_being_sent,
                     "agreement_id": agreement_id,
                     "esign_status": "out_for_signature",
                     "provider": "adobe_sign",

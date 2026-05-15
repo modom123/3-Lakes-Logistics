@@ -36,19 +36,21 @@ class AdobeSignClient:
             raise ValueError("Adobe Sign not configured — set ADOBE_INTEGRATION_KEY in .env")
         return {"Authorization": f"Bearer {key}", "Accept": "application/json"}
 
-    def send_template_for_signature(
+    def send_templates_for_signature(
         self,
-        template_id: str,
+        template_ids: list[str],
         agreement_name: str,
         recipient_email: str,
         recipient_name: str,
         message: str = "Please review and sign this agreement.",
         access_token: str | None = None,
     ) -> Optional[dict]:
-        """Send a saved Adobe Sign library template to a recipient for signature.
+        """Send one or more Adobe Sign library templates to a recipient in a single session.
 
-        This is the recommended flow — create the template once in Adobe Sign admin,
-        then reference it by library_doc_id for every new agreement send.
+        All documents are bundled into one signing email — the carrier fills out and
+        signs everything (e.g. Dispatch Agreement + W9) in one step.
+
+        template_ids: list of Adobe Sign library document IDs, presented to signer in order.
 
         Returns {"id": agreement_id, "name": ..., "status": "OUT_FOR_SIGNATURE"} or None.
         """
@@ -57,7 +59,7 @@ class AdobeSignClient:
             headers = self._auth_headers(access_token)
             headers["Content-Type"] = "application/json"
             payload = {
-                "fileInfos": [{"libraryDocumentId": template_id}],
+                "fileInfos": [{"libraryDocumentId": tid} for tid in template_ids],
                 "name": agreement_name,
                 "participantSetsInfo": [{
                     "memberInfos": [{"email": recipient_email, "name": recipient_name}],
@@ -71,7 +73,8 @@ class AdobeSignClient:
             r = httpx.post(url, headers=headers, json=payload, timeout=30)
             r.raise_for_status()
             data = r.json()
-            log.info("Adobe Sign agreement %s sent to %s", data.get("id"), recipient_email)
+            log.info("Adobe Sign agreement %s (%d docs) sent to %s",
+                     data.get("id"), len(template_ids), recipient_email)
             return data
         except ValueError as e:
             log.error("Adobe Sign config error: %s", e)
@@ -80,8 +83,27 @@ class AdobeSignClient:
             log.error("Adobe Sign API error %s: %s", e.response.status_code, e.response.text)
             return None
         except Exception as e:  # noqa: BLE001
-            log.error("Adobe Sign send_template_for_signature failed: %s", e)
+            log.error("Adobe Sign send_templates_for_signature failed: %s", e)
             return None
+
+    def send_template_for_signature(
+        self,
+        template_id: str,
+        agreement_name: str,
+        recipient_email: str,
+        recipient_name: str,
+        message: str = "Please review and sign this agreement.",
+        access_token: str | None = None,
+    ) -> Optional[dict]:
+        """Convenience wrapper for sending a single template."""
+        return self.send_templates_for_signature(
+            template_ids=[template_id],
+            agreement_name=agreement_name,
+            recipient_email=recipient_email,
+            recipient_name=recipient_name,
+            message=message,
+            access_token=access_token,
+        )
 
     def get_access_token(self, auth_code: str, redirect_uri: str) -> Optional[str]:
         """Exchange authorization code for access token (OAuth 2.0)."""
