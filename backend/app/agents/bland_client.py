@@ -72,6 +72,11 @@ def start_outbound_call(
     if not s.bland_ai_api_key:
         return {"status": "error", "error": "BLAND_AI_API_KEY not configured"}
 
+    # Verify API key and org_id are different — if both are the same "org_..." value,
+    # the API key is likely incorrect. Check the Bland dashboard for proper API key format.
+    if s.bland_ai_api_key == s.bland_ai_org_id and s.bland_ai_api_key.startswith("org_"):
+        return {"status": "error", "error": "BLAND_AI_API_KEY appears to be set to org_id value; verify in dashboard"}
+
     # Build the conversation context
     context = f"""Calling {prospect_name} at {company_name or 'unknown company'}.
 DOT#: {dot_number or 'unknown'}
