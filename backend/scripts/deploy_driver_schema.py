@@ -20,10 +20,24 @@ from psycopg2 import sql
 env_path = Path(__file__).parent.parent / ".env"
 if not env_path.exists():
     env_path = Path(__file__).parent.parent.parent / ".env"
-load_dotenv(env_path)
 
-SUPABASE_URL = os.getenv("SUPABASE_URL", "")
-SUPABASE_SERVICE_ROLE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "")
+# Load explicitly and override
+load_dotenv(env_path, override=True)
+
+# Read from file directly if load_dotenv didn't work
+if not os.getenv("SUPABASE_URL"):
+    try:
+        with open(env_path, 'r') as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith('#') and '=' in line:
+                    key, value = line.split('=', 1)
+                    os.environ[key.strip()] = value.strip()
+    except Exception as e:
+        print(f"Warning: Could not read .env file directly: {e}")
+
+SUPABASE_URL = os.getenv("SUPABASE_URL", "").strip()
+SUPABASE_SERVICE_ROLE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "").strip()
 
 # Extract connection parameters from Supabase URL
 # URL format: https://xxxx.supabase.co
