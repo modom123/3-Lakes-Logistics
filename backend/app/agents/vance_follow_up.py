@@ -1,4 +1,4 @@
-"""Vance Follow-Up Agent — Step 36.
+"""Nova Follow-Up Agent — Step 36.
 
 After Vance qualifies an interested prospect:
 1. Send demo video email
@@ -37,14 +37,14 @@ def run(payload: dict[str, Any]) -> dict[str, Any]:
 
     if not call_outcome == "interested":
         return {
-            "agent": "vance_follow_up",
+            "agent": "nova_follow_up",
             "status": "skipped",
             "reason": f"outcome was {call_outcome}, not interested",
         }
 
     if not prospect_email or not phone_number:
         return {
-            "agent": "vance_follow_up",
+            "agent": "nova_follow_up",
             "status": "error",
             "error": "email and phone required for follow-up",
         }
@@ -60,7 +60,7 @@ def run(payload: dict[str, Any]) -> dict[str, Any]:
 
     if email_result.get("status") != "sent":
         return {
-            "agent": "vance_follow_up",
+            "agent": "nova_follow_up",
             "status": "error",
             "error": f"email failed: {email_result.get('error')}",
         }
@@ -73,7 +73,7 @@ def run(payload: dict[str, Any]) -> dict[str, Any]:
     )
 
     log_agent(
-        "vance_follow_up",
+        "nova_follow_up",
         "follow_up_sequence_started",
         payload={
             "lead_id": lead_id,
@@ -84,7 +84,7 @@ def run(payload: dict[str, Any]) -> dict[str, Any]:
     )
 
     return {
-        "agent": "vance_follow_up",
+        "agent": "nova_follow_up",
         "status": "success",
         "lead_id": lead_id,
         "prospect": prospect_name,

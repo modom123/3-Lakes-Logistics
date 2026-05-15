@@ -5,7 +5,7 @@ Cheaper than Vapi at scale, cleaner API, direct Claude integration.
 """
 from __future__ import annotations
 
-import json
+import threading
 from typing import Any
 
 import httpx
@@ -16,13 +16,13 @@ from ..settings import get_settings
 
 BLAND_API_URL = "https://api.bland.ai/v1"
 
-# Vance system prompt optimized for phone conversations
-VANCE_SYSTEM_PROMPT = """You are Vance, the outbound prospecting voice of 3 Lakes Logistics.
+# Nova system prompt optimized for phone conversations
+NOVA_SYSTEM_PROMPT = """You are Nova, the outbound prospecting voice of 3 Lakes Logistics.
 You call owner-operators and small fleets to enroll them in the Founders program
 ($300/mo lifetime lock, 100% keep of loads, full automation).
 
-Personality: Confident, direct, blue-collar. Never oversell or pushy.
-You're a peer, not a salesman.
+Personality: Warm, professional, direct. Never oversell or pushy.
+You're a knowledgeable peer helping them find a better way to run their business.
 
 Your goal: Qualify on: DOT# age, fleet size, current dispatch situation, pain points.
 If they're interested, offer a 15-min call with our Commander (human).
@@ -33,6 +33,7 @@ Rules:
 - If they're not interested, accept it gracefully and wish them well
 - Never pressure or follow up too hard
 - If they seem open, say: "Perfect. Let me get you scheduled with our Commander for a quick 15-min call tomorrow?"
+- Always end every call with: "We'll be following up with an email to get you familiar with our process."
 
 Script variables available:
 - prospect_name: Their name
@@ -86,11 +87,11 @@ Goal: Qualify and offer demo call with Commander."""
     try:
         payload = {
             "phone_number": phone,
-            "task": VANCE_SYSTEM_PROMPT,
+            "task": NOVA_SYSTEM_PROMPT,
             "context": context,
             "model": "claude-opus",  # Use Claude for better reasoning
             "language": "en",
-            "voice": "male",  # Neutral, professional voice
+            "voice": "maya",  # Professional female voice
             "reduce_latency": True,  # Optimize for conversational speed
             "metadata": {
                 "lead_id": lead_id,
@@ -119,7 +120,7 @@ Goal: Qualify and offer demo call with Commander."""
         call_id = data.get("call_id")
 
         log_agent(
-            "vance",
+            "nova",
             "bland_call_started",
             payload={
                 "lead_id": lead_id,
@@ -139,7 +140,7 @@ Goal: Qualify and offer demo call with Commander."""
     except httpx.HTTPError as e:
         error_msg = str(e)
         log_agent(
-            "vance",
+            "nova",
             "bland_call_failed",
             carrier_id=None,
             payload={"lead_id": lead_id, "phone": phone},
@@ -148,8 +149,39 @@ Goal: Qualify and offer demo call with Commander."""
         return {"status": "error", "error": error_msg}
     except Exception as e:  # noqa: BLE001
         error_msg = f"Unexpected error: {str(e)}"
-        log_agent("vance", "bland_call_error", carrier_id=None, payload={"lead_id": lead_id}, error=error_msg)
+        log_agent("nova", "bland_call_error", carrier_id=None, payload={"lead_id": lead_id}, error=error_msg)
         return {"status": "error", "error": error_msg}
+
+
+def _schedule_post_call_email(
+    prospect_name: str,
+    prospect_email: str,
+    company_name: str,
+    lead_id: str,
+    phone_number: str,
+    delay_seconds: int = 180,
+) -> None:
+    """Fire post-call intro email after a delay using a daemon thread."""
+    from ..prospecting.follow_up import send_post_call_email
+
+    def _send():
+        try:
+            send_post_call_email(
+                lead_id=lead_id,
+                prospect_name=prospect_name,
+                prospect_email=prospect_email,
+                company_name=company_name,
+                phone_number=phone_number,
+            )
+        except Exception as exc:  # noqa: BLE001
+            log_agent("nova", "post_call_email_error", carrier_id=None,
+                      payload={"lead_id": lead_id}, error=str(exc))
+
+    t = threading.Timer(delay_seconds, _send)
+    t.daemon = True
+    t.start()
+    log_agent("nova", "post_call_email_scheduled",
+              payload={"lead_id": lead_id, "delay_s": delay_seconds, "email": prospect_email})
 
 
 def handle_bland_webhook(event: dict[str, Any]) -> dict[str, Any]:
@@ -180,7 +212,7 @@ def handle_bland_webhook(event: dict[str, Any]) -> dict[str, Any]:
         cost = duration * 0.06 / 60  # $0.06/min base + LLM fees
 
         log_agent(
-            "vance",
+            "nova",
             "bland_call_completed",
             carrier_id=None,
             payload={
@@ -198,7 +230,18 @@ def handle_bland_webhook(event: dict[str, Any]) -> dict[str, Any]:
         reason = analysis.get("reason", "unknown")
         outcome = "interested" if success else "not_interested"
 
-        # Trigger follow-up sequence if interested
+        # Always schedule post-call intro email 3 minutes after call ends (if email known)
+        if prospect_email:
+            _schedule_post_call_email(
+                prospect_name=prospect_name,
+                prospect_email=prospect_email,
+                company_name=company_name,
+                lead_id=lead_id or "",
+                phone_number=phone_number,
+                delay_seconds=180,
+            )
+
+        # Trigger full follow-up sequence if prospect was interested
         follow_up_result = None
         if outcome == "interested" and prospect_email and phone_number:
             follow_up_result = run_follow_up({
@@ -226,7 +269,7 @@ def handle_bland_webhook(event: dict[str, Any]) -> dict[str, Any]:
     elif event_type == "call.failed":
         reason = event.get("reason", "unknown")
         log_agent(
-            "vance",
+            "nova",
             "bland_call_failed",
             carrier_id=None,
             payload={"lead_id": lead_id, "call_id": call_id},
@@ -241,7 +284,7 @@ def handle_bland_webhook(event: dict[str, Any]) -> dict[str, Any]:
 
     else:
         log_agent(
-            "vance",
+            "nova",
             f"bland_webhook:{event_type}",
             carrier_id=None,
             payload={"lead_id": lead_id, "call_id": call_id},

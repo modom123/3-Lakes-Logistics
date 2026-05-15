@@ -497,27 +497,54 @@ def h21_document_vault_create_folder(carrier_id, contract_id, payload):
         return {"created": False, "error": str(e)}
 
 
-# ── Step 22: document_vault.upload_agreement ──────────────────────────────────
+# ── Step 22: document_vault.upload_docs ──────────────────────────────────────
 
 def h22_document_vault_upload_agreement(carrier_id, contract_id, payload):
+    """Upload carrier onboarding packet documents: agreement, W9, and COI."""
     if not carrier_id:
         return {"uploaded": False}
-    doc_url = payload.get("agreement_url") or payload.get("coi_url")
     sb = _db()
     if not sb:
         return {"uploaded": False, "note": "supabase_not_configured"}
-    try:
-        sb.table("document_vault").insert({
-            "carrier_id": str(carrier_id),
-            "contract_id": str(contract_id) if contract_id else None,
+
+    docs = [
+        {
             "doc_type": "carrier_agreement",
             "filename": "carrier_agreement_signed.pdf",
-            "storage_path": doc_url or f"carriers/{str(carrier_id)}/agreement.pdf",
+            "storage_path": payload.get("agreement_url") or f"carriers/{str(carrier_id)}/carrier_agreement_signed.pdf",
             "scan_status": "complete",
-        }).execute()
-        return {"uploaded": True, "doc_url": doc_url}
-    except Exception as e:  # noqa: BLE001
-        return {"uploaded": False, "error": str(e)}
+        },
+        {
+            "doc_type": "w9",
+            "filename": "w9.pdf",
+            "storage_path": payload.get("w9_url") or f"carriers/{str(carrier_id)}/w9.pdf",
+            "scan_status": payload.get("w9_url") and "complete" or "pending",
+        },
+        {
+            "doc_type": "coi",
+            "filename": "certificate_of_insurance.pdf",
+            "storage_path": payload.get("coi_url") or f"carriers/{str(carrier_id)}/coi.pdf",
+            "scan_status": payload.get("coi_url") and "complete" or "pending",
+        },
+    ]
+
+    uploaded = []
+    for doc in docs:
+        try:
+            sb.table("document_vault").insert({
+                "carrier_id": str(carrier_id),
+                "contract_id": str(contract_id) if contract_id else None,
+                **doc,
+            }).execute()
+            uploaded.append(doc["doc_type"])
+        except Exception:  # noqa: BLE001
+            pass
+
+    return {
+        "uploaded": bool(uploaded),
+        "docs": uploaded,
+        "pending_upload": [d["doc_type"] for d in docs if d["scan_status"] == "pending"],
+    }
 
 
 # ── Step 23: atlas.schedule_check_in ─────────────────────────────────────────

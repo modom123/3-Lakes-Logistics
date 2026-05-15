@@ -73,7 +73,7 @@ def send_follow_up_email(
         <div class="content">
             <p>Hi {prospect_name},</p>
 
-            <p>Thanks for taking my call! I'm pumped about the opportunity to get {company_name} enrolled in the Founders program.</p>
+            <p>Thanks for taking my call! I'm excited about the opportunity to get {company_name} enrolled in the Founders program.</p>
 
             <div class="video-container">
                 <p><strong>Watch this 3-minute overview:</strong></p>
@@ -104,7 +104,7 @@ def send_follow_up_email(
 
             <p>Looking forward to helping {company_name} scale!</p>
 
-            <p>Vance<br>
+            <p>Nova<br>
             3 Lakes Logistics<br>
             <em>Turning owner-operators into founders</em></p>
 
@@ -168,6 +168,149 @@ def send_follow_up_email(
             payload={"lead_id": lead_id, "prospect": prospect_name},
             error=error_msg,
         )
+        return {"status": "error", "error": error_msg}
+
+
+def send_post_call_email(
+    lead_id: str,
+    prospect_name: str,
+    prospect_email: str,
+    company_name: str,
+    phone_number: str,
+) -> dict[str, Any]:
+    """Send a brief process-intro email to every prospect 3 minutes after a call.
+
+    This goes to ALL prospects regardless of interest level — it's a friendly
+    follow-through on Nova's closing line: "We'll be following up with an email
+    to get you familiar with our process."
+    """
+    s = get_settings()
+    if not s.postmark_server_token:
+        return {"status": "error", "error": "postmark not configured"}
+
+    subject = f"Quick intro from Nova at 3 Lakes Logistics — {prospect_name}"
+
+    html_body = f"""
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body {{ font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; line-height: 1.6; color: #333; }}
+        .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+        .header {{ background: #1e40af; color: white; padding: 20px; border-radius: 8px 8px 0 0; text-align: center; }}
+        .header h1 {{ margin: 0; font-size: 22px; }}
+        .content {{ background: #f9fafb; padding: 30px; border-radius: 0 0 8px 8px; }}
+        .section {{ margin: 20px 0; }}
+        .cta-button {{ display: inline-block; background: #1e40af; color: white; padding: 12px 24px; border-radius: 6px; text-decoration: none; font-weight: bold; margin: 10px 0; }}
+        .process-steps {{ background: white; border-radius: 8px; padding: 20px; margin: 16px 0; }}
+        .step {{ display: flex; gap: 12px; margin: 12px 0; align-items: flex-start; }}
+        .step-num {{ background: #1e40af; color: white; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 12px; flex-shrink: 0; padding-top: 2px; }}
+        .footer {{ color: #666; font-size: 12px; margin-top: 20px; padding-top: 20px; border-top: 1px solid #ddd; }}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>3 Lakes Logistics — How We Work</h1>
+            <p>A quick overview so you know exactly what to expect</p>
+        </div>
+
+        <div class="content">
+            <p>Hi {prospect_name},</p>
+
+            <p>This is Nova from 3 Lakes — just wanted to follow through on what I mentioned on our call.
+            Here's a quick look at how our process works so you have all the info you need.</p>
+
+            <div class="process-steps">
+                <div class="step">
+                    <div class="step-num">1</div>
+                    <div><strong>Quick Qualification Call</strong> — That's what we just did! We make sure we're a good fit for each other before anything else.</div>
+                </div>
+                <div class="step">
+                    <div class="step-num">2</div>
+                    <div><strong>15-Min Commander Call</strong> — A brief call with our human Commander to review your lanes, equipment, and goals. No pressure, just a real conversation.</div>
+                </div>
+                <div class="step">
+                    <div class="step-num">3</div>
+                    <div><strong>Onboarding Packet</strong> — We send you a digital packet: carrier agreement, W9, insurance COI on file. Signed electronically in minutes.</div>
+                </div>
+                <div class="step">
+                    <div class="step-num">4</div>
+                    <div><strong>Founders Pricing Locked</strong> — $300/month, lifetime rate. Your loads, your earnings — 100% of what brokers pay goes to you.</div>
+                </div>
+                <div class="step">
+                    <div class="step-num">5</div>
+                    <div><strong>Full Automation Live</strong> — Loads dispatched directly to your app. Check-calls handled. Rate confirmations sent. You drive, we handle the rest.</div>
+                </div>
+            </div>
+
+            <div class="section">
+                <p>If you have any questions or want to move forward, just reply to this email or book a quick call:</p>
+                <p style="text-align: center;">
+                    <a href="{CALENDLY_BOOKING_URL}" class="cta-button">📅 Book Your Commander Call</a>
+                </p>
+            </div>
+
+            <p>No obligation — just here if you want to learn more.</p>
+
+            <p>Nova<br>
+            3 Lakes Logistics<br>
+            <em>Automated dispatch for owner-operators</em></p>
+
+            <div class="footer">
+                <p>You received this because we spoke today. Reply STOP to opt out of future messages.</p>
+                <p><a href="https://3lakeslogistics.com/unsubscribe">Unsubscribe</a></p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+"""
+
+    try:
+        r = httpx.post(
+            "https://api.postmarkapp.com/email",
+            headers={
+                "X-Postmark-Server-Token": s.postmark_server_token,
+                "Content-Type": "application/json",
+            },
+            json={
+                "From": s.postmark_from_email,
+                "To": prospect_email,
+                "Subject": subject,
+                "HtmlBody": html_body,
+                "Metadata": {
+                    "lead_id": lead_id,
+                    "type": "nova_post_call",
+                },
+            },
+            timeout=15,
+        )
+        r.raise_for_status()
+
+        data = r.json()
+        message_id = data.get("MessageID")
+
+        from ..logging_service import log_agent
+        log_agent(
+            "nova",
+            "post_call_email_sent",
+            payload={
+                "lead_id": lead_id,
+                "prospect": prospect_name,
+                "company": company_name,
+                "email": prospect_email,
+            },
+            result=message_id,
+        )
+
+        return {"status": "sent", "message_id": message_id}
+
+    except Exception as e:  # noqa: BLE001
+        error_msg = str(e)
+        from ..logging_service import log_agent
+        log_agent("nova", "post_call_email_failed",
+                  payload={"lead_id": lead_id, "prospect": prospect_name}, error=error_msg)
         return {"status": "error", "error": error_msg}
 
 
