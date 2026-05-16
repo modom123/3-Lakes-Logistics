@@ -2188,7 +2188,7 @@ async function doLogout(){
 sb.auth.getSession().then(({ data: { session } }) => {
   if(session?.user) showApp(session.user);
   else showLogin();
-});
+}).catch(() => showLogin());
 
 // Also handle login-password Enter key
 document.addEventListener('DOMContentLoaded', () => {
@@ -2203,8 +2203,8 @@ let allCarriers=[], allLoads=[], allInvoices=[], currentInvFilter='all', loadCou
 const pageNames={dashboard:'Dashboard',dispatch:'Dispatch Board',carriers:'Carriers',loads:'Load Manager',invoices:'Invoices & Billing',compliance:'DOT Compliance',ifta:'IFTA / Permits',insurance:'Insurance',revenue:'Revenue Tracker',providers:'Compliance Providers',checklist:'Daily Checklist',notes:'Dispatcher Notes',reports:'Team Reports','exec-command':'Exec Command',agents:'AI Agents',founders:'Founders Program',crm:'Lead CRM',leads:'Lead Pipeline',execution:'Execution Engine',email:'Email Center',vault:'Document Vault',clm:'CLM Scanner',ledger:'Atomic Ledger'};
 
 // ── 3 Lakes Logistics Backend API (FastAPI) ──
-const API_BASE = (window.__3LL_API_BASE || 'http://localhost:8080').replace(/\/$/,'');
-const API_TOKEN = (window.__3LL_API_TOKEN || localStorage.getItem('3LL_API_TOKEN') || 'change-me-in-prod');
+const API_BASE = (window.__3LL_API_BASE || localStorage.getItem('3LL_API_BASE') || 'http://localhost:8080').replace(/\/$/,'');
+const API_TOKEN = (window.__3LL_API_TOKEN || localStorage.getItem('3LL_API_TOKEN') || '');
 
 // ── Execution Engine Trigger Helper ──
 // Called after every Supabase write so the backend can run the right domain.
@@ -2897,7 +2897,7 @@ async function ecLoadContingencies(){
       const el=document.getElementById(countMap[p.name]);if(el)el.textContent=p.trigger_count||0;
       window._ecContIds[p.name]=p.id;
     });
-  }catch(e){}
+  }catch(e){console.error('ecLoadContingencies:',e);}
 }
 function ecShowEscModal(){document.getElementById('ec-esc-modal').style.display='flex';}
 function ecShowKpiModal(){document.getElementById('ec-kpi-modal').style.display='flex';}
@@ -3278,7 +3278,7 @@ async function vanceCall(){
   btn.disabled=true;btn.textContent='Dialing…';
   res.style.display='none';
   try{
-    const r=await apiFetch('/api/prospecting/call',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,phone,notes})});
+    const r=await apiFetch('/api/prospecting/call','POST',{name,phone,notes});
     const d=await r.json();
     if(d.ok){
       res.style.display='block';res.style.background='rgba(34,197,94,.1)';res.style.color='var(--green)';
@@ -3451,7 +3451,7 @@ async function runCLMScan(){
     document.getElementById('clm-result-panel').style.display='block';
     document.getElementById('clm-scan-panel').style.display='none';
     loadCLMList();
-    showToast('✅ Contract scanned — '+data.fields_extracted+' fields extracted');
+    toast('✅ Contract scanned — '+data.fields_extracted+' fields extracted');
   }catch(e){alert('Scan failed: '+e.message);}
   btn.disabled=false;btn.textContent='🤖 Scan with Claude AI';
 }
@@ -3540,7 +3540,7 @@ async function loadExecutionDomains(){
         <div style="font-size:26px;font-weight:900;color:${colors[d.domain]||'var(--blue)'}">${d.step_count}</div>
         <div style="font-size:11px;color:var(--muted)">Steps ${d.step_range}</div>
       </div>`).join('');
-  }catch(e){}
+  }catch(e){console.error('loadExecutionDomains:',e);document.getElementById('exec-domains').innerHTML='<div style="color:var(--red);padding:12px">Failed to load domains — check backend connection.</div>';}
 }
 
 async function loadExecutionSteps(){
@@ -4733,11 +4733,7 @@ async function renderCrmLeadDetail(lead){
 
 async function updateLeadStage(leadId, newStage){
   try {
-    await apiFetch(`/api/leads/${leadId}`, {
-      method: 'PATCH',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({stage: newStage, last_touch_at: new Date().toISOString()})
-    });
+    await apiFetch(`/api/leads/${leadId}`, 'PATCH', {stage: newStage, last_touch_at: new Date().toISOString()});
     const lead = crmAllLeads.find(l => l.id === leadId);
     if (lead) {
       lead.stage = newStage;
