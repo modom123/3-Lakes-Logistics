@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "dev": "capacitor serve",
-    "build": "mkdir -p public && cp eagleeye.html public/eagleeye.html && cp index.html public/index.html && cp privacy-policy.html public/ && cp data-safety.html public/ 2>/dev/null; exit 0",
+    "build": "mkdir -p public && cp eagleeye.html public/eagleeye.html && cp index.html public/index.html && cp privacy-policy.html public/ && cp data-safety.html public/ 2>/dev/null; mkdir -p public/shared && cp shared/config.js public/shared/config.js; node -e \"const fs=require('fs');let c=fs.readFileSync('public/shared/config.js','utf8');c=c.replace(\\\"'http://localhost:8080'\\\",\\\"'\"+(process.env.API_BASE_URL||'http://localhost:8080')+\"'\\\");fs.writeFileSync('public/shared/config.js',c);\"; exit 0",
     "cap:add:ios": "capacitor add ios",
     "cap:add:android": "capacitor add android",
     "cap:sync": "capacitor sync",

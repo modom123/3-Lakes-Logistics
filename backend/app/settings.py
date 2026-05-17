@@ -10,7 +10,7 @@ class Settings(BaseSettings):
 
     env: str = "development"
     log_level: str = "INFO"
-    cors_origins: str = "http://localhost:3000"
+    cors_origins: str = "http://localhost:3000,http://localhost:8080,https://3-lakes-logistics.vercel.app,https://3-lakes-logistic.vercel.app"
     api_bearer_token: str = "change-me-in-prod"
 
     supabase_url: str = ""
