@@ -11,7 +11,7 @@ from typing import Annotated
 from pydantic import BaseModel
 from fastapi import APIRouter, HTTPException, Depends, status
 
-from ..supabase_client import supabase_client
+from ..supabase_client import get_supabase
 from ..logging_service import get_logger
 from .routes_driver_auth import require_driver_token
 from .deps import require_bearer
@@ -64,7 +64,7 @@ async def register_fcm_token(req: FCMTokenRequest, session: DriverSession):
         )
 
     try:
-        supabase_client.table("drivers").update({
+        get_supabase().table("drivers").update({
             "fcm_token": req.token,
             "app_version": req.device_type
         }).eq("id", driver_id).execute()
@@ -112,7 +112,7 @@ async def send_push_notification(req: PushNotificationRequest):
     """
     try:
         # Get driver FCM token
-        driver_result = supabase_client.table("drivers").select(
+        driver_result = get_supabase().table("drivers").select(
             "id, fcm_token, first_name"
         ).eq("id", req.driver_id).single().execute()
 
@@ -149,7 +149,7 @@ async def broadcast_push_notification(req: BroadcastNotificationRequest):
     """
     try:
         # Get drivers with FCM tokens
-        query = supabase_client.table("drivers").select(
+        query = get_supabase().table("drivers").select(
             "id, fcm_token, first_name"
         ).neq("fcm_token", "")
 
@@ -200,7 +200,7 @@ async def broadcast_push_notification(req: BroadcastNotificationRequest):
 async def notify_driver_new_load_offer(driver_id: str, load_number: str, route: str):
     """Notify driver of new load offer."""
     try:
-        driver_result = supabase_client.table("drivers").select(
+        driver_result = get_supabase().table("drivers").select(
             "fcm_token, first_name"
         ).eq("id", driver_id).single().execute()
 
@@ -219,7 +219,7 @@ async def notify_driver_new_load_offer(driver_id: str, load_number: str, route: 
 async def notify_driver_new_message(driver_id: str, sender: str):
     """Notify driver of new message from dispatch."""
     try:
-        driver_result = supabase_client.table("drivers").select(
+        driver_result = get_supabase().table("drivers").select(
             "fcm_token"
         ).eq("id", driver_id).single().execute()
 
@@ -238,7 +238,7 @@ async def notify_driver_new_message(driver_id: str, sender: str):
 async def notify_driver_hos_warning(driver_id: str, warning: str):
     """Notify driver of HOS violation warning."""
     try:
-        driver_result = supabase_client.table("drivers").select(
+        driver_result = get_supabase().table("drivers").select(
             "fcm_token"
         ).eq("id", driver_id).single().execute()
 
@@ -257,7 +257,7 @@ async def notify_driver_hos_warning(driver_id: str, warning: str):
 async def notify_driver_payout_received(driver_id: str, amount: str):
     """Notify driver payout received."""
     try:
-        driver_result = supabase_client.table("drivers").select(
+        driver_result = get_supabase().table("drivers").select(
             "fcm_token"
         ).eq("id", driver_id).single().execute()
 
