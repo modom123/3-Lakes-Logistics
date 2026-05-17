@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import re
-from fastapi import APIRouter, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from ..logging_service import get_logger
 from ..supabase_client import get_supabase
@@ -13,7 +13,7 @@ log = get_logger("email.routes")
 router = APIRouter()
 
 
-@router.get("/email-log", dependencies=[require_bearer()])
+@router.get("/email-log", dependencies=[Depends(require_bearer)])
 async def get_email_log(
     limit: int = Query(50, ge=1, le=200),
     status_filter: str | None = Query(None, alias="status"),
@@ -53,7 +53,7 @@ async def get_email_log(
         raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, str(e))
 
 
-@router.get("/email-log/{email_id}", dependencies=[require_bearer()])
+@router.get("/email-log/{email_id}", dependencies=[Depends(require_bearer)])
 async def get_email_detail(email_id: str) -> dict:
     """Get full email record with extracted data and linked load.
 
@@ -96,7 +96,7 @@ async def get_email_detail(email_id: str) -> dict:
         raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, str(e))
 
 
-@router.get("/email-log/{email_id}/attachments", dependencies=[require_bearer()])
+@router.get("/email-log/{email_id}/attachments", dependencies=[Depends(require_bearer)])
 async def get_email_attachments(email_id: str) -> dict:
     """Get list of attachments associated with an email."""
     try:
@@ -119,7 +119,7 @@ async def get_email_attachments(email_id: str) -> dict:
         raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, str(e))
 
 
-@router.post("/email/send-test", dependencies=[require_bearer()])
+@router.post("/email/send-test", dependencies=[Depends(require_bearer)])
 async def send_test_email(to_email: str, template: str) -> dict:
     """Send a test email using Postmark (faster than SendGrid).
 
@@ -233,7 +233,7 @@ async def send_test_email(to_email: str, template: str) -> dict:
         raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, str(e))
 
 
-@router.get("/email/templates", dependencies=[require_bearer()])
+@router.get("/email/templates", dependencies=[Depends(require_bearer)])
 async def get_templates() -> dict:
     """List all email templates."""
     try:
@@ -256,7 +256,7 @@ async def get_templates() -> dict:
         raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, str(e))
 
 
-@router.post("/email/templates/{template_name}", dependencies=[require_bearer()])
+@router.post("/email/templates/{template_name}", dependencies=[Depends(require_bearer)])
 async def update_template(
     template_name: str,
     subject: str,
@@ -305,7 +305,7 @@ async def update_template(
         raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, str(e))
 
 
-@router.get("/email/stats", dependencies=[require_bearer()])
+@router.get("/email/stats", dependencies=[Depends(require_bearer)])
 async def get_email_stats() -> dict:
     """Get email ingest statistics."""
     try:
@@ -333,7 +333,7 @@ async def get_email_stats() -> dict:
         }
 
 
-@router.post("/email/{email_id}/parse-rate-confirmation", dependencies=[require_bearer()])
+@router.post("/email/{email_id}/parse-rate-confirmation", dependencies=[Depends(require_bearer)])
 async def parse_rate_confirmation(email_id: str) -> dict:
     """Extract rate confirmation data from email and create/update load record."""
     try:

@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import httpx
-from fastapi import APIRouter, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from ..logging_service import get_logger
 from ..settings import get_settings
@@ -11,7 +11,7 @@ from ..utils.load_transformer import transform_dat_load
 from .deps import require_bearer
 
 log = get_logger("dat.routes")
-router = APIRouter(dependencies=[require_bearer()])
+router = APIRouter(dependencies=[Depends(require_bearer)])
 
 
 @router.post("/fetch-dat")
