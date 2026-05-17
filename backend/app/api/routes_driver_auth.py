@@ -15,7 +15,7 @@ from typing import Annotated
 from fastapi import APIRouter, HTTPException, Header, status, Depends
 from pydantic import BaseModel, Field
 
-from ..supabase_client import supabase_client
+from ..supabase_client import get_supabase
 from ..logging_service import get_logger
 
 log = get_logger(__name__)
@@ -74,7 +74,7 @@ def require_driver_token(authorization: str | None = Header(default=None)) -> di
 
     # Query driver_sessions table
     try:
-        result = supabase_client.table("driver_sessions").select(
+        result = get_supabase().table("driver_sessions").select(
             "id, driver_id, expires_at"
         ).eq("token", token).single().execute()
 
@@ -94,7 +94,7 @@ def require_driver_token(authorization: str | None = Header(default=None)) -> di
             )
 
         # Update last_activity_at
-        supabase_client.table("driver_sessions").update(
+        get_supabase().table("driver_sessions").update(
             {"last_activity_at": datetime.now(timezone.utc).isoformat()}
         ).eq("id", session["id"]).execute()
 
@@ -163,7 +163,7 @@ async def driver_login(req: DriverLoginRequest):
 
     # Look up driver
     try:
-        result = supabase_client.table("drivers").select(
+        result = get_supabase().table("drivers").select(
             "id, first_name, last_name, carrier_id, pin_hash"
         ).eq("phone_e164", phone_e164).single().execute()
 
@@ -188,7 +188,7 @@ async def driver_login(req: DriverLoginRequest):
     expires_at = datetime.now(timezone.utc) + timedelta(days=30)
 
     try:
-        supabase_client.table("driver_sessions").insert({
+        get_supabase().table("driver_sessions").insert({
             "driver_id": driver["id"],
             "token": token,
             "expires_at": expires_at.isoformat(),
@@ -217,7 +217,7 @@ async def driver_logout(session: DriverSession):
     """Invalidate driver session."""
     try:
         driver_id = session["driver_id"]
-        supabase_client.table("driver_sessions").delete().eq(
+        get_supabase().table("driver_sessions").delete().eq(
             "driver_id", driver_id
         ).execute()
         return {"status": "logged out"}
@@ -235,7 +235,7 @@ async def get_driver_me(session: DriverSession):
     driver_id = session["driver_id"]
 
     try:
-        result = supabase_client.table("drivers").select(
+        result = get_supabase().table("drivers").select(
             "id, first_name, last_name, phone_e164, carrier_id, cdl_number"
         ).eq("id", driver_id).single().execute()
 
@@ -269,7 +269,7 @@ async def set_driver_pin(pin: str, session: DriverSession):
     pin_hash = hash_pin(pin)
 
     try:
-        supabase_client.table("drivers").update(
+        get_supabase().table("drivers").update(
             {"pin_hash": pin_hash}
         ).eq("id", driver_id).execute()
 

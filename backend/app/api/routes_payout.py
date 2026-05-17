@@ -15,7 +15,7 @@ from fastapi import APIRouter, HTTPException, Depends, status
 from pydantic import BaseModel
 import stripe
 
-from ..supabase_client import supabase_client
+from ..supabase_client import get_supabase
 from ..settings import get_settings
 from ..logging_service import get_logger
 from .routes_driver_auth import require_driver_token
@@ -80,7 +80,7 @@ async def setup_driver_payout(session: DriverSession):
 
     try:
         # Get driver details
-        driver_result = supabase_client.table("drivers").select(
+        driver_result = get_supabase().table("drivers").select(
             "id, first_name, last_name, phone_e164, email, stripe_account_id, stripe_account_status"
         ).eq("id", driver_id).single().execute()
 
@@ -115,7 +115,7 @@ async def setup_driver_payout(session: DriverSession):
             account_id = account.id
 
             # Save to database
-            supabase_client.table("drivers").update({
+            get_supabase().table("drivers").update({
                 "stripe_account_id": account_id,
                 "stripe_account_status": "pending"
             }).eq("id", driver_id).execute()
@@ -149,7 +149,7 @@ async def get_payout_status(session: DriverSession):
     driver_id = session["driver_id"]
 
     try:
-        driver_result = supabase_client.table("drivers").select(
+        driver_result = get_supabase().table("drivers").select(
             "stripe_account_id, stripe_account_status"
         ).eq("id", driver_id).single().execute()
 
@@ -184,7 +184,7 @@ async def request_payout(req: PayoutRequestModel, session: DriverSession):
 
     try:
         # Validate load exists & is delivered by this driver
-        load_result = supabase_client.table("loads").select(
+        load_result = get_supabase().table("loads").select(
             "id, driver_id, rate_total, delivered_at"
         ).eq("id", req.load_id).eq("driver_id", driver_id).eq("status", "delivered").single().execute()
 
@@ -196,7 +196,7 @@ async def request_payout(req: PayoutRequestModel, session: DriverSession):
             )
 
         # Get driver Stripe account
-        driver_result = supabase_client.table("drivers").select(
+        driver_result = get_supabase().table("drivers").select(
             "stripe_account_id, stripe_account_status"
         ).eq("id", driver_id).single().execute()
 
@@ -220,7 +220,7 @@ async def request_payout(req: PayoutRequestModel, session: DriverSession):
             )
 
         # Check if already paid out
-        existing_payout = supabase_client.table("driver_payouts").select(
+        existing_payout = get_supabase().table("driver_payouts").select(
             "id, status"
         ).eq("load_id", req.load_id).eq("driver_id", driver_id).execute()
 
@@ -242,7 +242,7 @@ async def request_payout(req: PayoutRequestModel, session: DriverSession):
         )
 
         # Store payout record
-        payout_result = supabase_client.table("driver_payouts").insert({
+        payout_result = get_supabase().table("driver_payouts").insert({
             "driver_id": driver_id,
             "load_id": req.load_id,
             "amount_cents": gross_cents,
@@ -283,7 +283,7 @@ async def get_payout_history(session: DriverSession):
     driver_id = session["driver_id"]
 
     try:
-        result = supabase_client.table("driver_payouts").select(
+        result = get_supabase().table("driver_payouts").select(
             "id, load_id, amount_cents, net_cents, status, paid_at"
         ).eq("driver_id", driver_id).order("requested_at", desc=True).limit(30).execute()
 

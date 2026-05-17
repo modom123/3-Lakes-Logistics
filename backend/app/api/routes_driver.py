@@ -7,7 +7,7 @@ from typing import Annotated
 from fastapi import APIRouter, HTTPException, Header, Depends, UploadFile, File, status
 from pydantic import BaseModel
 
-from ..supabase_client import supabase_client
+from ..supabase_client import get_supabase
 from ..logging_service import get_logger
 from .routes_driver_auth import require_driver_token
 
@@ -51,7 +51,7 @@ async def update_driver_location(req: LocationUpdate, session: DriverSession):
 
     try:
         # Query driver to get carrier_id and truck_id
-        result = supabase_client.table("drivers").select(
+        result = get_supabase().table("drivers").select(
             "id, carrier_id"
         ).eq("id", driver_id).single().execute()
 
@@ -59,14 +59,14 @@ async def update_driver_location(req: LocationUpdate, session: DriverSession):
         carrier_id = driver["carrier_id"]
 
         # Get current load to extract truck_id
-        load_result = supabase_client.table("loads").select(
+        load_result = get_supabase().table("loads").select(
             "id, truck_id"
         ).eq("driver_id", driver_id).eq("status", "in_transit").single().execute()
 
         truck_id = load_result.data.get("truck_id") if load_result.data else "unknown"
 
         # Insert/update telemetry
-        supabase_client.table("truck_telemetry").insert({
+        get_supabase().table("truck_telemetry").insert({
             "carrier_id": carrier_id,
             "truck_id": truck_id,
             "eld_provider": "mobile_app",
@@ -80,7 +80,7 @@ async def update_driver_location(req: LocationUpdate, session: DriverSession):
         }).execute()
 
         # Update driver last_location (jsonb)
-        supabase_client.table("drivers").update({
+        get_supabase().table("drivers").update({
             "last_location": {
                 "lat": req.lat,
                 "lng": req.lng,
@@ -132,7 +132,7 @@ async def upload_driver_document(
 
     # Get driver carrier_id
     try:
-        result = supabase_client.table("drivers").select(
+        result = get_supabase().table("drivers").select(
             "id, carrier_id"
         ).eq("id", driver_id).single().execute()
         carrier_id = result.data["carrier_id"]
@@ -148,20 +148,20 @@ async def upload_driver_document(
         file_content = await file.read()
         storage_path = f"{carrier_id}/{driver_id}/{doc_type}/{file.filename}"
 
-        supabase_client.storage.from_("driver-documents").upload(
+        get_supabase().storage.from_("driver-documents").upload(
             path=storage_path,
             file=file_content,
             file_options={"content-type": file.content_type or "application/octet-stream"}
         )
 
         # Generate signed URL (7-day expiry)
-        signed_url = supabase_client.storage.from_("driver-documents").create_signed_url(
+        signed_url = get_supabase().storage.from_("driver-documents").create_signed_url(
             path=storage_path,
             expires_in=604800  # 7 days
         )
 
         # Store metadata in document_vault
-        doc_result = supabase_client.table("document_vault").insert({
+        doc_result = get_supabase().table("document_vault").insert({
             "carrier_id": carrier_id,
             "doc_type": doc_type.upper(),
             "filename": file.filename,
@@ -196,14 +196,14 @@ async def get_driver_full_profile(session: DriverSession):
 
     try:
         # Get driver
-        driver_result = supabase_client.table("drivers").select(
+        driver_result = get_supabase().table("drivers").select(
             "id, first_name, last_name, phone_e164, cdl_number, stripe_account_id, stripe_account_status"
         ).eq("id", driver_id).single().execute()
 
         driver = driver_result.data
 
         # Get current load
-        load_result = supabase_client.table("loads").select(
+        load_result = get_supabase().table("loads").select(
             "id, load_number, status, rate_total, miles"
         ).eq("driver_id", driver_id).neq("status", "delivered").single().execute()
 
@@ -214,7 +214,7 @@ async def get_driver_full_profile(session: DriverSession):
         now = datetime.now(timezone.utc)
         week_start = now - timedelta(days=now.weekday())
 
-        earnings_result = supabase_client.table("loads").select(
+        earnings_result = get_supabase().table("loads").select(
             "rate_total, miles"
         ).eq("driver_id", driver_id).eq("status", "delivered").gte(
             "delivered_at", week_start.isoformat()
@@ -223,7 +223,7 @@ async def get_driver_full_profile(session: DriverSession):
         week_earnings = sum(l.get("rate_total", 0) for l in earnings_result.data or [])
 
         # Get documents
-        docs_result = supabase_client.table("document_vault").select(
+        docs_result = get_supabase().table("document_vault").select(
             "id, doc_type, filename"
         ).eq("carrier_id", driver["carrier_id"]).order(
             "created_at", desc=True
