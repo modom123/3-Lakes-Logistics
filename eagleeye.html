@@ -2306,7 +2306,7 @@ function toast(msg,type='success'){
 async function testConnection(){
   const el=document.getElementById('sb-status');
   try{
-    const{error}=await sb.from('carriers').select('id').limit(1);
+    const{error}=await sb.from('active_carriers').select('id').limit(1);
     if(error)throw error;
     el.textContent='✓ Supabase Live';
     el.className='sb-conn';
@@ -2325,7 +2325,7 @@ async function refreshAll(){
 
 // ── CARRIERS ──
 async function loadCarriers(){
-  const{data,error}=await sb.from('carriers').select('*').order('created_at',{ascending:false});
+  const{data,error}=await sb.from('active_carriers').select('*').order('created_at',{ascending:false});
   if(error){console.warn('loadCarriers:',error.message);return;}
   allCarriers=data||[];
   renderCarriersTable();
@@ -2338,28 +2338,27 @@ function renderCarriersTable(){
   if(badge)badge.textContent=allCarriers.length+' carriers';
   if(!wrap)return;
   if(allCarriers.length===0){wrap.innerHTML='<div class="empty-state"><div class="ei">👥</div><p>No carriers yet. Add your first carrier using the button above.</p></div>';return;}
-  wrap.innerHTML='<div class="tbl-wrap"><table><thead><tr><th>Carrier</th><th>MC #</th><th>Equipment</th><th>Plan</th><th>Home Base</th><th>Phone</th><th>Status</th><th>Actions</th></tr></thead><tbody>'+
-    allCarriers.map(c=>'<tr>'+
-      '<td class="td-name">'+esc(c.full_name)+'</td>'+
-      '<td class="t-mono" style="font-size:12px;color:var(--muted)">'+esc(c.mc_number||'—')+'</td>'+
-      '<td>'+esc(c.equipment||'Dry Van')+'</td>'+
+  wrap.innerHTML='<div class="tbl-wrap"><table><thead><tr><th>Carrier</th><th>DOT / MC</th><th>Equipment</th><th>Plan</th><th>Address</th><th>Phone</th><th>Status</th><th>Actions</th></tr></thead><tbody>'+
+    allCarriers.map(c=>{const name=c.company_name||c.full_name||'—';return'<tr>'+
+      '<td class="td-name">'+esc(name)+'</td>'+
+      '<td class="t-mono" style="font-size:12px;color:var(--muted)">'+esc((c.dot_number?'DOT '+c.dot_number:c.mc_number?'MC '+c.mc_number:'—'))+'</td>'+
+      '<td>'+esc(c.trailer_type||c.equipment||'—')+'</td>'+
       '<td><span class="badge '+planBadgeClass(c.plan)+'">'+planShort(c.plan)+'</span></td>'+
-      '<td>'+esc(c.home_base||'—')+'</td>'+
+      '<td>'+esc(c.address||c.home_base||'—')+'</td>'+
       '<td class="t-mono" style="font-size:11px">'+esc(c.phone||'—')+'</td>'+
-      '<td><span class="badge '+statusBadge(c.status)+'">'+esc(c.status||'Active')+'</span></td>'+
+      '<td><span class="badge '+statusBadge(c.status)+'">'+esc(c.status||'onboarding')+'</span></td>'+
       '<td style="display:flex;gap:6px">'+
         '<button class="btn-navy-sm" onclick="sendWelcomeEmail(\''+c.id+'\')" title="Send Welcome Email">📧 Welcome</button>'+
-        '<button class="btn-navy-sm" onclick="createInvoiceForCarrier(\''+c.id+'\',\''+esc(c.full_name).replace(/'/g,"\\'")+'\')" title="Create Invoice">🧾</button>'+
+        '<button class="btn-navy-sm" onclick="createInvoiceForCarrier(\''+c.id+'\',\''+esc(name).replace(/'/g,"\\'")+'\')" title="Create Invoice">🧾</button>'+
         '<button class="btn-red-sm" onclick="deleteCarrier(\''+c.id+'\')" title="Remove">✕</button>'+
-      '</td></tr>'
-    ).join('')+'</tbody></table></div>';
+      '</td></tr>';}).join('')+'</tbody></table></div>';
 }
 
 function updateCarrierMetrics(){
   const total=allCarriers.length;
-  const active=allCarriers.filter(c=>!c.status?.includes('Pending')&&!c.status?.includes('Inactive')).length;
-  const pending=allCarriers.filter(c=>c.status?.includes('Pending')||c.status?.includes('New')).length;
-  const fs=allCarriers.filter(c=>c.plan?.includes('10')||c.plan?.includes('Full')).length;
+  const active=allCarriers.filter(c=>c.status==='active').length;
+  const pending=allCarriers.filter(c=>c.status==='onboarding'||c.status==='onboarding_incomplete').length;
+  const fs=allCarriers.filter(c=>c.plan==='founders').length;
   setText('carrier-count-total',total);setText('carrier-count-active',active);
   setText('carrier-count-pending',pending);setText('carrier-count-fs',fs);
 }
@@ -2369,19 +2368,16 @@ async function saveCarrier(){
   const name=document.getElementById('mc-name').value.trim();
   if(!name){toast('Name is required','error');return;}
   btn.disabled=true;btn.textContent='Saving…';
-  const{error}=await sb.from('carriers').insert({
-    full_name:name,first_name:name.split(' ')[0],last_name:name.split(' ').slice(1).join(' '),
-    mc_number:document.getElementById('mc-number').value.trim(),
-    dot_number:document.getElementById('mc-dot').value.trim(),
-    home_base:document.getElementById('mc-base').value.trim(),
-    equipment:document.getElementById('mc-equip').value,
-    plan:document.getElementById('mc-plan').value,
-    phone:document.getElementById('mc-phone').value.trim(),
-    email:document.getElementById('mc-email').value.trim(),
-    insurance_provider:document.getElementById('mc-ins').value.trim(),
-    eld:document.getElementById('mc-eld').value.trim(),
-    status:'New — Pending Onboarding',
-    enrolled_date:new Date().toISOString().split('T')[0],loads_completed:0
+  const{error}=await sb.from('active_carriers').insert({
+    company_name:name,
+    mc_number:document.getElementById('mc-number').value.trim()||null,
+    dot_number:document.getElementById('mc-dot').value.trim()||null,
+    address:document.getElementById('mc-base').value.trim()||null,
+    trailer_type:document.getElementById('mc-equip').value||null,
+    plan:document.getElementById('mc-plan').value||'standard',
+    phone:document.getElementById('mc-phone').value.trim()||null,
+    email:document.getElementById('mc-email').value.trim()||null,
+    status:'onboarding',
   });
   btn.disabled=false;btn.textContent='Add Carrier';
   if(error){toast('Error: '+error.message,'error');return;}
@@ -2392,7 +2388,7 @@ async function saveCarrier(){
 
 async function deleteCarrier(id){
   if(!confirm('Remove this carrier?'))return;
-  const{error}=await sb.from('carriers').delete().eq('id',id);
+  const{error}=await sb.from('active_carriers').delete().eq('id',id);
   if(error){toast('Error: '+error.message,'error');return;}
   await loadCarriers();updateDashboard();toast('Carrier removed');
 }
@@ -2717,14 +2713,14 @@ function updateDashboard(){
     ).join('');}
   }
 
-  const p5=allCarriers.filter(c=>!c.plan?.includes('8')&&!c.plan?.includes('10')&&!c.plan?.includes('Full')).length;
-  const p8=allCarriers.filter(c=>c.plan?.includes('8')||c.plan?.includes('Premium')).length;
-  const p10=allCarriers.filter(c=>c.plan?.includes('10')||c.plan?.includes('Full')).length;
+  const pFounders=allCarriers.filter(c=>c.plan==='founders'||c.plan==='pro'||c.plan==='enterprise').length;
+  const pStandard=allCarriers.filter(c=>c.plan==='standard').length;
+  const pOther=allCarriers.filter(c=>!c.plan||c.plan==='discuss').length;
   const smEl=document.getElementById('service-mix-display');
   if(smEl)smEl.innerHTML=
-    '<div class="comp-item"><div class="comp-left"><span class="comp-ico">⭐</span><div><div class="comp-name">5% Standard Dispatch</div><div class="comp-desc">Per-load · most owner-operators</div></div></div><span class="badge badge-orange">'+p5+' carriers</span></div>'+
-    '<div class="comp-item"><div class="comp-left"><span class="comp-ico">⭐⭐</span><div><div class="comp-name">8% Premium Dispatch</div><div class="comp-desc">After-hours · 24/7 check-calls</div></div></div><span class="badge badge-gold">'+p8+' carriers</span></div>'+
-    '<div class="comp-item"><div class="comp-left"><span class="comp-ico">👑</span><div><div class="comp-name">10% Full-Service</div><div class="comp-desc">IFTA · ELD · compliance suite</div></div></div><span class="badge badge-green">'+p10+' carriers</span></div>'+
+    '<div class="comp-item"><div class="comp-left"><span class="comp-ico">👑</span><div><div class="comp-name">Founders Program</div><div class="comp-desc">$300/mo · keep 100% of loads</div></div></div><span class="badge badge-gold">'+pFounders+' carriers</span></div>'+
+    '<div class="comp-item"><div class="comp-left"><span class="comp-ico">⭐</span><div><div class="comp-name">Standard Plan</div><div class="comp-desc">8% per load · no monthly fee</div></div></div><span class="badge badge-blue">'+pStandard+' carriers</span></div>'+
+    '<div class="comp-item"><div class="comp-left"><span class="comp-ico">💬</span><div><div class="comp-name">Pending / Discuss</div><div class="comp-desc">Onboarding incomplete</div></div></div><span class="badge badge-orange">'+pOther+' carriers</span></div>'+
     '<div class="divider"></div><div class="t-sm t-muted t-mono">Total: '+total+' carriers in Supabase</div>';
 
   const gross=allLoads.reduce((a,l)=>a+(Number(l.rate)||0),0);
@@ -2770,11 +2766,11 @@ function showDashSummary(type){
       '<th style="text-align:left;padding:8px 6px;color:#6b7280;font-weight:700;font-size:11px">STATUS</th>'+
       '</tr></thead><tbody>'+
       rows.map(c=>`<tr style="border-bottom:1px solid #f3f4f6">
-        <td style="padding:9px 6px;font-weight:600">${esc(c.full_name||'—')}</td>
-        <td style="padding:9px 6px;color:#6b7280">${esc(c.equipment||'—')}</td>
-        <td style="padding:9px 6px;color:#6b7280">${esc(c.home_base||'—')}</td>
+        <td style="padding:9px 6px;font-weight:600">${esc(c.company_name||c.full_name||'—')}</td>
+        <td style="padding:9px 6px;color:#6b7280">${esc(c.trailer_type||c.equipment||'—')}</td>
+        <td style="padding:9px 6px;color:#6b7280">${esc(c.address||c.home_base||'—')}</td>
         <td style="padding:9px 6px">${esc(c.plan||'—')}</td>
-        <td style="padding:9px 6px"><span class="badge ${statusBadge(c.status)}">${esc(c.status||'Active')}</span></td>
+        <td style="padding:9px 6px"><span class="badge ${statusBadge(c.status)}">${esc(c.status||'onboarding')}</span></td>
       </tr>`).join('')+'</tbody></table>';
   } else if(type==='loads'){
     title.textContent='Loads This Month — Last 10';
@@ -2853,14 +2849,14 @@ function renderCarrierCompliance(){
     if(allCarriers.length===0){eldList.innerHTML='<div class="t-sm t-muted" style="padding:8px 0">No carriers in Supabase yet.</div>';}
     else eldList.innerHTML=allCarriers.map(c=>
       '<div class="comp-item"><div class="comp-left"><span class="comp-ico">📱</span>'+
-      '<div><div class="comp-name">'+esc(c.full_name)+'</div><div class="comp-desc">ELD: '+esc(c.eld||'Not specified')+' · '+esc(c.equipment||'Dry Van')+' · '+esc(c.home_base||'—')+'</div></div></div>'+
-      '<span class="badge '+(c.eld&&c.eld.length>1?'badge-green':'badge-orange')+'">'+(c.eld&&c.eld.length>1?'ELD Active':'Verify ELD')+'</span></div>'
+      '<div><div class="comp-name">'+esc(c.company_name||c.full_name||'—')+'</div><div class="comp-desc">'+esc(c.trailer_type||'Dry Van')+' · DOT: '+esc(c.dot_number||'—')+'</div></div></div>'+
+      '<span class="badge badge-orange">Verify ELD</span></div>'
     ).join('');
   }
   const insTable=document.getElementById('insurance-carrier-table');
   if(insTable){
     insTable.innerHTML=allCarriers.length
-      ? allCarriers.map(c=>'<tr><td class="td-name">'+esc(c.full_name)+'</td><td>'+esc(c.insurance_provider||'—')+'</td><td>$1,000,000</td><td><span class="badge badge-blue">Supabase</span></td><td><span class="badge badge-orange">Verify COI</span></td></tr>').join('')
+      ? allCarriers.map(c=>'<tr><td class="td-name">'+esc(c.company_name||c.full_name||'—')+'</td><td>'+esc(c.insurance_carrier||'—')+'</td><td>$1,000,000</td><td><span class="badge badge-blue">Supabase</span></td><td><span class="badge badge-orange">Verify COI</span></td></tr>').join('')
       : '<tr><td colspan="5" style="color:var(--muted);text-align:center;padding:12px">No carriers yet — add carriers to track COIs.</td></tr>';
   }
 }
@@ -3410,12 +3406,18 @@ async function loadVanceCalls(){
     const d=await r.json();
     const calls=d.calls||[];
     if(!calls.length){el.innerHTML='<div style="color:var(--muted);font-size:12px;padding:4px 0">No calls yet</div>';return;}
-    el.innerHTML=`<table class="tbl" style="font-size:12px"><thead><tr><th>Who</th><th>Phone</th><th>Status</th><th>Time</th></tr></thead><tbody>${calls.map(c=>{
-      const p=c.payload||{};const ok=c.result==='started';
+    el.innerHTML=`<table class="tbl" style="font-size:12px"><thead><tr><th>Who</th><th>Phone</th><th>Action</th><th>Outcome</th><th>Time</th></tr></thead><tbody>${calls.map(c=>{
+      const p=c.payload||{};
+      const who=p.name||p.prospect||p.company||p.lead_id||'—';
+      const phone=p.phone||'—';
+      const badgeCls=c.result==='started'||c.result==='success'?'green':c.error?'red':'orange';
+      const outcome=c.result||'—';
+      const dur=p.duration?` · ${Math.round(p.duration/60)}m`:'';
       return`<tr>
-        <td style="font-weight:500">${p.name||'—'}</td>
-        <td style="color:var(--muted)">${p.phone||'—'}</td>
-        <td><span class="badge badge-${ok?'green':'orange'}">${c.result||c.action}</span></td>
+        <td style="font-weight:500">${esc(who)}</td>
+        <td style="color:var(--muted)">${esc(phone)}</td>
+        <td style="color:var(--muted);font-size:11px">${esc(c.action||'—')}</td>
+        <td><span class="badge badge-${badgeCls}">${esc(outcome)}${dur}</span></td>
         <td style="color:var(--muted);white-space:nowrap">${c.ts?new Date(c.ts).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}):'—'}</td>
       </tr>`;}).join('')}</tbody></table>`;
   }catch(e){el.innerHTML=`<div style="color:var(--muted);font-size:12px">Could not load calls</div>`;}

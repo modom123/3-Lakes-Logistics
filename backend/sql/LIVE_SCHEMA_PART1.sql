@@ -30,10 +30,11 @@ create table if not exists public.active_carriers (
   esign_timestamp        timestamptz,
   agreement_pdf_hash     text,
   status                 text not null default 'onboarding',
-  compliance_suspended   boolean not null default false,
-  suspension_reason      text,
-  suspended_at           timestamptz,
-  onboarded_at           timestamptz,
+  compliance_suspended         boolean not null default false,
+  suspension_reason            text,
+  suspended_at                 timestamptz,
+  onboarding_missing_fields    text[],
+  onboarded_at                 timestamptz,
   created_at             timestamptz not null default now(),
   updated_at             timestamptz not null default now()
 );
@@ -42,9 +43,10 @@ create index if not exists idx_ac_mc     on public.active_carriers(mc_number);
 create index if not exists idx_ac_status on public.active_carriers(status);
 
 -- patch missing columns if table already existed
-alter table public.active_carriers add column if not exists compliance_suspended boolean not null default false;
-alter table public.active_carriers add column if not exists suspension_reason    text;
-alter table public.active_carriers add column if not exists suspended_at         timestamptz;
+alter table public.active_carriers add column if not exists compliance_suspended       boolean not null default false;
+alter table public.active_carriers add column if not exists suspension_reason          text;
+alter table public.active_carriers add column if not exists suspended_at               timestamptz;
+alter table public.active_carriers add column if not exists onboarding_missing_fields  text[];
 
 -- ── fleet_assets ────────────────────────────────────────────
 create table if not exists public.fleet_assets (

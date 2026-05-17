@@ -5,7 +5,7 @@ Cheaper than Vapi at scale, cleaner API, direct Claude integration.
 """
 from __future__ import annotations
 
-import json
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 import httpx
@@ -104,6 +104,10 @@ Goal: Qualify and offer demo call with Commander."""
         if s.bland_ai_org_id:
             payload["organization_id"] = s.bland_ai_org_id
 
+        # Auto-build webhook URL from app base URL if not explicitly provided
+        if not webhook_url and s.app_base_url:
+            webhook_url = f"{s.app_base_url.rstrip('/')}/api/webhooks/bland"
+
         if webhook_url:
             payload["webhook_url"] = webhook_url
 
@@ -198,6 +202,23 @@ def handle_bland_webhook(event: dict[str, Any]) -> dict[str, Any]:
         reason = analysis.get("reason", "unknown")
         outcome = "interested" if success else "not_interested"
 
+        # Update lead stage + touch timestamps in Supabase
+        if lead_id:
+            try:
+                from ..supabase_client import get_supabase
+                now = datetime.now(timezone.utc)
+                lead_update: dict[str, Any] = {
+                    "stage": outcome,
+                    "last_touch_at": now.isoformat(),
+                    "owner_agent": "vance",
+                    "updated_at": now.isoformat(),
+                }
+                if outcome == "interested":
+                    lead_update["next_touch_at"] = (now + timedelta(days=1)).isoformat()
+                get_supabase().table("leads").update(lead_update).eq("id", lead_id).execute()
+            except Exception:  # noqa: BLE001
+                pass  # non-fatal — call is still logged
+
         # Trigger follow-up sequence if interested
         follow_up_result = None
         if outcome == "interested" and prospect_email and phone_number:
@@ -232,6 +253,18 @@ def handle_bland_webhook(event: dict[str, Any]) -> dict[str, Any]:
             payload={"lead_id": lead_id, "call_id": call_id},
             error=reason,
         )
+        if lead_id:
+            try:
+                from ..supabase_client import get_supabase
+                now = datetime.now(timezone.utc)
+                get_supabase().table("leads").update({
+                    "last_touch_at": now.isoformat(),
+                    "next_touch_at": (now + timedelta(days=3)).isoformat(),
+                    "owner_agent": "vance",
+                    "updated_at": now.isoformat(),
+                }).eq("id", lead_id).execute()
+            except Exception:  # noqa: BLE001
+                pass
         return {
             "status": "failed",
             "lead_id": lead_id,

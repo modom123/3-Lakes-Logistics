@@ -29,6 +29,10 @@ class Settings(BaseSettings):
     vapi_assistant_id_vance: str = ""
     vapi_phone_number_id: str = ""
 
+    # Public base URL of this app — used to auto-build Bland webhook callback URL
+    # Set to Railway/Vercel deploy URL in production, e.g. https://3ll-api.railway.app
+    app_base_url: str = ""
+
     # Bland AI — outbound prospecting calls (Vance agent)
     # Much cheaper than Vapi (~$0.06/min base + Claude LLM)
     # Better for high-volume calling (1000+ calls/month)
