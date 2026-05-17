@@ -1100,3 +1100,72 @@ def step_195_equipment_demand(
         "equipment_types": len(forecast),
         "demand_forecast": forecast,
     }
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# STEPS 196-200 — Risk & reporting
+# ═══════════════════════════════════════════════════════════════════════════
+
+def step_196_compliance_risk(
+    carrier_id: UUID | None,
+    contract_id: UUID | None,
+    payload: dict,
+) -> dict:
+    """Assess compliance risk score across carrier fleet.
+
+    TODO: Replace stub with real compliance risk analysis logic.
+    """
+    log.info("step_196: compliance_risk (stub) carrier=%s", carrier_id)
+    return {"step": 196, "status": "stub", "carrier_id": str(carrier_id) if carrier_id else None}
+
+
+def step_197_weekly_report(
+    carrier_id: UUID | None,
+    contract_id: UUID | None,
+    payload: dict,
+) -> dict:
+    """Generate weekly executive report.
+
+    TODO: Replace stub with real weekly report generation logic.
+    """
+    log.info("step_197: weekly_report (stub) carrier=%s", carrier_id)
+    return {"step": 197, "status": "stub", "carrier_id": str(carrier_id) if carrier_id else None}
+
+
+def step_198_airtable_sync(
+    carrier_id: UUID | None,
+    contract_id: UUID | None,
+    payload: dict,
+) -> dict:
+    """Sync analytics data to Airtable.
+
+    TODO: Replace stub with real Airtable sync logic.
+    """
+    log.info("step_198: airtable_sync (stub) carrier=%s", carrier_id)
+    return {"step": 198, "status": "stub", "carrier_id": str(carrier_id) if carrier_id else None}
+
+
+def step_199_sentry_health(
+    carrier_id: UUID | None,
+    contract_id: UUID | None,
+    payload: dict,
+) -> dict:
+    """Check Sentry health and error rates.
+
+    TODO: Replace stub with real Sentry health check logic.
+    """
+    log.info("step_199: sentry_health (stub) carrier=%s", carrier_id)
+    return {"step": 199, "status": "stub", "carrier_id": str(carrier_id) if carrier_id else None}
+
+
+def step_200_analytics_complete(
+    carrier_id: UUID | None,
+    contract_id: UUID | None,
+    payload: dict,
+) -> dict:
+    """Mark analytics cycle as complete.
+
+    TODO: Replace stub with real analytics completion logic.
+    """
+    log.info("step_200: analytics_complete (stub) carrier=%s", carrier_id)
+    return {"step": 200, "status": "stub", "carrier_id": str(carrier_id) if carrier_id else None}
