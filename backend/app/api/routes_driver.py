@@ -106,7 +106,7 @@ async def update_driver_location(req: LocationUpdate, session: DriverSession):
 async def upload_driver_document(
     doc_type: str,
     file: UploadFile = File(...),
-    session: DriverSession = Depends(require_driver_token)
+    session: DriverSession
 ):
     """Upload driver document (BOL, POD, Lumper receipt).
 
