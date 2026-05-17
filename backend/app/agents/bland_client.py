@@ -113,7 +113,28 @@ Goal: Qualify and offer demo call with Commander."""
             json=payload,
             timeout=20,
         )
-        r.raise_for_status()
+
+        if not r.is_success:
+            body = r.text or ""
+            if "allowlist" in body.lower() or "not in allowlist" in body.lower():
+                return {
+                    "status": "error",
+                    "error": (
+                        "IP_ALLOWLIST_BLOCKED: Your server IP is not whitelisted in Bland AI. "
+                        "Fix: app.bland.ai → Account Settings → IP Allowlist → Disable (or add your server IP). "
+                        "See CRITICAL_FIX_GUIDE.md Issue #2."
+                    ),
+                }
+            if r.status_code == 401:
+                return {
+                    "status": "error",
+                    "error": (
+                        "BLAND_AUTH_FAILED: Invalid API key (401). "
+                        "Check BLAND_AI_API_KEY in .env — it must differ from BLAND_AI_ORG_ID. "
+                        "Get key from app.bland.ai → API Keys."
+                    ),
+                }
+            r.raise_for_status()
 
         data = r.json()
         call_id = data.get("call_id")
