@@ -105,8 +105,8 @@ async def update_driver_location(req: LocationUpdate, session: DriverSession):
 @router.post("/documents/upload")
 async def upload_driver_document(
     doc_type: str,
+    session: DriverSession,
     file: UploadFile = File(...),
-    session: DriverSession = Depends(require_driver_token)
 ):
     """Upload driver document (BOL, POD, Lumper receipt).
 
