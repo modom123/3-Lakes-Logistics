@@ -115,3 +115,35 @@ async def complete_onboarding(carrier_id: str, data: dict, bg: BackgroundTasks =
         return {"ok": True, "status": "onboarding", "stripe_checkout_url": checkout_url}
 
     return {"ok": True, "status": "onboarding_incomplete", "still_missing": still_missing}
+
+
+@router.post("/{carrier_id}/resend-welcome")
+async def resend_welcome(carrier_id: str, bg: BackgroundTasks = BackgroundTasks()) -> dict:
+    """Resend the welcome / onboarding email to a carrier.
+
+    Called by Eagle Eye's '📧 Welcome' button. Sends the full HTML welcome
+    email (same one sent at intake) and logs the action to agent_log.
+    """
+    from ..logging_service import log_agent
+    from ..api.routes_intake import _send_welcome_email
+
+    sb = get_supabase()
+    result = sb.table("active_carriers").select("*").eq("id", carrier_id).execute()
+    if not result.data:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "carrier not found")
+
+    carrier = result.data[0]
+    email = carrier.get("email")
+    if not email:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "carrier has no email on file")
+
+    company_name = carrier.get("company_name", "Carrier")
+    plan = carrier.get("plan", "founders")
+    missing = carrier.get("onboarding_missing_fields") or []
+
+    bg.add_task(_send_welcome_email, email, company_name, carrier_id, missing, plan)
+    log_agent("nova", "welcome_email.resent", carrier_id=carrier_id,
+              payload={"email": email, "plan": plan, "missing_fields": len(missing)},
+              result="queued")
+
+    return {"ok": True, "email": email, "carrier": company_name, "status": "queued"}

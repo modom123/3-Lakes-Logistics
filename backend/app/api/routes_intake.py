@@ -216,6 +216,8 @@ async def _send_welcome_email(email: str, company_name: str, carrier_id: str, mi
         from ..settings import get_settings
         s = get_settings()
         if not s.postmark_server_token:
+            log_agent("nova", "welcome_email.skipped", carrier_id=carrier_id,
+                      payload={"email": email, "reason": "POSTMARK_SERVER_TOKEN not configured"})
             return
 
         completion_url = f"https://3lakeslogistics.com/complete-onboarding?carrier_id={carrier_id}"
@@ -243,8 +245,13 @@ async def _send_welcome_email(email: str, company_name: str, carrier_id: str, mi
                 },
             )
         log.info(f"Welcome email sent to {email} (plan={plan}, missing={len(missing)})")
+        log_agent("nova", "welcome_email.sent", carrier_id=carrier_id,
+                  payload={"email": email, "plan": plan, "missing_fields": len(missing)},
+                  result="delivered")
     except Exception as e:  # noqa: BLE001
         log.error(f"Welcome email failed: {e}")
+        log_agent("nova", "welcome_email.failed", carrier_id=carrier_id,
+                  payload={"email": email}, error=str(e))
 
 
 @router.post("/intake", response_model=IntakeResponse, status_code=status.HTTP_201_CREATED)
@@ -366,6 +373,9 @@ async def carrier_intake(payload: CarrierIntake, request: Request,
         log_agent("atlas", "trigger.onboarding", carrier_id=carrier_id, result="queued")
     else:
         log.info(f"Partial intake {carrier_id} — missing: {missing}")
+        log_agent("atlas", "intake_incomplete", carrier_id=carrier_id,
+                  payload={"missing": missing, "email": email, "plan": payload.plan},
+                  result=f"profile incomplete — {len(missing)} fields needed")
 
     return IntakeResponse(
         ok=True,

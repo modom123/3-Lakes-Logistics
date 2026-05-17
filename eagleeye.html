@@ -3247,25 +3247,23 @@ async function sendRateConEmail(load, toEmail) {
 async function sendWelcomeEmail(carrierId) {
   const carrier = allCarriers.find(c => c.id === carrierId);
   if (!carrier) return;
+  const name = carrier.company_name || carrier.full_name || '—';
   if (!carrier.email) {
-    toast('No email on file for ' + carrier.full_name, 'error');
+    toast('No email on file for ' + name, 'error');
     return;
   }
-  toast('Sending welcome email…');
-  const params = {
-    to_email:     carrier.email,
-    carrier_name: carrier.full_name  || '—',
-    plan:         carrier.plan       || '5% Standard Dispatch',
-    mc_number:    carrier.mc_number  || '—',
-    home_base:    carrier.home_base  || '—',
-    equipment:    carrier.equipment  || 'Dry Van',
-  };
+  toast('Sending welcome email to ' + carrier.email + '…');
   try {
-    await emailjs.send(EJS_SERVICE, EJS_WELCOME, params);
-    toast('✅ Welcome email sent to ' + carrier.email);
+    const r = await apiFetch('/api/carriers/' + carrierId + '/resend-welcome', {method:'POST'});
+    const d = await r.json();
+    if (r.ok && d.ok) {
+      toast('✅ Welcome email queued for ' + carrier.email);
+      _pushNotif({agent:'nova', action:'welcome_email.resent', result:'queued for '+carrier.email, ts: new Date().toISOString()});
+    } else {
+      toast('Email failed: ' + (d.detail || JSON.stringify(d)), 'error');
+    }
   } catch(e) {
-    console.error('EmailJS error:', e);
-    toast('Email failed: ' + (e.text || e.message || 'Unknown error'), 'error');
+    toast('Email error: ' + (e.message || 'Unknown'), 'error');
   }
 }
 
