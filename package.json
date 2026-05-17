@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "dev": "capacitor serve",
-    "build": "mkdir -p public && cp eagleeye.html public/eagleeye.html && cp index.html public/index.html && cp privacy-policy.html public/ && cp data-safety.html public/ 2>/dev/null; exit 0",
+    "build": "mkdir -p public public/shared && cp eagleeye.html public/eagleeye.html && cp index.html public/index.html && cp privacy-policy.html public/ && cp data-safety.html public/ 2>/dev/null; cp shared/config.js public/shared/config.js && node scripts/inject-config.js; exit 0",
     "cap:add:ios": "capacitor add ios",
     "cap:add:android": "capacitor add android",
     "cap:sync": "capacitor sync",
