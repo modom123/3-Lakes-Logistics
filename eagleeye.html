@@ -802,10 +802,10 @@ td.td-name{font-weight:600;color:var(--navy);}
         </div>
       </div>
       <div class="g4">
-        <div class="mc"><div class="mc-label">Active Carriers</div><div class="mc-val gold" id="dash-total-carriers">—</div><div class="mc-sub" id="dash-carrier-sub">Loading…</div></div>
-        <div class="mc"><div class="mc-label">MTD Dispatch Fees</div><div class="mc-val green" id="dash-mtd-fees">—</div><div class="mc-sub">This month</div></div>
-        <div class="mc"><div class="mc-label">Loads This Month</div><div class="mc-val blue" id="dash-loads">—</div><div class="mc-sub" id="dash-rpm-sub">Avg RPM: —</div></div>
-        <div class="mc"><div class="mc-label">Unpaid Invoices</div><div class="mc-val orange" id="dash-unpaid">—</div><div class="mc-sub" id="dash-unpaid-sub">outstanding AR</div></div>
+        <div class="mc" onclick="showDashSummary('carriers')" style="cursor:pointer" title="Click for summary"><div class="mc-label">Active Carriers</div><div class="mc-val gold" id="dash-total-carriers">—</div><div class="mc-sub" id="dash-carrier-sub">Loading…</div></div>
+        <div class="mc" onclick="showDashSummary('fees')" style="cursor:pointer" title="Click for summary"><div class="mc-label">MTD Dispatch Fees</div><div class="mc-val green" id="dash-mtd-fees">—</div><div class="mc-sub">This month</div></div>
+        <div class="mc" onclick="showDashSummary('loads')" style="cursor:pointer" title="Click for summary"><div class="mc-label">Loads This Month</div><div class="mc-val blue" id="dash-loads">—</div><div class="mc-sub" id="dash-rpm-sub">Avg RPM: —</div></div>
+        <div class="mc" onclick="showDashSummary('unpaid')" style="cursor:pointer" title="Click for summary"><div class="mc-label">Unpaid Invoices</div><div class="mc-val orange" id="dash-unpaid">—</div><div class="mc-sub" id="dash-unpaid-sub">outstanding AR</div></div>
       </div>
       <div class="g2">
         <div class="card">
@@ -857,7 +857,14 @@ td.td-name{font-weight:600;color:var(--navy);}
       <div class="page-hdr">
         <div class="page-hdr-l"><div class="chip">Live</div><h2>Dispatch Board</h2></div>
         <div class="page-hdr-acts">
-          <button class="btn-out">Filter</button>
+          <select id="dispatch-filter-status" onchange="renderDispatchBoard()" style="padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px">
+            <option value="">All Statuses</option>
+            <option value="En Route">En Route</option>
+            <option value="Booked">Booked</option>
+            <option value="Check Due">Check Due</option>
+            <option value="POD Needed">POD Needed</option>
+            <option value="Delivered">Delivered</option>
+          </select>
           <button class="btn-navy" onclick="openModal('add-load-modal')">+ New Load</button>
         </div>
       </div>
@@ -2425,11 +2432,14 @@ function renderLoadsTable(){
 function renderDispatchBoard(){
   const tbody=document.getElementById('dispatch-table');
   if(!tbody)return;
-  const active=allLoads.filter(l=>l.status==='En Route'||l.status==='Booked'||l.status==='Check Due');
+  const filterVal=(document.getElementById('dispatch-filter-status')?.value||'');
+  const active=filterVal
+    ? allLoads.filter(l=>l.status===filterVal)
+    : allLoads.filter(l=>l.status==='En Route'||l.status==='Booked'||l.status==='Check Due');
   setText('dispatch-on-load',allLoads.filter(l=>l.status==='En Route').length);
   setText('dispatch-available',allCarriers.filter(c=>!allLoads.some(l=>l.driver_name===c.full_name&&(l.status==='En Route'||l.status==='Booked'))).length);
   setText('dispatch-pods',allLoads.filter(l=>l.status==='POD Needed').length);
-  if(active.length===0){tbody.innerHTML='<tr><td colspan="9"><div class="empty-state"><div class="ei">🚛</div><p>No active loads. Book a load to see it on the board.</p></div></td></tr>';return;}
+  if(active.length===0){tbody.innerHTML='<tr><td colspan="9"><div class="empty-state"><div class="ei">🚛</div><p>No loads match this filter.</p></div></td></tr>';return;}
   tbody.innerHTML=active.map(l=>
     '<tr>'+
     '<td class="td-name t-mono" style="font-size:12px">'+esc(l.load_number||('#'+l.id.slice(0,6)))+'</td>'+
@@ -2736,6 +2746,104 @@ function updateDashboard(){
       '<div class="tl-time">🆕 Enrolled '+esc(c.enrolled_date||'today')+'</div></div></div>'
     ).join('');
   }
+}
+
+// ── DASHBOARD SUMMARY MODAL ──
+function showDashSummary(type){
+  const modal=document.getElementById('dash-summary-modal');
+  const title=document.getElementById('dash-summary-title');
+  const body=document.getElementById('dash-summary-body');
+  const now=new Date();
+  const fmt=d=>d?new Date(d).toLocaleDateString('en-US',{month:'short',day:'numeric'}):'—';
+  const money=n=>'$'+Number(n||0).toLocaleString();
+  let html='';
+  if(type==='carriers'){
+    title.textContent='Active Carriers — Last 10';
+    const rows=allCarriers.slice(0,10);
+    if(!rows.length){html='<div style="color:#6b7280;padding:20px 0">No carriers on file yet.</div>';}
+    else html='<table style="width:100%;border-collapse:collapse;font-size:13px">'+
+      '<thead><tr style="border-bottom:2px solid #e5e7eb">'+
+      '<th style="text-align:left;padding:8px 6px;color:#6b7280;font-weight:700;font-size:11px">CARRIER</th>'+
+      '<th style="text-align:left;padding:8px 6px;color:#6b7280;font-weight:700;font-size:11px">EQUIPMENT</th>'+
+      '<th style="text-align:left;padding:8px 6px;color:#6b7280;font-weight:700;font-size:11px">BASE</th>'+
+      '<th style="text-align:left;padding:8px 6px;color:#6b7280;font-weight:700;font-size:11px">PLAN</th>'+
+      '<th style="text-align:left;padding:8px 6px;color:#6b7280;font-weight:700;font-size:11px">STATUS</th>'+
+      '</tr></thead><tbody>'+
+      rows.map(c=>`<tr style="border-bottom:1px solid #f3f4f6">
+        <td style="padding:9px 6px;font-weight:600">${esc(c.full_name||'—')}</td>
+        <td style="padding:9px 6px;color:#6b7280">${esc(c.equipment||'—')}</td>
+        <td style="padding:9px 6px;color:#6b7280">${esc(c.home_base||'—')}</td>
+        <td style="padding:9px 6px">${esc(c.plan||'—')}</td>
+        <td style="padding:9px 6px"><span class="badge ${statusBadge(c.status)}">${esc(c.status||'Active')}</span></td>
+      </tr>`).join('')+'</tbody></table>';
+  } else if(type==='loads'){
+    title.textContent='Loads This Month — Last 10';
+    const mtd=allLoads.filter(l=>{if(!l.created_at)return true;const d=new Date(l.created_at);return d.getMonth()===now.getMonth()&&d.getFullYear()===now.getFullYear();}).slice(0,10);
+    if(!mtd.length){html='<div style="color:#6b7280;padding:20px 0">No loads this month yet.</div>';}
+    else html='<table style="width:100%;border-collapse:collapse;font-size:13px">'+
+      '<thead><tr style="border-bottom:2px solid #e5e7eb">'+
+      '<th style="text-align:left;padding:8px 6px;color:#6b7280;font-weight:700;font-size:11px">ROUTE</th>'+
+      '<th style="text-align:left;padding:8px 6px;color:#6b7280;font-weight:700;font-size:11px">DRIVER</th>'+
+      '<th style="text-align:right;padding:8px 6px;color:#6b7280;font-weight:700;font-size:11px">RATE</th>'+
+      '<th style="text-align:right;padding:8px 6px;color:#6b7280;font-weight:700;font-size:11px">RPM</th>'+
+      '<th style="text-align:left;padding:8px 6px;color:#6b7280;font-weight:700;font-size:11px">STATUS</th>'+
+      '</tr></thead><tbody>'+
+      mtd.map(l=>`<tr style="border-bottom:1px solid #f3f4f6">
+        <td style="padding:9px 6px;font-weight:600">${esc(l.origin||'—')} → ${esc(l.destination||'—')}</td>
+        <td style="padding:9px 6px;color:#6b7280">${esc(l.driver_name||'—')}</td>
+        <td style="padding:9px 6px;text-align:right;font-family:monospace">${money(l.rate)}</td>
+        <td style="padding:9px 6px;text-align:right;font-family:monospace">${l.rpm?'$'+Number(l.rpm).toFixed(2):'—'}</td>
+        <td style="padding:9px 6px"><span class="badge ${statusBadge(l.status)}">${esc(l.status||'—')}</span></td>
+      </tr>`).join('')+'</tbody></table>';
+  } else if(type==='fees'){
+    title.textContent='MTD Dispatch Fees — Last 10 Loads';
+    const mtd=allLoads.filter(l=>{if(!l.created_at)return true;const d=new Date(l.created_at);return d.getMonth()===now.getMonth()&&d.getFullYear()===now.getFullYear();}).slice(0,10);
+    const total=mtd.reduce((a,l)=>a+(Number(l.dispatch_fee)||0),0);
+    if(!mtd.length){html='<div style="color:#6b7280;padding:20px 0">No loads this month.</div>';}
+    else html=`<div style="background:#f0fdf4;border-radius:8px;padding:12px 16px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center">
+        <span style="font-weight:600;color:#15803d">Total MTD Fees</span>
+        <span style="font-size:22px;font-weight:800;color:#15803d;font-family:monospace">${money(total)}</span>
+      </div>`+
+      '<table style="width:100%;border-collapse:collapse;font-size:13px">'+
+      '<thead><tr style="border-bottom:2px solid #e5e7eb">'+
+      '<th style="text-align:left;padding:8px 6px;color:#6b7280;font-weight:700;font-size:11px">DATE</th>'+
+      '<th style="text-align:left;padding:8px 6px;color:#6b7280;font-weight:700;font-size:11px">CARRIER</th>'+
+      '<th style="text-align:right;padding:8px 6px;color:#6b7280;font-weight:700;font-size:11px">GROSS</th>'+
+      '<th style="text-align:right;padding:8px 6px;color:#6b7280;font-weight:700;font-size:11px">DISPATCH FEE</th>'+
+      '</tr></thead><tbody>'+
+      mtd.map(l=>`<tr style="border-bottom:1px solid #f3f4f6">
+        <td style="padding:9px 6px;color:#6b7280;font-family:monospace;font-size:12px">${fmt(l.created_at)}</td>
+        <td style="padding:9px 6px;font-weight:600">${esc(l.driver_name||'—')}</td>
+        <td style="padding:9px 6px;text-align:right;font-family:monospace">${money(l.rate)}</td>
+        <td style="padding:9px 6px;text-align:right;font-family:monospace;color:#15803d;font-weight:700">${money(l.dispatch_fee)}</td>
+      </tr>`).join('')+'</tbody></table>';
+  } else if(type==='unpaid'){
+    title.textContent='Unpaid Invoices — Last 10';
+    const unpaid=allInvoices.filter(i=>i.status==='Unpaid'||i.status==='Overdue').slice(0,10);
+    const total=unpaid.reduce((a,i)=>a+(Number(i.amount)||0),0);
+    if(!unpaid.length){html='<div style="color:#6b7280;padding:20px 0">No unpaid invoices.</div>';}
+    else html=`<div style="background:#fff7ed;border-radius:8px;padding:12px 16px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center">
+        <span style="font-weight:600;color:#c2410c">Total Outstanding AR</span>
+        <span style="font-size:22px;font-weight:800;color:#c2410c;font-family:monospace">${money(total)}</span>
+      </div>`+
+      '<table style="width:100%;border-collapse:collapse;font-size:13px">'+
+      '<thead><tr style="border-bottom:2px solid #e5e7eb">'+
+      '<th style="text-align:left;padding:8px 6px;color:#6b7280;font-weight:700;font-size:11px">INVOICE #</th>'+
+      '<th style="text-align:left;padding:8px 6px;color:#6b7280;font-weight:700;font-size:11px">CARRIER</th>'+
+      '<th style="text-align:left;padding:8px 6px;color:#6b7280;font-weight:700;font-size:11px">DATE</th>'+
+      '<th style="text-align:right;padding:8px 6px;color:#6b7280;font-weight:700;font-size:11px">AMOUNT</th>'+
+      '<th style="text-align:left;padding:8px 6px;color:#6b7280;font-weight:700;font-size:11px">STATUS</th>'+
+      '</tr></thead><tbody>'+
+      unpaid.map(i=>`<tr style="border-bottom:1px solid #f3f4f6">
+        <td style="padding:9px 6px;font-family:monospace;font-size:12px">${esc(i.invoice_number||i.id||'—')}</td>
+        <td style="padding:9px 6px;font-weight:600">${esc(i.carrier_name||'—')}</td>
+        <td style="padding:9px 6px;color:#6b7280;font-family:monospace;font-size:12px">${fmt(i.due_date||i.created_at)}</td>
+        <td style="padding:9px 6px;text-align:right;font-family:monospace;font-weight:700">${money(i.amount)}</td>
+        <td style="padding:9px 6px"><span class="badge badge-red">${esc(i.status)}</span></td>
+      </tr>`).join('')+'</tbody></table>';
+  }
+  body.innerHTML=html;
+  modal.style.display='flex';
 }
 
 // ── COMPLIANCE / INSURANCE ──
@@ -4777,6 +4885,17 @@ if (typeof nav === 'function') {
 }
 </script>
 <!-- END EXECUTIVE COMMAND PANEL -->
+
+<!-- DASHBOARD SUMMARY MODAL -->
+<div id="dash-summary-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:2000;align-items:center;justify-content:center" onclick="if(event.target===this)this.style.display='none'">
+  <div style="background:#fff;border-radius:14px;width:92%;max-width:600px;max-height:80vh;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.3);display:flex;flex-direction:column">
+    <div style="padding:20px 24px;border-bottom:1px solid #e5e7eb;display:flex;justify-content:space-between;align-items:center">
+      <div id="dash-summary-title" style="font-size:17px;font-weight:700;color:#0B2545"></div>
+      <button onclick="document.getElementById('dash-summary-modal').style.display='none'" style="background:none;border:none;font-size:22px;color:#6b7280;cursor:pointer">×</button>
+    </div>
+    <div id="dash-summary-body" style="overflow-y:auto;padding:16px 24px 24px;flex:1"></div>
+  </div>
+</div>
 
 </body>
 </html>
