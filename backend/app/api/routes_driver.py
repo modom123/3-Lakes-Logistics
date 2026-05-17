@@ -105,8 +105,8 @@ async def update_driver_location(req: LocationUpdate, session: DriverSession):
 @router.post("/documents/upload")
 async def upload_driver_document(
     doc_type: str,
+    session: DriverSession,
     file: UploadFile = File(...),
-    session: DriverSession
 ):
     """Upload driver document (BOL, POD, Lumper receipt).
 
@@ -197,7 +197,7 @@ async def get_driver_full_profile(session: DriverSession):
     try:
         # Get driver
         driver_result = get_supabase().table("drivers").select(
-            "id, first_name, last_name, phone_e164, cdl_number, stripe_account_id, stripe_account_status"
+            "id, carrier_id, first_name, last_name, phone_e164, cdl_number, stripe_account_id, stripe_account_status"
         ).eq("id", driver_id).single().execute()
 
         driver = driver_result.data
@@ -205,9 +205,9 @@ async def get_driver_full_profile(session: DriverSession):
         # Get current load
         load_result = get_supabase().table("loads").select(
             "id, load_number, status, rate_total, miles"
-        ).eq("driver_id", driver_id).neq("status", "delivered").single().execute()
+        ).eq("driver_id", driver_id).neq("status", "delivered").limit(1).execute()
 
-        current_load = load_result.data if load_result.data else None
+        current_load = load_result.data[0] if load_result.data else None
 
         # Get this week's earnings
         from datetime import timedelta
