@@ -1,5 +1,6 @@
 // 3 Lakes Logistics — Shared Configuration
-// Edit this one file to update credentials/URLs across all 4 parts
+// API_BASE and API_TOKEN are injected at build time by scripts/inject-config.js
+// using Vercel env vars: API_BASE_URL and API_BEARER_TOKEN
 (function(){
   var C = window.__3LL_CONFIG = window.__3LL_CONFIG || {};
   C.SUPABASE_URL  = 'https://zngipootstubwvgdmckt.supabase.co';
@@ -10,3 +11,4 @@
   window.__3LL_API_BASE  = C.API_BASE;
   window.__3LL_API_TOKEN = C.API_TOKEN;
 })();
+
