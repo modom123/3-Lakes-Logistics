@@ -128,14 +128,22 @@ def migrate_airtable_leads() -> dict:
 
     for record in all_records:
         fields = record.get("fields", {})
-        company_name = _field(fields, "Company Name", "company name", "Company", "Name") or "Unknown"
-        phone        = _field(fields, "Phone", "phone number", "Phone Number", "Mobile")
-        email        = _field(fields, "Email", "email address", "Email Address")
-        dot_number   = _field(fields, "DOT", "DOT Number", "dot_number", "MC/DOT")
-        mc_number    = _field(fields, "MC", "MC Number", "mc_number")
-        contact_name = _field(fields, "Contact", "Contact Name", "contact_name", "Owner")
-        equipment    = _field(fields, "Equipment", "Equipment Type", "Trailer Type")
-        fleet_str    = _field(fields, "Fleet Size", "fleet_size", "Trucks", "# Trucks")
+
+        # Map Airtable field names → live leads table columns
+        business_name = _field(fields, "Company Name", "company name", "Business Name",
+                               "Company", "Name", "business_name") or "Unknown"
+        contact_name  = _field(fields, "Contact", "Contact Name", "Owner", "contact_name")
+        phone         = _field(fields, "Phone", "Phone Number", "phone number", "Mobile")
+        email         = _field(fields, "Email", "Email Address", "email address")
+        mc_number     = _field(fields, "MC", "MC Number", "mc_number", "MC #")
+        dot_number    = _field(fields, "DOT", "DOT Number", "dot_number", "MC/DOT", "DOT #")
+        equipment     = _field(fields, "Equipment", "Equipment Type", "Trailer Type",
+                               "equipment_type", "Truck Type")
+        city          = _field(fields, "City", "city", "Location")
+        state         = _field(fields, "State", "state", "ST")
+        notes         = _field(fields, "Notes", "notes", "Comments", "comment")
+        fleet_str     = _field(fields, "Fleet Size", "fleet_size", "Trucks", "# Trucks",
+                               "Number of Trucks")
 
         fleet_size: int | None = None
         if fleet_str:
@@ -144,6 +152,7 @@ def migrate_airtable_leads() -> dict:
             except Exception:
                 pass
 
+        # Dedup by DOT / MC
         if dot_number:
             existing = sb.table("leads").select("id").eq("dot_number", dot_number).limit(1).execute()
             if existing.data:
@@ -157,22 +166,23 @@ def migrate_airtable_leads() -> dict:
 
         source_ref = record.get("id", "")
 
-        # Build record with only valid leads-table columns
+        # Use actual live table column names (from information_schema query)
         rec: dict = {
-            "source":       "airtable",
-            "company_name": company_name,
-            "stage":        "new",
+            "business_name": business_name,   # col 2, NOT NULL — required
+            "source":        "Airtable",      # col 13, default 'FMCSA'
+            "status":        "New",           # col 14, default 'New'
         }
-        # Only set source_ref if non-empty
-        if source_ref:
-            rec["source_ref"] = source_ref
-        if phone:        rec["phone"]           = phone
-        if email:        rec["email"]           = email
-        if dot_number:   rec["dot_number"]      = dot_number
-        if mc_number:    rec["mc_number"]       = mc_number
-        if contact_name: rec["contact_name"]    = contact_name
-        if fleet_size:   rec["fleet_size"]      = fleet_size
-        if equipment:    rec["equipment_types"] = [equipment]
+        if source_ref:   rec["source_ref"]    = source_ref
+        if contact_name: rec["contact_name"]  = contact_name
+        if phone:        rec["phone"]         = phone
+        if email:        rec["email"]         = email
+        if mc_number:    rec["mc_number"]     = mc_number
+        if dot_number:   rec["dot_number"]    = dot_number
+        if equipment:    rec["equipment_type"] = equipment   # col 10, singular
+        if city:         rec["city"]          = city
+        if state:        rec["state"]         = state
+        if fleet_size:   rec["fleet_size"]    = fleet_size
+        if notes:        rec["notes"]         = notes
 
         try:
             # Skip if already imported by source_ref (safe re-run)

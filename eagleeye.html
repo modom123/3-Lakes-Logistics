@@ -3718,31 +3718,35 @@ async function loadLeadsPipeline(){
     const data=await res.json();
     const items=data.items||[];
 
-    // Support both correct column names and legacy migration column names
-    const name = l => l.company_name || l.prospect_name || '—';
+    // Live table uses business_name/status; also support legacy column names
+    const name = l => l.business_name || l.company_name || l.prospect_name || '—';
     const ph   = l => l.phone || l.phone_number || '—';
-    const stg  = l => l.stage || l.status || 'new';
+    const stg  = l => l.status || l.stage || 'New';
+    const loc  = l => [l.city, l.state].filter(Boolean).join(', ') || l.address || '';
 
-    const count=(stage)=>items.filter(l=>stg(l)===stage).length;
-    document.getElementById('lp-new').textContent=count('new');
-    document.getElementById('lp-contacted').textContent=count('contacted');
-    document.getElementById('lp-qualified').textContent=count('qualified');
-    document.getElementById('lp-converted').textContent=count('converted');
+    const stgLower = l => stg(l).toLowerCase();
+    const count = s => items.filter(l => stgLower(l) === s).length;
+    document.getElementById('lp-new').textContent       = count('new');
+    document.getElementById('lp-contacted').textContent = count('contacted');
+    document.getElementById('lp-qualified').textContent = count('qualified');
+    document.getElementById('lp-converted').textContent = count('converted');
     if(!tbl)return;
-    if(!items.length){tbl.innerHTML='<div class="empty-state">No leads yet. Click "Import from Airtable" above to load your 129 leads.</div>';return;}
+    if(!items.length){tbl.innerHTML='<div class="empty-state">No leads yet. Click "Import from Airtable" above to load your leads.</div>';return;}
 
     const scoreColor=s=>s>=8?'var(--green)':s>=5?'var(--gold)':'var(--muted)';
-    const stgBadge=s=>s==='converted'?'badge-green':s==='qualified'?'badge-blue':s==='contacted'?'badge-navy':'badge-ghost';
+    const stgBadge=s=>{const sl=s.toLowerCase();return sl==='converted'?'badge-green':sl==='qualified'?'badge-blue':sl==='contacted'?'badge-navy':'badge-ghost';};
     tbl.innerHTML='<div style="font-size:11px;color:var(--muted);margin-bottom:8px;padding:0 2px">'+items.length+' leads total</div>'+
-      '<div class="tbl-wrap"><table><thead><tr><th>Score</th><th>Company</th><th>DOT/MC</th><th>Phone</th><th>Source</th><th>Stage</th><th>Action</th></tr></thead><tbody>'+
+      '<div class="tbl-wrap"><table><thead><tr><th>Score</th><th>Company</th><th>Location</th><th>DOT/MC</th><th>Phone</th><th>Equipment</th><th>Status</th><th>Action</th></tr></thead><tbody>'+
       items.map(l=>{
         const phone=ph(l);
+        const equip=l.equipment_type||(l.equipment_types||[])[0]||'';
         return '<tr>'+
           '<td><strong style="color:'+scoreColor(l.score||0)+'">'+(l.score||'—')+'</strong></td>'+
-          '<td style="max-width:200px">'+esc(name(l))+(l.fleet_size?'<br><span style="font-size:10px;color:var(--muted)">'+l.fleet_size+' trucks</span>':'')+'</td>'+
+          '<td style="max-width:180px">'+esc(name(l))+(l.fleet_size?'<br><span style="font-size:10px;color:var(--muted)">'+l.fleet_size+' trucks</span>':'')+'</td>'+
+          '<td style="font-size:11px;color:var(--muted)">'+esc(loc(l))+'</td>'+
           '<td class="t-mono" style="font-size:10px">'+esc(l.dot_number||l.mc_number||'—')+'</td>'+
           '<td class="t-mono" style="font-size:11px">'+esc(phone)+'</td>'+
-          '<td><span class="badge badge-navy" style="font-size:9px">'+esc(l.source||'')+'</span></td>'+
+          '<td style="font-size:11px">'+esc(equip)+'</td>'+
           '<td><span class="badge '+stgBadge(stg(l))+'">'+esc(stg(l))+'</span></td>'+
           '<td><button class="btn-navy-sm" onclick="vanceDialLead(\''+esc(l.id)+'\',\''+esc(name(l)).replace(/'/g,"\\'")+'\',\''+esc(phone)+'\')" '+(phone==='—'?'disabled title="No phone number"':'')+'>📞 Call</button></td>'+
         '</tr>';
