@@ -187,18 +187,23 @@ def migrate_airtable_leads() -> dict:
                 raise ValueError("Insert returned no data — possible schema mismatch")
             inserted += 1
         except Exception as e:
-            import re as _re
+            import ast as _ast
             err_str = str(e)
-            # Extract the 'message' key — it names the exact failing column
-            msg_match = _re.search(r"'message':\s*'([^']*)'", err_str)
-            col_msg = msg_match.group(1) if msg_match else ""
-            if col_msg:
-                entry = f"COLUMN: {col_msg}"
-            else:
-                entry = err_str[:200]
-            # Also log rec keys on first failure so we know what we sent
+            col_msg = ""
+            # supabase-py wraps PostgREST errors as a dict-like string
+            # Try to parse it and extract the 'message' key (names the column)
+            try:
+                err_dict = _ast.literal_eval(err_str)
+                col_msg = err_dict.get("message", "")
+            except Exception:
+                pass
+            # Also try direct attribute access (postgrest-py APIError)
+            if not col_msg:
+                col_msg = getattr(e, "message", "") or getattr(getattr(e, "json", {}), "get", lambda k, d="": d)("message", "")
+
+            entry = f"COLUMN ERROR: {col_msg}" if col_msg else err_str[:150]
             if not errors:
-                entry += f"\nSENT KEYS: {list(rec.keys())}"
+                entry += f"\nSENT KEYS: {list(rec.keys())}\nSAMPLE VALUES: source={rec.get('source')!r} stage={rec.get('stage')!r}"
             if len(errors) < 3:
                 errors.append(entry)
             failed += 1
