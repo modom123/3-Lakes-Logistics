@@ -2248,14 +2248,17 @@ const API = {
   telemetryLatest(){ return this.get('/api/telemetry/latest'); },
 };
 
-// apiFetch — used by CLM, Vault, Ledger, Execution Engine sections.
-// Returns the raw Response so callers can do `await res.json()`.
+// apiFetch — bearer-authenticated fetch to the backend API.
 async function apiFetch(path, method='GET', body){
   const r = await fetch(API_BASE+path, {
     method,
     headers:{'Content-Type':'application/json','Authorization':'Bearer '+API_TOKEN},
     body: body ? JSON.stringify(body) : undefined
   });
+  if(!r.ok){
+    const text = await r.text().catch(()=>'');
+    console.error(`[apiFetch] ${method} ${path} → ${r.status}`, text);
+  }
   return r;
 }
 
@@ -3458,10 +3461,17 @@ async function checkBackend(){
   const envEl=document.getElementById('agent-backend-env');
   try{
     const h=await API.health();
+    if(!h){
+      console.error('[checkBackend] health returned null — backend unreachable or CORS blocked. API_BASE='+API_BASE);
+      if(el){el.textContent='Backend: ⚠ offline';el.className='badge badge-navy';}
+      if(envEl)envEl.textContent='offline';
+      return false;
+    }
     if(el){el.textContent='Backend: ✅ '+(h?.env||'up');el.className='badge badge-navy';}
     if(envEl)envEl.textContent=h?.env||'up';
     return true;
   }catch(e){
+    console.error('[checkBackend] exception:', e.message, 'API_BASE='+API_BASE);
     if(el){el.textContent='Backend: ⚠ offline';el.className='badge badge-navy';}
     if(envEl)envEl.textContent='offline';
     return false;
