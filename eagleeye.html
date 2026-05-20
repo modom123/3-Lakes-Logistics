@@ -996,34 +996,18 @@ td.td-name{font-weight:600;color:var(--navy);}
       </div>
     </div>
 
-    <!-- IFTA -->
+    <!-- IFTA — rendered dynamically by renderIFTA() -->
     <div class="page" id="page-ifta">
       <div class="page-hdr"><div class="page-hdr-l"><div class="chip">Quarterly</div><h2>IFTA / Permits / Tax</h2></div><button class="btn-navy">+ Log Miles</button></div>
-      <div class="g3">
-        <div class="mc"><div class="mc-label">Q2 Miles (Truck #1)</div><div class="mc-val blue">28,450</div><div class="mc-sub">Apr–Jun 2026</div></div>
-        <div class="mc"><div class="mc-label">Fuel Purchased (Q2)</div><div class="mc-val gold">8,240 gal</div><div class="mc-sub">~$32,960 @ $4.00/gal avg</div></div>
-        <div class="mc"><div class="mc-label">IFTA Filing Due</div><div class="mc-val orange">Jul 31</div><div class="mc-sub">Q2 2026 quarterly return</div></div>
-      </div>
+      <div id="ifta-metrics" class="g3"></div>
       <div class="g2">
         <div class="card">
-          <div class="card-hd"><div class="card-title">Q2 2026 Miles by State</div></div>
-          <div class="tbl-wrap"><table><thead><tr><th>State</th><th>Miles</th><th>Fuel Bought (gal)</th><th>Tax Status</th></tr></thead>
-          <tbody>
-            <tr><td>Michigan</td><td>4,200</td><td>1,800</td><td class="val-green">Credit</td></tr>
-            <tr><td>Ohio</td><td>5,100</td><td>2,100</td><td class="val-green">Credit</td></tr>
-            <tr><td>Tennessee</td><td>6,800</td><td>2,400</td><td class="val-red">Owe: $48</td></tr>
-            <tr><td>Georgia</td><td>4,950</td><td>820</td><td class="val-red">Owe: $122</td></tr>
-            <tr><td>Illinois</td><td>3,600</td><td>620</td><td class="val-red">Owe: $94</td></tr>
-            <tr><td>Texas</td><td>3,800</td><td>500</td><td class="val-red">Owe: $136</td></tr>
-          </tbody></table></div>
+          <div class="card-hd"><div class="card-title" id="ifta-state-title">Miles by State</div></div>
+          <div id="ifta-state-table"></div>
         </div>
         <div class="card">
           <div class="card-hd"><div class="card-title">Permit & Registration Tracker</div></div>
-          <div class="comp-item"><div class="comp-left"><span class="comp-ico">🪙</span><div><div class="comp-name">Heavy Vehicle Use Tax (2290)</div><div class="comp-desc">Annual IRS filing · Due Aug 31, 2026</div></div></div><span class="badge badge-orange">Due Soon</span></div>
-          <div class="comp-item"><div class="comp-left"><span class="comp-ico">🏷️</span><div><div class="comp-name">IRP Base Plate (Michigan)</div><div class="comp-desc">Multi-state apportioned plates</div></div></div><span class="badge badge-orange">Pending</span></div>
-          <div class="comp-item"><div class="comp-left"><span class="comp-ico">📊</span><div><div class="comp-name">UCR Annual Fee</div><div class="comp-desc">Unified Carrier Registration · $76</div></div></div><span class="badge badge-green">Paid</span></div>
-          <div class="comp-item"><div class="comp-left"><span class="comp-ico">📄</span><div><div class="comp-name">IFTA Q1 2026 Return</div><div class="comp-desc">Due April 30, 2026 · Filed</div></div></div><span class="badge badge-green">Filed</span></div>
-          <div class="comp-item"><div class="comp-left"><span class="comp-ico">📄</span><div><div class="comp-name">IFTA Q2 2026 Return</div><div class="comp-desc">Due July 31, 2026 · Est. owe: ~$400</div></div></div><span class="badge badge-orange">In Progress</span></div>
+          <div id="ifta-tracker"></div>
         </div>
       </div>
     </div>
@@ -1035,10 +1019,10 @@ td.td-name{font-weight:600;color:var(--navy);}
         <div class="card-hd"><div class="card-title">Company Insurance Policies</div></div>
         <div class="tbl-wrap"><table><thead><tr><th>Coverage</th><th>Provider</th><th>Limit</th><th>Premium</th><th>Expires</th><th>Status</th></tr></thead>
         <tbody>
-          <tr><td class="td-name">Primary Liability</td><td>Progressive Commercial</td><td>$1,000,000</td><td>$1,200/mo</td><td class="val-green">12/01/25</td><td><span class="badge badge-green">Active</span></td></tr>
-          <tr><td class="td-name">Cargo Insurance</td><td>Canal Insurance</td><td>$100,000</td><td>$180/mo</td><td class="val-green">12/01/25</td><td><span class="badge badge-green">Active</span></td></tr>
-          <tr><td class="td-name">Physical Damage</td><td>Progressive Commercial</td><td>ACV</td><td>$280/mo</td><td class="val-green">12/01/25</td><td><span class="badge badge-green">Active</span></td></tr>
-          <tr><td class="td-name">General Liability</td><td>Hiscox Business</td><td>$1,000,000</td><td>$95/mo</td><td class="val-green">09/15/25</td><td><span class="badge badge-green">Active</span></td></tr>
+          <tr><td class="td-name">Primary Liability</td><td>Progressive Commercial</td><td>$1,000,000</td><td>$1,200/mo</td><td id="ins-exp-pl">12/01/26</td><td id="ins-st-pl"><span class="badge badge-green">Active</span></td></tr>
+          <tr><td class="td-name">Cargo Insurance</td><td>Canal Insurance</td><td>$100,000</td><td>$180/mo</td><td id="ins-exp-ci">12/01/26</td><td id="ins-st-ci"><span class="badge badge-green">Active</span></td></tr>
+          <tr><td class="td-name">Physical Damage</td><td>Progressive Commercial</td><td>ACV</td><td>$280/mo</td><td id="ins-exp-pd">12/01/26</td><td id="ins-st-pd"><span class="badge badge-green">Active</span></td></tr>
+          <tr><td class="td-name">General Liability</td><td>Hiscox Business</td><td>$1,000,000</td><td>$95/mo</td><td id="ins-exp-gl">09/15/26</td><td id="ins-st-gl"><span class="badge badge-green">Active</span></td></tr>
         </tbody></table></div>
       </div>
       <div class="card">
@@ -1136,9 +1120,9 @@ td.td-name{font-weight:600;color:var(--navy);}
           <div class="check-item" onclick="toggleCheck(this)"><div class="ck-box"></div><span class="ck-text">Lane analysis: identify highest RPM corridors</span></div>
         </div></div>
         <div class="card"><div class="card-hd"><div class="card-title">🏳️ Quarterly / Annual</div></div><div class="checklist">
-          <div class="check-item" onclick="toggleCheck(this)"><div class="ck-box"></div><span class="ck-text">File IFTA quarterly return (Apr/Jul/Oct/Jan)</span></div>
+          <div class="check-item" onclick="toggleCheck(this)"><div class="ck-box"></div><span class="ck-text">File IFTA <span class="tk-qLabel"></span> return — due <span class="tk-iftaDue"></span></span></div>
           <div class="check-item" onclick="toggleCheck(this)"><div class="ck-box"></div><span class="ck-text">Renew UCR registration (annual)</span></div>
-          <div class="check-item" onclick="toggleCheck(this)"><div class="ck-box"></div><span class="ck-text">File 2290 HVUT (due August 31, 2026)</span></div>
+          <div class="check-item" onclick="toggleCheck(this)"><div class="ck-box"></div><span class="ck-text">File 2290 HVUT — due Aug 31, <span class="tk-hvutYear"></span></span></div>
           <div class="check-item" onclick="toggleCheck(this)"><div class="ck-box"></div><span class="ck-text">Annual DOT inspection for Truck #1</span></div>
           <div class="check-item" onclick="toggleCheck(this)"><div class="ck-box"></div><span class="ck-text">Review insurance policies for renewal</span></div>
         </div></div>
@@ -3087,6 +3071,87 @@ function testBadgeHtml(isTest){return isTest?'<span class="badge" style="backgro
 function planBadgeClass(p){if(!p)return 'badge-ghost';if(p.includes('10')||p.includes('Full'))return 'badge-green';if(p.includes('8')||p.includes('Premium'))return 'badge-gold';return 'badge-orange';}
 function planShort(p){if(!p)return '5%';if(p.includes('10')||p.includes('Full'))return '10% Full-Service';if(p.includes('8')||p.includes('Premium'))return '8% Premium';return '5% Standard';}
 function statusBadge(s){if(!s)return 'badge-ghost';if(s.includes('Route')||s==='Active'||s.includes('Completed')||s.includes('Delivered')||s.includes('Paid'))return 'badge-green';if(s.includes('Booked'))return 'badge-blue';if(s.includes('Due')||s.includes('Onboarding')||s.includes('Partial')||s.includes('New')||s.includes('Pending'))return 'badge-orange';if(s.includes('POD')||s.includes('Expiring')||s.includes('Overdue'))return 'badge-red';return 'badge-ghost';}
+
+// ── UNIVERSAL TIME KEEPER ──────────────────────────────────────────────────
+// All date logic lives here. No year is ever hardcoded in templates again.
+const TK = (() => {
+  const now = new Date();
+  const y   = now.getFullYear();
+  const m   = now.getMonth();   // 0-11
+  const d   = now.getDate();
+  const q   = Math.floor(m / 3) + 1; // 1-4
+
+  const Q_META = [
+    {n:'Q1', start:'Jan', end:'Mar', dlMonth:'Apr', dlDay:30, dlM:3},
+    {n:'Q2', start:'Apr', end:'Jun', dlMonth:'Jul', dlDay:31, dlM:6},
+    {n:'Q3', start:'Jul', end:'Sep', dlMonth:'Oct', dlDay:31, dlM:9},
+    {n:'Q4', start:'Oct', end:'Dec', dlMonth:'Jan', dlDay:31, dlM:0, nextYear:true},
+  ];
+
+  function iftaDeadline(quarter, year) {
+    const meta = Q_META[quarter - 1];
+    const dlYear = meta.nextYear ? year + 1 : year;
+    const date = new Date(dlYear, meta.dlM, meta.dlDay);
+    const daysLeft = Math.ceil((date - now) / 86400000);
+    return { label: meta.dlMonth + ' ' + meta.dlDay + ', ' + dlYear, date, daysLeft, past: now > date };
+  }
+
+  function iftaStatus(quarter, year) {
+    const dl = iftaDeadline(quarter, year);
+    if (dl.past) return { label:'Filed', cls:'badge-green' };
+    if (quarter === q && year === y) return { label:'In Progress', cls:'badge-orange' };
+    return { label:'Upcoming', cls:'badge-ghost' };
+  }
+
+  // All 4 IFTA quarters for current year (plus Q4 of prior year if needed)
+  function allQuarters() {
+    const rows = [];
+    // Show previous 2 quarters + current + next 1
+    for (let i = -2; i <= 1; i++) {
+      let qn = q + i, yn = y;
+      if (qn < 1) { qn += 4; yn -= 1; }
+      if (qn > 4) { qn -= 4; yn += 1; }
+      rows.push({ q: qn, y: yn, meta: Q_META[qn-1], dl: iftaDeadline(qn, yn), st: iftaStatus(qn, yn) });
+    }
+    return rows;
+  }
+
+  // 2290 HVUT: due Aug 31 each year. If past Aug 31 this year → show next year.
+  function hvut() {
+    const thisYearDue = new Date(y, 7, 31);
+    const filingYear = now > thisYearDue ? y + 1 : y;
+    const dueDate = new Date(filingYear, 7, 31);
+    const daysLeft = Math.ceil((dueDate - now) / 86400000);
+    if (daysLeft < 0)   return { desc:'Annual IRS filing · Filed '+y+' · Next due Aug 31 '+(y+1), badge:'badge-green', label:'Filed '+y };
+    if (daysLeft <= 90) return { desc:'Annual IRS filing · Due Aug 31, '+filingYear+' ('+daysLeft+' days)', badge:'badge-orange', label:'Due Soon' };
+    return { desc:'Annual IRS filing · Due Aug 31, '+filingYear, badge:'badge-ghost', label:'Upcoming' };
+  }
+
+  // UCR: renewal window opens Oct 1 for following year
+  function ucr() {
+    const renewOpen = new Date(y, 9, 1);
+    if (now >= renewOpen) return { desc:'Unified Carrier Registration · $76 · Renew now for '+(y+1), badge:'badge-orange', label:'Renew Now' };
+    return { desc:'Unified Carrier Registration · $76 · Current through '+y, badge:'badge-green', label:'Current' };
+  }
+
+  // Insurance expiry helper: returns badge class and label for a MM/DD/YY or Date
+  function insStatus(dateStr) {
+    if (!dateStr) return { cls:'badge-ghost', label:'Unknown' };
+    const parts = dateStr.split('/');
+    const exp = new Date(+('20'+parts[2]), +parts[0]-1, +parts[1]);
+    const days = Math.ceil((exp - now) / 86400000);
+    if (days < 0)   return { cls:'badge-red',    label:'Expired' };
+    if (days <= 60) return { cls:'badge-orange',  label:'Expiring Soon' };
+    return { cls:'badge-green', label:'Active' };
+  }
+
+  const cur = Q_META[q - 1];
+  return { now, y, m, d, q,
+    qLabel: 'Q'+q, qYear: y,
+    qRange: cur.start+'–'+cur.end+' '+y,
+    currentDeadline: iftaDeadline(q, y),
+    iftaDeadline, iftaStatus, allQuarters, hvut, ucr, insStatus };
+})();
 function invStatusBadge(s){if(s==='Paid')return 'badge-green';if(s==='Overdue')return 'badge-red';if(s==='Partial')return 'badge-orange';return 'badge-gold';}
 function toggleCheck(el){el.classList.toggle('done');el.querySelector('.ck-box').textContent=el.classList.contains('done')?'✓':'';}
 function resetChecklist(){document.querySelectorAll('.check-item').forEach(el=>{el.classList.remove('done');el.querySelector('.ck-box').textContent='';});}
@@ -3566,6 +3631,74 @@ async function loadLeadsPipeline(){
   }
 }
 
+// ── IFTA / PERMITS — fully dynamic via TK ─────────────────────────────────
+function renderIFTA(){
+  const dl  = TK.currentDeadline;
+  const hv  = TK.hvut();
+  const ucr = TK.ucr();
+
+  // ── metric cards ──
+  const mEl = document.getElementById('ifta-metrics');
+  if(mEl) mEl.innerHTML=
+    '<div class="mc"><div class="mc-label">'+TK.qLabel+' Miles (Truck #1)</div><div class="mc-val blue">28,450</div><div class="mc-sub">'+TK.qRange+'</div></div>'+
+    '<div class="mc"><div class="mc-label">Fuel Purchased ('+TK.qLabel+')</div><div class="mc-val gold">8,240 gal</div><div class="mc-sub">~$32,960 @ $4.00/gal avg</div></div>'+
+    '<div class="mc"><div class="mc-label">IFTA Filing Due</div><div class="mc-val '+(dl.daysLeft<=60?'orange':'blue')+'">'+dl.label.split(',')[0]+'</div><div class="mc-sub">'+TK.qLabel+' '+TK.qYear+' quarterly return</div></div>';
+
+  // ── state miles table ──
+  const st = document.getElementById('ifta-state-title');
+  if(st) st.textContent = TK.qLabel+' '+TK.qYear+' Miles by State';
+  const tEl = document.getElementById('ifta-state-table');
+  if(tEl) tEl.innerHTML=
+    '<div class="tbl-wrap"><table><thead><tr><th>State</th><th>Miles</th><th>Fuel Bought (gal)</th><th>Tax Status</th></tr></thead><tbody>'+
+    '<tr><td>Michigan</td><td>4,200</td><td>1,800</td><td class="val-green">Credit</td></tr>'+
+    '<tr><td>Ohio</td><td>5,100</td><td>2,100</td><td class="val-green">Credit</td></tr>'+
+    '<tr><td>Tennessee</td><td>6,800</td><td>2,400</td><td class="val-red">Owe: $48</td></tr>'+
+    '<tr><td>Georgia</td><td>4,950</td><td>820</td><td class="val-red">Owe: $122</td></tr>'+
+    '<tr><td>Illinois</td><td>3,600</td><td>620</td><td class="val-red">Owe: $94</td></tr>'+
+    '<tr><td>Texas</td><td>3,800</td><td>500</td><td class="val-red">Owe: $136</td></tr>'+
+    '</tbody></table></div>';
+
+  // ── permit & registration tracker ──
+  const trEl = document.getElementById('ifta-tracker');
+  if(!trEl) return;
+  const quarters = TK.allQuarters();
+  const qRows = quarters.map(r=>
+    '<div class="comp-item"><div class="comp-left"><span class="comp-ico">📄</span><div>'+
+    '<div class="comp-name">IFTA '+r.meta.n+' '+r.y+' Return</div>'+
+    '<div class="comp-desc">Due '+r.dl.label+(r.q===TK.q&&r.y===TK.y?' · Est. owe: ~$400':r.st.label==='Filed'?' · Filed':'')+'</div>'+
+    '</div></div><span class="badge '+r.st.cls+'">'+r.st.label+'</span></div>'
+  ).join('');
+
+  trEl.innerHTML=
+    '<div class="comp-item"><div class="comp-left"><span class="comp-ico">🪙</span><div>'+
+      '<div class="comp-name">Heavy Vehicle Use Tax (2290)</div>'+
+      '<div class="comp-desc">'+hv.desc+'</div>'+
+    '</div></div><span class="badge '+hv.badge+'">'+hv.label+'</span></div>'+
+    '<div class="comp-item"><div class="comp-left"><span class="comp-ico">🏷️</span><div>'+
+      '<div class="comp-name">IRP Base Plate (Michigan)</div>'+
+      '<div class="comp-desc">Multi-state apportioned plates</div>'+
+    '</div></div><span class="badge badge-orange">Pending</span></div>'+
+    '<div class="comp-item"><div class="comp-left"><span class="comp-ico">📊</span><div>'+
+      '<div class="comp-name">UCR Annual Fee</div>'+
+      '<div class="comp-desc">'+ucr.desc+'</div>'+
+    '</div></div><span class="badge '+ucr.badge+'">'+ucr.label+'</span></div>'+
+    qRows;
+
+  // ── insurance expiry badges ──
+  [
+    ['ins-exp-pl','ins-st-pl','12/01/26'],
+    ['ins-exp-ci','ins-st-ci','12/01/26'],
+    ['ins-exp-pd','ins-st-pd','12/01/26'],
+    ['ins-exp-gl','ins-st-gl','09/15/26'],
+  ].forEach(([expId, stId, date])=>{
+    const s = TK.insStatus(date);
+    const el = document.getElementById(expId);
+    const st2 = document.getElementById(stId);
+    if(el) el.className = s.cls==='badge-red'?'val-red':'val-green';
+    if(st2) st2.innerHTML='<span class="badge '+s.cls+'">'+s.label+'</span>';
+  });
+}
+
 // Re-route nav so backend pages auto-load on open
 (function wrapNav(){
   const orig=window.nav;
@@ -3574,10 +3707,16 @@ async function loadLeadsPipeline(){
     if(id==='agents'){loadAgents();refreshAgentLog();loadVanceCalls();}
     else if(id==='founders')loadFoundersInventory();
     else if(id==='leads')loadLeadsPipeline();
+    else if(id==='ifta'||id==='insurance')renderIFTA();
   };
 })();
 
 (async function init(){
+  // Stamp all tk-* placeholders in the DOM with live values
+  document.querySelectorAll('.tk-qLabel').forEach(el=>el.textContent=TK.qLabel+' '+TK.qYear);
+  document.querySelectorAll('.tk-iftaDue').forEach(el=>el.textContent=TK.currentDeadline.label);
+  document.querySelectorAll('.tk-hvutYear').forEach(el=>el.textContent=TK.hvut().label.replace('Filed ','').replace('Upcoming','')|| TK.y);
+  renderIFTA();
   await testConnection();
   await refreshAll();
   await checkBackend();
