@@ -286,15 +286,17 @@ async def carrier_intake(payload: CarrierIntake, request: Request,
         "status": onboarding_status,
         "onboarding_missing_fields": missing or None,
     }
+    # Pre-check: return existing carrier if DOT already registered (idempotent intake)
+    if payload.dot_number:
+        pre = sb.table("active_carriers").select("id").eq("dot_number", payload.dot_number).limit(1).execute()
+        if pre.data:
+            carrier_id = pre.data[0]["id"]
+            log.warning("DOT %s already registered — returning carrier_id %s", payload.dot_number, carrier_id)
+            return IntakeResponse(ok=True, carrier_id=carrier_id, next_step="complete_profile")
+
     try:
         res = sb.table("active_carriers").insert(carrier_row).execute()
     except Exception as e:
-        # Check if carrier already exists (duplicate DOT/MC from a previous partial attempt)
-        existing = sb.table("active_carriers").select("id").eq("dot_number", payload.dot_number or "").limit(1).execute()
-        if existing.data:
-            carrier_id = existing.data[0]["id"]
-            log.warning("Duplicate DOT — returning existing carrier_id %s", carrier_id)
-            return IntakeResponse(ok=True, carrier_id=carrier_id, next_step="complete_profile")
         raise HTTPException(500, f"carrier insert failed: {e}")
     if not res.data:
         raise HTTPException(500, "carrier insert failed")
