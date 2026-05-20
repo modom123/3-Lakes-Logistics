@@ -2306,7 +2306,7 @@ function toast(msg,type='success'){
 async function testConnection(){
   const el=document.getElementById('sb-status');
   try{
-    const{error}=await sb.from('carriers').select('id').limit(1);
+    const{error}=await sb.from('active_carriers').select('id').limit(1);
     if(error)throw error;
     el.textContent='✓ Supabase Live';
     el.className='sb-conn';
@@ -2325,7 +2325,7 @@ async function refreshAll(){
 
 // ── CARRIERS ──
 async function loadCarriers(){
-  const{data,error}=await sb.from('carriers').select('*').order('created_at',{ascending:false});
+  const{data,error}=await sb.from('active_carriers').select('*').order('created_at',{ascending:false});
   if(error){console.warn('loadCarriers:',error.message);return;}
   allCarriers=data||[];
   renderCarriersTable();
@@ -2340,16 +2340,16 @@ function renderCarriersTable(){
   if(allCarriers.length===0){wrap.innerHTML='<div class="empty-state"><div class="ei">👥</div><p>No carriers yet. Add your first carrier using the button above.</p></div>';return;}
   wrap.innerHTML='<div class="tbl-wrap"><table><thead><tr><th>Carrier</th><th>MC #</th><th>Equipment</th><th>Plan</th><th>Home Base</th><th>Phone</th><th>Status</th><th>Actions</th></tr></thead><tbody>'+
     allCarriers.map(c=>'<tr>'+
-      '<td class="td-name">'+esc(c.full_name)+'</td>'+
+      '<td class="td-name">'+esc(c.company_name)+'</td>'+
       '<td class="t-mono" style="font-size:12px;color:var(--muted)">'+esc(c.mc_number||'—')+'</td>'+
-      '<td>'+esc(c.equipment||'Dry Van')+'</td>'+
+      '<td>'+esc(c.trailer_type||'Dry Van')+'</td>'+
       '<td><span class="badge '+planBadgeClass(c.plan)+'">'+planShort(c.plan)+'</span></td>'+
-      '<td>'+esc(c.home_base||'—')+'</td>'+
+      '<td>'+esc(c.address||'—')+'</td>'+
       '<td class="t-mono" style="font-size:11px">'+esc(c.phone||'—')+'</td>'+
       '<td><span class="badge '+statusBadge(c.status)+'">'+esc(c.status||'Active')+'</span></td>'+
       '<td style="display:flex;gap:6px">'+
         '<button class="btn-navy-sm" onclick="sendWelcomeEmail(\''+c.id+'\')" title="Send Welcome Email">📧 Welcome</button>'+
-        '<button class="btn-navy-sm" onclick="createInvoiceForCarrier(\''+c.id+'\',\''+esc(c.full_name).replace(/'/g,"\\'")+'\')" title="Create Invoice">🧾</button>'+
+        '<button class="btn-navy-sm" onclick="createInvoiceForCarrier(\''+c.id+'\',\''+esc(c.company_name).replace(/'/g,"\\'")+'\')" title="Create Invoice">🧾</button>'+
         '<button class="btn-red-sm" onclick="deleteCarrier(\''+c.id+'\')" title="Remove">✕</button>'+
       '</td></tr>'
     ).join('')+'</tbody></table></div>';
@@ -2369,19 +2369,19 @@ async function saveCarrier(){
   const name=document.getElementById('mc-name').value.trim();
   if(!name){toast('Name is required','error');return;}
   btn.disabled=true;btn.textContent='Saving…';
-  const{error}=await sb.from('carriers').insert({
-    full_name:name,first_name:name.split(' ')[0],last_name:name.split(' ').slice(1).join(' '),
+  const{error}=await sb.from('active_carriers').insert({
+    company_name:name,
     mc_number:document.getElementById('mc-number').value.trim(),
     dot_number:document.getElementById('mc-dot').value.trim(),
-    home_base:document.getElementById('mc-base').value.trim(),
-    equipment:document.getElementById('mc-equip').value,
+    address:document.getElementById('mc-base').value.trim(),
+    trailer_type:document.getElementById('mc-equip').value,
     plan:document.getElementById('mc-plan').value,
     phone:document.getElementById('mc-phone').value.trim(),
     email:document.getElementById('mc-email').value.trim(),
-    insurance_provider:document.getElementById('mc-ins').value.trim(),
-    eld:document.getElementById('mc-eld').value.trim(),
-    status:'New — Pending Onboarding',
-    enrolled_date:new Date().toISOString().split('T')[0],loads_completed:0
+    insurance_carrier:document.getElementById('mc-ins').value.trim(),
+    eld_provider:document.getElementById('mc-eld').value.trim(),
+    esign_name:name,
+    status:'onboarding'
   });
   btn.disabled=false;btn.textContent='Add Carrier';
   if(error){toast('Error: '+error.message,'error');return;}
@@ -2392,7 +2392,7 @@ async function saveCarrier(){
 
 async function deleteCarrier(id){
   if(!confirm('Remove this carrier?'))return;
-  const{error}=await sb.from('carriers').delete().eq('id',id);
+  const{error}=await sb.from('active_carriers').delete().eq('id',id);
   if(error){toast('Error: '+error.message,'error');return;}
   await loadCarriers();updateDashboard();toast('Carrier removed');
 }
@@ -2437,7 +2437,7 @@ function renderDispatchBoard(){
     ? allLoads.filter(l=>l.status===filterVal)
     : allLoads.filter(l=>l.status==='En Route'||l.status==='Booked'||l.status==='Check Due');
   setText('dispatch-on-load',allLoads.filter(l=>l.status==='En Route').length);
-  setText('dispatch-available',allCarriers.filter(c=>!allLoads.some(l=>l.driver_name===c.full_name&&(l.status==='En Route'||l.status==='Booked'))).length);
+  setText('dispatch-available',allCarriers.filter(c=>!allLoads.some(l=>l.driver_name===c.company_name&&(l.status==='En Route'||l.status==='Booked'))).length);
   setText('dispatch-pods',allLoads.filter(l=>l.status==='POD Needed').length);
   if(active.length===0){tbody.innerHTML='<tr><td colspan="9"><div class="empty-state"><div class="ei">🚛</div><p>No loads match this filter.</p></div></td></tr>';return;}
   tbody.innerHTML=active.map(l=>
@@ -2536,7 +2536,7 @@ async function saveLoad(){
 
 function populateDriverSelect(){
   const sel=document.getElementById('load-driver-select');if(!sel)return;
-  const dbN=allCarriers.map(c=>c.full_name).filter(Boolean);
+  const dbN=allCarriers.map(c=>c.company_name).filter(Boolean);
   sel.innerHTML='<option value="">Select driver…</option>'+dbN.map(d=>'<option>'+esc(d)+'</option>').join('');
 }
 
@@ -2666,7 +2666,7 @@ function printInvoice(id){
 
 function populateInvSelects(){
   const csel=document.getElementById('inv-carrier-select');
-  if(csel)csel.innerHTML='<option value="">Select carrier (optional)…</option>'+allCarriers.map(c=>'<option value="'+c.id+'">'+esc(c.full_name)+'</option>').join('');
+  if(csel)csel.innerHTML='<option value="">Select carrier (optional)…</option>'+allCarriers.map(c=>'<option value="'+c.id+'">'+esc(c.company_name)+'</option>').join('');
   const lsel=document.getElementById('inv-load-select');
   if(lsel)lsel.innerHTML='<option value="">Select load (optional)…</option>'+allLoads.map(l=>'<option value="'+l.id+'">'+esc(l.load_number||('#'+l.id.slice(0,6)))+' — '+esc(l.driver_name||'')+'</option>').join('');
 }
@@ -2741,9 +2741,9 @@ function updateDashboard(){
     const newC=allCarriers.filter(c=>c.status?.includes('Pending')||c.status?.includes('New'));
     dyn.innerHTML=newC.slice(0,2).map(c=>
       '<div class="tl-item"><div class="tl-dot" style="background:rgba(37,99,235,.1);color:var(--blue)">📋</div>'+
-      '<div class="tl-body"><div class="tl-t">New Carrier — '+esc(c.full_name)+'</div>'+
-      '<div class="tl-d">'+esc(c.home_base||'—')+' · '+esc(c.equipment||'Dry Van')+' · '+planShort(c.plan)+' · Call within 24hrs</div>'+
-      '<div class="tl-time">🆕 Enrolled '+esc(c.enrolled_date||'today')+'</div></div></div>'
+      '<div class="tl-body"><div class="tl-t">New Carrier — '+esc(c.company_name)+'</div>'+
+      '<div class="tl-d">'+esc(c.address||'—')+' · '+esc(c.trailer_type||'Dry Van')+' · '+planShort(c.plan)+' · Call within 24hrs</div>'+
+      '<div class="tl-time">🆕 Enrolled '+(c.created_at||'').split('T')[0]+'</div></div></div>'
     ).join('');
   }
 }
@@ -2770,9 +2770,9 @@ function showDashSummary(type){
       '<th style="text-align:left;padding:8px 6px;color:#6b7280;font-weight:700;font-size:11px">STATUS</th>'+
       '</tr></thead><tbody>'+
       rows.map(c=>`<tr style="border-bottom:1px solid #f3f4f6">
-        <td style="padding:9px 6px;font-weight:600">${esc(c.full_name||'—')}</td>
-        <td style="padding:9px 6px;color:#6b7280">${esc(c.equipment||'—')}</td>
-        <td style="padding:9px 6px;color:#6b7280">${esc(c.home_base||'—')}</td>
+        <td style="padding:9px 6px;font-weight:600">${esc(c.company_name||'—')}</td>
+        <td style="padding:9px 6px;color:#6b7280">${esc(c.trailer_type||'—')}</td>
+        <td style="padding:9px 6px;color:#6b7280">${esc(c.address||'—')}</td>
         <td style="padding:9px 6px">${esc(c.plan||'—')}</td>
         <td style="padding:9px 6px"><span class="badge ${statusBadge(c.status)}">${esc(c.status||'Active')}</span></td>
       </tr>`).join('')+'</tbody></table>';
@@ -2853,14 +2853,14 @@ function renderCarrierCompliance(){
     if(allCarriers.length===0){eldList.innerHTML='<div class="t-sm t-muted" style="padding:8px 0">No carriers in Supabase yet.</div>';}
     else eldList.innerHTML=allCarriers.map(c=>
       '<div class="comp-item"><div class="comp-left"><span class="comp-ico">📱</span>'+
-      '<div><div class="comp-name">'+esc(c.full_name)+'</div><div class="comp-desc">ELD: '+esc(c.eld||'Not specified')+' · '+esc(c.equipment||'Dry Van')+' · '+esc(c.home_base||'—')+'</div></div></div>'+
-      '<span class="badge '+(c.eld&&c.eld.length>1?'badge-green':'badge-orange')+'">'+(c.eld&&c.eld.length>1?'ELD Active':'Verify ELD')+'</span></div>'
+      '<div><div class="comp-name">'+esc(c.company_name)+'</div><div class="comp-desc">ELD: '+esc(c.eld_provider||'Not specified')+' · '+esc(c.trailer_type||'Dry Van')+' · '+esc(c.address||'—')+'</div></div></div>'+
+      '<span class="badge '+(c.eld_provider&&c.eld_provider!=='other'?'badge-green':'badge-orange')+'">'+(c.eld_provider&&c.eld_provider!=='other'?'ELD Active':'Verify ELD')+'</span></div>'
     ).join('');
   }
   const insTable=document.getElementById('insurance-carrier-table');
   if(insTable){
     insTable.innerHTML=allCarriers.length
-      ? allCarriers.map(c=>'<tr><td class="td-name">'+esc(c.full_name)+'</td><td>'+esc(c.insurance_provider||'—')+'</td><td>$1,000,000</td><td><span class="badge badge-blue">Supabase</span></td><td><span class="badge badge-orange">Verify COI</span></td></tr>').join('')
+      ? allCarriers.map(c=>'<tr><td class="td-name">'+esc(c.company_name)+'</td><td>'+esc(c.insurance_carrier||'—')+'</td><td>$1,000,000</td><td><span class="badge badge-blue">Supabase</span></td><td><span class="badge badge-orange">Verify COI</span></td></tr>').join('')
       : '<tr><td colspan="5" style="color:var(--muted);text-align:center;padding:12px">No carriers yet — add carriers to track COIs.</td></tr>';
   }
 }
@@ -3210,7 +3210,7 @@ async function sendRateCon(loadId) {
   if (!load) return;
 
   // Find carrier email from allCarriers by matching driver name
-  const carrier = allCarriers.find(c => c.full_name === load.driver_name);
+  const carrier = allCarriers.find(c => c.company_name === load.driver_name || c.company_name === load.carrier_name);
   const toEmail = carrier?.email || '';
 
   if (!toEmail) {
@@ -3252,16 +3252,16 @@ async function sendWelcomeEmail(carrierId) {
   const carrier = allCarriers.find(c => c.id === carrierId);
   if (!carrier) return;
   if (!carrier.email) {
-    toast('No email on file for ' + carrier.full_name, 'error');
+    toast('No email on file for ' + carrier.company_name, 'error');
     return;
   }
   toast('Sending welcome email…');
   const params = {
     to_email:     carrier.email,
-    carrier_name: carrier.full_name  || '—',
-    plan:         carrier.plan       || '5% Standard Dispatch',
-    mc_number:    carrier.mc_number  || '—',
-    home_base:    carrier.home_base  || '—',
+    carrier_name: carrier.company_name  || '—',
+    plan:         carrier.plan          || '5% Standard Dispatch',
+    mc_number:    carrier.mc_number     || '—',
+    home_base:    carrier.address       || '—',
     equipment:    carrier.equipment  || 'Dry Van',
   };
   try {
@@ -3296,7 +3296,7 @@ async function doSendInvoice(inv, carrier, toEmail) {
   toast('Sending invoice…');
   const params = {
     to_email:       toEmail,
-    carrier_name:   carrier?.full_name || 'Carrier',
+    carrier_name:   carrier?.company_name || 'Carrier',
     invoice_number: inv.invoice_number || ('INV-' + inv.id.slice(0,6)),
     amount:         Number(inv.amount || 0).toLocaleString(),
     due_date:       inv.due_date || '—',
