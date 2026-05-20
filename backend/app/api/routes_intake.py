@@ -6,6 +6,8 @@ a secure link to complete the profile. Full submissions run the entire pipeline.
 """
 from __future__ import annotations
 
+from datetime import datetime, timezone
+
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Request, status
 
 from ..agents import penny, shield
@@ -280,7 +282,7 @@ async def carrier_intake(payload: CarrierIntake, request: Request,
         "esign_ip": payload.esign_ip or ip,
         "esign_user_agent": payload.esign_user_agent or ua,
         "agreement_pdf_hash": payload.agreement_pdf_hash,
-        "esign_timestamp": "now()",
+        "esign_timestamp": datetime.now(timezone.utc).isoformat(),
         "status": onboarding_status,
         "onboarding_missing_fields": missing or None,
     }
