@@ -54,3 +54,53 @@ def recent_loads(limit: int = 10) -> dict:
         .execute()
     )
     return {"items": res.data or []}
+
+
+@router.get("/loads")
+def list_loads(limit: int = 500, status: str | None = None) -> dict:
+    sb = get_supabase()
+    q = sb.table("loads").select("*").order("created_at", desc=True).limit(limit)
+    if status:
+        q = q.eq("status", status)
+    res = q.execute()
+    return {"count": len(res.data or []), "items": res.data or []}
+
+
+@router.get("/invoices")
+def list_invoices(limit: int = 500, status: str | None = None) -> dict:
+    sb = get_supabase()
+    q = sb.table("invoices").select("*").order("created_at", desc=True).limit(limit)
+    if status:
+        q = q.eq("status", status)
+    res = q.execute()
+    return {"count": len(res.data or []), "items": res.data or []}
+
+
+@router.post("/loads")
+def create_load(payload: dict) -> dict:
+    res = get_supabase().table("loads").insert(payload).execute()
+    return {"ok": True, "item": res.data[0] if res.data else {}}
+
+
+@router.patch("/loads/{load_id}")
+def update_load(load_id: str, payload: dict) -> dict:
+    get_supabase().table("loads").update(payload).eq("id", load_id).execute()
+    return {"ok": True}
+
+
+@router.post("/invoices")
+def create_invoice(payload: dict) -> dict:
+    res = get_supabase().table("invoices").insert(payload).execute()
+    return {"ok": True, "item": res.data[0] if res.data else {}}
+
+
+@router.patch("/invoices/{invoice_id}")
+def update_invoice(invoice_id: str, payload: dict) -> dict:
+    get_supabase().table("invoices").update(payload).eq("id", invoice_id).execute()
+    return {"ok": True}
+
+
+@router.delete("/invoices/{invoice_id}")
+def delete_invoice(invoice_id: str) -> dict:
+    get_supabase().table("invoices").delete().eq("id", invoice_id).execute()
+    return {"ok": True}

@@ -9,6 +9,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800;900&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="shared/config.js"></script>
+<script src="shared/tk.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
@@ -27,9 +28,9 @@
 }
 html,body{height:100%;overflow:hidden;}
 body{font-family:var(--ff-b);color:var(--text);background:var(--off);display:flex;}
-::-webkit-scrollbar{width:5px;height:5px;}
+::-webkit-scrollbar{width:10px;height:10px;}
 ::-webkit-scrollbar-track{background:var(--slate);}
-::-webkit-scrollbar-thumb{background:var(--gold);border-radius:3px;}
+::-webkit-scrollbar-thumb{background:var(--gold);border-radius:5px;border:2px solid var(--slate);}
 
 /* ── SIDEBAR ── */
 #sidebar{
@@ -801,11 +802,12 @@ td.td-name{font-weight:600;color:var(--navy);}
           <h2>Dashboard</h2>
         </div>
       </div>
-      <div class="g4">
-        <div class="mc" onclick="showDashSummary('carriers')" style="cursor:pointer" title="Click for summary"><div class="mc-label">Active Carriers</div><div class="mc-val gold" id="dash-total-carriers">—</div><div class="mc-sub" id="dash-carrier-sub">Loading…</div></div>
-        <div class="mc" onclick="showDashSummary('fees')" style="cursor:pointer" title="Click for summary"><div class="mc-label">MTD Dispatch Fees</div><div class="mc-val green" id="dash-mtd-fees">—</div><div class="mc-sub">This month</div></div>
-        <div class="mc" onclick="showDashSummary('loads')" style="cursor:pointer" title="Click for summary"><div class="mc-label">Loads This Month</div><div class="mc-val blue" id="dash-loads">—</div><div class="mc-sub" id="dash-rpm-sub">Avg RPM: —</div></div>
-        <div class="mc" onclick="showDashSummary('unpaid')" style="cursor:pointer" title="Click for summary"><div class="mc-label">Unpaid Invoices</div><div class="mc-val orange" id="dash-unpaid">—</div><div class="mc-sub" id="dash-unpaid-sub">outstanding AR</div></div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:16px;margin-bottom:16px">
+        <div class="mc" onclick="showDashSummary('carriers')" style="cursor:pointer" title="Click for recent 10"><div class="mc-label">Active Carriers</div><div class="mc-val gold" id="dash-total-carriers">—</div><div class="mc-sub" id="dash-carrier-sub">Loading…</div></div>
+        <div class="mc" onclick="showDashSummary('pending')" style="cursor:pointer" title="Click for recent 10"><div class="mc-label">Pending Carriers</div><div class="mc-val orange" id="dash-pending-carriers">—</div><div class="mc-sub" id="dash-pending-sub">Incomplete profiles</div></div>
+        <div class="mc" onclick="showDashSummary('fees')" style="cursor:pointer" title="Click for recent 10"><div class="mc-label">MTD Dispatch Fees</div><div class="mc-val green" id="dash-mtd-fees">—</div><div class="mc-sub">This month</div></div>
+        <div class="mc" onclick="showDashSummary('loads')" style="cursor:pointer" title="Click for recent 10"><div class="mc-label">Loads This Month</div><div class="mc-val blue" id="dash-loads">—</div><div class="mc-sub" id="dash-rpm-sub">Avg RPM: —</div></div>
+        <div class="mc" onclick="showDashSummary('unpaid')" style="cursor:pointer" title="Click for recent 10"><div class="mc-label">Unpaid Invoices</div><div class="mc-val red" id="dash-unpaid">—</div><div class="mc-sub" id="dash-unpaid-sub">outstanding AR</div></div>
       </div>
       <div class="g2">
         <div class="card">
@@ -995,33 +997,18 @@ td.td-name{font-weight:600;color:var(--navy);}
       </div>
     </div>
 
-    <!-- IFTA -->
+    <!-- IFTA — rendered dynamically by renderIFTA() -->
     <div class="page" id="page-ifta">
       <div class="page-hdr"><div class="page-hdr-l"><div class="chip">Quarterly</div><h2>IFTA / Permits / Tax</h2></div><button class="btn-navy">+ Log Miles</button></div>
-      <div class="g3">
-        <div class="mc"><div class="mc-label">Q1 Miles (Truck #1)</div><div class="mc-val blue">28,450</div><div class="mc-sub">Jan–Mar 2025</div></div>
-        <div class="mc"><div class="mc-label">Fuel Purchased (Q1)</div><div class="mc-val gold">8,240 gal</div><div class="mc-sub">~$32,960 @ $4.00/gal avg</div></div>
-        <div class="mc"><div class="mc-label">IFTA Filing Due</div><div class="mc-val orange">Apr 30</div><div class="mc-sub">File quarterly return</div></div>
-      </div>
+      <div id="ifta-metrics" class="g3"></div>
       <div class="g2">
         <div class="card">
-          <div class="card-hd"><div class="card-title">Q1 Miles by State</div></div>
-          <div class="tbl-wrap"><table><thead><tr><th>State</th><th>Miles</th><th>Fuel Bought (gal)</th><th>Tax Status</th></tr></thead>
-          <tbody>
-            <tr><td>Michigan</td><td>4,200</td><td>1,800</td><td class="val-green">Credit</td></tr>
-            <tr><td>Ohio</td><td>5,100</td><td>2,100</td><td class="val-green">Credit</td></tr>
-            <tr><td>Tennessee</td><td>6,800</td><td>2,400</td><td class="val-red">Owe: $48</td></tr>
-            <tr><td>Georgia</td><td>4,950</td><td>820</td><td class="val-red">Owe: $122</td></tr>
-            <tr><td>Illinois</td><td>3,600</td><td>620</td><td class="val-red">Owe: $94</td></tr>
-            <tr><td>Texas</td><td>3,800</td><td>500</td><td class="val-red">Owe: $136</td></tr>
-          </tbody></table></div>
+          <div class="card-hd"><div class="card-title" id="ifta-state-title">Miles by State</div></div>
+          <div id="ifta-state-table"></div>
         </div>
         <div class="card">
           <div class="card-hd"><div class="card-title">Permit & Registration Tracker</div></div>
-          <div class="comp-item"><div class="comp-left"><span class="comp-ico">🪙</span><div><div class="comp-name">Heavy Vehicle Use Tax (2290)</div><div class="comp-desc">Annual IRS filing · Due Aug 31</div></div></div><span class="badge badge-green">Filed</span></div>
-          <div class="comp-item"><div class="comp-left"><span class="comp-ico">🏷️</span><div><div class="comp-name">IRP Base Plate (Michigan)</div><div class="comp-desc">Multi-state apportioned plates</div></div></div><span class="badge badge-orange">Pending</span></div>
-          <div class="comp-item"><div class="comp-left"><span class="comp-ico">📊</span><div><div class="comp-name">UCR Annual Fee</div><div class="comp-desc">Unified Carrier Registration · $76</div></div></div><span class="badge badge-green">Paid</span></div>
-          <div class="comp-item"><div class="comp-left"><span class="comp-ico">📄</span><div><div class="comp-name">IFTA Q1 Return</div><div class="comp-desc">Due April 30 · Est. owe: ~$400</div></div></div><span class="badge badge-orange">In Progress</span></div>
+          <div id="ifta-tracker"></div>
         </div>
       </div>
     </div>
@@ -1033,10 +1020,10 @@ td.td-name{font-weight:600;color:var(--navy);}
         <div class="card-hd"><div class="card-title">Company Insurance Policies</div></div>
         <div class="tbl-wrap"><table><thead><tr><th>Coverage</th><th>Provider</th><th>Limit</th><th>Premium</th><th>Expires</th><th>Status</th></tr></thead>
         <tbody>
-          <tr><td class="td-name">Primary Liability</td><td>Progressive Commercial</td><td>$1,000,000</td><td>$1,200/mo</td><td class="val-green">12/01/25</td><td><span class="badge badge-green">Active</span></td></tr>
-          <tr><td class="td-name">Cargo Insurance</td><td>Canal Insurance</td><td>$100,000</td><td>$180/mo</td><td class="val-green">12/01/25</td><td><span class="badge badge-green">Active</span></td></tr>
-          <tr><td class="td-name">Physical Damage</td><td>Progressive Commercial</td><td>ACV</td><td>$280/mo</td><td class="val-green">12/01/25</td><td><span class="badge badge-green">Active</span></td></tr>
-          <tr><td class="td-name">General Liability</td><td>Hiscox Business</td><td>$1,000,000</td><td>$95/mo</td><td class="val-green">09/15/25</td><td><span class="badge badge-green">Active</span></td></tr>
+          <tr><td class="td-name">Primary Liability</td><td>Progressive Commercial</td><td>$1,000,000</td><td>$1,200/mo</td><td id="ins-exp-pl">12/01/26</td><td id="ins-st-pl"><span class="badge badge-green">Active</span></td></tr>
+          <tr><td class="td-name">Cargo Insurance</td><td>Canal Insurance</td><td>$100,000</td><td>$180/mo</td><td id="ins-exp-ci">12/01/26</td><td id="ins-st-ci"><span class="badge badge-green">Active</span></td></tr>
+          <tr><td class="td-name">Physical Damage</td><td>Progressive Commercial</td><td>ACV</td><td>$280/mo</td><td id="ins-exp-pd">12/01/26</td><td id="ins-st-pd"><span class="badge badge-green">Active</span></td></tr>
+          <tr><td class="td-name">General Liability</td><td>Hiscox Business</td><td>$1,000,000</td><td>$95/mo</td><td id="ins-exp-gl">09/15/26</td><td id="ins-st-gl"><span class="badge badge-green">Active</span></td></tr>
         </tbody></table></div>
       </div>
       <div class="card">
@@ -1134,9 +1121,9 @@ td.td-name{font-weight:600;color:var(--navy);}
           <div class="check-item" onclick="toggleCheck(this)"><div class="ck-box"></div><span class="ck-text">Lane analysis: identify highest RPM corridors</span></div>
         </div></div>
         <div class="card"><div class="card-hd"><div class="card-title">🏳️ Quarterly / Annual</div></div><div class="checklist">
-          <div class="check-item" onclick="toggleCheck(this)"><div class="ck-box"></div><span class="ck-text">File IFTA quarterly return (Apr/Jul/Oct/Jan)</span></div>
+          <div class="check-item" onclick="toggleCheck(this)"><div class="ck-box"></div><span class="ck-text">File IFTA <span class="tk-qLabel"></span> return — due <span class="tk-iftaDue"></span></span></div>
           <div class="check-item" onclick="toggleCheck(this)"><div class="ck-box"></div><span class="ck-text">Renew UCR registration (annual)</span></div>
-          <div class="check-item" onclick="toggleCheck(this)"><div class="ck-box"></div><span class="ck-text">File 2290 HVUT (due August 31)</span></div>
+          <div class="check-item" onclick="toggleCheck(this)"><div class="ck-box"></div><span class="ck-text">File 2290 HVUT — due Aug 31, <span class="tk-hvutYear"></span></span></div>
           <div class="check-item" onclick="toggleCheck(this)"><div class="ck-box"></div><span class="ck-text">Annual DOT inspection for Truck #1</span></div>
           <div class="check-item" onclick="toggleCheck(this)"><div class="ck-box"></div><span class="ck-text">Review insurance policies for renewal</span></div>
         </div></div>
@@ -1268,16 +1255,23 @@ td.td-name{font-weight:600;color:var(--navy);}
         </div>
       </div>
 
-      <div class="metrics" style="margin-bottom:16px">
-        <div class="mc"><div class="mc-label">Total Spots</div><div class="mc-val blue" id="fd-total">—</div></div>
-        <div class="mc"><div class="mc-label">Claimed</div><div class="mc-val green" id="fd-claimed">—</div></div>
-        <div class="mc"><div class="mc-label">Remaining</div><div class="mc-val gold" id="fd-remaining">—</div></div>
-        <div class="mc"><div class="mc-label">MRR at Full</div><div class="mc-val orange">$200,000</div><div class="mc-sub">$200/mo × 1,000</div></div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px;margin-bottom:16px">
+        <div class="mc"><div class="mc-label">Total Spots</div><div class="mc-val blue" id="fd-total">—</div><div class="mc-sub">across all categories</div></div>
+        <div class="mc"><div class="mc-label">Claimed</div><div class="mc-val green" id="fd-claimed">—</div><div class="mc-sub" id="fd-claimed-sub">spots taken</div></div>
+        <div class="mc"><div class="mc-label">Remaining</div><div class="mc-val gold" id="fd-remaining">—</div><div class="mc-sub">spots available</div></div>
+        <div class="mc"><div class="mc-label">Current MRR</div><div class="mc-val green" id="fd-mrr">—</div><div class="mc-sub">$300/mo × claimed</div></div>
+        <div class="mc"><div class="mc-label">MRR at Full</div><div class="mc-val orange" id="fd-mrr-full">—</div><div class="mc-sub">$300/mo × 1,000</div></div>
       </div>
 
-      <div class="card">
-        <div class="card-hd"><div class="card-title">Inventory by Equipment</div></div>
-        <div id="fd-inventory-table"><div class="loading"><div class="spin"></div>Loading inventory…</div></div>
+      <div class="g2">
+        <div class="card">
+          <div class="card-hd"><div class="card-title">Inventory by Equipment Type</div><span class="card-chip">Live</span></div>
+          <div id="fd-inventory-table"><div class="loading"><div class="spin"></div>Loading inventory…</div></div>
+        </div>
+        <div class="card">
+          <div class="card-hd"><div class="card-title">Founders Carriers</div><span class="card-chip" id="fd-carrier-count">—</span></div>
+          <div id="fd-carriers-list"><div class="loading"><div class="spin"></div>Loading carriers…</div></div>
+        </div>
       </div>
     </div>
 
@@ -2306,7 +2300,7 @@ function toast(msg,type='success'){
 async function testConnection(){
   const el=document.getElementById('sb-status');
   try{
-    const{error}=await sb.from('carriers').select('id').limit(1);
+    const{error}=await sb.from('active_carriers').select('id').limit(1);
     if(error)throw error;
     el.textContent='✓ Supabase Live';
     el.className='sb-conn';
@@ -2325,9 +2319,16 @@ async function refreshAll(){
 
 // ── CARRIERS ──
 async function loadCarriers(){
-  const{data,error}=await sb.from('carriers').select('*').order('created_at',{ascending:false});
-  if(error){console.warn('loadCarriers:',error.message);return;}
-  allCarriers=data||[];
+  try{
+    const res=await apiFetch('/api/carriers/?limit=500');
+    const json=await res.json();
+    allCarriers=json.items||[];
+  }catch(e){
+    console.warn('loadCarriers via API failed, trying Supabase direct:',e.message);
+    const{data,error}=await sb.from('active_carriers').select('*').order('created_at',{ascending:false});
+    if(error){console.warn('loadCarriers Supabase:',error.message);return;}
+    allCarriers=data||[];
+  }
   renderCarriersTable();
   updateCarrierMetrics();
 }
@@ -2339,17 +2340,17 @@ function renderCarriersTable(){
   if(!wrap)return;
   if(allCarriers.length===0){wrap.innerHTML='<div class="empty-state"><div class="ei">👥</div><p>No carriers yet. Add your first carrier using the button above.</p></div>';return;}
   wrap.innerHTML='<div class="tbl-wrap"><table><thead><tr><th>Carrier</th><th>MC #</th><th>Equipment</th><th>Plan</th><th>Home Base</th><th>Phone</th><th>Status</th><th>Actions</th></tr></thead><tbody>'+
-    allCarriers.map(c=>'<tr>'+
-      '<td class="td-name">'+esc(c.full_name)+'</td>'+
+    allCarriers.map(c=>'<tr'+(c.is_test?' style="opacity:0.7"':'')+'>'+
+      '<td class="td-name">'+esc(c.company_name)+testBadgeHtml(c.is_test)+'</td>'+
       '<td class="t-mono" style="font-size:12px;color:var(--muted)">'+esc(c.mc_number||'—')+'</td>'+
-      '<td>'+esc(c.equipment||'Dry Van')+'</td>'+
+      '<td>'+esc(c.trailer_type||'Dry Van')+'</td>'+
       '<td><span class="badge '+planBadgeClass(c.plan)+'">'+planShort(c.plan)+'</span></td>'+
-      '<td>'+esc(c.home_base||'—')+'</td>'+
+      '<td>'+esc(c.address||'—')+'</td>'+
       '<td class="t-mono" style="font-size:11px">'+esc(c.phone||'—')+'</td>'+
       '<td><span class="badge '+statusBadge(c.status)+'">'+esc(c.status||'Active')+'</span></td>'+
       '<td style="display:flex;gap:6px">'+
         '<button class="btn-navy-sm" onclick="sendWelcomeEmail(\''+c.id+'\')" title="Send Welcome Email">📧 Welcome</button>'+
-        '<button class="btn-navy-sm" onclick="createInvoiceForCarrier(\''+c.id+'\',\''+esc(c.full_name).replace(/'/g,"\\'")+'\')" title="Create Invoice">🧾</button>'+
+        '<button class="btn-navy-sm" onclick="createInvoiceForCarrier(\''+c.id+'\',\''+esc(c.company_name).replace(/'/g,"\\'")+'\')" title="Create Invoice">🧾</button>'+
         '<button class="btn-red-sm" onclick="deleteCarrier(\''+c.id+'\')" title="Remove">✕</button>'+
       '</td></tr>'
     ).join('')+'</tbody></table></div>';
@@ -2357,9 +2358,9 @@ function renderCarriersTable(){
 
 function updateCarrierMetrics(){
   const total=allCarriers.length;
-  const active=allCarriers.filter(c=>!c.status?.includes('Pending')&&!c.status?.includes('Inactive')).length;
-  const pending=allCarriers.filter(c=>c.status?.includes('Pending')||c.status?.includes('New')).length;
-  const fs=allCarriers.filter(c=>c.plan?.includes('10')||c.plan?.includes('Full')).length;
+  const active=allCarriers.filter(c=>c.status==='active'||c.status==='onboarding').length;
+  const pending=allCarriers.filter(c=>c.status==='onboarding_incomplete').length;
+  const fs=allCarriers.filter(c=>c.plan==='founders').length;
   setText('carrier-count-total',total);setText('carrier-count-active',active);
   setText('carrier-count-pending',pending);setText('carrier-count-fs',fs);
 }
@@ -2369,19 +2370,19 @@ async function saveCarrier(){
   const name=document.getElementById('mc-name').value.trim();
   if(!name){toast('Name is required','error');return;}
   btn.disabled=true;btn.textContent='Saving…';
-  const{error}=await sb.from('carriers').insert({
-    full_name:name,first_name:name.split(' ')[0],last_name:name.split(' ').slice(1).join(' '),
+  const{error}=await sb.from('active_carriers').insert({
+    company_name:name,
     mc_number:document.getElementById('mc-number').value.trim(),
     dot_number:document.getElementById('mc-dot').value.trim(),
-    home_base:document.getElementById('mc-base').value.trim(),
-    equipment:document.getElementById('mc-equip').value,
+    address:document.getElementById('mc-base').value.trim(),
+    trailer_type:document.getElementById('mc-equip').value,
     plan:document.getElementById('mc-plan').value,
     phone:document.getElementById('mc-phone').value.trim(),
     email:document.getElementById('mc-email').value.trim(),
-    insurance_provider:document.getElementById('mc-ins').value.trim(),
-    eld:document.getElementById('mc-eld').value.trim(),
-    status:'New — Pending Onboarding',
-    enrolled_date:new Date().toISOString().split('T')[0],loads_completed:0
+    insurance_carrier:document.getElementById('mc-ins').value.trim(),
+    eld_provider:document.getElementById('mc-eld').value.trim(),
+    esign_name:name,
+    status:'onboarding'
   });
   btn.disabled=false;btn.textContent='Add Carrier';
   if(error){toast('Error: '+error.message,'error');return;}
@@ -2392,16 +2393,21 @@ async function saveCarrier(){
 
 async function deleteCarrier(id){
   if(!confirm('Remove this carrier?'))return;
-  const{error}=await sb.from('carriers').delete().eq('id',id);
+  const{error}=await sb.from('active_carriers').delete().eq('id',id);
   if(error){toast('Error: '+error.message,'error');return;}
   await loadCarriers();updateDashboard();toast('Carrier removed');
 }
 
 // ── LOADS ──
 async function loadLoads(){
-  const{data,error}=await sb.from('loads').select('*').order('created_at',{ascending:false});
-  if(error){console.warn('loadLoads:',error.message);return;}
-  allLoads=data||[];
+  try{
+    const res=await apiFetch('/api/dashboard/loads?limit=500');
+    const json=await res.json();
+    allLoads=json.items||[];
+  }catch(e){
+    console.warn('loadLoads API failed:',e.message);
+    allLoads=[];
+  }
   renderLoadsTable();renderDispatchBoard();updateLoadMetrics();
 }
 
@@ -2437,7 +2443,7 @@ function renderDispatchBoard(){
     ? allLoads.filter(l=>l.status===filterVal)
     : allLoads.filter(l=>l.status==='En Route'||l.status==='Booked'||l.status==='Check Due');
   setText('dispatch-on-load',allLoads.filter(l=>l.status==='En Route').length);
-  setText('dispatch-available',allCarriers.filter(c=>!allLoads.some(l=>l.driver_name===c.full_name&&(l.status==='En Route'||l.status==='Booked'))).length);
+  setText('dispatch-available',allCarriers.filter(c=>!allLoads.some(l=>l.driver_name===c.company_name&&(l.status==='En Route'||l.status==='Booked'))).length);
   setText('dispatch-pods',allLoads.filter(l=>l.status==='POD Needed').length);
   if(active.length===0){tbody.innerHTML='<tr><td colspan="9"><div class="empty-state"><div class="ei">🚛</div><p>No loads match this filter.</p></div></td></tr>';return;}
   tbody.innerHTML=active.map(l=>
@@ -2462,8 +2468,8 @@ async function updateLoadStatus(id){
   const current=load?.status||'Booked';
   const next=statuses[(statuses.indexOf(current)+1)%statuses.length];
   if(!confirm('Change status to: '+next+'?'))return;
-  const{error}=await sb.from('loads').update({status:next}).eq('id',id);
-  if(error){toast('Error: '+error.message,'error');return;}
+  const upRes=await apiFetch('/api/dashboard/loads/'+id,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:next})});
+  if(!upRes.ok){toast('Error updating load status','error');return;}
   await loadLoads();toast('Status → '+next);
   // Fire the matching execution-engine trigger
   const triggerBody={load_id:id,load_number:load?.load_number||'',rate:load?.rate||null};
@@ -2508,7 +2514,7 @@ async function saveLoad(){
   const fee=Math.round(rate*pct/100);
   const rpm=miles?parseFloat((rate/miles).toFixed(2)):null;
   const postToWeb=document.getElementById('load-post-website')?.checked||false;
-  const{error}=await sb.from('loads').insert({
+  const insRes=await apiFetch('/api/dashboard/loads',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
     load_number:'#'+loadCounter++,driver_name:driver,origin,destination:dest,miles,rate,
     dispatch_pct:pct,dispatch_fee:fee,rpm,
     status:document.getElementById('load-status').value,
@@ -2516,9 +2522,9 @@ async function saveLoad(){
     commodity:document.getElementById('load-commodity').value.trim(),
     notes:document.getElementById('load-broker').value.trim(),
     post_to_website:postToWeb
-  });
+  })});
   btn.disabled=false;btn.textContent='Save Load';
-  if(error){toast('Error: '+error.message,'error');return;}
+  if(!insRes.ok){toast('Error saving load','error');return;}
   closeModal('add-load-modal');
   ['load-origin','load-dest','load-miles','load-rate','load-pickup','load-broker','load-commodity'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   const pwCb=document.getElementById('load-post-website');if(pwCb)pwCb.checked=false;
@@ -2536,15 +2542,20 @@ async function saveLoad(){
 
 function populateDriverSelect(){
   const sel=document.getElementById('load-driver-select');if(!sel)return;
-  const dbN=allCarriers.map(c=>c.full_name).filter(Boolean);
+  const dbN=allCarriers.map(c=>c.company_name).filter(Boolean);
   sel.innerHTML='<option value="">Select driver…</option>'+dbN.map(d=>'<option>'+esc(d)+'</option>').join('');
 }
 
 // ── INVOICES ──
 async function loadInvoices(){
-  const{data,error}=await sb.from('invoices').select('*').order('created_at',{ascending:false});
-  if(error){console.warn('loadInvoices:',error.message);return;}
-  allInvoices=data||[];
+  try{
+    const res=await apiFetch('/api/dashboard/invoices?limit=500');
+    const json=await res.json();
+    allInvoices=json.items||[];
+  }catch(e){
+    console.warn('loadInvoices API failed:',e.message);
+    allInvoices=[];
+  }
   updateInvoiceMetrics();
   renderLoadsTable();
 }
@@ -2604,15 +2615,15 @@ async function saveInvoice(){
   btn.disabled=true;btn.textContent='Saving…';
   const carrierId=document.getElementById('inv-carrier-select').value||null;
   const loadId=document.getElementById('inv-load-select').value||null;
-  const{error}=await sb.from('invoices').insert({
+  const invRes=await apiFetch('/api/dashboard/invoices',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
     invoice_number:document.getElementById('inv-number').value.trim()||autoInvNum(),
     carrier_id:carrierId,load_id:loadId,amount,
     status:document.getElementById('inv-status').value,
     due_date:document.getElementById('inv-due').value||null,
     notes:document.getElementById('inv-notes').value.trim()
-  });
+  })});
   btn.disabled=false;btn.textContent='Create Invoice';
-  if(error){toast('Error: '+error.message,'error');return;}
+  if(!invRes.ok){toast('Error creating invoice','error');return;}
   closeModal('add-invoice-modal');
   ['inv-number','inv-amount','inv-due','inv-notes'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   await loadInvoices();renderInvoices();updateDashboard();toast('Invoice created!');
@@ -2622,19 +2633,19 @@ function autoInvNum(){return 'INV-'+String(allInvoices.length+1).padStart(4,'0')
 function autoInvNumber(){const el=document.getElementById('inv-number');if(el)el.value=autoInvNum();}
 
 async function markInvoicePaid(id){
-  const{error}=await sb.from('invoices').update({status:'Paid',paid_date:new Date().toISOString().split('T')[0]}).eq('id',id);
-  if(error){toast('Error','error');return;}
+  const r=await apiFetch('/api/dashboard/invoices/'+id,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:'Paid',paid_date:new Date().toISOString().split('T')[0]})});
+  if(!r.ok){toast('Error','error');return;}
   await loadInvoices();renderInvoices();updateDashboard();toast('Marked as paid!');
 }
 async function markInvoiceOverdue(id){
-  const{error}=await sb.from('invoices').update({status:'Overdue'}).eq('id',id);
-  if(error){toast('Error','error');return;}
+  const r=await apiFetch('/api/dashboard/invoices/'+id,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:'Overdue'})});
+  if(!r.ok){toast('Error','error');return;}
   await loadInvoices();renderInvoices();toast('Marked overdue');
 }
 async function deleteInvoice(id){
   if(!confirm('Delete this invoice?'))return;
-  const{error}=await sb.from('invoices').delete().eq('id',id);
-  if(error){toast('Error','error');return;}
+  const r=await apiFetch('/api/dashboard/invoices/'+id,{method:'DELETE'});
+  if(!r.ok){toast('Error','error');return;}
   await loadInvoices();renderInvoices();updateDashboard();toast('Invoice deleted');
 }
 
@@ -2666,7 +2677,7 @@ function printInvoice(id){
 
 function populateInvSelects(){
   const csel=document.getElementById('inv-carrier-select');
-  if(csel)csel.innerHTML='<option value="">Select carrier (optional)…</option>'+allCarriers.map(c=>'<option value="'+c.id+'">'+esc(c.full_name)+'</option>').join('');
+  if(csel)csel.innerHTML='<option value="">Select carrier (optional)…</option>'+allCarriers.map(c=>'<option value="'+c.id+'">'+esc(c.company_name)+'</option>').join('');
   const lsel=document.getElementById('inv-load-select');
   if(lsel)lsel.innerHTML='<option value="">Select load (optional)…</option>'+allLoads.map(l=>'<option value="'+l.id+'">'+esc(l.load_number||('#'+l.id.slice(0,6)))+' — '+esc(l.driver_name||'')+'</option>').join('');
 }
@@ -2690,8 +2701,13 @@ function createInvoiceForLoad(loadId,driverName,fee){
 
 // ── DASHBOARD ──
 function updateDashboard(){
-  const total=allCarriers.length;
-  setText('dash-total-carriers',total);setText('dash-carrier-sub',total+' in Supabase');
+  const activeC=allCarriers.filter(c=>c.status==='active'||c.status==='onboarding');
+  const pendingC=allCarriers.filter(c=>c.status==='onboarding_incomplete');
+  const testCt=allCarriers.filter(c=>c.is_test).length;
+  setText('dash-total-carriers',activeC.length);
+  setText('dash-carrier-sub',allCarriers.length+' total'+(testCt?' · '+testCt+' test':''));
+  setText('dash-pending-carriers',pendingC.length);
+  setText('dash-pending-sub',pendingC.length+' need profile completion');
   const now=new Date();
   const mtdLoads=allLoads.filter(l=>{if(!l.created_at)return false;const d=new Date(l.created_at);return d.getMonth()===now.getMonth()&&d.getFullYear()===now.getFullYear();});
   const fees=mtdLoads.reduce((a,l)=>a+(Number(l.dispatch_fee)||0),0);
@@ -2725,7 +2741,7 @@ function updateDashboard(){
     '<div class="comp-item"><div class="comp-left"><span class="comp-ico">⭐</span><div><div class="comp-name">5% Standard Dispatch</div><div class="comp-desc">Per-load · most owner-operators</div></div></div><span class="badge badge-orange">'+p5+' carriers</span></div>'+
     '<div class="comp-item"><div class="comp-left"><span class="comp-ico">⭐⭐</span><div><div class="comp-name">8% Premium Dispatch</div><div class="comp-desc">After-hours · 24/7 check-calls</div></div></div><span class="badge badge-gold">'+p8+' carriers</span></div>'+
     '<div class="comp-item"><div class="comp-left"><span class="comp-ico">👑</span><div><div class="comp-name">10% Full-Service</div><div class="comp-desc">IFTA · ELD · compliance suite</div></div></div><span class="badge badge-green">'+p10+' carriers</span></div>'+
-    '<div class="divider"></div><div class="t-sm t-muted t-mono">Total: '+total+' carriers in Supabase</div>';
+    '<div class="divider"></div><div class="t-sm t-muted t-mono">Total: '+allCarriers.length+' carriers in system</div>';
 
   const gross=allLoads.reduce((a,l)=>a+(Number(l.rate)||0),0);
   const ar=allInvoices.filter(i=>i.status==='Unpaid'||i.status==='Overdue').reduce((a,i)=>a+(Number(i.amount)||0),0);
@@ -2738,12 +2754,12 @@ function updateDashboard(){
 
   const dyn=document.getElementById('dynamic-actions');
   if(dyn){
-    const newC=allCarriers.filter(c=>c.status?.includes('Pending')||c.status?.includes('New'));
+    const newC=allCarriers.filter(c=>c.status==='onboarding_incomplete');
     dyn.innerHTML=newC.slice(0,2).map(c=>
       '<div class="tl-item"><div class="tl-dot" style="background:rgba(37,99,235,.1);color:var(--blue)">📋</div>'+
-      '<div class="tl-body"><div class="tl-t">New Carrier — '+esc(c.full_name)+'</div>'+
-      '<div class="tl-d">'+esc(c.home_base||'—')+' · '+esc(c.equipment||'Dry Van')+' · '+planShort(c.plan)+' · Call within 24hrs</div>'+
-      '<div class="tl-time">🆕 Enrolled '+esc(c.enrolled_date||'today')+'</div></div></div>'
+      '<div class="tl-body"><div class="tl-t">New Carrier — '+esc(c.company_name)+'</div>'+
+      '<div class="tl-d">'+esc(c.address||'—')+' · '+esc(c.trailer_type||'Dry Van')+' · '+planShort(c.plan)+' · Call within 24hrs</div>'+
+      '<div class="tl-time">🆕 Enrolled '+(c.created_at||'').split('T')[0]+'</div></div></div>'
     ).join('');
   }
 }
@@ -2758,23 +2774,43 @@ function showDashSummary(type){
   const money=n=>'$'+Number(n||0).toLocaleString();
   let html='';
   if(type==='carriers'){
-    title.textContent='Active Carriers — Last 10';
-    const rows=allCarriers.slice(0,10);
-    if(!rows.length){html='<div style="color:#6b7280;padding:20px 0">No carriers on file yet.</div>';}
+    title.textContent='Active Carriers — Most Recent 10';
+    const rows=allCarriers.filter(c=>c.status==='active'||c.status==='onboarding').slice(0,10);
+    if(!rows.length){html='<div style="color:#6b7280;padding:20px 0">No active carriers yet.</div>';}
     else html='<table style="width:100%;border-collapse:collapse;font-size:13px">'+
       '<thead><tr style="border-bottom:2px solid #e5e7eb">'+
       '<th style="text-align:left;padding:8px 6px;color:#6b7280;font-weight:700;font-size:11px">CARRIER</th>'+
       '<th style="text-align:left;padding:8px 6px;color:#6b7280;font-weight:700;font-size:11px">EQUIPMENT</th>'+
       '<th style="text-align:left;padding:8px 6px;color:#6b7280;font-weight:700;font-size:11px">BASE</th>'+
       '<th style="text-align:left;padding:8px 6px;color:#6b7280;font-weight:700;font-size:11px">PLAN</th>'+
-      '<th style="text-align:left;padding:8px 6px;color:#6b7280;font-weight:700;font-size:11px">STATUS</th>'+
+      '<th style="text-align:left;padding:8px 6px;color:#6b7280;font-weight:700;font-size:11px">ENROLLED</th>'+
       '</tr></thead><tbody>'+
       rows.map(c=>`<tr style="border-bottom:1px solid #f3f4f6">
-        <td style="padding:9px 6px;font-weight:600">${esc(c.full_name||'—')}</td>
-        <td style="padding:9px 6px;color:#6b7280">${esc(c.equipment||'—')}</td>
-        <td style="padding:9px 6px;color:#6b7280">${esc(c.home_base||'—')}</td>
-        <td style="padding:9px 6px">${esc(c.plan||'—')}</td>
-        <td style="padding:9px 6px"><span class="badge ${statusBadge(c.status)}">${esc(c.status||'Active')}</span></td>
+        <td style="padding:9px 6px;font-weight:600">${esc(c.company_name||'—')}</td>
+        <td style="padding:9px 6px;color:#6b7280">${esc(c.trailer_type||'—')}</td>
+        <td style="padding:9px 6px;color:#6b7280">${esc(c.address||'—')}</td>
+        <td style="padding:9px 6px"><span class="badge ${planBadgeClass(c.plan)}">${planShort(c.plan)}</span></td>
+        <td style="padding:9px 6px;color:#6b7280;font-family:monospace;font-size:12px">${(c.created_at||'').split('T')[0]||'—'}</td>
+      </tr>`).join('')+'</tbody></table>';
+  } else if(type==='pending'){
+    title.textContent='Pending Carriers — Most Recent 10';
+    const rows=allCarriers.filter(c=>c.status==='onboarding_incomplete').slice(0,10);
+    if(!rows.length){html='<div style="color:#6b7280;padding:20px 0">No pending carriers — all profiles complete!</div>';}
+    else html='<div style="background:#fff7ed;border-radius:8px;padding:12px 16px;margin-bottom:16px"><span style="font-weight:600;color:#c2410c">'+rows.length+' carrier(s) need to complete their profile</span></div>'+
+      '<table style="width:100%;border-collapse:collapse;font-size:13px">'+
+      '<thead><tr style="border-bottom:2px solid #e5e7eb">'+
+      '<th style="text-align:left;padding:8px 6px;color:#6b7280;font-weight:700;font-size:11px">CARRIER</th>'+
+      '<th style="text-align:left;padding:8px 6px;color:#6b7280;font-weight:700;font-size:11px">DOT #</th>'+
+      '<th style="text-align:left;padding:8px 6px;color:#6b7280;font-weight:700;font-size:11px">PHONE</th>'+
+      '<th style="text-align:left;padding:8px 6px;color:#6b7280;font-weight:700;font-size:11px">PLAN</th>'+
+      '<th style="text-align:left;padding:8px 6px;color:#6b7280;font-weight:700;font-size:11px">MISSING</th>'+
+      '</tr></thead><tbody>'+
+      rows.map(c=>`<tr style="border-bottom:1px solid #f3f4f6">
+        <td style="padding:9px 6px;font-weight:600">${esc(c.company_name||'—')}</td>
+        <td style="padding:9px 6px;color:#6b7280;font-family:monospace;font-size:12px">${esc(c.dot_number||'—')}</td>
+        <td style="padding:9px 6px;color:#6b7280">${esc(c.phone||'—')}</td>
+        <td style="padding:9px 6px"><span class="badge ${planBadgeClass(c.plan)}">${planShort(c.plan)}</span></td>
+        <td style="padding:9px 6px;color:#c2410c;font-size:12px">${Array.isArray(c.onboarding_missing_fields)?c.onboarding_missing_fields.join(', '):'Profile incomplete'}</td>
       </tr>`).join('')+'</tbody></table>';
   } else if(type==='loads'){
     title.textContent='Loads This Month — Last 10';
@@ -2853,14 +2889,14 @@ function renderCarrierCompliance(){
     if(allCarriers.length===0){eldList.innerHTML='<div class="t-sm t-muted" style="padding:8px 0">No carriers in Supabase yet.</div>';}
     else eldList.innerHTML=allCarriers.map(c=>
       '<div class="comp-item"><div class="comp-left"><span class="comp-ico">📱</span>'+
-      '<div><div class="comp-name">'+esc(c.full_name)+'</div><div class="comp-desc">ELD: '+esc(c.eld||'Not specified')+' · '+esc(c.equipment||'Dry Van')+' · '+esc(c.home_base||'—')+'</div></div></div>'+
-      '<span class="badge '+(c.eld&&c.eld.length>1?'badge-green':'badge-orange')+'">'+(c.eld&&c.eld.length>1?'ELD Active':'Verify ELD')+'</span></div>'
+      '<div><div class="comp-name">'+esc(c.company_name)+'</div><div class="comp-desc">ELD: '+esc(c.eld_provider||'Not specified')+' · '+esc(c.trailer_type||'Dry Van')+' · '+esc(c.address||'—')+'</div></div></div>'+
+      '<span class="badge '+(c.eld_provider&&c.eld_provider!=='other'?'badge-green':'badge-orange')+'">'+(c.eld_provider&&c.eld_provider!=='other'?'ELD Active':'Verify ELD')+'</span></div>'
     ).join('');
   }
   const insTable=document.getElementById('insurance-carrier-table');
   if(insTable){
     insTable.innerHTML=allCarriers.length
-      ? allCarriers.map(c=>'<tr><td class="td-name">'+esc(c.full_name)+'</td><td>'+esc(c.insurance_provider||'—')+'</td><td>$1,000,000</td><td><span class="badge badge-blue">Supabase</span></td><td><span class="badge badge-orange">Verify COI</span></td></tr>').join('')
+      ? allCarriers.map(c=>'<tr><td class="td-name">'+esc(c.company_name)+'</td><td>'+esc(c.insurance_carrier||'—')+'</td><td>$1,000,000</td><td><span class="badge badge-blue">Supabase</span></td><td><span class="badge badge-orange">Verify COI</span></td></tr>').join('')
       : '<tr><td colspan="5" style="color:var(--muted);text-align:center;padding:12px">No carriers yet — add carriers to track COIs.</td></tr>';
   }
 }
@@ -2871,7 +2907,7 @@ async function loadNotes(){
   const{data,error}=await sb.from('dispatcher_notes').select('*').order('created_at',{ascending:false});
   const catMap={'Carrier Issue':['#fee2e2','var(--red)'],'Load Update':['rgba(37,99,235,.06)','var(--blue)'],'Compliance / Legal':['#fff7ed','var(--orange)'],'Revenue / Finance':['rgba(5,150,105,.06)','var(--green)'],'General':['var(--off)','var(--muted)']};
   if(error||!data||data.length===0){
-    container.innerHTML='<div class="card" style="margin-bottom:12px;border-left:3px solid var(--gold)"><div class="flex-b" style="margin-bottom:8px"><span class="t-sm val-gold" style="font-weight:600;font-family:var(--ff-m)">Marcus Davis — Insurance Urgent</span><span class="t-sm t-muted t-mono">Today</span></div><div class="t-sm" style="line-height:1.7">COI expires March 18. Called Progressive — renewal takes 3 days. Need Marcus to contact his broker by EOD tomorrow.</div></div>';
+    container.innerHTML='<div class="card" style="margin-bottom:12px;border-left:3px solid var(--gold)"><div class="flex-b" style="margin-bottom:8px"><span class="t-sm val-gold" style="font-weight:600;font-family:var(--ff-m)">Insurance COI Renewal</span><span class="t-sm t-muted t-mono">Today</span></div><div class="t-sm" style="line-height:1.7">Primary Liability COI renewal due Dec 2026. Verify Progressive policy is active and update Supabase insurance_compliance table with new cert dates.</div></div>';
     return;
   }
   container.innerHTML=data.map(n=>{
@@ -3047,9 +3083,97 @@ async function ecTriggerCont(name){
 // ── HELPERS ──
 function esc(str){if(!str)return '';return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function setText(id,val){const el=document.getElementById(id);if(el)el.textContent=val;}
+function statusColor(s){if(s==='active')return 'green';if(s==='onboarding')return 'navy';if(s==='onboarding_incomplete')return 'gold';return 'navy';}
+function testBadgeHtml(isTest){return isTest?'<span class="badge" style="background:#2a1f00;color:var(--gold);font-size:9px;margin-left:4px">TEST</span>':'';}
+
 function planBadgeClass(p){if(!p)return 'badge-ghost';if(p.includes('10')||p.includes('Full'))return 'badge-green';if(p.includes('8')||p.includes('Premium'))return 'badge-gold';return 'badge-orange';}
 function planShort(p){if(!p)return '5%';if(p.includes('10')||p.includes('Full'))return '10% Full-Service';if(p.includes('8')||p.includes('Premium'))return '8% Premium';return '5% Standard';}
 function statusBadge(s){if(!s)return 'badge-ghost';if(s.includes('Route')||s==='Active'||s.includes('Completed')||s.includes('Delivered')||s.includes('Paid'))return 'badge-green';if(s.includes('Booked'))return 'badge-blue';if(s.includes('Due')||s.includes('Onboarding')||s.includes('Partial')||s.includes('New')||s.includes('Pending'))return 'badge-orange';if(s.includes('POD')||s.includes('Expiring')||s.includes('Overdue'))return 'badge-red';return 'badge-ghost';}
+
+// ── UNIVERSAL TIME KEEPER ──────────────────────────────────────────────────
+// Loaded from shared/tk.js; inline below is a fallback if that script fails.
+if (!window.TK) (function() {
+const _TKinit = () => {
+  const now = new Date();
+  const y   = now.getFullYear();
+  const m   = now.getMonth();   // 0-11
+  const d   = now.getDate();
+  const q   = Math.floor(m / 3) + 1; // 1-4
+
+  const Q_META = [
+    {n:'Q1', start:'Jan', end:'Mar', dlMonth:'Apr', dlDay:30, dlM:3},
+    {n:'Q2', start:'Apr', end:'Jun', dlMonth:'Jul', dlDay:31, dlM:6},
+    {n:'Q3', start:'Jul', end:'Sep', dlMonth:'Oct', dlDay:31, dlM:9},
+    {n:'Q4', start:'Oct', end:'Dec', dlMonth:'Jan', dlDay:31, dlM:0, nextYear:true},
+  ];
+
+  function iftaDeadline(quarter, year) {
+    const meta = Q_META[quarter - 1];
+    const dlYear = meta.nextYear ? year + 1 : year;
+    const date = new Date(dlYear, meta.dlM, meta.dlDay);
+    const daysLeft = Math.ceil((date - now) / 86400000);
+    return { label: meta.dlMonth + ' ' + meta.dlDay + ', ' + dlYear, date, daysLeft, past: now > date };
+  }
+
+  function iftaStatus(quarter, year) {
+    const dl = iftaDeadline(quarter, year);
+    if (dl.past) return { label:'Filed', cls:'badge-green' };
+    if (quarter === q && year === y) return { label:'In Progress', cls:'badge-orange' };
+    return { label:'Upcoming', cls:'badge-ghost' };
+  }
+
+  // All 4 IFTA quarters for current year (plus Q4 of prior year if needed)
+  function allQuarters() {
+    const rows = [];
+    // Show previous 2 quarters + current + next 1
+    for (let i = -2; i <= 1; i++) {
+      let qn = q + i, yn = y;
+      if (qn < 1) { qn += 4; yn -= 1; }
+      if (qn > 4) { qn -= 4; yn += 1; }
+      rows.push({ q: qn, y: yn, meta: Q_META[qn-1], dl: iftaDeadline(qn, yn), st: iftaStatus(qn, yn) });
+    }
+    return rows;
+  }
+
+  // 2290 HVUT: due Aug 31 each year. If past Aug 31 this year → show next year.
+  function hvut() {
+    const thisYearDue = new Date(y, 7, 31);
+    const filingYear = now > thisYearDue ? y + 1 : y;
+    const dueDate = new Date(filingYear, 7, 31);
+    const daysLeft = Math.ceil((dueDate - now) / 86400000);
+    if (daysLeft < 0)   return { desc:'Annual IRS filing · Filed '+y+' · Next due Aug 31 '+(y+1), badge:'badge-green', label:'Filed '+y };
+    if (daysLeft <= 90) return { desc:'Annual IRS filing · Due Aug 31, '+filingYear+' ('+daysLeft+' days)', badge:'badge-orange', label:'Due Soon' };
+    return { desc:'Annual IRS filing · Due Aug 31, '+filingYear, badge:'badge-ghost', label:'Upcoming' };
+  }
+
+  // UCR: renewal window opens Oct 1 for following year
+  function ucr() {
+    const renewOpen = new Date(y, 9, 1);
+    if (now >= renewOpen) return { desc:'Unified Carrier Registration · $76 · Renew now for '+(y+1), badge:'badge-orange', label:'Renew Now' };
+    return { desc:'Unified Carrier Registration · $76 · Current through '+y, badge:'badge-green', label:'Current' };
+  }
+
+  // Insurance expiry helper: returns badge class and label for a MM/DD/YY or Date
+  function insStatus(dateStr) {
+    if (!dateStr) return { cls:'badge-ghost', label:'Unknown' };
+    const parts = dateStr.split('/');
+    const exp = new Date(+('20'+parts[2]), +parts[0]-1, +parts[1]);
+    const days = Math.ceil((exp - now) / 86400000);
+    if (days < 0)   return { cls:'badge-red',    label:'Expired' };
+    if (days <= 60) return { cls:'badge-orange',  label:'Expiring Soon' };
+    return { cls:'badge-green', label:'Active' };
+  }
+
+  const cur = Q_META[q - 1];
+  window.TK = { now, y, m, d, q,
+    qLabel: 'Q'+q, qYear: y,
+    qRange: cur.start+'–'+cur.end+' '+y,
+    currentDeadline: iftaDeadline(q, y),
+    iftaDeadline, iftaStatus, allQuarters, hvut, ucr, insStatus,
+    licenseStatus:(iso)=>{if(!iso)return{cls:'badge-ghost',label:'Unknown',daysLeft:null};const exp=new Date(iso);const days=Math.ceil((exp-now)/86400000);if(days<0)return{cls:'badge-red',label:'Expired',daysLeft:days};if(days<=30)return{cls:'badge-red',label:'Expires in '+days+'d',daysLeft:days};if(days<=90)return{cls:'badge-orange',label:'Expires in '+days+'d',daysLeft:days};return{cls:'badge-green',label:'Valid',daysLeft:days};},
+    stampDOM:()=>{}
+  };
+}; _TKinit(); })();
 function invStatusBadge(s){if(s==='Paid')return 'badge-green';if(s==='Overdue')return 'badge-red';if(s==='Partial')return 'badge-orange';return 'badge-gold';}
 function toggleCheck(el){el.classList.toggle('done');el.querySelector('.ck-box').textContent=el.classList.contains('done')?'✓':'';}
 function resetChecklist(){document.querySelectorAll('.check-item').forEach(el=>{el.classList.remove('done');el.querySelector('.ck-box').textContent='';});}
@@ -3210,7 +3334,7 @@ async function sendRateCon(loadId) {
   if (!load) return;
 
   // Find carrier email from allCarriers by matching driver name
-  const carrier = allCarriers.find(c => c.full_name === load.driver_name);
+  const carrier = allCarriers.find(c => c.company_name === load.driver_name || c.company_name === load.carrier_name);
   const toEmail = carrier?.email || '';
 
   if (!toEmail) {
@@ -3252,16 +3376,16 @@ async function sendWelcomeEmail(carrierId) {
   const carrier = allCarriers.find(c => c.id === carrierId);
   if (!carrier) return;
   if (!carrier.email) {
-    toast('No email on file for ' + carrier.full_name, 'error');
+    toast('No email on file for ' + carrier.company_name, 'error');
     return;
   }
   toast('Sending welcome email…');
   const params = {
     to_email:     carrier.email,
-    carrier_name: carrier.full_name  || '—',
-    plan:         carrier.plan       || '5% Standard Dispatch',
-    mc_number:    carrier.mc_number  || '—',
-    home_base:    carrier.home_base  || '—',
+    carrier_name: carrier.company_name  || '—',
+    plan:         carrier.plan          || '5% Standard Dispatch',
+    mc_number:    carrier.mc_number     || '—',
+    home_base:    carrier.address       || '—',
     equipment:    carrier.equipment  || 'Dry Van',
   };
   try {
@@ -3296,7 +3420,7 @@ async function doSendInvoice(inv, carrier, toEmail) {
   toast('Sending invoice…');
   const params = {
     to_email:       toEmail,
-    carrier_name:   carrier?.full_name || 'Carrier',
+    carrier_name:   carrier?.company_name || 'Carrier',
     invoice_number: inv.invoice_number || ('INV-' + inv.id.slice(0,6)),
     amount:         Number(inv.amount || 0).toLocaleString(),
     due_date:       inv.due_date || '—',
@@ -3443,11 +3567,23 @@ async function refreshAgentLog(){
 }
 
 async function loadFoundersInventory(){
+  // Both calls go through the backend API (service role key — bypasses RLS)
+  const [invResult, carriersResult] = await Promise.allSettled([
+    API.founders(),
+    apiFetch('/api/carriers/?plan=founders&limit=500').then(r=>r.json())
+  ]);
+
+  // Inventory block
   try{
-    const inv=await API.founders();
+    if(invResult.status==='rejected') throw invResult.reason;
+    const inv=invResult.value;
     document.getElementById('fd-total').textContent=inv.total;
     document.getElementById('fd-claimed').textContent=inv.claimed;
     document.getElementById('fd-remaining').textContent=inv.remaining;
+    const mrr=inv.claimed*300;
+    const mrrFull=1000*300;
+    document.getElementById('fd-mrr').textContent='$'+mrr.toLocaleString();
+    document.getElementById('fd-mrr-full').textContent='$'+mrrFull.toLocaleString();
     const tbl=document.getElementById('fd-inventory-table');
     if(tbl){
       tbl.innerHTML='<div class="tbl-wrap"><table><thead><tr><th>Category</th><th>Total</th><th>Claimed</th><th>Remaining</th><th>%</th></tr></thead><tbody>'+
@@ -3459,6 +3595,32 @@ async function loadFoundersInventory(){
   }catch(e){
     const tbl=document.getElementById('fd-inventory-table');
     if(tbl)tbl.innerHTML='<div class="empty-state">Backend offline — inventory unavailable.</div>';
+  }
+
+  // Founders carriers block
+  try{
+    if(carriersResult.status==='rejected') throw carriersResult.reason;
+    const carriers=carriersResult.value.items||[];
+    const realFounders=carriers.filter(c=>!c.is_test);
+    const el=document.getElementById('fd-carriers-list');
+    const badge=document.getElementById('fd-carrier-count');
+    if(badge) badge.textContent=realFounders.length+' real'+(carriers.length-realFounders.length?' · '+(carriers.length-realFounders.length)+' test':'');
+    if(!el) return;
+    if(!carriers.length){el.innerHTML='<div class="empty-state">No Founders plan carriers yet.</div>';return;}
+    el.innerHTML='<div class="tbl-wrap"><table><thead><tr><th>Company</th><th>DOT</th><th>Equipment</th><th>Status</th><th>Joined</th></tr></thead><tbody>'+
+      carriers.map(c=>{
+        const testBadge=c.is_test?'<span class="badge" style="background:var(--gold-muted,#6b5a1e);color:var(--gold);font-size:9px;margin-left:4px">TEST</span>':'';
+        return '<tr>'+
+          '<td><strong>'+esc(c.company_name||'—')+'</strong>'+testBadge+'</td>'+
+          '<td class="t-mono" style="font-size:11px">'+esc(c.dot_number||'—')+'</td>'+
+          '<td>'+esc(c.trailer_type||'—')+'</td>'+
+          '<td><span class="badge badge-'+statusColor(c.status)+'">'+esc(c.status)+'</span></td>'+
+          '<td style="font-size:11px">'+(c.created_at||'').split('T')[0]+'</td>'+
+        '</tr>';
+      }).join('')+'</tbody></table></div>';
+  }catch(e){
+    const el=document.getElementById('fd-carriers-list');
+    if(el)el.innerHTML='<div class="empty-state">Could not load Founders carriers.</div>';
   }
 }
 
@@ -3489,6 +3651,74 @@ async function loadLeadsPipeline(){
   }
 }
 
+// ── IFTA / PERMITS — fully dynamic via TK ─────────────────────────────────
+function renderIFTA(){
+  const dl  = TK.currentDeadline;
+  const hv  = TK.hvut();
+  const ucr = TK.ucr();
+
+  // ── metric cards ──
+  const mEl = document.getElementById('ifta-metrics');
+  if(mEl) mEl.innerHTML=
+    '<div class="mc"><div class="mc-label">'+TK.qLabel+' Miles (Truck #1)</div><div class="mc-val blue">28,450</div><div class="mc-sub">'+TK.qRange+'</div></div>'+
+    '<div class="mc"><div class="mc-label">Fuel Purchased ('+TK.qLabel+')</div><div class="mc-val gold">8,240 gal</div><div class="mc-sub">~$32,960 @ $4.00/gal avg</div></div>'+
+    '<div class="mc"><div class="mc-label">IFTA Filing Due</div><div class="mc-val '+(dl.daysLeft<=60?'orange':'blue')+'">'+dl.label.split(',')[0]+'</div><div class="mc-sub">'+TK.qLabel+' '+TK.qYear+' quarterly return</div></div>';
+
+  // ── state miles table ──
+  const st = document.getElementById('ifta-state-title');
+  if(st) st.textContent = TK.qLabel+' '+TK.qYear+' Miles by State';
+  const tEl = document.getElementById('ifta-state-table');
+  if(tEl) tEl.innerHTML=
+    '<div class="tbl-wrap"><table><thead><tr><th>State</th><th>Miles</th><th>Fuel Bought (gal)</th><th>Tax Status</th></tr></thead><tbody>'+
+    '<tr><td>Michigan</td><td>4,200</td><td>1,800</td><td class="val-green">Credit</td></tr>'+
+    '<tr><td>Ohio</td><td>5,100</td><td>2,100</td><td class="val-green">Credit</td></tr>'+
+    '<tr><td>Tennessee</td><td>6,800</td><td>2,400</td><td class="val-red">Owe: $48</td></tr>'+
+    '<tr><td>Georgia</td><td>4,950</td><td>820</td><td class="val-red">Owe: $122</td></tr>'+
+    '<tr><td>Illinois</td><td>3,600</td><td>620</td><td class="val-red">Owe: $94</td></tr>'+
+    '<tr><td>Texas</td><td>3,800</td><td>500</td><td class="val-red">Owe: $136</td></tr>'+
+    '</tbody></table></div>';
+
+  // ── permit & registration tracker ──
+  const trEl = document.getElementById('ifta-tracker');
+  if(!trEl) return;
+  const quarters = TK.allQuarters();
+  const qRows = quarters.map(r=>
+    '<div class="comp-item"><div class="comp-left"><span class="comp-ico">📄</span><div>'+
+    '<div class="comp-name">IFTA '+r.meta.n+' '+r.y+' Return</div>'+
+    '<div class="comp-desc">Due '+r.dl.label+(r.q===TK.q&&r.y===TK.y?' · Est. owe: ~$400':r.st.label==='Filed'?' · Filed':'')+'</div>'+
+    '</div></div><span class="badge '+r.st.cls+'">'+r.st.label+'</span></div>'
+  ).join('');
+
+  trEl.innerHTML=
+    '<div class="comp-item"><div class="comp-left"><span class="comp-ico">🪙</span><div>'+
+      '<div class="comp-name">Heavy Vehicle Use Tax (2290)</div>'+
+      '<div class="comp-desc">'+hv.desc+'</div>'+
+    '</div></div><span class="badge '+hv.badge+'">'+hv.label+'</span></div>'+
+    '<div class="comp-item"><div class="comp-left"><span class="comp-ico">🏷️</span><div>'+
+      '<div class="comp-name">IRP Base Plate (Michigan)</div>'+
+      '<div class="comp-desc">Multi-state apportioned plates</div>'+
+    '</div></div><span class="badge badge-orange">Pending</span></div>'+
+    '<div class="comp-item"><div class="comp-left"><span class="comp-ico">📊</span><div>'+
+      '<div class="comp-name">UCR Annual Fee</div>'+
+      '<div class="comp-desc">'+ucr.desc+'</div>'+
+    '</div></div><span class="badge '+ucr.badge+'">'+ucr.label+'</span></div>'+
+    qRows;
+
+  // ── insurance expiry badges ──
+  [
+    ['ins-exp-pl','ins-st-pl','12/01/26'],
+    ['ins-exp-ci','ins-st-ci','12/01/26'],
+    ['ins-exp-pd','ins-st-pd','12/01/26'],
+    ['ins-exp-gl','ins-st-gl','09/15/26'],
+  ].forEach(([expId, stId, date])=>{
+    const s = TK.insStatus(date);
+    const el = document.getElementById(expId);
+    const st2 = document.getElementById(stId);
+    if(el) el.className = s.cls==='badge-red'?'val-red':'val-green';
+    if(st2) st2.innerHTML='<span class="badge '+s.cls+'">'+s.label+'</span>';
+  });
+}
+
 // Re-route nav so backend pages auto-load on open
 (function wrapNav(){
   const orig=window.nav;
@@ -3497,10 +3727,16 @@ async function loadLeadsPipeline(){
     if(id==='agents'){loadAgents();refreshAgentLog();loadVanceCalls();}
     else if(id==='founders')loadFoundersInventory();
     else if(id==='leads')loadLeadsPipeline();
+    else if(id==='ifta'||id==='insurance')renderIFTA();
   };
 })();
 
 (async function init(){
+  // Stamp all tk-* placeholders in the DOM with live values
+  document.querySelectorAll('.tk-qLabel').forEach(el=>el.textContent=TK.qLabel+' '+TK.qYear);
+  document.querySelectorAll('.tk-iftaDue').forEach(el=>el.textContent=TK.currentDeadline.label);
+  document.querySelectorAll('.tk-hvutYear').forEach(el=>el.textContent=TK.hvut().label.replace('Filed ','').replace('Upcoming','')|| TK.y);
+  renderIFTA();
   await testConnection();
   await refreshAll();
   await checkBackend();
