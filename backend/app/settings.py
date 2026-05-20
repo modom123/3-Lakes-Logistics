@@ -11,7 +11,7 @@ class Settings(BaseSettings):
     env: str = "development"
     log_level: str = "INFO"
     cors_origins: str = "http://localhost:3000,http://localhost:8080,https://3-lakes-logistics.vercel.app,https://3-lakes-logistic.vercel.app,https://3lakeslogistics.com,https://www.3lakeslogistics.com"
-    api_bearer_token: str = "change-me-in-prod"
+    api_bearer_token: str = "taiOFL40cCr5V0pH89hUks8jXVPlOkm2WxKvd3f6BoE"
 
     supabase_url: str = ""
     supabase_anon_key: str = ""

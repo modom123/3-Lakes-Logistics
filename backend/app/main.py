@@ -9,8 +9,10 @@ from __future__ import annotations
 
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.responses import Response
 
 from .api import (
     agents_router,
@@ -108,6 +110,27 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
 
+    # Dynamic CORS — allows any *.vercel.app preview URL + configured origins
+    STATIC_ORIGINS = set(s.cors_list)
+
+    class DynamicCORSMiddleware(BaseHTTPMiddleware):
+        async def dispatch(self, request: Request, call_next) -> Response:
+            origin = request.headers.get("origin", "")
+            allowed = (
+                origin in STATIC_ORIGINS
+                or origin.endswith(".vercel.app")
+                or origin.endswith(".onrender.com")
+                or origin in ("https://3lakeslogistics.com", "https://www.3lakeslogistics.com")
+            )
+            response = await call_next(request)
+            if allowed and origin:
+                response.headers["Access-Control-Allow-Origin"] = origin
+                response.headers["Access-Control-Allow-Credentials"] = "true"
+                response.headers["Access-Control-Allow-Methods"] = "*"
+                response.headers["Access-Control-Allow-Headers"] = "*"
+            return response
+
+    app.add_middleware(DynamicCORSMiddleware)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=s.cors_list,
