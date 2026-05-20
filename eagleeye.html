@@ -883,10 +883,10 @@ td.td-name{font-weight:600;color:var(--navy);}
         </div>
       </div>
       <div class="g4">
-        <div class="mc"><div class="mc-label">On Load</div><div class="mc-val green" id="dispatch-on-load">—</div></div>
-        <div class="mc"><div class="mc-label">Available</div><div class="mc-val blue" id="dispatch-available">—</div></div>
-        <div class="mc"><div class="mc-label">Check-Calls Due</div><div class="mc-val orange">1</div></div>
-        <div class="mc"><div class="mc-label">PODs Needed</div><div class="mc-val red" id="dispatch-pods">—</div></div>
+        <div class="mc" onclick="showDashSummary('dispatch-on')" style="cursor:pointer" title="Click for recent 10"><div class="mc-label">On Load</div><div class="mc-val green" id="dispatch-on-load">—</div></div>
+        <div class="mc" onclick="showDashSummary('dispatch-avail')" style="cursor:pointer" title="Click for recent 10"><div class="mc-label">Available</div><div class="mc-val blue" id="dispatch-available">—</div></div>
+        <div class="mc" onclick="showDashSummary('dispatch-checkcall')" style="cursor:pointer" title="Click for recent 10"><div class="mc-label">Check-Calls Due</div><div class="mc-val orange">1</div></div>
+        <div class="mc" onclick="showDashSummary('dispatch-pods')" style="cursor:pointer" title="Click for recent 10"><div class="mc-label">PODs Needed</div><div class="mc-val red" id="dispatch-pods">—</div></div>
       </div>
       <div class="card">
         <div class="card-hd"><div class="card-title">Active Loads</div><span class="card-chip">Board</span></div>
@@ -904,10 +904,10 @@ td.td-name{font-weight:600;color:var(--navy);}
         <button class="btn-navy" onclick="openModal('add-carrier-modal')">+ Add Carrier</button>
       </div>
       <div class="g4">
-        <div class="mc"><div class="mc-label">Total Carriers</div><div class="mc-val gold" id="carrier-count-total">—</div></div>
-        <div class="mc"><div class="mc-label">Active</div><div class="mc-val green" id="carrier-count-active">—</div></div>
-        <div class="mc"><div class="mc-label">Onboarding</div><div class="mc-val orange" id="carrier-count-pending">—</div></div>
-        <div class="mc"><div class="mc-label">Full-Service 10%</div><div class="mc-val blue" id="carrier-count-fs">—</div></div>
+        <div class="mc" onclick="showDashSummary('all-carriers')" style="cursor:pointer" title="Click for recent 10"><div class="mc-label">Total Carriers</div><div class="mc-val gold" id="carrier-count-total">—</div></div>
+        <div class="mc" onclick="showDashSummary('carriers')" style="cursor:pointer" title="Click for recent 10"><div class="mc-label">Active</div><div class="mc-val green" id="carrier-count-active">—</div></div>
+        <div class="mc" onclick="showDashSummary('pending')" style="cursor:pointer" title="Click for recent 10"><div class="mc-label">Onboarding</div><div class="mc-val orange" id="carrier-count-pending">—</div></div>
+        <div class="mc" onclick="showDashSummary('carrier-fs')" style="cursor:pointer" title="Click for recent 10"><div class="mc-label">Full-Service 10%</div><div class="mc-val blue" id="carrier-count-fs">—</div></div>
       </div>
       <div class="card">
         <div class="card-hd">
@@ -925,9 +925,9 @@ td.td-name{font-weight:600;color:var(--navy);}
         <button class="btn-navy" onclick="openModal('add-load-modal')">+ Log New Load</button>
       </div>
       <div class="g3">
-        <div class="mc"><div class="mc-label">Loads This Month</div><div class="mc-val blue" id="loads-count-mtd">—</div></div>
-        <div class="mc"><div class="mc-label">Gross Revenue (MTD)</div><div class="mc-val green" id="loads-gross-mtd">—</div></div>
-        <div class="mc"><div class="mc-label">Avg RPM</div><div class="mc-val gold" id="loads-avg-rpm">—</div></div>
+        <div class="mc" onclick="showDashSummary('loads')" style="cursor:pointer" title="Click for recent 10"><div class="mc-label">Loads This Month</div><div class="mc-val blue" id="loads-count-mtd">—</div></div>
+        <div class="mc" onclick="showDashSummary('fees')" style="cursor:pointer" title="Click for recent 10"><div class="mc-label">Gross Revenue (MTD)</div><div class="mc-val green" id="loads-gross-mtd">—</div></div>
+        <div class="mc" onclick="showDashSummary('loads-rpm')" style="cursor:pointer" title="Click for recent 10"><div class="mc-label">Avg RPM</div><div class="mc-val gold" id="loads-avg-rpm">—</div></div>
       </div>
       <div class="card">
         <div class="card-hd"><div class="card-title">Load History</div><span class="card-chip">Supabase</span></div>
@@ -950,10 +950,10 @@ td.td-name{font-weight:600;color:var(--navy);}
         </div>
       </div>
       <div class="g4">
-        <div class="mc"><div class="mc-label">Total Invoiced (MTD)</div><div class="mc-val gold" id="inv-total-mtd">—</div></div>
-        <div class="mc"><div class="mc-label">Collected</div><div class="mc-val green" id="inv-collected">—</div></div>
-        <div class="mc"><div class="mc-label">Outstanding AR</div><div class="mc-val orange" id="inv-outstanding">—</div></div>
-        <div class="mc"><div class="mc-label">Overdue</div><div class="mc-val red" id="inv-overdue">—</div></div>
+        <div class="mc" onclick="showDashSummary('inv-all')" style="cursor:pointer" title="Click for recent 10"><div class="mc-label">Total Invoiced (MTD)</div><div class="mc-val gold" id="inv-total-mtd">—</div></div>
+        <div class="mc" onclick="showDashSummary('inv-paid')" style="cursor:pointer" title="Click for recent 10"><div class="mc-label">Collected</div><div class="mc-val green" id="inv-collected">—</div></div>
+        <div class="mc" onclick="showDashSummary('unpaid')" style="cursor:pointer" title="Click for recent 10"><div class="mc-label">Outstanding AR</div><div class="mc-val orange" id="inv-outstanding">—</div></div>
+        <div class="mc" onclick="showDashSummary('inv-overdue')" style="cursor:pointer" title="Click for recent 10"><div class="mc-label">Overdue</div><div class="mc-val red" id="inv-overdue">—</div></div>
       </div>
       <div id="invoices-list"><div class="loading"><div class="spin"></div>Loading invoices…</div></div>
     </div>
