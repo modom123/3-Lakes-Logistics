@@ -1695,6 +1695,80 @@ td.td-name{font-weight:600;color:var(--navy);}
 /* Empty state */
 .ec-empty{text-align:center;padding:36px 20px;color:#5A6A82;font-size:14px;}
 
+/* ── MOBILE HAMBURGER ── */
+#sb-hamburger{display:none;background:none;border:none;font-size:22px;cursor:pointer;color:var(--navy);padding:4px 8px;line-height:1;}
+#sb-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:190;}
+#sb-overlay.active{display:block;}
+
+@media(max-width:768px){
+  :root{--sidebar-w:0px;}
+  html,body{overflow:auto;}
+
+  #sidebar{
+    position:fixed;left:-240px;top:0;bottom:0;
+    width:240px;transition:left .25s;z-index:200;overflow-y:auto;
+  }
+  #sidebar.sb-open{left:0;}
+  #sb-hamburger{display:inline-flex;}
+  #main{width:100%;min-width:0;}
+
+  .topbar{padding:0 12px;gap:8px;height:54px;}
+  .tb-date,.tb-live{display:none;}
+  .tb-title{font-size:15px;}
+  .btn-sync{padding:6px 10px;font-size:11px;}
+
+  .content{padding:14px 12px;}
+
+  .g4{grid-template-columns:repeat(2,1fr);gap:10px;}
+  .g3{grid-template-columns:repeat(2,1fr);gap:10px;}
+  .g2{grid-template-columns:1fr;gap:10px;}
+  .g2-wide{grid-template-columns:1fr;gap:10px;}
+
+  .mc{padding:14px 16px;border-radius:10px;}
+  .mc-val{font-size:26px;}
+
+  .page-hdr{flex-direction:column;align-items:flex-start;gap:10px;margin-bottom:14px;}
+  .page-hdr-l h2{font-size:clamp(20px,5vw,28px);}
+  .page-hdr-acts{flex-wrap:wrap;gap:6px;width:100%;}
+  .page-hdr>.btn-navy,.page-hdr>.btn-out{width:100%;}
+
+  .btn-navy,.btn-out{padding:9px 14px;font-size:12px;}
+
+  .tbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+  .tbl-wrap table{min-width:540px;}
+
+  .card{padding:16px;}
+  .card-title{font-size:15px;}
+
+  /* CRM: stack panels vertically */
+  #page-crm .content-inner,
+  #page-crm > div > div[style*="grid-template-columns:350px"]{
+    grid-template-columns:1fr!important;
+    grid-template-rows:auto auto;
+    height:auto!important;
+    overflow:visible!important;
+  }
+  #crm-detail{border-top:1px solid var(--border);margin-top:12px;}
+
+  /* Lead pipeline */
+  #page-leads .g2{grid-template-columns:1fr;}
+
+  /* Dashboard summary modal */
+  #dash-summary-modal > div{
+    width:96%!important;
+    max-height:90vh!important;
+  }
+  .modal { width: min(600px, 96vw) !important; }
+  .modal-body { padding: 18px 16px; }
+  .form-row, .form-row-3 { grid-template-columns: 1fr; }
+  .modal-footer { flex-wrap: wrap; gap: 8px; }
+  .modal-footer .btn-navy,
+  .modal-footer .btn-out { flex: 1; min-width: 120px; justify-content: center; }
+  .fleet-table-wrap table { display: none; }
+  .fleet-cards { display: block; }
+}
+
+.fleet-cards { display: none; }
 @media(max-width:768px){
   .ec-wrap{padding:24px 16px 60px;}
   .ec-hero{padding:24px 20px;}
@@ -2044,8 +2118,30 @@ td.td-name{font-weight:600;color:var(--navy);}
     </div>
     <div class="modal-body">
       <div class="form-row">
-        <div class="fg"><label class="fl">Driver / Carrier <span>*</span></label><select class="fsel" id="load-driver-select"><option value="">Select driver…</option></select></div>
+        <div class="fg"><label class="fl">Driver / Carrier <span>*</span></label>
+          <select class="fsel" id="load-driver-select"><option value="">Select driver…</option></select>
+          <div id="load-equip-match-hint" style="font-size:10px;color:var(--muted);margin-top:3px"></div>
+        </div>
         <div class="fg"><label class="fl">Load Board / Source</label><select class="fsel" id="load-source"><option>DAT Power</option><option>Truckstop.io</option><option>Direct Shipper</option><option>Broker Direct</option></select></div>
+      </div>
+      <div class="form-row">
+        <div class="fg"><label class="fl">Equipment Type Needed</label>
+          <select class="fsel" id="load-equip-type" onchange="populateDriverSelect()">
+            <option value="">Any / Not specified</option>
+            <option value="Dry Van 53'">Dry Van 53'</option>
+            <option value="Dry Van 48'">Dry Van 48'</option>
+            <option value="Reefer">Reefer</option>
+            <option value="Flatbed">Flatbed</option>
+            <option value="Step Deck">Step Deck</option>
+            <option value="Cargo Van">Cargo Van</option>
+            <option value="26 Foot Box Truck">26 Foot Box Truck</option>
+            <option value="16 Foot Box Truck">16 Foot Box Truck</option>
+            <option value="Tanker / Hazmat">Tanker / Hazmat</option>
+          </select>
+        </div>
+        <div class="fg"><label class="fl">Weight (lbs)</label>
+          <input class="fi" type="number" id="load-weight" placeholder="42000">
+        </div>
       </div>
       <div class="form-row">
         <div class="fg"><label class="fl">Origin <span>*</span></label><input class="fi" id="load-origin" placeholder="e.g. Detroit, MI"></div>
@@ -2100,8 +2196,26 @@ td.td-name{font-weight:600;color:var(--navy);}
         <div class="fg"><label class="fl">Home Base</label><input class="fi" id="mc-base" placeholder="Detroit, MI"></div>
       </div>
       <div class="form-row">
-        <div class="fg"><label class="fl">Equipment</label><select class="fsel" id="mc-equip"><option>Dry Van 53'</option><option>Dry Van 48'</option><option>Reefer</option><option>Flatbed</option><option>Step Deck</option><option>Cargo Van</option><option>26 Foot Box Truck</option><option>16 Foot Box Truck</option><option>Tanker / Hazmat</option></select></div>
+        <div class="fg"><label class="fl">Primary Equipment <span>*</span></label>
+          <select class="fsel" id="mc-equip">
+            <option value="Dry Van 53'">Dry Van 53'</option>
+            <option value="Dry Van 48'">Dry Van 48'</option>
+            <option value="Reefer">Reefer</option>
+            <option value="Flatbed">Flatbed</option>
+            <option value="Step Deck">Step Deck</option>
+            <option value="Cargo Van">Cargo Van</option>
+            <option value="26 Foot Box Truck">26 Foot Box Truck</option>
+            <option value="16 Foot Box Truck">16 Foot Box Truck</option>
+            <option value="Tanker / Hazmat">Tanker / Hazmat</option>
+          </select>
+        </div>
+        <div class="fg"><label class="fl">Fleet Size (# of trucks)</label>
+          <input class="fi" type="number" id="mc-fleet-size" placeholder="1" min="1" max="999">
+        </div>
+      </div>
+      <div class="form-row">
         <div class="fg"><label class="fl">Service Plan</label><select class="fsel" id="mc-plan"><option>5% Standard Dispatch</option><option>8% Premium Dispatch</option><option>10% Full-Service</option></select></div>
+        <div class="fg"><label class="fl">ELD Device</label><input class="fi" id="mc-eld" placeholder="Samsara / Motive / etc."></div>
       </div>
       <div class="form-row">
         <div class="fg"><label class="fl">Phone</label><input class="fi" id="mc-phone" placeholder="(313) 555-0000"></div>
@@ -2109,7 +2223,7 @@ td.td-name{font-weight:600;color:var(--navy);}
       </div>
       <div class="form-row">
         <div class="fg"><label class="fl">Insurance Company</label><input class="fi" id="mc-ins" placeholder="Progressive Commercial"></div>
-        <div class="fg"><label class="fl">ELD Device</label><input class="fi" id="mc-eld" placeholder="Samsara / Motive / etc."></div>
+        <div class="fg"></div>
       </div>
     </div>
     <div class="modal-footer">
@@ -2338,21 +2452,38 @@ function renderCarriersTable(){
   if(badge)badge.textContent=allCarriers.length+' carriers';
   if(!wrap)return;
   if(allCarriers.length===0){wrap.innerHTML='<div class="empty-state"><div class="ei">👥</div><p>No carriers yet. Add your first carrier using the button above.</p></div>';return;}
-  wrap.innerHTML='<div class="tbl-wrap"><table><thead><tr><th>Carrier</th><th>MC #</th><th>Equipment</th><th>Plan</th><th>Home Base</th><th>Phone</th><th>Status</th><th>Actions</th></tr></thead><tbody>'+
-    allCarriers.map(c=>'<tr'+(c.is_test?' style="opacity:0.7"':'')+'>'+
-      '<td class="td-name">'+esc(c.company_name)+testBadgeHtml(c.is_test)+'</td>'+
-      '<td class="t-mono" style="font-size:12px;color:var(--muted)">'+esc(c.mc_number||'—')+'</td>'+
-      '<td>'+esc(c.trailer_type||'Dry Van')+'</td>'+
-      '<td><span class="badge '+planBadgeClass(c.plan)+'">'+planShort(c.plan)+'</span></td>'+
-      '<td>'+esc(c.address||'—')+'</td>'+
-      '<td class="t-mono" style="font-size:11px">'+esc(c.phone||'—')+'</td>'+
-      '<td><span class="badge '+statusBadge(c.status)+'">'+esc(c.status||'Active')+'</span></td>'+
-      '<td style="display:flex;gap:6px">'+
-        '<button class="btn-navy-sm" onclick="sendWelcomeEmail(\''+c.id+'\')" title="Send Welcome Email">📧 Welcome</button>'+
-        '<button class="btn-navy-sm" onclick="createInvoiceForCarrier(\''+c.id+'\',\''+esc(c.company_name).replace(/'/g,"\\'")+'\')" title="Create Invoice">🧾</button>'+
-        '<button class="btn-red-sm" onclick="deleteCarrier(\''+c.id+'\')" title="Remove">✕</button>'+
-      '</td></tr>'
-    ).join('')+'</tbody></table></div>';
+  wrap.innerHTML='<div class="tbl-wrap"><table><thead><tr>' +
+    '<th>Carrier</th><th>MC #</th><th>Equipment</th><th>Fleet</th><th>Plan</th><th>Home Base</th><th>Phone</th><th>Status</th><th>Actions</th>' +
+    '</tr></thead><tbody>' +
+    allCarriers.map(c => {
+      const types = (c.equipment_types||[]).filter(Boolean);
+      const equipDisplay = types.length > 1
+        ? types.map(t=>`<span style="display:inline-block;background:rgba(11,37,69,.07);border-radius:4px;padding:1px 6px;font-size:10px;margin:1px">${esc(t)}</span>`).join('')
+        : esc(types[0] || c.trailer_type || 'Dry Van');
+      const fleetSize = c.fleet_size || 1;
+      return '<tr'+(c.is_test?' style="opacity:0.7"':'')+' id="carrier-row-'+c.id+'">' +
+        '<td class="td-name">'+esc(c.company_name)+testBadgeHtml(c.is_test)+'</td>' +
+        '<td class="t-mono" style="font-size:12px;color:var(--muted)">'+esc(c.mc_number||'—')+'</td>' +
+        '<td>'+equipDisplay+'</td>' +
+        '<td style="text-align:center;font-weight:600;color:var(--navy)">'+fleetSize+'</td>' +
+        '<td><span class="badge '+planBadgeClass(c.plan)+'">'+planShort(c.plan)+'</span></td>' +
+        '<td>'+esc(c.address||'—')+'</td>' +
+        '<td class="t-mono" style="font-size:11px">'+esc(c.phone||'—')+'</td>' +
+        '<td><span class="badge '+statusBadge(c.status)+'">'+esc(c.status||'Active')+'</span></td>' +
+        '<td style="display:flex;gap:4px;flex-wrap:wrap">' +
+          '<button class="btn-gold-sm" onclick="toggleFleetPanel(\''+c.id+'\')" title="View/Add Trucks">🚛 Fleet</button>' +
+          '<button class="btn-navy-sm" onclick="sendWelcomeEmail(\''+c.id+'\')" title="Send Welcome Email">📧</button>' +
+          '<button class="btn-navy-sm" onclick="createInvoiceForCarrier(\''+c.id+'\',\''+esc(c.company_name).replace(/'/g,"\\'")+'\')" title="Create Invoice">🧾</button>' +
+          '<button class="btn-red-sm" onclick="deleteCarrier(\''+c.id+'\')" title="Remove">✕</button>' +
+        '</td></tr>' +
+        // Fleet panel row (hidden by default)
+        '<tr id="fleet-panel-'+c.id+'" style="display:none"><td colspan="9" style="padding:0;background:var(--off)">' +
+          '<div id="fleet-content-'+c.id+'" style="padding:16px 20px">' +
+            '<div class="loading"><div class="spin"></div> Loading fleet…</div>' +
+          '</div>' +
+        '</td></tr>';
+    }).join('') +
+    '</tbody></table></div>';
 }
 
 function updateCarrierMetrics(){
@@ -2375,6 +2506,8 @@ async function saveCarrier(){
     dot_number:document.getElementById('mc-dot').value.trim(),
     address:document.getElementById('mc-base').value.trim(),
     trailer_type:document.getElementById('mc-equip').value,
+    equipment_types:[document.getElementById('mc-equip').value],
+    fleet_size:parseInt(document.getElementById('mc-fleet-size')?.value)||1,
     plan:document.getElementById('mc-plan').value,
     phone:document.getElementById('mc-phone').value.trim(),
     email:document.getElementById('mc-email').value.trim(),
@@ -2395,6 +2528,158 @@ async function deleteCarrier(id){
   const{error}=await sb.from('active_carriers').delete().eq('id',id);
   if(error){toast('Error: '+error.message,'error');return;}
   await loadCarriers();updateDashboard();toast('Carrier removed');
+}
+
+// ── FLEET MANAGEMENT ──
+async function toggleFleetPanel(carrierId){
+  const row = document.getElementById('fleet-panel-'+carrierId);
+  if (!row) return;
+  const open = row.style.display === 'table-row';
+  // Close all open panels first
+  document.querySelectorAll('[id^="fleet-panel-"]').forEach(r => r.style.display = 'none');
+  if (open) return;
+  row.style.display = 'table-row';
+  await loadFleetPanel(carrierId);
+}
+
+async function loadFleetPanel(carrierId){
+  const content = document.getElementById('fleet-content-'+carrierId);
+  if (!content) return;
+  try {
+    const r = await apiFetch('/api/fleet/carrier/'+carrierId);
+    const d = await r.json();
+    renderFleetPanel(carrierId, d.items || []);
+  } catch(e) {
+    content.innerHTML = '<div style="color:var(--red);font-size:12px">Error loading fleet: '+e.message+'</div>';
+  }
+}
+
+function renderFleetPanel(carrierId, trucks){
+  const content = document.getElementById('fleet-content-'+carrierId);
+  if (!content) return;
+  const equipOptions = ['Dry Van 53\'','Dry Van 48\'','Reefer','Flatbed','Step Deck','Cargo Van','26 Foot Box Truck','16 Foot Box Truck','Tanker / Hazmat'];
+  const statusColor = s => ({available:'var(--green)',on_load:'var(--blue)',out_of_service:'var(--red)',maintenance:'var(--orange)'}[s]||'var(--muted)');
+
+  // Desktop table + mobile cards (CSS handles which shows)
+  const truckRows = trucks.length === 0
+    ? '<div style="color:var(--muted);font-size:12px;padding:8px 0">No trucks added yet. Add one below.</div>'
+    : `<div class="fleet-table-wrap">
+        <table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:12px">
+          <thead><tr style="border-bottom:2px solid var(--border)">
+            <th style="text-align:left;padding:6px 8px;color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:1px">Unit #</th>
+            <th style="text-align:left;padding:6px 8px;color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:1px">Year/Make</th>
+            <th style="text-align:left;padding:6px 8px;color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:1px">Equipment Type</th>
+            <th style="text-align:left;padding:6px 8px;color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:1px">VIN</th>
+            <th style="text-align:left;padding:6px 8px;color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:1px">Status</th>
+            <th style="padding:6px 8px"></th>
+          </tr></thead>
+          <tbody>
+          ${trucks.map(t => `
+            <tr style="border-bottom:1px solid var(--border)">
+              <td style="padding:7px 8px;font-weight:600">${esc(t.truck_id||'—')}</td>
+              <td style="padding:7px 8px;color:var(--muted)">${[t.year,t.make,t.model].filter(Boolean).join(' ')||'—'}</td>
+              <td style="padding:7px 8px">${esc(t.trailer_type||'—')}</td>
+              <td style="padding:7px 8px;font-family:var(--ff-m);font-size:11px;color:var(--muted)">${esc(t.vin||'—')}</td>
+              <td style="padding:7px 8px"><span style="font-size:11px;font-weight:600;color:${statusColor(t.status)}">${t.status||'available'}</span></td>
+              <td style="padding:7px 8px">
+                <button class="btn-red-sm" onclick="removeFleetAsset('${t.id}','${carrierId}')" style="padding:3px 8px;font-size:10px">✕</button>
+              </td>
+            </tr>
+          `).join('')}
+          </tbody>
+        </table>
+        <!-- Mobile cards (shown on small screens) -->
+        <div class="fleet-cards">
+          ${trucks.map(t => `
+            <div style="background:#fff;border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:start">
+              <div>
+                <div style="font-weight:600;margin-bottom:3px">Unit ${esc(t.truck_id||'—')}</div>
+                <div style="font-size:12px;color:var(--muted)">${[t.year,t.make,t.model].filter(Boolean).join(' ')||'—'}</div>
+                <div style="font-size:12px;margin-top:2px">${esc(t.trailer_type||'—')}</div>
+                <div style="font-size:11px;font-weight:600;color:${statusColor(t.status)};margin-top:3px">${t.status||'available'}</div>
+              </div>
+              <button class="btn-red-sm" onclick="removeFleetAsset('${t.id}','${carrierId}')" style="padding:3px 8px;font-size:10px">✕</button>
+            </div>
+          `).join('')}
+        </div>
+      </div>`;
+
+  content.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <div style="font-size:12px;font-weight:600;color:var(--navy)">Fleet (${trucks.length} truck${trucks.length===1?'':'s'})</div>
+      <button onclick="toggleAddTruckForm('${carrierId}')" class="btn-navy-sm" style="font-size:11px">+ Add Truck</button>
+    </div>
+    ${truckRows}
+    <div id="add-truck-form-${carrierId}" style="display:none;border-top:1px solid var(--border);padding-top:12px;margin-top:8px">
+      <div style="font-size:11px;font-weight:700;color:var(--navy);margin-bottom:10px;text-transform:uppercase;letter-spacing:1px">New Truck</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-bottom:10px">
+        <div><label style="font-size:10px;color:var(--muted);display:block;margin-bottom:3px">Unit # *</label>
+          <input class="fi" id="new-truck-unit-${carrierId}" placeholder="T-101" style="padding:6px 8px;font-size:12px"></div>
+        <div><label style="font-size:10px;color:var(--muted);display:block;margin-bottom:3px">Equipment Type *</label>
+          <select class="fsel" id="new-truck-type-${carrierId}" style="padding:6px 8px;font-size:12px">
+            ${equipOptions.map(o=>`<option value="${o}">${o}</option>`).join('')}
+          </select></div>
+        <div><label style="font-size:10px;color:var(--muted);display:block;margin-bottom:3px">Year</label>
+          <input class="fi" type="number" id="new-truck-year-${carrierId}" placeholder="2021" style="padding:6px 8px;font-size:12px"></div>
+        <div><label style="font-size:10px;color:var(--muted);display:block;margin-bottom:3px">Make / Model</label>
+          <input class="fi" id="new-truck-make-${carrierId}" placeholder="Freightliner Cascadia" style="padding:6px 8px;font-size:12px"></div>
+        <div><label style="font-size:10px;color:var(--muted);display:block;margin-bottom:3px">VIN (optional)</label>
+          <input class="fi" id="new-truck-vin-${carrierId}" placeholder="1FUJGBDV..." style="padding:6px 8px;font-size:12px"></div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn-navy" onclick="saveFleetAsset('${carrierId}')" style="padding:7px 16px;font-size:12px">Save Truck</button>
+        <button class="btn-out" onclick="toggleAddTruckForm('${carrierId}')" style="padding:7px 16px;font-size:12px">Cancel</button>
+      </div>
+    </div>
+  `;
+}
+
+function toggleAddTruckForm(carrierId){
+  const f = document.getElementById('add-truck-form-'+carrierId);
+  if (f) f.style.display = f.style.display === 'none' ? 'block' : 'none';
+}
+
+async function saveFleetAsset(carrierId){
+  const unit = document.getElementById('new-truck-unit-'+carrierId)?.value.trim();
+  const type = document.getElementById('new-truck-type-'+carrierId)?.value;
+  if (!unit) { toast('Unit number required','error'); return; }
+  const makeRaw = document.getElementById('new-truck-make-'+carrierId)?.value.trim()||'';
+  const parts = makeRaw.split(' ');
+  const make = parts[0]||'';
+  const model = parts.slice(1).join(' ')||'';
+  const payload = {
+    carrier_id: carrierId,
+    truck_id: unit,
+    trailer_type: type,
+    year: parseInt(document.getElementById('new-truck-year-'+carrierId)?.value)||null,
+    make: make||null,
+    model: model||null,
+    vin: document.getElementById('new-truck-vin-'+carrierId)?.value.trim()||null,
+  };
+  try {
+    const r = await apiFetch('/api/fleet/', 'POST', payload);
+    if (!r.ok) {
+      const e = await r.json().catch(()=>({}));
+      toast('Error: '+(e.detail||'could not add truck'),'error');
+      return;
+    }
+    toast('Truck added!');
+    await loadFleetPanel(carrierId);
+    await loadCarriers(); // refresh fleet_size + equipment_types
+    updateDashboard();
+  } catch(e) { toast('Error: '+e.message,'error'); }
+}
+
+async function removeFleetAsset(fleetId, carrierId){
+  if (!confirm('Remove this truck from the fleet?')) return;
+  try {
+    const r = await apiFetch('/api/fleet/'+fleetId, 'DELETE');
+    if (!r.ok) { toast('Error removing truck','error'); return; }
+    toast('Truck removed');
+    await loadFleetPanel(carrierId);
+    await loadCarriers();
+    updateDashboard();
+  } catch(e) { toast('Error: '+e.message,'error'); }
 }
 
 // ── LOADS ──
@@ -2520,12 +2805,15 @@ async function saveLoad(){
     pickup_date:document.getElementById('load-pickup').value||null,
     commodity:document.getElementById('load-commodity').value.trim(),
     notes:document.getElementById('load-broker').value.trim(),
-    post_to_website:postToWeb
+    post_to_website:postToWeb,
+    equipment_type: document.getElementById('load-equip-type')?.value||null,
+    weight_lbs: parseInt(document.getElementById('load-weight')?.value)||null
   });
   btn.disabled=false;btn.textContent='Save Load';
   if(!insRes.ok){toast('Error saving load','error');return;}
   closeModal('add-load-modal');
-  ['load-origin','load-dest','load-miles','load-rate','load-pickup','load-broker','load-commodity'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  ['load-origin','load-dest','load-miles','load-rate','load-pickup','load-broker','load-commodity','load-weight'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  const eqSel=document.getElementById('load-equip-type');if(eqSel)eqSel.value='';
   const pwCb=document.getElementById('load-post-website');if(pwCb)pwCb.checked=false;
   const prev=document.getElementById('fee-preview');if(prev)prev.textContent='Enter rate to calculate dispatch fee';
   await loadLoads();updateDashboard();toast('Load saved!');
@@ -2540,9 +2828,30 @@ async function saveLoad(){
 }
 
 function populateDriverSelect(){
-  const sel=document.getElementById('load-driver-select');if(!sel)return;
-  const dbN=allCarriers.map(c=>c.company_name).filter(Boolean);
-  sel.innerHTML='<option value="">Select driver…</option>'+dbN.map(d=>'<option>'+esc(d)+'</option>').join('');
+  const sel=document.getElementById('load-driver-select');
+  const hint=document.getElementById('load-equip-match-hint');
+  if(!sel)return;
+  const needEquip=(document.getElementById('load-equip-type')?.value||'').toLowerCase();
+  const active=allCarriers.filter(c=>c.status==='active'||c.status==='onboarding');
+  // Sort: carriers matching needed equipment type first
+  const sorted=[...active].sort((a,b)=>{
+    if(!needEquip)return 0;
+    const aTypes=(a.equipment_types||[a.trailer_type||'']).map(t=>(t||'').toLowerCase());
+    const bTypes=(b.equipment_types||[b.trailer_type||'']).map(t=>(t||'').toLowerCase());
+    const aMatch=aTypes.some(t=>t.includes(needEquip)||needEquip.includes(t.split(' ')[0]));
+    const bMatch=bTypes.some(t=>t.includes(needEquip)||needEquip.includes(t.split(' ')[0]));
+    if(aMatch&&!bMatch)return -1;
+    if(!aMatch&&bMatch)return 1;
+    return 0;
+  });
+  sel.innerHTML='<option value="">Select driver…</option>'+sorted.map(c=>{
+    const types=(c.equipment_types||[c.trailer_type||'']).filter(Boolean);
+    const matches=needEquip&&types.some(t=>(t||'').toLowerCase().includes(needEquip)||needEquip.includes((t||'').toLowerCase().split(' ')[0]));
+    const label=esc(c.company_name)+(types.length?' ('+types.join(', ')+')':'');
+    return `<option value="${esc(c.company_name)}"${matches?' style="font-weight:700"':''}>${label}</option>`;
+  }).join('');
+  const matchCount=needEquip?sorted.filter(c=>(c.equipment_types||[c.trailer_type||'']).some(t=>(t||'').toLowerCase().includes(needEquip))).length:0;
+  if(hint)hint.textContent=needEquip&&matchCount?matchCount+' carrier'+(matchCount===1?'':'s')+' match this equipment':'';
 }
 
 // ── INVOICES ──

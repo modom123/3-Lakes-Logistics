@@ -21,12 +21,55 @@ def list_fleet(carrier_id: str | None = None, status: str | None = None) -> dict
     return {"count": len(res.data or []), "items": res.data or []}
 
 
+@router.get("/carrier/{carrier_id}")
+def list_carrier_fleet(carrier_id: str) -> dict:
+    """List all trucks for a carrier."""
+    res = get_supabase().table("fleet_assets").select("*").eq("carrier_id", carrier_id).order("created_at").execute()
+    return {"count": len(res.data or []), "items": res.data or []}
+
+
 @router.get("/{fleet_id}")
 def get_fleet_asset(fleet_id: str) -> dict:
     res = get_supabase().table("fleet_assets").select("*").eq("id", fleet_id).maybe_single().execute()
     if not res.data:
         raise HTTPException(404, "fleet asset not found")
     return res.data
+
+
+@router.post("/")
+def add_fleet_asset(payload: dict) -> dict:
+    """Add a truck to a carrier's fleet."""
+    carrier_id = payload.get("carrier_id")
+    truck_id = payload.get("truck_id", "").strip()
+    if not carrier_id:
+        raise HTTPException(400, "carrier_id required")
+    if not truck_id:
+        raise HTTPException(400, "truck_id (unit number) required")
+    # Prevent duplicate unit numbers per carrier
+    existing = get_supabase().table("fleet_assets").select("id").eq("carrier_id", carrier_id).eq("truck_id", truck_id).execute()
+    if existing.data:
+        raise HTTPException(409, f"Unit {truck_id} already exists for this carrier")
+    data = {
+        "carrier_id": carrier_id,
+        "truck_id": truck_id,
+        "trailer_type": payload.get("trailer_type"),
+        "year": payload.get("year"),
+        "make": payload.get("make"),
+        "model": payload.get("model"),
+        "vin": payload.get("vin"),
+        "max_weight_lbs": payload.get("max_weight_lbs"),
+        "status": "available",
+    }
+    data = {k: v for k, v in data.items() if v is not None}
+    res = get_supabase().table("fleet_assets").insert(data).execute()
+    return {"ok": True, "item": res.data[0] if res.data else {}}
+
+
+@router.delete("/{fleet_id}")
+def delete_fleet_asset(fleet_id: str) -> dict:
+    """Remove a truck from a carrier's fleet."""
+    get_supabase().table("fleet_assets").delete().eq("id", fleet_id).execute()
+    return {"ok": True}
 
 
 @router.patch("/{fleet_id}/status")
