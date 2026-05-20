@@ -187,9 +187,20 @@ def migrate_airtable_leads() -> dict:
                 raise ValueError("Insert returned no data — possible schema mismatch")
             inserted += 1
         except Exception as e:
-            msg = str(e)[:300]
-            if len(errors) < 5:
-                errors.append(msg)
+            import re as _re
+            err_str = str(e)
+            # Extract the 'message' key — it names the exact failing column
+            msg_match = _re.search(r"'message':\s*'([^']*)'", err_str)
+            col_msg = msg_match.group(1) if msg_match else ""
+            if col_msg:
+                entry = f"COLUMN: {col_msg}"
+            else:
+                entry = err_str[:200]
+            # Also log rec keys on first failure so we know what we sent
+            if not errors:
+                entry += f"\nSENT KEYS: {list(rec.keys())}"
+            if len(errors) < 3:
+                errors.append(entry)
             failed += 1
 
     return {
