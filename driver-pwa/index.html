@@ -19,6 +19,7 @@
   <link rel="manifest" href="manifest.json" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.41.0"></script>
   <script src="../shared/config.js"></script>
+<script src="../shared/tk.js"></script>
   <style>
     :root {
       --bg:       #0a0f1e;
@@ -1321,11 +1322,13 @@ async function loadProfile() {
   }
 
   if (cdl.cdl_expiry) {
+    const st = window.TK ? TK.licenseStatus(cdl.cdl_expiry) : null;
     const days = Math.ceil((new Date(cdl.cdl_expiry) - new Date()) / 86400000);
     const pill = document.getElementById('cdl-status-pill');
     if (days < 0)        { pill.className = 'pill pill-red';    pill.innerHTML = '<span class="dot"></span> EXPIRED'; }
     else if (days <= 7)  { pill.className = 'pill pill-red';    pill.innerHTML = `<span class="dot"></span> ${days}d left`; }
     else if (days <= 30) { pill.className = 'pill pill-yellow'; pill.innerHTML = `<span class="dot"></span> ${days}d left`; }
+    else                 { pill.className = 'pill pill-green';  pill.innerHTML = `<span class="dot"></span> Valid`; }
   }
 }
 

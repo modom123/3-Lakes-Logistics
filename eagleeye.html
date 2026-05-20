@@ -9,6 +9,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800;900&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="shared/config.js"></script>
+<script src="shared/tk.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
@@ -3073,8 +3074,9 @@ function planShort(p){if(!p)return '5%';if(p.includes('10')||p.includes('Full'))
 function statusBadge(s){if(!s)return 'badge-ghost';if(s.includes('Route')||s==='Active'||s.includes('Completed')||s.includes('Delivered')||s.includes('Paid'))return 'badge-green';if(s.includes('Booked'))return 'badge-blue';if(s.includes('Due')||s.includes('Onboarding')||s.includes('Partial')||s.includes('New')||s.includes('Pending'))return 'badge-orange';if(s.includes('POD')||s.includes('Expiring')||s.includes('Overdue'))return 'badge-red';return 'badge-ghost';}
 
 // ── UNIVERSAL TIME KEEPER ──────────────────────────────────────────────────
-// All date logic lives here. No year is ever hardcoded in templates again.
-const TK = (() => {
+// Loaded from shared/tk.js; inline below is a fallback if that script fails.
+if (!window.TK) (function() {
+const _TKinit = () => {
   const now = new Date();
   const y   = now.getFullYear();
   const m   = now.getMonth();   // 0-11
@@ -3146,12 +3148,15 @@ const TK = (() => {
   }
 
   const cur = Q_META[q - 1];
-  return { now, y, m, d, q,
+  window.TK = { now, y, m, d, q,
     qLabel: 'Q'+q, qYear: y,
     qRange: cur.start+'–'+cur.end+' '+y,
     currentDeadline: iftaDeadline(q, y),
-    iftaDeadline, iftaStatus, allQuarters, hvut, ucr, insStatus };
-})();
+    iftaDeadline, iftaStatus, allQuarters, hvut, ucr, insStatus,
+    licenseStatus:(iso)=>{if(!iso)return{cls:'badge-ghost',label:'Unknown',daysLeft:null};const exp=new Date(iso);const days=Math.ceil((exp-now)/86400000);if(days<0)return{cls:'badge-red',label:'Expired',daysLeft:days};if(days<=30)return{cls:'badge-red',label:'Expires in '+days+'d',daysLeft:days};if(days<=90)return{cls:'badge-orange',label:'Expires in '+days+'d',daysLeft:days};return{cls:'badge-green',label:'Valid',daysLeft:days};},
+    stampDOM:()=>{}
+  };
+}; _TKinit(); })();
 function invStatusBadge(s){if(s==='Paid')return 'badge-green';if(s==='Overdue')return 'badge-red';if(s==='Partial')return 'badge-orange';return 'badge-gold';}
 function toggleCheck(el){el.classList.toggle('done');el.querySelector('.ck-box').textContent=el.classList.contains('done')?'✓':'';}
 function resetChecklist(){document.querySelectorAll('.check-item').forEach(el=>{el.classList.remove('done');el.querySelector('.ck-box').textContent='';});}
