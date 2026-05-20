@@ -1,11 +1,14 @@
 {
   "version": 2,
   "name": "3-lakes-logistic",
+  "buildCommand": "npm run build",
   "outputDirectory": "public",
   "cleanUrls": true,
   "routes": [
-    { "src": "/eagle-eye", "dest": "/eagleeye.html" },
-    { "src": "/ops",       "dest": "/eagleeye.html" },
-    { "src": "/(.*)",      "dest": "/eagleeye.html" }
+    { "src": "/shared/(.*)", "dest": "/shared/$1" },
+    { "src": "/eagle-eye",   "dest": "/eagleeye.html" },
+    { "src": "/ops",         "dest": "/eagleeye.html" },
+    { "src": "/(.*\\.html)", "dest": "/$1" },
+    { "src": "/(.*)",        "dest": "/eagleeye.html" }
   ]
 }
