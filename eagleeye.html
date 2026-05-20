@@ -1303,9 +1303,9 @@ td.td-name{font-weight:600;color:var(--navy);}
 
       <!-- AIRTABLE MIGRATION STATUS -->
       <div id="airtable-migration-card" style="display:none;margin-bottom:16px">
-        <div class="card" style="border-left:4px solid var(--blue);background:rgba(37,99,235,.05)">
+        <div class="card" style="border-left:4px solid var(--blue)">
           <div class="card-hd"><div class="card-title">🔄 Airtable Migration</div></div>
-          <div id="migration-status" style="padding:12px;font-size:13px">
+          <div id="migration-status" style="padding:4px 0;font-size:13px;color:var(--navy)">
             <div id="migration-spinner" style="display:flex;align-items:center;gap:8px">
               <div class="spin" style="width:16px;height:16px"></div>
               <span>Migrating leads from Airtable...</span>
@@ -4260,27 +4260,27 @@ async function debugAirtable() {
   const cardEl = document.getElementById('airtable-migration-card');
   const statusEl = document.getElementById('migration-status');
   cardEl.style.display = 'block';
-  statusEl.innerHTML = '<div style="padding:10px;color:rgba(255,255,255,.7)">⏳ Checking Airtable connection…</div>';
+  statusEl.innerHTML = '<div style="padding:4px 0;color:var(--navy)">⏳ Checking Airtable connection…</div>';
   try {
     const r = await fetch(`${API_BASE}/api/migrate/airtable-debug`, {
       headers: { 'Authorization': 'Bearer ' + API_TOKEN }
     });
     const data = await r.json();
     if (data.error) {
-      statusEl.innerHTML = `<div style="padding:12px;line-height:1.7">
-        <div style="color:var(--red);font-weight:600">❌ ${data.error}</div>
-        ${data.fix ? `<div style="margin-top:8px;font-size:12px;color:rgba(255,255,255,.8)">${data.fix}</div>` : ''}
-        ${data.base_id ? `<div style="margin-top:6px;font-size:11px;color:rgba(255,255,255,.5)">Base ID: ${data.base_id}</div>` : ''}
+      statusEl.innerHTML = `<div style="padding:4px 0;line-height:1.7;color:var(--navy)">
+        <div style="color:var(--red);font-weight:700">❌ ${data.error}</div>
+        ${data.fix ? `<div style="margin-top:8px;font-size:12px;color:var(--navy)">${data.fix}</div>` : ''}
+        ${data.base_id ? `<div style="margin-top:6px;font-size:11px;color:var(--muted)">Base ID: ${data.base_id}</div>` : ''}
       </div>`;
     } else {
-      statusEl.innerHTML = `<div style="padding:12px;line-height:1.7">
-        <div style="color:var(--green);font-weight:600">✅ Airtable connected</div>
-        <div style="margin-top:6px;font-size:12px;color:rgba(255,255,255,.7)">Base: ${data.base_id}</div>
-        <div style="font-size:12px;color:rgba(255,255,255,.7)">Tables found: <strong>${(data.tables||[]).join(', ')}</strong></div>
+      statusEl.innerHTML = `<div style="padding:4px 0;line-height:1.7;color:var(--navy)">
+        <div style="color:var(--green);font-weight:700">✅ Airtable connected</div>
+        <div style="margin-top:6px;font-size:12px">Base: <strong>${data.base_id}</strong></div>
+        <div style="font-size:12px">Tables: <strong>${(data.tables||[]).join(', ')}</strong></div>
       </div>`;
     }
   } catch(e) {
-    statusEl.innerHTML = `<div style="padding:10px;color:var(--red)">Error: ${e.message}</div>`;
+    statusEl.innerHTML = `<div style="padding:4px 0;color:var(--red);font-weight:600">Error: ${e.message}</div>`;
   }
 }
 
@@ -4309,17 +4309,24 @@ async function migrateAirtableLeads() {
 
     const data = await r.json();
 
+    const allOk = data.inserted > 0 && data.failed === 0;
     statusEl.innerHTML = `
-      <div style="padding:12px;line-height:1.6">
-        <div style="color:${data.inserted>0?'var(--green)':'var(--orange)'};font-weight:600">${data.inserted>0?'✅ Migration Complete!':'⚠️ Migration ran — check results'}</div>
-        <div style="margin-top:8px;font-size:12px;color:rgba(255,255,255,.7)">
-          <div>📊 Fetched: <strong>${data.fetched}</strong> records from Airtable</div>
-          <div>📁 Table used: <strong>${data.table_used||'unknown'}</strong></div>
-          <div>✔️ Inserted: <strong>${data.inserted}</strong> leads into Supabase</div>
-          ${data.skipped_dup>0?`<div>⏭ Skipped (duplicates): <strong>${data.skipped_dup}</strong></div>`:''}
-          ${data.failed>0?`<div style="color:var(--red)">❌ Failed: <strong>${data.failed}</strong></div>`:''}
-          ${(data.errors||[]).length>0?`<div style="margin-top:6px;font-size:10px;color:var(--red);font-family:monospace;white-space:pre-wrap">${data.errors.join('\n')}</div>`:''}
+      <div style="padding:4px 0;line-height:1.8;color:var(--navy)">
+        <div style="font-weight:700;font-size:14px;color:${allOk?'var(--green)':data.failed>0?'var(--red)':'var(--orange)'}">
+          ${allOk?'✅ Migration Complete!':data.failed===data.fetched?'❌ All records failed — see errors below':'⚠️ Partial migration — check errors'}
         </div>
+        <div style="margin-top:8px;font-size:13px">
+          <div>📊 Fetched from Airtable: <strong>${data.fetched}</strong></div>
+          <div>📁 Table: <strong>${data.table_used||'unknown'}</strong></div>
+          <div style="color:var(--green)">✔️ Inserted: <strong>${data.inserted}</strong></div>
+          ${data.skipped_dup>0?`<div style="color:var(--muted)">⏭ Skipped (already imported): <strong>${data.skipped_dup}</strong></div>`:''}
+          ${data.failed>0?`<div style="color:var(--red)">❌ Failed: <strong>${data.failed}</strong></div>`:''}
+        </div>
+        ${(data.errors||[]).length>0?`
+        <div style="margin-top:10px;padding:10px;background:#fff3cd;border:1px solid #ffc107;border-radius:6px">
+          <div style="font-weight:700;font-size:11px;color:#856404;margin-bottom:4px">ERROR DETAILS:</div>
+          <div style="font-size:10px;color:#856404;font-family:monospace;white-space:pre-wrap;word-break:break-all">${(data.errors||[]).join('\n\n')}</div>
+        </div>`:''}
       </div>
     `;
 

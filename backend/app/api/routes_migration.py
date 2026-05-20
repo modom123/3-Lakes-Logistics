@@ -156,12 +156,16 @@ def migrate_airtable_leads() -> dict:
                 continue
 
         source_ref = record.get("id", "")
+
+        # Build record with only valid leads-table columns
         rec: dict = {
             "source":       "airtable",
-            "source_ref":   source_ref,
             "company_name": company_name,
             "stage":        "new",
         }
+        # Only set source_ref if non-empty
+        if source_ref:
+            rec["source_ref"] = source_ref
         if phone:        rec["phone"]           = phone
         if email:        rec["email"]           = email
         if dot_number:   rec["dot_number"]      = dot_number
@@ -171,18 +175,20 @@ def migrate_airtable_leads() -> dict:
         if equipment:    rec["equipment_types"] = [equipment]
 
         try:
-            # Check if this Airtable record was already imported (by source_ref)
-            existing = sb.table("leads").select("id").eq("source_ref", source_ref).limit(1).execute()
-            if existing.data:
-                # Update existing row with correct column values
-                lead_id = existing.data[0]["id"]
-                sb.table("leads").update(rec).eq("id", lead_id).execute()
-            else:
-                sb.table("leads").insert(rec).execute()
+            # Skip if already imported by source_ref (safe re-run)
+            if source_ref:
+                existing = sb.table("leads").select("id").eq("source_ref", source_ref).limit(1).execute()
+                if existing.data:
+                    skipped += 1
+                    continue
+
+            result = sb.table("leads").insert(rec).execute()
+            if not result.data:
+                raise ValueError("Insert returned no data — possible schema mismatch")
             inserted += 1
         except Exception as e:
-            msg = str(e)[:200]
-            if not errors or msg not in errors:
+            msg = str(e)[:300]
+            if len(errors) < 5:
                 errors.append(msg)
             failed += 1
 
