@@ -655,6 +655,17 @@ td.td-name{font-weight:600;color:var(--navy);}
 </head>
 <body>
 
+<!-- ── DIAGNOSTIC BANNER (visible without F12) ─────────────────── -->
+<div id="diag-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:99999;background:#1a1a2e;color:#fff;font-family:monospace;font-size:12px;padding:8px 14px;border-top:2px solid #e74c3c;max-height:140px;overflow-y:auto">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+    <b style="color:#f1c40f">Eagle Eye Diagnostics</b>
+    <button onclick="document.getElementById('diag-banner').style.display='none'" style="background:none;border:1px solid #555;color:#fff;cursor:pointer;padding:2px 8px;border-radius:4px">✕</button>
+  </div>
+  <div>API: <span id="diag-url" style="color:#3498db">—</span></div>
+  <div>Health: <span id="diag-health" style="color:#e74c3c">checking…</span></div>
+  <div id="diag-errors" style="color:#e74c3c;margin-top:2px"></div>
+</div>
+
 <!-- ── LOGIN SCREEN ─────────────────────────────────────── -->
 <div id="login-screen">
   <div class="login-card">
@@ -772,6 +783,7 @@ td.td-name{font-weight:600;color:var(--navy);}
       <span class="notif-count" id="notif-count">0</span>
     </div>
     <button class="btn-sync" onclick="refreshAll()">↻ Sync</button>
+    <button class="btn-sync" style="background:#1a1a2e;font-size:11px;padding:6px 10px" onclick="const b=document.getElementById('diag-banner');b.style.display=b.style.display==='none'?'block':'none'">⚙ Diag</button>
   </div>
 
   <!-- Notification Panel (outside topbar so it overlays content) -->
@@ -2258,6 +2270,9 @@ async function apiFetch(path, method='GET', body){
   if(!r.ok){
     const text = await r.text().catch(()=>'');
     console.error(`[apiFetch] ${method} ${path} → ${r.status}`, text);
+    diagLog(`${method} ${path} → ${r.status} ${text.slice(0,80)}`,true);
+    const banner=document.getElementById('diag-banner');
+    if(banner)banner.style.display='block';
   }
   return r;
 }
@@ -3456,24 +3471,58 @@ const AGENT_META = {
   pulse:  {icon:'❤️', label:'Pulse',   desc:'Weekly wellness check'},
 };
 
+function diagLog(msg,isError=false){
+  const d=document.getElementById('diag-errors');
+  if(!d)return;
+  const line=document.createElement('div');
+  line.style.color=isError?'#e74c3c':'#2ecc71';
+  line.textContent='['+new Date().toISOString().substr(11,8)+'] '+msg;
+  d.prepend(line);
+  // keep last 10 lines
+  while(d.children.length>10)d.removeChild(d.lastChild);
+}
+
 async function checkBackend(){
   const el=document.getElementById('agents-api-status');
   const envEl=document.getElementById('agent-backend-env');
+  // Always show diag URL
+  const diagUrl=document.getElementById('diag-url');
+  if(diagUrl)diagUrl.textContent=API_BASE;
   try{
     const h=await API.health();
     if(!h){
       console.error('[checkBackend] health returned null — backend unreachable or CORS blocked. API_BASE='+API_BASE);
       if(el){el.textContent='Backend: ⚠ offline';el.className='badge badge-navy';}
       if(envEl)envEl.textContent='offline';
+      const diagH=document.getElementById('diag-health');
+      if(diagH){diagH.textContent='OFFLINE — health returned null (CORS or network blocked)';diagH.style.color='#e74c3c';}
+      const banner=document.getElementById('diag-banner');
+      if(banner)banner.style.display='block';
+      diagLog('health() → null (CORS/network)',true);
       return false;
     }
     if(el){el.textContent='Backend: ✅ '+(h?.env||'up');el.className='badge badge-navy';}
     if(envEl)envEl.textContent=h?.env||'up';
+    const diagH=document.getElementById('diag-health');
+    const sbStatus=h?.supabase||'unknown';
+    if(diagH){diagH.textContent='✅ online env='+( h?.env||'up')+' | supabase='+sbStatus;diagH.style.color=sbStatus.startsWith('MISSING')?'#e74c3c':'#2ecc71';}
+    if(sbStatus.startsWith('MISSING')){
+      const banner=document.getElementById('diag-banner');
+      if(banner)banner.style.display='block';
+      diagLog('⚠ SUPABASE not configured in Render — set SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY',true);
+    } else {
+      diagLog('health OK env='+( h?.env||'up')+' supabase='+sbStatus);
+    }
     return true;
   }catch(e){
     console.error('[checkBackend] exception:', e.message, 'API_BASE='+API_BASE);
     if(el){el.textContent='Backend: ⚠ offline';el.className='badge badge-navy';}
     if(envEl)envEl.textContent='offline';
+    const diagH=document.getElementById('diag-health');
+    if(diagH){diagH.textContent='ERROR: '+e.message;diagH.style.color='#e74c3c';}
+    const banner=document.getElementById('diag-banner');
+    if(banner)banner.style.display='block';
+    diagLog('exception: '+e.message,true);
     return false;
   }
 }
@@ -3741,6 +3790,9 @@ function renderIFTA(){
 })();
 
 (async function init(){
+  // Show API URL in diag banner immediately (no F12 needed)
+  const _diagUrl=document.getElementById('diag-url');
+  if(_diagUrl)_diagUrl.textContent=API_BASE;
   // Stamp all tk-* placeholders in the DOM with live values
   document.querySelectorAll('.tk-qLabel').forEach(el=>el.textContent=TK.qLabel+' '+TK.qYear);
   document.querySelectorAll('.tk-iftaDue').forEach(el=>el.textContent=TK.currentDeadline.label);

@@ -19,7 +19,15 @@ START_TIME = time.time()
 @router.get("/api/health", tags=["health"])
 async def health_basic():
     """Fast ping — driver app checks this every 30s to detect failover."""
-    return {"ok": True, "ts": datetime.now(timezone.utc).isoformat()}
+    from ..settings import get_settings
+    s = get_settings()
+    sb_ok = bool(s.supabase_url and s.supabase_service_role_key)
+    return {
+        "ok": True,
+        "env": s.env,
+        "ts": datetime.now(timezone.utc).isoformat(),
+        "supabase": "configured" if sb_ok else "MISSING — set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in Render",
+    }
 
 
 @router.get("/api/health/full", tags=["health"])
