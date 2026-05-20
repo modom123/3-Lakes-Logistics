@@ -40,19 +40,9 @@ alter table public.driver_payouts enable row level security;
 -- RLS POLICIES FOR DRIVER MESSAGES
 -- ============================================================
 
--- Drivers can read their own messages
-create policy "driver_messages_select_own"
-  on public.driver_messages
-  for select to authenticated
-  using (driver_id = (select id from drivers where auth_user_id = auth.uid() limit 1));
-
--- Drivers can insert their own messages
-create policy "driver_messages_insert_own"
-  on public.driver_messages
-  for insert to authenticated
-  with check (driver_id = (select id from drivers where auth_user_id = auth.uid() limit 1));
-
--- Service role (backend) can do anything
+-- Backend (service_role key) can do anything — bypasses RLS entirely.
+-- Driver auth uses custom tokens stored in driver_sessions, not Supabase
+-- auth, so there is no auth.uid() to build per-driver policies against.
 create policy "driver_messages_service_role"
   on public.driver_messages
   to service_role
@@ -62,13 +52,6 @@ create policy "driver_messages_service_role"
 -- RLS POLICIES FOR DRIVER SESSIONS
 -- ============================================================
 
--- Drivers can read their own sessions
-create policy "driver_sessions_select_own"
-  on public.driver_sessions
-  for select to authenticated
-  using (driver_id = (select id from drivers where auth_user_id = auth.uid() limit 1));
-
--- Service role (backend) can do anything
 create policy "driver_sessions_service_role"
   on public.driver_sessions
   to service_role
@@ -78,13 +61,6 @@ create policy "driver_sessions_service_role"
 -- RLS POLICIES FOR DRIVER PAYOUTS
 -- ============================================================
 
--- Drivers can read their own payouts
-create policy "driver_payouts_select_own"
-  on public.driver_payouts
-  for select to authenticated
-  using (driver_id = (select id from drivers where auth_user_id = auth.uid() limit 1));
-
--- Service role (backend) can do anything
 create policy "driver_payouts_service_role"
   on public.driver_payouts
   to service_role

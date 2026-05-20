@@ -37,20 +37,28 @@ if not os.getenv("SUPABASE_URL"):
         print(f"Warning: Could not read .env file directly: {e}")
 
 SUPABASE_URL = os.getenv("SUPABASE_URL", "").strip()
-SUPABASE_SERVICE_ROLE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "").strip()
+# Direct PostgreSQL connections require the DB password set in Supabase dashboard
+# (Settings → Database → Database password).  This is NOT the service-role JWT.
+SUPABASE_DB_PASSWORD = os.getenv("SUPABASE_DB_PASSWORD", "").strip()
 
 # Extract connection parameters from Supabase URL
 # URL format: https://xxxx.supabase.co
 if SUPABASE_URL:
     project_id = SUPABASE_URL.split("//")[1].split(".")[0]
-    db_host = f"{project_id}.supabase.co"
+    db_host = f"db.{project_id}.supabase.co"
     db_port = 5432
     db_name = "postgres"
     db_user = "postgres"
-    db_password = SUPABASE_SERVICE_ROLE_KEY
+    db_password = SUPABASE_DB_PASSWORD
 else:
     print("❌ ERROR: SUPABASE_URL not found in .env")
-    print("Please ensure .env is configured with SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY")
+    print("Please ensure .env is configured with SUPABASE_URL and SUPABASE_DB_PASSWORD")
+    sys.exit(1)
+
+if not db_password:
+    print("❌ ERROR: SUPABASE_DB_PASSWORD not set in .env")
+    print("   Find it in Supabase dashboard → Settings → Database → Database password")
+    print("   This is different from SUPABASE_SERVICE_ROLE_KEY")
     sys.exit(1)
 
 
