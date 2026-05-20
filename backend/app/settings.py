@@ -64,6 +64,8 @@ class Settings(BaseSettings):
     adobe_account_id: str = ""
     adobe_api_endpoint: str = "https://api.na1.adobesign.com"
 
+    render_api_key: str = ""
+
     sentry_dsn: str = ""
 
     # Reliability — Redis cache + backup API failover
