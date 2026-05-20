@@ -27,9 +27,9 @@
 }
 html,body{height:100%;overflow:hidden;}
 body{font-family:var(--ff-b);color:var(--text);background:var(--off);display:flex;}
-::-webkit-scrollbar{width:5px;height:5px;}
+::-webkit-scrollbar{width:10px;height:10px;}
 ::-webkit-scrollbar-track{background:var(--slate);}
-::-webkit-scrollbar-thumb{background:var(--gold);border-radius:3px;}
+::-webkit-scrollbar-thumb{background:var(--gold);border-radius:5px;border:2px solid var(--slate);}
 
 /* ── SIDEBAR ── */
 #sidebar{
@@ -801,11 +801,12 @@ td.td-name{font-weight:600;color:var(--navy);}
           <h2>Dashboard</h2>
         </div>
       </div>
-      <div class="g4">
-        <div class="mc" onclick="showDashSummary('carriers')" style="cursor:pointer" title="Click for summary"><div class="mc-label">Active Carriers</div><div class="mc-val gold" id="dash-total-carriers">—</div><div class="mc-sub" id="dash-carrier-sub">Loading…</div></div>
-        <div class="mc" onclick="showDashSummary('fees')" style="cursor:pointer" title="Click for summary"><div class="mc-label">MTD Dispatch Fees</div><div class="mc-val green" id="dash-mtd-fees">—</div><div class="mc-sub">This month</div></div>
-        <div class="mc" onclick="showDashSummary('loads')" style="cursor:pointer" title="Click for summary"><div class="mc-label">Loads This Month</div><div class="mc-val blue" id="dash-loads">—</div><div class="mc-sub" id="dash-rpm-sub">Avg RPM: —</div></div>
-        <div class="mc" onclick="showDashSummary('unpaid')" style="cursor:pointer" title="Click for summary"><div class="mc-label">Unpaid Invoices</div><div class="mc-val orange" id="dash-unpaid">—</div><div class="mc-sub" id="dash-unpaid-sub">outstanding AR</div></div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:16px;margin-bottom:16px">
+        <div class="mc" onclick="showDashSummary('carriers')" style="cursor:pointer" title="Click for recent 10"><div class="mc-label">Active Carriers</div><div class="mc-val gold" id="dash-total-carriers">—</div><div class="mc-sub" id="dash-carrier-sub">Loading…</div></div>
+        <div class="mc" onclick="showDashSummary('pending')" style="cursor:pointer" title="Click for recent 10"><div class="mc-label">Pending Carriers</div><div class="mc-val orange" id="dash-pending-carriers">—</div><div class="mc-sub" id="dash-pending-sub">Incomplete profiles</div></div>
+        <div class="mc" onclick="showDashSummary('fees')" style="cursor:pointer" title="Click for recent 10"><div class="mc-label">MTD Dispatch Fees</div><div class="mc-val green" id="dash-mtd-fees">—</div><div class="mc-sub">This month</div></div>
+        <div class="mc" onclick="showDashSummary('loads')" style="cursor:pointer" title="Click for recent 10"><div class="mc-label">Loads This Month</div><div class="mc-val blue" id="dash-loads">—</div><div class="mc-sub" id="dash-rpm-sub">Avg RPM: —</div></div>
+        <div class="mc" onclick="showDashSummary('unpaid')" style="cursor:pointer" title="Click for recent 10"><div class="mc-label">Unpaid Invoices</div><div class="mc-val red" id="dash-unpaid">—</div><div class="mc-sub" id="dash-unpaid-sub">outstanding AR</div></div>
       </div>
       <div class="g2">
         <div class="card">
@@ -2690,8 +2691,12 @@ function createInvoiceForLoad(loadId,driverName,fee){
 
 // ── DASHBOARD ──
 function updateDashboard(){
-  const total=allCarriers.length;
-  setText('dash-total-carriers',total);setText('dash-carrier-sub',total+' in Supabase');
+  const activeC=allCarriers.filter(c=>c.status==='active'||c.status==='onboarding');
+  const pendingC=allCarriers.filter(c=>c.status==='onboarding_incomplete');
+  setText('dash-total-carriers',activeC.length);
+  setText('dash-carrier-sub',allCarriers.length+' total in system');
+  setText('dash-pending-carriers',pendingC.length);
+  setText('dash-pending-sub',pendingC.length+' need profile completion');
   const now=new Date();
   const mtdLoads=allLoads.filter(l=>{if(!l.created_at)return false;const d=new Date(l.created_at);return d.getMonth()===now.getMonth()&&d.getFullYear()===now.getFullYear();});
   const fees=mtdLoads.reduce((a,l)=>a+(Number(l.dispatch_fee)||0),0);
@@ -2758,23 +2763,43 @@ function showDashSummary(type){
   const money=n=>'$'+Number(n||0).toLocaleString();
   let html='';
   if(type==='carriers'){
-    title.textContent='Active Carriers — Last 10';
-    const rows=allCarriers.slice(0,10);
-    if(!rows.length){html='<div style="color:#6b7280;padding:20px 0">No carriers on file yet.</div>';}
+    title.textContent='Active Carriers — Most Recent 10';
+    const rows=allCarriers.filter(c=>c.status==='active'||c.status==='onboarding').slice(0,10);
+    if(!rows.length){html='<div style="color:#6b7280;padding:20px 0">No active carriers yet.</div>';}
     else html='<table style="width:100%;border-collapse:collapse;font-size:13px">'+
       '<thead><tr style="border-bottom:2px solid #e5e7eb">'+
       '<th style="text-align:left;padding:8px 6px;color:#6b7280;font-weight:700;font-size:11px">CARRIER</th>'+
       '<th style="text-align:left;padding:8px 6px;color:#6b7280;font-weight:700;font-size:11px">EQUIPMENT</th>'+
       '<th style="text-align:left;padding:8px 6px;color:#6b7280;font-weight:700;font-size:11px">BASE</th>'+
       '<th style="text-align:left;padding:8px 6px;color:#6b7280;font-weight:700;font-size:11px">PLAN</th>'+
-      '<th style="text-align:left;padding:8px 6px;color:#6b7280;font-weight:700;font-size:11px">STATUS</th>'+
+      '<th style="text-align:left;padding:8px 6px;color:#6b7280;font-weight:700;font-size:11px">ENROLLED</th>'+
       '</tr></thead><tbody>'+
       rows.map(c=>`<tr style="border-bottom:1px solid #f3f4f6">
         <td style="padding:9px 6px;font-weight:600">${esc(c.company_name||'—')}</td>
         <td style="padding:9px 6px;color:#6b7280">${esc(c.trailer_type||'—')}</td>
         <td style="padding:9px 6px;color:#6b7280">${esc(c.address||'—')}</td>
-        <td style="padding:9px 6px">${esc(c.plan||'—')}</td>
-        <td style="padding:9px 6px"><span class="badge ${statusBadge(c.status)}">${esc(c.status||'Active')}</span></td>
+        <td style="padding:9px 6px"><span class="badge ${planBadgeClass(c.plan)}">${planShort(c.plan)}</span></td>
+        <td style="padding:9px 6px;color:#6b7280;font-family:monospace;font-size:12px">${(c.created_at||'').split('T')[0]||'—'}</td>
+      </tr>`).join('')+'</tbody></table>';
+  } else if(type==='pending'){
+    title.textContent='Pending Carriers — Most Recent 10';
+    const rows=allCarriers.filter(c=>c.status==='onboarding_incomplete').slice(0,10);
+    if(!rows.length){html='<div style="color:#6b7280;padding:20px 0">No pending carriers — all profiles complete!</div>';}
+    else html='<div style="background:#fff7ed;border-radius:8px;padding:12px 16px;margin-bottom:16px"><span style="font-weight:600;color:#c2410c">'+rows.length+' carrier(s) need to complete their profile</span></div>'+
+      '<table style="width:100%;border-collapse:collapse;font-size:13px">'+
+      '<thead><tr style="border-bottom:2px solid #e5e7eb">'+
+      '<th style="text-align:left;padding:8px 6px;color:#6b7280;font-weight:700;font-size:11px">CARRIER</th>'+
+      '<th style="text-align:left;padding:8px 6px;color:#6b7280;font-weight:700;font-size:11px">DOT #</th>'+
+      '<th style="text-align:left;padding:8px 6px;color:#6b7280;font-weight:700;font-size:11px">PHONE</th>'+
+      '<th style="text-align:left;padding:8px 6px;color:#6b7280;font-weight:700;font-size:11px">PLAN</th>'+
+      '<th style="text-align:left;padding:8px 6px;color:#6b7280;font-weight:700;font-size:11px">MISSING</th>'+
+      '</tr></thead><tbody>'+
+      rows.map(c=>`<tr style="border-bottom:1px solid #f3f4f6">
+        <td style="padding:9px 6px;font-weight:600">${esc(c.company_name||'—')}</td>
+        <td style="padding:9px 6px;color:#6b7280;font-family:monospace;font-size:12px">${esc(c.dot_number||'—')}</td>
+        <td style="padding:9px 6px;color:#6b7280">${esc(c.phone||'—')}</td>
+        <td style="padding:9px 6px"><span class="badge ${planBadgeClass(c.plan)}">${planShort(c.plan)}</span></td>
+        <td style="padding:9px 6px;color:#c2410c;font-size:12px">${Array.isArray(c.onboarding_missing_fields)?c.onboarding_missing_fields.join(', '):'Profile incomplete'}</td>
       </tr>`).join('')+'</tbody></table>';
   } else if(type==='loads'){
     title.textContent='Loads This Month — Last 10';
