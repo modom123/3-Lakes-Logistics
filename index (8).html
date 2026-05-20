@@ -1428,7 +1428,7 @@ const FOUNDERS_CATEGORIES=[
 ];
 window.FOUNDERS_CATEGORIES=FOUNDERS_CATEGORIES;
 // Backend base URL. Override from browser console: window.__3LL_API_BASE='https://api.3lakeslogistics.com'
-window.__3LL_API_BASE=window.__3LL_API_BASE||'http://localhost:8080';
+window.__3LL_API_BASE=window.__3LL_API_BASE||'https://three-lakes-logistics-api.onrender.com';
 // On page load, sync the founders counter from the backend if it's up.
 (function syncFromBackend(){
   try{
@@ -1742,7 +1742,7 @@ function oSub(){
   // Founders countdown and stash the carrier_id + Stripe checkout URL so
   // Step 6 can hand it off to Penny. On failure, queue for retry.
   (function sendIntake(){
-    const API=(window.__3LL_API_BASE||'http://localhost:8080').replace(/\/$/,'');
+    const API=(window.__3LL_API_BASE||'https://three-lakes-logistics-api.onrender.com').replace(/\/$/,'');
     fetch(API+'/api/carriers/intake',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
