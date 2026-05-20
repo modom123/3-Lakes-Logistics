@@ -1296,6 +1296,7 @@ td.td-name{font-weight:600;color:var(--navy);}
         </div>
         <div class="page-hdr-r" style="display:flex;gap:8px">
           <button class="btn-out" onclick="migrateAirtableLeads()" title="Import 129 leads from Airtable">📥 Import from Airtable</button>
+          <button class="btn-out" onclick="debugAirtable()" title="Check Airtable connection + list tables">🔍 Debug Airtable</button>
           <button class="btn-out" onclick="loadLeadsPipeline()">Refresh</button>
         </div>
       </div>
@@ -4253,6 +4254,34 @@ async function launchLeadMachine() {
       error: e.message, ts: new Date().toISOString() });
   }
   btn.disabled = false; btn.textContent = '⚡ Launch Lead Machine';
+}
+
+async function debugAirtable() {
+  const cardEl = document.getElementById('airtable-migration-card');
+  const statusEl = document.getElementById('migration-status');
+  cardEl.style.display = 'block';
+  statusEl.innerHTML = '<div style="padding:10px;color:rgba(255,255,255,.7)">⏳ Checking Airtable connection…</div>';
+  try {
+    const r = await fetch(`${API_BASE}/api/migrate/airtable-debug`, {
+      headers: { 'Authorization': 'Bearer ' + API_TOKEN }
+    });
+    const data = await r.json();
+    if (data.error) {
+      statusEl.innerHTML = `<div style="padding:12px;line-height:1.7">
+        <div style="color:var(--red);font-weight:600">❌ ${data.error}</div>
+        ${data.fix ? `<div style="margin-top:8px;font-size:12px;color:rgba(255,255,255,.8)">${data.fix}</div>` : ''}
+        ${data.base_id ? `<div style="margin-top:6px;font-size:11px;color:rgba(255,255,255,.5)">Base ID: ${data.base_id}</div>` : ''}
+      </div>`;
+    } else {
+      statusEl.innerHTML = `<div style="padding:12px;line-height:1.7">
+        <div style="color:var(--green);font-weight:600">✅ Airtable connected</div>
+        <div style="margin-top:6px;font-size:12px;color:rgba(255,255,255,.7)">Base: ${data.base_id}</div>
+        <div style="font-size:12px;color:rgba(255,255,255,.7)">Tables found: <strong>${(data.tables||[]).join(', ')}</strong></div>
+      </div>`;
+    }
+  } catch(e) {
+    statusEl.innerHTML = `<div style="padding:10px;color:var(--red)">Error: ${e.message}</div>`;
+  }
 }
 
 async function migrateAirtableLeads() {
