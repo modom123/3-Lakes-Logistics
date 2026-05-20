@@ -2256,7 +2256,6 @@ async function apiFetch(path, method='GET', body){
     headers:{'Content-Type':'application/json','Authorization':'Bearer '+API_TOKEN},
     body: body ? JSON.stringify(body) : undefined
   });
-  if(!r.ok) throw new Error(r.status+': '+(await r.text()));
   return r;
 }
 
@@ -2468,7 +2467,7 @@ async function updateLoadStatus(id){
   const current=load?.status||'Booked';
   const next=statuses[(statuses.indexOf(current)+1)%statuses.length];
   if(!confirm('Change status to: '+next+'?'))return;
-  const upRes=await apiFetch('/api/dashboard/loads/'+id,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:next})});
+  const upRes=await apiFetch('/api/dashboard/loads/'+id,'PATCH',{status:next});
   if(!upRes.ok){toast('Error updating load status','error');return;}
   await loadLoads();toast('Status → '+next);
   // Fire the matching execution-engine trigger
@@ -2514,7 +2513,7 @@ async function saveLoad(){
   const fee=Math.round(rate*pct/100);
   const rpm=miles?parseFloat((rate/miles).toFixed(2)):null;
   const postToWeb=document.getElementById('load-post-website')?.checked||false;
-  const insRes=await apiFetch('/api/dashboard/loads',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+  const insRes=await apiFetch('/api/dashboard/loads','POST',{
     load_number:'#'+loadCounter++,driver_name:driver,origin,destination:dest,miles,rate,
     dispatch_pct:pct,dispatch_fee:fee,rpm,
     status:document.getElementById('load-status').value,
@@ -2522,7 +2521,7 @@ async function saveLoad(){
     commodity:document.getElementById('load-commodity').value.trim(),
     notes:document.getElementById('load-broker').value.trim(),
     post_to_website:postToWeb
-  })});
+  });
   btn.disabled=false;btn.textContent='Save Load';
   if(!insRes.ok){toast('Error saving load','error');return;}
   closeModal('add-load-modal');
@@ -2615,13 +2614,13 @@ async function saveInvoice(){
   btn.disabled=true;btn.textContent='Saving…';
   const carrierId=document.getElementById('inv-carrier-select').value||null;
   const loadId=document.getElementById('inv-load-select').value||null;
-  const invRes=await apiFetch('/api/dashboard/invoices',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+  const invRes=await apiFetch('/api/dashboard/invoices','POST',{
     invoice_number:document.getElementById('inv-number').value.trim()||autoInvNum(),
     carrier_id:carrierId,load_id:loadId,amount,
     status:document.getElementById('inv-status').value,
     due_date:document.getElementById('inv-due').value||null,
     notes:document.getElementById('inv-notes').value.trim()
-  })});
+  });
   btn.disabled=false;btn.textContent='Create Invoice';
   if(!invRes.ok){toast('Error creating invoice','error');return;}
   closeModal('add-invoice-modal');
@@ -2633,18 +2632,18 @@ function autoInvNum(){return 'INV-'+String(allInvoices.length+1).padStart(4,'0')
 function autoInvNumber(){const el=document.getElementById('inv-number');if(el)el.value=autoInvNum();}
 
 async function markInvoicePaid(id){
-  const r=await apiFetch('/api/dashboard/invoices/'+id,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:'Paid',paid_date:new Date().toISOString().split('T')[0]})});
+  const r=await apiFetch('/api/dashboard/invoices/'+id,'PATCH',{status:'Paid',paid_date:new Date().toISOString().split('T')[0]});
   if(!r.ok){toast('Error','error');return;}
   await loadInvoices();renderInvoices();updateDashboard();toast('Marked as paid!');
 }
 async function markInvoiceOverdue(id){
-  const r=await apiFetch('/api/dashboard/invoices/'+id,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:'Overdue'})});
+  const r=await apiFetch('/api/dashboard/invoices/'+id,'PATCH',{status:'Overdue'});
   if(!r.ok){toast('Error','error');return;}
   await loadInvoices();renderInvoices();toast('Marked overdue');
 }
 async function deleteInvoice(id){
   if(!confirm('Delete this invoice?'))return;
-  const r=await apiFetch('/api/dashboard/invoices/'+id,{method:'DELETE'});
+  const r=await apiFetch('/api/dashboard/invoices/'+id,'DELETE');
   if(!r.ok){toast('Error','error');return;}
   await loadInvoices();renderInvoices();updateDashboard();toast('Invoice deleted');
 }
