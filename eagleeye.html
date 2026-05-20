@@ -2256,7 +2256,6 @@ async function apiFetch(path, method='GET', body){
     headers:{'Content-Type':'application/json','Authorization':'Bearer '+API_TOKEN},
     body: body ? JSON.stringify(body) : undefined
   });
-  if(!r.ok) throw new Error(r.status+': '+(await r.text()));
   return r;
 }
 
@@ -2319,9 +2318,16 @@ async function refreshAll(){
 
 // ── CARRIERS ──
 async function loadCarriers(){
-  const{data,error}=await sb.from('active_carriers').select('*').order('created_at',{ascending:false});
-  if(error){console.warn('loadCarriers:',error.message);return;}
-  allCarriers=data||[];
+  try{
+    const res=await apiFetch('/api/carriers/?limit=500');
+    const json=await res.json();
+    allCarriers=json.items||[];
+  }catch(e){
+    console.warn('loadCarriers via API failed, trying Supabase direct:',e.message);
+    const{data,error}=await sb.from('active_carriers').select('*').order('created_at',{ascending:false});
+    if(error){console.warn('loadCarriers Supabase:',error.message);return;}
+    allCarriers=data||[];
+  }
   renderCarriersTable();
   updateCarrierMetrics();
 }
@@ -2393,9 +2399,14 @@ async function deleteCarrier(id){
 
 // ── LOADS ──
 async function loadLoads(){
-  const{data,error}=await sb.from('loads').select('*').order('created_at',{ascending:false});
-  if(error){console.warn('loadLoads:',error.message);return;}
-  allLoads=data||[];
+  try{
+    const res=await apiFetch('/api/dashboard/loads?limit=500');
+    const json=await res.json();
+    allLoads=json.items||[];
+  }catch(e){
+    console.warn('loadLoads API failed:',e.message);
+    allLoads=[];
+  }
   renderLoadsTable();renderDispatchBoard();updateLoadMetrics();
 }
 
@@ -2456,8 +2467,8 @@ async function updateLoadStatus(id){
   const current=load?.status||'Booked';
   const next=statuses[(statuses.indexOf(current)+1)%statuses.length];
   if(!confirm('Change status to: '+next+'?'))return;
-  const{error}=await sb.from('loads').update({status:next}).eq('id',id);
-  if(error){toast('Error: '+error.message,'error');return;}
+  const upRes=await apiFetch('/api/dashboard/loads/'+id,'PATCH',{status:next});
+  if(!upRes.ok){toast('Error updating load status','error');return;}
   await loadLoads();toast('Status → '+next);
   // Fire the matching execution-engine trigger
   const triggerBody={load_id:id,load_number:load?.load_number||'',rate:load?.rate||null};
@@ -2502,7 +2513,7 @@ async function saveLoad(){
   const fee=Math.round(rate*pct/100);
   const rpm=miles?parseFloat((rate/miles).toFixed(2)):null;
   const postToWeb=document.getElementById('load-post-website')?.checked||false;
-  const{error}=await sb.from('loads').insert({
+  const insRes=await apiFetch('/api/dashboard/loads','POST',{
     load_number:'#'+loadCounter++,driver_name:driver,origin,destination:dest,miles,rate,
     dispatch_pct:pct,dispatch_fee:fee,rpm,
     status:document.getElementById('load-status').value,
@@ -2512,7 +2523,7 @@ async function saveLoad(){
     post_to_website:postToWeb
   });
   btn.disabled=false;btn.textContent='Save Load';
-  if(error){toast('Error: '+error.message,'error');return;}
+  if(!insRes.ok){toast('Error saving load','error');return;}
   closeModal('add-load-modal');
   ['load-origin','load-dest','load-miles','load-rate','load-pickup','load-broker','load-commodity'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   const pwCb=document.getElementById('load-post-website');if(pwCb)pwCb.checked=false;
@@ -2536,9 +2547,14 @@ function populateDriverSelect(){
 
 // ── INVOICES ──
 async function loadInvoices(){
-  const{data,error}=await sb.from('invoices').select('*').order('created_at',{ascending:false});
-  if(error){console.warn('loadInvoices:',error.message);return;}
-  allInvoices=data||[];
+  try{
+    const res=await apiFetch('/api/dashboard/invoices?limit=500');
+    const json=await res.json();
+    allInvoices=json.items||[];
+  }catch(e){
+    console.warn('loadInvoices API failed:',e.message);
+    allInvoices=[];
+  }
   updateInvoiceMetrics();
   renderLoadsTable();
 }
@@ -2598,7 +2614,7 @@ async function saveInvoice(){
   btn.disabled=true;btn.textContent='Saving…';
   const carrierId=document.getElementById('inv-carrier-select').value||null;
   const loadId=document.getElementById('inv-load-select').value||null;
-  const{error}=await sb.from('invoices').insert({
+  const invRes=await apiFetch('/api/dashboard/invoices','POST',{
     invoice_number:document.getElementById('inv-number').value.trim()||autoInvNum(),
     carrier_id:carrierId,load_id:loadId,amount,
     status:document.getElementById('inv-status').value,
@@ -2606,7 +2622,7 @@ async function saveInvoice(){
     notes:document.getElementById('inv-notes').value.trim()
   });
   btn.disabled=false;btn.textContent='Create Invoice';
-  if(error){toast('Error: '+error.message,'error');return;}
+  if(!invRes.ok){toast('Error creating invoice','error');return;}
   closeModal('add-invoice-modal');
   ['inv-number','inv-amount','inv-due','inv-notes'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   await loadInvoices();renderInvoices();updateDashboard();toast('Invoice created!');
@@ -2616,19 +2632,19 @@ function autoInvNum(){return 'INV-'+String(allInvoices.length+1).padStart(4,'0')
 function autoInvNumber(){const el=document.getElementById('inv-number');if(el)el.value=autoInvNum();}
 
 async function markInvoicePaid(id){
-  const{error}=await sb.from('invoices').update({status:'Paid',paid_date:new Date().toISOString().split('T')[0]}).eq('id',id);
-  if(error){toast('Error','error');return;}
+  const r=await apiFetch('/api/dashboard/invoices/'+id,'PATCH',{status:'Paid',paid_date:new Date().toISOString().split('T')[0]});
+  if(!r.ok){toast('Error','error');return;}
   await loadInvoices();renderInvoices();updateDashboard();toast('Marked as paid!');
 }
 async function markInvoiceOverdue(id){
-  const{error}=await sb.from('invoices').update({status:'Overdue'}).eq('id',id);
-  if(error){toast('Error','error');return;}
+  const r=await apiFetch('/api/dashboard/invoices/'+id,'PATCH',{status:'Overdue'});
+  if(!r.ok){toast('Error','error');return;}
   await loadInvoices();renderInvoices();toast('Marked overdue');
 }
 async function deleteInvoice(id){
   if(!confirm('Delete this invoice?'))return;
-  const{error}=await sb.from('invoices').delete().eq('id',id);
-  if(error){toast('Error','error');return;}
+  const r=await apiFetch('/api/dashboard/invoices/'+id,'DELETE');
+  if(!r.ok){toast('Error','error');return;}
   await loadInvoices();renderInvoices();updateDashboard();toast('Invoice deleted');
 }
 
@@ -3550,10 +3566,10 @@ async function refreshAgentLog(){
 }
 
 async function loadFoundersInventory(){
-  // Load inventory from backend + founders carriers from Supabase in parallel
+  // Both calls go through the backend API (service role key — bypasses RLS)
   const [invResult, carriersResult] = await Promise.allSettled([
     API.founders(),
-    sb.from('active_carriers').select('id,company_name,dot_number,mc_number,trailer_type,phone,email,status,plan,created_at,is_test').eq('plan','founders').order('created_at',{ascending:false})
+    apiFetch('/api/carriers/?plan=founders&limit=500').then(r=>r.json())
   ]);
 
   // Inventory block
@@ -3583,9 +3599,7 @@ async function loadFoundersInventory(){
   // Founders carriers block
   try{
     if(carriersResult.status==='rejected') throw carriersResult.reason;
-    const {data,error}=carriersResult.value;
-    if(error) throw error;
-    const carriers=data||[];
+    const carriers=carriersResult.value.items||[];
     const realFounders=carriers.filter(c=>!c.is_test);
     const el=document.getElementById('fd-carriers-list');
     const badge=document.getElementById('fd-carrier-count');
