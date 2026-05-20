@@ -4932,6 +4932,9 @@ async function loadTriggerStatus() {
 let crmAllLeads = [];
 let crmSelectedLead = null;
 
+function _crmName(l){ return l.business_name || l.company_name || 'Unknown'; }
+function _crmStatus(l){ return l.status || l.stage || 'New'; }
+
 async function loadCrmLeads(){
   try {
     const r = await apiFetch('/api/leads?limit=500');
@@ -4949,23 +4952,36 @@ function renderCrmLeadsList(){
   const search = document.getElementById('crm-search').value.toLowerCase();
 
   let filtered = crmAllLeads;
-  if (stage) filtered = filtered.filter(l => l.stage === stage);
+  if (stage) filtered = filtered.filter(l => _crmStatus(l).toLowerCase() === stage.toLowerCase());
   if (search) filtered = filtered.filter(l =>
-    (l.company_name || '').toLowerCase().includes(search) ||
+    _crmName(l).toLowerCase().includes(search) ||
     (l.phone || '').includes(search) ||
     (l.email || '').toLowerCase().includes(search)
   );
 
-  const html = filtered.map(l => `
+  const statusColor = s => {
+    const v = (s||'').toLowerCase();
+    if (v === 'interested' || v === 'won') return 'green';
+    if (v === 'not_interested' || v === 'lost') return 'red';
+    if (v === 'contacted') return 'blue';
+    return 'orange';
+  };
+
+  const html = filtered.map(l => {
+    const st = _crmStatus(l);
+    const hasFollowup = l.next_touch_at && new Date(l.next_touch_at) > new Date();
+    return `
     <div class="crm-lead-item ${crmSelectedLead?.id === l.id ? 'active' : ''}" onclick="selectCrmLead('${l.id}')" style="padding:10px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .2s;background:${crmSelectedLead?.id === l.id ? 'rgba(0,0,0,.05)' : 'transparent'}">
-      <div style="font-weight:500;margin-bottom:4px">${l.company_name || 'Unknown'}</div>
-      <div style="font-size:12px;color:var(--muted);margin-bottom:2px">${l.phone || l.email || 'No contact'}</div>
-      <div style="font-size:11px;display:flex;gap:4px">
-        <span class="badge badge-${l.stage === 'interested' ? 'green' : l.stage === 'not_interested' ? 'red' : 'orange'}">${l.stage || 'new'}</span>
-        <span style="color:var(--muted)">Score: ${l.score || 0}</span>
+      <div style="font-weight:500;margin-bottom:3px">${_crmName(l)}</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:3px">${l.phone || l.email || 'No contact'}</div>
+      <div style="font-size:11px;display:flex;gap:4px;flex-wrap:wrap;align-items:center">
+        <span class="badge badge-${statusColor(st)}">${st}</span>
+        ${l.equipment_type ? `<span style="color:var(--muted)">${l.equipment_type}</span>` : ''}
+        ${hasFollowup ? `<span style="color:#b45309;font-size:10px">📅 ${new Date(l.next_touch_at).toLocaleDateString('en-US',{month:'short',day:'numeric'})}</span>` : ''}
+        <span style="color:var(--muted);margin-left:auto">⭐${l.score || 0}</span>
       </div>
     </div>
-  `).join('');
+  `}).join('');
 
   document.getElementById('crm-leads-list').innerHTML = html || '<div style="padding:8px;color:var(--muted);font-size:12px">No leads</div>';
 }
@@ -4975,119 +4991,186 @@ async function selectCrmLead(leadId){
   if (!lead) return;
   crmSelectedLead = lead;
   renderCrmLeadsList();
-  await renderCrmLeadDetail(lead);
+  renderCrmLeadDetail(lead);
 }
 
-async function renderCrmLeadDetail(lead){
+function renderCrmLeadDetail(lead){
   const detailEl = document.getElementById('crm-detail');
 
-  let callHistory = [];
-  try {
-    const r = await apiFetch('/api/prospecting/calls?limit=50');
-    const d = await r.json();
-    if (lead.phone) {
-      const normalized = '+1' + lead.phone.replace(/\D/g, '').slice(-10);
-      callHistory = (d.calls || []).filter(c => {
-        const p = c.payload || {};
-        return p.phone === lead.phone || p.phone === normalized;
-      });
-    }
-  } catch (e) {
-    console.error('Error loading call history:', e);
-  }
+  const lastContact = lead.last_contact_at
+    ? new Date(lead.last_contact_at).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})
+    : '—';
+  const nextTouchVal = lead.next_touch_at ? lead.next_touch_at.slice(0,16) : '';
+  const st = _crmStatus(lead);
 
-  const lastTouch = lead.last_touch_at ? new Date(lead.last_touch_at).toLocaleString('en-US', {month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}) : '—';
-  const nextTouch = lead.next_touch_at ? new Date(lead.next_touch_at).toLocaleString('en-US', {month:'short',day:'numeric'}) : '—';
+  const statusColor = s => {
+    const v = (s||'').toLowerCase();
+    if (v === 'interested' || v === 'won') return 'green';
+    if (v === 'not_interested' || v === 'lost') return 'red';
+    if (v === 'contacted') return '#2563eb';
+    return 'var(--orange)';
+  };
+
+  const fld = (label, key, val, type='text', wide=false) => `
+    <div style="${wide ? 'grid-column:1/-1;' : ''}">
+      <div style="font-size:11px;color:var(--muted);margin-bottom:3px">${label}</div>
+      <input id="crm-fld-${key}" type="${type}" value="${(val||'').toString().replace(/"/g,'&quot;')}"
+        style="width:100%;box-sizing:border-box;padding:6px 8px;border:1px solid var(--border);border-radius:4px;font-size:13px;background:#fff"
+        onblur="saveCrmField('${lead.id}','${key}',this.value)">
+    </div>`;
 
   const html = `
     <div>
-      <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:16px">
+      <!-- Header -->
+      <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:14px">
         <div>
-          <h3 style="margin:0 0 4px 0">${lead.company_name || 'Unknown'}</h3>
-          <div style="font-size:12px;color:var(--muted)">
-            ${lead.contact_name ? `<div>${lead.contact_name}</div>` : ''}
-            ${lead.phone ? `<div>${lead.phone}</div>` : ''}
-            ${lead.email ? `<div>${lead.email}</div>` : ''}
-          </div>
+          <h3 style="margin:0 0 2px 0;font-size:16px">${_crmName(lead)}</h3>
+          <div style="font-size:11px;color:var(--muted)">${lead.source || 'Manual'} · Score ${lead.score || 0}</div>
         </div>
-        <div style="display:flex;gap:4px">
-          ${lead.phone ? `<button class="btn-gold" onclick="vanceCallLead('${lead.company_name}', '${lead.phone}')" style="padding:6px 12px;font-size:12px">📞 Call</button>` : ''}
+        <div style="display:flex;gap:6px">
+          <button onclick="crmLogCall('${lead.id}')" style="padding:6px 12px;font-size:12px;background:#2563eb;color:#fff;border:none;border-radius:4px;cursor:pointer">📞 Log Call</button>
+          ${lead.phone ? `<button class="btn-gold" onclick="vanceCallLead('${_crmName(lead).replace(/'/g,"\\'")}','${lead.phone}')" style="padding:6px 12px;font-size:12px">🤖 Vance</button>` : ''}
         </div>
       </div>
 
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;padding:12px;background:rgba(0,0,0,.05);border-radius:6px">
+      <!-- Status row -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;padding:12px;background:rgba(0,0,0,.04);border-radius:6px">
         <div>
-          <div style="font-size:11px;color:var(--muted);margin-bottom:4px">Status</div>
-          <select onchange="updateLeadStage('${lead.id}', this.value)" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:4px;font-size:13px">
-            <option value="new" ${lead.stage === 'new' ? 'selected' : ''}>New</option>
-            <option value="contacted" ${lead.stage === 'contacted' ? 'selected' : ''}>Contacted</option>
-            <option value="interested" ${lead.stage === 'interested' ? 'selected' : ''}>Interested</option>
-            <option value="not_interested" ${lead.stage === 'not_interested' ? 'selected' : ''}>Not interested</option>
-            <option value="won" ${lead.stage === 'won' ? 'selected' : ''}>Won</option>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:3px">Status</div>
+          <select id="crm-status-sel" onchange="crmUpdateStatus('${lead.id}',this.value)"
+            style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:4px;font-size:13px">
+            ${['New','Contacted','Interested','Not_Interested','Won','Lost'].map(s =>
+              `<option value="${s}" ${st.toLowerCase()===s.toLowerCase()?'selected':''}>${s.replace('_',' ')}</option>`
+            ).join('')}
           </select>
         </div>
         <div>
-          <div style="font-size:11px;color:var(--muted);margin-bottom:4px">Score</div>
-          <div style="padding:6px 8px;background:white;border:1px solid var(--border);border-radius:4px;font-weight:500">${lead.score || 0}</div>
-        </div>
-        <div style="grid-column:1/-1">
-          <div style="font-size:11px;color:var(--muted);margin-bottom:4px">Source</div>
-          <div style="font-size:12px">${lead.source || '—'}</div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:3px">Last Contact</div>
+          <div style="padding:6px 8px;background:#fff;border:1px solid var(--border);border-radius:4px;font-size:13px">${lastContact}</div>
         </div>
       </div>
 
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;font-size:12px">
-        <div>
-          <div style="color:var(--muted);margin-bottom:2px">Last touch</div>
-          <div>${lastTouch}</div>
-        </div>
-        <div>
-          <div style="color:var(--muted);margin-bottom:2px">Next follow-up</div>
-          <div>${nextTouch}</div>
+      <!-- Editable fields -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+        ${fld('Contact Name','contact_name', lead.contact_name||'')}
+        ${fld('Phone','phone', lead.phone||'', 'tel')}
+        ${fld('Email','email', lead.email||'', 'email')}
+        ${fld('Equipment Type','equipment_type', lead.equipment_type||'')}
+        ${fld('City','city', lead.city||'')}
+        ${fld('State','state', lead.state||'')}
+        ${fld('Fleet Size','fleet_size', lead.fleet_size||'', 'number')}
+      </div>
+
+      <!-- Follow-up scheduler -->
+      <div style="margin-bottom:14px;padding:12px;background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.3);border-radius:6px">
+        <div style="font-size:12px;font-weight:600;margin-bottom:8px;color:#92400e">📅 Schedule Follow-Up</div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <input type="datetime-local" id="crm-followup-dt" value="${nextTouchVal}"
+            style="flex:1;padding:6px 8px;border:1px solid var(--border);border-radius:4px;font-size:13px">
+          <button onclick="saveCrmFollowup('${lead.id}')"
+            style="padding:6px 14px;background:#d97706;color:#fff;border:none;border-radius:4px;font-size:12px;cursor:pointer;white-space:nowrap">
+            Save Date
+          </button>
+          ${nextTouchVal ? `<button onclick="clearCrmFollowup('${lead.id}')" style="padding:6px 10px;background:#e5e7eb;color:#374151;border:none;border-radius:4px;font-size:12px;cursor:pointer">Clear</button>` : ''}
         </div>
       </div>
 
-      ${callHistory.length > 0 ? `
-        <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border)">
-          <h4 style="margin:0 0 8px 0;font-size:13px">Call History (${callHistory.length})</h4>
-          <div style="display:flex;flex-direction:column;gap:8px">
-            ${callHistory.map(c => {
-              const ts = c.ts ? new Date(c.ts).toLocaleString('en-US', {month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}) : '—';
-              const ok = c.result === 'started';
-              return `
-                <div style="padding:8px;background:rgba(0,0,0,.03);border-radius:4px;border-left:3px solid ${ok ? 'var(--green)' : 'var(--orange)'}">
-                  <div style="display:flex;justify-content:space-between;margin-bottom:2px">
-                    <div style="font-weight:500;font-size:12px">${c.payload?.name || c.action || '—'}</div>
-                    <div style="font-size:11px;color:var(--muted)">${ts}</div>
-                  </div>
-                  <div style="font-size:11px;color:var(--muted)">
-                    Status: <span class="badge badge-${ok ? 'green' : 'orange'}">${c.result || 'pending'}</span>
-                  </div>
-                </div>
-              `;
-            }).join('')}
-          </div>
+      <!-- Notes -->
+      <div style="margin-bottom:14px">
+        <div style="font-size:12px;font-weight:600;margin-bottom:6px">📝 Notes</div>
+        <textarea id="crm-notes-box" rows="4"
+          style="width:100%;box-sizing:border-box;padding:8px;border:1px solid var(--border);border-radius:4px;font-size:13px;resize:vertical;font-family:inherit"
+          placeholder="Add call notes, observations…">${lead.notes || ''}</textarea>
+        <div style="display:flex;gap:8px;margin-top:6px">
+          <button onclick="saveCrmNotes('${lead.id}')"
+            style="padding:6px 16px;background:var(--navy);color:#fff;border:none;border-radius:4px;font-size:12px;cursor:pointer">
+            Save Notes
+          </button>
+          <button onclick="appendCrmNote('${lead.id}')"
+            style="padding:6px 16px;background:#e5e7eb;color:#374151;border:none;border-radius:4px;font-size:12px;cursor:pointer">
+            + Append with Timestamp
+          </button>
+          <span id="crm-notes-saved" style="font-size:11px;color:var(--green);align-self:center;display:none">✓ Saved</span>
         </div>
-      ` : '<div style="margin-top:16px;padding:12px;background:rgba(0,0,0,.03);border-radius:4px;color:var(--muted);font-size:12px">No call history yet</div>'}
+      </div>
     </div>
   `;
 
   detailEl.innerHTML = html;
 }
 
-async function updateLeadStage(leadId, newStage){
+async function crmPatch(leadId, patch){
+  await apiFetch(`/api/leads/${leadId}`, 'PATCH', patch);
+  const lead = crmAllLeads.find(l => l.id === leadId);
+  if (lead) Object.assign(lead, patch);
+}
+
+async function saveCrmField(leadId, key, value){
   try {
-    await apiFetch(`/api/leads/${leadId}`, 'PATCH', {stage: newStage, last_touch_at: new Date().toISOString()});
+    const coerced = key === 'fleet_size' ? (parseInt(value)||null) : (value.trim()||null);
+    await crmPatch(leadId, {[key]: coerced});
     const lead = crmAllLeads.find(l => l.id === leadId);
-    if (lead) {
-      lead.stage = newStage;
-      lead.last_touch_at = new Date().toISOString();
-      renderCrmLeadsList();
-      renderCrmLeadDetail(lead);
-    }
-  } catch (e) {
-    alert('Error updating lead: ' + e.message);
-  }
+    if (lead) renderCrmLeadsList();
+  } catch(e){ console.error('save field failed', e); }
+}
+
+async function crmUpdateStatus(leadId, newStatus){
+  try {
+    await crmPatch(leadId, {status: newStatus, last_contact_at: new Date().toISOString()});
+    renderCrmLeadsList();
+  } catch(e){ alert('Error updating status: ' + e.message); }
+}
+
+async function crmLogCall(leadId){
+  try {
+    await crmPatch(leadId, {status: 'Contacted', last_contact_at: new Date().toISOString()});
+    const lead = crmAllLeads.find(l => l.id === leadId);
+    renderCrmLeadsList();
+    if (lead) renderCrmLeadDetail(lead);
+    // Flash confirmation
+    const sel = document.getElementById('crm-status-sel');
+    if (sel) { sel.value = 'Contacted'; sel.style.background='#dcfce7'; setTimeout(()=>sel.style.background='',1500); }
+  } catch(e){ alert('Error logging call: ' + e.message); }
+}
+
+async function saveCrmFollowup(leadId){
+  const dt = document.getElementById('crm-followup-dt')?.value;
+  if (!dt) return;
+  try {
+    await crmPatch(leadId, {next_touch_at: new Date(dt).toISOString()});
+    renderCrmLeadsList();
+    const btn = event.target; btn.textContent='✓ Saved'; btn.style.background='#16a34a';
+    setTimeout(()=>{ btn.textContent='Save Date'; btn.style.background='#d97706'; }, 1800);
+  } catch(e){ alert('Error saving follow-up: ' + e.message); }
+}
+
+async function clearCrmFollowup(leadId){
+  try {
+    await crmPatch(leadId, {next_touch_at: null});
+    document.getElementById('crm-followup-dt').value = '';
+    renderCrmLeadsList();
+    const lead = crmAllLeads.find(l => l.id === leadId);
+    if (lead) renderCrmLeadDetail(lead);
+  } catch(e){ alert('Error clearing follow-up: ' + e.message); }
+}
+
+async function saveCrmNotes(leadId){
+  const notes = document.getElementById('crm-notes-box')?.value || '';
+  try {
+    await crmPatch(leadId, {notes});
+    const saved = document.getElementById('crm-notes-saved');
+    if (saved){ saved.style.display='inline'; setTimeout(()=>saved.style.display='none', 2000); }
+  } catch(e){ alert('Error saving notes: ' + e.message); }
+}
+
+async function appendCrmNote(leadId){
+  const box = document.getElementById('crm-notes-box');
+  if (!box) return;
+  const ts = new Date().toLocaleString('en-US',{month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit'});
+  const separator = box.value.trim() ? '\n\n' : '';
+  box.value = box.value + separator + `[${ts}]\n`;
+  box.focus();
+  box.setSelectionRange(box.value.length, box.value.length);
 }
 
 function vanceCallLead(name, phone){
