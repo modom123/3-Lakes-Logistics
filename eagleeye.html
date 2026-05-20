@@ -1000,13 +1000,13 @@ td.td-name{font-weight:600;color:var(--navy);}
     <div class="page" id="page-ifta">
       <div class="page-hdr"><div class="page-hdr-l"><div class="chip">Quarterly</div><h2>IFTA / Permits / Tax</h2></div><button class="btn-navy">+ Log Miles</button></div>
       <div class="g3">
-        <div class="mc"><div class="mc-label">Q1 Miles (Truck #1)</div><div class="mc-val blue">28,450</div><div class="mc-sub">Jan–Mar 2025</div></div>
-        <div class="mc"><div class="mc-label">Fuel Purchased (Q1)</div><div class="mc-val gold">8,240 gal</div><div class="mc-sub">~$32,960 @ $4.00/gal avg</div></div>
-        <div class="mc"><div class="mc-label">IFTA Filing Due</div><div class="mc-val orange">Apr 30</div><div class="mc-sub">File quarterly return</div></div>
+        <div class="mc"><div class="mc-label">Q2 Miles (Truck #1)</div><div class="mc-val blue">28,450</div><div class="mc-sub">Apr–Jun 2026</div></div>
+        <div class="mc"><div class="mc-label">Fuel Purchased (Q2)</div><div class="mc-val gold">8,240 gal</div><div class="mc-sub">~$32,960 @ $4.00/gal avg</div></div>
+        <div class="mc"><div class="mc-label">IFTA Filing Due</div><div class="mc-val orange">Jul 31</div><div class="mc-sub">Q2 2026 quarterly return</div></div>
       </div>
       <div class="g2">
         <div class="card">
-          <div class="card-hd"><div class="card-title">Q1 Miles by State</div></div>
+          <div class="card-hd"><div class="card-title">Q2 2026 Miles by State</div></div>
           <div class="tbl-wrap"><table><thead><tr><th>State</th><th>Miles</th><th>Fuel Bought (gal)</th><th>Tax Status</th></tr></thead>
           <tbody>
             <tr><td>Michigan</td><td>4,200</td><td>1,800</td><td class="val-green">Credit</td></tr>
@@ -1019,10 +1019,11 @@ td.td-name{font-weight:600;color:var(--navy);}
         </div>
         <div class="card">
           <div class="card-hd"><div class="card-title">Permit & Registration Tracker</div></div>
-          <div class="comp-item"><div class="comp-left"><span class="comp-ico">🪙</span><div><div class="comp-name">Heavy Vehicle Use Tax (2290)</div><div class="comp-desc">Annual IRS filing · Due Aug 31</div></div></div><span class="badge badge-green">Filed</span></div>
+          <div class="comp-item"><div class="comp-left"><span class="comp-ico">🪙</span><div><div class="comp-name">Heavy Vehicle Use Tax (2290)</div><div class="comp-desc">Annual IRS filing · Due Aug 31, 2026</div></div></div><span class="badge badge-orange">Due Soon</span></div>
           <div class="comp-item"><div class="comp-left"><span class="comp-ico">🏷️</span><div><div class="comp-name">IRP Base Plate (Michigan)</div><div class="comp-desc">Multi-state apportioned plates</div></div></div><span class="badge badge-orange">Pending</span></div>
           <div class="comp-item"><div class="comp-left"><span class="comp-ico">📊</span><div><div class="comp-name">UCR Annual Fee</div><div class="comp-desc">Unified Carrier Registration · $76</div></div></div><span class="badge badge-green">Paid</span></div>
-          <div class="comp-item"><div class="comp-left"><span class="comp-ico">📄</span><div><div class="comp-name">IFTA Q1 Return</div><div class="comp-desc">Due April 30 · Est. owe: ~$400</div></div></div><span class="badge badge-orange">In Progress</span></div>
+          <div class="comp-item"><div class="comp-left"><span class="comp-ico">📄</span><div><div class="comp-name">IFTA Q1 2026 Return</div><div class="comp-desc">Due April 30, 2026 · Filed</div></div></div><span class="badge badge-green">Filed</span></div>
+          <div class="comp-item"><div class="comp-left"><span class="comp-ico">📄</span><div><div class="comp-name">IFTA Q2 2026 Return</div><div class="comp-desc">Due July 31, 2026 · Est. owe: ~$400</div></div></div><span class="badge badge-orange">In Progress</span></div>
         </div>
       </div>
     </div>
@@ -1137,7 +1138,7 @@ td.td-name{font-weight:600;color:var(--navy);}
         <div class="card"><div class="card-hd"><div class="card-title">🏳️ Quarterly / Annual</div></div><div class="checklist">
           <div class="check-item" onclick="toggleCheck(this)"><div class="ck-box"></div><span class="ck-text">File IFTA quarterly return (Apr/Jul/Oct/Jan)</span></div>
           <div class="check-item" onclick="toggleCheck(this)"><div class="ck-box"></div><span class="ck-text">Renew UCR registration (annual)</span></div>
-          <div class="check-item" onclick="toggleCheck(this)"><div class="ck-box"></div><span class="ck-text">File 2290 HVUT (due August 31)</span></div>
+          <div class="check-item" onclick="toggleCheck(this)"><div class="ck-box"></div><span class="ck-text">File 2290 HVUT (due August 31, 2026)</span></div>
           <div class="check-item" onclick="toggleCheck(this)"><div class="ck-box"></div><span class="ck-text">Annual DOT inspection for Truck #1</span></div>
           <div class="check-item" onclick="toggleCheck(this)"><div class="ck-box"></div><span class="ck-text">Review insurance policies for renewal</span></div>
         </div></div>
@@ -2904,7 +2905,7 @@ async function loadNotes(){
   const{data,error}=await sb.from('dispatcher_notes').select('*').order('created_at',{ascending:false});
   const catMap={'Carrier Issue':['#fee2e2','var(--red)'],'Load Update':['rgba(37,99,235,.06)','var(--blue)'],'Compliance / Legal':['#fff7ed','var(--orange)'],'Revenue / Finance':['rgba(5,150,105,.06)','var(--green)'],'General':['var(--off)','var(--muted)']};
   if(error||!data||data.length===0){
-    container.innerHTML='<div class="card" style="margin-bottom:12px;border-left:3px solid var(--gold)"><div class="flex-b" style="margin-bottom:8px"><span class="t-sm val-gold" style="font-weight:600;font-family:var(--ff-m)">Marcus Davis — Insurance Urgent</span><span class="t-sm t-muted t-mono">Today</span></div><div class="t-sm" style="line-height:1.7">COI expires March 18. Called Progressive — renewal takes 3 days. Need Marcus to contact his broker by EOD tomorrow.</div></div>';
+    container.innerHTML='<div class="card" style="margin-bottom:12px;border-left:3px solid var(--gold)"><div class="flex-b" style="margin-bottom:8px"><span class="t-sm val-gold" style="font-weight:600;font-family:var(--ff-m)">Insurance COI Renewal</span><span class="t-sm t-muted t-mono">Today</span></div><div class="t-sm" style="line-height:1.7">Primary Liability COI renewal due Dec 2026. Verify Progressive policy is active and update Supabase insurance_compliance table with new cert dates.</div></div>';
     return;
   }
   container.innerHTML=data.map(n=>{
