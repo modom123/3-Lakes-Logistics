@@ -75,6 +75,34 @@ async def health_full():
     except Exception as e:
         results["twilio"] = f"error: {str(e)[:60]}"
 
+    # ── Bland AI ─────────────────────────────────────────────────────────────
+    try:
+        import httpx
+        if s.bland_ai_api_key:
+            r = httpx.get(
+                "https://api.bland.ai/v1/calls",
+                headers={"authorization": s.bland_ai_api_key},
+                params={"limit": 1},
+                timeout=8,
+            )
+            results["bland"] = "ok" if r.status_code in (200, 206) else f"http_{r.status_code}"
+        else:
+            results["bland"] = "no_key"
+    except Exception as e:
+        results["bland"] = f"error: {str(e)[:60]}"
+
+    # ── Postmark Email ────────────────────────────────────────────────────────
+    results["postmark"] = "ok" if s.postmark_server_token else "no_key"
+
+    # ── FMCSA ────────────────────────────────────────────────────────────────
+    results["fmcsa"] = "ok" if s.fmcsa_webkey else "no_key"
+
+    # ── ELD / Motive ─────────────────────────────────────────────────────────
+    results["eld"] = "ok" if s.motive_api_key else "no_key"
+
+    # ── Anthropic Claude ─────────────────────────────────────────────────────
+    results["claude"] = "ok" if s.anthropic_api_key else "no_key"
+
     # ── Redis / Cache ─────────────────────────────────────────────────────────
     try:
         from ..cache import cache_set, cache_get

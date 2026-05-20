@@ -4214,7 +4214,7 @@ async function launchLeadMachine() {
       `Source: ${data.source}`,
       `Min score: ${data.min_score_used}`,
       data.fmcsa_configured ? '✅ FMCSA live' : '⚠ FMCSA key not set — used demo data',
-      data.vapi_configured  ? '✅ Vapi ready' : '⚠ Vapi not configured — calls disabled',
+      data.bland_configured ? '✅ Bland AI ready' : (data.vapi_configured ? '✅ Vapi ready' : '⚠ Bland AI not configured — set BLAND_AI_API_KEY in Render'),
     ].join('  ·  ');
     document.getElementById('lm-r-detail').textContent = detail;
     resultEl.classList.add('show');
@@ -4310,31 +4310,64 @@ async function migrateAirtableLeads() {
 async function loadIntegrationStatus() {
   const grid = document.getElementById('integration-status-grid');
   if (!grid) return;
-  let health = null;
-  try { health = await API.health(); } catch(e) { /* backend offline */ }
+  grid.innerHTML = '<div class="loading"><div class="spin"></div>Checking integrations…</div>';
+
+  let services = {};
+  let backendOk = false;
+  try {
+    const r = await fetch(API_BASE + '/api/health/full', {
+      headers: { 'Authorization': 'Bearer ' + API_TOKEN }
+    });
+    if (r.ok) {
+      const data = await r.json();
+      services = data.services || {};
+      backendOk = true;
+    }
+  } catch(e) { /* backend offline */ }
+
+  // Map service key → ok state
+  // "ok" = ✅, "no_key" = ○ not configured, anything else = ⚠ error
+  function svc(key) {
+    if (!backendOk) return null;
+    const v = services[key];
+    if (v === undefined) return null;
+    if (v === 'ok' || v === 'redis_ok' || v === 'memory_fallback') return true;
+    if (v === 'no_key') return 'missing';
+    return false; // error string
+  }
+  function svcNote(key) {
+    const v = services[key];
+    if (!v || v === 'ok' || v === 'no_key' || v === 'redis_ok' || v === 'memory_fallback') return '';
+    return v; // error message
+  }
 
   const integrations = [
-    { name:'Backend API',     key:'api',      icon:'⚙️',  ok: !!health },
-    { name:'Supabase DB',     key:'supabase', icon:'🗄️',  ok: true }, // if we got here, it's up
-    { name:'Vapi (Vance)',    key:'vapi',     icon:'🎤',  ok: null, note:'Set VAPI_API_KEY' },
-    { name:'Twilio (Echo)',   key:'twilio',   icon:'💬',  ok: null, note:'Set TWILIO_ACCOUNT_SID' },
-    { name:'FMCSA API',       key:'fmcsa',    icon:'🛡️',  ok: null, note:'Set FMCSA_WEBKEY' },
-    { name:'Postmark Email',  key:'postmark', icon:'📧',  ok: null, note:'Set POSTMARK_SERVER_TOKEN' },
-    { name:'Stripe',          key:'stripe',   icon:'💳',  ok: null, note:'Set STRIPE_SECRET_KEY' },
-    { name:'ELD / Motive',    key:'eld',      icon:'🛰️',  ok: null, note:'Set MOTIVE_API_KEY' },
+    { name:'Backend API',      key:'api',      icon:'⚙️',  state: backendOk ? true : false,    missing:'Backend unreachable' },
+    { name:'Supabase DB',      key:'supabase', icon:'🗄️',  state: svc('supabase'),              missing:'Set SUPABASE_SERVICE_ROLE_KEY' },
+    { name:'Bland AI (Vance)', key:'bland',    icon:'📞',  state: svc('bland'),                 missing:'Set BLAND_AI_API_KEY in Render' },
+    { name:'Twilio (SMS)',     key:'twilio',   icon:'💬',  state: svc('twilio'),                missing:'Set TWILIO_ACCOUNT_SID + AUTH_TOKEN' },
+    { name:'Stripe',           key:'stripe',   icon:'💳',  state: svc('stripe'),                missing:'Set STRIPE_SECRET_KEY' },
+    { name:'Postmark Email',   key:'postmark', icon:'📧',  state: svc('postmark'),              missing:'Set POSTMARK_SERVER_TOKEN' },
+    { name:'FMCSA API',        key:'fmcsa',    icon:'🛡️',  state: svc('fmcsa'),                 missing:'Set FMCSA_WEBKEY' },
+    { name:'Claude AI',        key:'claude',   icon:'🤖',  state: svc('claude'),                missing:'Set ANTHROPIC_API_KEY' },
+    { name:'ELD / Motive',     key:'eld',      icon:'🛰️',  state: svc('eld'),                   missing:'Set MOTIVE_API_KEY' },
   ];
 
   grid.innerHTML = integrations.map(int => {
-    const statusColor = int.ok === true ? 'var(--green)' : int.ok === false ? 'var(--red)' : 'var(--muted)';
-    const statusText  = int.ok === true ? '✅ Connected' : int.ok === false ? '⚠ Offline' : '○ Not configured';
-    const badgeClass  = int.ok === true ? 'badge-green' : int.ok === false ? 'badge-red' : 'badge-ghost';
-    return `<div style="background:var(--off);border:1.5px solid var(--border);border-radius:10px;padding:14px 16px;">
+    const s = int.state;
+    const isOk      = s === true;
+    const isMissing = s === 'missing' || s === null;
+    const isError   = s === false;
+    const statusText = isOk ? '✅ Connected' : isMissing ? '○ Not configured' : '⚠ Error';
+    const badgeClass = isOk ? 'badge-green' : isMissing ? 'badge-ghost' : 'badge-red';
+    const note = isOk ? '' : (isError ? svcNote(int.key) : int.missing);
+    return `<div style="background:var(--off);border:1.5px solid ${isOk?'var(--green)':isError?'var(--red)':'var(--border)'};border-radius:10px;padding:14px 16px;">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
         <span style="font-size:18px">${int.icon}</span>
         <div style="font-weight:700;font-size:13px;color:var(--navy)">${int.name}</div>
       </div>
       <span class="badge ${badgeClass}">${statusText}</span>
-      ${int.ok === null && int.note ? `<div style="font-family:var(--ff-m);font-size:9px;color:var(--muted);margin-top:6px;letter-spacing:.5px">${int.note}</div>` : ''}
+      ${note ? `<div style="font-family:var(--ff-m);font-size:9px;color:var(--muted);margin-top:6px;letter-spacing:.5px;line-height:1.4">${note}</div>` : ''}
     </div>`;
   }).join('');
 }
