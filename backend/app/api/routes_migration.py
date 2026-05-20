@@ -155,26 +155,35 @@ def migrate_airtable_leads() -> dict:
                 skipped += 1
                 continue
 
+        source_ref = record.get("id", "")
         rec: dict = {
             "source":       "airtable",
-            "source_ref":   record.get("id"),
+            "source_ref":   source_ref,
             "company_name": company_name,
             "stage":        "new",
         }
-        if phone:        rec["phone"]          = phone
-        if email:        rec["email"]          = email
-        if dot_number:   rec["dot_number"]     = dot_number
-        if mc_number:    rec["mc_number"]      = mc_number
-        if contact_name: rec["contact_name"]   = contact_name
-        if fleet_size:   rec["fleet_size"]     = fleet_size
+        if phone:        rec["phone"]           = phone
+        if email:        rec["email"]           = email
+        if dot_number:   rec["dot_number"]      = dot_number
+        if mc_number:    rec["mc_number"]       = mc_number
+        if contact_name: rec["contact_name"]    = contact_name
+        if fleet_size:   rec["fleet_size"]      = fleet_size
         if equipment:    rec["equipment_types"] = [equipment]
 
         try:
-            sb.table("leads").insert(rec).execute()
+            # Check if this Airtable record was already imported (by source_ref)
+            existing = sb.table("leads").select("id").eq("source_ref", source_ref).limit(1).execute()
+            if existing.data:
+                # Update existing row with correct column values
+                lead_id = existing.data[0]["id"]
+                sb.table("leads").update(rec).eq("id", lead_id).execute()
+            else:
+                sb.table("leads").insert(rec).execute()
             inserted += 1
         except Exception as e:
-            msg = str(e)[:120]
-            errors.append(msg)
+            msg = str(e)[:200]
+            if not errors or msg not in errors:
+                errors.append(msg)
             failed += 1
 
     return {
