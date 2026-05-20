@@ -21,12 +21,19 @@ async def health_basic():
     """Fast ping — driver app checks this every 30s to detect failover."""
     from ..settings import get_settings
     s = get_settings()
-    sb_ok = bool(s.supabase_url and s.supabase_service_role_key)
+    if not s.supabase_url:
+        sb_status = "MISSING_URL — set SUPABASE_URL in Render"
+    elif s.supabase_service_role_key:
+        sb_status = "service_role_key"
+    elif s.supabase_anon_key:
+        sb_status = "anon_key_only — set SUPABASE_SERVICE_ROLE_KEY to bypass RLS"
+    else:
+        sb_status = "MISSING_KEY — set SUPABASE_SERVICE_ROLE_KEY in Render"
     return {
         "ok": True,
         "env": s.env,
         "ts": datetime.now(timezone.utc).isoformat(),
-        "supabase": "configured" if sb_ok else "MISSING — set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in Render",
+        "supabase": sb_status,
     }
 
 

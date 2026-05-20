@@ -2338,13 +2338,24 @@ async function refreshAll(){
 async function loadCarriers(){
   try{
     const res=await apiFetch('/api/carriers/?limit=500');
-    const json=await res.json();
-    allCarriers=json.items||[];
+    if(!res.ok){
+      const txt=await res.text().catch(()=>'');
+      diagLog('carriers API '+res.status+': '+txt.slice(0,120),true);
+      const banner=document.getElementById('diag-banner');if(banner)banner.style.display='block';
+      allCarriers=[];
+    } else {
+      const json=await res.json();
+      allCarriers=json.items||[];
+      diagLog('carriers: '+allCarriers.length+' records loaded');
+    }
   }catch(e){
+    diagLog('carriers exception: '+e.message,true);
+    const banner=document.getElementById('diag-banner');if(banner)banner.style.display='block';
     console.warn('loadCarriers via API failed, trying Supabase direct:',e.message);
     const{data,error}=await sb.from('active_carriers').select('*').order('created_at',{ascending:false});
-    if(error){console.warn('loadCarriers Supabase:',error.message);return;}
+    if(error){console.warn('loadCarriers Supabase:',error.message);diagLog('carriers Supabase fallback error: '+error.message,true);return;}
     allCarriers=data||[];
+    diagLog('carriers: Supabase fallback loaded '+allCarriers.length);
   }
   renderCarriersTable();
   updateCarrierMetrics();
@@ -2419,9 +2430,17 @@ async function deleteCarrier(id){
 async function loadLoads(){
   try{
     const res=await apiFetch('/api/dashboard/loads?limit=500');
-    const json=await res.json();
-    allLoads=json.items||[];
+    if(!res.ok){
+      const txt=await res.text().catch(()=>'');
+      diagLog('loads API '+res.status+': '+txt.slice(0,120),true);
+      allLoads=[];
+    } else {
+      const json=await res.json();
+      allLoads=json.items||[];
+      diagLog('loads: '+allLoads.length+' records loaded');
+    }
   }catch(e){
+    diagLog('loads exception: '+e.message,true);
     console.warn('loadLoads API failed:',e.message);
     allLoads=[];
   }
@@ -2567,9 +2586,17 @@ function populateDriverSelect(){
 async function loadInvoices(){
   try{
     const res=await apiFetch('/api/dashboard/invoices?limit=500');
-    const json=await res.json();
-    allInvoices=json.items||[];
+    if(!res.ok){
+      const txt=await res.text().catch(()=>'');
+      diagLog('invoices API '+res.status+': '+txt.slice(0,120),true);
+      allInvoices=[];
+    } else {
+      const json=await res.json();
+      allInvoices=json.items||[];
+      diagLog('invoices: '+allInvoices.length+' records loaded');
+    }
   }catch(e){
+    diagLog('invoices exception: '+e.message,true);
     console.warn('loadInvoices API failed:',e.message);
     allInvoices=[];
   }
