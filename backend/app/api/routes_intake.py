@@ -286,71 +286,97 @@ async def carrier_intake(payload: CarrierIntake, request: Request,
         "status": onboarding_status,
         "onboarding_missing_fields": missing or None,
     }
-    res = sb.table("active_carriers").insert(carrier_row).execute()
+    try:
+        res = sb.table("active_carriers").insert(carrier_row).execute()
+    except Exception as e:
+        # Check if carrier already exists (duplicate DOT/MC from a previous partial attempt)
+        existing = sb.table("active_carriers").select("id").eq("dot_number", payload.dot_number or "").limit(1).execute()
+        if existing.data:
+            carrier_id = existing.data[0]["id"]
+            log.warning("Duplicate DOT — returning existing carrier_id %s", carrier_id)
+            return IntakeResponse(ok=True, carrier_id=carrier_id, next_step="complete_profile")
+        raise HTTPException(500, f"carrier insert failed: {e}")
     if not res.data:
         raise HTTPException(500, "carrier insert failed")
     carrier_id = res.data[0]["id"]
 
     # 2. fleet_assets (first truck)
-    sb.table("fleet_assets").insert({
-        "carrier_id": carrier_id,
-        "truck_id": payload.truck_id,
-        "vin": payload.vin,
-        "year": payload.year,
-        "make": payload.make,
-        "model": payload.model,
-        "trailer_type": payload.trailer_type,
-        "max_weight_lbs": payload.max_weight,
-        "equipment_count": payload.equipment_count,
-    }).execute()
+    try:
+        sb.table("fleet_assets").insert({
+            "carrier_id": carrier_id,
+            "truck_id": payload.truck_id,
+            "vin": payload.vin,
+            "year": payload.year,
+            "make": payload.make,
+            "model": payload.model,
+            "trailer_type": payload.trailer_type,
+            "max_weight_lbs": payload.max_weight,
+            "equipment_count": payload.equipment_count,
+        }).execute()
+    except Exception as e:
+        log.error("fleet_assets insert failed for %s: %s", carrier_id, e)
 
     # 3. eld_connections (token will be encrypted in production)
     if payload.eld_provider and payload.eld_provider != "other":
-        sb.table("eld_connections").insert({
-            "carrier_id": carrier_id,
-            "eld_provider": payload.eld_provider,
-            "eld_api_token": payload.eld_api_token,
-            "eld_account_id": payload.eld_account_id,
-            "status": "pending",
-        }).execute()
+        try:
+            sb.table("eld_connections").insert({
+                "carrier_id": carrier_id,
+                "eld_provider": payload.eld_provider,
+                "eld_api_token": payload.eld_api_token,
+                "eld_account_id": payload.eld_account_id,
+                "status": "pending",
+            }).execute()
+        except Exception as e:
+            log.error("eld_connections insert failed for %s: %s", carrier_id, e)
 
     # 4. insurance_compliance (Shield kicks off a safety-light check)
-    sb.table("insurance_compliance").insert({
-        "carrier_id": carrier_id,
-        "insurance_carrier": payload.insurance_carrier,
-        "policy_number": payload.policy_number,
-        "policy_expiry": payload.policy_expiry,
-        "bmc91_ack": payload.bmc91_ack,
-        "mcs90_ack": payload.mcs90_ack,
-        "safer_consent": payload.safer_consent,
-        "csa_consent": payload.csa_consent,
-        "clearinghouse_consent": payload.clearinghouse_consent,
-        "psp_consent": payload.psp_consent,
-    }).execute()
+    try:
+        sb.table("insurance_compliance").insert({
+            "carrier_id": carrier_id,
+            "insurance_carrier": payload.insurance_carrier,
+            "policy_number": payload.policy_number,
+            "policy_expiry": payload.policy_expiry,
+            "bmc91_ack": payload.bmc91_ack,
+            "mcs90_ack": payload.mcs90_ack,
+            "safer_consent": payload.safer_consent,
+            "csa_consent": payload.csa_consent,
+            "clearinghouse_consent": payload.clearinghouse_consent,
+            "psp_consent": payload.psp_consent,
+        }).execute()
+    except Exception as e:
+        log.error("insurance_compliance insert failed for %s: %s", carrier_id, e)
 
     # 5. banking_accounts — only insert if at least one field provided
     if payload.bank_routing or payload.bank_account or payload.payee_name:
-        sb.table("banking_accounts").insert({
-            "carrier_id": carrier_id,
-            "bank_routing_last4": _last4(payload.bank_routing),
-            "bank_account_last4": _last4(payload.bank_account),
-            "account_type": payload.account_type,
-            "payee_name": payload.payee_name,
-        }).execute()
+        try:
+            sb.table("banking_accounts").insert({
+                "carrier_id": carrier_id,
+                "bank_routing_last4": _last4(payload.bank_routing),
+                "bank_account_last4": _last4(payload.bank_account),
+                "account_type": payload.account_type,
+                "payee_name": payload.payee_name,
+            }).execute()
+        except Exception as e:
+            log.error("banking_accounts insert failed for %s: %s", carrier_id, e)
 
     # 6. signatures_audit
-    sb.table("signatures_audit").insert({
-        "carrier_id": carrier_id,
-        "doc_type": "dispatch_agreement",
-        "esign_name": payload.esign_name,
-        "ip": payload.esign_ip or ip,
-        "user_agent": payload.esign_user_agent or ua,
-        "pdf_hash": payload.agreement_pdf_hash,
-    }).execute()
+    try:
+        sb.table("signatures_audit").insert({
+            "carrier_id": carrier_id,
+            "doc_type": "dispatch_agreement",
+            "esign_name": payload.esign_name,
+            "ip": payload.esign_ip or ip,
+            "user_agent": payload.esign_user_agent or ua,
+            "pdf_hash": payload.agreement_pdf_hash,
+        }).execute()
+    except Exception as e:
+        log.error("signatures_audit insert failed for %s: %s", carrier_id, e)
 
     # 7. founders_inventory claim++
-    sb.rpc("claim_founders_slot", {"p_category": payload.trailer_type}).execute() \
-        if False else _inc_founders_claimed(sb, payload.trailer_type)
+    try:
+        _inc_founders_claimed(sb, payload.trailer_type)
+    except Exception as e:
+        log.error("founders_inventory update failed: %s", e)
 
     # 8. Send welcome email (always — includes completion link if fields missing)
     if email:
