@@ -1,18 +1,25 @@
 """Telemetry + HOS — powers the EAGLE EYE live map and HOS widgets."""
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 
+from ..logging_service import get_logger
 from ..models.telemetry import HosStatus, TelemetryPing
 from ..supabase_client import get_supabase
 from .deps import require_bearer
+
+log = get_logger("route.telemetry")
 
 router = APIRouter(dependencies=[Depends(require_bearer)])
 
 
 @router.post("/ping")
 def ingest_ping(ping: TelemetryPing) -> dict:
-    get_supabase().table("truck_telemetry").insert(ping.model_dump(exclude_none=True)).execute()
+    try:
+        get_supabase().table("truck_telemetry").insert(ping.model_dump(exclude_none=True)).execute()
+    except Exception as e:
+        log.error("truck_telemetry insert failed: %s", e)
+        raise HTTPException(500, f"telemetry insert failed: {e}")
     return {"ok": True}
 
 
