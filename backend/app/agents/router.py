@@ -6,8 +6,9 @@ from __future__ import annotations
 from typing import Any, Callable
 
 from . import (
-    alexander, atlas, audit, beacon, echo, nova, orbit, penny, pulse,
-    scout, settler, shield, signal, sonny, vance, victoria,
+    alexander, atlas, audit, beacon, echo, isabella, katerina,
+    naomi, nova, orbit, penny, pulse, scout, settler, shield,
+    signal, sofia, sonny, vance, victoria, winston,
 )
 
 _DISPATCH: dict[str, Callable[[dict[str, Any]], dict[str, Any]]] = {
@@ -27,6 +28,11 @@ _DISPATCH: dict[str, Callable[[dict[str, Any]], dict[str, Any]]] = {
     "pulse":     pulse.run,
     "victoria":  victoria.run,
     "alexander": alexander.run,
+    "sofia":     sofia.run,
+    "isabella":  isabella.run,
+    "katerina":  katerina.run,
+    "winston":   winston.run,
+    "naomi":     naomi.run,
 }
 
 
