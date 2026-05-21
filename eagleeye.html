@@ -1045,6 +1045,25 @@ td.td-name{font-weight:600;color:var(--navy);}
         <div class="tbl-wrap"><table><thead><tr><th>Carrier</th><th>Insurance Co.</th><th>Liability Limit</th><th>Source</th><th>Status</th></tr></thead>
         <tbody id="insurance-carrier-table"><tr><td colspan="5"><div class="loading"><div class="spin"></div>Loading…</div></td></tr></tbody></table></div>
       </div>
+
+      <!-- ── CARRIER BRAIN ── -->
+      <div class="card" style="margin-top:16px;border-top:3px solid #0f766e">
+        <div class="card-hd">
+          <div>
+            <div class="card-title">🧬 Carrier Brain — Relationship Intelligence</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:2px">Per-carrier memory: risk profiles, call history, load patterns — written by Winston, Vance &amp; Isabella</div>
+          </div>
+          <button class="btn-out" style="font-size:12px" onclick="loadCarrierBrain()">Refresh</button>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin-bottom:16px">
+          <div class="mc" style="padding:10px 14px"><div class="mc-label">Carriers Tracked</div><div class="mc-val" id="cb-carrier-count" style="color:#0f766e">—</div></div>
+          <div class="mc" style="padding:10px 14px"><div class="mc-label">At-Risk Flagged</div><div class="mc-val red" id="cb-at-risk-count">—</div></div>
+          <div class="mc" style="padding:10px 14px"><div class="mc-label">High Priority</div><div class="mc-val orange" id="cb-high-priority">—</div></div>
+          <div class="mc" style="padding:10px 14px"><div class="mc-label">Vance Contacted</div><div class="mc-val blue" id="cb-vance-count">—</div></div>
+        </div>
+        <div style="font-size:11px;font-weight:600;color:var(--muted);letter-spacing:.5px;margin-bottom:8px">AT-RISK CARRIER PROFILES</div>
+        <div id="cb-at-risk-table"><div class="loading"><div class="spin"></div>Loading…</div></div>
+      </div>
     </div>
 
     <!-- REVENUE -->
@@ -1068,6 +1087,25 @@ td.td-name{font-weight:600;color:var(--navy);}
             <tr><td class="td-name">Yr 8</td><td>10</td><td>70–80</td><td>$10M+</td><td>$2.2M+</td></tr>
           </tbody></table></div>
         </div>
+      </div>
+
+      <!-- ── REVENUE BRAIN ── -->
+      <div class="card" style="margin-top:16px;border-top:3px solid #b45309">
+        <div class="card-hd">
+          <div>
+            <div class="card-title">💰 Revenue Brain — Financial Pattern Intelligence</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:2px">Sofia writes reconciliation metrics each run — patterns compound over time into learned financial intelligence</div>
+          </div>
+          <button class="btn-out" style="font-size:12px" onclick="loadRevenueBrain()">Refresh</button>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-bottom:16px">
+          <div class="mc" style="padding:10px 14px"><div class="mc-label">AR Outstanding</div><div class="mc-val orange" id="rb-ar">—</div></div>
+          <div class="mc" style="padding:10px 14px"><div class="mc-label">Collection Rate</div><div class="mc-val green" id="rb-collection">—</div></div>
+          <div class="mc" style="padding:10px 14px"><div class="mc-label">Missing Invoices</div><div class="mc-val red" id="rb-missing">—</div></div>
+          <div class="mc" style="padding:10px 14px"><div class="mc-label">Periods Tracked</div><div class="mc-val" id="rb-periods" style="color:#b45309">—</div></div>
+        </div>
+        <div style="font-size:11px;font-weight:600;color:var(--muted);letter-spacing:.5px;margin-bottom:8px">FINANCIAL MEMORY BY PERIOD</div>
+        <div id="rb-period-table"><div class="loading"><div class="spin"></div>Loading…</div></div>
       </div>
     </div>
 
@@ -1256,12 +1294,12 @@ td.td-name{font-weight:600;color:var(--navy);}
         <div id="agent-log-list"><div class="loading"><div class="spin"></div>Loading…</div></div>
       </div>
 
-      <!-- ── ORG BRAIN ── -->
+      <!-- ── NEXUS ── -->
       <div class="card" style="margin-top:16px;border-top:3px solid #7c3aed">
         <div class="card-hd">
           <div>
-            <div class="card-title">🧠 Org Brain — Agent Memory</div>
-            <div style="font-size:11px;color:var(--muted);margin-top:2px">Every agent learns from interactions and shares intelligence across the organization</div>
+            <div class="card-title">🧠 NEXUS — Shared Agent Intelligence</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:2px">Cross-agent memory layer — every agent learns from interactions and shares intelligence across the organization</div>
           </div>
           <div style="display:flex;gap:8px;align-items:center">
             <button class="btn-out" style="font-size:12px" onclick="loadOrgBrain()">Refresh</button>
@@ -1290,6 +1328,7 @@ td.td-name{font-weight:600;color:var(--navy);}
     </div>
 
     <!-- ── FOUNDERS ── -->
+
     <div class="page" id="page-founders">
       <div class="page-hdr">
         <div class="page-hdr-l">
@@ -2475,6 +2514,9 @@ const API = {
   orgInteractions(limit=50){ return this.get('/api/org/interactions?limit='+limit); },
   agentBrain(name){ return this.get('/api/org/brain/'+encodeURIComponent(name)); },
   pruneBrain(maxRows=500,maxDays=30){ return this.post('/api/org/brain/prune?max_rows='+maxRows+'&max_days='+maxDays,{}); },
+  carrierBrain(){ return this.get('/api/carriers/brain'); },
+  carrierBrainAtRisk(){ return this.get('/api/carriers/brain/at-risk'); },
+  revenueBrain(){ return this.get('/api/revenue/brain'); },
   leads(){ return this.get('/api/leads/?limit=500'); },
   carriersList(){ return this.get('/api/carriers/'); },
   telemetryLatest(){ return this.get('/api/telemetry/latest'); },
@@ -4469,6 +4511,93 @@ async function pruneInteractionLog(){
   }catch(e){toast('Prune failed: '+e.message,'error');}
 }
 
+async function loadCarrierBrain(){
+  const tableEl=document.getElementById('cb-at-risk-table');
+  try{
+    const [brainData, atRiskData] = await Promise.all([API.carrierBrain(), API.carrierBrainAtRisk()]);
+    const countEl=document.getElementById('cb-carrier-count');
+    const arEl=document.getElementById('cb-at-risk-count');
+    const highEl=document.getElementById('cb-high-priority');
+    const vanceEl=document.getElementById('cb-vance-count');
+    if(countEl)countEl.textContent=brainData.carrier_count??'0';
+    const atRisk=atRiskData.at_risk||[];
+    if(arEl)arEl.textContent=atRisk.length;
+    if(highEl)highEl.textContent=atRisk.filter(c=>c.priority==='high').length;
+    // Vance count: carriers in the brainData that have call_history memories
+    const carriers=brainData.carriers||[];
+    const vanced=carriers.filter(c=>(c.memories||[]).some(m=>m.memory_type==='call_history')).length;
+    if(vanceEl)vanceEl.textContent=vanced;
+    if(!atRisk.length){
+      tableEl.innerHTML='<div style="color:var(--muted);font-size:12px;padding:8px">No at-risk carriers flagged yet — run Winston to populate.</div>';
+      return;
+    }
+    const priorityColor={'high':'var(--red)','medium':'var(--orange)','low':'var(--muted)'};
+    const priorityBadge={'high':'badge-red','medium':'badge-orange','low':''};
+    tableEl.innerHTML='<div class="tbl-wrap"><table class="tbl" style="font-size:12px"><thead><tr><th>Carrier</th><th>Priority</th><th>Risk Reason</th><th>Total Loads</th><th>Last Load</th><th>Confidence</th><th>Flagged By</th></tr></thead><tbody>'+
+      atRisk.map(c=>{
+        const conf=Math.round((c.confidence||0)*100);
+        const ts=c.last_load_at?new Date(c.last_load_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}):'Never';
+        return`<tr>
+          <td style="font-weight:600">${esc(c.carrier_name||c.carrier_id)}</td>
+          <td><span class="badge ${priorityBadge[c.priority]||''}" style="font-size:10px">${esc(c.priority||'—')}</span></td>
+          <td style="color:var(--muted);max-width:220px">${esc(c.risk_reason||'—')}</td>
+          <td style="text-align:center">${c.total_loads??'—'}</td>
+          <td style="color:var(--muted);white-space:nowrap">${ts}</td>
+          <td>
+            <div style="display:flex;align-items:center;gap:5px">
+              <div style="width:48px;height:4px;background:var(--border);border-radius:2px">
+                <div style="width:${conf}%;height:100%;background:${conf>70?'var(--red)':conf>40?'var(--orange)':'var(--muted)'};border-radius:2px"></div>
+              </div>
+              <span style="font-size:10px;color:var(--muted)">${conf}%</span>
+            </div>
+          </td>
+          <td style="font-size:11px;color:var(--muted)">${esc(c.flagged_by||'—')}</td>
+        </tr>`;
+      }).join('')+'</tbody></table></div>';
+  }catch(e){
+    if(tableEl)tableEl.innerHTML='<div style="color:var(--muted);font-size:12px">Carrier Brain unavailable — run SQL migration 024_carrier_brain.sql first.</div>';
+  }
+}
+
+async function loadRevenueBrain(){
+  const tableEl=document.getElementById('rb-period-table');
+  try{
+    const data=await API.revenueBrain();
+    const arEl=document.getElementById('rb-ar');
+    const collEl=document.getElementById('rb-collection');
+    const missEl=document.getElementById('rb-missing');
+    const perEl=document.getElementById('rb-periods');
+    if(arEl)arEl.textContent='$'+(data.ar_outstanding||0).toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0});
+    if(collEl)collEl.textContent=(data.collection_rate_pct||0)+'%';
+    if(missEl)missEl.textContent=data.missing_invoices||0;
+    if(perEl)perEl.textContent=data.periods_tracked||0;
+
+    const byPeriod=data.by_period||{};
+    const periods=Object.keys(byPeriod).sort().reverse();
+    if(!periods.length){
+      tableEl.innerHTML='<div style="color:var(--muted);font-size:12px;padding:8px">No financial data yet — run Sofia to populate.</div>';
+      return;
+    }
+    tableEl.innerHTML='<div class="tbl-wrap"><table class="tbl" style="font-size:12px"><thead><tr><th>Period</th><th>AR Outstanding</th><th>Collection Rate</th><th>Missing Invoices</th><th>Monthly Revenue</th></tr></thead><tbody>'+
+      periods.map(pk=>{
+        const m=byPeriod[pk]||{};
+        const ar=m.ar_outstanding||{};const cr=m.collection_rate||{};
+        const mi=m.missing_invoices||{};const rev=m.monthly_revenue||{};
+        const arAmt=ar.amount??ar.value??'—';const crPct=cr.rate_pct??'—';
+        const miCnt=mi.count??'—';const revTotal=rev.total??'—';
+        return`<tr>
+          <td style="font-weight:600;color:#b45309">${esc(pk)}</td>
+          <td style="color:${arAmt&&arAmt>0?'var(--orange)':'var(--green)'}">${arAmt!=='—'?'$'+Number(arAmt).toLocaleString():arAmt}</td>
+          <td style="color:${crPct>=80?'var(--green)':crPct>=50?'var(--orange)':'var(--red)'}">${crPct!=='—'?crPct+'%':crPct}</td>
+          <td style="color:${miCnt>0?'var(--red)':'var(--green)'}">${miCnt}</td>
+          <td style="color:var(--muted)">${revTotal!=='—'?'$'+Number(revTotal).toLocaleString():revTotal}</td>
+        </tr>`;
+      }).join('')+'</tbody></table></div>';
+  }catch(e){
+    if(tableEl)tableEl.innerHTML='<div style="color:var(--muted);font-size:12px">Revenue Brain unavailable — run SQL migration 025_revenue_brain.sql first.</div>';
+  }
+}
+
 async function loadFoundersInventory(){
   // Both calls go through the backend API (service role key — bypasses RLS)
   const [invResult, carriersResult] = await Promise.allSettled([
@@ -4789,6 +4918,8 @@ function renderIFTA(){
   window.nav=function(id){
     orig(id);
     if(id==='agents'){loadAgents();refreshAgentLog();loadVanceCalls();loadOrgBrain();}
+    else if(id==='carriers')loadCarrierBrain();
+    else if(id==='revenue')loadRevenueBrain();
     else if(id==='founders')loadFoundersInventory();
     else if(id==='leads')loadLeadsPipeline();
     else if(id==='ifta'||id==='insurance')renderIFTA();

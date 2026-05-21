@@ -11,6 +11,7 @@ from typing import Any
 from ..logging_service import log_agent
 from ..supabase_client import get_supabase
 from . import memory as mem
+from . import carrier_brain as cb
 
 # Days without a completed load before a carrier is flagged at-risk
 _INACTIVITY_DAYS = 14
@@ -148,6 +149,28 @@ def run(payload: dict[str, Any]) -> dict[str, Any]:
         source_agent="winston",
         summary=f"Retention {result['retention_rate_pct']}% · {result['at_risk_count']} at risk",
     )
+    # Write each at-risk carrier into Carrier Brain for relationship-level tracking
+    for carrier in result["at_risk_carriers"][:20]:
+        cid = carrier.get("carrier_id")
+        if not cid:
+            continue
+        cb.remember_carrier(
+            cid,
+            carrier.get("name"),
+            "risk_profile",
+            {
+                "priority":     carrier["priority"],
+                "risk_reason":  carrier["risk_reason"],
+                "total_loads":  carrier["total_loads"],
+                "last_load_at": carrier["last_load_at"],
+                "plan":         carrier.get("plan"),
+                "fleet_size":   carrier.get("fleet_size"),
+            },
+            agent="winston",
+            confidence={"high": 0.85, "medium": 0.70, "low": 0.55}.get(carrier["priority"], 0.6),
+            summary=f"{carrier['priority'].upper()} risk — {carrier['risk_reason']}",
+        )
+
     if result["at_risk_count"] > 0:
         mem.log_interaction("winston", "isabella", "handoff",
             payload={"at_risk_count": result["at_risk_count"]},

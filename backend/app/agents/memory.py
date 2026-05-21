@@ -1,8 +1,13 @@
-"""Org Brain — Agent Memory Module.
+"""NEXUS — Shared Agent Memory Module.
 
-Every AI agent reads from and writes to this shared memory layer so
-the organization learns from each interaction rather than starting
-fresh on every run.
+The cross-agent intelligence layer connecting all 21 AI workers.
+Every agent reads from and writes to NEXUS so the organization learns
+from each interaction rather than starting fresh on every run.
+
+Three-brain architecture:
+    NEXUS         (this module)       — shared cross-agent patterns & directives
+    Carrier Brain (carrier_brain.py)  — per-carrier relationship intelligence
+    Revenue Brain (revenue_brain.py)  — financial patterns & period metrics
 
 Core API:
     remember(agent, key, value)    — persist or reinforce a memory
@@ -14,7 +19,7 @@ Core API:
 Confidence model:
     New memory:      starts at provided confidence (default 0.5)
     Reinforcement:   conf = min(1.0, old + (1 - old) * 0.15)
-    Decay not implemented yet — all memories persist until overwritten
+    Decay not implemented — memories persist until overwritten or cleared
 """
 from __future__ import annotations
 

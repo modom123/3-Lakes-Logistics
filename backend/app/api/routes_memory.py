@@ -1,9 +1,10 @@
-"""Org Brain API — exposes agent memory and interaction log to Eagle Eye.
+"""NEXUS API — exposes shared agent memory and interaction log to Eagle Eye.
 
-GET  /api/org/brain           — full intelligence snapshot (all agents)
+GET  /api/org/brain           — full NEXUS intelligence snapshot (all agents)
 GET  /api/org/brain/{agent}   — single agent's memories
 GET  /api/org/interactions    — recent cross-agent interaction feed
 DELETE /api/org/brain/{agent}/{key} — clear a specific memory (Commander only)
+POST /api/org/brain/prune     — trim interaction log (auto-runs daily 05:30 UTC)
 """
 from __future__ import annotations
 

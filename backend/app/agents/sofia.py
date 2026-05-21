@@ -6,8 +6,11 @@ from __future__ import annotations
 
 from typing import Any
 
+from datetime import datetime, timezone
+
 from ..logging_service import log_agent
 from ..supabase_client import get_supabase
+from . import revenue_brain as rb
 
 
 def reconcile(limit: int = 200) -> dict[str, Any]:
@@ -65,4 +68,30 @@ def run(payload: dict[str, Any]) -> dict[str, Any]:
         payload={},
         result=f"missing={result['missing_invoices']} ar=${result['total_ar_outstanding']} collection={result['collection_rate_pct']}%",
     )
+
+    # Publish to Revenue Brain — all_time and rolling snapshots
+    now = datetime.now(timezone.utc)
+    month_key = now.strftime("%Y-%m")
+
+    rb.record_metric("all_time", "ar_outstanding",
+        {"amount": result["total_ar_outstanding"], "overdue_count": result["overdue_invoices"]},
+        agent="sofia", confidence=0.8,
+        summary=f"AR ${result['total_ar_outstanding']:,.0f} · {result['overdue_invoices']} overdue",
+    )
+    rb.record_metric("all_time", "collection_rate",
+        {"rate_pct": result["collection_rate_pct"], "sample_size": result["invoices_found"]},
+        agent="sofia", confidence=0.75,
+        summary=f"{result['collection_rate_pct']}% collected · {result['invoices_found']} invoices sampled",
+    )
+    rb.record_metric("all_time", "missing_invoices",
+        {"count": result["missing_invoices"], "load_numbers": result["missing_load_numbers"]},
+        agent="sofia", confidence=0.85,
+        summary=f"{result['missing_invoices']} loads missing invoices",
+    )
+    rb.record_metric(month_key, "ar_outstanding",
+        {"amount": result["total_ar_outstanding"], "collection_rate_pct": result["collection_rate_pct"]},
+        agent="sofia", confidence=0.75,
+        summary=f"{month_key} AR ${result['total_ar_outstanding']:,.0f} · {result['collection_rate_pct']}% collected",
+    )
+
     return {"agent": "sofia", **result}

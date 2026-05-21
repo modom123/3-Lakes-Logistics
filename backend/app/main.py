@@ -25,6 +25,8 @@ from .api import (
     dat_router,
     fmcsa_router,
     memory_router,
+    carrier_brain_router,
+    revenue_brain_router,
     driver_auth_router,
     driver_router,
     email_router,
@@ -64,7 +66,7 @@ def _start_scheduler(app: FastAPI) -> None:
 
         scheduler = BackgroundScheduler(timezone="UTC")
 
-        # Org Brain prune — 05:30 UTC (before compliance, keeps interaction log lean)
+        # NEXUS prune — 05:30 UTC (before compliance, keeps interaction log lean)
         scheduler.add_job(
             prune_interactions,
             CronTrigger(hour=5, minute=30),
@@ -155,7 +157,9 @@ def create_app() -> FastAPI:
     app.include_router(notifications_router,  prefix="/api",              tags=["notifications"])
     app.include_router(email_router,          prefix="/api",              tags=["email"])
     app.include_router(executives_router,      prefix="/api",              tags=["executives"])
-    app.include_router(memory_router,          prefix="/api",              tags=["org-brain"])
+    app.include_router(memory_router,          prefix="/api",              tags=["nexus"])
+    app.include_router(carrier_brain_router,   prefix="/api",              tags=["carrier-brain"])
+    app.include_router(revenue_brain_router,   prefix="/api",              tags=["revenue-brain"])
     app.include_router(migration_router,       prefix="/api",              tags=["migration"])
     app.include_router(adobe_webhooks_router,  prefix="/api",              tags=["adobe"])
     app.include_router(adobe_intake_router,    prefix="/api",              tags=["adobe"])

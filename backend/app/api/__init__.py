@@ -24,6 +24,8 @@ from .routes_adobe_intake   import router as adobe_intake_router
 from .routes_dat           import router as dat_router
 from .routes_fmcsa         import router as fmcsa_router
 from .routes_memory        import router as memory_router
+from .routes_carrier_brain import router as carrier_brain_router
+from .routes_revenue_brain import router as revenue_brain_router
 
 from ..clm             import clm_router
 from ..email_ingest    import router as email_ingest_router
@@ -65,4 +67,6 @@ __all__ = [
     "dat_router",
     "fmcsa_router",
     "memory_router",
+    "carrier_brain_router",
+    "revenue_brain_router",
 ]

@@ -10,6 +10,7 @@ from typing import Any
 from .bland_client import start_outbound_call, handle_bland_webhook
 from ..logging_service import log_agent
 from . import memory as mem
+from . import carrier_brain as cb
 
 
 def run(payload: dict[str, Any]) -> dict[str, Any]:
@@ -101,5 +102,25 @@ def handle_webhook(event: dict[str, Any]) -> dict[str, Any]:
         outcome="success",
         outcome_notes=f"Tier A connect rate now {outcomes['tier_a_connect_rate']:.0%} over {tier_a_calls} calls",
     )
+
+    # Write call outcome to Carrier Brain if we have a carrier/lead ID
+    if lead_id:
+        existing_calls = cb.recall_value(lead_id, "call_history", {})
+        call_total  = int(existing_calls.get("total_calls", 0)) + 1
+        call_connected = int(existing_calls.get("connected_count", 0)) + (1 if connected else 0)
+        cb.remember_carrier(
+            lead_id, None, "call_history",
+            {
+                "total_calls":     call_total,
+                "connected_count": call_connected,
+                "last_status":     status,
+                "last_converted":  converted,
+                "connect_rate":    round(call_connected / call_total, 3),
+            },
+            agent="vance",
+            confidence=min(0.9, 0.3 + call_total * 0.07),
+            summary=f"{call_total} call(s) · {'connected' if connected else 'no answer'} · {'converted' if converted else 'no conversion'}",
+        )
+
     return result
 
