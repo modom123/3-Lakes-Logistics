@@ -66,4 +66,5 @@ VALUES
     0.6,
     'naomi',
     'Baseline scoring parameters — Naomi refines from Vance call outcomes'
-);
+)
+ON CONFLICT (agent_name, memory_key) DO NOTHING;
