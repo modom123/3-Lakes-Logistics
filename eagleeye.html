@@ -5829,6 +5829,8 @@ function renderCrmLeadDetail(lead){
         <div style="display:flex;gap:6px;flex-wrap:wrap">
           ${lead.phone ? `<a href="tel:${lead.phone}" onclick="crmOpenManualCall('${lead.id}','${lead.phone}')" style="padding:6px 12px;font-size:12px;background:#16a34a;color:#fff;border:none;border-radius:4px;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:4px">📞 Call</a>` : `<button onclick="crmOpenManualCall('${lead.id}','')" style="padding:6px 12px;font-size:12px;background:#16a34a;color:#fff;border:none;border-radius:4px;cursor:pointer">📞 Manual Call</button>`}
           ${lead.phone ? `<button class="btn-gold" onclick="crmVanceCall('${lead.id}','${_crmName(lead).replace(/'/g,"\\'")}','${lead.phone}')" style="padding:6px 12px;font-size:12px">🤖 Vance</button>` : ''}
+          <button onclick="crmOpenVideoCall('${lead.id}','zoom','${lead.email||''}')" style="padding:6px 12px;font-size:12px;background:#2D8CFF;color:#fff;border:none;border-radius:4px;cursor:pointer">📹 Zoom</button>
+          <button onclick="crmOpenVideoCall('${lead.id}','teams','${lead.email||''}')" style="padding:6px 12px;font-size:12px;background:#464EB8;color:#fff;border:none;border-radius:4px;cursor:pointer">💬 Teams</button>
         </div>
       </div>
 
@@ -5839,11 +5841,19 @@ function renderCrmLeadDetail(lead){
           <div>
             <div style="font-size:11px;color:var(--muted);margin-bottom:3px">Outcome</div>
             <select id="crm-call-outcome" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:4px;font-size:13px">
-              <option value="Answered">✅ Answered</option>
-              <option value="Voicemail">📬 Left Voicemail</option>
-              <option value="No Answer">📵 No Answer</option>
-              <option value="Callback Requested">🔁 Callback Requested</option>
-              <option value="Wrong Number">❌ Wrong Number</option>
+              <optgroup label="📞 Phone">
+                <option value="Answered">✅ Answered</option>
+                <option value="Voicemail">📬 Left Voicemail</option>
+                <option value="No Answer">📵 No Answer</option>
+                <option value="Callback Requested">🔁 Callback Requested</option>
+                <option value="Wrong Number">❌ Wrong Number</option>
+              </optgroup>
+              <optgroup label="📹 Video">
+                <option value="Zoom Meeting — Completed">📹 Zoom — Completed</option>
+                <option value="Zoom Meeting — No Show">📹 Zoom — No Show</option>
+                <option value="Teams Meeting — Completed">💬 Teams — Completed</option>
+                <option value="Teams Meeting — No Show">💬 Teams — No Show</option>
+              </optgroup>
             </select>
           </div>
           <div>
@@ -5958,6 +5968,30 @@ async function crmLogCall(leadId){
   } catch(e){ alert('Error logging call: ' + e.message); }
 }
 
+function crmOpenVideoCall(leadId, platform, email){
+  const panel = document.getElementById('crm-call-panel');
+  const title = document.getElementById('crm-call-panel-title');
+  const outcome = document.getElementById('crm-call-outcome');
+  if (!panel) return;
+  // Open the meeting platform
+  if (platform === 'zoom'){
+    const url = email ? `https://zoom.us/start/videomeeting` : 'https://zoom.us/start/videomeeting';
+    window.open(url, '_blank');
+    if (title) title.textContent = '📹 Log Zoom Meeting';
+    if (outcome) outcome.value = 'Zoom Meeting — Completed';
+  } else {
+    const url = email ? `https://teams.microsoft.com/l/call/0/0?users=${encodeURIComponent(email)}` : 'https://teams.microsoft.com';
+    window.open(url, '_blank');
+    if (title) title.textContent = '💬 Log Teams Meeting';
+    if (outcome) outcome.value = 'Teams Meeting — Completed';
+  }
+  document.getElementById('crm-call-duration').value = '';
+  document.getElementById('crm-call-notes').value = '';
+  document.getElementById('crm-call-panel-status').style.display = 'none';
+  panel.style.display = 'block';
+  panel.scrollIntoView({behavior:'smooth', block:'nearest'});
+}
+
 function crmOpenManualCall(leadId, phone){
   const panel = document.getElementById('crm-call-panel');
   const title = document.getElementById('crm-call-panel-title');
@@ -6014,9 +6048,10 @@ async function crmSaveCallLog(leadId){
     const lead = crmAllLeads.find(l => l.id === leadId);
     const existing = lead?.notes || '';
     const sep = existing.trim() ? '\n\n' : '';
+    const contactedOutcomes = ['Answered','Zoom Meeting — Completed','Teams Meeting — Completed'];
     await crmPatch(leadId, {
       notes: existing + sep + entry,
-      status: outcome === 'Answered' ? 'Contacted' : (lead?.status || 'Contacted'),
+      status: contactedOutcomes.includes(outcome) ? 'Contacted' : (lead?.status || 'Contacted'),
       last_contact_at: new Date().toISOString()
     });
     if (statusEl){ statusEl.style.display='block'; statusEl.style.background='rgba(34,197,94,.1)'; statusEl.style.color='var(--green)'; statusEl.textContent='✅ Call logged!'; }
