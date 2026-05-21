@@ -77,21 +77,24 @@ def start_outbound_call(
     if s.bland_ai_api_key == s.bland_ai_org_id and s.bland_ai_api_key.startswith("org_"):
         return {"status": "error", "error": "BLAND_AI_API_KEY appears to be set to org_id value; verify in dashboard"}
 
-    # Build the conversation context
-    context = f"""Calling {prospect_name} at {company_name or 'unknown company'}.
-DOT#: {dot_number or 'unknown'}
-Known pain point: {current_pain or 'none provided'}
-Goal: Qualify and offer demo call with Commander."""
+    # Fold call context into the task prompt so Bland receives a single coherent instruction
+    full_task = (
+        VANCE_SYSTEM_PROMPT
+        + f"\n\n--- CALL CONTEXT ---\n"
+        + f"You are calling {prospect_name} at {company_name or 'their company'}.\n"
+        + (f"DOT#: {dot_number}\n" if dot_number else "")
+        + (f"Known pain point: {current_pain}\n" if current_pain else "")
+        + "Goal: Qualify and, if interested, offer a 15-min Commander call."
+    )
 
     try:
         payload = {
             "phone_number": phone,
-            "task": VANCE_SYSTEM_PROMPT,
-            "context": context,
-            "model": "claude-opus",  # Use Claude for better reasoning
+            "task": full_task,
+            "model": "enhanced",   # Valid Bland models: base | turbo | enhanced
             "language": "en",
-            "voice": "male",  # Neutral, professional voice
-            "reduce_latency": True,  # Optimize for conversational speed
+            "voice": "ryan",       # Valid Bland male voice ID
+            "max_duration": 10,    # Cap at 10 minutes per call
             "metadata": {
                 "lead_id": lead_id,
                 "prospect_name": prospect_name,
@@ -105,7 +108,7 @@ Goal: Qualify and offer demo call with Commander."""
             payload["organization_id"] = s.bland_ai_org_id
 
         if webhook_url:
-            payload["webhook_url"] = webhook_url
+            payload["webhook"] = webhook_url   # Bland field is "webhook", not "webhook_url"
 
         r = httpx.post(
             f"{BLAND_API_URL}/calls",
