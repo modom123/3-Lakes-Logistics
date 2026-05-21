@@ -5826,10 +5826,37 @@ function renderCrmLeadDetail(lead){
           <h3 style="margin:0 0 2px 0;font-size:16px">${_crmName(lead)}</h3>
           <div style="font-size:11px;color:var(--muted)">${lead.source || 'Manual'} · Score ${lead.score || 0}</div>
         </div>
-        <div style="display:flex;gap:6px">
-          <button onclick="crmLogCall('${lead.id}')" style="padding:6px 12px;font-size:12px;background:#2563eb;color:#fff;border:none;border-radius:4px;cursor:pointer">📞 Log Call</button>
-          ${lead.phone ? `<button class="btn-gold" onclick="vanceCallLead('${_crmName(lead).replace(/'/g,"\\'")}','${lead.phone}')" style="padding:6px 12px;font-size:12px">🤖 Vance</button>` : ''}
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          ${lead.phone ? `<a href="tel:${lead.phone}" onclick="crmOpenManualCall('${lead.id}','${lead.phone}')" style="padding:6px 12px;font-size:12px;background:#16a34a;color:#fff;border:none;border-radius:4px;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:4px">📞 Call</a>` : `<button onclick="crmOpenManualCall('${lead.id}','')" style="padding:6px 12px;font-size:12px;background:#16a34a;color:#fff;border:none;border-radius:4px;cursor:pointer">📞 Manual Call</button>`}
+          ${lead.phone ? `<button class="btn-gold" onclick="crmVanceCall('${lead.id}','${_crmName(lead).replace(/'/g,"\\'")}','${lead.phone}')" style="padding:6px 12px;font-size:12px">🤖 Vance</button>` : ''}
         </div>
+      </div>
+
+      <!-- Call panel (shown after clicking Call or Vance) -->
+      <div id="crm-call-panel" style="display:none;margin-bottom:14px;padding:12px;background:rgba(22,163,74,.07);border:1px solid rgba(22,163,74,.3);border-radius:6px">
+        <div style="font-size:12px;font-weight:700;margin-bottom:8px;color:#15803d" id="crm-call-panel-title">📞 Log This Call</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+          <div>
+            <div style="font-size:11px;color:var(--muted);margin-bottom:3px">Outcome</div>
+            <select id="crm-call-outcome" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:4px;font-size:13px">
+              <option value="Answered">✅ Answered</option>
+              <option value="Voicemail">📬 Left Voicemail</option>
+              <option value="No Answer">📵 No Answer</option>
+              <option value="Callback Requested">🔁 Callback Requested</option>
+              <option value="Wrong Number">❌ Wrong Number</option>
+            </select>
+          </div>
+          <div>
+            <div style="font-size:11px;color:var(--muted);margin-bottom:3px">Duration (min)</div>
+            <input type="number" id="crm-call-duration" min="0" step="1" placeholder="e.g. 4" style="width:100%;box-sizing:border-box;padding:6px 8px;border:1px solid var(--border);border-radius:4px;font-size:13px">
+          </div>
+        </div>
+        <textarea id="crm-call-notes" rows="2" placeholder="Call notes…" style="width:100%;box-sizing:border-box;padding:8px;border:1px solid var(--border);border-radius:4px;font-size:13px;resize:vertical;font-family:inherit;margin-bottom:8px"></textarea>
+        <div style="display:flex;gap:8px">
+          <button onclick="crmSaveCallLog('${lead.id}')" style="padding:6px 16px;background:#16a34a;color:#fff;border:none;border-radius:4px;font-size:12px;cursor:pointer;font-weight:600">Save Call Log</button>
+          <button onclick="document.getElementById('crm-call-panel').style.display='none'" style="padding:6px 12px;background:#e5e7eb;color:#374151;border:none;border-radius:4px;font-size:12px;cursor:pointer">Cancel</button>
+        </div>
+        <div id="crm-call-panel-status" style="display:none;margin-top:6px;font-size:12px;padding:6px 8px;border-radius:4px"></div>
       </div>
 
       <!-- Status row -->
@@ -5926,10 +5953,80 @@ async function crmLogCall(leadId){
     const lead = crmAllLeads.find(l => l.id === leadId);
     renderCrmLeadsList();
     if (lead) renderCrmLeadDetail(lead);
-    // Flash confirmation
     const sel = document.getElementById('crm-status-sel');
     if (sel) { sel.value = 'Contacted'; sel.style.background='#dcfce7'; setTimeout(()=>sel.style.background='',1500); }
   } catch(e){ alert('Error logging call: ' + e.message); }
+}
+
+function crmOpenManualCall(leadId, phone){
+  const panel = document.getElementById('crm-call-panel');
+  const title = document.getElementById('crm-call-panel-title');
+  if (!panel) return;
+  if (title) title.textContent = phone ? `📞 Log Call — ${phone}` : '📞 Log Manual Call';
+  document.getElementById('crm-call-outcome').value = 'Answered';
+  document.getElementById('crm-call-duration').value = '';
+  document.getElementById('crm-call-notes').value = '';
+  document.getElementById('crm-call-panel-status').style.display = 'none';
+  panel.style.display = 'block';
+  panel.scrollIntoView({behavior:'smooth', block:'nearest'});
+}
+
+async function crmVanceCall(leadId, name, phone){
+  const panel = document.getElementById('crm-call-panel');
+  const title = document.getElementById('crm-call-panel-title');
+  const statusEl = document.getElementById('crm-call-panel-status');
+  if (panel) {
+    if (title) title.textContent = `🤖 Vance is dialing ${name || phone}…`;
+    panel.style.display = 'block';
+    if (statusEl){ statusEl.style.display='block'; statusEl.style.background='rgba(251,191,36,.1)'; statusEl.style.color='#92400e'; statusEl.textContent='Connecting Vance…'; }
+  }
+  try {
+    const r = await apiFetch('/api/prospecting/call','POST',{name, phone, notes:'CRM outreach'});
+    const d = await r.json();
+    if (d.ok){
+      if (statusEl){ statusEl.style.background='rgba(34,197,94,.1)'; statusEl.style.color='var(--green)'; statusEl.textContent=`✅ Vance is calling now. Call ID: ${d.call_id||'—'}`; }
+      // Log Vance call to notes
+      const ts = new Date().toLocaleString('en-US',{month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit'});
+      const lead = crmAllLeads.find(l => l.id === leadId);
+      const existing = lead?.notes || '';
+      const sep = existing.trim() ? '\n\n' : '';
+      const entry = `[${ts}] 🤖 VANCE CALL — Dialing ${phone}. Call ID: ${d.call_id||'—'}`;
+      await crmPatch(leadId, {notes: existing + sep + entry, status:'Contacted', last_contact_at: new Date().toISOString()});
+      renderCrmLeadsList();
+    } else {
+      if (statusEl){ statusEl.style.background='rgba(239,68,68,.1)'; statusEl.style.color='var(--red)'; statusEl.textContent=`❌ Vance failed: ${d.result?.error||JSON.stringify(d)}`; }
+    }
+  } catch(e){
+    if (statusEl){ statusEl.style.background='rgba(239,68,68,.1)'; statusEl.style.color='var(--red)'; statusEl.textContent=`❌ Error: ${e.message}`; }
+  }
+}
+
+async function crmSaveCallLog(leadId){
+  const outcome = document.getElementById('crm-call-outcome')?.value || 'Answered';
+  const duration = document.getElementById('crm-call-duration')?.value;
+  const notes = document.getElementById('crm-call-notes')?.value.trim() || '';
+  const statusEl = document.getElementById('crm-call-panel-status');
+  const ts = new Date().toLocaleString('en-US',{month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit'});
+  const durStr = duration ? ` · ${duration} min` : '';
+  const notesStr = notes ? `\n   Notes: ${notes}` : '';
+  const entry = `[${ts}] 📞 MANUAL CALL — ${outcome}${durStr}${notesStr}`;
+  try {
+    const lead = crmAllLeads.find(l => l.id === leadId);
+    const existing = lead?.notes || '';
+    const sep = existing.trim() ? '\n\n' : '';
+    await crmPatch(leadId, {
+      notes: existing + sep + entry,
+      status: outcome === 'Answered' ? 'Contacted' : (lead?.status || 'Contacted'),
+      last_contact_at: new Date().toISOString()
+    });
+    if (statusEl){ statusEl.style.display='block'; statusEl.style.background='rgba(34,197,94,.1)'; statusEl.style.color='var(--green)'; statusEl.textContent='✅ Call logged!'; }
+    setTimeout(()=>{ document.getElementById('crm-call-panel').style.display='none'; }, 1200);
+    renderCrmLeadsList();
+    const updatedLead = crmAllLeads.find(l => l.id === leadId);
+    if (updatedLead) renderCrmLeadDetail(updatedLead);
+  } catch(e){
+    if (statusEl){ statusEl.style.display='block'; statusEl.style.background='rgba(239,68,68,.1)'; statusEl.style.color='var(--red)'; statusEl.textContent=`❌ ${e.message}`; }
+  }
 }
 
 async function saveCrmFollowup(leadId){
