@@ -161,23 +161,62 @@ def _pull_fmcsa_prospects(hot_states: dict[str, float], per_state: int = 30) -> 
             if dot in known_dots or not dot:
                 continue
             mc_raw = str(row.get("mc_mx_ff_number") or "")
+            mc_clean = mc_raw.replace("MC-", "").replace("MX-", "").strip() or None
+            name = (row.get("legal_name") or row.get("dba_name") or "").strip()
+            if not name:
+                continue  # skip nameless records
             prospects.append({
-                "source": "fmcsa_census",
-                "dot_number": dot,
-                "mc_number": mc_raw.replace("MC-", "").replace("MX-", "").strip(),
-                "business_name": (row.get("legal_name") or row.get("dba_name") or "").strip(),
-                "phone": (row.get("telephone") or "").strip(),
-                "city": (row.get("phy_city") or "").strip(),
-                "state": state,
-                "fleet_size": _int(row.get("total_power_units")) or _int(row.get("tractor_trucks")) + _int(row.get("straight_trucks")),
+                "source":        "fmcsa_census",
+                "dot_number":    dot,
+                "mc_number":     mc_clean,
+                "business_name": name,
+                "phone":         (row.get("telephone") or "").strip() or None,
+                "city":          (row.get("phy_city") or "").strip() or None,
+                "state":         state,
+                "fleet_size":    _int(row.get("total_power_units")) or _int(row.get("tractor_trucks")) + _int(row.get("straight_trucks")) or None,
                 "equipment_type": "Dry Van" if _int(row.get("tractor_trucks")) > 0 else "Straight Truck",
-                "status": "New",
-                "score": 5,  # neutral base — model will re-score
+                "status":        "New",
+                "score":         5,  # neutral base — re-scored by model
                 "safety_rating": row.get("safety_rating") or "Not Rated",
             })
             known_dots.add(dot)  # prevent dupes across states
 
     return prospects
+
+
+def _persist_fmcsa_prospects(prospects: list[dict[str, Any]]) -> int:
+    """Insert net-new FMCSA prospects into the leads table. Returns count inserted."""
+    if not prospects:
+        return 0
+    sb = get_supabase()
+    rows = []
+    for p in prospects:
+        rows.append({
+            "business_name":     p["business_name"],
+            "dot_number":        p.get("dot_number"),
+            "mc_number":         p.get("mc_number"),
+            "phone":             p.get("phone"),
+            "city":              p.get("city"),
+            "state":             p.get("state"),
+            "fleet_size":        p.get("fleet_size"),
+            "equipment_type":    p.get("equipment_type"),
+            "score":             int(p.get("score") or 5),
+            "status":            "New",
+            "source":            "fmcsa_census",
+            "owner_agent":       "naomi",
+            "duplicate_checked": True,
+            "notes":             f"Safety Rating: {p.get('safety_rating') or 'Not Rated'}",
+        })
+    try:
+        inserted = 0
+        for i in range(0, len(rows), 50):  # batch in 50s
+            batch = rows[i : i + 50]
+            result = sb.table("leads").insert(batch).execute()
+            inserted += len(result.data or [])
+        return inserted
+    except Exception as exc:  # noqa: BLE001
+        log_agent("naomi", "persist_fmcsa_error", payload={}, result=str(exc))
+        return 0
 
 
 # ── Stage 3: Unified scoring ──────────────────────────────────────────────────
@@ -231,10 +270,12 @@ def rank_leads(limit: int = 200, min_score: float = 0, include_fmcsa: bool = Tru
         .data or []
     )
 
-    # Stage 2 — fresh FMCSA prospects from hot states
+    # Stage 2 — fresh FMCSA prospects from hot states, persisted to leads table
     fmcsa_prospects: list[dict[str, Any]] = []
+    fmcsa_inserted = 0
     if include_fmcsa and hot_states:
-        fmcsa_prospects = _pull_fmcsa_prospects(hot_states, per_state=25)
+        fmcsa_prospects = _pull_fmcsa_prospects(hot_states, per_state=50)
+        fmcsa_inserted = _persist_fmcsa_prospects(fmcsa_prospects)
 
     # Stage 3 — score everything together
     all_leads = list(rows) + fmcsa_prospects
@@ -268,19 +309,21 @@ def rank_leads(limit: int = 200, min_score: float = 0, include_fmcsa: bool = Tru
     tier_c = [s for s in scored if s["predictive_score"] < 5]
 
     return {
-        "leads_analyzed":       len(rows),
-        "fmcsa_prospects_added": len(fmcsa_prospects),
-        "total_scored":         len(scored),
-        "tier_a_count":         len(tier_a),
-        "tier_b_count":         len(tier_b),
-        "tier_c_count":         len(tier_c),
-        "hot_states":           hot_states,
-        "top_targets":          scored[:15],
-        "alexander_powered":    bool(hot_states),
+        "leads_analyzed":        len(rows),
+        "fmcsa_prospects_found": len(fmcsa_prospects),
+        "fmcsa_inserted":        fmcsa_inserted,
+        "total_scored":          len(scored),
+        "tier_a_count":          len(tier_a),
+        "tier_b_count":          len(tier_b),
+        "tier_c_count":          len(tier_c),
+        "hot_states":            hot_states,
+        "top_targets":           scored[:15],
+        "alexander_powered":     bool(hot_states),
         "handoff": (
             f"Tier A ({len(tier_a)} leads) → Vance call list. "
             f"Tier B ({len(tier_b)} leads) → Isabella campaign. "
-            f"Hot states: {', '.join(list(hot_states.keys())[:3]) or 'N/A'}."
+            f"Hot states: {', '.join(list(hot_states.keys())[:3]) or 'N/A'}. "
+            f"{fmcsa_inserted} new leads added from FMCSA today."
         ),
     }
 
@@ -320,7 +363,8 @@ def run(payload: dict[str, Any]) -> dict[str, Any]:
         "naomi", "predictive_rank",
         payload={"limit": limit, "include_fmcsa": include_fmcsa},
         result=(
-            f"analyzed={result['leads_analyzed']} fmcsa_new={result['fmcsa_prospects_added']} "
+            f"analyzed={result['leads_analyzed']} fmcsa_found={result['fmcsa_prospects_found']} "
+            f"fmcsa_inserted={result['fmcsa_inserted']} "
             f"tier_a={result['tier_a_count']} hot_states={list(result['hot_states'].keys())[:3]}"
         ),
     )
@@ -341,10 +385,11 @@ def run(payload: dict[str, Any]) -> dict[str, Any]:
     mem.remember(
         "org", "lead_intelligence",
         {
-            "tier_a_count":   result["tier_a_count"],
-            "tier_b_count":   result["tier_b_count"],
-            "hot_states":     result["hot_states"],
-            "fmcsa_new":      result["fmcsa_prospects_added"],
+            "tier_a_count":      result["tier_a_count"],
+            "tier_b_count":      result["tier_b_count"],
+            "hot_states":        result["hot_states"],
+            "fmcsa_found":       result["fmcsa_prospects_found"],
+            "fmcsa_inserted":    result["fmcsa_inserted"],
         },
         confidence=0.7,
         source_agent="naomi",
