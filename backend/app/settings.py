@@ -46,6 +46,11 @@ class Settings(BaseSettings):
 
     fmcsa_webkey: str = ""
 
+    # US DOT open data (data.transportation.gov) — Socrata app token
+    # Used by Alexander Wright agent for market intelligence
+    # Free token at https://data.transportation.gov/login
+    dot_api_key: str = ""
+
     google_maps_api_key: str = ""
     google_vision_credentials_json: str = ""
 

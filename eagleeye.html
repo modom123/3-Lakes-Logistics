@@ -1195,7 +1195,7 @@ td.td-name{font-weight:600;color:var(--navy);}
       </div>
 
       <div class="g4" style="margin-bottom:16px">
-        <div class="mc"><div class="mc-label">Registered Agents</div><div class="mc-val gold" id="agent-count">—</div><div class="mc-sub">14 personas live</div></div>
+        <div class="mc"><div class="mc-label">Registered Agents</div><div class="mc-val gold" id="agent-count">—</div><div class="mc-sub">16 personas live</div></div>
         <div class="mc"><div class="mc-label">Actions Today</div><div class="mc-val green" id="agent-actions-today">—</div></div>
         <div class="mc"><div class="mc-label">Errors (24h)</div><div class="mc-val red" id="agent-errors-24h">—</div></div>
         <div class="mc"><div class="mc-label">Backend</div><div class="mc-val blue" id="agent-backend-env">—</div></div>
@@ -1242,7 +1242,7 @@ td.td-name{font-weight:600;color:var(--navy);}
       </div>
 
       <div class="card" style="margin-bottom:16px">
-        <div class="card-hd"><div class="card-title">Run Agent Manually</div><span class="card-chip">14 Workers</span></div>
+        <div class="card-hd"><div class="card-title">Run Agent Manually</div><span class="card-chip">16 Workers</span></div>
         <div id="agent-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px">
           <div class="loading"><div class="spin"></div>Loading agents…</div>
         </div>
@@ -1867,11 +1867,11 @@ td.td-name{font-weight:600;color:var(--navy);}
     <div class="ec-hero-left">
       <div class="ec-badge">IEBC Executive Command</div>
       <h1>Commander Dashboard</h1>
-      <p>18-executive org structure — 5 cabinet + 13 expansion. KPI engine, 3-tier triage, contingency plans, daily State of the Fleet brief by Dr. Evelyn Sterling.</p>
+      <p>20-executive org structure — 7 cabinet + 13 expansion. KPI engine, 3-tier triage, contingency plans, daily State of the Fleet brief by Dr. Evelyn Sterling.</p>
     </div>
     <div class="ec-hero-stats">
-      <div class="ec-stat"><div class="ec-stat-n">18</div><div class="ec-stat-l">Executives</div></div>
-      <div class="ec-stat"><div class="ec-stat-n">5</div><div class="ec-stat-l">Cabinet</div></div>
+      <div class="ec-stat"><div class="ec-stat-n">20</div><div class="ec-stat-l">Executives</div></div>
+      <div class="ec-stat"><div class="ec-stat-n">7</div><div class="ec-stat-l">Cabinet</div></div>
       <div class="ec-stat"><div class="ec-stat-n">5</div><div class="ec-stat-l">Contingencies</div></div>
       <div class="ec-stat"><div class="ec-stat-n">200</div><div class="ec-stat-l">Auto Steps</div></div>
     </div>
@@ -1957,7 +1957,7 @@ td.td-name{font-weight:600;color:var(--navy);}
 
   <!-- Org Chart — All 18 Executives -->
   <div class="ec-card">
-    <div class="ec-sec-hd"><h2>Org Chart — 18 Executives</h2><span class="ec-count-badge">IEBC Workforce</span></div>
+    <div class="ec-sec-hd"><h2>Org Chart — 20 Executives</h2><span class="ec-count-badge">IEBC Workforce</span></div>
     <table class="ec-table" id="ec-org-table">
       <thead>
         <tr>
@@ -1970,7 +1970,7 @@ td.td-name{font-weight:600;color:var(--navy);}
         </tr>
       </thead>
       <tbody id="ec-org-tbody">
-        <!-- Pre-populated with all 18 executives — also refreshed from API -->
+        <!-- Pre-populated with all 20 executives — also refreshed from API -->
         <tr><td colspan="6" style="text-align:center;padding:24px;color:#5A6A82;font-size:13px;">Click "Refresh Dashboard" to load from API, or see static roster below.</td></tr>
       </tbody>
     </table>
@@ -4163,20 +4163,22 @@ async function doSendInvoice(inv, carrier, toEmail) {
 
 // ── Backend-powered pages (AI Agents, Founders, Leads) ──
 const AGENT_META = {
-  vance:  {icon:'🎤', label:'Vance',   desc:'Outbound prospecting calls'},
-  sonny:  {icon:'🎯', label:'Sonny',   desc:'Load board scraper'},
-  shield: {icon:'🛡️', label:'Shield',  desc:'FMCSA safety monitor'},
-  scout:  {icon:'📄', label:'Scout',   desc:'BOL/Rate Con OCR'},
-  penny:  {icon:'💳', label:'Penny',   desc:'Stripe billing'},
-  settler:{icon:'💵', label:'Settler', desc:'Weekly driver payouts'},
-  audit:  {icon:'📋', label:'Audit',   desc:'Credit / fuel advance'},
-  nova:   {icon:'📧', label:'Nova',    desc:'Broker check-call emails'},
-  signal: {icon:'🚨', label:'Signal',  desc:'Emergency 800# router'},
-  echo:   {icon:'💬', label:'Echo',    desc:'Driver SMS liaison'},
-  atlas:  {icon:'🧭', label:'Atlas',   desc:'Master orchestrator'},
-  beacon: {icon:'📣', label:'Beacon',  desc:'Executive daily digest'},
-  orbit:  {icon:'🛰️', label:'Orbit',   desc:'Geofence arrivals'},
-  pulse:  {icon:'❤️', label:'Pulse',   desc:'Weekly wellness check'},
+  vance:     {icon:'🎤', label:'Vance',     desc:'Outbound prospecting calls'},
+  sonny:     {icon:'🎯', label:'Sonny',     desc:'Load board scraper'},
+  shield:    {icon:'🛡️', label:'Shield',    desc:'FMCSA safety monitor'},
+  scout:     {icon:'📄', label:'Scout',     desc:'BOL/Rate Con OCR'},
+  penny:     {icon:'💳', label:'Penny',     desc:'Stripe billing'},
+  settler:   {icon:'💵', label:'Settler',   desc:'Weekly driver payouts'},
+  audit:     {icon:'📋', label:'Audit',     desc:'Credit / fuel advance'},
+  nova:      {icon:'📧', label:'Nova',      desc:'Broker check-call emails'},
+  signal:    {icon:'🚨', label:'Signal',    desc:'Emergency 800# router'},
+  echo:      {icon:'💬', label:'Echo',      desc:'Driver SMS liaison'},
+  atlas:     {icon:'🧭', label:'Atlas',     desc:'Master orchestrator'},
+  beacon:    {icon:'📣', label:'Beacon',    desc:'Executive daily digest'},
+  orbit:     {icon:'🛰️', label:'Orbit',     desc:'Geofence arrivals'},
+  pulse:     {icon:'❤️', label:'Pulse',     desc:'Weekly wellness check'},
+  victoria:  {icon:'👑', label:'Victoria',  desc:'CSO — strategic intelligence'},
+  alexander: {icon:'📊', label:'Alexander', desc:'VP Market Intel — DOT data'},
 };
 
 function diagLog(msg,isError=false){

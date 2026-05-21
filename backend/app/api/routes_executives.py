@@ -1,4 +1,4 @@
-"""IEBC Executive Command — 18 executives, KPI engine, triage system,
+"""IEBC Executive Command — 20 executives, KPI engine, triage system,
 daily briefs, contingency plans, Commander dashboard.
 """
 from __future__ import annotations
@@ -94,7 +94,7 @@ def _default_master_scores() -> dict:
 
 @router.get("/executives")
 def list_executives() -> dict:
-    """List all 18 executives grouped by department."""
+    """List all 20 executives grouped by department."""
     sb = get_supabase()
     res = sb.table("executives").select("*").order("department").execute()
     executives = res.data or []

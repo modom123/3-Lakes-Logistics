@@ -1,7 +1,8 @@
-"""19 AI agent personas. Each module is self-contained and callable
+"""21 AI agent personas. Each module is self-contained and callable
 through agent_router.dispatch(). See prompts.py for system prompts.
 """
 from . import (
+    alexander, # DOT market intelligence (VP Market Intelligence)
     atlas,     # master orchestrator
     audit,     # credit checks, fuel advances
     beacon,    # executive summaries
@@ -10,7 +11,7 @@ from . import (
     nova,      # broker check-call emails
     orbit,     # geofence arrivals
     penny,     # Stripe billing
-    prompts,   # all 19 system prompts
+    prompts,   # all 21 system prompts
     pulse,     # weekly fleet wellness
     router,    # agent_router
     scout,     # OCR for BOL/Rate Con
@@ -19,10 +20,11 @@ from . import (
     signal,    # emergency 800-number
     sonny,     # load board scraper
     vance,     # outbound prospecting voice
+    victoria,  # CSO strategic snapshot
 )
 
 __all__ = [
-    "atlas", "audit", "beacon", "echo", "motive_webhook", "nova",
+    "alexander", "atlas", "audit", "beacon", "echo", "motive_webhook", "nova",
     "orbit", "penny", "prompts", "pulse", "router", "scout", "settler",
-    "shield", "signal", "sonny", "vance",
+    "shield", "signal", "sonny", "vance", "victoria",
 ]
