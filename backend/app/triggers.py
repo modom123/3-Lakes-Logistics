@@ -84,3 +84,26 @@ def fire_compliance_sweep() -> None:
 def fire_analytics_update() -> None:
     """Trigger analytics domain (runs after settlement or on schedule)."""
     _bg(_run_domain_safe, "analytics", None, None, "analytics_refresh")
+
+
+def fire_vault_scan(doc_id: str) -> None:
+    """Trigger background AI extraction for a vault document.
+
+    Called after upload or classification for scannable doc types
+    (rate_con, bol, pod, broker_agreement).
+    """
+    def _scan():
+        try:
+            from .clm.doc_extractor import extract_vault_doc  # noqa: PLC0415
+            log.info("fire_vault_scan doc_id=%s", doc_id)
+            result = extract_vault_doc(doc_id)
+            log.info(
+                "fire_vault_scan complete doc_id=%s method=%s confidence=%.3f",
+                doc_id, result.get("method"), result.get("confidence", 0),
+            )
+        except Exception as exc:  # noqa: BLE001
+            log.error("fire_vault_scan failed doc_id=%s: %s", doc_id, exc)
+
+    t = threading.Thread(target=_scan, daemon=True)
+    t.start()
+

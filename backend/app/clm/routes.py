@@ -301,7 +301,13 @@ async def upload_vault_doc(
     doc_id = result.data[0]["id"] if result.data else None
     signed = _signed_url(storage_path, "documents")
 
-    return {"ok": True, "doc_id": doc_id, "filename": safe_name, "size_kb": size_kb, "url": signed}
+    # Auto-scan scannable doc types in the background
+    _SCANNABLE = {"rate_con", "rate_confirmation", "bol", "pod", "broker_agreement", "agreement"}
+    if doc_id and doc_type in _SCANNABLE:
+        from ..triggers import fire_vault_scan
+        fire_vault_scan(doc_id)
+
+    return {"ok": True, "doc_id": doc_id, "filename": safe_name, "size_kb": size_kb, "url": signed, "scan_queued": doc_type in _SCANNABLE}
 
 
 class _SendPayload:

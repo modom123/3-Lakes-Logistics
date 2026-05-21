@@ -88,7 +88,19 @@ def step_121_email_inbound_parse(
                 row["carrier_id"] = str(carrier_id)
             if contract_id:
                 row["contract_id"] = str(contract_id)
-            sb.table("document_vault").insert(row).execute()
+            insert_result = sb.table("document_vault").insert(row).execute()
+            # Fire background extraction for scannable docs that have storage paths
+            doc_type_final = row["doc_type"]
+            if (
+                doc_type_final in {"rate_confirmation", "bol", "pod", "broker_agreement"}
+                and att.get("storage_path")
+                and insert_result.data
+            ):
+                try:
+                    from ..triggers import fire_vault_scan  # noqa: PLC0415
+                    fire_vault_scan(insert_result.data[0]["id"])
+                except Exception as exc:  # noqa: BLE001
+                    log.warning("step_121: scan queue failed for %s: %s", att.get("filename"), exc)
 
     log.info("step_121: parsed email %s — %d attachments", payload.get("message_id"), len(attachments))
     return {
@@ -100,6 +112,9 @@ def step_121_email_inbound_parse(
     }
 
 
+_SCANNABLE_TYPES = {"rate_confirmation", "bol", "pod", "broker_agreement"}
+
+
 def step_122_doc_classify(
     carrier_id: UUID | None,
     contract_id: UUID | None,
@@ -107,8 +122,9 @@ def step_122_doc_classify(
 ) -> dict:
     """Classify document type from vault record or payload hint.
 
-    Reads pending documents from document_vault for the carrier/contract
-    and assigns a definitive doc_type based on filename and content hints.
+    Reads pending documents from document_vault for the carrier/contract,
+    assigns a definitive doc_type, then fires background extraction for
+    any scannable doc type (rate_confirmation, bol, pod, broker_agreement).
     """
     sb = get_supabase()
     q = sb.table("document_vault").select("*").eq("scan_status", "pending")
@@ -119,6 +135,7 @@ def step_122_doc_classify(
     docs = q.limit(50).execute().data or []
 
     classified: list[dict] = []
+    scan_queued = 0
     for doc in docs:
         fname = (doc.get("filename") or "").lower()
         current_type = doc.get("doc_type", "unknown")
@@ -146,8 +163,17 @@ def step_122_doc_classify(
 
         classified.append({"vault_id": doc["id"], "filename": doc["filename"], "doc_type": final_type})
 
-    log.info("step_122: classified %d documents", len(classified))
-    return {"documents_classified": len(classified), "documents": classified}
+        # Fire background extraction for business-critical doc types
+        if final_type in _SCANNABLE_TYPES:
+            try:
+                from ..triggers import fire_vault_scan  # noqa: PLC0415
+                fire_vault_scan(doc["id"])
+                scan_queued += 1
+            except Exception as exc:  # noqa: BLE001
+                log.warning("step_122: could not queue scan for %s: %s", doc["id"], exc)
+
+    log.info("step_122: classified %d documents scan_queued=%d", len(classified), scan_queued)
+    return {"documents_classified": len(classified), "scan_queued": scan_queued, "documents": classified}
 
 
 def step_123_extract_variables(
