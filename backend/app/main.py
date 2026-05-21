@@ -62,14 +62,23 @@ def _start_scheduler(app: FastAPI) -> None:
     try:
         from apscheduler.schedulers.background import BackgroundScheduler
         from apscheduler.triggers.cron import CronTrigger
-        from .triggers import fire_compliance_sweep, fire_analytics_update
+        from apscheduler.triggers.interval import IntervalTrigger
+        from .triggers import (
+            fire_compliance_sweep,
+            fire_analytics_update,
+            fire_alexander,
+            fire_victoria,
+            fire_naomi,
+            fire_winston,
+            fire_isabella,
+            fire_sofia,
+        )
         from .agents.memory import prune_interactions
         from .email.imap_poller import poll_all as poll_all_mailboxes
 
         scheduler = BackgroundScheduler(timezone="UTC")
 
-        # Mailbox IMAP poll — every 2 minutes (all 5 Hostinger mailboxes)
-        from apscheduler.triggers.interval import IntervalTrigger
+        # ── Mailbox IMAP poll — every 2 minutes ──────────────────────────────
         scheduler.add_job(
             poll_all_mailboxes,
             IntervalTrigger(minutes=2),
@@ -77,33 +86,79 @@ def _start_scheduler(app: FastAPI) -> None:
             replace_existing=True,
         )
 
-        # NEXUS prune — 05:30 UTC (before compliance, keeps interaction log lean)
+        # ── Daily intelligence chain (UTC) ────────────────────────────────────
+        # 05:30 — NEXUS prune (keeps interaction log lean before agents run)
         scheduler.add_job(
             prune_interactions,
             CronTrigger(hour=5, minute=30),
             id="memory_prune_daily",
             replace_existing=True,
         )
-
-        # Daily compliance sweep — 06:00 UTC
+        # 06:00 — Compliance sweep
         scheduler.add_job(
             fire_compliance_sweep,
             CronTrigger(hour=6, minute=0),
             id="compliance_daily",
             replace_existing=True,
         )
-
-        # Analytics refresh — 06:30 UTC (after compliance completes)
+        # 06:30 — Analytics refresh (after compliance)
         scheduler.add_job(
             fire_analytics_update,
             CronTrigger(hour=6, minute=30),
             id="analytics_daily",
             replace_existing=True,
         )
+        # 06:45 — Alexander Wright: FMCSA market intel (feeds Naomi's geo multipliers)
+        scheduler.add_job(
+            fire_alexander,
+            CronTrigger(hour=6, minute=45),
+            id="alexander_daily",
+            replace_existing=True,
+        )
+        # 07:00 — Victoria Roth: strategic snapshot + org brain directive
+        scheduler.add_job(
+            fire_victoria,
+            CronTrigger(hour=7, minute=0),
+            id="victoria_daily",
+            replace_existing=True,
+        )
+        # 07:15 — Naomi: lead scoring (reads Alexander's hot-state data)
+        scheduler.add_job(
+            fire_naomi,
+            CronTrigger(hour=7, minute=15),
+            id="naomi_daily",
+            replace_existing=True,
+        )
+        # 07:30 — Winston Carmichael: carrier health + churn signals → carrier brain
+        scheduler.add_job(
+            fire_winston,
+            CronTrigger(hour=7, minute=30),
+            id="winston_daily",
+            replace_existing=True,
+        )
+        # 08:00 — Isabella Cruz: lead campaigns + carrier re-engagement (reads Winston)
+        scheduler.add_job(
+            fire_isabella,
+            CronTrigger(hour=8, minute=0),
+            id="isabella_daily",
+            replace_existing=True,
+        )
+        # 08:15 — Sofia Chen: financial reconciliation (after overnight settlement runs)
+        scheduler.add_job(
+            fire_sofia,
+            CronTrigger(hour=8, minute=15),
+            id="sofia_daily",
+            replace_existing=True,
+        )
 
         scheduler.start()
         app.state.scheduler = scheduler
-        log.info("APScheduler started — compliance@06:00 UTC, analytics@06:30 UTC")
+        log.info(
+            "APScheduler started — "
+            "compliance@06:00 analytics@06:30 alexander@06:45 "
+            "victoria@07:00 naomi@07:15 winston@07:30 "
+            "isabella@08:00 sofia@08:15 mailbox_poll@2min"
+        )
     except ImportError:
         log.warning("apscheduler not installed — daily cron disabled. Run: pip install apscheduler")
     except Exception as exc:  # noqa: BLE001

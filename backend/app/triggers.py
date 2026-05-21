@@ -9,7 +9,16 @@ Trigger map
   load status → Booked      →  fire_dispatch(carrier_id, load_id)
   load status → En Route    →  fire_transit(carrier_id, load_id)
   load status → Delivered   →  fire_settlement(carrier_id, load_id)
+  daily 05:30 UTC cron      →  NEXUS prune (APScheduler)
   daily 06:00 UTC cron      →  fire_compliance_sweep()
+  daily 06:30 UTC cron      →  fire_analytics_update()
+  daily 06:45 UTC cron      →  fire_alexander()   — market intel (feeds Naomi)
+  daily 07:00 UTC cron      →  fire_victoria()    — strategic snapshot
+  daily 07:15 UTC cron      →  fire_naomi()       — lead scoring
+  daily 07:30 UTC cron      →  fire_winston()     — carrier health + churn signals
+  daily 08:00 UTC cron      →  fire_isabella()    — campaign builder (leads + re-engagement)
+  daily 08:15 UTC cron      →  fire_sofia()       — financial reconciliation
+  vault doc uploaded/classified → fire_vault_scan(doc_id)
 """
 from __future__ import annotations
 
@@ -84,6 +93,99 @@ def fire_compliance_sweep() -> None:
 def fire_analytics_update() -> None:
     """Trigger analytics domain (runs after settlement or on schedule)."""
     _bg(_run_domain_safe, "analytics", None, None, "analytics_refresh")
+
+
+def fire_alexander() -> None:
+    """Run Alexander Wright daily — market intelligence from FMCSA census."""
+    def _run():
+        try:
+            from .agents.alexander import run as alexander_run  # noqa: PLC0415
+            log.info("daily_agent: alexander starting")
+            result = alexander_run({})
+            log.info("daily_agent: alexander done states_analyzed=%s", result.get("states_analyzed"))
+        except Exception as exc:  # noqa: BLE001
+            log.error("daily_agent: alexander failed: %s", exc)
+    _bg(_run)
+
+
+def fire_victoria() -> None:
+    """Run Victoria Roth daily — strategic snapshot + org brain directive."""
+    def _run():
+        try:
+            from .agents.victoria import run as victoria_run  # noqa: PLC0415
+            log.info("daily_agent: victoria starting")
+            result = victoria_run({})
+            log.info("daily_agent: victoria done signals=%s", len(result.get("signals", [])))
+        except Exception as exc:  # noqa: BLE001
+            log.error("daily_agent: victoria failed: %s", exc)
+    _bg(_run)
+
+
+def fire_naomi() -> None:
+    """Run Naomi daily — lead scoring + FMCSA prospect pull."""
+    def _run():
+        try:
+            from .agents.naomi import run as naomi_run  # noqa: PLC0415
+            log.info("daily_agent: naomi starting")
+            result = naomi_run({})
+            log.info("daily_agent: naomi done leads_ranked=%s", result.get("leads_ranked"))
+        except Exception as exc:  # noqa: BLE001
+            log.error("daily_agent: naomi failed: %s", exc)
+    _bg(_run)
+
+
+def fire_winston() -> None:
+    """Run Winston Carmichael daily — carrier health + churn signals."""
+    def _run():
+        try:
+            from .agents.winston import run as winston_run  # noqa: PLC0415
+            log.info("daily_agent: winston starting")
+            result = winston_run({})
+            log.info(
+                "daily_agent: winston done at_risk=%s retention=%s%%",
+                result.get("at_risk_count"), result.get("retention_rate_pct"),
+            )
+        except Exception as exc:  # noqa: BLE001
+            log.error("daily_agent: winston failed: %s", exc)
+    _bg(_run)
+
+
+def fire_isabella() -> None:
+    """Run Isabella Cruz daily — lead campaigns + carrier re-engagement."""
+    def _run():
+        try:
+            from .agents.isabella import run as isabella_run  # noqa: PLC0415
+            log.info("daily_agent: isabella starting (leads)")
+            result_leads = isabella_run({"segment": "New", "limit": 50})
+            log.info("daily_agent: isabella leads done size=%s", result_leads.get("campaign_size"))
+
+            # Re-engagement campaign for at-risk carriers (reads Winston's carrier brain data)
+            from .agents.isabella import run_carrier_reengagement  # noqa: PLC0415
+            log.info("daily_agent: isabella starting (carrier re-engagement)")
+            result_carriers = run_carrier_reengagement()
+            log.info(
+                "daily_agent: isabella re-engagement done targeted=%s",
+                result_carriers.get("carriers_targeted"),
+            )
+        except Exception as exc:  # noqa: BLE001
+            log.error("daily_agent: isabella failed: %s", exc)
+    _bg(_run)
+
+
+def fire_sofia() -> None:
+    """Run Sofia Chen daily — financial reconciliation."""
+    def _run():
+        try:
+            from .agents.sofia import run as sofia_run  # noqa: PLC0415
+            log.info("daily_agent: sofia starting")
+            result = sofia_run({})
+            log.info(
+                "daily_agent: sofia done missing_invoices=%s collection_rate=%s%%",
+                result.get("missing_invoices"), result.get("collection_rate_pct"),
+            )
+        except Exception as exc:  # noqa: BLE001
+            log.error("daily_agent: sofia failed: %s", exc)
+    _bg(_run)
 
 
 def fire_vault_scan(doc_id: str) -> None:
