@@ -408,6 +408,20 @@ def update_vault_doc(doc_id: str, body: dict, _: str = Depends(require_bearer)) 
     return {"ok": True, "doc_id": doc_id, "updated": allowed}
 
 
+@router.post("/vault/{doc_id}/scan")
+def scan_vault_doc(doc_id: str, _: str = Depends(require_bearer)) -> dict:
+    """Extract structured data from a vault document using Claude AI.
+
+    Chooses PDF text extraction (PyPDF2) for digital PDFs, or Claude Vision
+    for scanned PDFs and images. Results stored in document_vault.extracted_data.
+    """
+    from .doc_extractor import extract_vault_doc
+    result = extract_vault_doc(doc_id)
+    if "error" in result:
+        raise HTTPException(422, result["error"])
+    return result
+
+
 @router.delete("/vault/{doc_id}")
 def delete_vault_doc(doc_id: str, _: str = Depends(require_bearer)) -> dict:
     """Delete a document record and attempt storage cleanup."""
