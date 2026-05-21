@@ -1370,16 +1370,41 @@ td.td-name{font-weight:600;color:var(--navy);}
       <div class="card" style="margin-bottom:16px;border-left:4px solid var(--blue)">
         <div class="card-hd">
           <div class="card-title">🔭 FMCSA Prospect Search</div>
-          <span class="card-chip">Live Census Data</span>
+          <span class="card-chip">4.44M carriers · 147 fields · Live Census</span>
         </div>
-        <p class="t-sm t-muted" style="margin-bottom:14px">Search active motor carriers from the FMCSA open dataset. Filter by state, city, and fleet size — one-click to add as a lead.</p>
-        <div class="form-row" style="margin-bottom:10px">
-          <div class="fg"><label class="fl">State</label><input class="fi" id="fmcsa-ps-state" placeholder="e.g. IL" maxlength="2" style="text-transform:uppercase"></div>
+        <p class="t-sm t-muted" style="margin-bottom:14px">Search the full FMCSA Company Census — active, inactive, and pending entities. Filter by state, fleet size, operation type, and more. One-click import as a lead.</p>
+        <div class="form-row" style="margin-bottom:8px">
+          <div class="fg"><label class="fl">State *</label><input class="fi" id="fmcsa-ps-state" placeholder="e.g. IL" maxlength="2" style="text-transform:uppercase"></div>
           <div class="fg"><label class="fl">City</label><input class="fi" id="fmcsa-ps-city" placeholder="e.g. Chicago"></div>
-          <div class="fg"><label class="fl">Min Trucks</label><input class="fi" id="fmcsa-ps-min" type="number" value="1" min="1" max="50"></div>
-          <div class="fg"><label class="fl">Max Trucks</label><input class="fi" id="fmcsa-ps-max" type="number" value="20" min="1" max="200"></div>
-          <div class="fg" style="display:flex;align-items:flex-end">
-            <button class="btn-navy" onclick="fmcsaProspectSearch()" id="fmcsa-ps-btn">🔍 Search</button>
+          <div class="fg"><label class="fl">Min Trucks</label><input class="fi" id="fmcsa-ps-min" type="number" value="1" min="1"></div>
+          <div class="fg"><label class="fl">Max Trucks</label><input class="fi" id="fmcsa-ps-max" type="number" value="30" min="1"></div>
+        </div>
+        <div class="form-row" style="margin-bottom:12px">
+          <div class="fg"><label class="fl">Operation Type</label>
+            <select class="fsel" id="fmcsa-ps-op">
+              <option value="">Any</option>
+              <option value="I">Interstate (I)</option>
+              <option value="A">Intrastate — All (A)</option>
+              <option value="H">Intrastate — HM Only (H)</option>
+            </select>
+          </div>
+          <div class="fg"><label class="fl">Equipment</label>
+            <select class="fsel" id="fmcsa-ps-equip">
+              <option value="">Any</option>
+              <option value="tractor">Tractor-Trailer only</option>
+              <option value="hazmat">Hazmat authorized</option>
+            </select>
+          </div>
+          <div class="fg"><label class="fl">Limit</label>
+            <select class="fsel" id="fmcsa-ps-limit">
+              <option value="25">25</option>
+              <option value="50" selected>50</option>
+              <option value="100">100</option>
+              <option value="200">200</option>
+            </select>
+          </div>
+          <div class="fg" style="display:flex;align-items:flex-end;gap:8px">
+            <button class="btn-navy" onclick="fmcsaProspectSearch()" id="fmcsa-ps-btn" style="flex:1">🔍 Search FMCSA</button>
           </div>
         </div>
         <div id="fmcsa-ps-results"></div>
@@ -4368,52 +4393,116 @@ async function loadFoundersInventory(){
 async function fmcsaProspectSearch(){
   const btn = document.getElementById('fmcsa-ps-btn');
   const out = document.getElementById('fmcsa-ps-results');
-  const state = (document.getElementById('fmcsa-ps-state')?.value||'').trim().toUpperCase();
-  const city  = (document.getElementById('fmcsa-ps-city')?.value||'').trim();
-  const min   = document.getElementById('fmcsa-ps-min')?.value||'1';
-  const max   = document.getElementById('fmcsa-ps-max')?.value||'20';
-  if(!state){ toast('Enter a state code (e.g. IL)','error'); return; }
+  const state  = (document.getElementById('fmcsa-ps-state')?.value||'').trim().toUpperCase();
+  const city   = (document.getElementById('fmcsa-ps-city')?.value||'').trim();
+  const min    = document.getElementById('fmcsa-ps-min')?.value||'1';
+  const max    = document.getElementById('fmcsa-ps-max')?.value||'30';
+  const op     = document.getElementById('fmcsa-ps-op')?.value||'';
+  const equip  = document.getElementById('fmcsa-ps-equip')?.value||'';
+  const limit  = document.getElementById('fmcsa-ps-limit')?.value||'50';
+  if(!state){ toast('Enter a 2-letter state code (e.g. IL)','error'); return; }
   btn.disabled=true; btn.textContent='Searching…';
-  out.innerHTML='<div class="loading"><div class="spin"></div>Querying FMCSA census…</div>';
+  out.innerHTML='<div class="loading"><div class="spin"></div>Querying FMCSA census — 4.44M records…</div>';
   try {
-    const params = new URLSearchParams({state, min_trucks:min, max_trucks:max, limit:'50'});
+    const params = new URLSearchParams({state, min_trucks:min, max_trucks:max, limit, authorized_only:'true'});
     if(city) params.set('city', city);
+    if(op)   params.set('carrier_op', op);
+    if(equip==='tractor')  params.set('tractor_only','true');
+    if(equip==='hazmat')   params.set('hazmat','true');
+
     const r = await apiFetch('/api/fmcsa/search?'+params.toString());
     const d = await r.json();
-    if(!r.ok){ out.innerHTML=`<div style="color:var(--red);padding:8px">Error: ${d.detail||'FMCSA search failed'}</div>`; return; }
+    if(!r.ok){ out.innerHTML=`<div style="color:var(--red);padding:8px;border-radius:6px;background:#fee2e2">Error: ${d.detail||'FMCSA search failed'}</div>`; return; }
     const results = d.results||[];
-    if(!results.length){ out.innerHTML='<div style="color:var(--muted);padding:12px;text-align:center">No carriers found for those filters.</div>'; return; }
+    if(!results.length){ out.innerHTML='<div style="color:var(--muted);padding:20px;text-align:center">No carriers found. Try broadening your filters or a different state.</div>'; return; }
 
-    const lightColor = l => l==='green'?'#16a34a':l==='red'?'#ef4444':'#d97706';
-    const lightLabel = l => l==='green'?'✅ Clear':l==='red'?'🔴 Risk':'⚠️ Review';
+    const newCount = results.filter(r=>!r.already_lead).length;
+    const ratingBg  = r => r==='Satisfactory'?'#d1fae5':r==='Unsatisfactory'?'#fee2e2':r==='Conditional'?'#fef3c7':'#f1f5f9';
+    const ratingClr = r => r==='Satisfactory'?'#047857':r==='Unsatisfactory'?'#dc2626':r==='Conditional'?'#92400e':'#64748b';
+    const lightIcon = l => l==='green'?'🟢':l==='red'?'🔴':'🟡';
+    const opLabel   = o => ({I:'Interstate',A:'Intrastate',H:'HM Only'})[o]||o||'—';
 
-    out.innerHTML = `<div style="font-size:12px;color:var(--muted);margin-bottom:8px">${results.length} carriers found · <span style="color:var(--green)">${results.filter(r=>!r.already_lead).length} new</span> · ${results.filter(r=>r.already_lead).length} already in CRM</div>
+    // Allow importing all new at once
+    const importAllBtn = newCount > 1
+      ? `<button onclick="fmcsaImportAll()" style="padding:5px 14px;font-size:12px;background:#16a34a;color:#fff;border:none;border-radius:5px;cursor:pointer;font-weight:600">⬇ Import All ${newCount} New</button>` : '';
+
+    out.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px">
+      <div style="font-size:12px;color:var(--muted)">
+        <strong style="color:var(--navy)">${results.length}</strong> carriers ·
+        <span style="color:var(--green);font-weight:600">${newCount} new</span> ·
+        ${results.filter(r=>r.already_lead).length} already in CRM
+      </div>
+      ${importAllBtn}
+    </div>
     <div style="overflow-x:auto">
-    <table class="tbl" style="font-size:12px">
+    <table class="tbl" style="font-size:11px" id="fmcsa-results-table">
       <thead><tr>
-        <th>Safety</th><th>Company</th><th>DOT</th><th>MC</th><th>City/State</th><th>Phone</th><th>Trucks</th><th>Rating</th><th></th>
+        <th>Safety</th>
+        <th>Company</th>
+        <th>DOT</th>
+        <th>MC</th>
+        <th>Location</th>
+        <th>Phone</th>
+        <th>Trucks</th>
+        <th>Drivers</th>
+        <th>Op</th>
+        <th>Rating</th>
+        <th>MCS-150</th>
+        <th></th>
       </tr></thead>
-      <tbody>${results.map(c=>`<tr style="${c.already_lead?'opacity:.5':''}">
-        <td><span style="color:${lightColor(c.safety_light)};font-weight:700">${lightLabel(c.safety_light)}</span></td>
-        <td style="font-weight:600;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(c.legal_name||c.dba_name||'—')}</td>
+      <tbody>${results.map((c,i)=>`<tr id="fmcsa-row-${i}" style="${c.already_lead?'opacity:.45':''}">
+        <td style="text-align:center;font-size:14px">${lightIcon(c.safety_light)}</td>
+        <td style="font-weight:600;max-width:170px">
+          <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(c.legal_name)}">${esc(c.legal_name||c.dba_name||'—')}</div>
+          ${c.dba_name&&c.dba_name!==c.legal_name?`<div style="font-size:10px;color:var(--muted);font-style:italic">${esc(c.dba_name)}</div>`:''}
+        </td>
         <td style="font-family:var(--ff-m);color:var(--muted)">${c.dot_number||'—'}</td>
         <td style="font-family:var(--ff-m);color:var(--muted)">${c.mc_number||'—'}</td>
-        <td>${esc(c.city||'—')}, ${c.state||''}</td>
+        <td style="white-space:nowrap">${esc(c.city||'—')}, ${c.state||''} ${c.zip||''}</td>
         <td style="white-space:nowrap">${c.phone?`<a href="tel:${c.phone}" style="color:var(--blue)">${c.phone}</a>`:'—'}</td>
-        <td style="text-align:center">${c.fleet_size||'—'}</td>
-        <td><span style="padding:2px 8px;border-radius:10px;font-size:10px;background:${c.safety_rating==='Satisfactory'?'#d1fae5':c.safety_rating==='Unsatisfactory'?'#fee2e2':c.safety_rating==='Conditional'?'#fef3c7':'#f1f5f9'};color:${c.safety_rating==='Satisfactory'?'#047857':c.safety_rating==='Unsatisfactory'?'#dc2626':c.safety_rating==='Conditional'?'#92400e':'#64748b'}">${c.safety_rating||'Not Rated'}</span></td>
-        <td>${c.already_lead
-          ? '<span style="font-size:11px;color:var(--muted)">In CRM</span>'
-          : `<button onclick="fmcsaImportLead(${JSON.stringify(c).replace(/"/g,'&quot;')},this)" style="padding:4px 10px;font-size:11px;background:var(--navy);color:#fff;border:none;border-radius:4px;cursor:pointer;white-space:nowrap">+ Add Lead</button>`
+        <td style="text-align:center;font-weight:700;color:var(--navy)">${c.total_power_units||'—'}</td>
+        <td style="text-align:center;color:var(--muted)">${c.total_drivers||'—'}</td>
+        <td style="white-space:nowrap;font-size:10px;color:var(--muted)">${opLabel(c.carrier_operation)}</td>
+        <td><span style="padding:2px 7px;border-radius:10px;font-size:10px;background:${ratingBg(c.safety_rating)};color:${ratingClr(c.safety_rating)};white-space:nowrap">${c.safety_rating||'Not Rated'}</span></td>
+        <td style="font-size:10px;color:var(--muted);white-space:nowrap">${c.mcs150_date||'—'}</td>
+        <td style="white-space:nowrap">${c.already_lead
+          ? '<span style="font-size:10px;color:var(--muted)">In CRM</span>'
+          : `<button data-idx="${i}" onclick="fmcsaImportLead(fmcsaSearchResults[${i}],this)" style="padding:3px 9px;font-size:11px;background:var(--navy);color:#fff;border:none;border-radius:4px;cursor:pointer;white-space:nowrap">+ Add</button>`
         }</td>
       </tr>`).join('')}
       </tbody>
     </table></div>`;
+    // Store results for import-all
+    window.fmcsaSearchResults = results;
   } catch(e){
-    out.innerHTML=`<div style="color:var(--red);padding:8px">Error: ${e.message}</div>`;
+    out.innerHTML=`<div style="color:var(--red);padding:8px;background:#fee2e2;border-radius:6px">Error: ${e.message}</div>`;
   } finally {
-    btn.disabled=false; btn.textContent='🔍 Search';
+    btn.disabled=false; btn.textContent='🔍 Search FMCSA';
   }
+}
+
+window.fmcsaSearchResults = [];
+
+async function fmcsaImportAll(){
+  const toImport = (window.fmcsaSearchResults||[]).filter(c=>!c.already_lead);
+  if(!toImport.length){ toast('No new carriers to import','error'); return; }
+  let done=0, failed=0;
+  for(const c of toImport){
+    try{
+      const r = await apiFetch('/api/fmcsa/import-lead','POST',c);
+      const d = await r.json();
+      if(d.ok) done++;
+      else if(d.reason==='already_exists') { /* skip */ }
+      else failed++;
+    } catch(e){ failed++; }
+  }
+  toast(`Imported ${done} carriers${failed?` · ${failed} failed`:''}`);
+  await loadLeadsPipeline();
+  // Grey out all imported rows
+  (window.fmcsaSearchResults||[]).forEach((c,i)=>{
+    if(!c.already_lead){ c.already_lead=true; const row=document.getElementById('fmcsa-row-'+i); if(row) row.style.opacity='.45'; }
+  });
 }
 
 async function fmcsaImportLead(carrier, btn){
