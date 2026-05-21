@@ -8,6 +8,7 @@ from typing import Any
 
 from ..logging_service import log_agent
 from ..supabase_client import get_supabase
+from . import memory as mem
 
 _TEMPLATES: dict[str, str] = {
     "New": (
@@ -72,10 +73,38 @@ def build_campaign(segment: str = "New", limit: int = 50) -> dict[str, Any]:
 def run(payload: dict[str, Any]) -> dict[str, Any]:
     segment = payload.get("segment", "New")
     limit = int(payload.get("limit", 50))
+
+    # Check what Naomi and Winston have written to memory — prioritize their signals
+    tier_b  = mem.recall_value("naomi", "tier_b_targets") or {}
+    churn   = mem.recall_value("winston", "churn_signals") or {}
+    directive = mem.recall_value("org", "strategic_directive") or {}
+
     result = build_campaign(segment=segment, limit=limit)
+
+    # Surface what intelligence was available
+    result["informed_by"] = {
+        "naomi_tier_b_count":  tier_b.get("count", 0),
+        "winston_at_risk":     churn.get("at_risk_count", 0),
+        "org_priority":        directive.get("priority", "unknown"),
+    }
+
     log_agent(
         "isabella", "build_campaign",
         payload={"segment": segment, "limit": limit},
         result=f"{result['campaign_size']} contacts avg_score={result['avg_lead_score']}",
+    )
+
+    # Write campaign summary to org brain
+    mem.remember(
+        "isabella", "last_campaign",
+        {"segment": segment, "size": result["campaign_size"], "avg_score": result["avg_lead_score"]},
+        confidence=0.6,
+        summary=f"Campaign: {result['campaign_size']} {segment} leads · avg score {result['avg_lead_score']}",
+    )
+    mem.log_interaction("isabella", "vance", "handoff",
+        payload={"campaign_size": result["campaign_size"], "segment": segment},
+        result={"status": "campaign_ready"},
+        outcome="success",
+        outcome_notes="Campaign built — Vance to execute voice follow-up on high-score contacts",
     )
     return {"agent": "isabella", **result}

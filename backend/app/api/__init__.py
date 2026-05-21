@@ -23,6 +23,7 @@ from .routes_adobe_webhooks import router as adobe_webhooks_router
 from .routes_adobe_intake   import router as adobe_intake_router
 from .routes_dat           import router as dat_router
 from .routes_fmcsa         import router as fmcsa_router
+from .routes_memory        import router as memory_router
 
 from ..clm             import clm_router
 from ..email_ingest    import router as email_ingest_router
@@ -63,4 +64,5 @@ __all__ = [
     "executives_router",
     "dat_router",
     "fmcsa_router",
+    "memory_router",
 ]

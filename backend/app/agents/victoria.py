@@ -9,6 +9,7 @@ from typing import Any
 
 from ..logging_service import log_agent
 from ..supabase_client import get_supabase
+from . import memory as mem
 
 
 def _safe_count(table: str, filters: dict | None = None) -> int:
@@ -78,7 +79,53 @@ def strategic_snapshot() -> dict[str, Any]:
 
 
 def run(payload: dict[str, Any]) -> dict[str, Any]:
+    # Read the full org brain before forming strategy
+    org_intel = mem.read_org_intelligence()
+
     result = strategic_snapshot()
+
+    # Enrich with org brain insights
+    lead_intel  = mem.recall_value("org", "lead_intelligence") or {}
+    market_intel = mem.recall_value("org", "market_intel") or {}
+    at_risk_data = mem.recall_value("winston", "churn_signals") or {}
+
+    result["org_brain"] = {
+        "agents_with_memory":  org_intel.get("agents_with_memory", 0),
+        "total_memories":      org_intel.get("total_memories", 0),
+        "recent_interactions": org_intel.get("recent_interactions", 0),
+        "top_state_from_alexander": market_intel.get("top_state"),
+        "tier_a_leads_from_naomi":  lead_intel.get("tier_a_count"),
+        "at_risk_carriers_from_winston": at_risk_data.get("at_risk_count"),
+    }
+
     summary = f"carriers={result['total_carriers']} activation={result['activation_rate_pct']}% signals={len(result['strategic_signals'])}"
     log_agent("victoria", "strategic_snapshot", payload={}, result=summary)
+
+    # Write strategic directive to org brain — all agents read this
+    directive = {
+        "priority":          "carrier_acquisition" if result["activation_rate_pct"] < 60 else "load_growth",
+        "hot_states":        market_intel.get("hot_states", {}),
+        "tier_a_leads":      lead_intel.get("tier_a_count", 0),
+        "at_risk_carriers":  at_risk_data.get("at_risk_count", 0),
+        "recommended_actions": result["recommended_actions"],
+    }
+    mem.remember(
+        "org", "strategic_directive",
+        directive,
+        confidence=0.8,
+        source_agent="victoria",
+        summary=f"Priority: {directive['priority']} · {len(result['recommended_actions'])} actions · activation={result['activation_rate_pct']}%",
+    )
+    mem.remember(
+        "victoria", "last_snapshot",
+        {k: v for k, v in result.items() if k != "org_brain"},
+        confidence=0.7,
+        summary=f"Strategic snapshot: {result['total_carriers']} carriers, {result['total_loads']} loads",
+    )
+    mem.log_interaction("victoria", "org", "directive",
+        payload={"directive_priority": directive["priority"]},
+        result={"actions_written": len(result["recommended_actions"])},
+        outcome="success",
+        outcome_notes=f"Activation={result['activation_rate_pct']}% · Tier A={lead_intel.get('tier_a_count','?')}",
+    )
     return {"agent": "victoria", **result}

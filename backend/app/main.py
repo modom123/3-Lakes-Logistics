@@ -24,6 +24,7 @@ from .api import (
     dashboard_router,
     dat_router,
     fmcsa_router,
+    memory_router,
     driver_auth_router,
     driver_router,
     email_router,
@@ -59,8 +60,17 @@ def _start_scheduler(app: FastAPI) -> None:
         from apscheduler.schedulers.background import BackgroundScheduler
         from apscheduler.triggers.cron import CronTrigger
         from .triggers import fire_compliance_sweep, fire_analytics_update
+        from .agents.memory import prune_interactions
 
         scheduler = BackgroundScheduler(timezone="UTC")
+
+        # Org Brain prune — 05:30 UTC (before compliance, keeps interaction log lean)
+        scheduler.add_job(
+            prune_interactions,
+            CronTrigger(hour=5, minute=30),
+            id="memory_prune_daily",
+            replace_existing=True,
+        )
 
         # Daily compliance sweep — 06:00 UTC
         scheduler.add_job(
@@ -145,6 +155,7 @@ def create_app() -> FastAPI:
     app.include_router(notifications_router,  prefix="/api",              tags=["notifications"])
     app.include_router(email_router,          prefix="/api",              tags=["email"])
     app.include_router(executives_router,      prefix="/api",              tags=["executives"])
+    app.include_router(memory_router,          prefix="/api",              tags=["org-brain"])
     app.include_router(migration_router,       prefix="/api",              tags=["migration"])
     app.include_router(adobe_webhooks_router,  prefix="/api",              tags=["adobe"])
     app.include_router(adobe_intake_router,    prefix="/api",              tags=["adobe"])

@@ -24,6 +24,7 @@ import httpx
 
 from ..logging_service import log_agent
 from ..settings import get_settings
+from . import memory as mem
 
 _BASE = "https://data.transportation.gov/resource/az4n-8mr2.json"
 _TIMEOUT = 20
@@ -132,7 +133,35 @@ def run(payload: dict[str, Any]) -> dict[str, Any]:
             payload={"limit": limit},
             result=f"records={result['records_fetched']} top_state={top} units={result.get('total_power_units_sampled', 0)}",
         )
+        # Write to org brain — Naomi and Victoria read this
+        if result.get("geographic_distribution"):
+            mem.remember(
+                "alexander", "hot_states",
+                result["geographic_distribution"],
+                confidence=0.6,
+                summary=f"Top market: {result.get('top_state_by_volume','?')} · {result['records_fetched']} carriers sampled",
+            )
+            mem.remember(
+                "org", "market_intel",
+                {
+                    "hot_states":          result["geographic_distribution"],
+                    "fleet_capacity":      result.get("fleet_capacity_by_state", {}),
+                    "interstate_carriers": result.get("interstate_carriers_by_state", {}),
+                    "top_state":           result.get("top_state_by_volume"),
+                },
+                confidence=0.6,
+                source_agent="alexander",
+                summary=f"FMCSA census market snapshot — {result['records_fetched']} authorized carriers",
+            )
+            mem.log_interaction(
+                "alexander", "org", "broadcast",
+                payload={"limit": limit},
+                result={"hot_states_written": len(result["geographic_distribution"])},
+                outcome="success",
+                outcome_notes=f"Top state: {result.get('top_state_by_volume')}",
+            )
         return {"agent": "alexander", **result}
     except RuntimeError as exc:
         log_agent("alexander", "market_intel", payload={}, result=f"ERROR: {exc}")
+        mem.log_interaction("alexander", "org", "broadcast", payload={}, result={"error": str(exc)}, outcome="failed")
         return {"agent": "alexander", "error": str(exc), "records_fetched": 0, "geographic_distribution": {}}

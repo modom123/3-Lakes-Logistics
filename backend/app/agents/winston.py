@@ -10,6 +10,7 @@ from typing import Any
 
 from ..logging_service import log_agent
 from ..supabase_client import get_supabase
+from . import memory as mem
 
 # Days without a completed load before a carrier is flagged at-risk
 _INACTIVITY_DAYS = 14
@@ -116,10 +117,42 @@ def assess_carriers() -> dict[str, Any]:
 
 
 def run(payload: dict[str, Any]) -> dict[str, Any]:
+    # Read strategic directive — Victoria may have flagged retention as priority
+    directive = mem.recall_value("org", "strategic_directive") or {}
+
     result = assess_carriers()
     log_agent(
         "winston", "retention_audit",
         payload={},
         result=f"at_risk={result['at_risk_count']} healthy={result['healthy_carriers']} retention={result['retention_rate_pct']}%",
     )
+
+    # Write churn signals to org brain — Victoria and Isabella read this
+    churn_data = {
+        "at_risk_count":      result["at_risk_count"],
+        "never_loaded_count": result["never_loaded_count"],
+        "retention_rate_pct": result["retention_rate_pct"],
+        "at_risk_names":      [c["name"] for c in result["at_risk_carriers"][:5] if c.get("name")],
+        "high_priority":      [c for c in result["at_risk_carriers"] if c.get("priority") == "high"][:5],
+    }
+    mem.remember(
+        "winston", "churn_signals",
+        churn_data,
+        confidence=0.75,
+        summary=f"{result['at_risk_count']} at-risk carriers · {result['never_loaded_count']} never loaded · retention={result['retention_rate_pct']}%",
+    )
+    mem.remember(
+        "org", "retention_health",
+        {"retention_rate_pct": result["retention_rate_pct"], "at_risk_count": result["at_risk_count"]},
+        confidence=0.75,
+        source_agent="winston",
+        summary=f"Retention {result['retention_rate_pct']}% · {result['at_risk_count']} at risk",
+    )
+    if result["at_risk_count"] > 0:
+        mem.log_interaction("winston", "isabella", "handoff",
+            payload={"at_risk_count": result["at_risk_count"]},
+            result={"churn_signals_written": True},
+            outcome="success",
+            outcome_notes=f"Isabella should run retention campaign for {result['at_risk_count']} at-risk carriers",
+        )
     return {"agent": "winston", **result}
