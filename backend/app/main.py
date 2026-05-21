@@ -129,8 +129,13 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
-    app.include_router(intake_router,         prefix="/api/carriers",     tags=["intake"])
-    app.include_router(carriers_router,       prefix="/api/carriers",     tags=["carriers"])
+    # Brain routes registered BEFORE carriers_router to prevent /{carrier_id}
+    # wildcard from swallowing /carriers/brain literal paths
+    app.include_router(carrier_brain_router,   prefix="/api",              tags=["carrier-brain"])
+    app.include_router(revenue_brain_router,   prefix="/api",              tags=["revenue-brain"])
+    app.include_router(memory_router,          prefix="/api",              tags=["nexus"])
+    app.include_router(intake_router,          prefix="/api/carriers",     tags=["intake"])
+    app.include_router(carriers_router,        prefix="/api/carriers",     tags=["carriers"])
     app.include_router(fleet_router,          prefix="/api/fleet",        tags=["fleet"])
     app.include_router(fleet_public_router,   prefix="/api/fleet",        tags=["fleet-public"])
     app.include_router(telemetry_router,      prefix="/api/telemetry",    tags=["telemetry"])
@@ -156,10 +161,7 @@ def create_app() -> FastAPI:
     app.include_router(payout_router,         prefix="/api",              tags=["payout"])
     app.include_router(notifications_router,  prefix="/api",              tags=["notifications"])
     app.include_router(email_router,          prefix="/api",              tags=["email"])
-    app.include_router(executives_router,      prefix="/api",              tags=["executives"])
-    app.include_router(memory_router,          prefix="/api",              tags=["nexus"])
-    app.include_router(carrier_brain_router,   prefix="/api",              tags=["carrier-brain"])
-    app.include_router(revenue_brain_router,   prefix="/api",              tags=["revenue-brain"])
+    app.include_router(executives_router,       prefix="/api",              tags=["executives"])
     app.include_router(migration_router,       prefix="/api",              tags=["migration"])
     app.include_router(adobe_webhooks_router,  prefix="/api",              tags=["adobe"])
     app.include_router(adobe_intake_router,    prefix="/api",              tags=["adobe"])
