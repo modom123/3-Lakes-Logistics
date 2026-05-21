@@ -1485,40 +1485,57 @@ td.td-name{font-weight:600;color:var(--navy);}
       <div class="page-hdr">
         <div class="page-hdr-l">
           <div class="chip">CRM</div>
-          <h2>Leads & Calls</h2>
+          <h2>Leads &amp; Contact Suite</h2>
         </div>
         <div class="page-hdr-r">
-          <div style="display:flex;gap:8px;align-items:center">
-            <select id="crm-filter-stage" style="padding:6px 10px;border:1px solid var(--border);border-radius:4px;font-size:13px">
-              <option value="">All stages</option>
-              <option value="new">New</option>
-              <option value="contacted">Contacted</option>
-              <option value="interested">Interested</option>
-              <option value="not_interested">Not interested</option>
-              <option value="won">Won</option>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <div style="display:flex;border:1px solid var(--border);border-radius:6px;overflow:hidden">
+              <button id="crm-btn-list" onclick="crmSetView('list')" style="padding:5px 12px;font-size:12px;border:none;background:var(--navy);color:#fff;cursor:pointer;font-weight:600">☰ List</button>
+              <button id="crm-btn-kanban" onclick="crmSetView('kanban')" style="padding:5px 12px;font-size:12px;border:none;background:transparent;color:var(--navy);cursor:pointer;font-weight:600;border-left:1px solid var(--border)">⬛ Kanban</button>
+              <button id="crm-btn-outreach" onclick="crmSetView('outreach')" style="padding:5px 12px;font-size:12px;border:none;background:transparent;color:var(--navy);cursor:pointer;font-weight:600;border-left:1px solid var(--border)">📡 Campaigns</button>
+            </div>
+            <select id="crm-filter-heat" onchange="renderCrmCurrentView()" style="padding:6px 10px;border:1px solid var(--border);border-radius:4px;font-size:13px">
+              <option value="">All heat</option>
+              <option value="hot">🔴 Hot</option>
+              <option value="warm">🟠 Warm</option>
+              <option value="cold">⚫ Cold</option>
             </select>
-            <input type="text" id="crm-search" placeholder="Search by company/phone..." style="padding:6px 10px;border:1px solid var(--border);border-radius:4px;font-size:13px;width:200px">
+            <select id="crm-filter-stage" onchange="renderCrmCurrentView()" style="padding:6px 10px;border:1px solid var(--border);border-radius:4px;font-size:13px">
+              <option value="">All stages</option>
+              <option value="New">New</option>
+              <option value="Contacted">Contacted</option>
+              <option value="Interested">Interested</option>
+              <option value="Not_Interested">Not interested</option>
+              <option value="Won">Won</option>
+            </select>
+            <input type="text" id="crm-search" placeholder="Search…" onchange="renderCrmCurrentView()" style="padding:6px 10px;border:1px solid var(--border);border-radius:4px;font-size:13px;width:160px">
           </div>
         </div>
       </div>
 
-      <div style="display:grid;grid-template-columns:350px 1fr;gap:16px;padding:16px;height:100%;overflow:hidden">
-        <!-- Left: Leads List -->
+      <!-- LIST VIEW -->
+      <div id="crm-view-list" style="display:grid;grid-template-columns:350px 1fr;gap:16px;padding:16px;height:calc(100vh - 120px);overflow:hidden">
         <div style="display:flex;flex-direction:column;border-right:1px solid var(--border);padding-right:16px">
           <div style="flex:1;overflow-y:auto;border:1px solid var(--border);border-radius:6px">
             <div id="crm-leads-list" style="min-height:200px"><div class="loading"><div class="spin"></div>Loading leads…</div></div>
           </div>
-          <div style="margin-top:12px;font-size:12px;color:var(--muted)">
-            <span id="crm-leads-count">0</span> leads
-          </div>
+          <div style="margin-top:8px;font-size:12px;color:var(--muted)"><span id="crm-leads-count">0</span> leads</div>
         </div>
-
-        <!-- Right: Lead Detail & Call History -->
         <div style="display:flex;flex-direction:column;overflow:hidden">
           <div id="crm-detail" style="flex:1;overflow-y:auto;border:1px solid var(--border);border-radius:6px;padding:16px">
-            <div style="text-align:center;color:var(--muted);padding:40px 20px">Select a lead to view details and call history</div>
+            <div style="text-align:center;color:var(--muted);padding:40px 20px">Select a lead to view details</div>
           </div>
         </div>
+      </div>
+
+      <!-- KANBAN VIEW -->
+      <div id="crm-view-kanban" style="display:none;padding:16px;overflow-x:auto;overflow-y:hidden;height:calc(100vh - 120px)">
+        <div id="crm-kanban-board" style="display:flex;gap:12px;min-width:max-content;height:100%"></div>
+      </div>
+
+      <!-- OUTREACH CAMPAIGNS VIEW -->
+      <div id="crm-view-outreach" style="display:none;padding:16px;overflow-y:auto;height:calc(100vh - 120px)">
+        <div id="crm-oe-root"></div>
       </div>
     </div>
 
@@ -1709,6 +1726,12 @@ td.td-name{font-weight:600;color:var(--navy);}
 
 /* Empty state */
 .ec-empty{text-align:center;padding:36px 20px;color:#5A6A82;font-size:14px;}
+
+.crm-heat-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.crm-heat-dot.crm-heat-hot{background:#ef4444;box-shadow:0 0 6px rgba(239,68,68,.5)}
+.crm-heat-dot.crm-heat-warm{background:#f97316;box-shadow:0 0 6px rgba(249,115,22,.4)}
+.crm-heat-dot.crm-heat-cold{background:#94a3b8}
+.crm-heat-dot.crm-heat-none{background:transparent}
 
 /* ── MOBILE HAMBURGER ── */
 #sb-hamburger{display:none;background:none;border:none;font-size:22px;cursor:pointer;color:var(--navy);padding:4px 8px;line-height:1;}
@@ -5735,6 +5758,7 @@ function _crmName(l){ return l.business_name || l.company_name || 'Unknown'; }
 function _crmStatus(l){ return l.status || l.stage || 'New'; }
 
 async function loadCrmLeads(){
+  crmLoadHeat(); crmOeLoad();
   try {
     const r = await apiFetch('/api/leads?limit=500');
     const d = await r.json();
@@ -5752,6 +5776,8 @@ function renderCrmLeadsList(){
 
   let filtered = crmAllLeads;
   if (stage) filtered = filtered.filter(l => _crmStatus(l).toLowerCase() === stage.toLowerCase());
+  const heat = document.getElementById('crm-filter-heat')?.value || '';
+  if (heat) filtered = filtered.filter(l => crmGetHeat(l.id) === heat);
   if (search) filtered = filtered.filter(l =>
     _crmName(l).toLowerCase().includes(search) ||
     (l.phone || '').includes(search) ||
@@ -5771,7 +5797,10 @@ function renderCrmLeadsList(){
     const hasFollowup = l.next_touch_at && new Date(l.next_touch_at) > new Date();
     return `
     <div class="crm-lead-item ${crmSelectedLead?.id === l.id ? 'active' : ''}" onclick="selectCrmLead('${l.id}')" style="padding:10px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .2s;background:${crmSelectedLead?.id === l.id ? 'rgba(0,0,0,.05)' : 'transparent'}">
-      <div style="font-weight:500;margin-bottom:3px">${_crmName(l)}</div>
+      <div style="display:flex;align-items:center;gap:7px;margin-bottom:3px">
+        <div class="crm-heat-dot crm-heat-${crmGetHeat(l.id)||'none'}"></div>
+        <div style="font-weight:500">${_crmName(l)}</div>
+      </div>
       <div style="font-size:12px;color:var(--muted);margin-bottom:3px">${l.phone || l.email || 'No contact'}</div>
       <div style="font-size:11px;display:flex;gap:4px;flex-wrap:wrap;align-items:center">
         <span class="badge badge-${statusColor(st)}">${st}</span>
@@ -5869,6 +5898,13 @@ function renderCrmLeadDetail(lead){
         <div id="crm-call-panel-status" style="display:none;margin-top:6px;font-size:12px;padding:6px 8px;border-radius:4px"></div>
       </div>
 
+      <!-- Heat -->
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
+        <span style="font-size:12px;color:var(--muted);font-weight:600">Heat:</span>
+        ${['hot','warm','cold'].map(h=>`<button onclick="crmSetHeat('${lead.id}','${h}')" style="padding:4px 12px;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid ${crmGetHeat(lead.id)===h?'transparent':'var(--border)'};background:${crmGetHeat(lead.id)===h?(h==='hot'?'#ef4444':h==='warm'?'#f97316':'#6b7280'):'transparent'};color:${crmGetHeat(lead.id)===h?'#fff':'var(--muted)'}">${h==='hot'?'🔴 Hot':h==='warm'?'🟠 Warm':'⚫ Cold'}</button>`).join('')}
+        ${crmGetHeat(lead.id)?`<button onclick="crmSetHeat('${lead.id}','')" style="padding:4px 8px;border-radius:20px;font-size:11px;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--muted)">✕</button>`:''}
+      </div>
+
       <!-- Status row -->
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;padding:12px;background:rgba(0,0,0,.04);border-radius:6px">
         <div>
@@ -5911,8 +5947,13 @@ function renderCrmLeadDetail(lead){
         </div>
       </div>
 
-      <!-- Notes -->
+      <!-- Notes + Activity Log tabs -->
       <div style="margin-bottom:14px">
+        <div style="display:flex;gap:0;border-bottom:2px solid var(--border);margin-bottom:10px">
+          <button id="crm-tab-notes-btn" onclick="crmShowTab('${lead.id}','notes')" style="padding:6px 14px;font-size:12px;font-weight:700;border:none;background:none;cursor:pointer;border-bottom:2px solid var(--navy);margin-bottom:-2px;color:var(--navy)">📝 Notes</button>
+          <button id="crm-tab-activity-btn" onclick="crmShowTab('${lead.id}','activity')" style="padding:6px 14px;font-size:12px;font-weight:600;border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;color:var(--muted)">📋 Activity Log</button>
+        </div>
+        <div id="crm-tab-notes">
         <div style="font-size:12px;font-weight:600;margin-bottom:6px">📝 Notes</div>
         <textarea id="crm-notes-box" rows="4"
           style="width:100%;box-sizing:border-box;padding:8px;border:1px solid var(--border);border-radius:4px;font-size:13px;resize:vertical;font-family:inherit"
@@ -5927,6 +5968,10 @@ function renderCrmLeadDetail(lead){
             + Append with Timestamp
           </button>
           <span id="crm-notes-saved" style="font-size:11px;color:var(--green);align-self:center;display:none">✓ Saved</span>
+        </div>
+        </div><!-- end crm-tab-notes -->
+        <div id="crm-tab-activity" style="display:none">
+          ${renderCrmActivityLog(lead)}
         </div>
       </div>
     </div>
@@ -6113,6 +6158,546 @@ function vanceCallLead(name, phone){
   }, 100);
 }
 
+// ── CRM HEAT SCORING ────────────────────────────────────────────────────────
+let crmHeatMap = {};
+function crmLoadHeat(){ try{ crmHeatMap = JSON.parse(localStorage.getItem('crm-heat')||'{}'); }catch(e){} }
+function crmSaveHeat(){ localStorage.setItem('crm-heat', JSON.stringify(crmHeatMap)); }
+function crmGetHeat(id){ return crmHeatMap[String(id)]||''; }
+function crmSetHeat(leadId, heat){
+  if(heat) crmHeatMap[String(leadId)] = heat;
+  else delete crmHeatMap[String(leadId)];
+  crmSaveHeat();
+  renderCrmLeadsList();
+  if(crmCurrentView==='kanban') renderCrmKanban();
+  const lead = crmAllLeads.find(l => l.id === leadId);
+  if(lead) renderCrmLeadDetail(lead);
+}
+
+// ── CRM VIEW SWITCHING ───────────────────────────────────────────────────────
+let crmCurrentView = 'list';
+
+function crmSetView(v){
+  crmCurrentView = v;
+  ['list','kanban','outreach'].forEach(k => {
+    const el = document.getElementById('crm-view-'+k);
+    const btn = document.getElementById('crm-btn-'+k);
+    if(el) el.style.display = k===v ? (k==='list'?'grid':'block') : 'none';
+    if(btn){ btn.style.background = k===v?'var(--navy)':'transparent'; btn.style.color = k===v?'#fff':'var(--navy)'; }
+  });
+  if(v==='kanban') renderCrmKanban();
+  if(v==='outreach') initCrmOutreach();
+}
+
+function renderCrmCurrentView(){
+  if(crmCurrentView==='list') renderCrmLeadsList();
+  else if(crmCurrentView==='kanban') renderCrmKanban();
+}
+
+// ── CRM KANBAN ───────────────────────────────────────────────────────────────
+const CRM_STAGES = ['New','Contacted','Interested','Not_Interested','Won','Lost'];
+const CRM_STAGE_COLORS = {New:'#f97316',Contacted:'#3b82f6',Interested:'#16a34a',Not_Interested:'#6b7280',Won:'#d97706',Lost:'#ef4444'};
+
+function renderCrmKanban(){
+  const board = document.getElementById('crm-kanban-board');
+  if(!board) return;
+  const heatF = document.getElementById('crm-filter-heat')?.value||'';
+  const search = (document.getElementById('crm-search')?.value||'').toLowerCase();
+  let leads = crmAllLeads;
+  if(heatF) leads = leads.filter(l => crmGetHeat(l.id)===heatF);
+  if(search) leads = leads.filter(l => _crmName(l).toLowerCase().includes(search)||(l.phone||'').includes(search));
+  board.innerHTML = CRM_STAGES.map(stage => {
+    const items = leads.filter(l => (_crmStatus(l)||'New').replace(' ','_') === stage);
+    const totalVal = items.reduce((s,l) => s+(Number(l.fleet_size)||0)*300, 0);
+    return `<div style="width:220px;flex-shrink:0;background:var(--surface2,#f1f5f9);border-radius:10px;padding:10px;display:flex;flex-direction:column;height:100%">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <div style="font-size:11px;font-weight:700;color:${CRM_STAGE_COLORS[stage]||'#334155'};text-transform:uppercase;letter-spacing:.5px">${stage.replace('_',' ')}</div>
+        <div style="font-size:11px;color:var(--muted)">${items.length}</div>
+      </div>
+      ${totalVal?`<div style="font-size:10px;color:var(--muted);margin-bottom:6px">~$${totalVal.toLocaleString()}/mo potential</div>`:''}
+      <div style="flex:1;overflow-y:auto">
+      ${items.map(l => {
+        const h = crmGetHeat(l.id);
+        const hColor = h==='hot'?'#ef4444':h==='warm'?'#f97316':'#94a3b8';
+        return `<div onclick="crmSetView('list');setTimeout(()=>selectCrmLead('${l.id}'),50)" style="background:#fff;border:1px solid var(--border);border-radius:8px;padding:9px;margin-bottom:7px;cursor:pointer;transition:border .15s" onmouseenter="this.style.borderColor='#d97706'" onmouseleave="this.style.borderColor='var(--border)'">
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+            ${h?`<div style="width:8px;height:8px;border-radius:50%;background:${hColor};box-shadow:0 0 5px ${hColor}44;flex-shrink:0"></div>`:'<div style="width:8px;height:8px;border-radius:50%;background:var(--border);flex-shrink:0"></div>'}
+            <div style="font-size:12px;font-weight:600;color:var(--navy)">${esc(_crmName(l))}</div>
+          </div>
+          <div style="font-size:11px;color:var(--muted)">${l.phone||l.email||'—'}</div>
+          ${l.equipment_type?`<div style="font-size:10px;color:var(--muted);margin-top:2px">${l.equipment_type}</div>`:''}
+          ${l.next_touch_at&&new Date(l.next_touch_at)>new Date()?`<div style="font-size:10px;color:#b45309;margin-top:3px">📅 ${new Date(l.next_touch_at).toLocaleDateString('en-US',{month:'short',day:'numeric'})}</div>`:''}
+        </div>`;
+      }).join('')||`<div style="font-size:11px;color:var(--muted);text-align:center;padding:16px 0">No leads</div>`}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── CRM ACTIVITY LOG ─────────────────────────────────────────────────────────
+function renderCrmActivityLog(lead){
+  const entries = [];
+  const notes = lead.notes || '';
+  const blocks = notes.split(/\n(?=\[)/);
+  blocks.forEach(block => {
+    const m = block.match(/^\[([^\]]+)\]\s*(.+)/s);
+    if(m){
+      const lines = m[2].split('\n').filter(Boolean);
+      entries.push({ts:m[1], text:lines[0]||'', detail:lines.slice(1).join(' ')});
+    }
+  });
+  const oeLog = (JSON.parse(localStorage.getItem('crm-oe-log')||'[]')).filter(e => e.leadId === String(lead.id));
+  oeLog.forEach(e => {
+    const ts = new Date(e.timestamp).toLocaleString('en-US',{month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit'});
+    entries.push({ts, text:`📧 ${e.subject}`, detail:`Campaign: ${e.campaignName||'—'} · Step ${(e.stepIndex||0)+1}`, isEmail:true});
+  });
+  if(!entries.length) return '<div style="text-align:center;color:var(--muted);padding:24px;font-size:13px">No activity logged yet.<br><span style="font-size:11px">Calls and emails will appear here.</span></div>';
+  return entries.reverse().map(e => {
+    const icon = e.isEmail?'📧':e.text.includes('VANCE')?'🤖':e.text.includes('Zoom')?'📹':e.text.includes('Teams')?'💬':e.text.includes('CALL')||e.text.includes('Answered')||e.text.includes('Voicemail')?'📞':'📝';
+    const color = e.isEmail?'#2563eb':e.text.includes('VANCE')?'#d97706':e.text.includes('Answered')||e.text.includes('Completed')?'#16a34a':'#6b7280';
+    return `<div style="display:flex;gap:10px;padding:9px 0;border-bottom:1px solid var(--border)">
+      <div style="font-size:18px;flex-shrink:0;width:24px;text-align:center">${icon}</div>
+      <div style="flex:1">
+        <div style="font-size:12px;font-weight:600;color:${color}">${e.text}</div>
+        ${e.detail?`<div style="font-size:11px;color:var(--muted);margin-top:2px">${e.detail}</div>`:''}
+        <div style="font-size:10px;color:var(--muted);margin-top:3px">🕐 ${e.ts}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function crmShowTab(leadId, tab){
+  const notesEl = document.getElementById('crm-tab-notes');
+  const actEl = document.getElementById('crm-tab-activity');
+  const notesBtn = document.getElementById('crm-tab-notes-btn');
+  const actBtn = document.getElementById('crm-tab-activity-btn');
+  if(notesEl) notesEl.style.display = tab==='notes'?'block':'none';
+  if(actEl) actEl.style.display = tab==='activity'?'block':'none';
+  if(notesBtn){ notesBtn.style.borderBottomColor=tab==='notes'?'var(--navy)':'transparent'; notesBtn.style.color=tab==='notes'?'var(--navy)':'var(--muted)'; notesBtn.style.fontWeight=tab==='notes'?'700':'600'; }
+  if(actBtn){ actBtn.style.borderBottomColor=tab==='activity'?'var(--navy)':'transparent'; actBtn.style.color=tab==='activity'?'var(--navy)':'var(--muted)'; actBtn.style.fontWeight=tab==='activity'?'700':'600'; }
+}
+
+// ── CRM OUTREACH ENGINE ──────────────────────────────────────────────────────
+let CRM_OE = {
+  campaigns: [],
+  log: [],
+  settings: {},
+};
+function crmOeLoad(){
+  try{ CRM_OE.campaigns = JSON.parse(localStorage.getItem('crm-oe-campaigns')||'[]'); }catch(e){ CRM_OE.campaigns=[]; }
+  try{ CRM_OE.log = JSON.parse(localStorage.getItem('crm-oe-log')||'[]'); }catch(e){ CRM_OE.log=[]; }
+  try{ CRM_OE.settings = JSON.parse(localStorage.getItem('crm-oe-settings')||'{}'); }catch(e){ CRM_OE.settings={}; }
+}
+function crmOeSave(){
+  localStorage.setItem('crm-oe-campaigns', JSON.stringify(CRM_OE.campaigns));
+  localStorage.setItem('crm-oe-log', JSON.stringify(CRM_OE.log));
+  localStorage.setItem('crm-oe-settings', JSON.stringify(CRM_OE.settings));
+}
+
+const CRM_OE_TEMPLATES = [
+  { id:'carrier-cold', name:'Owner-Operator Cold Outreach', desc:'5-touch sequence for new carrier leads', touches:5, steps:[
+    { day:0, subject:'Quick question about your dispatch setup, {{first_name}}',
+      body:`Hi {{first_name}},\n\nI work with owner-operators and small fleets to handle dispatch, invoicing, and compliance — so you can stay focused on the road.\n\nMost carriers I talk to are spending hours on paperwork and broker calls that we can take completely off your plate.\n\nWould a quick 15-minute call make sense to see if we'd be a good fit for {{company}}?\n\n{{your_name}}\n3 Lakes Logistics` },
+    { day:3, subject:'Re: {{first_name}} — one thing I wanted to share',
+      body:`Hi {{first_name}},\n\nFollowing up quickly — I know your time is tight.\n\nOur dispatch team handles load booking, rate negotiation, and check calls so you don't have to. Most carriers on our platform see a 15–20% increase in loaded miles within the first 90 days.\n\nWorth a conversation?\n\n{{your_name}}` },
+    { day:7, subject:'{{company}} — here is what we offer',
+      body:`Hi {{first_name}},\n\n3 Lakes Logistics offers:\n✅ Full dispatch (load booking + broker relations)\n✅ Invoicing & collections\n✅ IFTA & compliance support\n✅ 24/7 check-call monitoring\n\nFounders plan: $300/truck/month flat — no percentage cuts on your loads.\n\nOpen to a quick call this week?\n\n{{your_name}}` },
+    { day:14, subject:'Last note — {{first_name}}',
+      body:`Hi {{first_name}},\n\nI don't want to keep filling your inbox, so this is my last message for now.\n\nIf the timing isn't right, no worries at all. Feel free to reach out whenever you're ready to explore dispatch options.\n\nWishing you safe miles and strong rates.\n\n{{your_name}}\n3 Lakes Logistics` },
+    { day:30, subject:'Checking back in — {{first_name}}',
+      body:`Hi {{first_name}},\n\nHopefully the last few weeks have been good on the road.\n\nReaching back out because we've expanded our lane coverage and added a Pro plan with full-service dispatch. Wanted to see if the timing works better now.\n\nQuick 15-minute call?\n\n{{your_name}}` },
+  ]},
+  { id:'carrier-warm', name:'Warm Lead Follow-Up', desc:'3-touch sequence for interested leads', touches:3, steps:[
+    { day:0, subject:'Great connecting — next steps for {{company}}',
+      body:`Hi {{first_name}},\n\nGreat talking with you! Here is a quick summary:\n\n- Full dispatch coverage for your routes\n- Founders plan: $300/truck/month flat\n- Getting you onboarded within 48 hours\n\nReady to move forward? Just reply and I'll send over the agreement.\n\n{{your_name}}` },
+    { day:3, subject:'{{first_name}} — any questions?',
+      body:`Hi {{first_name}},\n\nWanted to follow up. Do you have any questions about the onboarding process or our plans?\n\nHappy to jump on a quick call to work through any details.\n\n{{your_name}}` },
+    { day:7, subject:'Still here when you\'re ready — {{first_name}}',
+      body:`Hi {{first_name}},\n\nNo pressure — just wanted to make sure I'm available when you're ready.\n\nFeel free to reply anytime.\n\n{{your_name}}` },
+  ]},
+  { id:'carrier-reactivate', name:'Re-Engagement Sequence', desc:'Re-engage cold or lost leads', touches:2, steps:[
+    { day:0, subject:'Things have changed — {{first_name}}',
+      body:`Hi {{first_name}},\n\nI know we talked before and the timing wasn't right. I wanted to reach out because we've made some improvements:\n\n- Expanded lane coverage\n- New Pro plan: $500/truck with full-service dispatch + IFTA\n- Faster onboarding — 24 hours\n\nWould it be worth a fresh 15-minute conversation?\n\n{{your_name}}` },
+    { day:7, subject:'One more thought — {{first_name}}',
+      body:`Hi {{first_name}},\n\nLast note, I promise. If things change on your end, we're always here.\n\nWishing you safe miles and strong rates.\n\n{{your_name}}\n3 Lakes Logistics` },
+  ]},
+];
+
+let crmOeInited = false;
+function initCrmOutreach(){
+  crmOeLoad();
+  const root = document.getElementById('crm-oe-root');
+  if(!root) return;
+  root.innerHTML = crmOeBuildHTML();
+  crmOeRefresh();
+  crmOeRunAutomation();
+  crmOeInited = true;
+}
+
+function crmOeBuildHTML(){
+  const s = crmOeStats();
+  return `
+  <div style="background:linear-gradient(135deg,#0B2140,#17377A);border-radius:12px;padding:16px 20px;margin-bottom:16px;display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+    <div>
+      <div style="font-family:var(--ff-h);font-size:1rem;font-weight:800;color:#F5C842">📡 Outreach Engine</div>
+      <div style="font-size:10px;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.08em">Automated Carrier Recruiting</div>
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-left:auto">
+      ${[['Campaigns',s.total],['Active',s.active],['Sent',s.sent],['Prospects',s.prospects]].map(([l,v])=>`<div style="padding:5px 12px;border-radius:20px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);font-size:11px;color:rgba(255,255,255,.8)"><span style="color:#F5C842;font-weight:700">${v}</span> ${l}</div>`).join('')}
+      <button onclick="crmOeOpenNew()" style="padding:6px 16px;background:#F5C842;color:#0B2140;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">+ New Campaign</button>
+    </div>
+  </div>
+  <div style="display:flex;gap:0;border-bottom:2px solid var(--border);margin-bottom:16px">
+    <button class="crm-oe-tab active" id="oetab-campaigns" onclick="crmOeTab('campaigns')" style="padding:9px 18px;font-size:12px;font-weight:700;border:none;background:none;cursor:pointer;border-bottom:2px solid var(--navy);margin-bottom:-2px;color:var(--navy)">🚀 Campaigns</button>
+    <button class="crm-oe-tab" id="oetab-templates" onclick="crmOeTab('templates')" style="padding:9px 18px;font-size:12px;font-weight:600;border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;color:var(--muted)">📝 Templates</button>
+    <button class="crm-oe-tab" id="oetab-log" onclick="crmOeTab('log')" style="padding:9px 18px;font-size:12px;font-weight:600;border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;color:var(--muted)">📋 Activity Log</button>
+    <button class="crm-oe-tab" id="oetab-setup" onclick="crmOeTab('setup')" style="padding:9px 18px;font-size:12px;font-weight:600;border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;color:var(--muted)">⚙️ Setup</button>
+  </div>
+  <div id="oe-view-campaigns"></div>
+  <div id="oe-view-templates" style="display:none"></div>
+  <div id="oe-view-log" style="display:none"></div>
+  <div id="oe-view-setup" style="display:none"></div>
+  <div id="oe-modal-wrap" style="display:none;position:fixed;inset:0;background:rgba(11,33,64,.45);z-index:9000;align-items:center;justify-content:center;backdrop-filter:blur(3px)">
+    <div id="oe-modal-inner" style="background:#fff;border-radius:14px;padding:24px;max-width:560px;width:92%;max-height:85vh;overflow-y:auto;box-shadow:0 20px 60px rgba(11,33,64,.25)"></div>
+  </div>`;
+}
+
+function crmOeStats(){
+  const c = CRM_OE.campaigns;
+  return {
+    total: c.length,
+    active: c.filter(x=>x.status==='active').length,
+    sent: CRM_OE.log.filter(l=>l.type==='sent').length,
+    prospects: c.reduce((s,x)=>s+(x.prospects||[]).length,0),
+  };
+}
+
+function crmOeTab(tab){
+  ['campaigns','templates','log','setup'].forEach(t=>{
+    const el = document.getElementById('oe-view-'+t);
+    const btn = document.getElementById('oetab-'+t);
+    if(el) el.style.display = t===tab?'block':'none';
+    if(btn){ btn.style.borderBottomColor=t===tab?'var(--navy)':'transparent'; btn.style.color=t===tab?'var(--navy)':'var(--muted)'; btn.style.fontWeight=t===tab?'700':'600'; }
+  });
+  if(tab==='templates') crmOeRenderTemplates();
+  if(tab==='log') crmOeRenderLog();
+  if(tab==='setup') crmOeRenderSetup();
+}
+
+function crmOeRefresh(){ crmOeRenderCampaigns(); }
+
+function crmOeRenderCampaigns(){
+  const el = document.getElementById('oe-view-campaigns');
+  if(!el) return;
+  if(!CRM_OE.campaigns.length){
+    el.innerHTML = `<div style="text-align:center;padding:40px;color:var(--muted)">
+      <div style="font-size:32px;margin-bottom:12px">📡</div>
+      <div style="font-size:14px;font-weight:600;margin-bottom:6px">No campaigns yet</div>
+      <div style="font-size:12px;margin-bottom:16px">Create a campaign to start automated carrier outreach</div>
+      <button onclick="crmOeOpenNew()" style="padding:8px 20px;background:var(--navy);color:#fff;border:none;border-radius:6px;font-size:13px;cursor:pointer;font-weight:600">+ New Campaign</button>
+    </div>`;
+    return;
+  }
+  el.innerHTML = CRM_OE.campaigns.map(camp => {
+    const tpl = CRM_OE_TEMPLATES.find(t=>t.id===camp.templateId);
+    const sent = CRM_OE.log.filter(l=>l.campaignId===camp.id&&l.type==='sent').length;
+    const prospects = camp.prospects||[];
+    const progress = tpl ? Math.round(sent/(tpl.steps.length*Math.max(prospects.length,1))*100) : 0;
+    return `<div style="background:#fff;border:1.5px solid var(--border);border-radius:12px;padding:16px;margin-bottom:12px">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px">
+        <div>
+          <div style="font-weight:700;font-size:14px;color:var(--navy)">${esc(camp.name)}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px">${tpl?tpl.name:'Unknown template'} · Started ${camp.startDate}</div>
+        </div>
+        <div style="display:flex;gap:6px;align-items:center">
+          <span style="padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700;background:${camp.status==='active'?'#d1fae5':'#fef3c7'};color:${camp.status==='active'?'#047857':'#92400e'}">${camp.status}</span>
+          <button onclick="crmOeToggle('${camp.id}')" style="padding:4px 10px;font-size:11px;border:1px solid var(--border);border-radius:5px;cursor:pointer;background:transparent">${camp.status==='active'?'Pause':'Resume'}</button>
+          <button onclick="crmOeViewCamp('${camp.id}')" style="padding:4px 10px;font-size:11px;border:none;border-radius:5px;cursor:pointer;background:var(--navy);color:#fff">View</button>
+          <button onclick="crmOeDelete('${camp.id}')" style="padding:4px 8px;font-size:11px;border:1px solid #fca5a5;border-radius:5px;cursor:pointer;background:#fee2e2;color:#dc2626">✕</button>
+        </div>
+      </div>
+      <div style="display:flex;gap:16px;font-size:12px;color:var(--muted);margin-bottom:8px">
+        <span>👥 ${prospects.length} prospect${prospects.length!==1?'s':''}</span>
+        <span>📧 ${sent} sent</span>
+        <span>📊 ${progress}% complete</span>
+      </div>
+      <div style="height:4px;background:var(--surface2,#f1f5f9);border-radius:2px"><div style="height:100%;background:linear-gradient(90deg,#d97706,#f59e0b);border-radius:2px;width:${Math.min(100,progress)}%"></div></div>
+    </div>`;
+  }).join('');
+}
+
+function crmOeRenderTemplates(){
+  const el = document.getElementById('oe-view-templates');
+  if(!el) return;
+  el.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px">
+    ${CRM_OE_TEMPLATES.map(t=>`<div style="background:#fff;border:1.5px solid var(--border);border-radius:10px;padding:14px">
+      <div style="font-weight:700;font-size:13px;color:var(--navy);margin-bottom:4px">${t.name}</div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:10px">${t.desc} · ${t.touches} touches</div>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        ${t.steps.map((s,i)=>`<div style="display:flex;gap:8px;align-items:flex-start">
+          <div style="width:20px;height:20px;border-radius:5px;background:var(--navy);color:#F5C842;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">${i+1}</div>
+          <div><div style="font-size:11px;font-weight:600">Day ${s.day}</div><div style="font-size:10px;color:var(--muted)">${s.subject.substring(0,50)}…</div></div>
+        </div>`).join('')}
+      </div>
+      <button onclick="crmOeOpenNew('${t.id}')" style="margin-top:12px;width:100%;padding:7px;background:var(--navy);color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer;font-weight:600">Use This Template</button>
+    </div>`).join('')}
+  </div>`;
+}
+
+function crmOeRenderLog(){
+  const el = document.getElementById('oe-view-log');
+  if(!el) return;
+  const entries = [...CRM_OE.log].reverse().slice(0,100);
+  if(!entries.length){ el.innerHTML='<div style="text-align:center;padding:30px;color:var(--muted)">No activity yet</div>'; return; }
+  el.innerHTML = `<table style="width:100%;border-collapse:collapse;font-size:12px">
+    <thead><tr style="border-bottom:2px solid var(--border)">
+      <th style="text-align:left;padding:8px;color:var(--muted);font-weight:600">Time</th>
+      <th style="text-align:left;padding:8px;color:var(--muted);font-weight:600">Prospect</th>
+      <th style="text-align:left;padding:8px;color:var(--muted);font-weight:600">Campaign</th>
+      <th style="text-align:left;padding:8px;color:var(--muted);font-weight:600">Subject</th>
+      <th style="text-align:left;padding:8px;color:var(--muted);font-weight:600">Status</th>
+    </tr></thead>
+    <tbody>${entries.map(e=>`<tr style="border-bottom:1px solid var(--border)">
+      <td style="padding:7px 8px;color:var(--muted);white-space:nowrap">${new Date(e.timestamp).toLocaleDateString('en-US',{month:'short',day:'numeric'})}</td>
+      <td style="padding:7px 8px;font-weight:500">${esc(e.prospectName||'—')}</td>
+      <td style="padding:7px 8px;color:var(--muted)">${esc(e.campaignName||'—')}</td>
+      <td style="padding:7px 8px">${esc((e.subject||'').substring(0,45))}…</td>
+      <td style="padding:7px 8px"><span style="padding:2px 8px;border-radius:10px;background:${e.type==='sent'?'#eff6ff':e.type==='replied'?'#faf5ff':'#f0fdf4'};color:${e.type==='sent'?'#1d4ed8':e.type==='replied'?'#7e22ce':'#15803d'};font-size:10px;font-weight:600">${e.type}</span></td>
+    </tr>`).join('')}</tbody>
+  </table>`;
+}
+
+function crmOeRenderSetup(){
+  const s = CRM_OE.settings;
+  const el = document.getElementById('oe-view-setup');
+  if(!el) return;
+  el.innerHTML = `<div style="max-width:480px">
+    <div style="font-size:13px;font-weight:700;margin-bottom:4px">EmailJS Configuration</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:16px">Connect your EmailJS account to enable automated email sending. <a href="https://www.emailjs.com" target="_blank" style="color:var(--blue)">Get free account →</a></div>
+    <div style="display:grid;gap:10px">
+      ${[['Service ID','oe-ejsvc',s.ejsvc||'','e.g. service_abc123'],['Template ID','oe-ejtpl',s.ejtpl||'','e.g. template_xyz'],['Public Key','oe-ejkey',s.ejkey||'','Your EmailJS public key'],['Your Name','oe-fromname',s.fromname||'','e.g. Mike Johnson'],['Reply-To Email','oe-fromemail',s.fromemail||'','your@email.com']].map(([l,id,v,ph])=>`<div>
+        <label style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px">${l}</label>
+        <input id="${id}" value="${esc(v)}" placeholder="${ph}" style="width:100%;box-sizing:border-box;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px">
+      </div>`).join('')}
+    </div>
+    <button onclick="crmOeSaveSettings()" style="margin-top:14px;padding:8px 24px;background:var(--navy);color:#fff;border:none;border-radius:6px;font-size:13px;cursor:pointer;font-weight:600">Save Settings</button>
+    <div id="oe-setup-saved" style="display:none;margin-top:8px;font-size:12px;color:var(--green)">✅ Settings saved!</div>
+    <div style="margin-top:20px;padding:12px;background:var(--surface2,#f1f5f9);border-radius:8px">
+      <div style="font-size:12px;font-weight:600;margin-bottom:6px">⚡ Auto-Send Engine</div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:8px">Runs when you visit the Campaigns page. Checks all active campaigns and sends any emails that are due.</div>
+      <button onclick="crmOeRunAutomation()" style="padding:6px 14px;background:#16a34a;color:#fff;border:none;border-radius:5px;font-size:12px;cursor:pointer">▶ Run Now</button>
+      <div id="oe-auto-log" style="margin-top:8px;font-size:11px;color:var(--muted);font-family:var(--ff-m);max-height:120px;overflow-y:auto;background:#fff;border:1px solid var(--border);border-radius:5px;padding:8px"></div>
+    </div>
+  </div>`;
+}
+
+function crmOeOpenNew(tplId=''){
+  const modal = document.getElementById('oe-modal-wrap');
+  const inner = document.getElementById('oe-modal-inner');
+  if(!modal||!inner) return;
+  const leads = crmAllLeads.filter(l => l.email).slice(0,20);
+  inner.innerHTML = `
+    <div style="font-family:var(--ff-h);font-size:1rem;font-weight:800;color:var(--navy);margin-bottom:4px">🚀 New Campaign</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:16px">Set up an automated email sequence for carrier outreach</div>
+    <div style="display:grid;gap:10px;margin-bottom:12px">
+      <div>
+        <label style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;display:block;margin-bottom:4px">Campaign Name</label>
+        <input id="oe-nc-name" placeholder="e.g. May Cold Outreach" style="width:100%;box-sizing:border-box;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px">
+      </div>
+      <div>
+        <label style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;display:block;margin-bottom:4px">Template</label>
+        <select id="oe-nc-tpl" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px">
+          ${CRM_OE_TEMPLATES.map(t=>`<option value="${t.id}" ${t.id===tplId?'selected':''}>${t.name} (${t.touches} touches)</option>`).join('')}
+        </select>
+      </div>
+      <div>
+        <label style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;display:block;margin-bottom:4px">Prospects — one per line: Name, email, company</label>
+        <textarea id="oe-nc-prospects" rows="6" placeholder="John Smith, john@trucking.com, Smith Trucking&#10;Maria Garcia, maria@mg-freight.com, MG Freight" style="width:100%;box-sizing:border-box;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;font-family:var(--ff-m);resize:vertical"></textarea>
+        ${leads.length?`<div style="margin-top:6px;font-size:11px;color:var(--muted)">Quick-add from CRM leads with email: <span style="color:var(--blue);cursor:pointer" onclick="crmOeImportLeads()">Import ${leads.length} leads with email</span></div>`:''}
+      </div>
+    </div>
+    <div style="display:flex;justify-content:flex-end;gap:8px;padding-top:12px;border-top:1px solid var(--border)">
+      <button onclick="crmOeCloseModal()" style="padding:7px 16px;border:1px solid var(--border);border-radius:6px;font-size:13px;cursor:pointer;background:transparent">Cancel</button>
+      <button onclick="crmOeCreate()" style="padding:7px 18px;background:var(--navy);color:#fff;border:none;border-radius:6px;font-size:13px;cursor:pointer;font-weight:600">🚀 Launch Campaign</button>
+    </div>`;
+  modal.style.display = 'flex';
+}
+
+function crmOeImportLeads(){
+  const leads = crmAllLeads.filter(l => l.email).slice(0,20);
+  const box = document.getElementById('oe-nc-prospects');
+  if(!box) return;
+  box.value = leads.map(l => `${_crmName(l)}, ${l.email}, ${_crmName(l)}`).join('\n');
+}
+
+function crmOeCloseModal(){
+  const modal = document.getElementById('oe-modal-wrap');
+  if(modal) modal.style.display = 'none';
+}
+
+function crmOeCreate(){
+  const name = document.getElementById('oe-nc-name')?.value.trim();
+  const tplId = document.getElementById('oe-nc-tpl')?.value;
+  const raw = document.getElementById('oe-nc-prospects')?.value.trim();
+  if(!name){ toast('Enter a campaign name','error'); return; }
+  if(!raw){ toast('Add at least one prospect','error'); return; }
+  const prospects = raw.split('\n').filter(l=>l.trim()).map(line => {
+    const parts = line.split(',').map(p=>p.trim());
+    const fullName = parts[0]||'Contact';
+    return { id:'p-'+Date.now()+Math.random(), name:fullName, firstName:fullName.split(' ')[0], email:parts[1]||'', company:parts[2]||fullName, startDate:new Date().toISOString().split('T')[0], currentStep:0, status:'active' };
+  });
+  const camp = { id:'c-'+Date.now(), name, templateId:tplId, status:'active', startDate:new Date().toISOString().split('T')[0], prospects, created:new Date().toISOString() };
+  CRM_OE.campaigns.unshift(camp);
+  crmOeSave();
+  crmOeCloseModal();
+  crmOeRefresh();
+  crmOeRunAutomation();
+  toast(`Campaign "${name}" launched with ${prospects.length} prospect${prospects.length!==1?'s':''}`);
+}
+
+function crmOeToggle(id){
+  const camp = CRM_OE.campaigns.find(c=>c.id===id);
+  if(!camp) return;
+  camp.status = camp.status==='active'?'paused':'active';
+  crmOeSave(); crmOeRefresh();
+}
+
+function crmOeDelete(id){
+  if(!confirm('Delete this campaign?')) return;
+  CRM_OE.campaigns = CRM_OE.campaigns.filter(c=>c.id!==id);
+  CRM_OE.log = CRM_OE.log.filter(l=>l.campaignId!==id);
+  crmOeSave(); crmOeRefresh();
+}
+
+function crmOeViewCamp(id){
+  const camp = CRM_OE.campaigns.find(c=>c.id===id);
+  const modal = document.getElementById('oe-modal-wrap');
+  const inner = document.getElementById('oe-modal-inner');
+  if(!camp||!modal||!inner) return;
+  const tpl = CRM_OE_TEMPLATES.find(t=>t.id===camp.templateId);
+  inner.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:16px">
+      <div><div style="font-family:var(--ff-h);font-size:1rem;font-weight:800;color:var(--navy)">${esc(camp.name)}</div>
+      <div style="font-size:11px;color:var(--muted)">${tpl?tpl.name:'—'} · ${camp.status}</div></div>
+      <button onclick="crmOeCloseModal()" style="padding:4px 10px;border:1px solid var(--border);border-radius:5px;cursor:pointer;font-size:12px">✕</button>
+    </div>
+    <div style="font-size:12px;font-weight:600;margin-bottom:8px">👥 Prospects (${(camp.prospects||[]).length})</div>
+    ${(camp.prospects||[]).map(p => {
+      const sent = CRM_OE.log.filter(l=>l.campaignId===camp.id&&l.prospectId===p.id&&l.type==='sent').length;
+      const steps = tpl?tpl.steps.length:0;
+      return `<div style="display:flex;align-items:center;justify-content:space-between;padding:8px;border:1px solid var(--border);border-radius:6px;margin-bottom:6px">
+        <div>
+          <div style="font-size:12px;font-weight:600">${esc(p.name)}</div>
+          <div style="font-size:11px;color:var(--muted)">${p.email||'no email'} · Step ${sent}/${steps}</div>
+        </div>
+        <div style="display:flex;gap:6px">
+          <span style="padding:2px 8px;border-radius:10px;font-size:10px;background:${p.status==='active'?'#d1fae5':'#fef3c7'};color:${p.status==='active'?'#047857':'#92400e'}">${p.status}</span>
+          <button onclick="crmOeMarkReplied('${camp.id}','${p.id}')" style="padding:3px 8px;font-size:10px;border:1px solid var(--border);border-radius:4px;cursor:pointer">✓ Replied</button>
+        </div>
+      </div>`;
+    }).join('')}`;
+  modal.style.display = 'flex';
+}
+
+function crmOeMarkReplied(campId, prospectId){
+  const camp = CRM_OE.campaigns.find(c=>c.id===campId);
+  if(!camp) return;
+  const p = (camp.prospects||[]).find(p=>p.id===prospectId);
+  if(p) p.status = 'replied';
+  CRM_OE.log.push({ id:'l-'+Date.now(), campaignId:campId, prospectId, type:'replied', timestamp:new Date().toISOString(), prospectName:p?.name, campaignName:camp.name });
+  crmOeSave();
+  crmOeViewCamp(campId);
+  toast('Marked as replied!');
+}
+
+function crmOeSaveSettings(){
+  CRM_OE.settings = {
+    ejsvc:     document.getElementById('oe-ejsvc')?.value.trim()||'',
+    ejtpl:     document.getElementById('oe-ejtpl')?.value.trim()||'',
+    ejkey:     document.getElementById('oe-ejkey')?.value.trim()||'',
+    fromname:  document.getElementById('oe-fromname')?.value.trim()||'',
+    fromemail: document.getElementById('oe-fromemail')?.value.trim()||'',
+  };
+  crmOeSave();
+  const saved = document.getElementById('oe-setup-saved');
+  if(saved){ saved.style.display='block'; setTimeout(()=>saved.style.display='none',2000); }
+}
+
+function crmOeGetQueue(){
+  const today = new Date();
+  const queue = [];
+  CRM_OE.campaigns.filter(c=>c.status==='active').forEach(camp=>{
+    const tpl = CRM_OE_TEMPLATES.find(t=>t.id===camp.templateId);
+    if(!tpl) return;
+    (camp.prospects||[]).filter(p=>p.status==='active').forEach(prospect=>{
+      const sent = CRM_OE.log.filter(l=>l.campaignId===camp.id&&l.prospectId===prospect.id&&l.type==='sent').length;
+      const nextIdx = sent;
+      if(nextIdx >= tpl.steps.length) return;
+      const step = tpl.steps[nextIdx];
+      const start = new Date(prospect.startDate||camp.startDate||today);
+      const sendDate = new Date(start);
+      sendDate.setDate(sendDate.getDate()+step.day);
+      if(sendDate <= today) queue.push({campaign:camp, prospect, step, stepIndex:nextIdx, sendDate});
+    });
+  });
+  return queue;
+}
+
+async function crmOeSendEmail(item){
+  const s = CRM_OE.settings;
+  if(!s.ejsvc||!s.ejtpl||!s.ejkey) return false;
+  const name = s.fromname||'3 Lakes Logistics';
+  const fill = str => str.replace(/\{\{first_name\}\}/g, item.prospect.firstName||item.prospect.name.split(' ')[0])
+    .replace(/\{\{company\}\}/g, item.prospect.company||item.prospect.name)
+    .replace(/\{\{your_name\}\}/g, name);
+  try {
+    if(typeof emailjs==='undefined'){
+      await new Promise((res,rej)=>{
+        const s=document.createElement('script');
+        s.src='https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js';
+        s.onload=res; s.onerror=rej;
+        document.head.appendChild(s);
+      });
+    }
+    emailjs.init(s.ejkey);
+    await emailjs.send(s.ejsvc, s.ejtpl, {
+      to_email: item.prospect.email,
+      subject: fill(item.step.subject),
+      message: fill(item.step.body),
+      from_name: name,
+      reply_to: s.fromemail||'',
+    });
+    return true;
+  } catch(e){ console.warn('EmailJS error:',e); return false; }
+}
+
+function crmOeRunAutomation(){
+  const queue = crmOeGetQueue();
+  const logEl = document.getElementById('oe-auto-log');
+  const lines = [`[${new Date().toLocaleTimeString()}] Checking queue…`];
+  if(!queue.length){
+    lines.push('✅ No emails due right now');
+    if(logEl) logEl.innerHTML = lines.join('<br>');
+    return;
+  }
+  lines.push(`📬 ${queue.length} email${queue.length!==1?'s':''} due`);
+  queue.forEach(item => {
+    const s = CRM_OE.settings;
+    lines.push(`→ ${item.prospect.name} (${item.prospect.email||'no email'}) Step ${item.stepIndex+1}: "${item.step.subject.substring(0,40)}…"`);
+    if(item.prospect.email && s.ejsvc) {
+      crmOeSendEmail(item).then(ok => {
+        lines.push(ok ? `✅ Sent to ${item.prospect.email}` : `⚠ Send failed — check EmailJS settings`);
+        if(logEl) logEl.innerHTML = lines.join('<br>');
+      });
+    } else {
+      lines.push(`⏸ Queued (${!item.prospect.email?'no email':'EmailJS not configured'})`);
+    }
+    CRM_OE.log.push({ id:'l-'+Date.now()+Math.random(), campaignId:item.campaign.id, prospectId:item.prospect.id, stepIndex:item.stepIndex, type:'sent', timestamp:new Date().toISOString(), subject:item.step.subject, email:item.prospect.email, prospectName:item.prospect.name, campaignName:item.campaign.name, leadId:item.prospect.leadId||'' });
+  });
+  if(logEl) logEl.innerHTML = lines.join('<br>');
+  crmOeSave();
+  crmOeRefresh();
+}
+
 // Hook nav to load CRM when page is selected
 if (typeof nav === 'function') {
   const origNav = nav.bind(window);
@@ -6124,8 +6709,8 @@ if (typeof nav === 'function') {
         const searchInput = document.getElementById('crm-search');
         if (stageFilter && !stageFilter._crmListener) {
           stageFilter._crmListener = true;
-          stageFilter.addEventListener('change', renderCrmLeadsList);
-          searchInput.addEventListener('input', renderCrmLeadsList);
+          stageFilter.addEventListener('change', renderCrmCurrentView);
+          searchInput.addEventListener('input', renderCrmCurrentView);
         }
       }, 100);
     }
