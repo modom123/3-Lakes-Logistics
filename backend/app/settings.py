@@ -77,12 +77,16 @@ class Settings(BaseSettings):
     adobe_account_id: str = ""
     adobe_api_endpoint: str = "https://api.na1.adobesign.com"
 
-    # Social media — Facebook, Instagram, LinkedIn
+    # Social media — Facebook, Instagram, LinkedIn, TikTok, YouTube
     facebook_page_id: str = ""
     facebook_access_token: str = ""
     instagram_account_id: str = ""
     linkedin_access_token: str = ""
     linkedin_organization_id: str = ""
+    tiktok_access_token: str = ""
+    tiktok_open_id: str = ""
+    tiktok_image_url: str = ""   # public URL of a branded image to post (e.g. https://3lakeslogistics.com/social-card.png)
+    youtube_access_token: str = ""  # OAuth2 token with youtube scope
 
     render_api_key: str = ""
 
