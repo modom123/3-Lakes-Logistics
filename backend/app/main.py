@@ -157,24 +157,24 @@ def _start_scheduler(app: FastAPI) -> None:
             id="sofia_daily",
             replace_existing=True,
         )
-        # 09:00 — Vance: outbound calls to high-score leads (score >= 8) — 5am ET
+        # 13:00 — Vance: outbound calls to high-score leads (score >= 8) — 9am ET
         scheduler.add_job(
             fire_vance_batch,
-            CronTrigger(hour=9, minute=0),
+            CronTrigger(hour=13, minute=0),
             id="vance_batch_daily",
             replace_existing=True,
         )
-        # 13:00 — SMS campaign: Tier B leads (score 4-7) — 9am ET
+        # 14:00 — SMS campaign: Tier B leads (score 4-7) — 10am ET
         scheduler.add_job(
             fire_sms_campaign,
-            CronTrigger(hour=13, minute=0),
+            CronTrigger(hour=14, minute=0),
             id="sms_outreach_daily",
             replace_existing=True,
         )
-        # 13:30 — Email campaign: cold outreach to leads with email — 9:30am ET
+        # 14:30 — Email campaign: cold outreach to leads with email — 10:30am ET
         scheduler.add_job(
             fire_email_campaign,
-            CronTrigger(hour=13, minute=30),
+            CronTrigger(hour=14, minute=30),
             id="email_outreach_daily",
             replace_existing=True,
         )
