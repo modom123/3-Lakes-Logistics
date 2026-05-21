@@ -93,7 +93,6 @@ def start_outbound_call(
             "task": full_task,
             "model": "enhanced",   # Valid Bland models: base | turbo | enhanced
             "language": "en",
-            "voice": "ryan",       # Valid Bland male voice ID
             "max_duration": 10,    # Cap at 10 minutes per call
             "metadata": {
                 "lead_id": lead_id,
@@ -103,6 +102,9 @@ def start_outbound_call(
                 "dot_number": dot_number,
             },
         }
+
+        if s.bland_ai_voice:
+            payload["voice"] = s.bland_ai_voice  # Set BLAND_AI_VOICE in env to use a specific voice
 
         if webhook_url:
             payload["webhook"] = webhook_url

@@ -35,6 +35,7 @@ class Settings(BaseSettings):
     bland_ai_api_key: str = ""
     bland_ai_webhook_secret: str = ""
     bland_ai_org_id: str = ""
+    bland_ai_voice: str = ""  # Optional voice ID from your Bland dashboard; leave empty for default
 
     elevenlabs_api_key: str = ""
 
