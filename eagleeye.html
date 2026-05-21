@@ -1366,6 +1366,25 @@ td.td-name{font-weight:600;color:var(--navy);}
         </div>
       </div>
 
+      <!-- FMCSA PROSPECT SEARCH -->
+      <div class="card" style="margin-bottom:16px;border-left:4px solid var(--blue)">
+        <div class="card-hd">
+          <div class="card-title">🔭 FMCSA Prospect Search</div>
+          <span class="card-chip">Live Census Data</span>
+        </div>
+        <p class="t-sm t-muted" style="margin-bottom:14px">Search active motor carriers from the FMCSA open dataset. Filter by state, city, and fleet size — one-click to add as a lead.</p>
+        <div class="form-row" style="margin-bottom:10px">
+          <div class="fg"><label class="fl">State</label><input class="fi" id="fmcsa-ps-state" placeholder="e.g. IL" maxlength="2" style="text-transform:uppercase"></div>
+          <div class="fg"><label class="fl">City</label><input class="fi" id="fmcsa-ps-city" placeholder="e.g. Chicago"></div>
+          <div class="fg"><label class="fl">Min Trucks</label><input class="fi" id="fmcsa-ps-min" type="number" value="1" min="1" max="50"></div>
+          <div class="fg"><label class="fl">Max Trucks</label><input class="fi" id="fmcsa-ps-max" type="number" value="20" min="1" max="200"></div>
+          <div class="fg" style="display:flex;align-items:flex-end">
+            <button class="btn-navy" onclick="fmcsaProspectSearch()" id="fmcsa-ps-btn">🔍 Search</button>
+          </div>
+        </div>
+        <div id="fmcsa-ps-results"></div>
+      </div>
+
       <div class="g4" style="margin-bottom:16px">
         <div class="mc"><div class="mc-label">New</div><div class="mc-val blue" id="lp-new">—</div></div>
         <div class="mc"><div class="mc-label">Contacted</div><div class="mc-val orange" id="lp-contacted">—</div></div>
@@ -4344,6 +4363,77 @@ async function loadFoundersInventory(){
     const el=document.getElementById('fd-carriers-list');
     if(el)el.innerHTML='<div class="empty-state">Could not load Founders carriers.</div>';
   }
+}
+
+async function fmcsaProspectSearch(){
+  const btn = document.getElementById('fmcsa-ps-btn');
+  const out = document.getElementById('fmcsa-ps-results');
+  const state = (document.getElementById('fmcsa-ps-state')?.value||'').trim().toUpperCase();
+  const city  = (document.getElementById('fmcsa-ps-city')?.value||'').trim();
+  const min   = document.getElementById('fmcsa-ps-min')?.value||'1';
+  const max   = document.getElementById('fmcsa-ps-max')?.value||'20';
+  if(!state){ toast('Enter a state code (e.g. IL)','error'); return; }
+  btn.disabled=true; btn.textContent='Searching…';
+  out.innerHTML='<div class="loading"><div class="spin"></div>Querying FMCSA census…</div>';
+  try {
+    const params = new URLSearchParams({state, min_trucks:min, max_trucks:max, limit:'50'});
+    if(city) params.set('city', city);
+    const r = await apiFetch('/api/fmcsa/search?'+params.toString());
+    const d = await r.json();
+    if(!r.ok){ out.innerHTML=`<div style="color:var(--red);padding:8px">Error: ${d.detail||'FMCSA search failed'}</div>`; return; }
+    const results = d.results||[];
+    if(!results.length){ out.innerHTML='<div style="color:var(--muted);padding:12px;text-align:center">No carriers found for those filters.</div>'; return; }
+
+    const lightColor = l => l==='green'?'#16a34a':l==='red'?'#ef4444':'#d97706';
+    const lightLabel = l => l==='green'?'✅ Clear':l==='red'?'🔴 Risk':'⚠️ Review';
+
+    out.innerHTML = `<div style="font-size:12px;color:var(--muted);margin-bottom:8px">${results.length} carriers found · <span style="color:var(--green)">${results.filter(r=>!r.already_lead).length} new</span> · ${results.filter(r=>r.already_lead).length} already in CRM</div>
+    <div style="overflow-x:auto">
+    <table class="tbl" style="font-size:12px">
+      <thead><tr>
+        <th>Safety</th><th>Company</th><th>DOT</th><th>MC</th><th>City/State</th><th>Phone</th><th>Trucks</th><th>Rating</th><th></th>
+      </tr></thead>
+      <tbody>${results.map(c=>`<tr style="${c.already_lead?'opacity:.5':''}">
+        <td><span style="color:${lightColor(c.safety_light)};font-weight:700">${lightLabel(c.safety_light)}</span></td>
+        <td style="font-weight:600;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(c.legal_name||c.dba_name||'—')}</td>
+        <td style="font-family:var(--ff-m);color:var(--muted)">${c.dot_number||'—'}</td>
+        <td style="font-family:var(--ff-m);color:var(--muted)">${c.mc_number||'—'}</td>
+        <td>${esc(c.city||'—')}, ${c.state||''}</td>
+        <td style="white-space:nowrap">${c.phone?`<a href="tel:${c.phone}" style="color:var(--blue)">${c.phone}</a>`:'—'}</td>
+        <td style="text-align:center">${c.fleet_size||'—'}</td>
+        <td><span style="padding:2px 8px;border-radius:10px;font-size:10px;background:${c.safety_rating==='Satisfactory'?'#d1fae5':c.safety_rating==='Unsatisfactory'?'#fee2e2':c.safety_rating==='Conditional'?'#fef3c7':'#f1f5f9'};color:${c.safety_rating==='Satisfactory'?'#047857':c.safety_rating==='Unsatisfactory'?'#dc2626':c.safety_rating==='Conditional'?'#92400e':'#64748b'}">${c.safety_rating||'Not Rated'}</span></td>
+        <td>${c.already_lead
+          ? '<span style="font-size:11px;color:var(--muted)">In CRM</span>'
+          : `<button onclick="fmcsaImportLead(${JSON.stringify(c).replace(/"/g,'&quot;')},this)" style="padding:4px 10px;font-size:11px;background:var(--navy);color:#fff;border:none;border-radius:4px;cursor:pointer;white-space:nowrap">+ Add Lead</button>`
+        }</td>
+      </tr>`).join('')}
+      </tbody>
+    </table></div>`;
+  } catch(e){
+    out.innerHTML=`<div style="color:var(--red);padding:8px">Error: ${e.message}</div>`;
+  } finally {
+    btn.disabled=false; btn.textContent='🔍 Search';
+  }
+}
+
+async function fmcsaImportLead(carrier, btn){
+  btn.disabled=true; btn.textContent='Adding…';
+  try {
+    const r = await apiFetch('/api/fmcsa/import-lead','POST', carrier);
+    const d = await r.json();
+    if(d.ok){
+      btn.textContent='✅ Added';
+      btn.style.background='#16a34a';
+      toast(`${carrier.legal_name||'Carrier'} added as lead`);
+      loadLeadsPipeline();
+    } else if(d.reason==='already_exists'){
+      btn.textContent='Already in CRM';
+      btn.disabled=true;
+    } else {
+      btn.disabled=false; btn.textContent='+ Add Lead';
+      toast('Import failed','error');
+    }
+  } catch(e){ btn.disabled=false; btn.textContent='+ Add Lead'; toast(e.message,'error'); }
 }
 
 async function loadLeadsPipeline(){

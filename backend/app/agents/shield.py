@@ -13,6 +13,7 @@ from ..supabase_client import get_supabase
 SafetyLight = Literal["green", "yellow", "red"]
 
 FMCSA_SAFER_BASE = "https://mobile.fmcsa.dot.gov/qc/services/carriers"
+FMCSA_CENSUS_BASE = "https://data.transportation.gov/resource/az4n-8mr2.json"
 
 _CDL_WARN_DAYS = 30
 _CDL_URGENT_DAYS = 7
@@ -35,22 +36,59 @@ def fetch_safer(dot: str | None) -> dict[str, Any] | None:
         return {"error": str(e), "dot": dot}
 
 
-def score(safer: dict[str, Any] | None, insurance_expiry: str | None = None) -> SafetyLight:
-    """Compute traffic-light from SAFER data, insurance, and CSA BASIC scores.
+def fetch_census(dot: str | None) -> dict[str, Any] | None:
+    """Pull carrier info from FMCSA Motor Carrier Census open dataset."""
+    if not dot:
+        return None
+    try:
+        r = httpx.get(
+            FMCSA_CENSUS_BASE,
+            params={
+                "$where": f"dot_number='{dot.strip()}'",
+                "$limit": 1,
+                "$select": "dot_number,legal_name,dba_name,phy_state,phy_city,telephone,mc_mx_ff_number,total_power_units,safety_rating,safety_rating_date,oos_date,carrier_operation,entity_type",
+            },
+            timeout=12,
+        )
+        r.raise_for_status()
+        data = r.json()
+        return data[0] if data else None
+    except Exception as e:  # noqa: BLE001
+        return {"error": str(e), "dot": dot}
 
-    green:  allowedToOperate=Y, no OOS, insurance current
-    yellow: insurance within 30 days of expiry or borderline BASIC scores
-    red:    allowedToOperate=N, active OOS order, or expired insurance
+
+def score(
+    safer: dict[str, Any] | None,
+    insurance_expiry: str | None = None,
+    census: dict[str, Any] | None = None,
+) -> SafetyLight:
+    """Compute traffic-light from SAFER data, FMCSA census, and insurance.
+
+    green:  allowedToOperate=Y, no OOS, insurance current, Satisfactory/None rating
+    yellow: insurance within 30 days of expiry, Conditional rating, or data missing
+    red:    allowedToOperate=N, active OOS, expired insurance, Unsatisfactory rating
     """
-    if not safer or safer.get("error"):
-        return "yellow"
-    content = safer.get("content", {}) if isinstance(safer, dict) else {}
-    carrier = content.get("carrier", {}) if isinstance(content, dict) else {}
-    if carrier.get("allowedToOperate") == "N":
-        return "red"
-    if carrier.get("oosDate"):
-        return "red"
+    # ── FMCSA Census check (open data — no API key required) ──
+    if census and not census.get("error"):
+        census_rating = (census.get("safety_rating") or "None").strip()
+        if census_rating == "Unsatisfactory":
+            return "red"
+        if census.get("oos_date"):
+            return "red"
+        if census_rating == "Conditional":
+            # Don't return red yet — check insurance too, settle on yellow
+            pass
 
+    # ── SAFER/webKey check ──
+    if safer and not safer.get("error") and not safer.get("stub"):
+        content = safer.get("content", {}) if isinstance(safer, dict) else {}
+        carrier = content.get("carrier", {}) if isinstance(content, dict) else {}
+        if carrier.get("allowedToOperate") == "N":
+            return "red"
+        if carrier.get("oosDate"):
+            return "red"
+
+    # ── Insurance expiry check ──
     if insurance_expiry:
         try:
             expiry = date.fromisoformat(insurance_expiry)
@@ -63,6 +101,11 @@ def score(safer: dict[str, Any] | None, insurance_expiry: str | None = None) -> 
                 return "yellow"
         except ValueError:
             pass
+
+    # Conditional rating from census → yellow (after insurance passed)
+    if census and not census.get("error"):
+        if (census.get("safety_rating") or "").strip() == "Conditional":
+            return "yellow"
 
     return "green"
 
@@ -133,13 +176,16 @@ def run_cdl_sweep() -> dict:
 
 
 def enqueue_safety_check(carrier_id: str, dot: str | None, mc: str | None) -> None:
-    """Called from intake — runs SAFER + CDL check on new carrier."""
+    """Called from intake — runs SAFER + Census + CDL check on new carrier."""
     log_agent("shield", "enqueue", carrier_id=carrier_id, payload={"dot": dot, "mc": mc})
+    sb = get_supabase()
+
+    # Pull both data sources in parallel-ish
     safer = fetch_safer(dot)
+    census = fetch_census(dot)
 
     insurance = (
-        get_supabase()
-        .table("insurance_compliance")
+        sb.table("insurance_compliance")
         .select("policy_expiry")
         .eq("carrier_id", carrier_id)
         .single()
@@ -147,15 +193,37 @@ def enqueue_safety_check(carrier_id: str, dot: str | None, mc: str | None) -> No
         .data
     )
     expiry = insurance.get("policy_expiry") if insurance else None
-    light = score(safer, expiry)
+    light = score(safer, expiry, census)
+
+    # Enrich active_carriers with census data if available
+    if census and not census.get("error") and not census.get("stub"):
+        enrich: dict[str, Any] = {}
+        if census.get("total_power_units"):
+            try:
+                enrich["fleet_size"] = int(str(census["total_power_units"]).replace(",", ""))
+            except ValueError:
+                pass
+        if census.get("telephone") and not enrich.get("phone"):
+            enrich["phone"] = census["telephone"]
+        if enrich:
+            try:
+                sb.table("active_carriers").update(enrich).eq("id", carrier_id).execute()
+            except Exception:  # noqa: BLE001
+                pass
 
     try:
-        get_supabase().table("insurance_compliance").update(
-            {"safety_light": light, "last_checked_at": "now()"}
+        sb.table("insurance_compliance").update(
+            {
+                "safety_light": light,
+                "last_checked_at": "now()",
+                "census_safety_rating": (census or {}).get("safety_rating") or None,
+            }
         ).eq("carrier_id", carrier_id).execute()
     except Exception as e:  # noqa: BLE001
         log_agent("shield", "update_light", carrier_id=carrier_id, error=str(e))
 
+    log_agent("shield", "check_complete", carrier_id=carrier_id,
+              result=light, payload={"census_rating": (census or {}).get("safety_rating")})
     check_cdl_expiry(carrier_id)
 
 
