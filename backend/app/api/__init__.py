@@ -33,6 +33,7 @@ from ..email_ingest    import router as email_ingest_router
 from ..execution_engine import execution_router
 from ..atomic_ledger   import atomic_ledger_router
 from ..compliance      import compliance_router
+from ..studio          import studio_router
 
 __all__ = [
     "intake_router",
@@ -71,4 +72,5 @@ __all__ = [
     "carrier_brain_router",
     "revenue_brain_router",
     "mailboxes_router",
+    "studio_router",
 ]

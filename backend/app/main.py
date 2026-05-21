@@ -7,10 +7,12 @@ Run locally:
 """
 from __future__ import annotations
 
+import os
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from .api import (
     agents_router,
@@ -46,6 +48,7 @@ from .api import (
     intake_router,
     leads_router,
     prospecting_router,
+    studio_router,
     telemetry_router,
     triggers_router,
     webhooks_router,
@@ -264,7 +267,15 @@ def create_app() -> FastAPI:
     app.include_router(adobe_webhooks_router,  prefix="/api",              tags=["adobe"])
     app.include_router(adobe_intake_router,    prefix="/api",              tags=["adobe"])
     app.include_router(mailboxes_router,       prefix="/api",              tags=["mailboxes"])
+    app.include_router(studio_router,          prefix="/api",              tags=["studio"])
     app.include_router(health_router,                                     tags=["health"])
+
+    # Marketing assets served as static files at /marketing/*
+    _marketing_dir = os.path.normpath(
+        os.path.join(os.path.dirname(__file__), "..", "..", "marketing")
+    )
+    if os.path.isdir(_marketing_dir):
+        app.mount("/marketing", StaticFiles(directory=_marketing_dir), name="marketing")
 
     log.info("3 Lakes Logistics API ready (env=%s)", s.env)
     return app

@@ -8,6 +8,7 @@ import httpx
 
 from ..logging_service import log_agent
 from ..settings import get_settings
+from ..studio.registry import CHANNEL_COPY
 
 _THEMES = ["open_loads", "founder_program", "industry_tips", "open_loads", "founder_program", "industry_tips", "open_loads"]
 
@@ -62,7 +63,9 @@ def _generate_post(theme: str, platform: str) -> str:
         return r.json()["content"][0]["text"].strip()
     except Exception as exc:  # noqa: BLE001
         log_agent("social", "generate_post_failed", error=str(exc))
-        return f"3 Lakes Logistics — {theme.replace('_', ' ')}. Call us today."
+        # Fall back to brand-accurate copy from studio registry
+        social_copy = CHANNEL_COPY.get("social", {})
+        return social_copy.get(theme, f"3 Lakes Logistics — {theme.replace('_', ' ')}.")
 
 
 def _post_facebook(text: str) -> dict[str, Any]:

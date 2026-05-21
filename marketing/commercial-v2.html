@@ -1,0 +1,1135 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>3 Lakes Logistics — Commercial v2 (custom track)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script type="text/babel" src="animations.jsx"></script>
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+<script src="audio-engine.js"></script>
+<style>
+  html, body { margin: 0; padding: 0; height: 100%; background: #000; font-family: 'Space Grotesk', system-ui, sans-serif; overflow: hidden; }
+  #root { width: 100%; height: 100%; }
+  @keyframes ticker-scroll {
+    from { transform: translateX(0); }
+    to { transform: translateX(-50%); }
+  }
+  @keyframes pulse-glow {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(52,211,153,0.5); }
+    50% { box-shadow: 0 0 0 14px rgba(52,211,153,0); }
+  }
+  @keyframes dash-flow {
+    to { stroke-dashoffset: -50; }
+  }
+  @keyframes truck-rumble {
+    0%,100% { transform: translateY(0); }
+    50% { transform: translateY(-1.5px); }
+  }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel">
+const { Stage, Sprite, useTime, useTimeline, useSprite, Easing, interpolate, animate, clamp } = window;
+const { useTweaks, TweaksPanel, TweakSection, TweakSlider, TweakToggle, TweakRadio, TweakSelect } = window;
+
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "trackId": "_tmukfHXBvQ",
+  "musicStartOffset": 154,
+  "musicVolume": 55,
+  "voiceOn": true,
+  "voiceRateOffset": 0,
+  "voicePitchOffset": 0,
+  "sfxOn": true
+}/*EDITMODE-END*/;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// VOICEOVER SCRIPT — timed lines synced to the timeline
+// ─────────────────────────────────────────────────────────────────────────────
+// Per-line voice tuning: rate (speed), pitch (1.0 = natural), volume.
+// More natural cadence — slower for emphasis lines, slight pitch variation.
+const SCRIPT = [
+  { t: 0.7,  text: "Trucking has a problem.",                              rate: 0.92, pitch: 0.95 },
+  { t: 3.1,  text: "Thirty percent — gone to dispatchers.",                rate: 0.98, pitch: 1.00 },
+  { t: 6.1,  text: "Fourteen hours a week — burned on paperwork.",        rate: 0.98, pitch: 0.98 },
+  { t: 9.1,  text: "Four hundred dollars, left on the dock. Every month.", rate: 0.95, pitch: 0.96 },
+  { t: 12.6, text: "Until now.",                                            rate: 0.88, pitch: 1.02 },
+  { t: 14.7, text: "Meet, three Lakes Logistics.",                          rate: 0.92, pitch: 1.00 },
+  { t: 17.6, text: "A.I. dispatch.",                                        rate: 1.00, pitch: 1.05 },
+  { t: 19.6, text: "Shield compliance.",                                    rate: 1.00, pitch: 1.05 },
+  { t: 21.6, text: "Revenue recovery.",                                     rate: 1.00, pitch: 1.05 },
+  { t: 23.6, text: "Paperless office.",                                     rate: 1.00, pitch: 1.05 },
+  { t: 26.1, text: "One platform. A hundred and fifty five automations.",  rate: 0.96, pitch: 1.00 },
+  { t: 30.0, text: "Plus twenty two cents more, per mile. Zero commission.", rate: 0.98, pitch: 1.02 },
+  { t: 34.2, text: "Three hundred dollars a month — locked for life.",     rate: 0.92, pitch: 1.00 },
+  { t: 38.6, text: "First, one thousand trucks only.",                     rate: 0.92, pitch: 0.98 },
+  { t: 41.6, text: "Three Lakes Logistics. Automated American trucking.",  rate: 0.92, pitch: 1.00 },
+];
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Voiceover controller — fires speech lines as the timeline crosses thresholds.
+// Cancels on pause / scrub backwards.
+// ─────────────────────────────────────────────────────────────────────────────
+function Voiceover({ enabled, rateOffset = 0, pitchOffset = 0 }) {
+  const { time, playing } = useTimeline();
+  const firedRef = React.useRef(new Set());
+  const lastTimeRef = React.useRef(0);
+
+  // Pick the most natural-sounding English voice available
+  const voiceRef = React.useRef(null);
+  React.useEffect(() => {
+    if (!('speechSynthesis' in window)) return;
+    const pick = () => {
+      const voices = window.speechSynthesis.getVoices();
+      if (!voices.length) return;
+
+      // Score every voice; higher = better. We prefer named neural / natural
+      // voices and en-US over en-GB. Default-flag (often a phone-quality voice)
+      // is downweighted unless it's a known good one.
+      const score = (v) => {
+        const n = (v.name || '').toLowerCase();
+        let s = 0;
+        if (/(neural|natural|online|premium|enhanced|wavenet|studio)/.test(n)) s += 100;
+        if (/(guy|davis|brian|christopher|eric|tony|jason|matthew|adam)/.test(n)) s += 50;  // male announcer voices
+        if (/(aria|jenny|emma|olivia|samantha)/.test(n)) s += 35; // strong female voices
+        if (/google\s*us\s*english/.test(n)) s += 60;
+        if (/microsoft/.test(n)) s += 25;
+        if (v.lang && v.lang.startsWith('en-US')) s += 20;
+        else if (v.lang && v.lang.startsWith('en')) s += 8;
+        if (/(zira|hazel|cortana|david)/.test(n)) s -= 25; // older robotic SAPI voices
+        return s;
+      };
+
+      const sorted = [...voices].sort((a, b) => score(b) - score(a));
+      voiceRef.current = sorted[0] || voices[0];
+      // For debugging: window.__pickedVoice = voiceRef.current;
+    };
+    pick();
+    window.speechSynthesis.onvoiceschanged = pick;
+  }, []);
+
+  // Cancel speech on disable / pause / scrub backward
+  React.useEffect(() => {
+    if (!enabled) {
+      try { window.speechSynthesis.cancel(); } catch {}
+      firedRef.current.clear();
+      return;
+    }
+    if (!playing) {
+      try { window.speechSynthesis.cancel(); } catch {}
+    }
+  }, [enabled, playing]);
+
+  React.useEffect(() => {
+    // If user scrubbed back, reset fired set for lines after the new time
+    if (time < lastTimeRef.current - 0.3) {
+      const stillFired = new Set();
+      firedRef.current.forEach(idx => {
+        if (SCRIPT[idx].t < time) stillFired.add(idx);
+      });
+      firedRef.current = stillFired;
+      try { window.speechSynthesis.cancel(); } catch {}
+    }
+    lastTimeRef.current = time;
+
+    if (!enabled || !playing) return;
+    if (!('speechSynthesis' in window)) return;
+
+    SCRIPT.forEach((line, i) => {
+      if (firedRef.current.has(i)) return;
+      if (time >= line.t && time < line.t + 0.5) {
+        firedRef.current.add(i);
+        const u = new SpeechSynthesisUtterance(line.text);
+        if (voiceRef.current) u.voice = voiceRef.current;
+        u.rate = clamp((line.rate ?? 0.95) + rateOffset, 0.5, 1.6);
+        u.pitch = clamp((line.pitch ?? 1.0) + pitchOffset, 0.5, 1.6);
+        u.volume = 1.0;
+        window.speechSynthesis.speak(u);
+      }
+    });
+  }, [time, enabled, playing]);
+
+  return null;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Visual atoms
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Animated circuit grid background
+function CircuitBG({ intensity = 0.5, color = '#4FB3F2' }) {
+  const time = useTime();
+  return (
+    <svg viewBox="0 0 1920 1080" preserveAspectRatio="none"
+         style={{ position:'absolute', inset:0, width:'100%', height:'100%', opacity: intensity }}>
+      <defs>
+        <linearGradient id="bgglow" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor={color} stopOpacity="0.0"/>
+          <stop offset="0.5" stopColor={color} stopOpacity="0.6"/>
+          <stop offset="1" stopColor={color} stopOpacity="0.0"/>
+        </linearGradient>
+      </defs>
+      <g fill="none" stroke={color} strokeWidth="1.2" strokeOpacity="0.55">
+        <path d="M0,140 L380,140 L430,190 L820,190" strokeDasharray="6 6" style={{animation:'dash-flow 1.6s linear infinite'}}/>
+        <path d="M1920,260 L1480,260 L1430,310 L1080,310" strokeDasharray="6 6" style={{animation:'dash-flow 2.2s linear infinite reverse'}}/>
+        <path d="M0,420 L260,420 L310,470 L640,470" strokeDasharray="6 6" style={{animation:'dash-flow 1.9s linear infinite'}}/>
+        <path d="M1920,560 L1640,560 L1590,610 L1280,610" strokeDasharray="6 6" style={{animation:'dash-flow 2.6s linear infinite reverse'}}/>
+        <path d="M0,820 L380,820 L430,770 L780,770" strokeDasharray="6 6" style={{animation:'dash-flow 1.7s linear infinite'}}/>
+        <path d="M1920,920 L1500,920 L1450,870 L1140,870" strokeDasharray="6 6" style={{animation:'dash-flow 2.3s linear infinite reverse'}}/>
+      </g>
+      <g fill="#4FB3F2">
+        <circle cx="820" cy="190" r="4"/><circle cx="1080" cy="310" r="4"/>
+        <circle cx="640" cy="470" r="4"/><circle cx="1280" cy="610" r="4"/>
+        <circle cx="780" cy="770" r="4"/><circle cx="1140" cy="870" r="4"/>
+      </g>
+      <g fill="#34D399">
+        <circle cx="430" cy="190" r="3"/><circle cx="1430" cy="310" r="3"/>
+        <circle cx="310" cy="470" r="3"/><circle cx="1590" cy="610" r="3"/>
+      </g>
+    </svg>
+  );
+}
+
+// Cut flash between scenes
+function CutFlash({ at, duration = 0.18, color = '#fff' }) {
+  const time = useTime();
+  const d = time - at;
+  if (d < 0 || d > duration) return null;
+  const opacity = 1 - (d / duration);
+  return <div style={{ position:'absolute', inset:0, background: color, opacity, mixBlendMode:'screen', pointerEvents:'none' }}/>;
+}
+
+// Word-by-word kinetic text
+function KineticLine({ words, startDelay = 0, gap = 0.08, size = 200, weight = 700, color = '#F5F8FB',
+                       x = 'center', y = 'center', accentIdx = -1, accentColor = '#34D399' }) {
+  const sp = useSprite();
+  const t = sp.localTime;
+  return (
+    <div style={{
+      position:'absolute',
+      left: x === 'center' ? '50%' : x,
+      top:  y === 'center' ? '50%' : y,
+      transform: `translate(${x === 'center' ? '-50%' : '0'}, ${y === 'center' ? '-50%' : '0'})`,
+      display:'flex', flexWrap:'wrap', gap: size * 0.12,
+      fontFamily:"'Space Grotesk',sans-serif",
+      fontSize: size, fontWeight: weight, lineHeight: 0.9,
+      letterSpacing:'-0.04em',
+      color, textWrap:'balance',
+      maxWidth: 1700,
+    }}>
+      {words.map((w, i) => {
+        const local = clamp((t - startDelay - i * gap) / 0.32, 0, 1);
+        const e = Easing.easeOutBack(local);
+        return (
+          <span key={i} style={{
+            display:'inline-block',
+            transform: `translateY(${(1 - e) * 30}px) scale(${0.85 + 0.15 * e})`,
+            opacity: local,
+            color: i === accentIdx ? accentColor : color,
+          }}>{w}</span>
+        );
+      })}
+    </div>
+  );
+}
+
+// Big slamming number
+function SlamNumber({ value, label, sub, color = '#4FB3F2' }) {
+  const sp = useSprite();
+  const t = sp.localTime;
+  const e = Easing.easeOutBack(clamp(t / 0.45, 0, 1));
+  const scale = 0.7 + 0.3 * e;
+  const opacity = clamp(t / 0.25, 0, 1);
+  const exit = clamp((t - (sp.duration - 0.35)) / 0.35, 0, 1);
+  const exitScale = 1 + 0.1 * exit;
+  const exitOpacity = 1 - exit;
+
+  return (
+    <div style={{
+      position:'absolute', inset:0,
+      display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center',
+      opacity: opacity * exitOpacity,
+      transform: `scale(${scale * exitScale})`,
+    }}>
+      <div style={{
+        fontFamily:"'JetBrains Mono',monospace",
+        fontSize: 30, letterSpacing:'0.3em',
+        color: '#8BD0F8', textTransform:'uppercase',
+        marginBottom: 30,
+      }}>{label}</div>
+      <div style={{
+        fontFamily:"'Space Grotesk',sans-serif",
+        fontSize: 480, fontWeight: 700, lineHeight: 0.85,
+        letterSpacing:'-0.06em',
+        color: color,
+        textShadow: `0 0 80px ${color}55`,
+      }}>{value}</div>
+      {sub && <div style={{
+        fontFamily:"'Space Grotesk',sans-serif",
+        fontSize: 48, fontWeight: 500, color: '#F5F8FB',
+        marginTop: 24, letterSpacing:'-0.01em',
+        textAlign:'center', maxWidth: 1400,
+      }}>{sub}</div>}
+    </div>
+  );
+}
+
+// Ticker (high-energy scrolling band)
+function Ticker({ items, color = '#34D399', y = 940 }) {
+  const text = items.join('   ●   ');
+  return (
+    <div style={{
+      position:'absolute', left:0, right:0, top:y,
+      overflow:'hidden', whiteSpace:'nowrap',
+      borderTop:'1px solid rgba(143,200,243,0.2)',
+      borderBottom:'1px solid rgba(143,200,243,0.2)',
+      height: 64,
+      display:'flex', alignItems:'center',
+    }}>
+      <div style={{
+        fontFamily:"'JetBrains Mono',monospace",
+        fontSize: 28, letterSpacing:'0.16em', textTransform:'uppercase',
+        color, fontWeight: 500,
+        display:'inline-block',
+        animation:'ticker-scroll 16s linear infinite',
+        whiteSpace:'nowrap',
+      }}>
+        <span style={{paddingRight:64}}>{text}</span>
+        <span style={{paddingRight:64}}>{text}</span>
+      </div>
+    </div>
+  );
+}
+
+// Brand wordmark
+function Wordmark({ size = 1, dark = false }) {
+  const color = dark ? '#0B2545' : '#F5F8FB';
+  return (
+    <div style={{display:'flex', alignItems:'center', gap: 24 * size, color}}>
+      <div style={{
+        width: 80 * size, height: 80 * size,
+        borderRadius: 18 * size,
+        background:'linear-gradient(140deg, #4FB3F2 0%, #2A6BC9 100%)',
+        display:'grid', placeItems:'center',
+        fontFamily:"'Space Grotesk',sans-serif",
+        fontWeight: 700, fontSize: 44 * size, color:'#fff',
+        boxShadow:'0 8px 30px rgba(79,179,242,0.4)',
+      }}>3L</div>
+      <div style={{fontFamily:"'Space Grotesk',sans-serif", fontWeight:600, fontSize: 52 * size, letterSpacing:'-0.025em'}}>
+        3 Lakes Logistics
+      </div>
+    </div>
+  );
+}
+
+// Phone mock for feature reel
+function FeaturePhone({ kind, label }) {
+  const sp = useSprite();
+  const t = sp.localTime;
+  const enter = Easing.easeOutBack(clamp(t / 0.5, 0, 1));
+  const exit = clamp((t - (sp.duration - 0.35)) / 0.35, 0, 1);
+  const ty = (1 - enter) * 80 - exit * 40;
+  const opacity = clamp(t / 0.3, 0, 1) * (1 - exit);
+
+  const content = {
+    dispatch: <DispatchScreen/>,
+    shield: <ShieldScreen/>,
+    recovery: <RecoveryScreen/>,
+    paperless: <PaperlessScreen/>,
+  }[kind];
+
+  return (
+    <div style={{
+      position:'absolute',
+      left:'50%', top:'52%',
+      transform: `translate(-50%, calc(-50% + ${ty}px))`,
+      opacity,
+      display:'flex', flexDirection:'column', alignItems:'center', gap: 36,
+    }}>
+      <div style={{
+        width: 440, height: 880,
+        background:'#0F1B2E', borderRadius: 56, padding: 16,
+        boxShadow:'0 40px 120px rgba(79,179,242,0.35), 0 0 0 3px rgba(255,255,255,0.06) inset',
+      }}>
+        <div style={{ width:'100%', height:'100%', borderRadius: 42, background:'#F5F8FB', position:'relative', overflow:'hidden', display:'flex', flexDirection:'column' }}>
+          <div style={{ position:'absolute', top:24, left:'50%', transform:'translateX(-50%)', width:140, height:32, background:'#0F1B2E', borderRadius:18, zIndex:5 }}/>
+          <div style={{ padding:'24px 32px 0', display:'flex', justifyContent:'space-between', fontFamily:"'JetBrains Mono',monospace", fontSize:15, fontWeight:600, color:'#0A1A2F' }}>
+            <span>9:41</span><span>●●● ▲</span>
+          </div>
+          <div style={{ padding:'66px 24px 24px', flex:1, display:'flex', flexDirection:'column', gap:14, overflow:'hidden' }}>
+            {content}
+          </div>
+        </div>
+      </div>
+      <div style={{
+        fontFamily:"'Space Grotesk',sans-serif",
+        fontSize: 56, fontWeight: 700, color:'#F5F8FB',
+        letterSpacing:'-0.03em',
+      }}>{label}</div>
+    </div>
+  );
+}
+
+function DispatchScreen() {
+  return (
+    <>
+      <div style={{fontFamily:"'JetBrains Mono',monospace", fontSize:12, color:'rgba(11,37,69,0.55)', letterSpacing:'0.16em', textTransform:'uppercase'}}>AI Dispatch</div>
+      <div style={{fontSize:28, fontWeight:700, color:'#0A1A2F', letterSpacing:'-0.01em'}}>Live Load Match</div>
+      <div style={{background:'linear-gradient(140deg, #4FB3F2, #2A6BC9)', borderRadius:20, padding:'20px 22px', color:'#fff'}}>
+        <div style={{display:'flex', justifyContent:'space-between', fontFamily:"'JetBrains Mono',monospace", fontSize:11, letterSpacing:'0.14em', textTransform:'uppercase', opacity:0.85}}>
+          <span>Match #2,481</span>
+          <span style={{color:'#34D399'}}>● LIVE</span>
+        </div>
+        <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginTop:12}}>
+          <div style={{fontSize:18, fontWeight:600}}>Chicago</div>
+          <div style={{fontSize:20}}>→</div>
+          <div style={{fontSize:18, fontWeight:600}}>Atlanta</div>
+        </div>
+        <div style={{display:'flex', justifyContent:'space-between', fontSize:14, marginTop:10, opacity:0.85}}>
+          <span>Dry Van · 42k lbs</span><span style={{fontWeight:600}}>$3.12 RPM</span>
+        </div>
+      </div>
+      <div style={{background:'#fff', border:'1px solid rgba(11,37,69,0.08)', borderRadius:18, padding:'16px 20px'}}>
+        <div style={{display:'flex', justifyContent:'space-between', fontFamily:"'JetBrains Mono',monospace", fontSize:11, letterSpacing:'0.14em', textTransform:'uppercase', color:'rgba(11,37,69,0.55)'}}>
+          <span>Negotiation</span><span style={{color:'#10A877'}}>+22¢</span>
+        </div>
+        <div style={{marginTop:12, fontSize:15, color:'#0A1A2F'}}>
+          <div style={{display:'flex', justifyContent:'space-between', padding:'4px 0'}}><span style={{color:'rgba(11,37,69,0.55)'}}>Offered</span><span>$2.90</span></div>
+          <div style={{display:'flex', justifyContent:'space-between', padding:'4px 0'}}><span style={{color:'rgba(11,37,69,0.55)'}}>Booked</span><span style={{fontWeight:700}}>$3.12</span></div>
+        </div>
+      </div>
+      <div style={{background:'linear-gradient(140deg, #34D399, #10A877)', color:'#fff', borderRadius:18, padding:'18px 22px', fontSize:20, fontWeight:600}}>
+        Rate con signed &amp; sent.
+      </div>
+    </>
+  );
+}
+
+function ShieldScreen() {
+  return (
+    <>
+      <div style={{fontFamily:"'JetBrains Mono',monospace", fontSize:12, color:'rgba(11,37,69,0.55)', letterSpacing:'0.16em', textTransform:'uppercase'}}>Shield · Compliance</div>
+      <div style={{fontSize:28, fontWeight:700, color:'#0A1A2F', letterSpacing:'-0.01em'}}>All Systems Clear</div>
+      <div style={{display:'grid', placeItems:'center', padding:'18px 0'}}>
+        <svg width="140" height="160" viewBox="0 0 120 140" style={{animation:'pulse-glow 1.6s ease-in-out infinite', borderRadius:'50%'}}>
+          <defs><linearGradient id="shg2" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stopColor="#34D399"/><stop offset="1" stopColor="#10A877"/></linearGradient></defs>
+          <path d="M60 6 L110 26 L110 64 C110 96 88 122 60 134 C32 122 10 96 10 64 L10 26 Z" fill="url(#shg2)"/>
+          <path d="M40 72 L54 86 L84 56" stroke="#fff" strokeWidth="8" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      </div>
+      {[['ELD · Hours','OK'],['CSA Score','82'],['Insurance','Active'],['IFTA','Filed']].map(([l,v])=>(
+        <div key={l} style={{display:'flex', justifyContent:'space-between', alignItems:'center', background:'#fff', border:'1px solid rgba(11,37,69,0.08)', borderRadius:14, padding:'12px 16px', fontSize:15, fontWeight:500}}>
+          <span>{l}</span>
+          <span style={{fontFamily:"'JetBrains Mono',monospace", fontSize:12, letterSpacing:'0.12em', color:'#10A877', background:'rgba(52,211,153,0.14)', padding:'4px 10px', borderRadius:999}}>{v}</span>
+        </div>
+      ))}
+    </>
+  );
+}
+
+function RecoveryScreen() {
+  return (
+    <>
+      <div style={{fontFamily:"'JetBrains Mono',monospace", fontSize:12, color:'rgba(11,37,69,0.55)', letterSpacing:'0.16em', textTransform:'uppercase'}}>Recovery · This week</div>
+      <div style={{fontSize:28, fontWeight:700, color:'#0A1A2F', letterSpacing:'-0.01em'}}>Claims Filed</div>
+      {[['Detention 3.4h','CH Robinson','+$255'],['Lumper','JB Hunt','+$180'],['TONU','RXO','+$150'],['Detention 2.1h','Schneider','+$95']].map((r,i)=>(
+        <div key={i} style={{background:'#fff', border:'1px solid rgba(11,37,69,0.08)', borderRadius:14, padding:'12px 16px', display:'grid', gridTemplateColumns:'1fr auto', alignItems:'center'}}>
+          <div>
+            <div style={{fontSize:15, fontWeight:600, color:'#0A1A2F'}}>{r[0]}</div>
+            <div style={{fontFamily:"'JetBrains Mono',monospace", fontSize:11, color:'rgba(11,37,69,0.55)', letterSpacing:'0.08em', textTransform:'uppercase'}}>{r[1]}</div>
+          </div>
+          <div style={{fontFamily:"'JetBrains Mono',monospace", fontSize:18, fontWeight:700, color:'#10A877'}}>{r[2]}</div>
+        </div>
+      ))}
+      <div style={{background:'#0B2545', color:'#fff', borderRadius:14, padding:'14px 18px', display:'flex', justifyContent:'space-between', alignItems:'center', marginTop:4}}>
+        <div>
+          <div style={{fontFamily:"'JetBrains Mono',monospace", fontSize:11, letterSpacing:'0.14em', textTransform:'uppercase', opacity:0.7}}>Recovered · 7 days</div>
+          <div style={{fontFamily:"'Space Grotesk',sans-serif", fontSize:30, fontWeight:700}}>$680.00</div>
+        </div>
+        <div style={{fontFamily:"'JetBrains Mono',monospace", fontSize:11, color:'#6EE7B7', letterSpacing:'0.12em'}}>AUTO-FILED</div>
+      </div>
+    </>
+  );
+}
+
+function PaperlessScreen() {
+  return (
+    <>
+      <div style={{fontFamily:"'JetBrains Mono',monospace", fontSize:12, color:'rgba(11,37,69,0.55)', letterSpacing:'0.16em', textTransform:'uppercase'}}>Back office · Today</div>
+      <div style={{fontSize:28, fontWeight:700, color:'#0A1A2F', letterSpacing:'-0.01em'}}>Documents</div>
+      {[['POD','POD_2481.pdf','Chicago → Atlanta','Filed','filed'],
+        ['BOL','BOL_2481.pdf','Auto-extracted · 8 fields','Filed','filed'],
+        ['RC','RateCon_RXO.pdf','E-signed','Filed','filed'],
+        ['INV','Invoice_2481.pdf','Routed to factoring','Routing','routing'],
+        ['COI','COI_2026Q2.pdf','Insurance · current','Filed','filed']].map((r,i)=>(
+        <div key={i} style={{background:'#fff', border:'1px solid rgba(11,37,69,0.08)', borderRadius:14, padding:'10px 14px', display:'grid', gridTemplateColumns:'34px 1fr auto', gap:12, alignItems:'center'}}>
+          <div style={{width:34, height:34, borderRadius:8, background:'rgba(79,179,242,0.14)', display:'grid', placeItems:'center', fontFamily:"'JetBrains Mono',monospace", fontSize:10, fontWeight:700, color:'#1B6BB9'}}>{r[0]}</div>
+          <div>
+            <div style={{fontSize:13, fontWeight:600, color:'#0A1A2F'}}>{r[1]}</div>
+            <div style={{fontFamily:"'JetBrains Mono',monospace", fontSize:10, color:'rgba(11,37,69,0.55)', letterSpacing:'0.06em', textTransform:'uppercase'}}>{r[2]}</div>
+          </div>
+          <div style={{fontFamily:"'JetBrains Mono',monospace", fontSize:10, padding:'4px 8px', borderRadius:999,
+            background: r[4]==='filed' ? 'rgba(52,211,153,0.14)' : 'rgba(245,184,71,0.18)',
+            color: r[4]==='filed' ? '#0a8c5e' : '#a0721a'
+          }}>{r[3]}</div>
+        </div>
+      ))}
+    </>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SCENES
+// ─────────────────────────────────────────────────────────────────────────────
+
+// 0.0 – 2.8: Cold open. Black, scan-lines, "Trucking has a problem."
+function SceneColdOpen() {
+  return (
+    <Sprite start={0} end={2.8}>
+      {({ localTime }) => {
+        const opacity = clamp(localTime / 0.4, 0, 1);
+        const exit = clamp((localTime - 2.4) / 0.4, 0, 1);
+        return (
+          <div style={{ position:'absolute', inset:0, background:'#000', opacity: 1 - exit }}>
+            {/* scan-lines */}
+            <div style={{ position:'absolute', inset:0,
+              background:'repeating-linear-gradient(0deg, transparent 0 2px, rgba(255,255,255,0.04) 2px 3px)',
+              opacity: 0.5,
+            }}/>
+            {/* glitch bar */}
+            <div style={{
+              position:'absolute', left:0, right:0,
+              top: `${30 + Math.sin(localTime * 12) * 20}%`,
+              height: 6, background:'#4FB3F2', opacity: 0.6,
+            }}/>
+            <div style={{
+              position:'absolute', inset:0,
+              display:'flex', alignItems:'center', justifyContent:'center',
+              opacity: opacity * (1 - exit),
+            }}>
+              <div style={{
+                fontFamily:"'Space Grotesk',sans-serif",
+                fontSize: 160, fontWeight: 700, lineHeight: 0.95,
+                letterSpacing:'-0.04em', color:'#F5F8FB',
+                textAlign:'center', textWrap:'balance',
+                maxWidth: 1500,
+              }}>
+                Trucking has a<br/>
+                <span style={{color:'#FF5C5C'}}>problem.</span>
+              </div>
+            </div>
+          </div>
+        );
+      }}
+    </Sprite>
+  );
+}
+
+// 2.8 – 12.5: Pain montage — 3 hammering stats
+function ScenePain() {
+  return (
+    <>
+      <Sprite start={2.8} end={5.9}>
+        {() => (
+          <div style={{position:'absolute', inset:0, background:'linear-gradient(180deg, #1a0a0a 0%, #0B2545 100%)'}}>
+            <CircuitBG intensity={0.25} color="#FF5C5C"/>
+            <SlamNumber value="30%" label="To the dispatcher" sub="On every load. Before you net a cent." color="#FF5C5C"/>
+          </div>
+        )}
+      </Sprite>
+      <CutFlash at={5.85} color="#FF5C5C"/>
+
+      <Sprite start={5.9} end={8.9}>
+        {() => (
+          <div style={{position:'absolute', inset:0, background:'linear-gradient(180deg, #0B2545 0%, #061629 100%)'}}>
+            <CircuitBG intensity={0.25} color="#F5B847"/>
+            <SlamNumber value="14 hrs" label="Burned on paperwork" sub="Every week. A second job — unpaid." color="#F5B847"/>
+          </div>
+        )}
+      </Sprite>
+      <CutFlash at={8.85} color="#F5B847"/>
+
+      <Sprite start={8.9} end={12.4}>
+        {() => (
+          <div style={{position:'absolute', inset:0, background:'linear-gradient(180deg, #061629 0%, #1a0a0a 100%)'}}>
+            <CircuitBG intensity={0.25} color="#FF5C5C"/>
+            <SlamNumber value="$400" label="Left on the dock" sub="Detention, lumper, TONU — every single month." color="#FF5C5C"/>
+          </div>
+        )}
+      </Sprite>
+      <CutFlash at={12.35} color="#fff"/>
+    </>
+  );
+}
+
+// 12.4 – 14.5: "Until now." — pure type
+function SceneUntilNow() {
+  return (
+    <Sprite start={12.4} end={14.5}>
+      {() => (
+        <div style={{position:'absolute', inset:0, background:'#F5F8FB', display:'flex', alignItems:'center', justifyContent:'center'}}>
+          <KineticLine words={['Until', 'now.']} size={300} weight={700} color="#0B2545" accentIdx={1} accentColor="#1B6BB9"/>
+        </div>
+      )}
+    </Sprite>
+  );
+}
+
+// 14.5 – 17.4: Logo reveal
+function SceneLogoReveal() {
+  return (
+    <Sprite start={14.5} end={17.4}>
+      {({ localTime }) => {
+        const e = Easing.easeOutBack(clamp(localTime / 0.7, 0, 1));
+        const exit = clamp((localTime - 2.5) / 0.4, 0, 1);
+        return (
+          <div style={{position:'absolute', inset:0, background:'linear-gradient(160deg, #061629 0%, #0B2545 50%, #1B3A6B 100%)', display:'flex', alignItems:'center', justifyContent:'center'}}>
+            <CircuitBG intensity={0.4}/>
+            <div style={{
+              transform: `scale(${0.6 + 0.4 * e})`,
+              opacity: clamp(localTime / 0.3, 0, 1) * (1 - exit),
+              display:'flex', flexDirection:'column', alignItems:'center', gap: 40,
+            }}>
+              <Wordmark size={2.2}/>
+              <div style={{
+                fontFamily:"'JetBrains Mono',monospace",
+                fontSize: 32, letterSpacing:'0.32em', textTransform:'uppercase',
+                color:'#34D399',
+              }}>Delivering Trust Across America</div>
+            </div>
+          </div>
+        );
+      }}
+    </Sprite>
+  );
+}
+
+// 17.4 – 25.6: Feature reel (4 phones)
+function SceneFeatureReel() {
+  const features = [
+    { start: 17.4, end: 19.5, kind: 'dispatch', label: 'AI Dispatch' },
+    { start: 19.5, end: 21.5, kind: 'shield',   label: 'Shield Compliance' },
+    { start: 21.5, end: 23.5, kind: 'recovery', label: 'Revenue Recovery' },
+    { start: 23.5, end: 25.6, kind: 'paperless', label: 'Paperless Office' },
+  ];
+  return (
+    <>
+      {features.map((f, i) => (
+        <Sprite key={i} start={f.start} end={f.end}>
+          {() => (
+            <div style={{position:'absolute', inset:0, background:'linear-gradient(180deg, #0B2545 0%, #061629 100%)'}}>
+              <CircuitBG intensity={0.35}/>
+              <div style={{position:'absolute', top:60, left:80, fontFamily:"'JetBrains Mono',monospace", fontSize:24, color:'#8BD0F8', letterSpacing:'0.16em', textTransform:'uppercase'}}>
+                0{i+1} · Feature
+              </div>
+              <div style={{position:'absolute', top:60, right:80, fontFamily:"'JetBrains Mono',monospace", fontSize:24, color:'rgba(245,248,251,0.5)', letterSpacing:'0.16em', textTransform:'uppercase'}}>
+                3 Lakes Logistics
+              </div>
+              <FeaturePhone kind={f.kind} label={f.label}/>
+            </div>
+          )}
+        </Sprite>
+      ))}
+    </>
+  );
+}
+
+// 25.6 – 29.5: "ONE PLATFORM. 155+ AUTOMATIONS."
+function ScenePlatform() {
+  return (
+    <Sprite start={25.6} end={29.5}>
+      {() => (
+        <div style={{position:'absolute', inset:0, background:'linear-gradient(140deg, #061629 0%, #0B2545 100%)'}}>
+          <CircuitBG intensity={0.4} color="#34D399"/>
+          <div style={{position:'absolute', inset:0, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap: 80}}>
+            <KineticLine words={['One', 'platform.']} size={180} color="#F5F8FB" y="32%"/>
+            <div style={{
+              position:'absolute', left:'50%', top:'62%', transform:'translate(-50%, -50%)',
+              fontFamily:"'Space Grotesk',sans-serif",
+              fontSize: 360, fontWeight:700, letterSpacing:'-0.05em', lineHeight: 0.9,
+              color:'#34D399', textShadow:'0 0 80px rgba(52,211,153,0.4)',
+              display:'flex', alignItems:'baseline', gap: 16,
+            }}>
+              155
+              <span style={{fontSize: 140, color:'#34D399'}}>+</span>
+            </div>
+            <div style={{
+              position:'absolute', left:'50%', top:'86%', transform:'translateX(-50%)',
+              fontFamily:"'JetBrains Mono',monospace",
+              fontSize: 36, letterSpacing:'0.24em', textTransform:'uppercase',
+              color:'#F5F8FB',
+            }}>Automations · Running 24/7</div>
+          </div>
+        </div>
+      )}
+    </Sprite>
+  );
+}
+
+// 29.5 – 34: Proof tickers
+function SceneProof() {
+  return (
+    <Sprite start={29.5} end={34}>
+      {({ localTime }) => {
+        // Cycle through 3 stats at ~1.4s each
+        const stats = [
+          { v: '+22¢', l: 'Above market RPM', c: '#4FB3F2' },
+          { v: '0%',  l: 'Commission', c: '#34D399' },
+          { v: '100%', l: 'Compliant', c: '#F5B847' },
+        ];
+        return (
+          <div style={{position:'absolute', inset:0, background:'#F5F8FB'}}>
+            <div style={{
+              position:'absolute', inset:0, opacity: 0.06,
+              backgroundImage:'linear-gradient(rgba(11,37,69,1) 1px, transparent 1px), linear-gradient(90deg, rgba(11,37,69,1) 1px, transparent 1px)',
+              backgroundSize: '80px 80px',
+            }}/>
+            <div style={{position:'absolute', inset:0, display:'grid', gridTemplateColumns:'1fr 1fr 1fr', alignItems:'center', padding:'0 80px'}}>
+              {stats.map((s, i) => {
+                const showAt = i * 1.4;
+                const local = localTime - showAt;
+                const e = Easing.easeOutBack(clamp(local / 0.4, 0, 1));
+                const opacity = clamp(local / 0.25, 0, 1);
+                return (
+                  <div key={i} style={{
+                    transform: `translateY(${(1 - e) * 60}px) scale(${0.85 + 0.15 * e})`,
+                    opacity,
+                    textAlign:'center',
+                  }}>
+                    <div style={{
+                      fontFamily:"'Space Grotesk',sans-serif",
+                      fontSize: 220, fontWeight:700, lineHeight: 0.9, letterSpacing:'-0.05em',
+                      color: s.c,
+                    }}>{s.v}</div>
+                    <div style={{
+                      fontFamily:"'JetBrains Mono',monospace",
+                      fontSize: 30, letterSpacing:'0.18em', textTransform:'uppercase',
+                      color:'#0B2545', marginTop: 24,
+                    }}>{s.l}</div>
+                  </div>
+                );
+              })}
+            </div>
+            <Ticker items={['+22¢ RPM','0% Commission','100% Compliant','155+ Automations','+$400/mo Recovered','24/7 Dispatch']} y={950}/>
+          </div>
+        );
+      }}
+    </Sprite>
+  );
+}
+
+// 34 – 41.5: Offer slam — $300/mo, locked for life, 1000 trucks
+function SceneOffer() {
+  return (
+    <>
+      <CutFlash at={33.95} color="#34D399"/>
+      <Sprite start={34} end={41.5}>
+        {({ localTime }) => {
+          const tier1 = Easing.easeOutBack(clamp(localTime / 0.5, 0, 1));
+          const tier2 = clamp((localTime - 2.0) / 0.4, 0, 1);
+          const tier3 = clamp((localTime - 4.5) / 0.4, 0, 1);
+          return (
+            <div style={{position:'absolute', inset:0, background:'linear-gradient(160deg, #0B2545 0%, #061629 100%)'}}>
+              <CircuitBG intensity={0.45}/>
+              <div style={{position:'absolute', inset:0, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center'}}>
+                <div style={{
+                  fontFamily:"'JetBrains Mono',monospace",
+                  fontSize: 32, letterSpacing:'0.32em', textTransform:'uppercase',
+                  color:'#34D399', opacity: clamp(localTime/0.3, 0, 1),
+                  marginBottom: 30,
+                  display:'inline-flex', alignItems:'center', gap: 18,
+                }}>
+                  <span style={{width:14, height:14, borderRadius:'50%', background:'#34D399', boxShadow:'0 0 0 6px rgba(52,211,153,0.2)'}}/>
+                  Founders Pricing · Live
+                </div>
+                <div style={{
+                  fontFamily:"'Space Grotesk',sans-serif",
+                  fontWeight: 700,
+                  fontSize: 480,
+                  lineHeight: 0.85,
+                  letterSpacing:'-0.06em',
+                  color:'#F5F8FB',
+                  transform: `scale(${0.7 + 0.3 * tier1})`,
+                  textShadow:'0 0 100px rgba(79,179,242,0.35)',
+                  display:'flex', alignItems:'flex-start',
+                }}>
+                  <span style={{fontSize: 200, marginTop: 50, color:'#8BD0F8'}}>$</span>
+                  300
+                </div>
+                <div style={{
+                  fontFamily:"'Space Grotesk',sans-serif",
+                  fontSize: 80, fontWeight:600, color:'#F5F8FB', letterSpacing:'-0.02em',
+                  marginTop: 12, opacity: tier2,
+                  transform: `translateY(${(1-tier2)*20}px)`,
+                }}>
+                  / month — <span style={{color:'#34D399'}}>locked for life.</span>
+                </div>
+                <div style={{
+                  marginTop: 50, opacity: tier3,
+                  transform: `translateY(${(1-tier3)*20}px)`,
+                  fontFamily:"'JetBrains Mono',monospace",
+                  fontSize: 38, letterSpacing:'0.2em', textTransform:'uppercase',
+                  color:'#F5B847',
+                  padding:'18px 36px',
+                  border:'2px solid #F5B847',
+                  borderRadius: 999,
+                }}>
+                  First 1,000 Trucks Only
+                </div>
+              </div>
+            </div>
+          );
+        }}
+      </Sprite>
+    </>
+  );
+}
+
+// 41.5 – 45: Final CTA
+function SceneCTA() {
+  return (
+    <>
+      <CutFlash at={41.45} color="#fff"/>
+      <Sprite start={41.5} end={45}>
+        {({ localTime }) => {
+          const e = Easing.easeOutCubic(clamp(localTime / 0.6, 0, 1));
+          return (
+            <div style={{position:'absolute', inset:0, background:'#F5F8FB', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap: 48}}>
+              <div style={{
+                transform: `scale(${0.85 + 0.15 * e})`,
+                opacity: clamp(localTime/0.3, 0, 1),
+              }}>
+                <Wordmark size={2.4} dark/>
+              </div>
+              <div style={{
+                fontFamily:"'Space Grotesk',sans-serif",
+                fontSize: 80, fontWeight:600, letterSpacing:'-0.02em', color:'#0B2545',
+                textWrap:'balance', textAlign:'center', maxWidth: 1500,
+                opacity: clamp((localTime-0.4)/0.4, 0, 1),
+              }}>
+                Automated American trucking.
+              </div>
+              <div style={{
+                fontFamily:"'JetBrains Mono',monospace",
+                fontSize: 44, letterSpacing:'0.16em', textTransform:'lowercase',
+                color:'#1B6BB9',
+                padding:'24px 48px',
+                borderRadius: 999,
+                background:'rgba(79,179,242,0.12)',
+                border:'2px solid rgba(79,179,242,0.3)',
+                opacity: clamp((localTime-0.9)/0.4, 0, 1),
+                transform: `translateY(${(1-clamp((localTime-0.9)/0.4, 0, 1))*20}px)`,
+              }}>
+                3lakeslogistics.com
+              </div>
+            </div>
+          );
+        }}
+      </Sprite>
+    </>
+  );
+}
+
+// Persistent corner mark + timecode (small, always-on)
+function PersistentChrome() {
+  const time = useTime();
+  const fmt = `00:${String(Math.floor(time)).padStart(2,'0')}`;
+  return (
+    <>
+      <div style={{
+        position:'absolute', top:48, left:64,
+        fontFamily:"'JetBrains Mono',monospace",
+        fontSize:18, color:'rgba(255,255,255,0.4)',
+        letterSpacing:'0.18em', textTransform:'uppercase',
+        zIndex: 50, pointerEvents:'none',
+      }}>● REC {fmt}</div>
+    </>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SFX cue dispatcher — fires whooshes / hits at scene boundaries
+// ─────────────────────────────────────────────────────────────────────────────
+const SFX_CUES = [
+  { t: 0.6,  kind: 'whoosh' },     // open
+  { t: 2.8,  kind: 'hit'    },     // 30%
+  { t: 5.9,  kind: 'hit'    },     // 14 hrs
+  { t: 8.9,  kind: 'hit'    },     // $400
+  { t: 12.4, kind: 'whoosh' },     // Until now
+  { t: 14.5, kind: 'swell'  },     // logo reveal
+  { t: 17.4, kind: 'whoosh' },     // feature reel
+  { t: 19.5, kind: 'whoosh' },
+  { t: 21.5, kind: 'whoosh' },
+  { t: 23.5, kind: 'whoosh' },
+  { t: 25.6, kind: 'swell'  },     // platform
+  { t: 29.5, kind: 'whoosh' },
+  { t: 33.95,kind: 'hit'    },     // offer slam
+  { t: 41.5, kind: 'whoosh' },
+];
+function SfxCues({ engineRef, enabled }) {
+  const { time, playing } = useTimeline();
+  const firedRef = React.useRef(new Set());
+  const lastTimeRef = React.useRef(0);
+
+  React.useEffect(() => {
+    // Reset on scrub back
+    if (time < lastTimeRef.current - 0.3) {
+      const still = new Set();
+      firedRef.current.forEach(i => { if (SFX_CUES[i].t < time) still.add(i); });
+      firedRef.current = still;
+    }
+    lastTimeRef.current = time;
+
+    if (!enabled || !playing || !engineRef.current) return;
+    SFX_CUES.forEach((cue, i) => {
+      if (firedRef.current.has(i)) return;
+      if (time >= cue.t && time < cue.t + 0.3) {
+        firedRef.current.add(i);
+        if (cue.kind === 'whoosh') engineRef.current.whoosh();
+        else if (cue.kind === 'hit') engineRef.current.hit();
+        else if (cue.kind === 'swell') engineRef.current.swell(1.6);
+      }
+    });
+  }, [time, playing, enabled, engineRef]);
+
+  return null;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MASTER
+// ─────────────────────────────────────────────────────────────────────────────
+function Commercial({ audioOn, voiceOn, sfxOn, voiceRateOffset, voicePitchOffset, engineRef }) {
+  return (
+    <>
+      <Voiceover enabled={audioOn && voiceOn} rateOffset={voiceRateOffset} pitchOffset={voicePitchOffset}/>
+      <SfxCues engineRef={engineRef} enabled={audioOn && sfxOn}/>
+      <SceneColdOpen/>
+      <ScenePain/>
+      <SceneUntilNow/>
+      <SceneLogoReveal/>
+      <SceneFeatureReel/>
+      <ScenePlatform/>
+      <SceneProof/>
+      <SceneOffer/>
+      <SceneCTA/>
+    </>
+  );
+}
+
+function App() {
+  const [audioOn, setAudioOn] = React.useState(false);
+  const [armed, setArmed] = React.useState(false);
+  const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
+  const engineRef = React.useRef(null);   // used only for SFX (whoosh/hit/swell)
+  const ytPlayerRef = React.useRef(null);
+  const ytReadyRef = React.useRef(false);
+
+  // ── Load the YouTube IFrame Player API once ──
+  React.useEffect(() => {
+    const buildPlayer = () => {
+      if (ytPlayerRef.current) return;
+      ytPlayerRef.current = new window.YT.Player('yt-player', {
+        videoId: t.trackId,
+        playerVars: {
+          controls: 0, autoplay: 0, modestbranding: 1, rel: 0,
+          playsinline: 1, disablekb: 1, fs: 0, iv_load_policy: 3,
+        },
+        events: {
+          onReady: () => {
+            ytReadyRef.current = true;
+            try { ytPlayerRef.current.setVolume(t.musicVolume); } catch {}
+          },
+        },
+      });
+    };
+    if (window.YT && window.YT.Player) {
+      buildPlayer();
+    } else {
+      const prev = window.onYouTubeIframeAPIReady;
+      window.onYouTubeIframeAPIReady = () => {
+        if (prev) try { prev(); } catch {}
+        buildPlayer();
+      };
+      if (!document.getElementById('yt-iframe-api')) {
+        const s = document.createElement('script');
+        s.id = 'yt-iframe-api';
+        s.src = 'https://www.youtube.com/iframe_api';
+        document.head.appendChild(s);
+      }
+    }
+  }, []);  // eslint-disable-line
+
+  const enable = (withSound) => {
+    if (withSound) {
+      try {
+        const u = new SpeechSynthesisUtterance(' ');
+        u.volume = 0;
+        window.speechSynthesis.speak(u);
+      } catch {}
+      // SFX engine — start with music style 'off' so only whoosh/hit/swell fire
+      if (!engineRef.current) engineRef.current = window.AudioEngine.create();
+      engineRef.current.setStyle('off');
+      engineRef.current.start();
+      engineRef.current.setMusicGain(0);
+      // YouTube track
+      try {
+        if (ytPlayerRef.current && ytReadyRef.current) {
+          ytPlayerRef.current.seekTo(t.musicStartOffset || 0, true);
+          ytPlayerRef.current.setVolume(t.musicVolume);
+          ytPlayerRef.current.playVideo();
+        } else if (ytPlayerRef.current) {
+          // Player not ready yet — schedule play on ready
+          const wait = setInterval(() => {
+            if (ytReadyRef.current) {
+              clearInterval(wait);
+              ytPlayerRef.current.seekTo(t.musicStartOffset || 0, true);
+              ytPlayerRef.current.setVolume(t.musicVolume);
+              ytPlayerRef.current.playVideo();
+            }
+          }, 80);
+        }
+      } catch {}
+      setAudioOn(true);
+    }
+    setArmed(true);
+    try { localStorage.setItem('3l-commercial:t', '0'); } catch {}
+  };
+
+  // ── Live wire tweaks ──
+  React.useEffect(() => {
+    if (!audioOn) return;
+    try { ytPlayerRef.current && ytPlayerRef.current.setVolume(t.musicVolume); } catch {}
+  }, [t.musicVolume, audioOn]);
+
+  React.useEffect(() => {
+    if (!audioOn) return;
+    try {
+      ytPlayerRef.current && ytPlayerRef.current.seekTo(t.musicStartOffset || 0, true);
+    } catch {}
+  }, [t.musicStartOffset, audioOn]);
+
+  return (
+    <>
+      {/* Hidden YouTube player — audio source. Off-screen but kept renderable. */}
+      <div style={{
+        position:'fixed', left:-9999, top:-9999, width:200, height:120, opacity:0, pointerEvents:'none',
+      }}>
+        <div id="yt-player"></div>
+      </div>
+
+      <Stage width={1920} height={1080} duration={45} background="#000" persistKey="3l-commercial-v2" loop={false} autoplay={true}>
+        <Commercial
+          audioOn={audioOn}
+          voiceOn={t.voiceOn}
+          sfxOn={t.sfxOn}
+          voiceRateOffset={t.voiceRateOffset}
+          voicePitchOffset={t.voicePitchOffset}
+          engineRef={engineRef}
+        />
+        <PersistentChrome/>
+      </Stage>
+
+      {/* Tweaks panel — visible when the user toggles Tweaks on from the toolbar */}
+      {armed && (
+        <TweaksPanel title="Commercial Tweaks">
+          <TweakSection label="Music · YouTube track"/>
+          <TweakSlider
+            label="Volume"
+            value={t.musicVolume}
+            min={0} max={100} step={1} unit="%"
+            onChange={(v) => setTweak('musicVolume', v)}
+          />
+          <TweakSlider
+            label="Track start (s)"
+            value={t.musicStartOffset}
+            min={0} max={180} step={1} unit="s"
+            onChange={(v) => setTweak('musicStartOffset', v)}
+          />
+          <TweakSection label="Voiceover"/>
+          <TweakToggle
+            label="Voice enabled"
+            value={t.voiceOn}
+            onChange={(v) => setTweak('voiceOn', v)}
+          />
+          <TweakSlider
+            label="Speed offset"
+            value={t.voiceRateOffset}
+            min={-0.3} max={0.3} step={0.02}
+            onChange={(v) => setTweak('voiceRateOffset', Math.round(v * 100) / 100)}
+          />
+          <TweakSlider
+            label="Pitch offset"
+            value={t.voicePitchOffset}
+            min={-0.3} max={0.3} step={0.02}
+            onChange={(v) => setTweak('voicePitchOffset', Math.round(v * 100) / 100)}
+          />
+          <TweakSection label="Sound effects"/>
+          <TweakToggle
+            label="SFX (whoosh / hits)"
+            value={t.sfxOn}
+            onChange={(v) => setTweak('sfxOn', v)}
+          />
+        </TweaksPanel>
+      )}
+
+      {!armed && (
+        <div style={{
+          position:'fixed', inset:0,
+          background:'rgba(0,0,0,0.78)', backdropFilter:'blur(8px)',
+          display:'flex', alignItems:'center', justifyContent:'center',
+          zIndex: 100,
+        }}>
+          <div style={{
+            background:'linear-gradient(160deg, #061629 0%, #0B2545 100%)',
+            border:'1px solid rgba(143,200,243,0.2)',
+            borderRadius: 24,
+            padding: '56px 64px',
+            color:'#F5F8FB', maxWidth: 620, textAlign:'center',
+            fontFamily:"'Space Grotesk',sans-serif",
+            boxShadow:'0 40px 120px rgba(79,179,242,0.25)',
+          }}>
+            <div style={{
+              fontFamily:"'JetBrains Mono',monospace",
+              fontSize: 14, letterSpacing:'0.2em', textTransform:'uppercase',
+              color:'#34D399',
+              display:'inline-flex', alignItems:'center', gap: 10, marginBottom: 22,
+            }}>
+              <span style={{width:8, height:8, borderRadius:'50%', background:'#34D399', boxShadow:'0 0 0 4px rgba(52,211,153,0.25)'}}/>
+              45-second commercial
+            </div>
+            <div style={{ fontSize: 56, fontWeight:700, lineHeight: 1.0, letterSpacing:'-0.025em', marginBottom: 18 }}>
+              Automated<br/>American Trucking.
+            </div>
+            <div style={{ fontSize: 18, color:'rgba(245,248,251,0.7)', marginBottom: 36, lineHeight: 1.5 }}>
+              Best with sound. Voiceover over your YouTube backing track.
+            </div>
+            <div style={{display:'flex', gap: 14, justifyContent:'center'}}>
+              <button onClick={() => enable(true)} style={{
+                background:'#34D399', color:'#0B2545', border:'none', borderRadius: 999,
+                padding:'18px 36px', fontFamily:"'Space Grotesk',sans-serif",
+                fontSize: 18, fontWeight: 600, cursor:'pointer',
+                boxShadow:'0 10px 30px rgba(52,211,153,0.35)',
+              }}>▶ Play with sound</button>
+              <button onClick={() => enable(false)} style={{
+                background:'transparent', color:'rgba(245,248,251,0.8)', border:'1px solid rgba(245,248,251,0.25)',
+                borderRadius: 999, padding:'18px 28px', fontFamily:"'Space Grotesk',sans-serif",
+                fontSize: 16, fontWeight: 500, cursor:'pointer',
+              }}>Play muted</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>

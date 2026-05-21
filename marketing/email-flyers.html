@@ -1,0 +1,294 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>3 Lakes Logistics — Email Flyers</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link href="flyer-styles.css" rel="stylesheet">
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script type="text/babel" src="design-canvas.jsx"></script>
+<style>
+  body { margin: 0; background: #1a1f2e; font-family: 'Space Grotesk', system-ui, sans-serif; }
+  /* SVG circuit line component */
+  .circuit-svg { display: block; width: 100%; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel">
+const { DesignCanvas, DCSection, DCArtboard } = window;
+
+/* ============== FLYER 1: Founders urgency / countdown ============== */
+function FlyerFounders() {
+  return (
+    <div className="flyer">
+      <div className="flyer-head">
+        <div className="left">
+          <div className="mark">3L</div>
+          <span>3 Lakes Logistics</span>
+        </div>
+        <span>Founders · Live</span>
+      </div>
+
+      {/* Hero */}
+      <div style={{position:'relative', padding:'56px 40px 48px', background:'#0B2545', color:'#F5F8FB', overflow:'hidden'}}>
+        {/* circuit bg */}
+        <svg viewBox="0 0 600 400" preserveAspectRatio="none" style={{position:'absolute', inset:0, width:'100%', height:'100%', opacity:0.4}}>
+          <g fill="none" stroke="#4FB3F2" strokeWidth="1">
+            <path d="M0,80 L160,80 L190,110 L380,110" />
+            <path d="M600,140 L460,140 L430,170 L260,170" />
+            <path d="M0,310 L200,310 L230,340 L420,340" />
+          </g>
+          <g fill="#34D399">
+            <circle cx="380" cy="110" r="3"/>
+            <circle cx="260" cy="170" r="3"/>
+            <circle cx="420" cy="340" r="3"/>
+          </g>
+        </svg>
+
+        <div style={{position:'relative'}}>
+          <div className="mono" style={{fontSize:12, color:'#34D399', textTransform:'uppercase', letterSpacing:'0.18em', display:'flex', alignItems:'center', gap:10, marginBottom:18}}>
+            <span style={{width:8, height:8, borderRadius:'50%', background:'#34D399', boxShadow:'0 0 0 4px rgba(52,211,153,0.2)'}}/>
+            Founders pricing · live
+          </div>
+          <h1 style={{fontSize:64, fontWeight:700, lineHeight:0.96, letterSpacing:'-0.035em', margin:0, textWrap:'balance'}}>
+            1,000 trucks.<br/>Then the door<br/>closes.
+          </h1>
+          <p style={{fontSize:19, lineHeight:1.45, color:'rgba(245,248,251,0.75)', marginTop:22, maxWidth:480}}>
+            Lock in <strong style={{color:'#F5F8FB', fontWeight:600}}>$300/month for life</strong> on the full 3 Lakes Logistics platform — AI dispatch, Shield compliance, and revenue recovery. First 1,000 carriers only.
+          </p>
+        </div>
+      </div>
+
+      <div className="circuit-strip"></div>
+
+      {/* Price banner */}
+      <div style={{background:'#061629', color:'#F5F8FB', padding:'32px 40px', display:'grid', gridTemplateColumns:'1fr 1fr', gap:24, alignItems:'end'}}>
+        <div>
+          <div className="mono" style={{fontSize:11, color:'#8BD0F8', letterSpacing:'0.16em', textTransform:'uppercase'}}>Founders rate</div>
+          <div style={{fontSize:84, fontWeight:700, lineHeight:0.95, letterSpacing:'-0.04em', marginTop:6}}>
+            <span style={{fontSize:32, fontWeight:500, verticalAlign:'top', marginRight:4, opacity:0.8}}>$</span>300
+            <span style={{fontSize:18, fontWeight:500, color:'rgba(245,248,251,0.6)', marginLeft:8}}>/mo</span>
+          </div>
+        </div>
+        <div style={{paddingBottom:12}}>
+          <div className="mono" style={{fontSize:11, color:'rgba(245,248,251,0.45)', letterSpacing:'0.16em', textTransform:'uppercase'}}>After truck 1,000</div>
+          <div style={{fontSize:22, fontWeight:500, marginTop:8, color:'rgba(245,248,251,0.8)', textDecoration:'line-through', textDecorationColor:'rgba(245,248,251,0.4)'}}>
+            $500/mo · climbing
+          </div>
+        </div>
+      </div>
+
+      {/* Body */}
+      <div style={{padding:'40px 40px 32px', background:'#F5F8FB'}}>
+        <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:18, marginBottom:32}}>
+          {[
+            ['+22¢', 'Above-market RPM'],
+            ['+$400', 'Monthly recovery'],
+            ['155+', 'Automations'],
+            ['0%', 'Commission'],
+          ].map(([v, l]) => (
+            <div key={l} style={{background:'#fff', border:'1px solid rgba(11,37,69,0.08)', borderRadius:14, padding:'18px 20px'}}>
+              <div style={{fontSize:32, fontWeight:700, letterSpacing:'-0.02em', color:'#0B2545'}}>{v}</div>
+              <div className="mono" style={{fontSize:10, color:'rgba(11,37,69,0.55)', textTransform:'uppercase', letterSpacing:'0.12em', marginTop:4}}>{l}</div>
+            </div>
+          ))}
+        </div>
+
+        <div style={{textAlign:'center', display:'flex', flexDirection:'column', alignItems:'center', gap:14}}>
+          <a className="btn-primary green" href="https://3lakeslogistics.com/signup" target="_blank" rel="noopener" style={{fontSize:18, padding:'20px 40px'}}>Claim my founders spot →</a>
+          <a className="btn-ghost" href="https://3lakeslogistics.com/contact" target="_blank" rel="noopener">Book a 15-min call</a>
+        </div>
+      </div>
+
+      <div className="flyer-foot">
+        <div className="row">
+          <span>3lakeslogistics.com</span>
+          <span>FMCSA · LICENSED · BONDED</span>
+        </div>
+        <div style={{marginTop:8, opacity:0.6}}>(555) 000-1234 · dispatch@3lakeslogistics.com</div>
+      </div>
+    </div>
+  );
+}
+
+/* ============== FLYER 2: Pain-point — "Stop bleeding revenue" ============== */
+function FlyerPain() {
+  return (
+    <div className="flyer">
+      <div className="flyer-head">
+        <div className="left">
+          <div className="mark">3L</div>
+          <span>3 Lakes Logistics</span>
+        </div>
+        <span>For owner-operators</span>
+      </div>
+
+      <div style={{padding:'56px 40px 40px', background:'#F5F8FB', color:'#0A1A2F'}}>
+        <div className="mono" style={{fontSize:12, color:'#1B6BB9', textTransform:'uppercase', letterSpacing:'0.18em', marginBottom:18}}>
+          The math nobody shows you
+        </div>
+        <h1 style={{fontSize:56, fontWeight:600, lineHeight:0.98, letterSpacing:'-0.03em', margin:0, textWrap:'balance'}}>
+          Your truck is leaking <span style={{color:'#0B2545', borderBottom:'4px solid #34D399', paddingBottom:2}}>$1,200/month</span>.
+        </h1>
+        <p style={{fontSize:18, lineHeight:1.5, color:'rgba(11,37,69,0.65)', marginTop:24, maxWidth:520}}>
+          Most dispatchers take a 30% cut, paperwork swallows two days a week, and most carriers never claim the detention they're owed. Here's where the money goes.
+        </p>
+      </div>
+
+      {/* The leak breakdown */}
+      <div style={{padding:'0 40px 40px', background:'#F5F8FB'}}>
+        <div style={{background:'#fff', border:'1px solid rgba(11,37,69,0.08)', borderRadius:18, overflow:'hidden'}}>
+          {[
+            {n:'01', label:'COMMISSION', amt:'30%+', sub:'Of gross to dispatchers & brokers'},
+            {n:'02', label:'PAPERWORK', amt:'14 hrs', sub:'Weekly — rate cons, BOLs, PODs'},
+            {n:'03', label:'LOST CLAIMS', amt:'$400/mo', sub:'Detention, TONU, lumper unclaimed'},
+          ].map((row, i) => (
+            <div key={row.n} style={{display:'grid', gridTemplateColumns:'60px 1fr auto', padding:'22px 24px', alignItems:'center', borderBottom: i < 2 ? '1px solid rgba(11,37,69,0.08)' : 'none', gap:18}}>
+              <div className="mono" style={{fontSize:13, color:'rgba(11,37,69,0.4)', letterSpacing:'0.1em'}}>{row.n}</div>
+              <div>
+                <div className="mono" style={{fontSize:10, color:'rgba(11,37,69,0.5)', textTransform:'uppercase', letterSpacing:'0.14em'}}>{row.label}</div>
+                <div style={{fontSize:18, fontWeight:500, marginTop:4, color:'#0A1A2F'}}>{row.sub}</div>
+              </div>
+              <div style={{fontSize:30, fontWeight:700, letterSpacing:'-0.02em', color:'#0B2545', fontFamily:"'Space Grotesk',sans-serif"}}>
+                {row.amt}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* The fix */}
+      <div style={{padding:'48px 40px 40px', background:'#0B2545', color:'#F5F8FB', position:'relative', overflow:'hidden'}}>
+        <svg viewBox="0 0 600 300" preserveAspectRatio="none" style={{position:'absolute', inset:0, width:'100%', height:'100%', opacity:0.3}}>
+          <g fill="none" stroke="#4FB3F2" strokeWidth="1">
+            <path d="M0,60 L180,60 L210,90 L420,90"/>
+            <path d="M600,210 L440,210 L410,240 L240,240"/>
+          </g>
+          <g fill="#4FB3F2"><circle cx="420" cy="90" r="3"/><circle cx="240" cy="240" r="3"/></g>
+        </svg>
+        <div style={{position:'relative'}}>
+          <div className="mono" style={{fontSize:12, color:'#34D399', textTransform:'uppercase', letterSpacing:'0.18em', marginBottom:14}}>
+            The fix · one flat fee
+          </div>
+          <h2 style={{fontSize:38, fontWeight:600, lineHeight:1.05, letterSpacing:'-0.02em', margin:0, textWrap:'balance'}}>
+            3 Lakes Logistics seals every leak.<br/>For $300 a month.
+          </h2>
+          <div style={{marginTop:28, textAlign:'left'}}>
+            <a className="btn-primary green" href="https://3lakeslogistics.com/signup" target="_blank" rel="noopener" style={{fontSize:17, padding:'18px 34px'}}>See how it works →</a>
+          </div>
+        </div>
+      </div>
+
+      <div className="flyer-foot">
+        <div className="row">
+          <span>3lakeslogistics.com</span>
+          <span>FOUNDERS · 1000 TRUCKS</span>
+        </div>
+        <div style={{marginTop:8, opacity:0.6}}>(555) 000-1234 · dispatch@3lakeslogistics.com</div>
+      </div>
+    </div>
+  );
+}
+
+/* ============== FLYER 3: Product features — "Meet the platform" ============== */
+function FlyerProduct() {
+  const features = [
+    { tag:'01', name:'AI Dispatch', desc:'24/7 load matching · auto-negotiation · +22¢ above market', color:'#4FB3F2' },
+    { tag:'02', name:'Shield Compliance', desc:'Continuous ELD · CSA · insurance · IFTA monitoring', color:'#34D399' },
+    { tag:'03', name:'Revenue Recovery', desc:'Detention · TONU · lumper claims filed automatically', color:'#F5B847' },
+    { tag:'04', name:'Paperless Office', desc:'OCR + AI files BOLs, PODs, rate cons & factoring', color:'#8BD0F8' },
+  ];
+  return (
+    <div className="flyer">
+      <div className="flyer-head">
+        <div className="left">
+          <div className="mark">3L</div>
+          <span>3 Lakes Logistics</span>
+        </div>
+        <span>The platform</span>
+      </div>
+
+      <div style={{padding:'56px 40px 36px', background:'#0B2545', color:'#F5F8FB', position:'relative', overflow:'hidden'}}>
+        <svg viewBox="0 0 600 360" preserveAspectRatio="none" style={{position:'absolute', inset:0, width:'100%', height:'100%', opacity:0.45}}>
+          <g fill="none" stroke="#4FB3F2" strokeWidth="1">
+            <path d="M0,60 L180,60 L210,90 L420,90"/>
+            <path d="M600,160 L440,160 L410,190 L240,190"/>
+            <path d="M0,290 L200,290 L230,320 L420,320"/>
+          </g>
+          <g fill="#34D399"><circle cx="420" cy="90" r="3"/><circle cx="240" cy="190" r="3"/><circle cx="420" cy="320" r="3"/></g>
+        </svg>
+        <div style={{position:'relative'}}>
+          <div className="mono" style={{fontSize:12, color:'#34D399', textTransform:'uppercase', letterSpacing:'0.18em', marginBottom:16}}>
+            One platform · 155+ automations
+          </div>
+          <h1 style={{fontSize:56, fontWeight:700, lineHeight:0.96, letterSpacing:'-0.035em', margin:0}}>
+            Your operating<br/>system for the<br/><span style={{background:'linear-gradient(120deg, #4FB3F2, #34D399)', WebkitBackgroundClip:'text', backgroundClip:'text', WebkitTextFillColor:'transparent'}}>open road.</span>
+          </h1>
+        </div>
+      </div>
+
+      <div className="circuit-strip"></div>
+
+      <div style={{padding:'40px 40px 24px', background:'#F5F8FB'}}>
+        <div style={{display:'flex', flexDirection:'column', gap:14}}>
+          {features.map(f => (
+            <div key={f.tag} style={{background:'#fff', border:'1px solid rgba(11,37,69,0.08)', borderRadius:16, padding:'22px 24px', display:'grid', gridTemplateColumns:'56px 1fr', gap:18, alignItems:'center'}}>
+              <div style={{width:56, height:56, borderRadius:14, background:`${f.color}1F`, display:'grid', placeItems:'center'}}>
+                <span className="mono" style={{fontSize:14, fontWeight:700, color:f.color, letterSpacing:'0.05em'}}>{f.tag}</span>
+              </div>
+              <div>
+                <div style={{fontSize:21, fontWeight:600, color:'#0A1A2F', letterSpacing:'-0.01em'}}>{f.name}</div>
+                <div style={{fontSize:14, color:'rgba(11,37,69,0.6)', marginTop:4, lineHeight:1.45}}>{f.desc}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div style={{padding:'8px 40px 40px', background:'#F5F8FB', display:'flex', alignItems:'center', justifyContent:'space-between', gap:16}}>
+        <div>
+          <div className="mono" style={{fontSize:11, color:'rgba(11,37,69,0.55)', letterSpacing:'0.14em', textTransform:'uppercase'}}>Founders rate</div>
+          <div style={{fontSize:42, fontWeight:700, letterSpacing:'-0.03em', color:'#0B2545', lineHeight:1}}>$300<span style={{fontSize:16, fontWeight:500, color:'rgba(11,37,69,0.5)', marginLeft:6}}>/mo</span></div>
+        </div>
+        <a className="btn-primary" href="https://3lakeslogistics.com/signup" target="_blank" rel="noopener" style={{fontSize:16, padding:'18px 28px'}}>Get started →</a>
+      </div>
+
+      <div className="flyer-foot">
+        <div className="row">
+          <span>3lakeslogistics.com</span>
+          <span>DELIVERING TRUST</span>
+        </div>
+        <div style={{marginTop:8, opacity:0.6}}>(555) 000-1234 · dispatch@3lakeslogistics.com</div>
+      </div>
+    </div>
+  );
+}
+
+function App() {
+  return (
+    <DesignCanvas title="3 Lakes Logistics — Email Flyers" subtitle="Three campaign directions · 600px wide">
+      <DCSection id="flyers" title="Email flyers">
+        <DCArtboard id="founders" label="A — Founders Urgency" width={600} height={1180}>
+          <FlyerFounders/>
+        </DCArtboard>
+        <DCArtboard id="pain" label="B — Stop the Leak" width={600} height={1180}>
+          <FlyerPain/>
+        </DCArtboard>
+        <DCArtboard id="product" label="C — Meet the Platform" width={600} height={1180}>
+          <FlyerProduct/>
+        </DCArtboard>
+      </DCSection>
+    </DesignCanvas>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>

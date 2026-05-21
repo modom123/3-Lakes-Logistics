@@ -13,12 +13,13 @@ from ..settings import get_settings
 from ..supabase_client import get_supabase
 from . import memory as mem
 
-CALENDLY_URL = "https://calendly.com/3lakes/commander-call"
+from ..studio.registry import CHANNEL_COPY, BOOKING_URL
 
+# Brand-accurate templates sourced from official 3 Lakes marketing materials
 _TEMPLATES = [
-    "Hi {name}, {company} running loads in {state}? 3 Lakes Logistics pays fast & keeps you moving. Book a free call: {link} Reply STOP to opt out.",
-    "Hey {name} — owner-operators in {state} are locking in $300/mo with 3 Lakes & keeping 100% of earnings. Interested? {link} Reply STOP to opt out.",
-    "{name}, tired of chasing brokers in {state}? 3 Lakes automates your dispatch so you haul more. See how: {link} Reply STOP to opt out.",
+    CHANNEL_COPY["sms"]["new_lead"],
+    CHANNEL_COPY["sms"]["warm_lead"],
+    CHANNEL_COPY["sms"]["open_loads"],
 ]
 
 
@@ -65,7 +66,7 @@ def send_batch(daily_limit: int = 75) -> dict[str, Any]:
             name=row.get("contact_name") or "there",
             company=row.get("company_name") or "your company",
             state=row.get("state") or "your area",
-            link=CALENDLY_URL,
+            link=BOOKING_URL,
         )
         # Truncate to SMS safe length
         if len(body) > 160:

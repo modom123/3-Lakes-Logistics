@@ -1,4 +1,8 @@
-"""Email Campaigner — cold outreach to leads with email addresses via Postmark."""
+"""Email Campaigner — cold outreach to leads with email addresses via Postmark.
+
+Uses the brand-accurate HTML template from studio/email_template.py which
+matches the official 3 Lakes design materials (dark blue, real stats, brand copy).
+"""
 from __future__ import annotations
 
 import time
@@ -10,44 +14,11 @@ import httpx
 from ..logging_service import log_agent
 from ..settings import get_settings
 from ..supabase_client import get_supabase
+from ..studio.email_template import build_html
+from ..studio.registry import CHANNEL_COPY
 from . import memory as mem
 
-CALENDLY_URL = "https://calendly.com/3lakes/commander-call"
 POSTMARK_API = "https://api.postmarkapp.com/email"
-
-_EMAIL_HTML = """\
-<!DOCTYPE html>
-<html>
-<body style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;color:#222;">
-  <p>Hi {name},</p>
-  <p>I'm reaching out because we're actively moving loads through <strong>{state}</strong>
-  and we're looking for reliable owner-operators to work with.</p>
-  <p>At <strong>3 Lakes Logistics</strong>, our Founders program gives you:</p>
-  <ul>
-    <li><strong>$300/month</strong> — locked in for life</li>
-    <li><strong>100% of load earnings</strong> stay in your pocket</li>
-    <li>Full dispatch automation — we handle broker communication, paperwork, and compliance</li>
-    <li>Dedicated support so you can focus on driving</li>
-  </ul>
-  <p>We only work with a limited number of carriers per region, and spots in {state} are
-  filling up fast.</p>
-  <p>If you'd like to see how it works, grab a free 15-minute call with our team:</p>
-  <p style="text-align:center;">
-    <a href="{calendly}" style="background:#1a56db;color:#fff;padding:12px 24px;
-    border-radius:6px;text-decoration:none;font-weight:bold;">
-      Schedule a Free Call
-    </a>
-  </p>
-  <p>No pressure — just a quick conversation to see if it's a fit.</p>
-  <p>Best,<br>The 3 Lakes Logistics Team</p>
-  <hr style="border:none;border-top:1px solid #eee;margin-top:32px;">
-  <p style="font-size:11px;color:#888;">
-    You received this because your carrier information is publicly listed with the FMCSA.<br>
-    <a href="https://3lakeslogistics.com/unsubscribe?id={lead_id}">Unsubscribe</a>
-  </p>
-</body>
-</html>
-"""
 
 
 def send_batch(daily_limit: int = 100) -> dict[str, Any]:
@@ -76,12 +47,12 @@ def send_batch(daily_limit: int = 100) -> dict[str, Any]:
             failed += 1
             continue
 
-        state = row.get("state") or "your area"
-        html_body = _EMAIL_HTML.format(
-            name=row.get("contact_name") or "there",
-            state=state,
-            calendly=CALENDLY_URL,
-            lead_id=row["id"],
+        state = row.get("state") or ""
+        lead_name = row.get("contact_name") or "there"
+        html_body = build_html(state=state, lead_name=lead_name)
+        subject = (
+            CHANNEL_COPY["email"]["subject_open_loads"].format(state=state)
+            if state else CHANNEL_COPY["email"]["subject_pitch"]
         )
 
         try:
@@ -95,7 +66,7 @@ def send_batch(daily_limit: int = 100) -> dict[str, Any]:
                 json={
                     "From": s.postmark_from_email,
                     "To": email,
-                    "Subject": f"Open loads in {state} — 3 Lakes Logistics",
+                    "Subject": subject,
                     "HtmlBody": html_body,
                     "MessageStream": "outbound",
                 },
