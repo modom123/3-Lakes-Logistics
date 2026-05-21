@@ -26,6 +26,7 @@ from .routes_fmcsa         import router as fmcsa_router
 from .routes_memory        import router as memory_router
 from .routes_carrier_brain import router as carrier_brain_router
 from .routes_revenue_brain import router as revenue_brain_router
+from .routes_mailboxes     import router as mailboxes_router
 
 from ..clm             import clm_router
 from ..email_ingest    import router as email_ingest_router
@@ -69,4 +70,5 @@ __all__ = [
     "memory_router",
     "carrier_brain_router",
     "revenue_brain_router",
+    "mailboxes_router",
 ]

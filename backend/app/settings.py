@@ -44,6 +44,14 @@ class Settings(BaseSettings):
     # Email ingest pipeline
     sendgrid_inbound_email: str = "loads@3lakeslogistics.com"
 
+    # Hostinger mailboxes — IMAP (imap.hostinger.com:993) + SMTP (smtp.hostinger.com:587)
+    # Set one password per mailbox. Login = full email address.
+    email_loads_password: str = ""   # loads@3lakeslogistics.com
+    email_sales_password: str = ""   # sales@3lakeslogistics.com
+    email_info_password:  str = ""   # info@3lakeslogistics.com
+    email_mark_password:  str = ""   # mark@3lakeslogistics.com
+    email_cece_password:  str = ""   # cece@3lakeslogistics.com
+
     fmcsa_webkey: str = ""
 
     # US DOT open data (data.transportation.gov) — Socrata app token

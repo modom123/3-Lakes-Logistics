@@ -27,6 +27,7 @@ from .api import (
     memory_router,
     carrier_brain_router,
     revenue_brain_router,
+    mailboxes_router,
     driver_auth_router,
     driver_router,
     email_router,
@@ -63,8 +64,18 @@ def _start_scheduler(app: FastAPI) -> None:
         from apscheduler.triggers.cron import CronTrigger
         from .triggers import fire_compliance_sweep, fire_analytics_update
         from .agents.memory import prune_interactions
+        from .email.imap_poller import poll_all as poll_all_mailboxes
 
         scheduler = BackgroundScheduler(timezone="UTC")
+
+        # Mailbox IMAP poll — every 2 minutes (all 5 Hostinger mailboxes)
+        from apscheduler.triggers.interval import IntervalTrigger
+        scheduler.add_job(
+            poll_all_mailboxes,
+            IntervalTrigger(minutes=2),
+            id="mailbox_poll",
+            replace_existing=True,
+        )
 
         # NEXUS prune — 05:30 UTC (before compliance, keeps interaction log lean)
         scheduler.add_job(
@@ -165,6 +176,7 @@ def create_app() -> FastAPI:
     app.include_router(migration_router,       prefix="/api",              tags=["migration"])
     app.include_router(adobe_webhooks_router,  prefix="/api",              tags=["adobe"])
     app.include_router(adobe_intake_router,    prefix="/api",              tags=["adobe"])
+    app.include_router(mailboxes_router,       prefix="/api",              tags=["mailboxes"])
     app.include_router(health_router,                                     tags=["health"])
 
     log.info("3 Lakes Logistics API ready (env=%s)", s.env)

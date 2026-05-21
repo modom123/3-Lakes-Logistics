@@ -2702,7 +2702,7 @@ function nav(id){
   if(id==='vault')loadVault();
   if(id==='ledger')loadLedger();
   if(id==='execution'){loadExecutionDomains();loadExecutionSteps();}
-  if(id==='email'&&typeof emcRefreshFeed==='function'){emcRefreshFeed();emcRefreshStats();}
+  if(id==='email'&&typeof mailInit==='function'){mailInit();}
 }
 
 function openModal(id){
@@ -6035,338 +6035,361 @@ async function loadTriggerStatus() {
      ═══════════════════════════════════════════════════════════════ -->
 <div class="page" id="page-email">
 <style>
-/* ── Email Management Center Styles ───────────────────────────── */
-.emc-wrap { max-width: 1280px; margin: 0 auto; padding: 48px 40px 80px; }
-.emc-hero { background: linear-gradient(135deg, #059669 0%, #10b981 60%, #059669 100%); border-radius: 18px; padding: 36px 44px; margin-bottom: 36px; display: flex; align-items: center; justify-content: space-between; gap: 24px; flex-wrap: wrap; }
-.emc-hero-left h1 { font-family: 'Playfair Display', serif; font-size: clamp(28px, 3.5vw, 46px); color: #fff; font-weight: 900; line-height: 1.05; margin-bottom: 8px; }
-.emc-hero-left p { color: rgba(255, 255, 255, 0.75); font-size: 14px; max-width: 520px; line-height: 1.65; }
-.emc-stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; margin-bottom: 36px; }
-.emc-stat-card { background: #fff; border-radius: 12px; padding: 24px; border: 1px solid #e5e7eb; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05); }
-.emc-stat-label { font-size: 12px; color: #6b7280; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
-.emc-stat-value { font-size: 32px; font-weight: 800; color: #059669; font-family: 'JetBrains Mono', monospace; }
-.emc-stat-card.alert .emc-stat-value { color: #dc2626; }
-.emc-panel { background: #fff; border-radius: 12px; padding: 28px; border: 1px solid #e5e7eb; margin-bottom: 28px; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05); }
-.emc-panel h3 { font-size: 18px; font-weight: 700; color: #1f2937; margin-bottom: 20px; }
-.emc-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-.emc-table th { background: #f9fafb; padding: 12px 14px; text-align: left; font-weight: 700; font-size: 11px; letter-spacing: 0.5px; text-transform: uppercase; color: #6b7280; border-bottom: 2px solid #e5e7eb; }
-.emc-table td { padding: 12px 14px; border-bottom: 1px solid #f3f4f6; vertical-align: middle; }
-.emc-table tr:last-child td { border-bottom: none; }
-.emc-table tr:hover td { background: #f9fafb; }
-.emc-email-time { color: #6b7280; font-family: 'JetBrains Mono', monospace; font-size: 12px; }
-.emc-status { display: inline-block; padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; text-transform: uppercase; }
-.emc-status.load_created { background: #dcfce7; color: #15803d; }
-.emc-status.low_confidence { background: #fef3c7; color: #92400e; }
-.emc-status.error { background: #fee2e2; color: #b91c1c; }
-.emc-status.received { background: #e0f2fe; color: #0369a1; }
-.emc-status.processing { background: #f5f3ff; color: #7c3aed; }
-.emc-confidence { font-family: 'JetBrains Mono', monospace; color: #059669; font-weight: 600; }
-.emc-templates { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 18px; }
-.emc-template-card { border: 1px solid #e5e7eb; border-radius: 12px; padding: 18px; background: #fafbfc; transition: all 0.2s; }
-.emc-template-card:hover { border-color: #059669; box-shadow: 0 4px 12px rgba(5, 150, 105, 0.1); }
-.emc-template-card h4 { margin: 0 0 6px 0; color: #1f2937; font-size: 14px; font-weight: 700; }
-.emc-template-card p { margin: 6px 0 12px 0; color: #6b7280; font-size: 12px; line-height: 1.5; }
-.emc-template-card-buttons { display: flex; gap: 8px; }
-.emc-template-card button { flex: 1; padding: 6px 10px; font-size: 11px; border-radius: 6px; border: none; cursor: pointer; font-weight: 600; transition: all 0.2s; }
-.emc-btn-preview { background: #f0f9ff; color: #0369a1; border: 1px solid #bfdbfe; }
-.emc-btn-preview:hover { background: #e0f2fe; }
-.emc-btn-edit { background: #f5f3ff; color: #7c3aed; border: 1px solid #ddd6fe; }
-.emc-btn-edit:hover { background: #ede9fe; }
-.emc-form-group { margin-bottom: 18px; }
-.emc-form-group label { display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 6px; }
-.emc-form-group input, .emc-form-group select { width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 13px; }
-.emc-form-group input:focus, .emc-form-group select:focus { outline: none; border-color: #059669; box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.1); }
-.emc-submit-btn { background: #059669; color: #fff; padding: 11px 22px; border: none; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
-.emc-submit-btn:hover { background: #047857; }
-.emc-modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.5); z-index: 1000; align-items: center; justify-content: center; }
-.emc-modal.show { display: flex; }
-.emc-modal-content { background: #fff; border-radius: 14px; padding: 32px; max-width: 500px; width: 90%; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2); }
-.emc-modal-content h3 { margin: 0 0 20px 0; color: #1f2937; font-size: 18px; font-weight: 700; }
-.emc-modal-content form { display: flex; flex-direction: column; gap: 16px; }
-.emc-modal-buttons { display: flex; gap: 12px; margin-top: 24px; }
-.emc-modal-buttons button { flex: 1; padding: 11px; border: none; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; }
-.emc-modal-btn-submit { background: #059669; color: #fff; }
-.emc-modal-btn-submit:hover { background: #047857; }
-.emc-modal-btn-cancel { background: #f3f4f6; color: #374151; }
-.emc-modal-btn-cancel:hover { background: #e5e7eb; }
-.emc-detail-drawer { display: none; position: fixed; right: 0; top: 0; bottom: 0; width: 400px; background: #fff; box-shadow: -2px 0 12px rgba(0, 0, 0, 0.15); z-index: 999; overflow-y: auto; }
-.emc-detail-drawer.show { display: block; }
-.emc-drawer-header { padding: 20px; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center; }
-.emc-drawer-close { background: none; border: none; font-size: 24px; color: #6b7280; cursor: pointer; }
-.emc-drawer-body { padding: 20px; }
-.emc-drawer-section { margin-bottom: 24px; }
-.emc-drawer-section h4 { font-size: 12px; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px; }
-.emc-drawer-item { font-size: 13px; color: #1f2937; margin-bottom: 8px; word-break: break-word; }
-.emc-drawer-label { color: #6b7280; font-weight: 600; margin-bottom: 2px; }
+.mail-client{display:flex;height:calc(100vh - 56px);overflow:hidden;background:var(--bg)}
+.mail-sidebar{width:220px;min-width:220px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto;flex-shrink:0}
+.mail-sidebar-top{padding:14px 12px 10px;border-bottom:1px solid var(--border)}
+.mail-mb-list{padding:8px 0}
+.mail-mb-item{padding:8px 12px;display:flex;align-items:center;gap:8px;cursor:pointer;transition:background .12s}
+.mail-mb-item:hover{background:rgba(0,31,63,.05)}
+.mail-mb-item.active{background:rgba(0,31,63,.09)}
+.mail-mb-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;transition:background .3s}
+.mail-mb-label{flex:1;font-size:13px;font-weight:500;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mail-mb-count{font-size:10px;font-weight:700;background:var(--navy);color:#FFD700;padding:2px 6px;border-radius:8px;white-space:nowrap}
+.mail-list-pane{width:340px;min-width:280px;border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;flex-shrink:0}
+.mail-list-hd{padding:10px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;flex-shrink:0}
+.mail-list-body{flex:1;overflow-y:auto}
+.mail-item{padding:10px 14px;border-bottom:1px solid rgba(0,0,0,.05);cursor:pointer;transition:background .12s}
+.mail-item:hover{background:rgba(0,31,63,.03)}
+.mail-item.active{background:rgba(0,31,63,.07)}
+.mail-item.unread .mail-item-subject{font-weight:700}
+.mail-item.unread .mail-item-from{font-weight:700}
+.mail-item-row1{display:flex;justify-content:space-between;align-items:center;margin-bottom:2px}
+.mail-item-from{font-size:12px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:200px}
+.mail-item-time{font-size:10px;color:var(--muted);white-space:nowrap;margin-left:4px;flex-shrink:0}
+.mail-item-subject{font-size:12px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:2px}
+.mail-item-preview{font-size:11px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mail-item-tags{display:flex;gap:4px;margin-top:4px;flex-wrap:wrap}
+.mail-body-pane{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+.mail-body-empty{display:flex;align-items:center;justify-content:center;flex-direction:column;height:100%;color:var(--muted)}
 </style>
 
-<div class="emc-wrap">
-  <!-- Hero Section -->
-  <div class="emc-hero">
-    <div class="emc-hero-left">
-      <h1>Email Management Center</h1>
-      <p>Monitor incoming broker rate confirmations, auto-generate loads from PDFs, manage email templates, and view ingest audit trail.</p>
-    </div>
-  </div>
-
-  <!-- Stats Cards -->
-  <div class="emc-stats-row">
-    <div class="emc-stat-card">
-      <div class="emc-stat-label">Today's Emails</div>
-      <div class="emc-stat-value" id="emc-count-today">0</div>
-    </div>
-    <div class="emc-stat-card">
-      <div class="emc-stat-label">Loads Created</div>
-      <div class="emc-stat-value" id="emc-loads-created">0</div>
-    </div>
-    <div class="emc-stat-card alert">
-      <div class="emc-stat-label">Pending Review</div>
-      <div class="emc-stat-value" id="emc-pending">0</div>
-    </div>
-  </div>
-
-  <!-- Live Email Feed -->
-  <div class="emc-panel">
-    <h3>Live Email Feed</h3>
-    <table class="emc-table">
-      <thead>
-        <tr>
-          <th>Time</th>
-          <th>From</th>
-          <th>Subject</th>
-          <th>Broker</th>
-          <th>Status</th>
-          <th>Confidence</th>
-        </tr>
-      </thead>
-      <tbody id="emc-email-tbody">
-        <tr><td colspan="6" style="text-align: center; color: #9ca3af; padding: 20px;">Loading email feed...</td></tr>
-      </tbody>
-    </table>
-  </div>
-
-  <!-- Email Templates -->
-  <div class="emc-panel">
-    <h3>Email Templates</h3>
-    <div class="emc-templates" id="emc-templates-container">
-      <div style="text-align: center; color: #9ca3af; grid-column: 1 / -1; padding: 20px;">Loading templates...</div>
-    </div>
-  </div>
-
-  <!-- Email Configuration -->
-  <div class="emc-panel">
-    <h3>Email Configuration</h3>
-    <form id="emc-settings-form">
-      <div class="emc-form-group">
-        <label>Inbound Email Address (SendGrid)</label>
-        <input type="email" id="emc-inbound-email" placeholder="loads@3lakes.logistics" readonly style="background: #f9fafb;" />
+<div class="mail-client">
+  <!-- Sidebar -->
+  <div class="mail-sidebar">
+    <div class="mail-sidebar-top">
+      <button class="btn-navy" onclick="mailCompose()" style="width:100%;font-size:12px;padding:8px;margin-bottom:8px">+ Compose</button>
+      <div style="display:flex;align-items:center;gap:6px">
+        <button id="mail-poll-btn" onclick="mailPollAll()" style="padding:5px 10px;font-size:11px;border:1px solid var(--border);border-radius:4px;cursor:pointer;background:var(--surface);flex:1">↻ Poll</button>
+        <span id="mail-poll-status" style="font-size:10px;color:var(--muted)"></span>
       </div>
-      <div class="emc-form-group">
-        <label>From Name (Outbound Emails)</label>
-        <input type="text" id="emc-from-name" placeholder="3 Lakes Logistics" value="3 Lakes Logistics" />
-      </div>
-      <div class="emc-form-group">
-        <label>Reply-To Email</label>
-        <input type="email" id="emc-reply-to" placeholder="ops@3lakeslogistics.com" value="ops@3lakeslogistics.com" />
-      </div>
-      <button type="button" onclick="emcSendTestEmail()" class="emc-submit-btn">Send Test Email</button>
-    </form>
+    </div>
+    <div class="mail-mb-list" id="mail-mb-list">
+      <div style="padding:20px;text-align:center;color:var(--muted);font-size:12px">Loading…</div>
+    </div>
+  </div>
+
+  <!-- Email list -->
+  <div class="mail-list-pane">
+    <div class="mail-list-hd">
+      <span id="mail-list-title" style="font-weight:700;font-size:13px;flex:1">All Mailboxes</span>
+      <input id="mail-search-input" placeholder="🔍 Search" oninput="mailSearch(this.value)" style="padding:4px 8px;border:1px solid var(--border);border-radius:4px;font-size:11px;width:110px;outline:none;background:var(--bg)">
+    </div>
+    <div id="mail-list-body" class="mail-list-body">
+      <div style="padding:30px;text-align:center;color:var(--muted)">Select a mailbox</div>
+    </div>
+  </div>
+
+  <!-- Email body -->
+  <div class="mail-body-pane" id="mail-body-pane">
+    <div class="mail-body-empty" id="mail-body-empty">
+      <div style="font-size:40px;margin-bottom:12px">📧</div>
+      <div style="font-size:14px">Select an email to read</div>
+      <div style="font-size:12px;margin-top:6px;color:var(--muted)">5 connected mailboxes</div>
+    </div>
+    <div id="mail-body-content" style="display:none;height:100%;flex-direction:column;overflow:hidden"></div>
   </div>
 </div>
 
-<!-- Test Email Modal -->
-<div class="emc-modal" id="emc-test-modal">
-  <div class="emc-modal-content">
-    <h3>Send Test Email</h3>
-    <form id="emc-test-form">
-      <div class="emc-form-group">
-        <label>To Email Address</label>
-        <input type="email" id="emc-test-to" placeholder="your@email.com" required />
-      </div>
-      <div class="emc-form-group">
-        <label>Template</label>
-        <select id="emc-test-template">
-          <option value="dispatch_sheet">Dispatch Sheet</option>
-          <option value="broker_confirm">Broker Confirmation</option>
-          <option value="payout_summary">Payout Summary</option>
-        </select>
-      </div>
-      <div class="emc-modal-buttons">
-        <button type="button" onclick="emcSubmitTestEmail()" class="emc-modal-btn-submit">Send Test</button>
-        <button type="button" onclick="emcCloseTestModal()" class="emc-modal-btn-cancel">Cancel</button>
-      </div>
-    </form>
+<!-- Compose modal -->
+<div id="mail-compose-modal" style="display:none;position:fixed;bottom:24px;right:24px;width:540px;max-width:96vw;background:var(--surface);border:1px solid var(--border);border-radius:10px;box-shadow:0 12px 40px rgba(0,0,0,.25);z-index:9300;flex-direction:column;max-height:72vh">
+  <div style="padding:11px 16px;background:var(--navy);color:#fff;border-radius:10px 10px 0 0;display:flex;justify-content:space-between;align-items:center">
+    <span id="mail-compose-title" style="font-size:13px;font-weight:600">New Message</span>
+    <button onclick="mailCloseCompose()" style="background:none;border:none;color:rgba(255,255,255,.7);font-size:20px;cursor:pointer;line-height:1;padding:0">×</button>
   </div>
-</div>
-
-<!-- Email Detail Drawer -->
-<div class="emc-detail-drawer" id="emc-detail-drawer">
-  <div class="emc-drawer-header">
-    <h3 style="margin: 0; font-size: 16px;">Email Details</h3>
-    <button class="emc-drawer-close" onclick="emcCloseDetail()">&times;</button>
+  <div style="border-bottom:1px solid var(--border)">
+    <div style="display:flex;align-items:center;gap:8px;padding:7px 16px;border-bottom:1px solid var(--border)">
+      <span style="font-size:11px;font-weight:600;color:var(--muted);width:46px">From</span>
+      <select id="mail-compose-from" style="flex:1;border:none;outline:none;font-size:12px;background:transparent">
+        <option value="loads">loads@3lakeslogistics.com</option>
+        <option value="sales">sales@3lakeslogistics.com</option>
+        <option value="info">info@3lakeslogistics.com</option>
+        <option value="mark">mark@3lakeslogistics.com</option>
+        <option value="cece">cece@3lakeslogistics.com</option>
+      </select>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;padding:7px 16px;border-bottom:1px solid var(--border)">
+      <span style="font-size:11px;font-weight:600;color:var(--muted);width:46px">To</span>
+      <input id="mail-compose-to" type="email" placeholder="recipient@example.com" style="flex:1;border:none;outline:none;font-size:12px;background:transparent">
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;padding:7px 16px;border-bottom:1px solid var(--border)">
+      <span style="font-size:11px;font-weight:600;color:var(--muted);width:46px">CC</span>
+      <input id="mail-compose-cc" type="text" placeholder="optional" style="flex:1;border:none;outline:none;font-size:12px;background:transparent">
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;padding:7px 16px">
+      <span style="font-size:11px;font-weight:600;color:var(--muted);width:46px">Subject</span>
+      <input id="mail-compose-subject" type="text" placeholder="Subject" style="flex:1;border:none;outline:none;font-size:12px;font-weight:500;background:transparent">
+    </div>
   </div>
-  <div class="emc-drawer-body" id="emc-drawer-content">
-    <!-- Populated dynamically -->
+  <textarea id="mail-compose-body" placeholder="Write your message…" style="flex:1;min-height:150px;border:none;outline:none;padding:12px 16px;font-size:13px;resize:none;font-family:inherit;background:transparent"></textarea>
+  <div style="padding:10px 16px;border-top:1px solid var(--border);display:flex;gap:8px;align-items:center">
+    <button onclick="mailSend()" id="mail-send-btn" class="btn-navy" style="font-size:13px;padding:7px 18px">Send</button>
+    <span id="mail-send-status" style="font-size:12px;color:var(--muted)"></span>
+    <button onclick="mailCloseCompose()" style="margin-left:auto;padding:6px 12px;background:none;border:1px solid var(--border);border-radius:5px;cursor:pointer;font-size:12px;color:var(--muted)">Discard</button>
   </div>
+  <input type="hidden" id="mail-compose-reply-id">
+  <input type="hidden" id="mail-compose-reply-msg-id">
 </div>
 
 <script>
-(function(){
-  const EMC_BASE = (typeof API_BASE !== 'undefined' ? API_BASE : '') + '/api';
-  const EMC_TOKEN = (typeof API_TOKEN !== 'undefined' ? API_TOKEN : localStorage.getItem('ec_token') || '');
+// ── Mail Client ────────────────────────────────────────────────────────────
+let _mailCurrent='all';
+let _mailEmails=[];
+let _mailSelectedId=null;
+let _mailboxStatuses=[];
+const _MB_COLORS={loads:'#2563eb',sales:'#059669',info:'#7c3aed',mark:'#dc2626',cece:'#d97706'};
+const _MB_ICONS={loads:'📥',sales:'📊',info:'ℹ️',mark:'👤',cece:'👤'};
 
-  function emcHeaders(){
-    return {'Content-Type':'application/json','Authorization':'Bearer '+EMC_TOKEN};
+window.mailInit=function(){mailLoadMailboxes();mailLoadInbox();};
+
+async function mailLoadMailboxes(){
+  try{
+    const r=await apiFetch('/api/mailboxes');
+    const d=await r.json();
+    _mailboxStatuses=d.mailboxes||[];
+    _renderSidebar(_mailboxStatuses);
+  }catch(e){document.getElementById('mail-mb-list').innerHTML='<div style="padding:12px;font-size:11px;color:var(--red)">'+esc(e.message)+'</div>';}
+}
+
+function _renderSidebar(mailboxes){
+  const el=document.getElementById('mail-mb-list');
+  const totalUnread=mailboxes.reduce((s,m)=>s+(m.unread||0),0);
+  let h=`<div class="mail-mb-item ${_mailCurrent==='all'?'active':''}" onclick="mailSelectMB('all')">
+    <div class="mail-mb-dot" style="background:#6b7280"></div>
+    <span class="mail-mb-label" style="font-weight:600">All Mailboxes</span>
+    ${totalUnread?`<span class="mail-mb-count">${totalUnread}</span>`:''}
+  </div><div style="height:1px;background:var(--border);margin:4px 0"></div>`;
+  for(const mb of mailboxes){
+    const dot=mb.status==='ok'?'#22c55e':mb.status==='error'?'#ef4444':'#d1d5db';
+    const title=mb.status+(mb.error?' — '+mb.error:'')+(mb.last_polled?' · Polled '+new Date(mb.last_polled).toLocaleTimeString():'');
+    h+=`<div class="mail-mb-item ${_mailCurrent===mb.name?'active':''}" onclick="mailSelectMB('${mb.name}')" title="${esc(title)}">
+      <div class="mail-mb-dot" style="background:${dot}"></div>
+      <span class="mail-mb-label">${_MB_ICONS[mb.name]||'📧'} ${mb.name}@</span>
+      ${mb.unread?`<span class="mail-mb-count" style="background:${_MB_COLORS[mb.name]||'var(--navy)'}">${mb.unread}</span>`:''}
+    </div>
+    ${!mb.configured?`<div style="padding:0 12px 6px 28px;font-size:10px;color:#9ca3af">Not connected</div>`:''}`;
   }
+  el.innerHTML=h;
+}
 
-  // Load email feed
-  window.emcRefreshFeed = function(){
-    fetch(EMC_BASE+'/email-log?limit=50',{headers:emcHeaders()})
-      .then(r=>r.json())
-      .then(d=>{
-        if(d.ok && d.data){
-          const tbody = document.getElementById('emc-email-tbody');
-          if(d.data.length===0){
-            tbody.innerHTML='<tr><td colspan="6" style="text-align:center;color:#9ca3af;padding:20px;">No emails received yet</td></tr>';
-            return;
-          }
-          tbody.innerHTML=d.data.map(e=>{
-            const time=new Date(e.received_at).toLocaleTimeString();
-            const broker=e.broker_name||'Unknown';
-            const conf=(e.confidence||0).toFixed(2);
-            return `<tr onclick="emcShowDetail('${e.id}')" style="cursor:pointer;">
-              <td class="emc-email-time">${time}</td>
-              <td>${e.from_email}</td>
-              <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;">${e.subject}</td>
-              <td>${broker}</td>
-              <td><span class="emc-status ${e.status}">${e.status.replace(/_/g,' ')}</span></td>
-              <td class="emc-confidence">${conf}</td>
-            </tr>`;
-          }).join('');
-        }
-      })
-      .catch(e=>console.error('Email feed error:',e));
-  };
+async function mailSelectMB(name){
+  _mailCurrent=name;_mailSelectedId=null;
+  document.getElementById('mail-body-empty').style.display='flex';
+  document.getElementById('mail-body-content').style.display='none';
+  document.getElementById('mail-list-title').textContent=name==='all'?'All Mailboxes':name+'@3lakeslogistics.com';
+  _renderSidebar(_mailboxStatuses);
+  await mailLoadInbox();
+}
 
-  // Load stats
-  function emcRefreshStats(){
-    fetch(EMC_BASE+'/email/stats',{headers:emcHeaders()})
-      .then(r=>r.json())
-      .then(d=>{
-        if(d.ok && d.data){
-          const stats=d.data;
-          document.getElementById('emc-count-today').textContent=(stats.received_today||0);
-          document.getElementById('emc-loads-created').textContent=(stats.load_created||0);
-          document.getElementById('emc-pending').textContent=(stats.low_confidence||0);
-        }
-      })
-      .catch(e=>console.error('Stats error:',e));
+async function mailLoadInbox(){
+  const lb=document.getElementById('mail-list-body');
+  lb.innerHTML='<div style="padding:30px;text-align:center;color:var(--muted)"><div class="spin" style="width:20px;height:20px;border:2px solid rgba(0,31,63,.15);border-top-color:var(--navy);margin:0 auto 8px"></div></div>';
+  try{
+    const url=_mailCurrent==='all'?'/api/mailboxes/inbox?limit=100':`/api/mailboxes/${_mailCurrent}/inbox?limit=100`;
+    const r=await apiFetch(url);
+    const d=await r.json();
+    _mailEmails=d.emails||[];
+    _renderEmailList(_mailEmails);
+  }catch(e){lb.innerHTML=`<div style="padding:20px;text-align:center;color:var(--red)">${esc(e.message)}</div>`;}
+}
+
+function _renderEmailList(emails){
+  const el=document.getElementById('mail-list-body');
+  if(!emails.length){
+    el.innerHTML='<div style="padding:40px 20px;text-align:center;color:var(--muted);font-size:13px">No emails yet<br><span style="font-size:11px">Click ↻ Poll to check for new messages</span></div>';
+    return;
   }
+  el.innerHTML=emails.map(e=>{
+    const from=esc((e.from_address||'').replace(/<[^>]+>/,'').trim()||'unknown');
+    const subj=esc(e.subject||'(no subject)');
+    const preview=esc((e.body_text||'').replace(/\s+/g,' ').trim().substring(0,70));
+    const ts=e.received_at?_relTime(new Date(e.received_at)):'—';
+    const unread=!e.is_read?'unread':'';
+    const active=e.id===_mailSelectedId?'active':'';
+    const att=e.attachment_count>0?`<span style="font-size:10px;color:#6b7280">📎${e.attachment_count}</span>`:'';
+    const mbBadge=_mailCurrent==='all'?`<span style="font-size:10px;padding:1px 5px;border-radius:3px;background:${_MB_COLORS[e.mailbox]||'#6b7280'}22;color:${_MB_COLORS[e.mailbox]||'#6b7280'};font-weight:600">${e.mailbox}</span>`:'';
+    const outIcon=e.direction==='outbound'?'<span style="font-size:10px;color:var(--muted)">↗ Sent</span>':'';
+    return`<div class="mail-item ${unread} ${active}" id="mitem-${esc(e.id)}" onclick="mailOpen('${esc(e.id)}')">
+      <div class="mail-item-row1">
+        <span class="mail-item-from">${from.length>30?from.slice(0,30)+'…':from}</span>
+        <span class="mail-item-time">${ts}</span>
+      </div>
+      <div class="mail-item-subject">${subj}</div>
+      <div class="mail-item-preview">${preview||'—'}</div>
+      <div class="mail-item-tags">${mbBadge}${att}${outIcon}</div>
+    </div>`;
+  }).join('');
+}
 
-  // Load templates
-  function emcLoadTemplates(){
-    fetch(EMC_BASE+'/email/templates',{headers:emcHeaders()})
-      .then(r=>r.json())
-      .then(d=>{
-        if(d.ok && d.data){
-          const container=document.getElementById('emc-templates-container');
-          container.innerHTML=d.data.map(t=>`
-            <div class="emc-template-card">
-              <h4>${t.name.replace(/_/g,' ')}</h4>
-              <p>${t.subject}</p>
-              <div class="emc-template-card-buttons">
-                <button class="emc-btn-preview" onclick="emcPreviewTemplate('${t.name}')">Preview</button>
-                <button class="emc-btn-edit" onclick="emcEditTemplate('${t.name}')">Edit</button>
-              </div>
-            </div>
-          `).join('');
-        }
-      })
-      .catch(e=>console.error('Templates error:',e));
+function mailSearch(q){
+  const lq=q.toLowerCase();
+  const filtered=!lq?_mailEmails:_mailEmails.filter(e=>
+    (e.subject||'').toLowerCase().includes(lq)||(e.from_address||'').toLowerCase().includes(lq)||(e.body_text||'').toLowerCase().includes(lq)
+  );
+  _renderEmailList(filtered);
+}
+
+function _relTime(d){
+  const s=(new Date()-d)/1000;
+  if(s<60)return'just now';if(s<3600)return Math.floor(s/60)+'m';
+  if(s<86400)return Math.floor(s/3600)+'h';if(s<604800)return Math.floor(s/86400)+'d';
+  return d.toLocaleDateString('en-US',{month:'short',day:'numeric'});
+}
+
+async function mailOpen(id){
+  _mailSelectedId=id;
+  document.querySelectorAll('.mail-item').forEach(el=>el.classList.remove('active'));
+  const item=document.getElementById('mitem-'+id);
+  if(item){item.classList.add('active');item.classList.remove('unread');}
+  document.getElementById('mail-body-empty').style.display='none';
+  const bc=document.getElementById('mail-body-content');
+  bc.style.display='flex';
+  bc.innerHTML='<div style="padding:40px;text-align:center;color:var(--muted)"><div class="spin" style="width:24px;height:24px;border:2px solid rgba(0,31,63,.15);border-top-color:var(--navy);margin:0 auto"></div></div>';
+  try{
+    const r=await apiFetch(`/api/mailboxes/email/${id}`);
+    const d=await r.json();
+    _renderBody(d.email,bc);
+    const em=_mailEmails.find(m=>m.id===id);
+    if(em)em.is_read=true;
+  }catch(err){bc.innerHTML=`<div style="padding:20px;color:var(--red)">${esc(err.message)}</div>`;}
+}
+
+function _renderBody(e,container){
+  const ts=e.received_at?new Date(e.received_at).toLocaleString('en-US',{weekday:'short',month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit'}):'—';
+  const dir=e.direction==='outbound'?'<span style="font-size:11px;background:rgba(5,150,105,.1);color:#059669;padding:2px 6px;border-radius:3px;font-weight:600">Sent</span>':'';
+  const atts=(e.attachments||[]);
+  const attHtml=atts.length?`<div style="padding:12px 20px;border-top:1px solid var(--border);background:rgba(0,0,0,.02);flex-shrink:0">
+    <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:6px">Attachments (${atts.length})</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">${atts.map(a=>`<span style="padding:5px 10px;background:var(--surface);border:1px solid var(--border);border-radius:5px;font-size:11px">📎 ${esc(a.name||'file')} <span style="color:var(--muted)">${a.size_kb||0}KB</span></span>`).join('')}</div>
+  </div>`:'';
+  const bodyContent=e.body_html
+    ?`<iframe sandbox="allow-same-origin" srcdoc="${e.body_html.replace(/&/g,'&amp;').replace(/"/g,'&quot;')}" style="width:100%;height:100%;border:none;flex:1;min-height:300px"></iframe>`
+    :`<pre style="white-space:pre-wrap;font-size:13px;line-height:1.7;padding:20px;font-family:inherit;margin:0;flex:1;overflow-y:auto">${esc(e.body_text||'(empty)')}</pre>`;
+  container.innerHTML=`
+    <div style="padding:14px 20px;border-bottom:1px solid var(--border);flex-shrink:0">
+      <div style="font-size:16px;font-weight:700;margin-bottom:8px;line-height:1.3">${esc(e.subject||'(no subject)')} ${dir}</div>
+      <div style="font-size:12px;color:var(--muted);display:grid;grid-template-columns:auto 1fr;gap:2px 10px;margin-bottom:10px">
+        <span style="font-weight:600">From</span><span>${esc(e.from_address||'')}</span>
+        <span style="font-weight:600">To</span><span>${esc((e.to_addresses||[]).join(', '))}</span>
+        ${(e.cc_addresses||[]).length?`<span style="font-weight:600">CC</span><span>${esc(e.cc_addresses.join(', '))}</span>`:''}
+        <span style="font-weight:600">Date</span><span>${ts}</span>
+        <span style="font-weight:600">Mailbox</span><span style="color:${_MB_COLORS[e.mailbox]||'var(--text)'};font-weight:600">${e.mailbox}@3lakeslogistics.com</span>
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <button onclick="mailReply('${esc(e.id)}','${esc(e.from_address||'')}','${esc((e.subject||'').replace(/'/g,"\\'"))}')" class="btn-navy" style="font-size:11px;padding:5px 12px">↩ Reply</button>
+        <button onclick="mailForward('${esc(e.id)}','${esc((e.subject||'').replace(/'/g,"\\'"))}')" style="padding:5px 12px;font-size:11px;border:1px solid var(--border);border-radius:4px;cursor:pointer;background:var(--surface)">→ Forward</button>
+        ${e.mailbox==='loads'&&atts.length?`<button onclick="nav('vault')" style="padding:5px 12px;font-size:11px;border:1px solid #059669;border-radius:4px;cursor:pointer;background:rgba(5,150,105,.06);color:#059669;font-weight:600">📄 Vault</button>`:''}
+        <button onclick="mailDelete('${esc(e.id)}')" style="padding:5px 12px;font-size:11px;border:1px solid rgba(239,68,68,.4);border-radius:4px;cursor:pointer;background:rgba(239,68,68,.05);color:var(--red);margin-left:auto">🗑 Delete</button>
+      </div>
+    </div>
+    <div style="flex:1;overflow-y:auto;display:flex;flex-direction:column">${bodyContent}</div>
+    ${attHtml}`;
+}
+
+function mailCompose(){
+  document.getElementById('mail-compose-to').value='';
+  document.getElementById('mail-compose-cc').value='';
+  document.getElementById('mail-compose-subject').value='';
+  document.getElementById('mail-compose-body').value='';
+  document.getElementById('mail-compose-reply-id').value='';
+  document.getElementById('mail-compose-reply-msg-id').value='';
+  document.getElementById('mail-compose-title').textContent='New Message';
+  document.getElementById('mail-send-status').textContent='';
+  document.getElementById('mail-send-btn').textContent='Send';
+  const sel=document.getElementById('mail-compose-from');
+  if(_mailCurrent!=='all')sel.value=_mailCurrent;
+  const modal=document.getElementById('mail-compose-modal');
+  modal.style.display='flex';
+  setTimeout(()=>document.getElementById('mail-compose-to').focus(),60);
+}
+function mailReply(id,from,subject){
+  mailCompose();
+  document.getElementById('mail-compose-to').value=from;
+  document.getElementById('mail-compose-subject').value=subject.startsWith('Re:')?subject:'Re: '+subject;
+  document.getElementById('mail-compose-reply-id').value=id;
+  document.getElementById('mail-compose-title').textContent='Reply';
+  setTimeout(()=>document.getElementById('mail-compose-body').focus(),60);
+}
+function mailForward(id,subject){
+  mailCompose();
+  document.getElementById('mail-compose-subject').value=subject.startsWith('Fwd:')?subject:'Fwd: '+subject;
+  document.getElementById('mail-compose-title').textContent='Forward';
+}
+function mailCloseCompose(){document.getElementById('mail-compose-modal').style.display='none';}
+
+async function mailSend(){
+  const btn=document.getElementById('mail-send-btn');
+  const statusEl=document.getElementById('mail-send-status');
+  const from=document.getElementById('mail-compose-from').value;
+  const to=document.getElementById('mail-compose-to').value.trim();
+  const cc=document.getElementById('mail-compose-cc').value.trim();
+  const subject=document.getElementById('mail-compose-subject').value.trim();
+  const body=document.getElementById('mail-compose-body').value.trim();
+  const replyId=document.getElementById('mail-compose-reply-id').value;
+  if(!to){statusEl.style.color='var(--red)';statusEl.textContent='To is required';return;}
+  if(!subject){statusEl.style.color='var(--red)';statusEl.textContent='Subject is required';return;}
+  btn.disabled=true;btn.textContent='Sending…';statusEl.textContent='';
+  try{
+    const payload={from_mailbox:from,to:[to],subject,body_html:'',body_text:body};
+    if(cc)payload.cc=[cc];
+    if(replyId)payload.in_reply_to_db_id=replyId;
+    const r=await apiFetch('/api/mailboxes/compose','POST',payload);
+    const d=await r.json();
+    if(d.sent){
+      statusEl.style.color='var(--green)';statusEl.textContent='✅ Sent';
+      setTimeout(()=>{mailCloseCompose();mailLoadInbox();},1500);
+    }else{statusEl.style.color='var(--red)';statusEl.textContent=d.error||d.detail||'Send failed';}
+  }catch(e){statusEl.style.color='var(--red)';statusEl.textContent=e.message;}
+  finally{btn.disabled=false;btn.textContent='Send';}
+}
+
+async function mailPollAll(){
+  const btn=document.getElementById('mail-poll-btn');
+  const st=document.getElementById('mail-poll-status');
+  btn.disabled=true;btn.textContent='…';st.textContent='';
+  try{
+    const r=await apiFetch('/api/mailboxes/poll','POST',{});
+    const d=await r.json();
+    const total=(d.results||[]).reduce((s,x)=>s+(x.fetched||0),0);
+    st.textContent=total>0?`+${total} new`:'Up to date';
+    await mailLoadMailboxes();
+    await mailLoadInbox();
+  }catch(e){st.textContent='Error';}
+  finally{btn.disabled=false;btn.textContent='↻ Poll';}
+}
+
+async function mailDelete(id){
+  if(!confirm('Remove this email from Eagle Eye?'))return;
+  try{
+    await apiFetch(`/api/mailboxes/email/${id}`,'DELETE',{});
+    toast('Removed');
+    _mailEmails=_mailEmails.filter(e=>e.id!==id);
+    _renderEmailList(_mailEmails);
+    document.getElementById('mail-body-content').style.display='none';
+    document.getElementById('mail-body-empty').style.display='flex';
+    _mailSelectedId=null;
+  }catch(e){toast('Delete failed: '+e.message,'error');}
+}
+
+// Auto-poll every 2 minutes while email page is visible
+setInterval(()=>{
+  const pg=document.getElementById('page-email');
+  if(pg&&pg.style.display!=='none'){
+    apiFetch('/api/mailboxes/poll','POST',{}).then(r=>r.json()).then(d=>{
+      const n=(d.results||[]).reduce((s,x)=>s+(x.fetched||0),0);
+      if(n>0){mailLoadMailboxes();mailLoadInbox();}
+    }).catch(()=>{});
   }
-
-  window.emcShowDetail = function(emailId){
-    fetch(EMC_BASE+'/email-log/'+emailId,{headers:emcHeaders()})
-      .then(r=>r.json())
-      .then(d=>{
-        if(d.ok && d.data){
-          const e=d.data.data;
-          const content=document.getElementById('emc-drawer-content');
-          const extracted=e.extracted_data||{};
-          content.innerHTML=`
-            <div class="emc-drawer-section">
-              <h4>Email Info</h4>
-              <div class="emc-drawer-item"><span class="emc-drawer-label">From:</span> ${e.from_email}</div>
-              <div class="emc-drawer-item"><span class="emc-drawer-label">To:</span> ${e.to_email}</div>
-              <div class="emc-drawer-item"><span class="emc-drawer-label">Subject:</span> ${e.subject}</div>
-              <div class="emc-drawer-item"><span class="emc-drawer-label">Received:</span> ${new Date(e.received_at).toLocaleString()}</div>
-            </div>
-            <div class="emc-drawer-section">
-              <h4>Extraction Results</h4>
-              <div class="emc-drawer-item"><span class="emc-drawer-label">Status:</span> <span class="emc-status ${e.status}">${e.status}</span></div>
-              <div class="emc-drawer-item"><span class="emc-drawer-label">Confidence:</span> ${((e.confidence||0)*100).toFixed(1)}%</div>
-              <div class="emc-drawer-item"><span class="emc-drawer-label">Broker:</span> ${e.broker_name||'—'}</div>
-            </div>
-            ${e.linked_load?`<div class="emc-drawer-section">
-              <h4>Linked Load</h4>
-              <div class="emc-drawer-item"><span class="emc-drawer-label">Load ID:</span> ${e.load_id}</div>
-              <div class="emc-drawer-item"><span class="emc-drawer-label">Status:</span> ${e.linked_load.status||'—'}</div>
-            </div>`:''}
-            <div class="emc-drawer-section">
-              <h4>Raw Body</h4>
-              <div class="emc-drawer-item" style="background:#f9fafb;padding:10px;border-radius:6px;max-height:200px;overflow-y:auto;font-size:12px;white-space:pre-wrap;">${e.body_text||e.body_html||'(empty)'}</div>
-            </div>
-          `;
-          document.getElementById('emc-detail-drawer').classList.add('show');
-        }
-      })
-      .catch(e=>console.error('Detail error:',e));
-  };
-
-  window.emcCloseDetail = function(){
-    document.getElementById('emc-detail-drawer').classList.remove('show');
-  };
-
-  window.emcSendTestEmail = function(){
-    document.getElementById('emc-test-modal').classList.add('show');
-  };
-
-  window.emcCloseTestModal = function(){
-    document.getElementById('emc-test-modal').classList.remove('show');
-  };
-
-  window.emcSubmitTestEmail = function(){
-    const to_email=document.getElementById('emc-test-to').value;
-    const template=document.getElementById('emc-test-template').value;
-    if(!to_email){alert('Please enter email');return;}
-    fetch(EMC_BASE+'/email/send-test?to_email='+encodeURIComponent(to_email)+'&template='+encodeURIComponent(template),
-      {method:'POST',headers:emcHeaders()})
-      .then(r=>r.json())
-      .then(d=>{
-        if(d.ok){
-          alert('Test email sent to '+to_email);
-          emcCloseTestModal();
-        }else{
-          alert('Error: '+(d.error||'Unknown error'));
-        }
-      })
-      .catch(e=>{alert('Error: '+e.message);console.error(e);});
-  };
-
-  window.emcPreviewTemplate = function(name){
-    alert('Template preview not yet implemented for: '+name);
-  };
-
-  window.emcEditTemplate = function(name){
-    alert('Template editing not yet implemented for: '+name);
-  };
-
-  // Initial load and polling
-  emcLoadTemplates();
-  emcRefreshFeed();
-  emcRefreshStats();
-  setInterval(emcRefreshFeed,30000);
-  setInterval(emcRefreshStats,60000);
-})();
+},120000);
 </script>
 </div>
 
