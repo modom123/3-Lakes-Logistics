@@ -104,11 +104,8 @@ def start_outbound_call(
             },
         }
 
-        if s.bland_ai_org_id:
-            payload["organization_id"] = s.bland_ai_org_id
-
         if webhook_url:
-            payload["webhook"] = webhook_url   # Bland field is "webhook", not "webhook_url"
+            payload["webhook"] = webhook_url
 
         r = httpx.post(
             f"{BLAND_API_URL}/calls",
@@ -116,7 +113,17 @@ def start_outbound_call(
             json=payload,
             timeout=20,
         )
-        r.raise_for_status()
+
+        if not r.is_success:
+            body = r.text
+            log_agent(
+                "vance",
+                "bland_call_failed",
+                carrier_id=None,
+                payload={"lead_id": lead_id, "phone": phone, "status_code": r.status_code},
+                error=body,
+            )
+            return {"status": "error", "error": f"Bland {r.status_code}: {body}"}
 
         data = r.json()
         call_id = data.get("call_id")
@@ -136,19 +143,9 @@ def start_outbound_call(
         return {
             "status": "started",
             "call_id": call_id,
-            "cost_estimate": 0.06,  # Base $0.06/min + Claude LLM costs
+            "cost_estimate": 0.06,
         }
 
-    except httpx.HTTPError as e:
-        error_msg = str(e)
-        log_agent(
-            "vance",
-            "bland_call_failed",
-            carrier_id=None,
-            payload={"lead_id": lead_id, "phone": phone},
-            error=error_msg,
-        )
-        return {"status": "error", "error": error_msg}
     except Exception as e:  # noqa: BLE001
         error_msg = f"Unexpected error: {str(e)}"
         log_agent("vance", "bland_call_error", carrier_id=None, payload={"lead_id": lead_id}, error=error_msg)
