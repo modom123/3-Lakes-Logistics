@@ -28,6 +28,7 @@ CREATE INDEX IF NOT EXISTS idx_carrier_brain_confidence ON carrier_brain (confid
 
 -- RLS: service-role only (Eagle Eye backend reads/writes; no public access)
 ALTER TABLE carrier_brain ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS carrier_brain_service_only ON carrier_brain;
 CREATE POLICY carrier_brain_service_only ON carrier_brain
   USING (auth.role() = 'service_role');
 

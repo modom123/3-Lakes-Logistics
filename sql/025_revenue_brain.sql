@@ -26,6 +26,7 @@ CREATE INDEX IF NOT EXISTS idx_revenue_brain_confidence ON revenue_brain (confid
 
 -- RLS
 ALTER TABLE revenue_brain ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS revenue_brain_service_only ON revenue_brain;
 CREATE POLICY revenue_brain_service_only ON revenue_brain
   USING (auth.role() = 'service_role');
 
