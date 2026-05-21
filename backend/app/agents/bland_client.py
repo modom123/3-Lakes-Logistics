@@ -25,20 +25,16 @@ Personality: Confident, direct, blue-collar. Never oversell or pushy.
 You're a peer, not a salesman.
 
 Your goal: Qualify on: DOT# age, fleet size, current dispatch situation, pain points.
-If they're interested, offer a 15-min call with our Commander (human).
+If they're interested, offer a 15-min call with our onboarding department.
+Try to either schedule an appointment OR get their email address for follow-up.
 
 Rules:
 - Lead with curiosity: "How long you been running your own authority?"
 - Listen more than you talk
 - If they're not interested, accept it gracefully and wish them well
 - Never pressure or follow up too hard
-- If they seem open, say: "Perfect. Let me get you scheduled with our Commander for a quick 15-min call tomorrow?"
-
-Script variables available:
-- prospect_name: Their name
-- company_name: Their company
-- dot_number: DOT# (if known)
-- current_pain: Their stated pain point (if known)
+- If they seem open, say: "Perfect. Let me get you scheduled with our onboarding for a quick 15-min call tomorrow?"
+- If they can't schedule now, say: "No problem — what's a good email? I'll send you the details and a booking link."
 
 Keep responses conversational and natural. Sound like you're actually talking to them."""
 
@@ -195,22 +191,32 @@ def handle_bland_webhook(event: dict[str, Any]) -> dict[str, Any]:
             result="success",
         )
 
-        # Parse Bland's analysis for decision signals
-        success = analysis.get("success", False)
-        reason = analysis.get("reason", "unknown")
+        # Detect interest from Bland's analysis — check multiple possible fields
+        success = (
+            analysis.get("success")
+            or analysis.get("goal_completion")
+            or analysis.get("converted")
+            or analysis.get("interested")
+            or False
+        )
+        reason = analysis.get("reason") or analysis.get("summary") or "unknown"
         outcome = "interested" if success else "not_interested"
 
-        # Trigger follow-up sequence if interested
+        # Also grab email if Bland extracted it from the conversation
+        extracted_email = analysis.get("email") or analysis.get("prospect_email") or prospect_email
+
+        # Trigger follow-up for interested prospects — even if no email (SMS-only path)
         follow_up_result = None
-        if outcome == "interested" and prospect_email and phone_number:
+        if outcome == "interested" and phone_number:
             follow_up_result = run_follow_up({
                 "lead_id": lead_id,
                 "prospect_name": prospect_name,
-                "prospect_email": prospect_email,
+                "prospect_email": extracted_email,
                 "company_name": company_name,
                 "phone_number": phone_number,
                 "call_outcome": "interested",
                 "call_id": call_id,
+                "transcript": transcript,
             })
 
         return {

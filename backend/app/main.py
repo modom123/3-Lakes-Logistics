@@ -79,11 +79,20 @@ def _start_scheduler(app: FastAPI) -> None:
             fire_sms_campaign,
             fire_email_campaign,
             fire_social_post,
+            fire_follow_up_reminders,
         )
         from .agents.memory import prune_interactions
         from .email.imap_poller import poll_all as poll_all_mailboxes
 
         scheduler = BackgroundScheduler(timezone="UTC")
+
+        # ── Follow-up 24h reminders — every hour ─────────────────────────────
+        scheduler.add_job(
+            fire_follow_up_reminders,
+            IntervalTrigger(hours=1),
+            id="follow_up_reminders",
+            replace_existing=True,
+        )
 
         # ── Mailbox IMAP poll — every 2 minutes ──────────────────────────────
         scheduler.add_job(

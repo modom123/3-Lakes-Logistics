@@ -254,6 +254,19 @@ def fire_social_post() -> None:
     _bg(_run)
 
 
+def fire_follow_up_reminders() -> None:
+    """Hourly job — sends 24h SMS reminders to Interested leads whose time has come."""
+    def _run():
+        try:
+            from .prospecting.follow_up import send_due_reminders  # noqa: PLC0415
+            result = send_due_reminders()
+            log.info("fire_follow_up_reminders sent=%s eligible=%s",
+                     result.get("sent"), result.get("eligible"))
+        except Exception as exc:  # noqa: BLE001
+            log.error("fire_follow_up_reminders failed: %s", exc)
+    _bg(_run)
+
+
 def fire_vault_scan(doc_id: str) -> None:
     """Trigger background AI extraction for a vault document.
 
