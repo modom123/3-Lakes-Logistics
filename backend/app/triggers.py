@@ -188,6 +188,72 @@ def fire_sofia() -> None:
     _bg(_run)
 
 
+def fire_vance_batch() -> None:
+    """Run Vance batch daily — outbound calls to high-score leads (score >= 8)."""
+    def _run():
+        try:
+            from .agents.vance import run_batch  # noqa: PLC0415
+            log.info("daily_agent: vance_batch starting")
+            result = run_batch()
+            log.info(
+                "daily_agent: vance_batch done queued=%s errors=%s",
+                result.get("calls_queued"), result.get("errors"),
+            )
+        except Exception as exc:  # noqa: BLE001
+            log.error("daily_agent: vance_batch failed: %s", exc)
+    _bg(_run)
+
+
+def fire_sms_campaign() -> None:
+    """Run SMS campaigner daily — bulk SMS to Tier B leads (score 4-7)."""
+    def _run():
+        try:
+            from .agents.sms_campaigner import send_batch  # noqa: PLC0415
+            log.info("daily_agent: sms_campaign starting")
+            result = send_batch()
+            log.info(
+                "daily_agent: sms_campaign done sent=%s failed=%s",
+                result.get("sent"), result.get("failed"),
+            )
+        except Exception as exc:  # noqa: BLE001
+            log.error("daily_agent: sms_campaign failed: %s", exc)
+    _bg(_run)
+
+
+def fire_email_campaign() -> None:
+    """Run email campaigner daily — cold outreach to leads with email addresses."""
+    def _run():
+        try:
+            from .agents.email_campaigner import send_batch  # noqa: PLC0415
+            log.info("daily_agent: email_campaign starting")
+            result = send_batch()
+            log.info(
+                "daily_agent: email_campaign done sent=%s failed=%s",
+                result.get("sent"), result.get("failed"),
+            )
+        except Exception as exc:  # noqa: BLE001
+            log.error("daily_agent: email_campaign failed: %s", exc)
+    _bg(_run)
+
+
+def fire_social_post() -> None:
+    """Run social poster weekly — posts to Facebook, Instagram, LinkedIn."""
+    def _run():
+        try:
+            from .agents.social import post_all  # noqa: PLC0415
+            log.info("weekly_agent: social_post starting")
+            result = post_all()
+            log.info(
+                "weekly_agent: social_post done fb=%s ig=%s li=%s",
+                result.get("facebook", {}).get("status"),
+                result.get("instagram", {}).get("status"),
+                result.get("linkedin", {}).get("status"),
+            )
+        except Exception as exc:  # noqa: BLE001
+            log.error("weekly_agent: social_post failed: %s", exc)
+    _bg(_run)
+
+
 def fire_vault_scan(doc_id: str) -> None:
     """Trigger background AI extraction for a vault document.
 

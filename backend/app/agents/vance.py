@@ -5,12 +5,76 @@ Much cheaper than Vapi, cleaner API, better for 1000+ calls/month.
 """
 from __future__ import annotations
 
+import re
+import time
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from .bland_client import start_outbound_call, handle_bland_webhook
 from ..logging_service import log_agent
+from ..supabase_client import get_supabase
 from . import memory as mem
 from . import carrier_brain as cb
+
+
+def _normalize_phone(phone: str) -> str | None:
+    """Normalize to E.164 (+1XXXXXXXXXX). Returns None if not a valid US number."""
+    digits = re.sub(r"\D", "", phone)
+    if len(digits) == 10:
+        return f"+1{digits}"
+    if len(digits) == 11 and digits.startswith("1"):
+        return f"+{digits}"
+    return None
+
+
+def run_batch(limit: int = 30) -> dict[str, Any]:
+    """Dial up to `limit` high-score leads that haven't been touched recently."""
+    db = get_supabase()
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=3)).isoformat()
+
+    rows = (
+        db.table("leads")
+        .select("id,contact_name,company_name,phone,dot_number,email")
+        .gte("score", 8)
+        .in_("status", ["New", "Warm", "Contacted"])
+        .not_.is_("phone", "null")
+        .neq("do_not_contact", True)
+        .or_(f"last_touch_at.is.null,last_touch_at.lt.{cutoff}")
+        .limit(limit)
+        .execute()
+    ).data or []
+
+    calls_queued = 0
+    errors = 0
+    now = datetime.now(timezone.utc).isoformat()
+
+    for row in rows:
+        phone = _normalize_phone(row.get("phone") or "")
+        if not phone:
+            errors += 1
+            continue
+
+        result = start_outbound_call(
+            lead_id=str(row["id"]),
+            phone=phone,
+            prospect_name=row.get("contact_name") or "Friend",
+            prospect_email=row.get("email") or "",
+            company_name=row.get("company_name") or "",
+            dot_number=str(row.get("dot_number") or ""),
+        )
+
+        if result.get("status") == "started":
+            db.table("leads").update(
+                {"last_contact_at": now, "last_touch_at": now, "outreach_channel": "voice"}
+            ).eq("id", row["id"]).execute()
+            calls_queued += 1
+        else:
+            errors += 1
+
+        time.sleep(1)
+
+    log_agent("vance", "run_batch", result=f"queued={calls_queued} errors={errors}")
+    return {"agent": "vance", "batch_size": len(rows), "calls_queued": calls_queued, "errors": errors}
 
 
 def run(payload: dict[str, Any]) -> dict[str, Any]:

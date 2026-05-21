@@ -77,6 +77,13 @@ class Settings(BaseSettings):
     adobe_account_id: str = ""
     adobe_api_endpoint: str = "https://api.na1.adobesign.com"
 
+    # Social media — Facebook, Instagram, LinkedIn
+    facebook_page_id: str = ""
+    facebook_access_token: str = ""
+    instagram_account_id: str = ""
+    linkedin_access_token: str = ""
+    linkedin_organization_id: str = ""
+
     render_api_key: str = ""
 
     sentry_dsn: str = ""

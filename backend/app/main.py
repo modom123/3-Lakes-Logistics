@@ -72,6 +72,10 @@ def _start_scheduler(app: FastAPI) -> None:
             fire_winston,
             fire_isabella,
             fire_sofia,
+            fire_vance_batch,
+            fire_sms_campaign,
+            fire_email_campaign,
+            fire_social_post,
         )
         from .agents.memory import prune_interactions
         from .email.imap_poller import poll_all as poll_all_mailboxes
@@ -148,6 +152,34 @@ def _start_scheduler(app: FastAPI) -> None:
             fire_sofia,
             CronTrigger(hour=8, minute=15),
             id="sofia_daily",
+            replace_existing=True,
+        )
+        # 09:00 — Vance: outbound calls to high-score leads (score >= 8) — 5am ET
+        scheduler.add_job(
+            fire_vance_batch,
+            CronTrigger(hour=9, minute=0),
+            id="vance_batch_daily",
+            replace_existing=True,
+        )
+        # 13:00 — SMS campaign: Tier B leads (score 4-7) — 9am ET
+        scheduler.add_job(
+            fire_sms_campaign,
+            CronTrigger(hour=13, minute=0),
+            id="sms_outreach_daily",
+            replace_existing=True,
+        )
+        # 13:30 — Email campaign: cold outreach to leads with email — 9:30am ET
+        scheduler.add_job(
+            fire_email_campaign,
+            CronTrigger(hour=13, minute=30),
+            id="email_outreach_daily",
+            replace_existing=True,
+        )
+        # Mondays 13:00 — Social: post to Facebook/Instagram/LinkedIn — 9am ET
+        scheduler.add_job(
+            fire_social_post,
+            CronTrigger(day_of_week="mon", hour=13, minute=0),
+            id="social_post_weekly",
             replace_existing=True,
         )
 
