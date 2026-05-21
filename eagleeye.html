@@ -1561,38 +1561,137 @@ td.td-name{font-weight:600;color:var(--navy);}
         <div class="page-hdr-l">
           <div class="chip">CLM</div>
           <h2>Document Vault</h2>
-          <p style="margin-top:4px;font-size:13px;color:var(--muted)">All BOLs, PODs, rate confirmations, invoices & compliance docs uploaded by drivers or emailed in</p>
+          <p style="margin-top:4px;font-size:13px;color:var(--muted)">BOLs, PODs, rate confs, invoices &amp; compliance docs — retrieve, review, and send</p>
         </div>
-        <div class="page-hdr-r">
-          <button class="btn-navy" onclick="loadVault()">↻ Refresh</button>
+        <div class="page-hdr-r" style="display:flex;gap:8px">
+          <button class="btn-out" onclick="loadVault()">↻ Refresh</button>
+          <button class="btn-gold" onclick="openVaultUpload()">+ Upload Document</button>
         </div>
       </div>
 
-      <div class="metrics" style="margin-bottom:20px">
+      <!-- Metrics -->
+      <div class="metrics" style="margin-bottom:16px">
         <div class="mc"><div class="mc-label">Total Documents</div><div class="mc-val blue" id="vault-total">—</div></div>
         <div class="mc"><div class="mc-label">PODs</div><div class="mc-val green" id="vault-pods">—</div></div>
-        <div class="mc"><div class="mc-label">Rate Confirmations</div><div class="mc-val gold" id="vault-ratecon">—</div></div>
+        <div class="mc"><div class="mc-label">Rate Cons</div><div class="mc-val gold" id="vault-ratecon">—</div></div>
         <div class="mc"><div class="mc-label">BOLs</div><div class="mc-val orange" id="vault-bols">—</div></div>
+        <div class="mc"><div class="mc-label">Invoices</div><div class="mc-val" style="color:#8b5cf6" id="vault-invoices">—</div></div>
+        <div class="mc"><div class="mc-label">Sent Today</div><div class="mc-val" style="color:#06b6d4" id="vault-sent-today">—</div></div>
       </div>
 
-      <div class="card">
-        <div class="card-hd">
-          <div class="card-title">All Documents</div>
-          <div style="display:flex;gap:12px;align-items:center">
-            <select id="vault-type-filter" onchange="filterVaultDocs()" class="fsel" style="padding:6px 12px;font-size:13px">
-              <option value="">All Types</option>
-              <option value="pod">POD (Proof of Delivery)</option>
-              <option value="rate_con">Rate Confirmation</option>
-              <option value="bol">Bill of Lading</option>
-              <option value="invoice">Invoice</option>
-              <option value="compliance">Compliance Doc</option>
-              <option value="other">Other</option>
-            </select>
-            <input type="text" id="vault-search" placeholder="Search filename…" onkeyup="filterVaultDocs()" style="padding:6px 12px;font-size:13px;border:1px solid var(--border);border-radius:4px;width:240px">
-          </div>
+      <!-- Filters -->
+      <div class="card" style="margin-bottom:12px;padding:12px 16px">
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+          <select id="vault-type-filter" onchange="filterVaultDocs()" style="padding:7px 12px;font-size:13px;border:1px solid var(--border);border-radius:6px;background:var(--surface)">
+            <option value="">All Types</option>
+            <option value="pod">POD</option>
+            <option value="rate_con">Rate Confirmation</option>
+            <option value="bol">BOL</option>
+            <option value="invoice">Invoice</option>
+            <option value="compliance">Compliance</option>
+            <option value="agreement">Agreement</option>
+            <option value="other">Other</option>
+          </select>
+          <select id="vault-status-filter" onchange="filterVaultDocs()" style="padding:7px 12px;font-size:13px;border:1px solid var(--border);border-radius:6px;background:var(--surface)">
+            <option value="">All Statuses</option>
+            <option value="complete">Complete</option>
+            <option value="pending">Pending</option>
+            <option value="failed">Failed</option>
+          </select>
+          <input type="text" id="vault-search" placeholder="Search filename or load #…" oninput="filterVaultDocs()" style="padding:7px 12px;font-size:13px;border:1px solid var(--border);border-radius:6px;width:220px;background:var(--surface)">
+          <span style="font-size:12px;color:var(--muted)" id="vault-count-label"></span>
         </div>
+      </div>
+
+      <!-- Documents table -->
+      <div class="card">
         <div id="vault-table"><div class="loading"><div class="spin"></div>Loading vault…</div></div>
       </div>
+    </div>
+
+    <!-- ── VAULT UPLOAD MODAL ── -->
+    <div id="vault-upload-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9000;align-items:center;justify-content:center">
+      <div style="background:var(--card);border-radius:10px;padding:28px;width:480px;max-width:95vw;box-shadow:var(--shadow-lg)">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+          <div style="font-size:17px;font-weight:700">Upload Document</div>
+          <button onclick="closeVaultUpload()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted)">✕</button>
+        </div>
+        <div id="vault-upload-drop" onclick="document.getElementById('vault-file-input').click()" style="border:2px dashed var(--border);border-radius:8px;padding:32px;text-align:center;cursor:pointer;margin-bottom:16px;transition:border-color .2s" ondragover="event.preventDefault();this.style.borderColor='var(--gold)'" ondragleave="this.style.borderColor='var(--border)'" ondrop="handleVaultDrop(event)">
+          <div style="font-size:32px;margin-bottom:8px">📄</div>
+          <div style="font-weight:600;margin-bottom:4px">Drop file here or click to browse</div>
+          <div style="font-size:12px;color:var(--muted)">PDF, JPG, PNG, DOCX — max 25MB</div>
+          <div id="vault-file-name" style="margin-top:8px;font-size:13px;color:var(--gold);font-weight:600"></div>
+        </div>
+        <input type="file" id="vault-file-input" style="display:none" accept=".pdf,.jpg,.jpeg,.png,.docx,.xlsx" onchange="previewVaultFile(this)">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
+          <div>
+            <label style="font-size:11px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px">DOCUMENT TYPE</label>
+            <select id="vault-up-type" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:13px;background:var(--surface)">
+              <option value="other">Other</option>
+              <option value="pod">POD</option>
+              <option value="rate_con">Rate Confirmation</option>
+              <option value="bol">BOL</option>
+              <option value="invoice">Invoice</option>
+              <option value="compliance">Compliance</option>
+              <option value="agreement">Agreement</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size:11px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px">LOAD # (optional)</label>
+            <input id="vault-up-load" type="text" placeholder="e.g. LD-10042" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:13px;box-sizing:border-box">
+          </div>
+        </div>
+        <div style="margin-bottom:16px">
+          <label style="font-size:11px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px">NOTES (optional)</label>
+          <input id="vault-up-notes" type="text" placeholder="e.g. Signed BOL for Blue Ridge Trucking" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:13px;box-sizing:border-box">
+        </div>
+        <div id="vault-up-result" style="display:none;padding:10px;border-radius:6px;font-size:13px;margin-bottom:12px"></div>
+        <div style="display:flex;gap:10px;justify-content:flex-end">
+          <button class="btn-out" onclick="closeVaultUpload()">Cancel</button>
+          <button class="btn-gold" id="vault-up-btn" onclick="submitVaultUpload()">Upload</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── VAULT SEND MODAL ── -->
+    <div id="vault-send-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9000;align-items:center;justify-content:center">
+      <div style="background:var(--card);border-radius:10px;padding:28px;width:460px;max-width:95vw;box-shadow:var(--shadow-lg)">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+          <div style="font-size:17px;font-weight:700">Send Document</div>
+          <button onclick="closeVaultSend()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted)">✕</button>
+        </div>
+        <div id="vault-send-doc-label" style="background:var(--surface);border-radius:6px;padding:10px 14px;margin-bottom:16px;font-size:13px;color:var(--muted)"></div>
+        <div style="margin-bottom:12px">
+          <label style="font-size:11px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px">RECIPIENT EMAIL *</label>
+          <input id="vault-send-to" type="email" placeholder="broker@company.com" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:13px;box-sizing:border-box">
+        </div>
+        <div style="margin-bottom:12px">
+          <label style="font-size:11px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px">SUBJECT</label>
+          <input id="vault-send-subject" type="text" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:13px;box-sizing:border-box">
+        </div>
+        <div style="margin-bottom:16px">
+          <label style="font-size:11px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px">MESSAGE (optional)</label>
+          <textarea id="vault-send-message" rows="3" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:13px;resize:vertical;box-sizing:border-box">Please find the attached document via the secure link below.</textarea>
+        </div>
+        <input type="hidden" id="vault-send-doc-id">
+        <div id="vault-send-result" style="display:none;padding:10px;border-radius:6px;font-size:13px;margin-bottom:12px"></div>
+        <div style="display:flex;gap:10px;justify-content:flex-end">
+          <button class="btn-out" onclick="closeVaultSend()">Cancel</button>
+          <button class="btn-navy" id="vault-send-btn" onclick="submitVaultSend()">📧 Send</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── VAULT PREVIEW MODAL ── -->
+    <div id="vault-preview-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:9100;flex-direction:column">
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 20px;background:var(--navy)">
+        <div id="vault-preview-title" style="color:#fff;font-weight:600;font-size:14px"></div>
+        <div style="display:flex;gap:10px">
+          <a id="vault-preview-dl" href="#" download style="color:var(--gold);font-size:13px;text-decoration:none;padding:6px 14px;border:1px solid var(--gold);border-radius:4px">⬇ Download</a>
+          <button onclick="closeVaultPreview()" style="background:none;border:1px solid rgba(255,255,255,.3);color:#fff;padding:6px 14px;border-radius:4px;cursor:pointer;font-size:13px">✕ Close</button>
+        </div>
+      </div>
+      <iframe id="vault-preview-frame" src="" style="flex:1;border:none;background:#fff"></iframe>
     </div>
 
     <!-- ── CRM / LEADS PAGE ── -->
@@ -4920,6 +5019,7 @@ function renderIFTA(){
     if(id==='agents'){loadAgents();refreshAgentLog();loadVanceCalls();loadOrgBrain();}
     else if(id==='carriers')loadCarrierBrain();
     else if(id==='revenue')loadRevenueBrain();
+    else if(id==='vault')loadVault();
     else if(id==='founders')loadFoundersInventory();
     else if(id==='leads')loadLeadsPipeline();
     else if(id==='ifta'||id==='insurance')renderIFTA();
@@ -5002,43 +5102,210 @@ async function runCLMScan(){
 // ══════════════════════════════════════════════════════
 // DOCUMENT VAULT
 // ══════════════════════════════════════════════════════
-let _vaultDocs=[];const docTypeLabels={pod:'POD',rate_con:'Rate Con',bol:'BOL',invoice:'Invoice',compliance:'Compliance',other:'Other'};const docTypeIcons={pod:'🚚',rate_con:'💬',bol:'📄',invoice:'🧾',compliance:'✅',other:'📎'};async function loadVault(){
+// ══════════════════════════════════════════════════════
+// DOCUMENT VAULT — retrieve, review, send
+// ══════════════════════════════════════════════════════
+let _vaultDocs=[];
+const DOC_LABELS={pod:'POD',rate_con:'Rate Con',bol:'BOL',invoice:'Invoice',compliance:'Compliance',agreement:'Agreement',folder:'Folder',other:'Other'};
+const DOC_ICONS ={pod:'🚚',rate_con:'📋',bol:'📄',invoice:'🧾',compliance:'✅',agreement:'📝',folder:'📁',other:'📎'};
+const DOC_COLORS={pod:'#22c55e',rate_con:'#f59e0b',bol:'#3b82f6',invoice:'#8b5cf6',compliance:'#10b981',agreement:'#6366f1',other:'#6b7280'};
+
+async function loadVault(){
   const t=document.getElementById('vault-table');
-  t.innerHTML='<div class="loading"><div class="spin"></div>Loading…</div>';
+  t.innerHTML='<div class="loading"><div class="spin"></div>Loading vault…</div>';
   try{
     const res=await apiFetch('/api/clm/vault/docs');
     _vaultDocs=await res.json();
-    if(!_vaultDocs.length){t.innerHTML='<div style="padding:20px;color:var(--muted);text-align:center">Vault is empty. Docs upload automatically when drivers submit BOL/POD from the Driver App.</div>';updateVaultMetrics([]);return;}
-    updateVaultMetrics(_vaultDocs);
-    renderVaultDocs(_vaultDocs);
-  }catch(e){t.innerHTML=`<div style="padding:20px;color:var(--red)">Error: ${e.message}</div>`;}
-}function updateVaultMetrics(docs){
-  const total=docs.length;const pods=docs.filter(d=>d.doc_type==='pod').length;const ratcons=docs.filter(d=>d.doc_type==='rate_con').length;const bols=docs.filter(d=>d.doc_type==='bol').length;
-  document.getElementById('vault-total').textContent=total;
-  document.getElementById('vault-pods').textContent=pods;
-  document.getElementById('vault-ratecon').textContent=ratcons;
-  document.getElementById('vault-bols').textContent=bols;
-}function filterVaultDocs(){
-  const typeFilter=document.getElementById('vault-type-filter')?.value||'';
-  const searchFilter=document.getElementById('vault-search')?.value||'';
+    _updateVaultMetrics(_vaultDocs);
+    filterVaultDocs();
+  }catch(e){t.innerHTML=`<div style="padding:20px;color:var(--red)">Could not load vault: ${esc(e.message)}</div>`;}
+}
+
+function _updateVaultMetrics(docs){
+  const today=new Date().toDateString();
+  const sentToday=docs.filter(d=>d.last_sent_at&&new Date(d.last_sent_at).toDateString()===today).length;
+  const set=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
+  set('vault-total',docs.length);
+  set('vault-pods',docs.filter(d=>d.doc_type==='pod').length);
+  set('vault-ratecon',docs.filter(d=>d.doc_type==='rate_con').length);
+  set('vault-bols',docs.filter(d=>d.doc_type==='bol').length);
+  set('vault-invoices',docs.filter(d=>d.doc_type==='invoice').length);
+  set('vault-sent-today',sentToday);
+}
+
+function filterVaultDocs(){
+  const type=document.getElementById('vault-type-filter')?.value||'';
+  const status=document.getElementById('vault-status-filter')?.value||'';
+  const search=(document.getElementById('vault-search')?.value||'').toLowerCase();
   const filtered=_vaultDocs.filter(d=>{
-    const typeMatch=!typeFilter||d.doc_type===typeFilter;
-    const searchMatch=!searchFilter||d.filename?.toLowerCase().includes(searchFilter.toLowerCase());
-    return typeMatch&&searchMatch;
+    if(type&&d.doc_type!==type)return false;
+    if(status&&d.scan_status!==status)return false;
+    if(search&&!((d.filename||'').toLowerCase().includes(search)||(d.load_number||'').toLowerCase().includes(search)||(d.notes||'').toLowerCase().includes(search)))return false;
+    return true;
   });
-  renderVaultDocs(filtered);
-}function renderVaultDocs(docs){
+  const lbl=document.getElementById('vault-count-label');
+  if(lbl)lbl.textContent=`${filtered.length} of ${_vaultDocs.length} documents`;
+  _renderVaultDocs(filtered);
+}
+
+function _renderVaultDocs(docs){
   const t=document.getElementById('vault-table');
-  if(!docs.length){t.innerHTML='<div style="padding:40px 20px;text-align:center;color:var(--muted)">No documents match your filter</div>';return;}
-  const statusBadge=s=>`<span class="badge badge-${s==='complete'?'green':s==='failed'?'red':'orange'}">${s}</span>`;
-  t.innerHTML=`<table class="tbl"><thead><tr><th style="width:12%">Type</th><th style="width:40%">Filename</th><th style="width:10%">Size</th><th style="width:15%">Status</th><th style="width:23%">Uploaded</th></tr></thead>
-    <tbody>${docs.map(d=>{const icon=docTypeIcons[d.doc_type]||'📎';const label=docTypeLabels[d.doc_type]||d.doc_type;return`<tr>
-      <td><span style="font-size:18px">${icon}</span> <span class="badge" style="background:rgba(59,130,246,.1);color:#3b82f6;font-size:11px;font-weight:600">${label}</span></td>
-      <td style="font-size:14px;font-weight:500;word-break:break-word">${d.filename||'—'}</td>
-      <td style="color:var(--muted);font-size:12px">${d.file_size_kb?d.file_size_kb+'KB':'—'}</td>
-      <td>${statusBadge(d.scan_status)}</td>
-      <td style="color:var(--muted);font-size:12px;white-space:nowrap">${d.uploaded_at?new Date(d.uploaded_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}):'—'}</td>
-    </tr>`}).join('')}</tbody></table>`;
+  if(!docs.length){
+    t.innerHTML='<div style="padding:40px;text-align:center;color:var(--muted)">'+(
+      _vaultDocs.length?'No documents match your filter.':'Vault is empty — docs upload automatically from the Driver App, or use the Upload button.')+'</div>';
+    return;
+  }
+  const sb=s=>`<span class="badge badge-${s==='complete'?'green':s==='failed'?'red':'orange'}" style="font-size:10px">${s}</span>`;
+  t.innerHTML=`<div class="tbl-wrap"><table class="tbl"><thead><tr>
+    <th style="width:110px">Type</th>
+    <th>Filename</th>
+    <th style="width:90px">Load #</th>
+    <th style="width:60px">Size</th>
+    <th style="width:80px">Status</th>
+    <th style="width:70px">Sent</th>
+    <th style="width:100px">Uploaded</th>
+    <th style="width:150px">Actions</th>
+  </tr></thead><tbody>${docs.map(d=>{
+    const icon=DOC_ICONS[d.doc_type]||'📎';
+    const label=DOC_LABELS[d.doc_type]||d.doc_type;
+    const color=DOC_COLORS[d.doc_type]||'#6b7280';
+    const ts=d.uploaded_at?new Date(d.uploaded_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'2-digit'}):'—';
+    const sentBadge=d.sent_count>0?`<span title="Last sent to ${esc(d.last_sent_to||'')}" style="font-size:11px;background:rgba(6,182,212,.1);color:#06b6d4;padding:2px 6px;border-radius:4px;cursor:default">${d.sent_count}×</span>`:'<span style="color:var(--muted);font-size:11px">—</span>';
+    const did=esc(d.id);
+    const fn=esc(d.filename||'document');
+    return`<tr>
+      <td><span style="font-size:16px">${icon}</span> <span style="font-size:11px;font-weight:600;color:${color}">${label}</span></td>
+      <td style="font-weight:500;font-size:13px;max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${fn}">${fn}${d.notes?`<div style="font-size:11px;color:var(--muted)">${esc(d.notes)}</div>`:''}</td>
+      <td style="font-size:12px;color:var(--muted)">${d.load_number||'—'}</td>
+      <td style="font-size:12px;color:var(--muted)">${d.file_size_kb?d.file_size_kb+'KB':'—'}</td>
+      <td>${sb(d.scan_status||'pending')}</td>
+      <td>${sentBadge}</td>
+      <td style="font-size:12px;color:var(--muted);white-space:nowrap">${ts}</td>
+      <td style="white-space:nowrap">
+        <button onclick="vaultView('${did}')" style="padding:4px 8px;font-size:11px;border:1px solid var(--border);border-radius:4px;cursor:pointer;background:var(--surface);margin-right:3px" title="Preview">👁 View</button>
+        <button onclick="vaultDownload('${did}')" style="padding:4px 8px;font-size:11px;border:1px solid var(--border);border-radius:4px;cursor:pointer;background:var(--surface);margin-right:3px" title="Download">⬇</button>
+        <button onclick="openVaultSend('${did}','${fn}')" style="padding:4px 8px;font-size:11px;border:1px solid var(--gold);border-radius:4px;cursor:pointer;background:rgba(212,170,0,.08);color:var(--gold);font-weight:600" title="Send via email">✉</button>
+      </td>
+    </tr>`;
+  }).join('')}</tbody></table></div>`;
+}
+
+async function vaultView(docId){
+  try{
+    toast('Loading preview…');
+    const res=await apiFetch(`/api/clm/vault/${docId}/url?expires=3600`);
+    const d=await res.json();
+    if(!d.url)throw new Error('No signed URL returned');
+    document.getElementById('vault-preview-title').textContent=d.filename||'Document';
+    document.getElementById('vault-preview-dl').href=d.url;
+    document.getElementById('vault-preview-dl').download=d.filename||'document';
+    document.getElementById('vault-preview-frame').src=d.url;
+    const modal=document.getElementById('vault-preview-modal');
+    modal.style.display='flex';
+  }catch(e){toast('Could not load preview: '+e.message,'error');}
+}
+
+async function vaultDownload(docId){
+  try{
+    const res=await apiFetch(`/api/clm/vault/${docId}/url?expires=3600`);
+    const d=await res.json();
+    if(!d.url)throw new Error('No signed URL');
+    const a=document.createElement('a');a.href=d.url;a.download=d.filename||'document';a.style.display='none';
+    document.body.appendChild(a);a.click();document.body.removeChild(a);
+  }catch(e){toast('Download failed: '+e.message,'error');}
+}
+
+function closeVaultPreview(){
+  document.getElementById('vault-preview-modal').style.display='none';
+  document.getElementById('vault-preview-frame').src='';
+}
+
+// ── Upload ────────────────────────────────────────────
+function openVaultUpload(){
+  document.getElementById('vault-upload-modal').style.display='flex';
+  document.getElementById('vault-file-name').textContent='';
+  document.getElementById('vault-up-result').style.display='none';
+  document.getElementById('vault-file-input').value='';
+}
+function closeVaultUpload(){document.getElementById('vault-upload-modal').style.display='none';}
+function previewVaultFile(input){
+  const f=input.files[0];
+  if(f)document.getElementById('vault-file-name').textContent=f.name+' ('+Math.round(f.size/1024)+'KB)';
+}
+function handleVaultDrop(e){
+  e.preventDefault();
+  e.currentTarget.style.borderColor='var(--border)';
+  const f=e.dataTransfer.files[0];
+  if(f){document.getElementById('vault-file-input').files=e.dataTransfer.files;document.getElementById('vault-file-name').textContent=f.name+' ('+Math.round(f.size/1024)+'KB)';}
+}
+async function submitVaultUpload(){
+  const input=document.getElementById('vault-file-input');
+  const res=document.getElementById('vault-up-result');
+  const btn=document.getElementById('vault-up-btn');
+  if(!input.files.length){res.style.display='block';res.style.background='rgba(239,68,68,.1)';res.style.color='var(--red)';res.textContent='Please select a file.';return;}
+  btn.disabled=true;btn.textContent='Uploading…';
+  res.style.display='none';
+  const fd=new FormData();
+  fd.append('file',input.files[0]);
+  fd.append('doc_type',document.getElementById('vault-up-type').value);
+  const ln=document.getElementById('vault-up-load').value.trim();
+  const nt=document.getElementById('vault-up-notes').value.trim();
+  if(ln)fd.append('load_number',ln);
+  if(nt)fd.append('notes',nt);
+  try{
+    const r=await fetch(API_BASE+'/api/clm/vault/upload',{method:'POST',headers:{'Authorization':'Bearer '+API_TOKEN},body:fd});
+    const d=await r.json();
+    if(d.ok){
+      res.style.display='block';res.style.background='rgba(34,197,94,.1)';res.style.color='var(--green)';
+      res.textContent=`✅ Uploaded: ${d.filename} (${d.size_kb}KB)`;
+      setTimeout(()=>{closeVaultUpload();loadVault();},1500);
+    }else{
+      res.style.display='block';res.style.background='rgba(239,68,68,.1)';res.style.color='var(--red)';
+      res.textContent='Upload failed: '+(d.detail||JSON.stringify(d));
+    }
+  }catch(e){
+    res.style.display='block';res.style.background='rgba(239,68,68,.1)';res.style.color='var(--red)';
+    res.textContent='Error: '+e.message;
+  }finally{btn.disabled=false;btn.textContent='Upload';}
+}
+
+// ── Send ─────────────────────────────────────────────
+function openVaultSend(docId, filename){
+  document.getElementById('vault-send-doc-id').value=docId;
+  document.getElementById('vault-send-doc-label').textContent='📄 '+filename;
+  document.getElementById('vault-send-subject').value='Document from 3 Lakes Logistics: '+filename;
+  document.getElementById('vault-send-to').value='';
+  document.getElementById('vault-send-result').style.display='none';
+  document.getElementById('vault-send-modal').style.display='flex';
+  setTimeout(()=>document.getElementById('vault-send-to').focus(),50);
+}
+function closeVaultSend(){document.getElementById('vault-send-modal').style.display='none';}
+async function submitVaultSend(){
+  const docId=document.getElementById('vault-send-doc-id').value;
+  const to=document.getElementById('vault-send-to').value.trim();
+  const subject=document.getElementById('vault-send-subject').value.trim();
+  const message=document.getElementById('vault-send-message').value.trim();
+  const res=document.getElementById('vault-send-result');
+  const btn=document.getElementById('vault-send-btn');
+  if(!to){res.style.display='block';res.style.background='rgba(239,68,68,.1)';res.style.color='var(--red)';res.textContent='Recipient email is required.';return;}
+  btn.disabled=true;btn.textContent='Sending…';
+  res.style.display='none';
+  try{
+    const r=await apiFetch(`/api/clm/vault/${docId}/send`,'POST',{to,subject,message});
+    const d=await r.json();
+    res.style.display='block';
+    if(d.ok){
+      res.style.background='rgba(34,197,94,.1)';res.style.color='var(--green)';
+      res.textContent=`✅ ${d.sent?'Email sent to '+to:'Logged (Postmark not configured)'}`;
+      setTimeout(()=>{closeVaultSend();loadVault();},2000);
+    }else{
+      res.style.background='rgba(239,68,68,.1)';res.style.color='var(--red)';
+      res.textContent='Failed: '+(d.detail||JSON.stringify(d));
+    }
+  }catch(e){
+    res.style.display='block';res.style.background='rgba(239,68,68,.1)';res.style.color='var(--red)';
+    res.textContent='Error: '+e.message;
+  }finally{btn.disabled=false;btn.textContent='📧 Send';}
 }
 
 // ══════════════════════════════════════════════════════

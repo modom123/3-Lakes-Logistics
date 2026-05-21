@@ -20,7 +20,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 
 from ..api.deps import require_bearer
 from ..supabase_client import get_supabase
@@ -191,6 +191,7 @@ def list_vault(
     carrier_id: str | None = None,
     doc_type: str | None = None,
     scan_status: str | None = None,
+    search: str | None = None,
     _: str = Depends(require_bearer),
 ):
     sb = get_supabase()
@@ -201,7 +202,229 @@ def list_vault(
         q = q.eq("doc_type", doc_type)
     if scan_status:
         q = q.eq("scan_status", scan_status)
+    if search:
+        q = q.ilike("filename", f"%{search}%")
     return q.order("uploaded_at", desc=True).limit(500).execute().data
+
+
+def _signed_url(storage_path: str, bucket: str = "documents", expires: int = 3600) -> str | None:
+    """Generate a Supabase Storage signed URL. Returns None on any error."""
+    try:
+        result = get_supabase().storage.from_(bucket).create_signed_url(storage_path, expires)
+        return result.get("signedURL") or result.get("signed_url")
+    except Exception:
+        try:
+            result = get_supabase().storage.from_("driver-documents").create_signed_url(storage_path, expires)
+            return result.get("signedURL") or result.get("signed_url")
+        except Exception:
+            return None
+
+
+@router.get("/vault/{doc_id}")
+def get_vault_doc(doc_id: str, _: str = Depends(require_bearer)) -> dict:
+    """Single document record with a fresh signed URL."""
+    sb = get_supabase()
+    res = sb.table("document_vault").select("*").eq("id", doc_id).limit(1).execute()
+    if not res.data:
+        raise HTTPException(404, "Document not found")
+    doc = res.data[0]
+    bucket = doc.get("bucket") or "documents"
+    doc["signed_url"] = _signed_url(doc["storage_path"], bucket)
+    # Fetch send history
+    sends = sb.table("vault_sends").select("sent_to,subject,sent_at").eq("document_id", doc_id).order("sent_at", desc=True).limit(10).execute()
+    doc["send_history"] = sends.data or []
+    return {"ok": True, "doc": doc}
+
+
+@router.get("/vault/{doc_id}/url")
+def vault_doc_url(doc_id: str, expires: int = 3600, _: str = Depends(require_bearer)) -> dict:
+    """Generate a fresh signed URL for viewing or downloading a vault document."""
+    sb = get_supabase()
+    res = sb.table("document_vault").select("id,filename,storage_path,bucket,doc_type").eq("id", doc_id).limit(1).execute()
+    if not res.data:
+        raise HTTPException(404, "Document not found")
+    doc = res.data[0]
+    bucket = doc.get("bucket") or "documents"
+    url = _signed_url(doc["storage_path"], bucket, expires=min(expires, 86400))
+    if not url:
+        raise HTTPException(502, f"Could not generate signed URL for {doc['filename']} — check Supabase Storage bucket '{bucket}'")
+    return {"ok": True, "doc_id": doc_id, "filename": doc["filename"], "url": url, "expires_in": expires}
+
+
+@router.post("/vault/upload")
+async def upload_vault_doc(
+    file: UploadFile = File(...),
+    doc_type: str = Form("other"),
+    carrier_id: str = Form(None),
+    load_number: str = Form(None),
+    notes: str = Form(None),
+    _: str = Depends(require_bearer),
+) -> dict:
+    """Upload a document to the vault from Eagle Eye. Stores in Supabase Storage bucket 'documents'."""
+    from ..settings import get_settings
+    s = get_settings()
+    sb = get_supabase()
+
+    content = await file.read()
+    size_kb = len(content) // 1024
+    safe_name = file.filename or "upload.pdf"
+    ts = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+    storage_path = f"vault/{doc_type}/{ts}_{safe_name}"
+
+    # Upload to Supabase Storage
+    try:
+        sb.storage.from_("documents").upload(
+            path=storage_path,
+            file=content,
+            file_options={"content-type": file.content_type or "application/octet-stream"},
+        )
+    except Exception as e:
+        raise HTTPException(502, f"Storage upload failed: {e}")
+
+    # Insert vault metadata record
+    row = {
+        "doc_type":     doc_type,
+        "filename":     safe_name,
+        "storage_path": storage_path,
+        "bucket":       "documents",
+        "file_size_kb": size_kb,
+        "mime_type":    file.content_type or "application/octet-stream",
+        "scan_status":  "complete",
+        "notes":        notes,
+    }
+    if carrier_id:
+        row["carrier_id"] = carrier_id
+    if load_number:
+        row["load_number"] = load_number
+
+    result = sb.table("document_vault").insert(row).execute()
+    doc_id = result.data[0]["id"] if result.data else None
+    signed = _signed_url(storage_path, "documents")
+
+    return {"ok": True, "doc_id": doc_id, "filename": safe_name, "size_kb": size_kb, "url": signed}
+
+
+class _SendPayload:
+    pass
+
+@router.post("/vault/{doc_id}/send")
+async def send_vault_doc(doc_id: str, body: dict, _: str = Depends(require_bearer)) -> dict:
+    """Email a vault document link to a recipient via Postmark.
+    Body: {to: str, subject: str, message: str}
+    """
+    from ..settings import get_settings
+    import httpx
+
+    to_email   = body.get("to", "").strip()
+    subject    = body.get("subject", "Document from 3 Lakes Logistics")
+    message    = body.get("message", "Please find the attached document via the link below.")
+    expires    = 604800  # 7-day link
+
+    if not to_email:
+        raise HTTPException(400, "Recipient email (to) is required")
+
+    sb = get_supabase()
+    res = sb.table("document_vault").select("*").eq("id", doc_id).limit(1).execute()
+    if not res.data:
+        raise HTTPException(404, "Document not found")
+    doc = res.data[0]
+
+    bucket = doc.get("bucket") or "documents"
+    url = _signed_url(doc["storage_path"], bucket, expires=expires)
+    if not url:
+        raise HTTPException(502, "Could not generate signed URL — check Supabase Storage configuration")
+
+    s = get_settings()
+    doc_label = {
+        "pod": "Proof of Delivery", "bol": "Bill of Lading", "rate_con": "Rate Confirmation",
+        "invoice": "Invoice", "compliance": "Compliance Document", "agreement": "Carrier Agreement",
+    }.get(doc.get("doc_type", ""), "Document")
+
+    html_body = f"""
+<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto">
+  <div style="background:#001f3f;padding:20px;text-align:center">
+    <h2 style="color:#FFD700;margin:0">3 Lakes Logistics</h2>
+    <p style="color:#aaa;margin:6px 0 0;font-size:13px">Document Vault</p>
+  </div>
+  <div style="padding:24px;background:#f9f9f9">
+    <p style="margin-top:0">{message}</p>
+    <table style="width:100%;border-collapse:collapse;margin-bottom:20px">
+      <tr><td style="padding:8px;color:#555;font-size:13px;border-bottom:1px solid #eee"><strong>Document</strong></td><td style="padding:8px;font-size:13px;border-bottom:1px solid #eee">{doc.get('filename','—')}</td></tr>
+      <tr><td style="padding:8px;color:#555;font-size:13px;border-bottom:1px solid #eee"><strong>Type</strong></td><td style="padding:8px;font-size:13px;border-bottom:1px solid #eee">{doc_label}</td></tr>
+      <tr><td style="padding:8px;color:#555;font-size:13px"><strong>Link expires</strong></td><td style="padding:8px;font-size:13px">7 days</td></tr>
+    </table>
+    <div style="text-align:center;margin:24px 0">
+      <a href="{url}" style="background:#001f3f;color:#FFD700;padding:14px 32px;text-decoration:none;border-radius:6px;font-weight:bold;font-size:15px">View {doc_label}</a>
+    </div>
+    <p style="font-size:11px;color:#999;text-align:center">This link expires in 7 days. Sent by 3 Lakes Logistics operations team.</p>
+  </div>
+</div>"""
+
+    sent = False
+    if s.postmark_server_token:
+        async with httpx.AsyncClient() as client:
+            resp = await client.post(
+                "https://api.postmarkapp.com/email",
+                headers={"X-Postmark-Server-Token": s.postmark_server_token, "Content-Type": "application/json"},
+                json={"From": s.postmark_from_email, "To": to_email, "Subject": subject,
+                      "HtmlBody": html_body, "MessageStream": "outbound", "Tag": "vault-send"},
+                timeout=15,
+            )
+        sent = resp.status_code == 200
+
+    # Update vault record
+    old_count = int(doc.get("sent_count") or 0)
+    sb.table("document_vault").update({
+        "sent_count":   old_count + 1,
+        "last_sent_at": datetime.now(timezone.utc).isoformat(),
+        "last_sent_to": to_email,
+    }).eq("id", doc_id).execute()
+
+    # Log to vault_sends
+    sb.table("vault_sends").insert({
+        "document_id": doc_id,
+        "sent_to":     to_email,
+        "subject":     subject,
+        "message":     message,
+    }).execute()
+
+    return {
+        "ok": True,
+        "sent": sent,
+        "to": to_email,
+        "doc_id": doc_id,
+        "note": "Email sent via Postmark" if sent else "Postmark not configured — send logged only",
+        "signed_url": url,
+    }
+
+
+@router.patch("/vault/{doc_id}")
+def update_vault_doc(doc_id: str, body: dict, _: str = Depends(require_bearer)) -> dict:
+    """Update notes, doc_type, or load_number on a vault document."""
+    allowed = {k: v for k, v in body.items() if k in ("notes", "doc_type", "load_number", "carrier_id")}
+    if not allowed:
+        raise HTTPException(400, "Nothing to update — allowed fields: notes, doc_type, load_number, carrier_id")
+    get_supabase().table("document_vault").update(allowed).eq("id", doc_id).execute()
+    return {"ok": True, "doc_id": doc_id, "updated": allowed}
+
+
+@router.delete("/vault/{doc_id}")
+def delete_vault_doc(doc_id: str, _: str = Depends(require_bearer)) -> dict:
+    """Delete a document record and attempt storage cleanup."""
+    sb = get_supabase()
+    res = sb.table("document_vault").select("id,filename,storage_path,bucket").eq("id", doc_id).limit(1).execute()
+    if not res.data:
+        raise HTTPException(404, "Document not found")
+    doc = res.data[0]
+    bucket = doc.get("bucket") or "documents"
+    storage_deleted = False
+    try:
+        sb.storage.from_(bucket).remove([doc["storage_path"]])
+        storage_deleted = True
+    except Exception:
+        pass
+    sb.table("document_vault").delete().eq("id", doc_id).execute()
+    return {"ok": True, "doc_id": doc_id, "filename": doc["filename"], "storage_deleted": storage_deleted}
 
 
 # ── Email inbound (step 121) ─────────────────────────────────────────────────
