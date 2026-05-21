@@ -909,7 +909,7 @@ td.td-name{font-weight:600;color:var(--navy);}
         <div class="mc" onclick="showDashSummary('all-carriers')" style="cursor:pointer" title="Click for recent 10"><div class="mc-label">Total Carriers</div><div class="mc-val gold" id="carrier-count-total">—</div></div>
         <div class="mc" onclick="showDashSummary('carriers')" style="cursor:pointer" title="Click for recent 10"><div class="mc-label">Active</div><div class="mc-val green" id="carrier-count-active">—</div></div>
         <div class="mc" onclick="showDashSummary('pending')" style="cursor:pointer" title="Click for recent 10"><div class="mc-label">Onboarding</div><div class="mc-val orange" id="carrier-count-pending">—</div></div>
-        <div class="mc" onclick="showDashSummary('carrier-fs')" style="cursor:pointer" title="Click for recent 10"><div class="mc-label">Full-Service 10%</div><div class="mc-val blue" id="carrier-count-fs">—</div></div>
+        <div class="mc" onclick="showDashSummary('carrier-fs')" style="cursor:pointer" title="Click for recent 10"><div class="mc-label">8% Load Plan</div><div class="mc-val blue" id="carrier-count-fs">—</div></div>
       </div>
       <div class="card">
         <div class="card-hd">
@@ -2165,7 +2165,7 @@ td.td-name{font-weight:600;color:var(--navy);}
       <div class="form-row-3">
         <div class="fg"><label class="fl">Miles</label><input class="fi" type="number" id="load-miles" placeholder="847" oninput="calcFee()"></div>
         <div class="fg"><label class="fl">Gross Rate ($) <span>*</span></label><input class="fi" type="number" id="load-rate" placeholder="2100" oninput="calcFee()"></div>
-        <div class="fg"><label class="fl">Dispatch Fee</label><select class="fsel" id="load-pct" onchange="calcFee()"><option value="5">5% — Founders / Pro</option><option value="8">8% — Pay-As-You-Go</option><option value="10">10% — Full-Service</option></select></div>
+        <div class="fg"><label class="fl">Dispatch Fee</label><select class="fsel" id="load-pct" onchange="calcFee()"><option value="0">$0 — Subscription plan (Founders / Pro)</option><option value="8" selected>8% — 8% of Load plan</option></select></div>
       </div>
       <div class="form-row">
         <div class="fg"><label class="fl">Pickup Date</label><input class="fi" type="date" id="load-pickup"></div>
@@ -2229,7 +2229,7 @@ td.td-name{font-weight:600;color:var(--navy);}
         </div>
       </div>
       <div class="form-row">
-        <div class="fg"><label class="fl">Service Plan</label><select class="fsel" id="mc-plan"><option value="founders">🏁 Founders — 5% + $300/truck/mo</option><option value="standard" selected>Standard Dispatch — 5%</option><option value="pay_as_you_go">Pay-As-You-Go — 8%</option><option value="pro">Pro — 5% Premium</option><option value="full_service">Full-Service — 10%</option><option value="discuss">Enterprise / Custom</option></select></div>
+        <div class="fg"><label class="fl">Service Plan</label><select class="fsel" id="mc-plan"><option value="founders">🏁 Founders — $300/truck/mo</option><option value="pro">💫 Pro — $500/truck/mo</option><option value="pay_as_you_go" selected>⚡ 8% of Load</option></select></div>
         <div class="fg"><label class="fl">ELD Device</label><input class="fi" id="mc-eld" placeholder="Samsara / Motive / etc."></div>
       </div>
       <div class="form-row">
@@ -2533,9 +2533,9 @@ function updateCarrierMetrics(){
   const total=allCarriers.length;
   const active=allCarriers.filter(c=>c.status==='active'||c.status==='onboarding').length;
   const pending=allCarriers.filter(c=>c.status==='onboarding_incomplete').length;
-  const fs=allCarriers.filter(c=>normPlanKey(c.plan)==='full_service').length;
+  const payLoad=allCarriers.filter(c=>normPlanKey(c.plan)==='pay_as_you_go').length;
   setText('carrier-count-total',total);setText('carrier-count-active',active);
-  setText('carrier-count-pending',pending);setText('carrier-count-fs',fs);
+  setText('carrier-count-pending',pending);setText('carrier-count-fs',payLoad);
 }
 
 async function saveCarrier(){
@@ -2909,7 +2909,7 @@ function autoSetDispatchPct(){
   const driverName=document.getElementById('load-driver-select')?.value;
   const pctSel=document.getElementById('load-pct');
   if(!driverName||!pctSel)return;
-  const carrier=allCarriers.find(c=>(c.company_name||'')===(driverName));
+  const carrier=allCarriers.find(c=>(c.company_name||'')===driverName);
   if(carrier){
     const pct=planPct(carrier.plan);
     pctSel.value=String(pct);
@@ -3112,69 +3112,100 @@ function updateDashboard(){
     ).join('');}
   }
 
-  // ── Service Mix (live, from actual carrier plan values) ──
+  // ── Service Mix — 3 real plans ──
   const PLANS=[
-    {key:'founders',    label:'Founders',          pct:'5%', desc:'$300/truck/mo + 5% dispatch', icon:'🏁', badge:'badge-gold'},
-    {key:'standard',    label:'Standard Dispatch',  pct:'5%', desc:'Per-load, no monthly fee',    icon:'⭐',  badge:'badge-orange'},
-    {key:'pay_as_you_go',label:'Pay-As-You-Go',    pct:'8%', desc:'Per-load, no monthly fee',    icon:'⭐⭐', badge:'badge-blue'},
-    {key:'pro',         label:'Pro',                pct:'5%', desc:'Enhanced service + priority', icon:'💫',  badge:'badge-navy'},
-    {key:'full_service',label:'Full-Service',       pct:'10%',desc:'IFTA · ELD · compliance',     icon:'👑',  badge:'badge-green'},
-    {key:'discuss',     label:'Custom/Enterprise',  pct:'—',  desc:'Negotiated rate',             icon:'🤝',  badge:'badge-ghost'},
+    {key:'founders',     label:'Founders',      rate:'$300/truck/mo', icon:'🏁', badge:'badge-gold'},
+    {key:'pro',          label:'Pro',           rate:'$500/truck/mo', icon:'💫', badge:'badge-navy'},
+    {key:'pay_as_you_go',label:'8% of Load',    rate:'8% per load',   icon:'⚡', badge:'badge-blue'},
   ];
-  // Carrier counts per plan
-  const planCounts={};
-  allCarriers.forEach(c=>{const k=normPlanKey(c.plan);planCounts[k]=(planCounts[k]||0)+1;});
-  // MTD dispatch fee revenue per plan (match load's driver_name to carrier)
+  // Per-plan carrier + truck counts
+  const planCounts={};const planTrucks={};
+  allCarriers.forEach(c=>{
+    const k=normPlanKey(c.plan);
+    planCounts[k]=(planCounts[k]||0)+1;
+    planTrucks[k]=(planTrucks[k]||0)+(c.fleet_size||1);
+  });
+  const totalCarriers=allCarriers.length||1;
+  const totalTrucks=Object.values(planTrucks).reduce((a,b)=>a+b,0)||1;
+  // Monthly subscription revenue per flat-fee plan
+  const planMRR={};
+  allCarriers.forEach(c=>{
+    const k=normPlanKey(c.plan);
+    const monthly=planMonthly(c.plan);
+    if(monthly)planMRR[k]=(planMRR[k]||0)+monthly*(c.fleet_size||1);
+  });
+  // MTD dispatch fees for 8% plan
   const carrierPlanMap={};
   allCarriers.forEach(c=>{if(c.company_name)carrierPlanMap[c.company_name.toLowerCase()]=normPlanKey(c.plan);});
   const planFees={};
   mtdLoads.forEach(l=>{
-    const k=carrierPlanMap[(l.driver_name||'').toLowerCase()]||'standard';
+    const k=carrierPlanMap[(l.driver_name||'').toLowerCase()]||'pay_as_you_go';
     planFees[k]=(planFees[k]||0)+(Number(l.dispatch_fee)||0);
   });
-  const totalFees=Object.values(planFees).reduce((a,b)=>a+b,0)||fees||1;
-  // Founders monthly subscription revenue
-  const foundersMonthly=allCarriers.filter(c=>normPlanKey(c.plan)==='founders').reduce((a,c)=>a+300*(c.fleet_size||1),0);
+  // Total revenue = all MRR + all MTD fees (for % calc)
+  const totalMRR=Object.values(planMRR).reduce((a,b)=>a+b,0);
+  const totalDispatch=Object.values(planFees).reduce((a,b)=>a+b,0)||fees||1;
+  const totalRevProxy=totalMRR+totalDispatch||1;
   const smEl=document.getElementById('service-mix-display');
   if(smEl){
     const rows=PLANS.map(plan=>{
       const ct=planCounts[plan.key]||0;
-      const planFee=planFees[plan.key]||0;
-      const feeShare=totalFees>0?Math.round(planFee/totalFees*100):0;
-      if(!ct)return '';
-      return `<div class="comp-item">
-        <div class="comp-left">
-          <span class="comp-ico">${plan.icon}</span>
-          <div>
-            <div class="comp-name">${plan.label} <span style="color:var(--gold);font-family:var(--ff-m)">${plan.pct}</span></div>
-            <div class="comp-desc">${plan.desc}${planFee?` · MTD $${planFee.toLocaleString()}`:''}${feeShare&&planFee?` (${feeShare}%)`:''}</div>
+      const trucks=planTrucks[plan.key]||0;
+      const pctC=totalCarriers>0?Math.round(ct/totalCarriers*100):0;
+      const pctT=totalTrucks>0?Math.round(trucks/totalTrucks*100):0;
+      const rev=planMRR[plan.key]||planFees[plan.key]||0;
+      const pctR=totalRevProxy>0?Math.round(rev/totalRevProxy*100):0;
+      const revLabel=planMRR[plan.key]?`$${(planMRR[plan.key]||0).toLocaleString()}/mo MRR`
+                    :planFees[plan.key]?`$${(planFees[plan.key]||0).toLocaleString()} MTD fees`:'—';
+      return `<div class="comp-item" style="align-items:flex-start;flex-direction:column;gap:6px">
+        <div style="display:flex;justify-content:space-between;width:100%;align-items:center">
+          <div style="display:flex;align-items:center;gap:8px">
+            <span class="comp-ico">${plan.icon}</span>
+            <div>
+              <div class="comp-name">${plan.label}</div>
+              <div class="comp-desc" style="color:var(--muted)">${plan.rate}</div>
+            </div>
+          </div>
+          <span class="badge ${plan.badge}">${ct} carrier${ct!==1?'s':''}</span>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;width:100%;margin-top:2px">
+          <div style="background:var(--surface2);border-radius:6px;padding:6px 8px;text-align:center">
+            <div style="font-size:16px;font-weight:800;font-family:var(--ff-h);color:var(--gold)">${pctC}%</div>
+            <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px">${ct} of ${totalCarriers} carriers</div>
+          </div>
+          <div style="background:var(--surface2);border-radius:6px;padding:6px 8px;text-align:center">
+            <div style="font-size:16px;font-weight:800;font-family:var(--ff-h);color:var(--green)">${pctT}%</div>
+            <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px">${trucks} of ${totalTrucks} trucks</div>
+          </div>
+          <div style="background:var(--surface2);border-radius:6px;padding:6px 8px;text-align:center">
+            <div style="font-size:16px;font-weight:800;font-family:var(--ff-h);color:var(--blue)">${rev?pctR+'%':'—'}</div>
+            <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px">${revLabel}</div>
           </div>
         </div>
-        <span class="badge ${plan.badge}">${ct} carrier${ct!==1?'s':''}</span>
       </div>`;
-    }).filter(Boolean).join('');
+    }).join('<div class="divider" style="margin:8px 0"></div>');
     smEl.innerHTML=rows+
       '<div class="divider"></div>'+
       '<div style="display:flex;justify-content:space-between;align-items:center">'+
-        '<span class="t-sm t-muted t-mono">'+allCarriers.length+' total carriers</span>'+
-        (foundersMonthly?'<span class="t-sm t-mono" style="color:var(--green)">+$'+foundersMonthly.toLocaleString()+'/mo subscriptions</span>':'')+
+        '<span class="t-sm t-muted t-mono">'+totalCarriers+' carriers · '+totalTrucks+' trucks total</span>'+
+        (totalMRR?'<span class="t-sm t-mono" style="color:var(--green)">$'+totalMRR.toLocaleString()+'/mo MRR</span>':'')+
       '</div>';
   }
 
   const gross=allLoads.reduce((a,l)=>a+(Number(l.rate)||0),0);
   const ar=allInvoices.filter(i=>i.status==='Unpaid'||i.status==='Overdue').reduce((a,i)=>a+(Number(i.amount)||0),0);
-  // Subscription MRR from all carriers
-  const mrr=allCarriers.filter(c=>normPlanKey(c.plan)==='founders').reduce((a,c)=>a+300*(c.fleet_size||1),0);
+  const mrr=totalMRR;
   setText('rev-gross','$'+gross.toLocaleString());setText('rev-dispatch-fees','$'+fees.toLocaleString());setText('rev-ar','$'+ar.toLocaleString());
   const rbEl=document.getElementById('rev-breakdown');
   if(rbEl){
-    // Dynamic goal = 10% of active carriers × avg load rate (rough target)
-    const feeGoal=Math.max(4800,allCarriers.filter(c=>c.status==='active').length*400);
-    const grossGoal=Math.max(22000,allCarriers.filter(c=>c.status==='active').length*4000);
+    const activeCount=allCarriers.filter(c=>c.status==='active').length;
+    const feeGoal=Math.max(4800,activeCount*400);
+    const grossGoal=Math.max(22000,activeCount*4000);
+    const mrrGoal=Math.max(5000,totalTrucks*400);
     rbEl.innerHTML=
-      (mrr?`<div style="margin-bottom:14px"><div class="flex-b" style="margin-bottom:5px"><span class="t-sm">Subscription MRR</span><span class="t-sm t-mono" style="color:var(--green)">$${mrr.toLocaleString()}/mo</span></div><div class="prog-bar"><div class="prog-fill" style="width:${Math.min(100,(mrr/30000)*100).toFixed(0)}%;background:var(--green)"></div></div></div>`:'')+
-      `<div style="margin-bottom:14px"><div class="flex-b" style="margin-bottom:5px"><span class="t-sm">Dispatch Fees (MTD)</span><span class="t-sm val-gold t-mono">$${fees.toLocaleString()} / $${feeGoal.toLocaleString()}</span></div><div class="prog-bar"><div class="prog-fill" style="width:${Math.min(100,(fees/feeGoal)*100).toFixed(0)}%;background:var(--gold)"></div></div></div>`+
-      `<div style="margin-bottom:14px"><div class="flex-b" style="margin-bottom:5px"><span class="t-sm">Gross Revenue (MTD)</span><span class="t-sm val-green t-mono">$${gross.toLocaleString()} / $${grossGoal.toLocaleString()}</span></div><div class="prog-bar"><div class="prog-fill" style="width:${Math.min(100,(gross/grossGoal)*100).toFixed(0)}%;background:var(--green)"></div></div></div>`+
+      (mrr?`<div style="margin-bottom:14px"><div class="flex-b" style="margin-bottom:5px"><span class="t-sm">Subscription MRR (Founders + Pro)</span><span class="t-sm t-mono" style="color:var(--green)">$${mrr.toLocaleString()} / $${mrrGoal.toLocaleString()}</span></div><div class="prog-bar"><div class="prog-fill" style="width:${Math.min(100,(mrr/mrrGoal)*100).toFixed(0)}%;background:var(--green)"></div></div></div>`:'')+
+      `<div style="margin-bottom:14px"><div class="flex-b" style="margin-bottom:5px"><span class="t-sm">Dispatch Fees MTD (8% plan)</span><span class="t-sm val-gold t-mono">$${fees.toLocaleString()} / $${feeGoal.toLocaleString()}</span></div><div class="prog-bar"><div class="prog-fill" style="width:${Math.min(100,(fees/feeGoal)*100).toFixed(0)}%;background:var(--gold)"></div></div></div>`+
+      `<div style="margin-bottom:14px"><div class="flex-b" style="margin-bottom:5px"><span class="t-sm">Gross Revenue MTD</span><span class="t-sm val-green t-mono">$${gross.toLocaleString()} / $${grossGoal.toLocaleString()}</span></div><div class="prog-bar"><div class="prog-fill" style="width:${Math.min(100,(gross/grossGoal)*100).toFixed(0)}%;background:var(--green)"></div></div></div>`+
       `<div class="divider"></div><div class="flex-b"><span class="t-sm t-muted">Outstanding AR</span><span style="font-family:var(--ff-h);font-size:22px;font-weight:800;color:var(--orange)">$${ar.toLocaleString()}</span></div>`;
   }
 
@@ -3702,18 +3733,19 @@ function testBadgeHtml(isTest){return isTest?'<span class="badge" style="backgro
 // ── PLAN HELPERS ──────────────────────────────────────────────────────────────
 // Canonical plan keys: founders | standard | pay_as_you_go | pro | full_service | discuss
 function normPlanKey(p){
-  if(!p)return 'standard';
+  if(!p)return 'pay_as_you_go';
   const v=p.toLowerCase().replace(/[-\s]/g,'_');
   if(v.includes('founder'))return 'founders';
-  if(v.includes('pay_as_you_go')||v.includes('payasyougo')||v==='8'||v.includes('_8_')||v.startsWith('8%'))return 'pay_as_you_go';
-  if(v.includes('full')||v.includes('enterprise')||v.includes('_10')||v.startsWith('10%'))return 'full_service';
   if(v.includes('pro'))return 'pro';
-  if(v.includes('discuss')||v.includes('custom'))return 'discuss';
-  return 'standard';
+  // 8% / pay-as-you-go / any old display-string fallback
+  return 'pay_as_you_go';
 }
-function planPct(p){const k=normPlanKey(p);if(k==='pay_as_you_go')return 8;if(k==='full_service')return 10;return 5;}
-function planBadgeClass(p){const k=normPlanKey(p);if(k==='founders')return 'badge-gold';if(k==='pay_as_you_go')return 'badge-blue';if(k==='full_service')return 'badge-green';if(k==='pro')return 'badge-navy';if(k==='discuss')return 'badge-ghost';return 'badge-orange';}
-function planShort(p){const k=normPlanKey(p);if(k==='founders')return 'Founders 5%';if(k==='pay_as_you_go')return 'Pay-As-You-Go 8%';if(k==='full_service')return 'Full-Service 10%';if(k==='pro')return 'Pro 5%';if(k==='discuss')return 'Custom';return 'Standard 5%';}
+// Returns per-load dispatch % (0 for flat-fee plans)
+function planPct(p){return normPlanKey(p)==='pay_as_you_go'?8:0;}
+// Returns flat monthly fee per truck (0 for % plan)
+function planMonthly(p){const k=normPlanKey(p);if(k==='founders')return 300;if(k==='pro')return 500;return 0;}
+function planBadgeClass(p){const k=normPlanKey(p);if(k==='founders')return 'badge-gold';if(k==='pro')return 'badge-navy';return 'badge-blue';}
+function planShort(p){const k=normPlanKey(p);if(k==='founders')return 'Founders $300/truck';if(k==='pro')return 'Pro $500/truck';return '8% of Load';}
 function statusBadge(s){if(!s)return 'badge-ghost';if(s.includes('Route')||s==='Active'||s.includes('Completed')||s.includes('Delivered')||s.includes('Paid'))return 'badge-green';if(s.includes('Booked'))return 'badge-blue';if(s.includes('Due')||s.includes('Onboarding')||s.includes('Partial')||s.includes('New')||s.includes('Pending'))return 'badge-orange';if(s.includes('POD')||s.includes('Expiring')||s.includes('Overdue'))return 'badge-red';return 'badge-ghost';}
 
 // ── UNIVERSAL TIME KEEPER ──────────────────────────────────────────────────
