@@ -28,9 +28,9 @@
 }
 html,body{height:100%;overflow:hidden;}
 body{font-family:var(--ff-b);color:var(--text);background:var(--off);display:flex;}
-::-webkit-scrollbar{width:10px;height:10px;}
+::-webkit-scrollbar{width:25px;height:25px;}
 ::-webkit-scrollbar-track{background:var(--slate);}
-::-webkit-scrollbar-thumb{background:var(--gold);border-radius:5px;border:2px solid var(--slate);}
+::-webkit-scrollbar-thumb{background:var(--gold);border-radius:8px;border:5px solid var(--slate);}
 
 /* ── SIDEBAR ── */
 #sidebar{
@@ -276,9 +276,10 @@ body{font-family:var(--ff-b);color:var(--text);background:var(--off);display:fle
 .badge-ghost{background:transparent;color:var(--muted);border:1px solid var(--border);}
 
 /* ── TABLE ── */
-.tbl-wrap{overflow-x:auto;border-radius:10px;border:1.5px solid var(--border);}
+.tbl-wrap{overflow-x:auto;overflow-y:auto;max-height:480px;border-radius:10px;border:1.5px solid var(--border);}
 table{width:100%;border-collapse:collapse;}
 thead tr{background:var(--slate);}
+thead th{position:sticky;top:0;z-index:2;background:var(--slate);}
 th{
   font-family:var(--ff-m);font-size:9px;font-weight:500;
   color:var(--muted);text-transform:uppercase;letter-spacing:1.5px;
@@ -2020,8 +2021,14 @@ td.td-name{font-weight:600;color:var(--navy);}
   .page-hdr-l h2{font-size:clamp(20px,5vw,28px);}
   .page-hdr-acts{flex-wrap:wrap;gap:6px;width:100%;}
   .page-hdr>.btn-navy,.page-hdr>.btn-out{width:100%;}
+  .page-hdr-acts>.btn-navy,.page-hdr-acts>.btn-out,
+  .page-hdr-acts>.btn-gold-sm,.page-hdr-acts>.btn-navy-sm,
+  .page-hdr-acts>.btn-red-sm,.page-hdr-acts>.btn-green-sm{
+    flex:1;min-width:120px;justify-content:center;text-align:center;
+  }
 
-  .btn-navy,.btn-out{padding:9px 14px;font-size:12px;}
+  .btn-navy,.btn-out{padding:9px 14px;font-size:12px;justify-content:center;text-align:center;}
+  .btn-gold-sm,.btn-navy-sm,.btn-red-sm,.btn-green-sm{font-size:11px;padding:7px 10px;}
 
   .tbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;}
   .tbl-wrap table{min-width:540px;}
@@ -4517,7 +4524,7 @@ async function vanceCall(){
 async function loadVanceCalls(){
   const el=document.getElementById('vc-log');
   try{
-    const r=await apiFetch('/api/prospecting/calls?limit=10');
+    const r=await apiFetch('/api/prospecting/calls?limit=15');
     const d=await r.json();
     const calls=d.calls||[];
     if(!calls.length){el.innerHTML='<div style="color:var(--muted);font-size:12px;padding:4px 0">No calls yet</div>';return;}
@@ -5666,7 +5673,7 @@ function startAgentRealtime() {
 let _lastPollTs = null;
 async function pollAgentLog() {
   try {
-    const q = sb.table('agent_log').select('*').order('ts', {ascending:false}).limit(5);
+    const q = sb.table('agent_log').select('*').order('ts', {ascending:false}).limit(15);
     if (_lastPollTs) q.gt('ts', _lastPollTs);
     const { data } = await q;
     if (data?.length) {
@@ -5679,7 +5686,7 @@ async function pollAgentLog() {
 // ── Seed notif panel from recent log on page load ────────────────────────────
 async function seedRecentNotifs() {
   try {
-    const { data } = await sb.from('agent_log').select('*').order('ts', {ascending:false}).limit(8);
+    const { data } = await sb.from('agent_log').select('*').order('ts', {ascending:false}).limit(15);
     if (data?.length) {
       _lastPollTs = data[0].ts;
       // Add silently (no toasts, no unread bump) so panel feels populated on first open
