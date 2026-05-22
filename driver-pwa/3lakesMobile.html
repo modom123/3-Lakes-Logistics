@@ -74,6 +74,7 @@ html, body {
 }
 .scroll-inner { padding: 0 0 16px; }
 
+
 /* VIEWS */
 .view { display: none; }
 .view.active { display: block; }
@@ -491,6 +492,17 @@ input[type=file].hidden-input { display: none; }
 
 #cdl-status-pill { display: inline-flex; align-items: center; gap: 4px; padding: 3px 9px; border-radius: 99px; font-size: 10px; font-weight: 700; }
 /* ── END STEP 5 ── */
+
+/* ── DESKTOP FRAME — center the 480px app column on wide screens ── */
+@media (min-width: 600px) {
+  body { background: #050c1a; }
+  #header, #main, #bottom-nav {
+    width: 480px !important;
+    left: 50% !important;
+    right: auto !important;
+    transform: translateX(-50%) !important;
+  }
+}
   </style>
 </head>
 <body>

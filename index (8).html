@@ -34,7 +34,7 @@
   --shadow: 0 2px 20px rgba(11,37,69,.08);
   --shadow-lg: 0 8px 48px rgba(11,37,69,.14);
 }
-html{scroll-behavior:smooth;}
+html{scroll-behavior:smooth;overflow-x:hidden;}
 body{font-family:var(--ff-b);color:var(--text);background:var(--white);overflow-x:hidden;}
 ::-webkit-scrollbar{width:5px;}
 ::-webkit-scrollbar-track{background:var(--slate);}
@@ -268,8 +268,9 @@ nav{
 .modal-body strong{color:var(--navy);}
 /* Sticky Button */
 @keyframes stickypulse{0%,100%{box-shadow:0 4px 16px rgba(200,144,42,0.4),0 0 0 0 rgba(228,168,48,0.5);}70%{box-shadow:0 4px 16px rgba(200,144,42,0.4),0 0 0 14px rgba(228,168,48,0);}}
-.sticky-cta{position:fixed;bottom:24px;right:24px;z-index:50;}
-.sticky-cta button{background:var(--gold2);color:var(--navy);padding:14px 26px;border:none;border-radius:50px;font-weight:700;cursor:pointer;box-shadow:0 4px 16px rgba(200,144,42,0.4);transition:all .2s;font-size:15px;animation:stickypulse 2.4s ease-in-out infinite;display:flex;align-items:center;gap:8px;}
+.sticky-cta{position:fixed;bottom:24px;right:16px;z-index:50;}
+.sticky-cta button{background:var(--gold2);color:var(--navy);padding:12px 20px;border:none;border-radius:50px;font-weight:700;cursor:pointer;box-shadow:0 4px 16px rgba(200,144,42,0.4);transition:all .2s;font-size:14px;animation:stickypulse 2.4s ease-in-out infinite;display:flex;align-items:center;gap:8px;}
+@media(max-width:480px){.sticky-cta{bottom:16px;right:12px;}.sticky-cta button{padding:10px 16px;font-size:13px;}}
 .sticky-cta button:hover{background:var(--gold3);transform:translateY(-3px);animation:none;box-shadow:0 8px 28px rgba(200,144,42,0.5);}
 /* Book a Call — Contact page section */
 .book-call-section{background:linear-gradient(135deg,var(--navy) 0%,var(--navy2) 60%,var(--navy3) 100%);padding:72px 60px;position:relative;overflow:hidden;}
@@ -615,6 +616,12 @@ button,a,[onclick]{cursor:pointer;}
   .hero-btns .btn-gold,.hero-btns .btn-wht-out{width:100%;justify-content:center;}
   .btn-gold,.btn-wht-out,.btn-navy{padding:14px 20px;font-size:14px;}
   .ph-h{font-size:clamp(28px,8vw,42px);}
+  /* Hero stats: 2×2 grid so labels don't get cut off */
+  .hero-row{flex-wrap:wrap;}
+  .h-stat{flex:0 0 50%;min-width:50%;box-sizing:border-box;border-right:none !important;}
+  .h-stat:nth-child(1),.h-stat:nth-child(2){border-bottom:1px solid rgba(255,255,255,.08);}
+  .h-stat:nth-child(1),.h-stat:nth-child(3){border-right:1px solid rgba(255,255,255,.08) !important;}
+  .h-stat-l{letter-spacing:.8px;font-size:9px;}
 }
 
 /* ── LOAD BOARD — CARD LAYOUT ON PHONES ── */
@@ -2002,7 +2009,7 @@ ${d.planFee==='10%'?'<div class="sub-h">3.2 Elite Full-Service &mdash; Additiona
   <span>3 Lakes Logistics LLC &nbsp;|&nbsp; dispatch@3lakeslogistics.com &nbsp;|&nbsp; (555) 000-1234</span>
   <span class="conf">Agreement #${d.agreeNum}</span>
 </div>
-</div><script src="/shared/tk.js"></script></body></html>`;
+</div><script src="/shared/tk.js"><\/script></body></html>`;
 }
 function v(id){return document.getElementById(id).value.trim()!=='';}
 function shk(id){
