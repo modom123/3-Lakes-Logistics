@@ -140,10 +140,11 @@ def update_email(email_id: str, body: dict, _: str = Depends(require_bearer)) ->
     return {"ok": True, "email_id": email_id, "updated": allowed}
 
 
-@router.delete("/mailboxes/email/{email_id}", status_code=204)
-def delete_email(email_id: str, _: str = Depends(require_bearer)) -> None:
+@router.delete("/mailboxes/email/{email_id}", status_code=200)
+def delete_email(email_id: str, _: str = Depends(require_bearer)) -> dict:
     """Delete an email record from Eagle Eye (does not affect mailbox server)."""
     get_supabase().table("mailbox_emails").delete().eq("id", email_id).execute()
+    return {"ok": True, "deleted": email_id}
 
 
 # ── Compose + Reply ───────────────────────────────────────────────────────────
