@@ -277,6 +277,9 @@ body{font-family:var(--ff-b);color:var(--text);background:var(--off);display:fle
 
 /* ── TABLE ── */
 .tbl-wrap{overflow-x:auto;overflow-y:auto;max-height:480px;border-radius:10px;border:1.5px solid var(--border);}
+/* Universal scroll container — apply to any list/log/table wrapper */
+.scroll-box{overflow-y:auto;max-height:480px;}
+.scroll-box-sm{overflow-y:auto;max-height:280px;}
 table{width:100%;border-collapse:collapse;}
 thead tr{background:var(--slate);}
 thead th{position:sticky;top:0;z-index:2;background:var(--slate);}
@@ -917,7 +920,7 @@ td.td-name{font-weight:600;color:var(--navy);}
           <div class="card-title">Carrier Roster</div>
           <span class="badge badge-navy" id="carrier-roster-badge">Loading…</span>
         </div>
-        <div id="carriers-table-wrap"><div class="loading"><div class="spin"></div>Loading carriers from Supabase…</div></div>
+        <div id="carriers-table-wrap" class="scroll-box"><div class="loading"><div class="spin"></div>Loading carriers from Supabase…</div></div>
       </div>
     </div>
 
@@ -1276,7 +1279,7 @@ td.td-name{font-weight:600;color:var(--navy);}
 
         <div style="margin-top:8px">
           <div style="font-size:11px;font-weight:600;color:var(--muted);margin-bottom:8px;letter-spacing:.5px">RECENT CALLS</div>
-          <div id="vc-log"><div class="loading"><div class="spin"></div>Loading…</div></div>
+          <div id="vc-log" class="scroll-box-sm"><div class="loading"><div class="spin"></div>Loading…</div></div>
         </div>
       </div>
 
@@ -1292,7 +1295,7 @@ td.td-name{font-weight:600;color:var(--navy);}
           <div class="card-title">Recent Agent Log</div>
           <span class="badge badge-green" style="font-size:9px;letter-spacing:1px">🔴 LIVE</span>
         </div>
-        <div id="agent-log-list"><div class="loading"><div class="spin"></div>Loading…</div></div>
+        <div id="agent-log-list" class="scroll-box"><div class="loading"><div class="spin"></div>Loading…</div></div>
       </div>
 
       <!-- ── NEXUS ── -->
@@ -1491,7 +1494,7 @@ td.td-name{font-weight:600;color:var(--navy);}
 
       <div class="card">
         <div class="card-hd"><div class="card-title">Top Scored Leads</div><span class="card-chip" id="lp-count-chip">Loading…</span></div>
-        <div id="lp-table"><div class="loading"><div class="spin"></div>Loading leads…</div></div>
+        <div id="lp-table" class="scroll-box"><div class="loading"><div class="spin"></div>Loading leads…</div></div>
       </div>
     </div>
 
@@ -1810,7 +1813,7 @@ td.td-name{font-weight:600;color:var(--navy);}
       </div>
       <div class="card">
         <div class="card-hd"><div class="card-title">Recent Events</div></div>
-        <div id="ledger-table"><div class="loading"><div class="spin"></div>Loading ledger…</div></div>
+        <div id="ledger-table" class="scroll-box"><div class="loading"><div class="spin"></div>Loading ledger…</div></div>
       </div>
     </div>
 
@@ -1873,7 +1876,7 @@ td.td-name{font-weight:600;color:var(--navy);}
       <!-- Step Log -->
       <div class="card">
         <div class="card-hd"><div class="card-title">Recent Step Executions</div></div>
-        <div id="exec-log"><div class="loading"><div class="spin"></div>Loading executions…</div></div>
+        <div id="exec-log" class="scroll-box"><div class="loading"><div class="spin"></div>Loading executions…</div></div>
       </div>
     </div>
 
@@ -2652,7 +2655,7 @@ const API = {
   founders(){ return fetch(API_BASE+'/api/founders/inventory').then(r=>r.json()); },
   listAgents(){ return this.get('/api/agents/list'); },
   runAgent(name, payload){ return this.post('/api/agents/'+encodeURIComponent(name)+'/run', payload||{}); },
-  agentLog(){ return this.get('/api/agents/log?limit=50'); },
+  agentLog(){ return this.get('/api/agents/log?limit=15'); },
   orgBrain(){ return this.get('/api/org/brain'); },
   orgInteractions(limit=50){ return this.get('/api/org/interactions?limit='+limit); },
   agentBrain(name){ return this.get('/api/org/brain/'+encodeURIComponent(name)); },
@@ -2660,7 +2663,7 @@ const API = {
   carrierBrain(){ return this.get('/api/carriers/brain'); },
   carrierBrainAtRisk(){ return this.get('/api/carriers/brain/at-risk'); },
   revenueBrain(){ return this.get('/api/revenue/brain'); },
-  leads(){ return this.get('/api/leads/?limit=500'); },
+  leads(){ return this.get('/api/leads/?limit=15'); },
   carriersList(){ return this.get('/api/carriers/'); },
   telemetryLatest(){ return this.get('/api/telemetry/latest'); },
 };
@@ -2753,7 +2756,7 @@ async function refreshAll(){
 // ── CARRIERS ──
 async function loadCarriers(){
   try{
-    const res=await apiFetch('/api/carriers/?limit=500');
+    const res=await apiFetch('/api/carriers/?limit=15');
     if(!res.ok){
       const txt=await res.text().catch(()=>'');
       diagLog('carriers API '+res.status+': '+txt.slice(0,120),true);
@@ -3016,7 +3019,7 @@ async function removeFleetAsset(fleetId, carrierId){
 // ── LOADS ──
 async function loadLoads(){
   try{
-    const res=await apiFetch('/api/dashboard/loads?limit=500');
+    const res=await apiFetch('/api/dashboard/loads?limit=15');
     if(!res.ok){
       const txt=await res.text().catch(()=>'');
       diagLog('loads API '+res.status+': '+txt.slice(0,120),true);
@@ -3208,7 +3211,7 @@ function autoSetDispatchPct(){
 // ── INVOICES ──
 async function loadInvoices(){
   try{
-    const res=await apiFetch('/api/dashboard/invoices?limit=500');
+    const res=await apiFetch('/api/dashboard/invoices?limit=15');
     if(!res.ok){
       const txt=await res.text().catch(()=>'');
       diagLog('invoices API '+res.status+': '+txt.slice(0,120),true);
@@ -4528,14 +4531,14 @@ async function loadVanceCalls(){
     const d=await r.json();
     const calls=d.calls||[];
     if(!calls.length){el.innerHTML='<div style="color:var(--muted);font-size:12px;padding:4px 0">No calls yet</div>';return;}
-    el.innerHTML=`<table class="tbl" style="font-size:12px"><thead><tr><th>Who</th><th>Phone</th><th>Status</th><th>Time</th></tr></thead><tbody>${calls.map(c=>{
+    el.innerHTML=`<div class="tbl-wrap"><table class="tbl" style="font-size:12px"><thead><tr><th>Who</th><th>Phone</th><th>Status</th><th>Time</th></tr></thead><tbody>${calls.map(c=>{
       const p=c.payload||{};const ok=c.result==='started';
       return`<tr>
         <td style="font-weight:500">${p.name||'—'}</td>
         <td style="color:var(--muted)">${p.phone||'—'}</td>
         <td><span class="badge badge-${ok?'green':'orange'}">${c.result||c.action}</span></td>
         <td style="color:var(--muted);white-space:nowrap">${c.ts?new Date(c.ts).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}):'—'}</td>
-      </tr>`;}).join('')}</tbody></table>`;
+      </tr>`;}).join('')}</tbody></table></div>`;
   }catch(e){el.innerHTML=`<div style="color:var(--muted);font-size:12px">Could not load calls</div>`;}
 }
 async function refreshAgentLog(){
@@ -4937,7 +4940,7 @@ async function fmcsaImportLead(carrier, btn){
 async function loadLeadsPipeline(){
   const tbl=document.getElementById('lp-table');
   try{
-    const res=await apiFetch('/api/leads/?limit=500');
+    const res=await apiFetch('/api/leads/?limit=15');
     if(!res.ok){const t=await res.text().catch(()=>'');if(tbl)tbl.innerHTML='<div class="empty-state">Error loading leads: '+t.slice(0,120)+'</div>';return;}
     const data=await res.json();
     const items=data.items||[];
@@ -5460,7 +5463,7 @@ async function loadLedger(){
   const t=document.getElementById('ledger-table');
   t.innerHTML='<div class="loading"><div class="spin"></div>Loading…</div>';
   try{
-    const res=await apiFetch('/api/ledger/events?limit=100');
+    const res=await apiFetch('/api/ledger/events?limit=15');
     const data=await res.json();
     document.getElementById('ledger-total').textContent=data.length;
     document.getElementById('ledger-contracts').textContent=data.filter(e=>e.event_type?.startsWith('contract.')).length;
@@ -5506,7 +5509,7 @@ async function loadExecutionSteps(){
     const qs=domain?`?domain=${domain}`:'';
     const [stepsRes,execRes]=await Promise.all([
       apiFetch('/api/execution/steps'+qs),
-      apiFetch('/api/execution/executions'+(qs?qs+'&limit=50':'?limit=50'))
+      apiFetch('/api/execution/executions'+(qs?qs+'&limit=15':'?limit=15'))
     ]);
     const steps=await stepsRes.json();
     const execs=await execRes.json();
@@ -6201,7 +6204,7 @@ async function mailLoadInbox(){
   const lb=document.getElementById('mail-list-body');
   lb.innerHTML='<div style="padding:30px;text-align:center;color:var(--muted)"><div class="spin" style="width:20px;height:20px;border:2px solid rgba(0,31,63,.15);border-top-color:var(--navy);margin:0 auto 8px"></div></div>';
   try{
-    const url=_mailCurrent==='all'?'/api/mailboxes/inbox?limit=100':`/api/mailboxes/${_mailCurrent}/inbox?limit=100`;
+    const url=_mailCurrent==='all'?'/api/mailboxes/inbox?limit=15':`/api/mailboxes/${_mailCurrent}/inbox?limit=15`;
     const r=await apiFetch(url);
     const d=await r.json();
     _mailEmails=d.emails||[];
@@ -6642,7 +6645,7 @@ function _crmStatus(l){ return l.status || l.stage || 'New'; }
 async function loadCrmLeads(){
   crmLoadHeat(); crmOeLoad();
   try {
-    const r = await apiFetch('/api/leads?limit=500');
+    const r = await apiFetch('/api/leads?limit=15');
     const d = await r.json();
     crmAllLeads = d.items || [];
     document.getElementById('crm-leads-count').textContent = crmAllLeads.length;
