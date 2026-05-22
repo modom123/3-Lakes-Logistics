@@ -75,11 +75,16 @@ CHANNEL_COPY: dict[str, dict[str, str]] = {
         "stat_pitch":
             "We charge $300 flat. You keep every dollar you earn. "
             "Our AI negotiates 22 cents above market on every load and files your detention automatically.",
-        "cta":
-            "Want me to get you 15 minutes with our Commander? Takes about 10 minutes to get you set up.",
+        "cta_signup":
+            "I can text you the sign-up link right now — takes 3 minutes and you're locked in as a Founder.",
+        "cta_book":
+            "If you want to talk it through first, I can get you 15 minutes with our onboarding team tomorrow.",
         "objection_price":
             "That's less than a tank of diesel. And you're already paying 30% on every load — "
             "this replaces all of that.",
+        "objection_think":
+            "Totally — I'll text you the link. Just know Founders pricing closes at 1,000 trucks "
+            "and we're close. You can sign up in 3 minutes whenever you're ready.",
     },
     "social": {
         "open_loads":

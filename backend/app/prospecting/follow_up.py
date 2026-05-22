@@ -64,21 +64,25 @@ def _build_follow_up_html(prospect_name: str, company_name: str) -> str:
       </tr>
     </table>
 
-    <p style="font-size:15px;color:#374151;line-height:1.7;margin:20px 0 8px;">
-      <strong>Option 1 — Book your 15-min onboarding call:</strong>
+    <p style="font-size:15px;color:#374151;line-height:1.7;margin:20px 0 4px;">
+      <strong>Ready to lock in your spot?</strong> Takes 3 minutes — you're in as a Founder:
     </p>
     <table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:8px 0 20px;">
-      <a href="{BOOKING_URL}" style="display:inline-block;background:#34D399;color:#0B2545;font-weight:800;font-size:15px;padding:14px 36px;border-radius:7px;text-decoration:none;letter-spacing:0.3px;">
-        Book My Onboarding Call &rarr;
+      <a href="{SIGNUP_URL}" style="display:inline-block;background:#34D399;color:#0B2545;font-weight:800;font-size:16px;padding:16px 40px;border-radius:7px;text-decoration:none;letter-spacing:0.3px;">
+        Sign Up Now — Lock Founders Pricing &rarr;
       </a>
     </td></tr></table>
 
-    <p style="font-size:15px;color:#374151;line-height:1.7;margin:0 0 8px;">
-      <strong>Option 2 — Start your intake now</strong> (3 minutes, locks your spot):
+    <p style="font-size:14px;color:#6B7280;text-align:center;margin:-12px 0 20px;">
+      — or —
+    </p>
+
+    <p style="font-size:14px;color:#374151;line-height:1.7;margin:0 0 8px;">
+      Have questions first? Book a free 15-min call with our onboarding team:
     </p>
     <table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:8px 0 20px;">
-      <a href="{SIGNUP_URL}" style="display:inline-block;background:#0B2545;color:#fff;font-weight:700;font-size:14px;padding:12px 32px;border-radius:7px;text-decoration:none;">
-        Start My Intake &rarr;
+      <a href="{BOOKING_URL}" style="display:inline-block;background:#0B2545;color:#fff;font-weight:700;font-size:14px;padding:12px 32px;border-radius:7px;text-decoration:none;">
+        Book a 15-Min Onboarding Call &rarr;
       </a>
     </td></tr></table>
 
@@ -158,14 +162,15 @@ def send_follow_up_sms(
     first = prospect_name.split()[0] if prospect_name else "there"
     if reminder:
         body = (
-            f"Hey {first}, still thinking about 3 Lakes? "
-            f"Lock in Founders pricing before we hit 1,000 trucks: {BOOKING_URL} "
+            f"Hey {first}, don't let Founders pricing slip — "
+            f"sign up in 3 min: {SIGNUP_URL} "
+            f"Or book a call: {BOOKING_URL} "
             f"Reply STOP to opt out."
         )
     else:
         body = (
-            f"Hey {first}! Great chatting — here's your onboarding link: {BOOKING_URL} "
-            f"Or start your quick intake: {SIGNUP_URL} "
+            f"Hey {first}! Great chatting. Sign up now and lock Founders pricing ($300/mo for life): {SIGNUP_URL} "
+            f"Or book a 15-min call: {BOOKING_URL} "
             f"Reply STOP to opt out."
         )
 
