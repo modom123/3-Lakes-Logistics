@@ -613,6 +613,22 @@ input[type=file].hidden-input { display: none; }
       </div>
     </div>
 
+    <!-- Quick Actions — above pay so always visible in viewport -->
+    <div class="action-row">
+      <a class="action-btn blue-action" id="navigate-action-btn" href="#" onclick="navigateToLoad(event)">
+        <div class="action-btn-icon">🗺</div>
+        <div class="action-btn-label">Navigate</div>
+      </a>
+      <a class="action-btn green-action" id="call-broker-action-btn" href="#">
+        <div class="action-btn-icon">📞</div>
+        <div class="action-btn-label">Call Broker</div>
+      </a>
+      <div class="action-btn" onclick="showView('docs')">
+        <div class="action-btn-icon">📎</div>
+        <div class="action-btn-label">Upload Doc</div>
+      </div>
+    </div>
+
     <!-- Today's Pay + This Week -->
     <div class="pay-summary-row">
       <div class="pay-summary-card">
@@ -628,22 +644,6 @@ input[type=file].hidden-input { display: none; }
         <div class="pay-row"><span class="pay-row-label">Miles</span><span class="pay-row-value" id="miles-today">—</span></div>
         <div class="pay-row"><span class="pay-row-label">Loads</span><span class="pay-row-value" id="week-loads">—</span></div>
         <div class="pay-row"><span class="pay-row-label">Earned</span><span class="pay-row-value" style="color:var(--green)" id="week-earned">—</span></div>
-      </div>
-    </div>
-
-    <!-- Quick Actions -->
-    <div class="action-row">
-      <a class="action-btn blue-action" id="navigate-action-btn" href="#" onclick="navigateToLoad(event)">
-        <div class="action-btn-icon">🗺</div>
-        <div class="action-btn-label">Navigate</div>
-      </a>
-      <a class="action-btn green-action" id="call-broker-action-btn" href="#">
-        <div class="action-btn-icon">📞</div>
-        <div class="action-btn-label">Call Broker</div>
-      </a>
-      <div class="action-btn" onclick="showView('docs')">
-        <div class="action-btn-icon">📎</div>
-        <div class="action-btn-label">Upload Doc</div>
       </div>
     </div>
 
@@ -1298,8 +1298,8 @@ function renderCurrentLoad(load) {
   document.getElementById('miles-today').textContent    = load.miles       ? load.miles.toLocaleString() : '—';
   document.getElementById('est-pay').textContent        = rate ? '$'+(rate*0.72).toFixed(0) : '—';
   // Addresses
-  const pickupAddr   = [load.pickup_address,   load.origin_city||load.pickup_city,   load.origin_state||load.pickup_state].filter(Boolean).join(', ');
-  const deliveryAddr = [load.delivery_address, load.dest_city||load.delivery_city,   load.dest_state||load.delivery_state].filter(Boolean).join(', ');
+  const pickupAddr   = load.pickup_address   || [load.origin_city||load.pickup_city,  load.origin_state||load.pickup_state].filter(Boolean).join(', ');
+  const deliveryAddr = load.delivery_address || [load.dest_city||load.delivery_city,  load.dest_state||load.delivery_state].filter(Boolean).join(', ');
   if (pickupAddr || deliveryAddr) {
     document.getElementById('load-addresses').style.display = 'block';
     document.getElementById('pickup-address').textContent   = pickupAddr   || '—';
