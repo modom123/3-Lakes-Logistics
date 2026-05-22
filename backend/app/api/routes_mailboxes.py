@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from ..api.deps import require_bearer
+from .deps import require_bearer
 from ..supabase_client import get_supabase
 from ..logging_service import get_logger
 
