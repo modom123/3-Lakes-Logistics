@@ -286,6 +286,13 @@ def create_app() -> FastAPI:
     if os.path.isdir(_marketing_dir):
         app.mount("/marketing", StaticFiles(directory=_marketing_dir), name="marketing")
 
+    # Driver PWA served as static files at /driver-pwa/*
+    _driver_pwa_dir = os.path.normpath(
+        os.path.join(os.path.dirname(__file__), "..", "..", "driver-pwa")
+    )
+    if os.path.isdir(_driver_pwa_dir):
+        app.mount("/driver-pwa", StaticFiles(directory=_driver_pwa_dir), name="driver-pwa")
+
     log.info("3 Lakes Logistics API ready (env=%s)", s.env)
     return app
 
