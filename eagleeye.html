@@ -6162,12 +6162,21 @@ const _MB_ICONS={loads:'📥',sales:'📊',info:'ℹ️',mark:'👤',cece:'👤'
 window.mailInit=function(){mailLoadMailboxes();mailLoadInbox();};
 
 async function mailLoadMailboxes(){
+  const listEl=document.getElementById('mail-mb-list');
   try{
     const r=await apiFetch('/api/mailboxes');
+    if(!r.ok){
+      listEl.innerHTML=`<div style="padding:16px;font-size:12px;color:var(--red);text-align:center">
+        ⚠️ Mailbox API unavailable (${r.status})<br>
+        <span style="color:var(--muted);font-size:11px">Deploy may still be in progress</span><br>
+        <button onclick="mailLoadMailboxes()" style="margin-top:8px;padding:5px 14px;font-size:11px;cursor:pointer;border:1px solid var(--border);border-radius:4px;background:var(--surface)">↻ Retry</button>
+      </div>`;
+      return;
+    }
     const d=await r.json();
     _mailboxStatuses=d.mailboxes||[];
     _renderSidebar(_mailboxStatuses);
-  }catch(e){document.getElementById('mail-mb-list').innerHTML='<div style="padding:12px;font-size:11px;color:var(--red)">'+esc(e.message)+'</div>';}
+  }catch(e){listEl.innerHTML='<div style="padding:12px;font-size:11px;color:var(--red)">'+esc(e.message)+'</div>';}
 }
 
 function _renderSidebar(mailboxes){
@@ -6206,6 +6215,13 @@ async function mailLoadInbox(){
   try{
     const url=_mailCurrent==='all'?'/api/mailboxes/inbox?limit=15':`/api/mailboxes/${_mailCurrent}/inbox?limit=15`;
     const r=await apiFetch(url);
+    if(!r.ok){
+      lb.innerHTML=`<div style="padding:24px;text-align:center;color:var(--muted);font-size:12px">
+        ⚠️ ${r.status} — Email routes not deployed yet<br>
+        <button onclick="mailLoadInbox()" style="margin-top:10px;padding:5px 14px;font-size:11px;cursor:pointer;border:1px solid var(--border);border-radius:4px;background:var(--surface)">↻ Retry</button>
+      </div>`;
+      return;
+    }
     const d=await r.json();
     _mailEmails=d.emails||[];
     _renderEmailList(_mailEmails);
