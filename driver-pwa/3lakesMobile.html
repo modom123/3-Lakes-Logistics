@@ -9,13 +9,19 @@
     }
   </script>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <meta name="theme-color" content="#0d1e3f" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="3LL Driver" />
   <title>3 Lakes Driver</title>
   <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+  <link rel="apple-touch-icon" sizes="120x120" href="icons/icon-120.png" />
+  <link rel="apple-touch-icon" sizes="152x152" href="icons/icon-152.png" />
+  <link rel="apple-touch-icon" sizes="167x167" href="icons/icon-167.png" />
+  <link rel="apple-touch-icon" sizes="180x180" href="icons/icon-180.png" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.41.0"></script>
   <script src="../shared/config.js"></script>
   <script src="../shared/tk.js"></script>
@@ -488,6 +494,22 @@ input[type=file].hidden-input { display: none; }
   </style>
 </head>
 <body>
+
+<!-- ── INSTALL BANNER (Android) ── -->
+<div id="install-banner" style="display:none;position:fixed;bottom:80px;left:12px;right:12px;z-index:9999;
+  background:#1a2a4a;border:1px solid #3b82f6;border-radius:14px;padding:14px 16px;
+  display:none;align-items:center;gap:12px;box-shadow:0 4px 20px rgba(0,0,0,0.5)">
+  <img src="icons/icon-192.png" width="40" height="40" style="border-radius:10px;flex-shrink:0" />
+  <div style="flex:1">
+    <div style="font-weight:700;font-size:14px;color:#f1f5f9">Add to Home Screen</div>
+    <div style="font-size:12px;color:#94a3b8;margin-top:2px">Install the 3 Lakes Driver app</div>
+  </div>
+  <button id="install-btn" style="background:#3b82f6;color:#fff;border:none;border-radius:10px;
+    padding:8px 14px;font-size:13px;font-weight:700;cursor:pointer;flex-shrink:0">Install</button>
+  <button id="install-dismiss" style="background:none;border:none;color:#94a3b8;font-size:20px;
+    cursor:pointer;padding:0 4px;flex-shrink:0">&times;</button>
+</div>
+
 <!-- ── HEADER ── -->
 <div id="header">
   <div>
@@ -1248,6 +1270,29 @@ document.addEventListener('DOMContentLoaded', () => {
 function registerServiceWorker() {
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
 }
+
+// ── PWA INSTALL PROMPT (Android Chrome) ──────────────────────────────────────
+let _deferredInstallPrompt = null;
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  _deferredInstallPrompt = e;
+  const banner = document.getElementById('install-banner');
+  if (banner && !localStorage.getItem('3ll_install_dismissed')) {
+    banner.style.display = 'flex';
+  }
+});
+document.getElementById('install-btn')?.addEventListener('click', async () => {
+  if (!_deferredInstallPrompt) return;
+  _deferredInstallPrompt.prompt();
+  const { outcome } = await _deferredInstallPrompt.userChoice;
+  if (outcome === 'accepted') localStorage.setItem('3ll_install_dismissed', '1');
+  _deferredInstallPrompt = null;
+  document.getElementById('install-banner').style.display = 'none';
+});
+document.getElementById('install-dismiss')?.addEventListener('click', () => {
+  document.getElementById('install-banner').style.display = 'none';
+  localStorage.setItem('3ll_install_dismissed', '1');
+});
 
 // ── VIEW NAVIGATION ───────────────────────────────────────────────────────────
 function showView(name) {
