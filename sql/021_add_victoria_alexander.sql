@@ -4,20 +4,21 @@
 -- Total executives: 18 → 20
 -- ============================================================
 
--- Victoria Roth — Chief Strategy Officer (Cabinet level)
+-- Victoria Roth — Chief Growth Officer (Cabinet level)
+-- Note: Title updated from Chief Strategy Officer → Chief Growth Officer in migration 029
 INSERT INTO executives (
     name, title, department, reports_to, manages,
     primary_kpi, kpi_target, kpi_definition,
     avatar_initials, avatar_color
 ) VALUES (
     'Victoria Roth',
-    'Chief Strategy Officer',
+    'Chief Growth Officer',
     'growth',
     'commander',
     ARRAY['Alexander Wright', 'Benjamin Mercer', 'Sterling Pierce', 'growth_division'],
     'Growth Velocity Score',
     '>87 / MoM revenue growth > 15%',
-    'Composite score of MoM revenue growth, carrier activation rate, lead pipeline velocity, and market share index. Dictates macro expansion strategy.',
+    'Composite score of MoM revenue growth, carrier acquisition velocity, lead pipeline conversion, and market share expansion. Owns the full growth engine.',
     'VR',
     '#8B1A1A'
 );

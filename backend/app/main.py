@@ -69,6 +69,8 @@ def _start_scheduler(app: FastAPI) -> None:
         from .triggers import (
             fire_compliance_sweep,
             fire_analytics_update,
+            fire_mark_odom,
+            fire_cc_gulley,
             fire_alexander,
             fire_victoria,
             fire_naomi,
@@ -131,11 +133,18 @@ def _start_scheduler(app: FastAPI) -> None:
             id="alexander_daily",
             replace_existing=True,
         )
-        # 07:00 — Victoria Roth: strategic snapshot + org brain directive
+        # 07:00 — Victoria Roth: CGO growth snapshot + org brain directive
         scheduler.add_job(
             fire_victoria,
             CronTrigger(hour=7, minute=0),
             id="victoria_daily",
+            replace_existing=True,
+        )
+        # 07:05 — CC Gulley: CSO strategic plan + 30/60/90-day roadmap (reads Victoria)
+        scheduler.add_job(
+            fire_cc_gulley,
+            CronTrigger(hour=7, minute=5),
+            id="cc_gulley_daily",
             replace_existing=True,
         )
         # 07:15 — Naomi: lead scoring (reads Alexander's hot-state data)
@@ -164,6 +173,13 @@ def _start_scheduler(app: FastAPI) -> None:
             fire_sofia,
             CronTrigger(hour=8, minute=15),
             id="sofia_daily",
+            replace_existing=True,
+        )
+        # 08:30 — Mark Odom: CEO Commander brief (reads all executive outputs)
+        scheduler.add_job(
+            fire_mark_odom,
+            CronTrigger(hour=8, minute=30),
+            id="mark_odom_daily",
             replace_existing=True,
         )
         # 13:00 — Vance: outbound calls to high-score leads (score >= 8) — 9am ET
@@ -200,8 +216,8 @@ def _start_scheduler(app: FastAPI) -> None:
         log.info(
             "APScheduler started — "
             "compliance@06:00 analytics@06:30 alexander@06:45 "
-            "victoria@07:00 naomi@07:15 winston@07:30 "
-            "isabella@08:00 sofia@08:15 mailbox_poll@2min"
+            "victoria@07:00 cc_gulley@07:05 naomi@07:15 winston@07:30 "
+            "isabella@08:00 sofia@08:15 mark_odom@08:30 mailbox_poll@2min"
         )
     except ImportError:
         log.warning("apscheduler not installed — daily cron disabled. Run: pip install apscheduler")

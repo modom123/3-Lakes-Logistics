@@ -254,6 +254,40 @@ def fire_social_post() -> None:
     _bg(_run)
 
 
+def fire_mark_odom() -> None:
+    """Run Mark Odom daily — Commander brief + tier-3 review + strategic directives."""
+    def _run():
+        try:
+            from .agents.mark_odom import run as mark_odom_run  # noqa: PLC0415
+            log.info("daily_agent: mark_odom starting")
+            result = mark_odom_run({})
+            log.info(
+                "daily_agent: mark_odom done decisions=%s tier3_open=%s",
+                len(result.get("commander_decisions", [])),
+                result.get("fleet_metrics", {}).get("open_tier3_escalations"),
+            )
+        except Exception as exc:  # noqa: BLE001
+            log.error("daily_agent: mark_odom failed: %s", exc)
+    _bg(_run)
+
+
+def fire_cc_gulley() -> None:
+    """Run CC Gulley daily — strategic plan + 30/60/90-day roadmap + risk assessment."""
+    def _run():
+        try:
+            from .agents.cc_gulley import run as cc_gulley_run  # noqa: PLC0415
+            log.info("daily_agent: cc_gulley starting")
+            result = cc_gulley_run({})
+            log.info(
+                "daily_agent: cc_gulley done priorities=%s risks=%s",
+                len(result.get("priorities_30d", [])),
+                len(result.get("strategic_risks", [])),
+            )
+        except Exception as exc:  # noqa: BLE001
+            log.error("daily_agent: cc_gulley failed: %s", exc)
+    _bg(_run)
+
+
 def fire_follow_up_reminders() -> None:
     """Hourly job — sends 24h SMS reminders to Interested leads whose time has come."""
     def _run():

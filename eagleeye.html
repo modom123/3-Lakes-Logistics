@@ -2084,11 +2084,18 @@ td.td-name{font-weight:600;color:var(--navy);}
     <div class="ec-hero-left">
       <div class="ec-badge">IEBC Executive Command</div>
       <h1>Commander Dashboard</h1>
-      <p>23-executive org structure — 7 cabinet + 16 expansion. KPI engine, 3-tier triage, contingency plans, daily State of the Fleet brief by Dr. Evelyn Sterling.</p>
+      <div style="display:flex;align-items:center;gap:10px;margin:8px 0 10px;">
+        <div style="width:38px;height:38px;border-radius:50%;background:#0B1F4B;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;color:#fff;flex-shrink:0;">MO</div>
+        <div>
+          <div style="font-weight:700;font-size:15px;color:#0B2545;">Mark Odom — CEO &amp; Commander</div>
+          <div style="font-size:12px;color:#5A6A82;">AI Infrastructure Founder · 30+ Years · $100M+ Portfolio Management · IEBC Architect</div>
+        </div>
+      </div>
+      <p>25-executive org structure — 9 cabinet + 16 expansion. KPI engine, 3-tier triage, contingency plans, daily State of the Fleet brief by Dr. Evelyn Sterling.</p>
     </div>
     <div class="ec-hero-stats">
-      <div class="ec-stat"><div class="ec-stat-n">23</div><div class="ec-stat-l">Executives</div></div>
-      <div class="ec-stat"><div class="ec-stat-n">7</div><div class="ec-stat-l">Cabinet</div></div>
+      <div class="ec-stat"><div class="ec-stat-n">25</div><div class="ec-stat-l">Executives</div></div>
+      <div class="ec-stat"><div class="ec-stat-n">9</div><div class="ec-stat-l">Cabinet</div></div>
       <div class="ec-stat"><div class="ec-stat-n">5</div><div class="ec-stat-l">Contingencies</div></div>
       <div class="ec-stat"><div class="ec-stat-n">200</div><div class="ec-stat-l">Auto Steps</div></div>
     </div>
@@ -2172,9 +2179,9 @@ td.td-name{font-weight:600;color:var(--navy);}
     </div>
   </div>
 
-  <!-- Org Chart — All 18 Executives -->
+  <!-- Org Chart — All 25 Executives -->
   <div class="ec-card">
-    <div class="ec-sec-hd"><h2>Org Chart — 23 Executives</h2><span class="ec-count-badge">IEBC Workforce</span></div>
+    <div class="ec-sec-hd"><h2>Org Chart — 25 Executives</h2><span class="ec-count-badge">IEBC Workforce</span></div>
     <table class="ec-table" id="ec-org-table">
       <thead>
         <tr>
@@ -3918,14 +3925,21 @@ async function ecLoadExecutives(){
   const tbody=document.getElementById('ec-org-tbody');if(!tbody)return;
   try{
     const d=await API.get('/executives');
-    const all=(d.all||[]).sort((a,b)=>{const ac=a.reports_to==='commander'?0:1,bc=b.reports_to==='commander'?0:1;return ac-bc||(a.department||'').localeCompare(b.department||'');});
+    const all=(d.all||[]).sort((a,b)=>{
+      const aTop=!a.reports_to?-1:0, bTop=!b.reports_to?-1:0;
+      if(aTop!==bTop)return aTop-bTop;
+      const ac=a.reports_to==='commander'?0:1,bc=b.reports_to==='commander'?0:1;
+      return ac-bc||(a.department||'').localeCompare(b.department||'');
+    });
     if(!all.length){tbody.innerHTML='<tr><td colspan="6" class="ec-empty">No executive data found — check API.</td></tr>';return;}
     tbody.innerHTML=all.map(ex=>{
+      const isCmd=!ex.reports_to;
       const isCab=ex.reports_to==='commander';
-      return '<tr><td><div class="ec-name-cell"><div class="ec-avatar" style="background:'+(ex.avatar_color||'#0B2545')+'">'+esc(ex.avatar_initials||'?')+'</div><span class="ec-title-text">'+esc(ex.name)+(isCab?'<span class="ec-cabinet-badge">Cabinet</span>':'')+'</span></div></td>'+
+      const reportsLabel=isCmd?'<span style="color:#0B1F4B;font-weight:700">Top — Commander</span>':(ex.reports_to==='commander'?'Mark Odom (CEO)':esc(ex.reports_to||'—'));
+      return '<tr'+(isCmd?' style="background:#f0f4ff;border-left:3px solid #0B1F4B;"':'')+'><td><div class="ec-name-cell"><div class="ec-avatar" style="background:'+(ex.avatar_color||'#0B2545')+'">'+esc(ex.avatar_initials||'?')+'</div><span class="ec-title-text">'+esc(ex.name)+(isCmd?'<span class="ec-cabinet-badge" style="background:#0B1F4B">CEO</span>':(isCab?'<span class="ec-cabinet-badge">Cabinet</span>':''))+'</span></div></td>'+
         '<td style="font-size:12px;color:var(--muted)">'+esc(ex.title||'')+'</td>'+
         '<td><span class="ec-dept-pill dept-'+(ex.department||'operations')+'">'+esc(ex.department||'—')+'</span></td>'+
-        '<td style="font-size:12px;color:var(--muted)">'+(ex.reports_to==='commander'?'Commander':esc(ex.reports_to||'—'))+'</td>'+
+        '<td style="font-size:12px;color:var(--muted)">'+reportsLabel+'</td>'+
         '<td style="font-size:12px;font-weight:600">'+esc(ex.primary_kpi||'—')+'</td>'+
         '<td style="font-family:var(--ff-m);font-size:11px;color:var(--muted)">'+esc(ex.kpi_target||'—')+'</td></tr>';
     }).join('');
@@ -4401,7 +4415,9 @@ const AGENT_META = {
   beacon:    {icon:'📣', label:'Beacon',    desc:'Executive daily digest'},
   orbit:     {icon:'🛰️', label:'Orbit',     desc:'Geofence arrivals'},
   pulse:     {icon:'❤️', label:'Pulse',     desc:'Weekly wellness check'},
-  victoria:  {icon:'👑', label:'Victoria',  desc:'CSO — strategic intelligence'},
+  mark_odom: {icon:'⭐', label:'Commander', desc:'CEO — daily brief & Tier-3 command'},
+  cc_gulley: {icon:'🧭', label:'CC Gulley', desc:'CSO — 30/60/90 strategic roadmap'},
+  victoria:  {icon:'📈', label:'Victoria',  desc:'CGO — growth engine & pipeline'},
   alexander: {icon:'📊', label:'Alexander', desc:'VP Market Intel — DOT data'},
   sofia:     {icon:'🧾', label:'Sofia',     desc:'Invoice reconciliation & AR'},
   isabella:  {icon:'📣', label:'Isabella',  desc:'Outreach campaign builder'},
@@ -4578,7 +4594,7 @@ async function loadOrgBrain(){
 
     // agent memory cards
     const byAgent=brainData.by_agent||{};
-    const agentOrder=['org','victoria','naomi','alexander','winston','isabella','vance','sofia','katerina'];
+    const agentOrder=['org','mark_odom','cc_gulley','victoria','naomi','alexander','winston','isabella','vance','sofia','katerina'];
     const allAgents=[...new Set([...agentOrder,...Object.keys(byAgent)])].filter(a=>byAgent[a]);
     if(!allAgents.length){
       cardsEl.innerHTML='<div style="color:var(--muted);font-size:12px;padding:8px">No memories stored yet — run agents to populate the org brain.</div>';
@@ -6469,20 +6485,26 @@ setInterval(()=>{
         var tbody=document.getElementById('ec-org-tbody');
         if(!all.length){tbody.innerHTML='<tr><td colspan="6" class="ec-empty">No executive data found</td></tr>';return;}
         var html='';
-        // Sort cabinet first
+        // Sort CEO first, then cabinet, then by department
         all.sort(function(a,b){
+          var aTop=!a.reports_to?-1:0,bTop=!b.reports_to?-1:0;
+          if(aTop!==bTop)return aTop-bTop;
           var ac=a.reports_to==='commander'?0:1;
           var bc=b.reports_to==='commander'?0:1;
           return ac-bc||(a.department||'').localeCompare(b.department||'');
         });
         all.forEach(function(ex){
+          var isCmd=!ex.reports_to;
           var isCab=ex.reports_to==='commander';
           var deptClass='dept-'+(ex.department||'operations');
-          html+='<tr>';
-          html+='<td><div class="ec-name-cell"><div class="ec-avatar" style="background:'+(ex.avatar_color||'#0B2545')+'">'+(ex.avatar_initials||'?')+'</div><span class="ec-title-text">'+ex.name+(isCab?'<span class="ec-cabinet-badge">Cabinet</span>':'')+'</span></div></td>';
+          var reportsLabel=isCmd?'<span style="color:#0B1F4B;font-weight:700">Top — Commander</span>':(ex.reports_to==='commander'?'Mark Odom (CEO)':(ex.reports_to||'—'));
+          var rowStyle=isCmd?' style="background:#f0f4ff;border-left:3px solid #0B1F4B;"':'';
+          var badge=isCmd?'<span class="ec-cabinet-badge" style="background:#0B1F4B">CEO</span>':(isCab?'<span class="ec-cabinet-badge">Cabinet</span>':'');
+          html+='<tr'+rowStyle+'>';
+          html+='<td><div class="ec-name-cell"><div class="ec-avatar" style="background:'+(ex.avatar_color||'#0B2545')+'">'+(ex.avatar_initials||'?')+'</div><span class="ec-title-text">'+ex.name+badge+'</span></div></td>';
           html+='<td style="font-size:12px;color:#5A6A82;">'+ex.title+'</td>';
           html+='<td><span class="ec-dept-pill '+deptClass+'">'+ex.department+'</span></td>';
-          html+='<td style="font-size:12px;color:#5A6A82;">'+(ex.reports_to==='commander'?'Commander':ex.reports_to)+'</td>';
+          html+='<td style="font-size:12px;color:#5A6A82;">'+reportsLabel+'</td>';
           html+='<td style="font-size:12px;font-weight:600;color:#0F1D35;">'+(ex.primary_kpi||'—')+'</td>';
           html+='<td class="ec-kpi-target">'+(ex.kpi_target||'—')+'</td>';
           html+='</tr>';

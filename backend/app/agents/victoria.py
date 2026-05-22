@@ -1,4 +1,4 @@
-"""Victoria Roth — Chief Strategy Officer (IEBC Step 54).
+"""Victoria Roth — Chief Growth Officer (IEBC Step 54).
 Pulls real-time business metrics and produces a strategic intelligence
 snapshot: growth trajectory, plan mix health, and top 3 recommended
 macro actions for the Commander. Daily task to be refined.
@@ -99,9 +99,9 @@ def run(payload: dict[str, Any]) -> dict[str, Any]:
     }
 
     summary = f"carriers={result['total_carriers']} activation={result['activation_rate_pct']}% signals={len(result['strategic_signals'])}"
-    log_agent("victoria", "strategic_snapshot", payload={}, result=summary)
+    log_agent("victoria", "growth_snapshot", payload={}, result=summary)
 
-    # Write strategic directive to org brain — all agents read this
+    # Write growth directive to org brain — all agents read this
     directive = {
         "priority":          "carrier_acquisition" if result["activation_rate_pct"] < 60 else "load_growth",
         "hot_states":        market_intel.get("hot_states", {}),
