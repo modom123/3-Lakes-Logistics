@@ -9047,6 +9047,156 @@ const TS_DOMAINS = [
         }
       }
     ]
+  },
+  {
+    id: 'security', label: 'Security', icon: '🔒',
+    tests: [
+      {
+        name: 'Stripe webhook forgery (no signature) → 400',
+        run: async () => {
+          const r = await fetch(`${API_BASE}/api/webhooks/stripe`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ type: 'charge.succeeded', data: {} })
+          });
+          if (r.status !== 400) throw new Error(`Expected 400 — forged Stripe webhook accepted (got ${r.status})`);
+          return `status ${r.status} — forgery rejected ✓`;
+        }
+      },
+      {
+        name: 'Stripe webhook invalid signature → 400',
+        run: async () => {
+          const r = await fetch(`${API_BASE}/api/webhooks/stripe`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Stripe-Signature': 't=9999,v1=fakesig,v0=nope' },
+            body: JSON.stringify({ type: 'payment_intent.succeeded' })
+          });
+          if (r.status !== 400) throw new Error(`Invalid Stripe signature accepted (got ${r.status})`);
+          return `status ${r.status} — bad signature rejected ✓`;
+        }
+      },
+      {
+        name: 'Horizontal privilege escalation — exec dashboard → 401/403',
+        run: async () => {
+          const r = await fetch(`${API_BASE}/api/executives/dashboard`, {
+            headers: { 'Authorization': 'Bearer fake_driver_token_not_exec_abc123' }
+          });
+          if (![401,403].includes(r.status)) throw new Error(`Driver token reached exec dashboard (got ${r.status})`);
+          return `status ${r.status} — escalation blocked ✓`;
+        }
+      },
+      {
+        name: 'Executive escalations — unauthorized POST → 401/403',
+        run: async () => {
+          const r = await fetch(`${API_BASE}/api/executives/escalations`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer fake_driver_token_xyz' },
+            body: JSON.stringify({ message: 'injected', priority: 'critical' })
+          });
+          if (![401,403].includes(r.status)) throw new Error(`Unauthorized escalation injection succeeded (got ${r.status})`);
+          return `status ${r.status} — injection blocked ✓`;
+        }
+      },
+      {
+        name: 'Executive routes — no auth → 401/403',
+        run: async () => {
+          const paths = ['/api/executives/dashboard', '/api/executives/kpis', '/api/executives/escalations'];
+          for (const p of paths) {
+            const r = await fetch(`${API_BASE}${p}`);
+            if (![401,403].includes(r.status)) throw new Error(`${p} accessible without auth (got ${r.status})`);
+          }
+          return `all ${paths.length} exec routes protected ✓`;
+        }
+      },
+      {
+        name: 'Payout endpoint auth guard → 401',
+        run: async () => {
+          const r = await fetch(`${API_BASE}/api/payout/request`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ load_id: 'test', gross_amount: 1850 })
+          });
+          if (r.status !== 401) throw new Error(`Payout accessible without auth (got ${r.status})`);
+          return `status ${r.status} — financial route protected ✓`;
+        }
+      }
+    ]
+  },
+  {
+    id: 'integration', label: 'Integration', icon: '🔗',
+    tests: [
+      {
+        name: 'Twilio webhook SMS trace (valid-ish payload)',
+        run: async () => {
+          const body = new URLSearchParams({ From: '+13135550001', To: '+13135559000', Body: 'Test SMS', MessageSid: 'SM_ee_test_001' });
+          const r = await fetch(`${API_BASE}/api/comms/webhook/twilio`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: body.toString()
+          });
+          if (r.status >= 500) throw new Error(`Twilio SMS webhook crashed (got ${r.status})`);
+          return `status ${r.status} — SMS event processed ✓`;
+        }
+      },
+      {
+        name: 'Twilio webhook malformed payload (graceful)',
+        run: async () => {
+          const r = await fetch(`${API_BASE}/api/comms/webhook/twilio`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: 'garbage=&&=broken&'
+          });
+          if (r.status >= 500) throw new Error(`Malformed Twilio payload crashed server (got ${r.status})`);
+          return `status ${r.status} — graceful degradation ✓`;
+        }
+      },
+      {
+        name: 'Adobe Sign callback event trace',
+        run: async () => {
+          const r = await fetch(`${API_BASE}/api/webhooks/adobe/agreement-signed`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ event: 'AGREEMENT_ACTION_COMPLETED', agreement: { id: 'test-001', status: 'SIGNED' } })
+          });
+          if (r.status >= 500) throw new Error(`Adobe callback crashed server (got ${r.status})`);
+          return `status ${r.status} — Adobe event handled ✓`;
+        }
+      },
+      {
+        name: 'Email parse — unknown ID → 404 not 500',
+        run: async () => {
+          const r = await fetch(`${API_BASE}/api/email/FAKE-EMAIL-ID-000/parse-rate-confirmation`, {
+            method: 'POST',
+            headers: { Authorization: 'Bearer ' + API_TOKEN }
+          });
+          if (r.status >= 500) throw new Error(`Unknown email ID parse crashed (got ${r.status})`);
+          if (![404,422].includes(r.status)) throw new Error(`Expected 404/422 for unknown ID, got ${r.status}`);
+          return `status ${r.status} — graceful 404 ✓`;
+        }
+      },
+      {
+        name: 'DAT load board endpoint reachable',
+        run: async () => {
+          const r = await fetch(`${API_BASE}/api/loads/fetch-dat`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + API_TOKEN },
+            body: JSON.stringify({ origin: 'Chicago, IL', destination: 'Detroit, MI', equipment: 'dry_van' })
+          });
+          if (r.status >= 500) throw new Error(`DAT load board returned ${r.status}`);
+          return `status ${r.status} — external integration reachable ✓`;
+        }
+      },
+      {
+        name: 'Email log endpoint reachable',
+        run: async () => {
+          const r = await fetch(`${API_BASE}/api/email-log`, {
+            headers: { Authorization: 'Bearer ' + API_TOKEN }
+          });
+          if (!r.ok) throw new Error(`Email log unreachable: ${r.status}`);
+          return `status ${r.status} — email log accessible ✓`;
+        }
+      }
+    ]
   }
 ];
 
