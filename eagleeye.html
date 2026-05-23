@@ -750,6 +750,11 @@ td.td-name{font-weight:600;color:var(--navy);}
     <div class="sb-item" onclick="nav('bond')"><span class="sb-icon">🕵️</span> Bond Office <span class="sb-badge" id="bond-notif" style="display:none">0</span></div>
   </div>
 
+  <div class="sb-section">
+    <div class="sb-label">Dev</div>
+    <div class="sb-item" onclick="nav('tests')"><span class="sb-icon">🧪</span> Test Suite</div>
+  </div>
+
   <div class="sb-footer">
     <div class="sb-user">
       <strong id="sb-user-name">—</strong>
@@ -7865,6 +7870,386 @@ async function bondPollExternal(){
 // Auto-refresh every 30s when Bond page is active
 setInterval(()=>{if(document.getElementById('page-bond')?.classList.contains('active'))bondLoadThread();},30000);
 setInterval(()=>{if(document.getElementById('page-bond')?.classList.contains('active'))bondLoadStatus();},60000);
+</script>
+
+<!-- ═══════════════════════════ TEST SUITE PAGE ═══════════════════════════ -->
+<div class="page" id="page-tests">
+<style>
+.ts-wrap{padding:24px 28px;height:calc(100vh - 116px);overflow-y:auto;box-sizing:border-box;}
+.ts-topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px;}
+.ts-title{font-family:var(--ff-p);font-size:22px;font-weight:700;color:var(--gold2);}
+.ts-subtitle{font-size:12px;color:var(--muted);margin-top:2px;}
+.ts-runall{background:var(--gold2);color:#000;border:none;padding:9px 22px;border-radius:6px;font-weight:700;font-size:13px;cursor:pointer;letter-spacing:.4px;}
+.ts-runall:hover{background:var(--gold1);}
+.ts-runall:disabled{opacity:.5;cursor:not-allowed;}
+.ts-summary{display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;}
+.ts-stat{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 18px;min-width:90px;text-align:center;}
+.ts-stat-n{font-size:26px;font-weight:900;}
+.ts-stat-l{font-size:10px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);margin-top:2px;}
+.ts-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:16px;}
+.ts-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;display:flex;flex-direction:column;}
+.ts-card-head{display:flex;align-items:center;justify-content:space-between;padding:14px 16px 10px;border-bottom:1px solid var(--border);}
+.ts-card-title{display:flex;align-items:center;gap:8px;font-weight:700;font-size:14px;}
+.ts-card-icon{font-size:18px;}
+.ts-badge{font-size:10px;font-weight:800;letter-spacing:.6px;padding:3px 9px;border-radius:20px;text-transform:uppercase;}
+.ts-badge.idle{background:rgba(255,255,255,.07);color:var(--muted);}
+.ts-badge.running{background:rgba(228,168,48,.15);color:var(--gold2);}
+.ts-badge.pass{background:rgba(16,185,129,.15);color:#10b981;}
+.ts-badge.fail{background:rgba(239,68,68,.15);color:#ef4444;}
+.ts-badge.partial{background:rgba(245,158,11,.15);color:#f59e0b;}
+.ts-card-body{padding:12px 14px;display:flex;flex-direction:column;gap:8px;flex:1;}
+.ts-run-btn{width:100%;padding:7px 0;border:1px solid var(--border);background:transparent;color:var(--text);border-radius:5px;font-size:12px;font-weight:600;cursor:pointer;letter-spacing:.3px;transition:background .15s,color .15s;}
+.ts-run-btn:hover{background:rgba(228,168,48,.1);border-color:var(--gold2);color:var(--gold2);}
+.ts-run-btn:disabled{opacity:.45;cursor:not-allowed;}
+.ts-results{background:var(--bg);border:1px solid var(--border);border-radius:6px;min-height:80px;max-height:220px;overflow-y:auto;font-family:var(--ff-m);font-size:11px;padding:8px 10px;display:flex;flex-direction:column;gap:4px;}
+.ts-results::-webkit-scrollbar{width:5px;}
+.ts-results::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
+.ts-row{display:flex;align-items:flex-start;gap:6px;line-height:1.5;}
+.ts-row .chip{flex-shrink:0;font-size:9px;font-weight:800;padding:1px 6px;border-radius:3px;text-transform:uppercase;letter-spacing:.4px;margin-top:1px;}
+.ts-row .chip.p{background:rgba(16,185,129,.2);color:#10b981;}
+.ts-row .chip.f{background:rgba(239,68,68,.2);color:#ef4444;}
+.ts-row .chip.r{background:rgba(228,168,48,.2);color:var(--gold2);}
+.ts-row .ts-msg{flex:1;color:var(--text);}
+.ts-row .ts-detail{color:var(--muted);font-size:10px;}
+.ts-empty{color:var(--muted);font-style:italic;text-align:center;padding:20px 0;}
+.ts-dur{color:var(--muted);font-size:10px;margin-left:auto;flex-shrink:0;}
+</style>
+<div class="ts-wrap">
+  <div class="ts-topbar">
+    <div>
+      <div class="ts-title">🧪 Test Suite</div>
+      <div class="ts-subtitle">Live smoke tests — runs against <span id="ts-api-url" style="color:var(--gold2)"></span></div>
+    </div>
+    <button class="ts-runall" onclick="tsRunAll()">▶ Run All Domains</button>
+  </div>
+
+  <div class="ts-summary">
+    <div class="ts-stat"><div class="ts-stat-n" id="ts-total" style="color:var(--text)">—</div><div class="ts-stat-l">Total Tests</div></div>
+    <div class="ts-stat"><div class="ts-stat-n" id="ts-passed" style="color:#10b981">—</div><div class="ts-stat-l">Passed</div></div>
+    <div class="ts-stat"><div class="ts-stat-n" id="ts-failed" style="color:#ef4444">—</div><div class="ts-stat-l">Failed</div></div>
+    <div class="ts-stat"><div class="ts-stat-n" id="ts-dur-total" style="color:var(--muted)">—</div><div class="ts-stat-l">Duration</div></div>
+  </div>
+
+  <div class="ts-grid" id="ts-grid"></div>
+</div>
+</div>
+<!-- ═══════════════════════════ END TEST SUITE ═══════════════════════════ -->
+
+<script>
+// ── Test Suite ─────────────────────────────────────────────────────────────
+const TS_DOMAINS = [
+  {
+    id: 'health', label: 'Health', icon: '❤️',
+    tests: [
+      {
+        name: 'Ping',
+        run: async () => {
+          const r = await fetch(`${API_BASE}/api/health/ping`);
+          if (!r.ok) throw new Error(`HTTP ${r.status}`);
+          const d = await r.json();
+          if (d !== 'ok') throw new Error(`Expected "ok", got ${JSON.stringify(d)}`);
+          return 'pong received';
+        }
+      },
+      {
+        name: 'Full health (Supabase + Stripe)',
+        run: async () => {
+          const r = await fetch(`${API_BASE}/api/health/full`);
+          if (!r.ok) throw new Error(`HTTP ${r.status}`);
+          const d = await r.json();
+          if (!d.ok) throw new Error('Health not ok: ' + JSON.stringify(d));
+          return `supabase=${d.services?.supabase||'?'}`;
+        }
+      },
+      {
+        name: 'Auth guard (no token → 401/403)',
+        run: async () => {
+          const r = await fetch(`${API_BASE}/api/leads/`);
+          if (![401,403].includes(r.status)) throw new Error(`Expected 401/403, got ${r.status}`);
+          return `status ${r.status} — protected`;
+        }
+      }
+    ]
+  },
+  {
+    id: 'carriers', label: 'Carriers', icon: '👥',
+    tests: [
+      {
+        name: 'List carriers',
+        run: async () => {
+          const d = await apiFetch('/api/carriers/');
+          return `${Array.isArray(d) ? d.length : (d?.count ?? '?')} record(s)`;
+        }
+      },
+      {
+        name: 'Carrier intake schema reachable',
+        run: async () => {
+          const r = await fetch(`${API_BASE}/api/carriers/intake`, {
+            method: 'OPTIONS',
+            headers: { Authorization: 'Bearer ' + API_TOKEN }
+          });
+          if (r.status >= 500) throw new Error(`HTTP ${r.status}`);
+          return `OPTIONS ${r.status}`;
+        }
+      }
+    ]
+  },
+  {
+    id: 'fleet', label: 'Fleet', icon: '🚛',
+    tests: [
+      {
+        name: 'List fleet',
+        run: async () => {
+          const d = await apiFetch('/api/fleet/');
+          return `${Array.isArray(d) ? d.length : (d?.count ?? '?')} record(s)`;
+        }
+      },
+      {
+        name: 'Fleet public endpoint',
+        run: async () => {
+          const r = await fetch(`${API_BASE}/api/fleet/public`);
+          if (r.status >= 500) throw new Error(`HTTP ${r.status}`);
+          return `status ${r.status}`;
+        }
+      }
+    ]
+  },
+  {
+    id: 'leads', label: 'Leads', icon: '🎯',
+    tests: [
+      {
+        name: 'List leads',
+        run: async () => {
+          const d = await apiFetch('/api/leads/');
+          if (!('count' in d) || !('items' in d)) throw new Error('Missing count/items keys');
+          return `${d.count} lead(s)`;
+        }
+      },
+      {
+        name: 'Leads limit param',
+        run: async () => {
+          const d = await apiFetch('/api/leads/?limit=5');
+          if (d.count > 5) throw new Error(`Expected ≤5, got ${d.count}`);
+          return `limit=5 → ${d.count} returned`;
+        }
+      }
+    ]
+  },
+  {
+    id: 'telemetry', label: 'Telemetry', icon: '🛰️',
+    tests: [
+      {
+        name: 'Latest positions shape',
+        run: async () => {
+          const d = await apiFetch('/api/telemetry/latest');
+          if (!('count' in d) || !Array.isArray(d.items)) throw new Error('Bad shape');
+          return `${d.count} position(s)`;
+        }
+      },
+      {
+        name: 'Ping ingestion',
+        run: async () => {
+          const d = await apiFetch('/api/telemetry/ping', 'POST', {
+            carrier_id: 'test-carrier-001', truck_id: 'test-truck-001',
+            eld_provider: 'samsara', lat: 34.0522, lng: -118.2437,
+            speed_mph: 55.5, heading_deg: 270.0
+          });
+          if (!d.ok) throw new Error('ok !== true');
+          return 'ping accepted';
+        }
+      }
+    ]
+  },
+  {
+    id: 'dashboard', label: 'Dashboard', icon: '📊',
+    tests: [
+      {
+        name: 'KPIs endpoint',
+        run: async () => {
+          const r = await fetch(`${API_BASE}/api/dashboard/kpis`, {
+            headers: { Authorization: 'Bearer ' + API_TOKEN }
+          });
+          if (!r.ok) throw new Error(`HTTP ${r.status}`);
+          const d = await r.json();
+          const keys = Object.keys(d).length;
+          return `${keys} metric(s) returned`;
+        }
+      },
+      {
+        name: 'Execution domains',
+        run: async () => {
+          const d = await apiFetch('/api/execution/domains');
+          const domains = Array.isArray(d) ? d : (d?.domains || []);
+          return `${domains.length} domain(s) registered`;
+        }
+      }
+    ]
+  },
+  {
+    id: 'bond', label: 'Bond Channel', icon: '🕵️',
+    tests: [
+      {
+        name: 'Bond thread endpoint',
+        run: async () => {
+          const d = await apiFetch('/api/bond/thread');
+          const msgs = Array.isArray(d) ? d : (d?.messages || d?.thread || []);
+          return `${msgs.length} message(s) in thread`;
+        }
+      },
+      {
+        name: 'Bond status',
+        run: async () => {
+          const d = await apiFetch('/api/bond/status');
+          return `sandbox=${d.sandbox_id?.slice(0,8)||'?'}… connected=${d.connected??'?'}`;
+        }
+      },
+      {
+        name: 'External inbox auth guard',
+        run: async () => {
+          const r = await fetch(`${API_BASE}/api/bond/inbox`);
+          if (![401,403,422].includes(r.status)) throw new Error(`Expected 401/403/422, got ${r.status}`);
+          return `status ${r.status} — X-Bond-Key required`;
+        }
+      }
+    ]
+  }
+];
+
+let _tsRunning = false;
+
+function tsRenderGrid() {
+  document.getElementById('ts-api-url').textContent = API_BASE;
+  const grid = document.getElementById('ts-grid');
+  grid.innerHTML = TS_DOMAINS.map(dom => `
+    <div class="ts-card" id="tscard-${dom.id}">
+      <div class="ts-card-head">
+        <div class="ts-card-title">
+          <span class="ts-card-icon">${dom.icon}</span>
+          <span>${dom.label}</span>
+          <span style="font-size:11px;color:var(--muted);font-weight:400">(${dom.tests.length} test${dom.tests.length!==1?'s':''})</span>
+        </div>
+        <span class="ts-badge idle" id="tsbadge-${dom.id}">IDLE</span>
+      </div>
+      <div class="ts-card-body">
+        <button class="ts-run-btn" id="tsbtn-${dom.id}" onclick="tsRunDomain('${dom.id}')">▶ Run ${dom.label} Tests</button>
+        <div class="ts-results" id="tsresults-${dom.id}">
+          <div class="ts-empty">No results yet — click Run to start</div>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+async function tsRunDomain(domainId) {
+  const dom = TS_DOMAINS.find(d => d.id === domainId);
+  if (!dom) return;
+  const badge  = document.getElementById(`tsbadge-${domainId}`);
+  const btn    = document.getElementById(`tsbtn-${domainId}`);
+  const box    = document.getElementById(`tsresults-${domainId}`);
+  badge.className = 'ts-badge running'; badge.textContent = 'RUNNING';
+  btn.disabled = true;
+  box.innerHTML = '';
+
+  let passed = 0, failed = 0;
+  for (const t of dom.tests) {
+    const row = document.createElement('div');
+    row.className = 'ts-row';
+    const chip = document.createElement('span');
+    chip.className = 'chip r'; chip.textContent = 'RUN';
+    const msg  = document.createElement('span'); msg.className = 'ts-msg'; msg.textContent = t.name;
+    const dur  = document.createElement('span'); dur.className = 'ts-dur';
+    row.append(chip, msg, dur);
+    box.appendChild(row);
+    box.scrollTop = box.scrollHeight;
+
+    const t0 = performance.now();
+    try {
+      const detail = await t.run();
+      const ms = Math.round(performance.now() - t0);
+      chip.className = 'chip p'; chip.textContent = 'PASS';
+      dur.textContent = `${ms}ms`;
+      if (detail) {
+        const d = document.createElement('div');
+        d.className = 'ts-row';
+        d.innerHTML = `<span style="width:30px"></span><span class="ts-detail">${detail}</span>`;
+        box.appendChild(d);
+      }
+      passed++;
+    } catch(e) {
+      const ms = Math.round(performance.now() - t0);
+      chip.className = 'chip f'; chip.textContent = 'FAIL';
+      dur.textContent = `${ms}ms`;
+      const d = document.createElement('div');
+      d.className = 'ts-row';
+      d.innerHTML = `<span style="width:30px"></span><span class="ts-detail" style="color:#ef4444">${e.message}</span>`;
+      box.appendChild(d);
+      failed++;
+    }
+    box.scrollTop = box.scrollHeight;
+  }
+
+  if (failed === 0) {
+    badge.className = 'ts-badge pass'; badge.textContent = `PASS ${passed}/${passed}`;
+  } else if (passed === 0) {
+    badge.className = 'ts-badge fail'; badge.textContent = `FAIL 0/${passed+failed}`;
+  } else {
+    badge.className = 'ts-badge partial'; badge.textContent = `${passed}/${passed+failed} PASS`;
+  }
+  btn.disabled = false;
+  tsUpdateSummary();
+}
+
+async function tsRunAll() {
+  if (_tsRunning) return;
+  _tsRunning = true;
+  document.querySelector('.ts-runall').disabled = true;
+  document.querySelector('.ts-runall').textContent = '⏳ Running…';
+  const t0 = performance.now();
+  for (const dom of TS_DOMAINS) {
+    await tsRunDomain(dom.id);
+  }
+  const totalMs = Math.round(performance.now() - t0);
+  document.getElementById('ts-dur-total').textContent = `${(totalMs/1000).toFixed(1)}s`;
+  document.querySelector('.ts-runall').disabled = false;
+  document.querySelector('.ts-runall').textContent = '▶ Run All Domains';
+  _tsRunning = false;
+}
+
+function tsUpdateSummary() {
+  let total = 0, passed = 0, failed = 0;
+  TS_DOMAINS.forEach(dom => {
+    const badge = document.getElementById(`tsbadge-${dom.id}`);
+    if (!badge || badge.classList.contains('idle') || badge.classList.contains('running')) return;
+    dom.tests.forEach(t => {
+      total++;
+      const box = document.getElementById(`tsresults-${dom.id}`);
+      const chips = box?.querySelectorAll('.chip.p, .chip.f') || [];
+      chips.forEach(c => { if(c.classList.contains('p')) passed++; else failed++; });
+    });
+  });
+  // Recount from actual chips rather than stale state
+  total = 0; passed = 0; failed = 0;
+  TS_DOMAINS.forEach(dom => {
+    const box = document.getElementById(`tsresults-${dom.id}`);
+    if (!box) return;
+    box.querySelectorAll('.chip.p').forEach(() => { total++; passed++; });
+    box.querySelectorAll('.chip.f').forEach(() => { total++; failed++; });
+  });
+  document.getElementById('ts-total').textContent  = total  || '—';
+  document.getElementById('ts-passed').textContent = passed || '—';
+  document.getElementById('ts-failed').textContent = failed || '—';
+}
+
+// Render grid when page is first visited
+(function patchNavForTests() {
+  const _origNav = nav;
+  nav = function(id) {
+    _origNav(id);
+    if (id === 'tests' && !document.getElementById('ts-grid').children.length) {
+      tsRenderGrid();
+    }
+  };
+})();
 </script>
 
 </body>
