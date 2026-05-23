@@ -287,7 +287,7 @@ def _handle_bland_ai_allowlist(context: dict) -> dict:
 
 
 def _handle_render_env(context: dict) -> dict:
-    """Set an environment variable on the Render service."""
+    """Set an environment variable on the Render service (GET → merge → PUT)."""
     s = get_settings()
     key   = context.get("key", "")
     value = context.get("value", "")
@@ -299,24 +299,43 @@ def _handle_render_env(context: dict) -> dict:
 
     try:
         hdr = {"Authorization": f"Bearer {s.render_api_key}", "Accept": "application/json"}
+
+        # Find service
         svcs = httpx.get(f"{_RENDER_URL}/services?limit=20", headers=hdr, timeout=15).json()
         svc_id = next(
             ((svc.get("service") or svc).get("id")
-             for svc in svcs
+             for svc in (svcs if isinstance(svcs, list) else [])
              if _RENDER_SVC.lower() in (svc.get("service") or svc).get("name", "").lower()),
             None,
         )
         if not svc_id:
-            return {"automated": False, "reason": f"Service '{_RENDER_SVC}' not found in Render account", "server_ip": None}
+            return {"automated": False, "reason": f"Service '{_RENDER_SVC}' not found", "server_ip": None}
+
+        # GET current env vars so we don't wipe them
+        existing_raw = httpx.get(
+            f"{_RENDER_URL}/services/{svc_id}/env-vars?limit=100",
+            headers=hdr, timeout=15
+        ).json()
+        existing = existing_raw if isinstance(existing_raw, list) else []
+
+        # Merge: keep all existing, update/add target key
+        merged: list[dict] = []
+        for item in existing:
+            ev = item.get("envVar", item)
+            k, v = ev.get("key", ""), ev.get("value")
+            if k == key:
+                continue  # will re-add with new value
+            merged.append({"key": k} if v is None else {"key": k, "value": v})
+        merged.append({"key": key, "value": value})
 
         r = httpx.put(
             f"{_RENDER_URL}/services/{svc_id}/env-vars",
             headers={**hdr, "Content-Type": "application/json"},
-            json=[{"key": key, "value": value}],
+            json=merged,
             timeout=15,
         )
         if r.status_code in (200, 201):
-            return {"automated": True, "action": f"Set {key} on Render service {svc_id}"}
+            return {"automated": True, "action": f"Set {key} on Render service {svc_id} (preserved {len(existing)} existing vars)"}
         return {"automated": False, "reason": f"Render API {r.status_code}: {r.text[:200]}", "server_ip": None}
     except Exception as exc:
         return {"automated": False, "reason": f"Render API error: {str(exc)[:200]}", "server_ip": None}

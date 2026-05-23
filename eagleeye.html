@@ -1383,33 +1383,32 @@ td.td-name{font-weight:600;color:var(--navy);}
           <h2>Lead Pipeline</h2>
         </div>
         <div class="page-hdr-r" style="display:flex;gap:8px">
-          <button class="btn-out" onclick="bondPullAirtableLeads(event)" title="Bond pulls + scores + dedupes from Airtable '3 Lakes Business Hub'">🕵️ Bond: Pull Leads</button>
-          <button class="btn-out" onclick="migrateAirtableLeads()" title="Import leads from Airtable (Atlas route)">📥 Import from Airtable</button>
-          <button class="btn-out" onclick="debugAirtable()" title="Check Airtable connection + list tables">🔍 Debug Airtable</button>
           <button class="btn-out" onclick="loadLeadsPipeline()">Refresh</button>
         </div>
       </div>
 
-      <!-- AIRTABLE CREDENTIAL CONFIGURATOR -->
-      <div class="card" style="margin-bottom:16px;border-left:4px solid #e4a830">
+      <!-- BOND AIRTABLE IMPORT -->
+      <div class="card" id="bond-airtable-card" style="margin-bottom:16px;border-left:4px solid #e4a830">
         <div class="card-hd">
-          <div class="card-title">🕵️ Bond — Airtable Configuration</div>
-          <span class="card-chip" style="background:rgba(228,168,48,.15);color:#e4a830">Render Env</span>
+          <div class="card-title">🕵️ Bond — Import Airtable Leads</div>
+          <span class="card-chip" style="background:rgba(228,168,48,.15);color:#e4a830">3 Lakes Business Hub</span>
         </div>
-        <div style="font-size:12px;color:var(--muted);margin-bottom:12px">Bond will set <code>AIRTABLE_API_KEY</code> directly in Render and trigger a redeploy (~30s).</div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:12px">
+          Paste your Airtable API key — Bond pulls all leads immediately and saves the key to Render for future runs.
+        </div>
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
           <input id="airtable-key-input" type="password"
-            placeholder="Airtable API key (pat…)"
-            style="flex:1;min-width:220px;padding:8px 12px;border:1px solid rgba(0,0,0,.15);border-radius:6px;font-size:13px;font-family:var(--ff-m);background:#fff;color:var(--navy)"
-            oninput="document.getElementById('bond-set-render-btn').disabled=!this.value.trim()"
+            placeholder="Airtable personal access token (pat…)"
+            style="flex:1;min-width:240px;padding:8px 12px;border:1px solid rgba(0,0,0,.15);border-radius:6px;font-size:13px;font-family:var(--ff-m);background:#fff;color:var(--navy)"
+            oninput="document.getElementById('bond-import-btn').disabled=!this.value.trim()"
           />
-          <button id="bond-set-render-btn" class="btn-out" disabled
-            onclick="bondSetRenderEnv(event)"
-            style="background:#e4a830;color:#fff;border-color:#e4a830;font-weight:600">
-            🕵️ Bond: Set in Render
+          <button id="bond-import-btn" class="btn-out" disabled
+            onclick="bondImportAirtableLeads(event)"
+            style="background:#e4a830;color:#fff;border-color:#e4a830;font-weight:700;padding:8px 18px">
+            🕵️ Bond: Pull All Leads
           </button>
         </div>
-        <div id="bond-render-status" style="margin-top:10px;font-size:12px;display:none"></div>
+        <div id="bond-import-status" style="margin-top:12px;font-size:13px;display:none;line-height:1.7"></div>
       </div>
 
       <!-- AIRTABLE MIGRATION STATUS -->
@@ -5001,7 +5000,7 @@ async function fmcsaImportLead(carrier, btn){
 async function loadLeadsPipeline(){
   const tbl=document.getElementById('lp-table');
   try{
-    const res=await apiFetch('/api/leads/?limit=15');
+    const res=await apiFetch('/api/leads/?limit=200');
     if(!res.ok){const t=await res.text().catch(()=>'');if(tbl)tbl.innerHTML='<div class="empty-state">Error loading leads: '+t.slice(0,120)+'</div>';return;}
     const data=await res.json();
     const items=data.items||[];
@@ -5019,7 +5018,7 @@ async function loadLeadsPipeline(){
     document.getElementById('lp-qualified').textContent = count('qualified');
     document.getElementById('lp-converted').textContent = count('converted');
     if(!tbl)return;
-    if(!items.length){tbl.innerHTML='<div class="empty-state">No leads yet. Click "Import from Airtable" above to load your leads.</div>';return;}
+    if(!items.length){tbl.innerHTML='<div class="empty-state">No leads yet — paste your Airtable API key above and click <strong>🕵️ Bond: Pull All Leads</strong>.</div>';return;}
 
     const scoreColor=s=>s>=8?'var(--green)':s>=5?'var(--gold)':'var(--muted)';
     const stgBadge=s=>{const sl=s.toLowerCase();return sl==='converted'?'badge-green':sl==='qualified'?'badge-blue':sl==='contacted'?'badge-navy':'badge-ghost';};
@@ -5931,90 +5930,63 @@ async function migrateAirtableLeads() {
   btn.textContent = '📥 Import from Airtable';
 }
 
-async function bondPullAirtableLeads(e) {
+async function bondImportAirtableLeads(e) {
   const btn = e.target;
-  const cardEl = document.getElementById('airtable-migration-card');
-  const statusEl = document.getElementById('migration-status');
-  btn.disabled = true; btn.textContent = '⏳ Bond dispatched…';
-  cardEl.style.display = 'block';
-  statusEl.innerHTML = '<div style="padding:4px 0;color:var(--navy)">🕵️ Bond connecting to Airtable <em>3 Lakes Business Hub</em>…</div>';
-  try {
-    const d = await apiFetch('/api/agents/james_bond/run','POST',{scope:'airtable_leads'});
-    const data = await d.json();
-    if (data.status === 'BLOCKED') {
-      statusEl.innerHTML = `<div style="padding:4px 0;color:var(--red);line-height:1.7">
-        <div style="font-weight:700">🔒 Bond Blocked — ${data.reason}</div>
-        <div style="margin-top:8px;font-size:12px">${data.action||''}</div>
-      </div>`;
-      toast('Bond blocked: AIRTABLE_API_KEY not set', 'error');
-    } else if (data.status === 'ERROR') {
-      statusEl.innerHTML = `<div style="padding:4px 0;color:var(--red);line-height:1.7">
-        <div style="font-weight:700">❌ Bond Error: ${data.reason}</div>
-      </div>`;
-      toast('Bond Airtable pull failed', 'error');
-    } else {
-      statusEl.innerHTML = `<div style="padding:4px 0;line-height:1.8;color:var(--navy)">
-        <div style="font-weight:700;font-size:14px;color:var(--green)">✅ Bond Mission Complete</div>
-        <div style="margin-top:8px;font-size:13px">
-          <div>📋 Table: <strong>${data.table_used||'—'}</strong></div>
-          <div>📊 Pulled: <strong>${data.records_pulled||0}</strong></div>
-          <div style="color:var(--green)">✔️ Inserted: <strong>${data.inserted||0}</strong></div>
-          ${(data.duplicates_skipped||0)>0?`<div style="color:var(--muted)">⏭ Dupes skipped: <strong>${data.duplicates_skipped}</strong></div>`:''}
-        </div>
-        ${data.directive?`<div style="margin-top:10px;font-size:11px;font-style:italic;color:var(--navy-mid)">${data.directive}</div>`:''}
-      </div>`;
-      toast(`🕵️ Bond: ${data.inserted||0} leads inserted`, 'success');
-      _pushNotif({id:'bond_leads_'+Date.now(),agent:'james_bond',action:'airtable_leads_pull',
-        result:`${data.inserted} leads inserted · ${data.duplicates_skipped} dupes`,ts:new Date().toISOString()});
-      await new Promise(r=>setTimeout(r,1200));
-      await loadLeadsPipeline();
-      setTimeout(()=>{cardEl.style.display='none';},6000);
-    }
-  } catch(err) {
-    statusEl.innerHTML = `<div style="padding:4px 0;color:var(--red)"><strong>❌ Bond failed:</strong> ${err.message}</div>`;
-    toast('Bond Airtable pull error: '+err.message,'error');
-  }
-  btn.disabled=false; btn.textContent='🕵️ Bond: Pull Leads';
-}
+  const apiKey = document.getElementById('airtable-key-input').value.trim();
+  const statusEl = document.getElementById('bond-import-status');
+  if (!apiKey) return;
 
-async function bondSetRenderEnv(e) {
-  const btn = e.target;
-  const keyVal = document.getElementById('airtable-key-input').value.trim();
-  const statusEl = document.getElementById('bond-render-status');
-  if (!keyVal) return;
-  btn.disabled = true; btn.textContent = '⏳ Bond dispatching…';
+  btn.disabled = true; btn.textContent = '⏳ Bond pulling leads…';
   statusEl.style.display = 'block';
-  statusEl.innerHTML = '<span style="color:var(--navy)">🕵️ Bond connecting to Render API…</span>';
+  statusEl.innerHTML = '<span style="color:var(--navy)">🕵️ Bond connecting to <em>3 Lakes Business Hub</em>…</span>';
+
   try {
-    const d = await apiFetch('/api/agents/james_bond/run','POST',{
-      scope:'set_render_env', key:'AIRTABLE_API_KEY', value:keyVal, deploy:true
+    // Step 1: Pull leads now (key used directly — no deploy wait needed)
+    const pullRes = await apiFetch('/api/agents/james_bond/run','POST',{
+      scope:'airtable_leads', airtable_api_key: apiKey
     });
-    const data = await d.json();
-    if (data.status === 'BLOCKED') {
-      statusEl.innerHTML = `<span style="color:var(--red);font-weight:600">🔒 ${data.reason}</span><br><span style="color:var(--muted)">${data.action||''}</span>`;
-      toast('Bond blocked: RENDER_API_KEY not configured', 'error');
-    } else if (data.status === 'ERROR') {
-      statusEl.innerHTML = `<span style="color:var(--red);font-weight:600">❌ ${data.reason}</span>`;
-      toast('Bond Render error: '+data.reason, 'error');
-    } else {
-      statusEl.innerHTML = `
-        <span style="color:var(--green);font-weight:600">✅ AIRTABLE_API_KEY set in Render</span>
-        ${data.deploy_triggered?`<br><span style="color:var(--muted)">Deploy ${data.deploy_id||''} in progress — service restarts in ~30s</span>`:''}
-        <br><span style="color:var(--muted);font-size:11px;font-style:italic">${data.directive||''}</span>
-      `;
-      toast('🕵️ Bond: AIRTABLE_API_KEY set — Render redeploying', 'success');
-      _pushNotif({id:'bond_render_'+Date.now(),agent:'james_bond',action:'set_render_env',
-        result:'AIRTABLE_API_KEY set · deploy '+data.deploy_id,ts:new Date().toISOString()});
-      document.getElementById('airtable-key-input').value = '';
-      btn.disabled = true;
+    const pull = await pullRes.json();
+
+    if (pull.status === 'ERROR') {
+      statusEl.innerHTML = `<span style="color:var(--red);font-weight:600">❌ ${pull.reason}</span>`;
+      toast('Bond: Airtable pull failed — '+pull.reason, 'error');
+      btn.disabled=false; btn.textContent='🕵️ Bond: Pull All Leads';
+      return;
     }
+
+    // Step 2: Save key to Render in background (don't block UI on this)
+    statusEl.innerHTML = `
+      <div style="color:var(--green);font-weight:700">✅ ${pull.inserted||0} leads imported into pipeline</div>
+      <div style="margin-top:6px;color:var(--muted);font-size:12px">
+        Table: <strong>${pull.table_used||'—'}</strong> ·
+        Pulled: <strong>${pull.records_pulled||0}</strong> ·
+        Dupes skipped: <strong>${pull.duplicates_skipped||0}</strong>
+      </div>
+      <div style="margin-top:6px;color:var(--muted);font-size:11px">🔑 Saving key to Render for future pulls…</div>
+    `;
+    toast(`🕵️ Bond: ${pull.inserted||0} leads in pipeline`, 'success');
+    _pushNotif({id:'bond_leads_'+Date.now(),agent:'james_bond',action:'airtable_leads_pull',
+      result:`${pull.inserted} leads imported`,ts:new Date().toISOString()});
+
+    // Refresh pipeline immediately
+    await loadLeadsPipeline();
+
+    // Save key to Render (fire-and-forget)
+    apiFetch('/api/agents/james_bond/run','POST',{
+      scope:'set_render_env', key:'AIRTABLE_API_KEY', value:apiKey, deploy:false
+    }).then(r=>r.json()).then(d=>{
+      const saved = d.status==='SUCCESS';
+      statusEl.querySelector('div:last-child').textContent =
+        saved ? '🔑 Key saved to Render — future pulls are one click.' : '⚠️ Key not saved to Render (RENDER_API_KEY missing) — you'll need to re-paste next time.';
+    }).catch(()=>{});
+
+    document.getElementById('airtable-key-input').value = '';
+    btn.textContent = '✅ Done';
   } catch(err) {
     statusEl.innerHTML = `<span style="color:var(--red)">❌ ${err.message}</span>`;
-    toast('Bond Render set error: '+err.message, 'error');
-    btn.disabled = false; btn.textContent = '🕵️ Bond: Set in Render';
-    return;
+    toast('Bond import error: '+err.message, 'error');
+    btn.disabled=false; btn.textContent='🕵️ Bond: Pull All Leads';
   }
-  btn.textContent = '✅ Set';
 }
 
 // ══════════════════════════════════════════════════════
