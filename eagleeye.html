@@ -1538,11 +1538,35 @@ td.td-name{font-weight:600;color:var(--navy);}
               <label class="fl">Document Type</label>
               <select class="fsel" id="clm-doc-type">
                 <option value="auto">🤖 Auto-Detect Type</option>
-                <option value="rate_confirmation">Rate Confirmation</option>
-                <option value="bol">Bill of Lading (BOL)</option>
-                <option value="pod">Proof of Delivery (POD)</option>
-                <option value="invoice">Invoice</option>
-                <option value="broker_agreement">Broker Agreement</option>
+                <optgroup label="── Load Documents ──">
+                  <option value="rate_confirmation">Rate Confirmation / Load Tender</option>
+                  <option value="dedicated_lane_agreement">Dedicated Lane Agreement</option>
+                  <option value="bol">Bill of Lading (BOL)</option>
+                  <option value="pod">Proof of Delivery (POD)</option>
+                  <option value="invoice">Freight Invoice</option>
+                </optgroup>
+                <optgroup label="── Agreements ──">
+                  <option value="master_service_agreement">Master Service Agreement (MSA)</option>
+                  <option value="broker_carrier_agreement">Broker-Carrier Agreement</option>
+                  <option value="shipper_carrier_agreement">Shipper-Carrier Agreement</option>
+                  <option value="owner_operator_lease">IC / Owner-Operator Lease</option>
+                  <option value="freight_brokerage_terms">Freight Brokerage T&amp;C</option>
+                  <option value="co_brokerage_agreement">Co-Brokerage / Co-Load Agreement</option>
+                  <option value="tpl_contract">3PL Contract</option>
+                </optgroup>
+                <optgroup label="── Specialized ──">
+                  <option value="fuel_surcharge_addendum">Fuel Surcharge Addendum</option>
+                  <option value="hazmat_transport_rider">HazMat Transport Rider</option>
+                  <option value="cross_border_agreement">Cross-Border Agreement</option>
+                  <option value="intermodal_agreement">Intermodal Interchange Agreement</option>
+                  <option value="trailer_interchange_agreement">Trailer Interchange Agreement</option>
+                  <option value="warehouse_bailment">Warehouse Bailment / Storage</option>
+                  <option value="freight_forwarding_agreement">Freight Forwarding Agreement</option>
+                  <option value="yard_management_contract">Yard Management Contract</option>
+                  <option value="logistics_tech_saas">Logistics Tech / SaaS License</option>
+                  <option value="cargo_claim_settlement">Cargo Claim Settlement &amp; Release</option>
+                  <option value="nemt_contract">NEMT Contract</option>
+                </optgroup>
               </select>
             </div>
           </div>
@@ -1672,13 +1696,29 @@ td.td-name{font-weight:600;color:var(--navy);}
           <div>
             <label style="font-size:11px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px">DOCUMENT TYPE</label>
             <select id="vault-up-type" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:13px;background:var(--surface)">
-              <option value="other">Other</option>
-              <option value="pod">POD</option>
-              <option value="rate_con">Rate Confirmation</option>
-              <option value="bol">BOL</option>
-              <option value="invoice">Invoice</option>
-              <option value="compliance">Compliance</option>
-              <option value="agreement">Agreement</option>
+              <option value="other">🤖 Auto-Detect</option>
+              <optgroup label="── Load Docs ──">
+                <option value="rate_con">Rate Confirmation</option>
+                <option value="bol">BOL</option>
+                <option value="pod">POD</option>
+                <option value="invoice">Invoice</option>
+              </optgroup>
+              <optgroup label="── Agreements ──">
+                <option value="msa">MSA</option>
+                <option value="broker_carrier_agreement">Broker-Carrier Agreement</option>
+                <option value="owner_operator_lease">IC / Owner-Op Lease</option>
+                <option value="freight_brokerage_terms">Brokerage T&amp;C</option>
+                <option value="fuel_surcharge_addendum">FSC Addendum</option>
+                <option value="hazmat">HazMat Rider</option>
+                <option value="cross_border">Cross-Border Agreement</option>
+                <option value="cargo_claim">Cargo Claim Settlement</option>
+              </optgroup>
+              <optgroup label="── Other ──">
+                <option value="compliance">Compliance / Authority</option>
+                <option value="insurance">Insurance / COI</option>
+                <option value="w9">W-9</option>
+                <option value="other">Other</option>
+              </optgroup>
             </select>
           </div>
           <div>

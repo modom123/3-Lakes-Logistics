@@ -22,19 +22,72 @@ import anthropic
 
 from ..settings import get_settings
 from ..supabase_client import get_supabase
-from .scanner import _PROMPTS, _REQUIRED_FIELDS, _SYSTEM, _CLASSIFY_SYSTEM, _CLASSIFY_PROMPT, _KNOWN_TYPES
+from .scanner import (
+    _PROMPTS, _REQUIRED_FIELDS, _SYSTEM,
+    _CLASSIFY_SYSTEM, _CLASSIFY_PROMPT, _KNOWN_TYPES,
+)
 
 log = logging.getLogger("3ll.clm.doc_extractor")
 
-# ── Doc type mapping ─────────────────────────────────────────────────────────
+# ── Doc type mapping — vault doc_type → scanner contract_type ────────────────
+# Covers all 20 CON classes plus legacy and common alias forms.
 _DOC_TYPE_MAP: dict[str, str] = {
-    "rate_con":          "rate_confirmation",
-    "rate_confirmation": "rate_confirmation",
-    "bol":               "bol",
-    "pod":               "pod",
-    "broker_agreement":  "broker_agreement",
-    "agreement":         "broker_agreement",
-    "invoice":           "invoice",
+    # Load-level
+    "rate_con":                  "rate_confirmation",
+    "rate_confirmation":         "rate_confirmation",
+    "spot_rate_confirmation":    "rate_confirmation",
+    "dedicated_lane_agreement":  "dedicated_lane_agreement",
+    "dedicated_lane":            "dedicated_lane_agreement",
+    # BOL / POD / Invoice
+    "bol":                       "bol",
+    "pod":                       "pod",
+    "invoice":                   "invoice",
+    # Agreement types (CON-01 through CON-09, CON-12)
+    "agreement":                 "broker_carrier_agreement",
+    "broker_agreement":          "broker_carrier_agreement",
+    "broker_carrier_agreement":  "broker_carrier_agreement",
+    "master_service_agreement":  "master_service_agreement",
+    "msa":                       "master_service_agreement",
+    "shipper_carrier_agreement": "shipper_carrier_agreement",
+    "owner_operator_lease":      "owner_operator_lease",
+    "ic_lease":                  "owner_operator_lease",
+    "freight_brokerage_terms":   "freight_brokerage_terms",
+    "co_brokerage_agreement":    "co_brokerage_agreement",
+    "co_load":                   "co_brokerage_agreement",
+    # Specialized addenda (CON-13, CON-14)
+    "fuel_surcharge_addendum":   "fuel_surcharge_addendum",
+    "fsc_addendum":              "fuel_surcharge_addendum",
+    "hazmat_transport_rider":    "hazmat_transport_rider",
+    "hazmat":                    "hazmat_transport_rider",
+    # Intermodal / logistics (CON-06, CON-07, CON-10, CON-11, CON-16, CON-17, CON-18)
+    "intermodal_agreement":      "intermodal_agreement",
+    "intermodal":                "intermodal_agreement",
+    "tpl_contract":              "tpl_contract",
+    "3pl":                       "tpl_contract",
+    "warehouse_bailment":        "warehouse_bailment",
+    "warehouse":                 "warehouse_bailment",
+    "trailer_interchange_agreement": "trailer_interchange_agreement",
+    "trailer_interchange":       "trailer_interchange_agreement",
+    "freight_forwarding_agreement":  "freight_forwarding_agreement",
+    "freight_forwarding":        "freight_forwarding_agreement",
+    "yard_management_contract":  "yard_management_contract",
+    "yard_management":           "yard_management_contract",
+    "logistics_tech_saas":       "logistics_tech_saas",
+    "saas":                      "logistics_tech_saas",
+    # Special purpose (CON-15, CON-19, CON-20)
+    "cross_border_agreement":    "cross_border_agreement",
+    "cross_border":              "cross_border_agreement",
+    "cargo_claim_settlement":    "cargo_claim_settlement",
+    "cargo_claim":               "cargo_claim_settlement",
+    "nemt_contract":             "nemt_contract",
+    "nemt":                      "nemt_contract",
+    # Other / non-extractable — return None to trigger auto-classify
+    "compliance":                None,
+    "w9":                        None,
+    "insurance":                 None,
+    "other":                     None,
+    "folder":                    None,
+    "unknown":                   None,
 }
 
 # ── MIME type sets ────────────────────────────────────────────────────────────
