@@ -491,6 +491,10 @@ def run(payload: dict[str, Any]) -> dict[str, Any]:
     if scope == "airtable_leads":
         return _mission_pull_airtable_leads(payload)
 
+    # ── Render env-var setter mission ─────────────────────────────────────────
+    if scope == "set_render_env":
+        return _mission_set_render_env(payload)
+
     agent_focus: str | None = payload.get("agent_focus")
     top_n: int       = int(payload.get("top_n", 5))
     remediate: bool  = bool(payload.get("remediate", True))
@@ -866,5 +870,229 @@ def _mission_pull_airtable_leads(payload: dict) -> dict:
             f"BOND DIRECTIVE: {inserted} leads inserted from '3 Lakes Business Hub'. "
             f"Vance can now begin outbound on {inserted} new prospects. "
             f"{dupes} duplicate{'s' if dupes != 1 else ''} skipped."
+        ),
+    }
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# RENDER ENV-VAR SETTER MISSION
+# Bond reads current env vars, merges in new key/value, puts them back,
+# then triggers a redeploy.  Safe: preserves all existing vars.
+# ═══════════════════════════════════════════════════════════════════════════════
+
+import json as _j
+
+_RENDER_API = "https://api.render.com/v1"
+_render_log = _logging.getLogger("3ll.james_bond.render")
+
+
+def _render_req(method: str, path: str, api_key: str, body=None) -> dict | list:
+    url = f"{_RENDER_API}{path}"
+    data = _j.dumps(body).encode() if body is not None else None
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Accept":        "application/json",
+    }
+    if data:
+        headers["Content-Type"] = "application/json"
+    req = _urllib_req.Request(url, data=data, headers=headers, method=method)
+    with _urllib_req.urlopen(req, timeout=20) as resp:
+        raw = resp.read()
+        return _j.loads(raw) if raw else {}
+
+
+def _render_find_service(api_key: str, name_hint: str) -> str:
+    """Return service ID matching name_hint (substring match, case-insensitive)."""
+    page = _render_req("GET", "/services?limit=20&type=web_service", api_key)
+    # Render returns a list of {service: {...}} wrappers
+    items = page if isinstance(page, list) else page.get("services", [])
+    for item in items:
+        svc = item.get("service", item)
+        svc_name = (svc.get("name") or "").lower()
+        svc_slug = (svc.get("slug") or "").lower()
+        if name_hint.lower() in svc_name or name_hint.lower() in svc_slug:
+            return svc["id"]
+    raise ValueError(
+        f"No Render web service matching '{name_hint}' found. "
+        "Set RENDER_SERVICE_ID in Render env or pass service_id in payload."
+    )
+
+
+def _render_get_env_vars(service_id: str, api_key: str) -> list[dict]:
+    """Collect all env vars, paginating if needed."""
+    all_vars: list[dict] = []
+    cursor = None
+    while True:
+        path = f"/services/{service_id}/env-vars?limit=100"
+        if cursor:
+            path += f"&cursor={cursor}"
+        page = _render_req("GET", path, api_key)
+        items = page if isinstance(page, list) else []
+        for item in items:
+            ev = item.get("envVar", item)
+            all_vars.append(ev)
+        if len(items) < 100:
+            break
+        # advance cursor if present
+        cursor = items[-1].get("cursor") if items else None
+        if not cursor:
+            break
+    return all_vars
+
+
+def _render_put_env_vars(service_id: str, api_key: str, env_vars: list[dict]) -> None:
+    """Replace ALL env vars on the service with the given list."""
+    _render_req("PUT", f"/services/{service_id}/env-vars", api_key, env_vars)
+
+
+def _render_trigger_deploy(service_id: str, api_key: str) -> str:
+    """Kick a new deploy. Returns deploy ID."""
+    result = _render_req("POST", f"/services/{service_id}/deploys",
+                         api_key, {"clearCache": "do_not_clear"})
+    deploy = result.get("deploy", result)
+    return deploy.get("id", "unknown")
+
+
+def _mission_set_render_env(payload: dict) -> dict:
+    """Bond sets one or more env vars on the Render service and triggers redeploy.
+
+    Payload keys:
+        key      str  — env var name  (e.g. 'AIRTABLE_API_KEY')
+        value    str  — env var value
+        vars     dict — alternative: {KEY: value, ...} for bulk set
+        service_id str — override auto-discovery
+        deploy   bool — trigger redeploy after update (default True)
+    """
+    from ..settings import get_settings
+    s = get_settings()
+
+    render_key = s.render_api_key
+    if not render_key:
+        return {
+            "agent":   _NAME,
+            "mission": "set_render_env",
+            "status":  "BLOCKED",
+            "reason":  "RENDER_API_KEY not set in environment.",
+            "action":  "Add RENDER_API_KEY to Render dashboard → Environment variables.",
+        }
+
+    # Build the dict of changes from payload
+    updates: dict[str, str] = {}
+    if payload.get("vars") and isinstance(payload["vars"], dict):
+        updates.update(payload["vars"])
+    if payload.get("key") and payload.get("value") is not None:
+        updates[payload["key"]] = payload["value"]
+
+    if not updates:
+        return {
+            "agent":   _NAME,
+            "mission": "set_render_env",
+            "status":  "ERROR",
+            "reason":  "Payload must include 'key'+'value' or 'vars' dict.",
+        }
+
+    # Resolve service ID
+    service_id = (
+        payload.get("service_id")
+        or s.render_service_id
+        or None
+    )
+    try:
+        if not service_id:
+            service_id = _render_find_service(render_key, s.render_service_name)
+        _render_log.info("Bond Render mission: service_id=%s", service_id)
+    except Exception as exc:
+        return {
+            "agent":   _NAME,
+            "mission": "set_render_env",
+            "status":  "ERROR",
+            "reason":  f"Could not resolve Render service: {exc}",
+        }
+
+    # GET current env vars
+    try:
+        current = _render_get_env_vars(service_id, render_key)
+    except Exception as exc:
+        return {
+            "agent":   _NAME,
+            "mission": "set_render_env",
+            "status":  "ERROR",
+            "reason":  f"Could not fetch current env vars: {exc}",
+        }
+
+    # Merge: build new list
+    # Vars with value=None are Render "secret" fields — preserve key but skip value
+    # so they don't get wiped; they'll remain as secret on Render's side.
+    preserved_secrets: list[str] = []
+    new_vars: list[dict] = []
+
+    for ev in current:
+        k = ev.get("key", "")
+        v = ev.get("value")        # None = Render secret (masked)
+        if k in updates:
+            continue               # will be re-added with new value below
+        if v is None:
+            preserved_secrets.append(k)
+            # Include key-only entry; Render preserves the secret value when
+            # value field is omitted from a PUT item.
+            new_vars.append({"key": k})
+        else:
+            new_vars.append({"key": k, "value": v})
+
+    for k, v in updates.items():
+        new_vars.append({"key": k, "value": v})
+
+    # PUT the merged list back
+    try:
+        _render_put_env_vars(service_id, render_key, new_vars)
+    except Exception as exc:
+        return {
+            "agent":   _NAME,
+            "mission": "set_render_env",
+            "status":  "ERROR",
+            "reason":  f"PUT env vars failed: {exc}",
+        }
+
+    # Trigger redeploy (default True)
+    deploy_id = None
+    if payload.get("deploy", True):
+        try:
+            deploy_id = _render_trigger_deploy(service_id, render_key)
+            _render_log.info("Bond: Render deploy triggered id=%s", deploy_id)
+        except Exception as exc:
+            _render_log.warning("Bond: deploy trigger failed: %s", exc)
+
+    summary_parts = [f"{k}=***{str(v)[-4:]}" for k, v in updates.items()]
+    mem.remember(
+        _NAME, "render_env_update",
+        {
+            "service_id": service_id,
+            "keys_set":   list(updates.keys()),
+            "deploy_id":  deploy_id,
+            "timestamp":  datetime.now(timezone.utc).isoformat(),
+        },
+        confidence=1.0, source_agent=_NAME,
+        summary=f"Set {len(updates)} Render env var(s): {', '.join(updates.keys())}",
+    )
+    log_agent(
+        _NAME, "set_render_env",
+        payload={"service_id": service_id, "keys": list(updates.keys())},
+        result=f"set={len(updates)} deploy_id={deploy_id}",
+    )
+
+    return {
+        "agent":              _NAME,
+        "mission":            "set_render_env",
+        "status":             "SUCCESS",
+        "service_id":         service_id,
+        "vars_set":           list(updates.keys()),
+        "vars_set_summary":   summary_parts,
+        "preserved_secrets":  preserved_secrets,
+        "deploy_triggered":   bool(deploy_id),
+        "deploy_id":          deploy_id,
+        "directive": (
+            f"BOND DIRECTIVE: {', '.join(updates.keys())} set on Render service. "
+            + (f"Deploy {deploy_id} in progress — service will restart in ~30s. " if deploy_id else "")
+            + ("Re-run Bond: Pull Leads once deploy completes." if "AIRTABLE_API_KEY" in updates else "")
         ),
     }

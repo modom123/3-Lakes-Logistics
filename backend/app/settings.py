@@ -90,6 +90,8 @@ class Settings(BaseSettings):
     youtube_access_token: str = ""  # OAuth2 token with youtube scope
 
     render_api_key: str = ""
+    render_service_id: str = ""          # Render web service ID (srv-...); auto-discovered if blank
+    render_service_name: str = "three-lakes-logistics-api"  # fallback name for discovery
 
     sentry_dsn: str = ""
 

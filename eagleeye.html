@@ -1390,6 +1390,28 @@ td.td-name{font-weight:600;color:var(--navy);}
         </div>
       </div>
 
+      <!-- AIRTABLE CREDENTIAL CONFIGURATOR -->
+      <div class="card" style="margin-bottom:16px;border-left:4px solid #e4a830">
+        <div class="card-hd">
+          <div class="card-title">🕵️ Bond — Airtable Configuration</div>
+          <span class="card-chip" style="background:rgba(228,168,48,.15);color:#e4a830">Render Env</span>
+        </div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:12px">Bond will set <code>AIRTABLE_API_KEY</code> directly in Render and trigger a redeploy (~30s).</div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <input id="airtable-key-input" type="password"
+            placeholder="Airtable API key (pat…)"
+            style="flex:1;min-width:220px;padding:8px 12px;border:1px solid rgba(0,0,0,.15);border-radius:6px;font-size:13px;font-family:var(--ff-m);background:#fff;color:var(--navy)"
+            oninput="document.getElementById('bond-set-render-btn').disabled=!this.value.trim()"
+          />
+          <button id="bond-set-render-btn" class="btn-out" disabled
+            onclick="bondSetRenderEnv(event)"
+            style="background:#e4a830;color:#fff;border-color:#e4a830;font-weight:600">
+            🕵️ Bond: Set in Render
+          </button>
+        </div>
+        <div id="bond-render-status" style="margin-top:10px;font-size:12px;display:none"></div>
+      </div>
+
       <!-- AIRTABLE MIGRATION STATUS -->
       <div id="airtable-migration-card" style="display:none;margin-bottom:16px">
         <div class="card" style="border-left:4px solid var(--blue)">
@@ -5953,6 +5975,46 @@ async function bondPullAirtableLeads(e) {
     toast('Bond Airtable pull error: '+err.message,'error');
   }
   btn.disabled=false; btn.textContent='🕵️ Bond: Pull Leads';
+}
+
+async function bondSetRenderEnv(e) {
+  const btn = e.target;
+  const keyVal = document.getElementById('airtable-key-input').value.trim();
+  const statusEl = document.getElementById('bond-render-status');
+  if (!keyVal) return;
+  btn.disabled = true; btn.textContent = '⏳ Bond dispatching…';
+  statusEl.style.display = 'block';
+  statusEl.innerHTML = '<span style="color:var(--navy)">🕵️ Bond connecting to Render API…</span>';
+  try {
+    const d = await apiFetch('/api/agents/james_bond/run','POST',{
+      scope:'set_render_env', key:'AIRTABLE_API_KEY', value:keyVal, deploy:true
+    });
+    const data = await d.json();
+    if (data.status === 'BLOCKED') {
+      statusEl.innerHTML = `<span style="color:var(--red);font-weight:600">🔒 ${data.reason}</span><br><span style="color:var(--muted)">${data.action||''}</span>`;
+      toast('Bond blocked: RENDER_API_KEY not configured', 'error');
+    } else if (data.status === 'ERROR') {
+      statusEl.innerHTML = `<span style="color:var(--red);font-weight:600">❌ ${data.reason}</span>`;
+      toast('Bond Render error: '+data.reason, 'error');
+    } else {
+      statusEl.innerHTML = `
+        <span style="color:var(--green);font-weight:600">✅ AIRTABLE_API_KEY set in Render</span>
+        ${data.deploy_triggered?`<br><span style="color:var(--muted)">Deploy ${data.deploy_id||''} in progress — service restarts in ~30s</span>`:''}
+        <br><span style="color:var(--muted);font-size:11px;font-style:italic">${data.directive||''}</span>
+      `;
+      toast('🕵️ Bond: AIRTABLE_API_KEY set — Render redeploying', 'success');
+      _pushNotif({id:'bond_render_'+Date.now(),agent:'james_bond',action:'set_render_env',
+        result:'AIRTABLE_API_KEY set · deploy '+data.deploy_id,ts:new Date().toISOString()});
+      document.getElementById('airtable-key-input').value = '';
+      btn.disabled = true;
+    }
+  } catch(err) {
+    statusEl.innerHTML = `<span style="color:var(--red)">❌ ${err.message}</span>`;
+    toast('Bond Render set error: '+err.message, 'error');
+    btn.disabled = false; btn.textContent = '🕵️ Bond: Set in Render';
+    return;
+  }
+  btn.textContent = '✅ Set';
 }
 
 // ══════════════════════════════════════════════════════
