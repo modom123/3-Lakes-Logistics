@@ -7979,6 +7979,42 @@ setInterval(()=>{if(document.getElementById('page-bond')?.classList.contains('ac
 .ts-rcon-directive::-webkit-scrollbar{width:5px;}
 .ts-rcon-directive::-webkit-scrollbar-thumb{background:var(--gold2);border-radius:3px;}
 .ts-escalated-tag{font-size:9px;font-weight:800;background:rgba(228,168,48,.15);color:var(--gold2);padding:2px 8px;border-radius:10px;text-transform:uppercase;letter-spacing:.5px;margin-left:auto;}
+/* Dual-Bond Mission Control */
+.ts-mission{display:none;background:linear-gradient(135deg,rgba(10,10,20,.95),rgba(15,15,30,.98));border:1px solid rgba(228,168,48,.4);border-radius:12px;overflow:hidden;margin-bottom:20px;}
+.ts-mission.active{display:block;}
+.ts-mission-header{display:flex;align-items:center;gap:14px;padding:16px 20px;border-bottom:1px solid rgba(228,168,48,.2);background:rgba(228,168,48,.04);}
+.ts-mission-title{font-family:var(--ff-p);font-size:16px;font-weight:900;color:var(--gold2);letter-spacing:.5px;}
+.ts-mission-sub{font-size:10px;color:var(--muted);margin-top:2px;}
+.ts-mission-badge{font-size:10px;font-weight:800;padding:3px 10px;border-radius:20px;text-transform:uppercase;letter-spacing:.6px;margin-left:auto;}
+.ts-mission-badge.standby{background:rgba(255,255,255,.07);color:var(--muted);}
+.ts-mission-badge.running{background:rgba(228,168,48,.2);color:var(--gold2);animation:pulse-gold 1.5s infinite;}
+.ts-mission-badge.healed{background:rgba(16,185,129,.2);color:#10b981;}
+.ts-mission-badge.partial{background:rgba(245,158,11,.2);color:#f59e0b;}
+@keyframes pulse-gold{0%,100%{opacity:1;}50%{opacity:.5;}}
+.ts-mission-phases{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:1px;background:rgba(228,168,48,.1);}
+.ts-phase{padding:12px 16px;background:rgba(10,10,20,.95);display:flex;flex-direction:column;gap:4px;}
+.ts-phase-label{font-size:9px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);font-weight:700;}
+.ts-phase-val{font-size:13px;font-weight:800;color:var(--text);}
+.ts-phase-val.ok{color:#10b981;}.ts-phase-val.warn{color:#f59e0b;}.ts-phase-val.err{color:#ef4444;}.ts-phase-val.active{color:var(--gold2);}
+.ts-mission-log{max-height:260px;overflow-y:scroll;padding:14px 18px;font-family:var(--ff-m);font-size:11px;line-height:1.7;scrollbar-width:thin;scrollbar-color:var(--gold2) rgba(0,0,0,.3);}
+.ts-mission-log::-webkit-scrollbar{width:5px;}
+.ts-mission-log::-webkit-scrollbar-thumb{background:var(--gold2);border-radius:3px;}
+.ts-ml-line{display:flex;gap:10px;align-items:baseline;}
+.ts-ml-ts{color:rgba(255,255,255,.25);flex-shrink:0;font-size:9px;}
+.ts-ml-txt{flex:1;}
+.ts-ml-txt.ok{color:#10b981;}.ts-ml-txt.warn{color:#f59e0b;}.ts-ml-txt.err{color:#ef4444;}.ts-ml-txt.bond{color:var(--gold2);}
+.ts-mission-directive{background:rgba(0,0,0,.4);border-top:1px solid rgba(228,168,48,.15);padding:14px 18px;}
+.ts-mission-directive-title{font-size:10px;font-weight:700;color:var(--gold2);text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px;}
+.ts-directive-box{background:rgba(0,0,0,.5);border:1px solid rgba(228,168,48,.2);border-radius:6px;max-height:200px;overflow-y:scroll;padding:10px 12px;font-family:var(--ff-m);font-size:10px;color:rgba(255,255,255,.7);white-space:pre-wrap;line-height:1.6;scrollbar-width:thin;scrollbar-color:var(--gold2) rgba(0,0,0,.3);}
+.ts-directive-box::-webkit-scrollbar{width:5px;}
+.ts-directive-box::-webkit-scrollbar-thumb{background:var(--gold2);border-radius:3px;}
+.ts-mission-footer{display:flex;align-items:center;gap:10px;padding:12px 18px;border-top:1px solid rgba(228,168,48,.1);}
+.ts-mission-iter{font-size:10px;color:var(--muted);}
+.ts-retest-btn{background:transparent;border:1px solid var(--gold2);color:var(--gold2);padding:6px 16px;border-radius:5px;font-size:11px;font-weight:700;cursor:pointer;}
+.ts-retest-btn:hover{background:rgba(228,168,48,.1);}
+.ts-unleash-btn{background:var(--gold2);color:#000;border:none;padding:10px 24px;border-radius:6px;font-weight:900;font-size:13px;cursor:pointer;letter-spacing:.4px;}
+.ts-unleash-btn:hover{background:var(--gold1);}
+.ts-unleash-btn:disabled{opacity:.5;cursor:not-allowed;}
 </style>
 <div class="ts-wrap">
   <div class="ts-topbar">
@@ -7986,7 +8022,10 @@ setInterval(()=>{if(document.getElementById('page-bond')?.classList.contains('ac
       <div class="ts-title">🧪 Test Suite</div>
       <div class="ts-subtitle">Live smoke tests — runs against <span id="ts-api-url" style="color:var(--gold2)"></span></div>
     </div>
-    <button class="ts-runall" onclick="tsRunAll()">▶ Run All Domains</button>
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+      <button class="ts-runall" onclick="tsRunAll()">▶ Run All Domains</button>
+      <button class="ts-unleash-btn" id="ts-unleash-btn" onclick="tsUnleashBothBonds()">🕵️🕵️ Unleash Both Bonds</button>
+    </div>
   </div>
 
   <!-- IEBC Technical Team -->
@@ -8026,6 +8065,37 @@ setInterval(()=>{if(document.getElementById('page-bond')?.classList.contains('ac
         </div>
       </div>
       <span class="ts-team-assign" onclick="tsAssignRun('alexander','Alexander Kane')">Run All →</span>
+    </div>
+  </div>
+
+  <!-- Dual-Bond Mission Control Panel -->
+  <div class="ts-mission" id="ts-mission">
+    <div class="ts-mission-header">
+      <span style="font-size:26px;">🕵️🕵️</span>
+      <div>
+        <div class="ts-mission-title">DUAL-BOND AUTONOMOUS MISSION</div>
+        <div class="ts-mission-sub">Internal Bond + External Bond · Daytona <span id="ts-mission-sandbox" style="color:var(--gold2)">2a50d3c2…c5c6</span></div>
+      </div>
+      <span class="ts-mission-badge standby" id="ts-mission-badge">STANDBY</span>
+    </div>
+    <div class="ts-mission-phases">
+      <div class="ts-phase"><div class="ts-phase-label">Failures</div><div class="ts-phase-val" id="tsp-failures">—</div></div>
+      <div class="ts-phase"><div class="ts-phase-label">Internal Fixed</div><div class="ts-phase-val ok" id="tsp-fixed">—</div></div>
+      <div class="ts-phase"><div class="ts-phase-label">Need Manual</div><div class="ts-phase-val warn" id="tsp-manual">—</div></div>
+      <div class="ts-phase"><div class="ts-phase-label">External Bond</div><div class="ts-phase-val" id="tsp-ext">—</div></div>
+      <div class="ts-phase"><div class="ts-phase-label">Iteration</div><div class="ts-phase-val active" id="tsp-iter">—</div></div>
+      <div class="ts-phase"><div class="ts-phase-label">Tests After Fix</div><div class="ts-phase-val" id="tsp-retest">—</div></div>
+    </div>
+    <div class="ts-mission-log" id="ts-mission-log"></div>
+    <div class="ts-mission-directive" id="ts-mission-directive-wrap" style="display:none;">
+      <div class="ts-mission-directive-title">🕵️ Bond Directive Sent to External Bond</div>
+      <div class="ts-directive-box" id="ts-mission-directive-box"></div>
+    </div>
+    <div class="ts-mission-footer">
+      <span class="ts-mission-iter" id="ts-mission-iter-label"></span>
+      <button class="ts-retest-btn" id="ts-retest-btn" style="display:none;" onclick="tsMissionRetest()">↺ Re-run Tests Now</button>
+      <div style="flex:1;"></div>
+      <button class="ts-retest-btn" id="ts-poll-btn" style="display:none;" onclick="tsPollExternal()">📡 Check External Bond Reply</button>
     </div>
   </div>
 
@@ -8735,6 +8805,233 @@ async function tsRunAutofix() {
   }
 
   btn.disabled = false; btn.textContent = '⚡ Run Auto-Fix Again';
+}
+
+// ── Dual-Bond Autonomous Mission ────────────────────────────────────────────
+let _missionIteration  = 0;
+let _missionPolling    = null;
+let _missionRunning    = false;
+
+function mlLog(msg, type='') {
+  const log = document.getElementById('ts-mission-log');
+  const line = document.createElement('div');
+  line.className = 'ts-ml-line';
+  line.innerHTML = `<span class="ts-ml-ts">${new Date().toLocaleTimeString()}</span><span class="ts-ml-txt ${type}">${msg}</span>`;
+  log.appendChild(line);
+  log.scrollTop = log.scrollHeight;
+}
+
+function missionBadge(state) {
+  const el = document.getElementById('ts-mission-badge');
+  el.className = 'ts-mission-badge ' + state;
+  el.textContent = state.toUpperCase();
+}
+
+function missionPhase(id, val, cls='') {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = val;
+  if (cls) el.className = `ts-phase-val ${cls}`;
+}
+
+async function tsUnleashBothBonds() {
+  if (_missionRunning) { toast('Mission already running', 'error'); return; }
+  _missionRunning = true;
+  _missionIteration++;
+
+  const unleash = document.getElementById('ts-unleash-btn');
+  unleash.disabled = true; unleash.textContent = '⏳ Mission Active…';
+
+  // Activate panel
+  const panel = document.getElementById('ts-mission');
+  panel.classList.add('active');
+  document.getElementById('ts-mission-log').innerHTML = '';
+  missionBadge('running');
+  missionPhase('tsp-iter', _missionIteration, 'active');
+  document.getElementById('ts-mission-directive-wrap').style.display = 'none';
+  document.getElementById('ts-retest-btn').style.display = 'none';
+  document.getElementById('ts-poll-btn').style.display   = 'none';
+
+  // ── Phase 1: Run all tests ──────────────────────────────────────────────
+  mlLog('Phase 1 — Running full test suite…', 'bond');
+  await tsRunAll();
+  const failures = tsCollectFailures();
+  _tsLastFailures = failures;
+  missionPhase('tsp-failures', failures.length, failures.length === 0 ? 'ok' : 'err');
+
+  if (!failures.length) {
+    mlLog('✓ All tests passing — no mission needed!', 'ok');
+    missionBadge('healed');
+    missionPhase('tsp-retest', 'All Green', 'ok');
+    unleash.disabled = false; unleash.textContent = '🕵️🕵️ Unleash Both Bonds';
+    _missionRunning = false;
+    return;
+  }
+
+  mlLog(`Found ${failures.length} failure(s) across: ${[...new Set(failures.map(f=>f.domain))].join(', ')}`, 'warn');
+
+  // ── Phase 2: Internal autofix ───────────────────────────────────────────
+  mlLog('Phase 2 — Internal self-heal (Winston, Isabella, Alexander)…', 'bond');
+  let autofixData = {};
+  try {
+    autofixData = await apiFetch('/api/agents/technical_team/run', 'POST', {
+      action: 'autofix', failures
+    });
+    const fixed  = autofixData.fixed?.length  || 0;
+    const manual = autofixData.needs_manual?.length || 0;
+    missionPhase('tsp-fixed',  fixed,  fixed  > 0 ? 'ok'   : '');
+    missionPhase('tsp-manual', manual, manual > 0 ? 'warn' : 'ok');
+    (autofixData.fixed || []).forEach(f => mlLog(`  ✓ Fixed: [${f.area}] ${f.action}`, 'ok'));
+    (autofixData.needs_manual || []).forEach(m => mlLog(`  ⚠ Manual needed: [${m.area}] ${m.action}`, 'warn'));
+    if (!fixed && !manual) mlLog('  → No internal fixes applicable', '');
+  } catch(e) {
+    mlLog(`  Internal autofix error: ${e.message}`, 'err');
+  }
+
+  // ── Phase 3: Autonomous dual-bond mission ──────────────────────────────
+  mlLog('Phase 3 — James Bond briefing + External Bond directive…', 'bond');
+  let missionData = {};
+  try {
+    missionData = await apiFetch('/api/agents/technical_team/run', 'POST', {
+      action:    'autonomous',
+      failures,
+      iteration: _missionIteration,
+    });
+
+    const extSent = missionData.external_bond?.sent;
+    missionPhase('tsp-ext', extSent ? 'Directive Sent' : 'Unreachable', extSent ? 'active' : 'err');
+
+    if (extSent) {
+      mlLog('  🕵️ Bond directive transmitted to External Bond on Daytona', 'bond');
+      mlLog(`  Message ID: ${missionData.external_bond?.message_id || 'pending'}`, '');
+    } else {
+      mlLog('  ✗ Could not reach External Bond — check bond channel config', 'err');
+    }
+
+    if (missionData.directive) {
+      document.getElementById('ts-mission-directive-wrap').style.display = '';
+      document.getElementById('ts-mission-directive-box').textContent = missionData.directive;
+    }
+
+    if (missionData.bond_brief) {
+      mlLog('  Bond Brief: ' + missionData.bond_brief.split('\n')[0], 'bond');
+    }
+  } catch(e) {
+    mlLog(`  Mission dispatch error: ${e.message}`, 'err');
+    missionPhase('tsp-ext', 'Error', 'err');
+  }
+
+  // ── Phase 4: Re-run failed domains ─────────────────────────────────────
+  mlLog('Phase 4 — Re-running failed domains to measure progress…', 'bond');
+  const failedDomIds = [...new Set(failures.map(f =>
+    TS_DOMAINS.find(d => d.label === f.domain)?.id
+  ).filter(Boolean))];
+
+  let nowPassing = 0, stillFailing = 0;
+  for (const domId of failedDomIds) {
+    const dom = TS_DOMAINS.find(d => d.id === domId);
+    if (!dom) continue;
+    mlLog(`  Re-testing ${dom.label}…`);
+    await tsRunDomain(domId);
+    const box    = document.getElementById(`tsresults-${domId}`);
+    const fails  = box?.querySelectorAll('.chip.f').length || 0;
+    const passes = box?.querySelectorAll('.chip.p').length || 0;
+    if (fails === 0) {
+      nowPassing++;
+      mlLog(`  ✓ ${dom.label}: HEALED (${passes}/${passes} pass)`, 'ok');
+    } else {
+      stillFailing++;
+      mlLog(`  ✗ ${dom.label}: ${fails} still failing`, 'err');
+    }
+  }
+
+  tsUpdateSummary();
+  missionPhase('tsp-retest',
+    `${nowPassing} healed / ${stillFailing} remain`,
+    stillFailing === 0 ? 'ok' : nowPassing > 0 ? 'warn' : 'err'
+  );
+
+  // ── Final verdict ───────────────────────────────────────────────────────
+  if (stillFailing === 0) {
+    mlLog('✓ MISSION COMPLETE — All domains healed!', 'ok');
+    missionBadge('healed');
+    toast('🕵️🕵️ Both Bonds succeeded — all tests passing!', 'success');
+  } else {
+    const extSent = missionData.external_bond?.sent;
+    mlLog(`⚠ ${stillFailing} domain(s) still failing — External Bond has the directive.`, 'warn');
+    mlLog('  Check Bond Office for External Bond\'s reply, then click Re-run Tests.', '');
+    missionBadge('partial');
+    toast(`⚠ ${nowPassing} healed · ${stillFailing} need External Bond's fix — monitoring…`, 'error');
+    // Show re-run and poll buttons
+    document.getElementById('ts-retest-btn').style.display = '';
+    document.getElementById('ts-poll-btn').style.display   = extSent ? '' : 'none';
+    // Auto-poll bond channel for External Bond reply every 15s
+    _startMissionPoll();
+  }
+
+  document.getElementById('ts-mission-iter-label').textContent =
+    `Iteration ${_missionIteration} complete · ${new Date().toLocaleTimeString()}`;
+
+  unleash.disabled = false;
+  unleash.textContent = stillFailing > 0 ? '🕵️🕵️ Re-Run Mission' : '🕵️🕵️ Unleash Both Bonds';
+  _missionRunning = false;
+}
+
+function _startMissionPoll() {
+  if (_missionPolling) clearInterval(_missionPolling);
+  _missionPolling = setInterval(tsPollExternal, 15000);
+}
+
+async function tsPollExternal() {
+  mlLog('📡 Polling for External Bond reply…', 'bond');
+  try {
+    const data = await apiFetch('/api/bond/thread');
+    const msgs = Array.isArray(data) ? data : (data?.messages || data?.thread || []);
+    const replies = msgs.filter(m =>
+      m.direction === 'external_to_internal' &&
+      (m.metadata?.source === 'dual_bond_autonomous' ||
+       (m.content||'').toLowerCase().includes('fix') ||
+       (m.content||'').toLowerCase().includes('patch') ||
+       (m.content||'').toLowerCase().includes('report'))
+    );
+    if (replies.length) {
+      const latest = replies[replies.length - 1];
+      mlLog(`  🕵️ External Bond replied: "${(latest.content||'').slice(0,120)}…"`, 'ok');
+      mlLog('  Click "Re-run Tests Now" to verify fixes.', 'bond');
+      document.getElementById('ts-retest-btn').style.display = '';
+      if (_missionPolling) { clearInterval(_missionPolling); _missionPolling = null; }
+      toast('🕵️ External Bond has replied — re-run tests to verify!', 'success');
+    } else {
+      mlLog('  External Bond has not replied yet — still waiting…', '');
+    }
+  } catch(e) {
+    mlLog(`  Poll error: ${e.message}`, 'err');
+  }
+}
+
+async function tsMissionRetest() {
+  mlLog('↺ Re-running all failed domains after External Bond fix…', 'bond');
+  const failures = tsCollectFailures();
+  const domIds   = [...new Set(failures.map(f =>
+    TS_DOMAINS.find(d => d.label === f.domain)?.id
+  ).filter(Boolean))];
+  // If no current failures, rerun all
+  const toRun = domIds.length ? domIds : TS_DOMAINS.map(d => d.id);
+  let pass = 0, fail = 0;
+  for (const id of toRun) {
+    await tsRunDomain(id);
+    const box = document.getElementById(`tsresults-${id}`);
+    if ((box?.querySelectorAll('.chip.f').length || 0) === 0) pass++; else fail++;
+  }
+  tsUpdateSummary();
+  missionPhase('tsp-retest', `${pass} healed / ${fail} remain`, fail === 0 ? 'ok' : 'warn');
+  if (fail === 0) {
+    mlLog('✓ ALL TESTS PASSING — Mission successful!', 'ok');
+    missionBadge('healed');
+    if (_missionPolling) { clearInterval(_missionPolling); _missionPolling = null; }
+  } else {
+    mlLog(`⚠ ${fail} domain(s) still failing — consider another mission iteration.`, 'warn');
+  }
 }
 
 // Render grid when page is first visited

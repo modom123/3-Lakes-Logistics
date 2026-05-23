@@ -661,6 +661,173 @@ def _autofix(classified: list[dict]) -> dict[str, Any]:
     }
 
 
+# ── Dual-Bond autonomous mission ─────────────────────────────────────────────
+
+def _build_mission_directive(
+    classified: list[dict],
+    autofix: dict,
+    bond_brief: str,
+    iteration: int = 1,
+) -> str:
+    domains   = sorted({f["domain"] for f in classified})
+    remaining = [
+        f for f in classified
+        if not any(
+            fix.get("area", "").lower() in f.get("domain", "").lower()
+            for fix in autofix.get("fixed", [])
+        )
+    ]
+
+    lines = [
+        f"╔══════════════════════════════════════════════════════════╗",
+        f"║  DUAL-BOND AUTONOMOUS MISSION DIRECTIVE  ·  Iteration {iteration}  ║",
+        f"╚══════════════════════════════════════════════════════════╝",
+        f"",
+        f"FROM:     James Bond · IEBC Internal · {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}",
+        f"TO:       External Bond · Daytona {_DAYTONA_ID}",
+        f"PRIORITY: {'CRITICAL' if len(remaining) >= 3 else 'HIGH'}",
+        f"",
+        f"STRATEGIC BRIEF:",
+        bond_brief or "System health restoration required.",
+        f"",
+        f"TEST SUITE STATUS:",
+        f"  Total failures : {len(classified)} across {len(domains)} domain(s): {', '.join(domains)}",
+        f"  Internal fixes : {len(autofix.get('fixed', []))} applied automatically",
+        f"  Still failing  : {len(remaining)} require External Bond action",
+        f"",
+    ]
+
+    if autofix.get("fixed"):
+        lines.append("ALREADY FIXED INTERNALLY:")
+        for f in autofix["fixed"]:
+            lines.append(f"  ✓ [{f.get('area','?')}] {f.get('action','')}")
+        lines.append("")
+
+    if remaining:
+        lines.append("FAILURES REQUIRING YOUR ACTION:")
+        for i, f in enumerate(remaining, 1):
+            lines += [
+                f"  {i}. Domain: {f['domain']}  ·  Test: {f['test_name']}",
+                f"     Type: {f.get('failure_type','?')}  ·  Error: {f.get('error','')}",
+            ]
+        lines.append("")
+
+    manual = autofix.get("needs_manual", [])
+    if manual:
+        lines.append("MANUAL ACTIONS STILL NEEDED (internal team cannot auto-apply):")
+        for m in manual:
+            lines += [
+                f"  • [{m.get('area','?')}] {m.get('action','')}",
+                f"    HOW: {m.get('how','')}",
+            ]
+        lines.append("")
+
+    env = autofix.get("env_status", {})
+    missing_env = [k for k, v in env.items() if not v]
+    if missing_env:
+        lines += [
+            "MISSING ENVIRONMENT VARIABLES (detected from Render):",
+            *[f"  ✗ {k}" for k in missing_env],
+            "",
+        ]
+
+    lines += [
+        "YOUR MISSION:",
+        "  1. For each remaining failure — diagnose from Daytona sandbox",
+        "  2. Write the fix: Python code patch / SQL migration / env var value",
+        "  3. If code fix: push to modom123/3-lakes-logistics main branch",
+        "  4. If SQL fix: provide the exact SQL statement",
+        "  5. If env var: provide the exact variable name and instructions to obtain value",
+        "  6. Reply to this directive via POST /api/bond/report with:",
+        "     { 'fixes_applied': [...], 'sql_run': [...], 'env_vars_needed': [...], 'code_pushed': bool }",
+        "",
+        "  Verify Render API is reachable: curl https://three-lakes-logistics-api.onrender.com/api/health/ping",
+        "",
+        "BOND DIRECTIVE TO COMMANDER: External Bond has all context. Stand by for fix report.",
+    ]
+
+    return "\n".join(lines)
+
+
+def run_autonomous_mission(failures: list[dict], iteration: int = 1) -> dict[str, Any]:
+    """Full dual-bond mission: autofix internally, brief External Bond, return mission state."""
+    from . import james_bond as jb
+
+    # Classify
+    classified = []
+    for f in failures:
+        ftype = _classify(f.get("test_name",""), f.get("domain",""), f.get("error",""))
+        sid   = _assign(ftype)
+        classified.append({**f, "failure_type": ftype, "specialist": sid})
+
+    # Phase 1 — internal autofix
+    autofix = _autofix(classified)
+
+    # Phase 2 — James Bond strategic brief
+    try:
+        bond_report = jb.run({"scope": "tech", "top_n": 3})
+        brief = bond_report.get("executive_brief", "")
+    except Exception:
+        brief = "Tech audit unavailable — proceeding with test data only."
+
+    # Phase 3 — compose External Bond directive
+    directive = _build_mission_directive(classified, autofix, brief, iteration)
+
+    # Phase 4 — send to External Bond
+    ext_sent = False
+    ext_msg_id = None
+    try:
+        result = bond_courier.send_directive(
+            content=directive,
+            priority="critical" if len(classified) >= 3 else "high",
+            metadata={
+                "source":          "dual_bond_autonomous",
+                "iteration":       iteration,
+                "failure_count":   len(classified),
+                "internal_fixed":  len(autofix.get("fixed", [])),
+                "sandbox_id":      _DAYTONA_ID,
+            },
+        )
+        ext_sent   = True
+        ext_msg_id = result.get("message", {}).get("id")
+    except Exception as exc:
+        log_agent(_NAME, "send_directive", result=f"failed: {exc}")
+
+    mem.remember(
+        _NAME, "autonomous_mission",
+        {
+            "iteration":      iteration,
+            "timestamp":      datetime.now(timezone.utc).isoformat(),
+            "failure_count":  len(classified),
+            "internal_fixed": len(autofix.get("fixed", [])),
+            "external_sent":  ext_sent,
+            "ext_msg_id":     ext_msg_id,
+        },
+        confidence=0.9,
+        summary=f"Dual-Bond mission iteration {iteration}: {len(classified)} failures, {len(autofix.get('fixed',[]))} fixed internally, External Bond {'alerted' if ext_sent else 'unreachable'}",
+    )
+
+    log_agent(_NAME, "autonomous_mission",
+              payload={"iteration": iteration, "failures": len(classified)},
+              result=f"internal_fixed={len(autofix.get('fixed',[]))} ext_sent={ext_sent}")
+
+    return {
+        "agent":        _NAME,
+        "action":       "autonomous",
+        "iteration":    iteration,
+        "classified":   classified,
+        "autofix":      autofix,
+        "bond_brief":   brief,
+        "directive":    directive,
+        "external_bond": {
+            "sent":       ext_sent,
+            "message_id": ext_msg_id,
+            "sandbox_id": _DAYTONA_ID,
+        },
+        "timestamp":    datetime.now(timezone.utc).isoformat(),
+    }
+
+
 # ── Main run ──────────────────────────────────────────────────────────────────
 
 def run(payload: dict[str, Any]) -> dict[str, Any]:
@@ -691,6 +858,12 @@ def run(payload: dict[str, Any]) -> dict[str, Any]:
 
     if action == "env_check":
         return {"agent": _NAME, "action": "env_check", "env_status": _env_status()}
+
+    if action == "autonomous":
+        raw = payload.get("failures", [])
+        if not raw:
+            return {"agent": _NAME, "error": "failures required for autonomous mission"}
+        return run_autonomous_mission(raw, int(payload.get("iteration", 1)))
 
     if action != "remediate":
         return {"agent": _NAME, "error": f"unknown action: {action}"}
