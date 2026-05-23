@@ -228,18 +228,74 @@ def _build_directives(
     return directives
 
 
+def _llm_brief(
+    coverage: dict[str, Any],
+    pipeline: dict[str, Any],
+    gaps: list[dict[str, Any]],
+    directives: list[str],
+) -> str | None:
+    """Call Claude Sonnet to write a sharper consultant brief. Returns None on failure."""
+    from ..settings import get_settings
+    import httpx as _httpx
+    key = get_settings().anthropic_api_key
+    if not key:
+        return None
+    context = (
+        f"Agent coverage: {coverage['active_agent_count']} active, {coverage['silent_agent_count']} silent\n"
+        f"Silent agents: {coverage['silent_agents']}\n"
+        f"Missing memory keys: {coverage['missing_key_gaps']}\n"
+        f"Lead pipeline: {pipeline['tier_a_leads']} Tier A, {pipeline['tier_b_leads']} Tier B\n"
+        f"Vance connect rate: {pipeline['connect_rate']}\n"
+        f"Top gaps: {[g['gap'] for g in gaps[:3]]}\n"
+        f"Directives: {directives[:3]}\n"
+        f"Timestamp: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}"
+    )
+    try:
+        r = _httpx.post(
+            "https://api.anthropic.com/v1/messages",
+            headers={
+                "x-api-key": key,
+                "anthropic-version": "2023-06-01",
+                "content-type": "application/json",
+            },
+            json={
+                "model":      "claude-sonnet-4-6",
+                "max_tokens": 500,
+                "system": (
+                    "You are James Bond, IEBC Consultant. You write sharp, no-filler executive briefs "
+                    "for the Commander of a 28-agent AI trucking operation. "
+                    "Structure: one paragraph of findings, one crisp directive. "
+                    "Tone: direct, intelligent, slightly dry. Never use bullet points. "
+                    "End every brief with: BOND DIRECTIVE TO COMMANDER: [one sentence action]."
+                ),
+                "messages": [{"role": "user", "content": f"Write my consulting brief from this data:\n{context}"}],
+            },
+            timeout=30,
+        )
+        r.raise_for_status()
+        return r.json()["content"][0]["text"].strip()
+    except Exception:
+        return None
+
+
 def _executive_summary(
     coverage: dict[str, Any],
     pipeline: dict[str, Any],
     gaps: list[dict[str, Any]],
     directives: list[str],
 ) -> str:
+    # Try LLM-powered brief first
+    llm = _llm_brief(coverage, pipeline, gaps, directives)
+    if llm:
+        return llm
+
+    # Fallback: template
     high_gaps = sum(1 for g in gaps if g["priority"] == "HIGH")
-    silent = coverage["silent_agent_count"]
-    tier_a = pipeline["tier_a_leads"]
-    tier_b = pipeline["tier_b_leads"]
-    rate = pipeline["connect_rate"]
-    rate_str = f"{rate:.0%}" if rate is not None else "not yet measured"
+    silent    = coverage["silent_agent_count"]
+    tier_a    = pipeline["tier_a_leads"]
+    tier_b    = pipeline["tier_b_leads"]
+    rate      = pipeline["connect_rate"]
+    rate_str  = f"{rate:.0%}" if rate is not None else "not yet measured"
 
     return textwrap.dedent(f"""\
         IEBC CONSULTING BRIEF — James Bond — {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}

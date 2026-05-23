@@ -13,8 +13,11 @@ Payload:
 """
 from __future__ import annotations
 
+import json
 from datetime import datetime, timezone
 from typing import Any
+
+import httpx
 
 from ..logging_service import log_agent
 from . import bond_courier
@@ -22,6 +25,42 @@ from . import memory as mem
 
 _NAME = "technical_team"
 _DAYTONA_ID = "2a50d3c2-f813-49c0-8dec-f9248581c5c6"
+
+
+# ── LLM helper ────────────────────────────────────────────────────────────────
+
+def _llm(
+    system: str,
+    user: str,
+    model: str = "claude-haiku-4-5-20251001",
+    max_tokens: int = 800,
+) -> str | None:
+    """Call Anthropic. Returns None gracefully if key absent or call fails."""
+    from ..settings import get_settings
+    key = get_settings().anthropic_api_key
+    if not key:
+        return None
+    try:
+        r = httpx.post(
+            "https://api.anthropic.com/v1/messages",
+            headers={
+                "x-api-key":           key,
+                "anthropic-version":   "2023-06-01",
+                "content-type":        "application/json",
+            },
+            json={
+                "model":      model,
+                "max_tokens": max_tokens,
+                "system":     system,
+                "messages":   [{"role": "user", "content": user}],
+            },
+            timeout=40,
+        )
+        r.raise_for_status()
+        return r.json()["content"][0]["text"].strip()
+    except Exception as exc:
+        log_agent(_NAME, "llm_error", error=str(exc))
+        return None
 
 SPECIALISTS: dict[str, dict] = {
     "winston_cole": {
@@ -157,6 +196,30 @@ def _winston_analyze(failures: list[dict]) -> dict[str, Any]:
             ]
         diagnoses.append({"domain": domain, "test": f["test_name"], "cause": cause, "steps": steps})
 
+    # LLM enhancement: ask Claude to write actual code fixes
+    llm_fix = _llm(
+        system=(
+            "You are Winston Cole, Lead Test Engineer for IEBC. "
+            "You receive failing API test details and write precise, runnable Python code fixes or patches. "
+            "Be concise. Return only code and brief comments — no prose."
+        ),
+        user=(
+            f"These API tests are failing:\n{json.dumps(mine, indent=2)}\n\n"
+            "For each failure: identify the most likely root cause, then write the minimal Python code change "
+            "or shell command that fixes it. Format as:\n"
+            "# [Domain] [Test]\n# Cause: ...\n<code fix or command>\n\n"
+        ),
+        model="claude-haiku-4-5-20251001",
+        max_tokens=700,
+    )
+    if llm_fix:
+        artifacts.append({
+            "type":     "python",
+            "title":    "Winston's AI-Generated Code Fix",
+            "filename": "winston_ai_fix.py",
+            "content":  llm_fix,
+        })
+
     return {
         "specialist":       "winston_cole",
         "name":             "Winston Cole",
@@ -266,6 +329,30 @@ def _isabella_analyze(failures: list[dict]) -> dict[str, Any]:
                 "",
             ]
 
+    # LLM enhancement: targeted SQL for the exact failures
+    llm_sql = _llm(
+        system=(
+            "You are Isabella Nash, Systems Analyst for IEBC. "
+            "You write precise, safe SQL for Supabase (PostgreSQL 15). "
+            "Only use CREATE TABLE IF NOT EXISTS, CREATE INDEX IF NOT EXISTS, ALTER TABLE ADD COLUMN IF NOT EXISTS. "
+            "No destructive statements. Return only SQL with brief comments."
+        ),
+        user=(
+            f"These database-related test failures occurred:\n{json.dumps(mine, indent=2)}\n\n"
+            "Write the exact SQL statements needed to fix each failure. "
+            "Include a VERIFY SELECT after each fix."
+        ),
+        model="claude-haiku-4-5-20251001",
+        max_tokens=700,
+    )
+    if llm_sql:
+        artifacts.append({
+            "type":     "sql",
+            "title":    "Isabella's AI-Generated Schema Fix",
+            "filename": "isabella_ai_fix.sql",
+            "content":  llm_sql,
+        })
+
     return {
         "specialist":     "isabella_nash",
         "name":           "Isabella Nash",
@@ -372,6 +459,30 @@ def _alexander_analyze(failures: list[dict]) -> dict[str, Any]:
             ],
         },
     ]
+
+    # LLM enhancement: precise integration steps for exact failures
+    llm_config = _llm(
+        system=(
+            "You are Alexander Kane, Integration Engineer for IEBC. "
+            "You write exact, copy-paste-ready environment variable configs and API setup steps. "
+            "Be precise. Include the exact Render dashboard path, exact curl verification commands, "
+            "and how to generate any secrets. No filler."
+        ),
+        user=(
+            f"These API/auth/config test failures occurred:\n{json.dumps(mine, indent=2)}\n\n"
+            "Write the exact steps to fix each: which env vars to set, how to generate them, "
+            "how to set them on Render, and the exact curl command to verify each fix."
+        ),
+        model="claude-haiku-4-5-20251001",
+        max_tokens=700,
+    )
+    if llm_config:
+        artifacts.append({
+            "type":     "env",
+            "title":    "Alexander's AI-Generated Integration Fix",
+            "filename": "alexander_ai_fix.sh",
+            "content":  llm_config,
+        })
 
     return {
         "specialist":     "alexander_kane",
@@ -941,8 +1052,36 @@ def run_autonomous_mission(failures: list[dict], iteration: int = 1) -> dict[str
     except Exception:
         brief = "Tech audit unavailable — proceeding with test data only."
 
-    # Phase 3 — compose External Bond directive
-    directive = _build_mission_directive(classified, autofix, brief, iteration)
+    # Phase 3 — compose External Bond directive (LLM if available, template fallback)
+    env_status    = autofix.get("env_status", {})
+    fixed_summary = [f.get("action","") for f in autofix.get("fixed", [])]
+    manual_items  = [m.get("action","") for m in autofix.get("needs_manual", [])]
+    missing_env   = [k for k,v in env_status.items() if not v]
+
+    llm_directive = _llm(
+        system=(
+            "You are James Bond, IEBC Internal Consultant. "
+            "You write bond-to-bond directives: short, numbered, executable fix instructions "
+            "for a field operative (External Bond) who will run commands, push code, and execute SQL immediately. "
+            "Each FIX block must contain: exact command or SQL, exact verification step, and what to report back. "
+            "No investigation language. No 'consider' or 'check'. Use 'RUN', 'EXECUTE', 'PUSH', 'SET'."
+        ),
+        user=(
+            f"Iteration: {iteration}\n"
+            f"Test failures remaining:\n{json.dumps(classified, indent=2)}\n\n"
+            f"Already fixed internally: {fixed_summary}\n"
+            f"Still needs human/External Bond: {manual_items}\n"
+            f"Missing env vars on Render: {missing_env}\n"
+            f"Render API: https://three-lakes-logistics-api.onrender.com\n"
+            f"Repo: modom123/3-lakes-logistics (push to main)\n"
+            f"Daytona sandbox: {_DAYTONA_ID}\n\n"
+            "Write numbered FIX instructions. Each fix must be immediately executable by External Bond. "
+            "End with: POST /api/bond/report when all done."
+        ),
+        model="claude-sonnet-4-6",
+        max_tokens=1800,
+    )
+    directive = llm_directive if llm_directive else _build_mission_directive(classified, autofix, brief, iteration)
 
     # Phase 4 — send to External Bond
     ext_sent = False
