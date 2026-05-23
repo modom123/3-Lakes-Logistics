@@ -17,6 +17,7 @@ from .api import (
     atomic_ledger_router,
     bland_webhooks_router,
     bond_router,
+    brokers_router,
     carriers_router,
     clm_router,
     comms_public_router,
@@ -24,6 +25,8 @@ from .api import (
     compliance_router,
     dashboard_router,
     dat_router,
+    edi_router,
+    edi_public_router,
     fmcsa_router,
     memory_router,
     carrier_brain_router,
@@ -84,6 +87,7 @@ def _start_scheduler(app: FastAPI) -> None:
         )
         from .agents.memory import prune_interactions
         from .email.imap_poller import poll_all as poll_all_mailboxes
+        from .integrations.brokers import poll_all_rest_brokers
 
         scheduler = BackgroundScheduler(timezone="UTC")
 
@@ -106,6 +110,7 @@ def _start_scheduler(app: FastAPI) -> None:
         scheduler.add_job(fire_sms_campaign, CronTrigger(hour=14, minute=0), id="sms_outreach_daily", replace_existing=True)
         scheduler.add_job(fire_email_campaign, CronTrigger(hour=14, minute=30), id="email_outreach_daily", replace_existing=True)
         scheduler.add_job(fire_social_post, CronTrigger(day_of_week="mon", hour=13, minute=0), id="social_post_weekly", replace_existing=True)
+        scheduler.add_job(poll_all_rest_brokers, IntervalTrigger(minutes=15), id="broker_rest_poll", replace_existing=True)
 
         scheduler.start()
         app.state.scheduler = scheduler
@@ -179,6 +184,9 @@ def create_app() -> FastAPI:
     app.include_router(adobe_webhooks_router,  prefix="/api",              tags=["adobe"])
     app.include_router(adobe_intake_router,    prefix="/api",              tags=["adobe"])
     app.include_router(mailboxes_router,       prefix="/api",              tags=["mailboxes"])
+    app.include_router(brokers_router,         prefix="/api/brokers",      tags=["brokers"])
+    app.include_router(edi_router,             prefix="/api/edi",          tags=["edi"])
+    app.include_router(edi_public_router,      prefix="/api/edi",          tags=["edi"])
     app.include_router(studio_router,          prefix="/api",              tags=["studio"])
     app.include_router(health_router,                                      tags=["health"])
 

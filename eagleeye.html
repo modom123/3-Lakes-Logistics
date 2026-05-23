@@ -742,6 +742,8 @@ td.td-name{font-weight:600;color:var(--navy);}
   <div class="sb-section">
     <div class="sb-label">Contracts</div>
     <div class="sb-item" onclick="nav('clm')"><span class="sb-icon">📑</span> CLM Scanner <span class="sb-badge" id="clm-notif" style="display:none">●</span></div>
+    <div class="sb-item" onclick="nav('brokers')"><span class="sb-icon">🤝</span> Broker Registry <span class="sb-badge" id="broker-notif" style="display:none">●</span></div>
+    <div class="sb-item" onclick="nav('edi-log')"><span class="sb-icon">📡</span> EDI Log</div>
     <div class="sb-item" onclick="nav('vault')"><span class="sb-icon">🗄️</span> Document Vault</div>
     <div class="sb-item" onclick="nav('ledger')"><span class="sb-icon">📒</span> Atomic Ledger</div>
   </div>
@@ -1506,6 +1508,156 @@ td.td-name{font-weight:600;color:var(--navy);}
       <div class="card">
         <div class="card-hd"><div class="card-title">Top Scored Leads</div><span class="card-chip" id="lp-count-chip">Loading…</span></div>
         <div id="lp-table" class="scroll-box"><div class="loading"><div class="spin"></div>Loading leads…</div></div>
+      </div>
+    </div>
+
+    <!-- ── BROKER REGISTRY PAGE ── -->
+    <div class="page" id="page-brokers">
+      <div class="page-hdr">
+        <div class="page-hdr-l">
+          <h2>Broker Registry</h2>
+          <span style="font-size:12px;color:var(--muted)">Manage broker relationships, EDI &amp; REST integrations</span>
+        </div>
+        <div class="page-hdr-r">
+          <button class="btn-out" onclick="loadBrokers()">Refresh</button>
+          <button class="btn-navy" onclick="showBrokerIntakeModal()">+ Add Broker</button>
+        </div>
+      </div>
+
+      <!-- Stats row -->
+      <div class="metrics-row" style="margin-bottom:16px">
+        <div class="mc"><div class="mc-label">Total Brokers</div><div class="mc-val blue" id="broker-total">—</div></div>
+        <div class="mc"><div class="mc-label">Active</div><div class="mc-val green" id="broker-active">—</div></div>
+        <div class="mc"><div class="mc-label">Pending Approval</div><div class="mc-val orange" id="broker-pending">—</div></div>
+        <div class="mc"><div class="mc-label">EDI Connected</div><div class="mc-val gold" id="broker-edi">—</div></div>
+        <div class="mc"><div class="mc-label">REST Connected</div><div class="mc-val" style="color:#8b5cf6" id="broker-rest">—</div></div>
+      </div>
+
+      <!-- Filter bar -->
+      <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center">
+        <select id="broker-filter-status" onchange="loadBrokers()" style="padding:7px 10px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text);font-size:13px">
+          <option value="">All Statuses</option>
+          <option value="active">Active</option>
+          <option value="pending">Pending</option>
+          <option value="suspended">Suspended</option>
+          <option value="blacklisted">Blacklisted</option>
+        </select>
+        <select id="broker-filter-api" onchange="loadBrokers()" style="padding:7px 10px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text);font-size:13px">
+          <option value="">All Integration Types</option>
+          <option value="edi">EDI</option>
+          <option value="rest">REST API</option>
+          <option value="manual">Manual</option>
+        </select>
+        <input id="broker-search" oninput="filterBrokerTable()" placeholder="Search company or MC#…" style="padding:7px 12px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text);font-size:13px;flex:1;min-width:180px">
+      </div>
+
+      <!-- Broker table -->
+      <div class="card" style="padding:0;overflow:hidden">
+        <div style="overflow-x:auto">
+          <table style="width:100%;border-collapse:collapse;font-size:13px" id="broker-table">
+            <thead>
+              <tr style="background:var(--navy);color:#fff">
+                <th style="padding:10px 14px;text-align:left;font-weight:600">Company</th>
+                <th style="padding:10px 14px;text-align:left;font-weight:600">MC #</th>
+                <th style="padding:10px 14px;text-align:left;font-weight:600">State</th>
+                <th style="padding:10px 14px;text-align:left;font-weight:600">Payment</th>
+                <th style="padding:10px 14px;text-align:left;font-weight:600">Integration</th>
+                <th style="padding:10px 14px;text-align:center;font-weight:600">Score</th>
+                <th style="padding:10px 14px;text-align:center;font-weight:600">Avg Pay</th>
+                <th style="padding:10px 14px;text-align:center;font-weight:600">Loads</th>
+                <th style="padding:10px 14px;text-align:center;font-weight:600">Status</th>
+                <th style="padding:10px 14px;text-align:center;font-weight:600">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="broker-tbody">
+              <tr><td colspan="10" style="padding:32px;text-align:center;color:var(--muted)"><div class="spin" style="display:inline-block;width:20px;height:20px;border:2px solid var(--border);border-top-color:var(--gold);border-radius:50%;animation:spin .8s linear infinite"></div> Loading brokers…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── BROKER INTAKE MODAL ── -->
+    <div id="broker-intake-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:2000;display:none;align-items:center;justify-content:center">
+      <div style="background:var(--surface);border-radius:12px;padding:28px;width:540px;max-width:94vw;max-height:90vh;overflow-y:auto;border:1px solid var(--border)">
+        <h3 style="margin:0 0 18px;color:var(--text)">Register New Broker</h3>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div style="grid-column:1/-1"><label style="font-size:12px;color:var(--muted)">Company Name *</label><input class="fi" id="bi-company" placeholder="e.g. C.H. Robinson Worldwide"></div>
+          <div><label style="font-size:12px;color:var(--muted)">MC Number *</label><input class="fi" id="bi-mc" placeholder="MC-123456"></div>
+          <div><label style="font-size:12px;color:var(--muted)">DOT Number</label><input class="fi" id="bi-dot" placeholder="USDOT-123456"></div>
+          <div><label style="font-size:12px;color:var(--muted)">Contact Name</label><input class="fi" id="bi-contact-name" placeholder="Jane Smith"></div>
+          <div><label style="font-size:12px;color:var(--muted)">Contact Email</label><input class="fi" id="bi-contact-email" placeholder="jane@broker.com"></div>
+          <div><label style="font-size:12px;color:var(--muted)">Contact Phone</label><input class="fi" id="bi-contact-phone" placeholder="(555) 000-0000"></div>
+          <div><label style="font-size:12px;color:var(--muted)">City</label><input class="fi" id="bi-city" placeholder="Chicago"></div>
+          <div><label style="font-size:12px;color:var(--muted)">State</label><input class="fi" id="bi-state" placeholder="IL"></div>
+          <div><label style="font-size:12px;color:var(--muted)">Payment Terms</label>
+            <select class="fi" id="bi-payment-terms">
+              <option value="Net-30">Net-30</option>
+              <option value="Net-45">Net-45</option>
+              <option value="Net-15">Net-15</option>
+              <option value="QuickPay">QuickPay</option>
+              <option value="Net-7">Net-7</option>
+            </select>
+          </div>
+          <div><label style="font-size:12px;color:var(--muted)">QuickPay Discount %</label><input class="fi" id="bi-qp-pct" type="number" step="0.1" placeholder="e.g. 2.0"></div>
+          <div style="grid-column:1/-1"><label style="font-size:12px;color:var(--muted)">Notes</label><textarea class="fi" id="bi-notes" rows="2" placeholder="Any notes about this broker relationship…" style="resize:vertical"></textarea></div>
+        </div>
+        <div style="display:flex;gap:10px;margin-top:18px">
+          <button class="btn-navy" onclick="submitBrokerIntake()" style="flex:1">Register Broker</button>
+          <button class="btn-out" onclick="closeBrokerIntakeModal()">Cancel</button>
+        </div>
+        <div id="bi-result" style="margin-top:12px;font-size:13px;display:none"></div>
+      </div>
+    </div>
+
+    <!-- ── BROKER DETAIL MODAL ── -->
+    <div id="broker-detail-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:2000;align-items:center;justify-content:center">
+      <div style="background:var(--surface);border-radius:12px;padding:28px;width:680px;max-width:96vw;max-height:92vh;overflow-y:auto;border:1px solid var(--border)">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
+          <h3 style="margin:0;color:var(--text)" id="bd-title">Broker Detail</h3>
+          <button onclick="closeBrokerDetailModal()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted)">×</button>
+        </div>
+        <div id="bd-body">Loading…</div>
+      </div>
+    </div>
+
+    <!-- ── EDI LOG PAGE ── -->
+    <div class="page" id="page-edi-log">
+      <div class="page-hdr">
+        <div class="page-hdr-l">
+          <h2>EDI Transaction Log</h2>
+          <span style="font-size:12px;color:var(--muted)">All inbound/outbound X12 EDI transactions</span>
+        </div>
+        <div class="page-hdr-r">
+          <button class="btn-out" onclick="loadEDILog()">Refresh</button>
+        </div>
+      </div>
+      <div class="metrics-row" style="margin-bottom:16px">
+        <div class="mc"><div class="mc-label">Total Transactions</div><div class="mc-val blue" id="edi-total">—</div></div>
+        <div class="mc"><div class="mc-label">Inbound 204s</div><div class="mc-val green" id="edi-204-in">—</div></div>
+        <div class="mc"><div class="mc-label">Outbound 990s</div><div class="mc-val gold" id="edi-990-out">—</div></div>
+        <div class="mc"><div class="mc-label">Status 214s</div><div class="mc-val" style="color:#8b5cf6" id="edi-214-out">—</div></div>
+        <div class="mc"><div class="mc-label">Invoices 210</div><div class="mc-val orange" id="edi-210-out">—</div></div>
+      </div>
+      <div class="card" style="padding:0;overflow:hidden">
+        <div style="overflow-x:auto">
+          <table style="width:100%;border-collapse:collapse;font-size:13px">
+            <thead>
+              <tr style="background:var(--navy);color:#fff">
+                <th style="padding:10px 14px;text-align:left">Direction</th>
+                <th style="padding:10px 14px;text-align:left">Type</th>
+                <th style="padding:10px 14px;text-align:left">Load #</th>
+                <th style="padding:10px 14px;text-align:left">Broker</th>
+                <th style="padding:10px 14px;text-align:center">Status</th>
+                <th style="padding:10px 14px;text-align:left">Time</th>
+                <th style="padding:10px 14px;text-align:left">Error</th>
+              </tr>
+            </thead>
+            <tbody id="edi-log-tbody">
+              <tr><td colspan="7" style="padding:32px;text-align:center;color:var(--muted)">Click Refresh to load EDI log</td></tr>
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
 
@@ -2805,6 +2957,8 @@ function nav(id){
   if(id==='exec-command'){const n=document.getElementById('exec-esc-notif');if(n)n.style.display='none';ecRefreshDashboard();}
   if(id==='compliance'||id==='insurance')renderCarrierCompliance();
   if(id==='clm')loadCLMList();
+  if(id==='brokers')loadBrokers();
+  if(id==='edi-log')loadEDILog();
   if(id==='vault')loadVault();
   if(id==='ledger')loadLedger();
   if(id==='execution'){loadExecutionDomains();loadExecutionSteps();}
@@ -5851,6 +6005,305 @@ function startAgentRealtime() {
   }
 }
 
+// ════════════════════════════════════════════════════════════════════════════
+// BROKER REGISTRY
+// ════════════════════════════════════════════════════════════════════════════
+
+let _allBrokers = [];
+
+async function loadBrokers() {
+  const status = document.getElementById('broker-filter-status')?.value || '';
+  const apiType = document.getElementById('broker-filter-api')?.value || '';
+  let url = `${API}/brokers/?limit=500`;
+  if (status) url += `&status=${status}`;
+  if (apiType) url += `&api_type=${apiType}`;
+  try {
+    const r = await apiFetch(url);
+    _allBrokers = r.items || [];
+    renderBrokerTable(_allBrokers);
+    updateBrokerStats(_allBrokers);
+  } catch(e) {
+    document.getElementById('broker-tbody').innerHTML =
+      `<tr><td colspan="10" style="padding:24px;text-align:center;color:#ef4444">Failed to load brokers: ${e.message}</td></tr>`;
+  }
+}
+
+function renderBrokerTable(brokers) {
+  const tbody = document.getElementById('broker-tbody');
+  if (!brokers.length) {
+    tbody.innerHTML = '<tr><td colspan="10" style="padding:32px;text-align:center;color:var(--muted)">No brokers found. Click + Add Broker to register your first broker.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = brokers.map(b => {
+    const statusColor = {active:'#22c55e', pending:'#f59e0b', suspended:'#ef4444', blacklisted:'#7f1d1d'}[b.status] || '#94a3b8';
+    const apiChip = {edi:'<span style="background:#1e3a8a;color:#93c5fd;padding:2px 7px;border-radius:4px;font-size:11px;font-weight:600">EDI</span>',
+                     rest:'<span style="background:#4c1d95;color:#c4b5fd;padding:2px 7px;border-radius:4px;font-size:11px;font-weight:600">REST</span>',
+                     manual:'<span style="background:var(--navy);color:var(--muted);padding:2px 7px;border-radius:4px;font-size:11px">Manual</span>'}[b.api_type] || '';
+    const score = b.scorecard_score != null ? `<span style="color:${b.scorecard_score >= 7 ? '#22c55e' : b.scorecard_score >= 4 ? '#f59e0b' : '#ef4444'};font-weight:700">${b.scorecard_score.toFixed(1)}</span>` : '<span style="color:var(--muted)">—</span>';
+    const payDays = b.avg_pay_days != null ? `${b.avg_pay_days.toFixed(0)}d` : '—';
+    return `<tr style="border-bottom:1px solid var(--border);cursor:pointer" onclick="openBrokerDetail('${b.id}')" onmouseover="this.style.background='rgba(255,255,255,.04)'" onmouseout="this.style.background=''">
+      <td style="padding:10px 14px;font-weight:600;color:var(--text)">${b.company_name}</td>
+      <td style="padding:10px 14px;color:var(--muted);font-family:monospace;font-size:12px">${b.mc_number}</td>
+      <td style="padding:10px 14px;color:var(--muted)">${b.state || '—'}</td>
+      <td style="padding:10px 14px;color:var(--text)">${b.payment_terms || '—'}</td>
+      <td style="padding:10px 14px">${apiChip}</td>
+      <td style="padding:10px 14px;text-align:center">${score}</td>
+      <td style="padding:10px 14px;text-align:center;color:var(--muted)">${payDays}</td>
+      <td style="padding:10px 14px;text-align:center;color:var(--text)">${(b.total_loads||0).toLocaleString()}</td>
+      <td style="padding:10px 14px;text-align:center"><span style="color:${statusColor};font-size:11px;font-weight:700;text-transform:uppercase">${b.status}</span></td>
+      <td style="padding:10px 14px;text-align:center">
+        ${b.status === 'pending' ? `<button onclick="event.stopPropagation();approveBroker('${b.id}','${b.company_name}')" style="padding:4px 10px;font-size:11px;background:#22c55e;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:600">Approve</button>` : ''}
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function updateBrokerStats(brokers) {
+  document.getElementById('broker-total').textContent   = brokers.length;
+  document.getElementById('broker-active').textContent  = brokers.filter(b => b.status === 'active').length;
+  document.getElementById('broker-pending').textContent = brokers.filter(b => b.status === 'pending').length;
+  document.getElementById('broker-edi').textContent     = brokers.filter(b => b.api_type === 'edi').length;
+  document.getElementById('broker-rest').textContent    = brokers.filter(b => b.api_type === 'rest').length;
+}
+
+function filterBrokerTable() {
+  const q = (document.getElementById('broker-search')?.value || '').toLowerCase();
+  if (!q) { renderBrokerTable(_allBrokers); return; }
+  renderBrokerTable(_allBrokers.filter(b =>
+    (b.company_name||'').toLowerCase().includes(q) ||
+    (b.mc_number||'').toLowerCase().includes(q) ||
+    (b.contact_name||'').toLowerCase().includes(q)
+  ));
+}
+
+async function approveBroker(brokerId, name) {
+  if (!confirm(`Approve ${name} as an active broker?`)) return;
+  try {
+    await apiFetch(`${API}/brokers/${brokerId}/approve`, {method:'POST'});
+    pushNotif(`Broker approved: ${name}`, 'success');
+    loadBrokers();
+  } catch(e) { pushNotif(`Approval failed: ${e.message}`, 'error'); }
+}
+
+async function openBrokerDetail(brokerId) {
+  const modal = document.getElementById('broker-detail-modal');
+  const body  = document.getElementById('bd-body');
+  modal.style.display = 'flex';
+  body.innerHTML = '<div style="padding:40px;text-align:center"><div class="spin" style="display:inline-block;width:24px;height:24px;border:2px solid var(--border);border-top-color:var(--gold);border-radius:50%;animation:spin .8s linear infinite"></div> Loading…</div>';
+  try {
+    const b = await apiFetch(`${API}/brokers/${brokerId}`);
+    document.getElementById('bd-title').textContent = b.company_name;
+    const statusColor = {active:'#22c55e', pending:'#f59e0b', suspended:'#ef4444', blacklisted:'#7f1d1d'}[b.status] || '#94a3b8';
+    const agtHtml = (b.recent_edi||[]).slice(0,10).map(e =>
+      `<tr style="border-bottom:1px solid var(--border)">
+        <td style="padding:6px 10px"><span style="color:${e.direction==='inbound'?'#22c55e':'#60a5fa'}">${e.direction}</span></td>
+        <td style="padding:6px 10px;font-weight:700">${e.transaction_set}</td>
+        <td style="padding:6px 10px;font-family:monospace;font-size:12px">${e.load_number||'—'}</td>
+        <td style="padding:6px 10px"><span style="color:${e.status==='processed'||e.status==='sent'?'#22c55e':e.status==='failed'?'#ef4444':'#f59e0b'}">${e.status}</span></td>
+        <td style="padding:6px 10px;font-size:11px;color:var(--muted)">${new Date(e.created_at).toLocaleString()}</td>
+      </tr>`
+    ).join('') || '<tr><td colspan="5" style="padding:12px;text-align:center;color:var(--muted)">No EDI transactions yet</td></tr>';
+
+    const agrHtml = (b.agreements||[]).map(a =>
+      `<div style="padding:10px;border:1px solid var(--border);border-radius:6px;margin-bottom:8px">
+        <span style="font-weight:600;color:var(--text)">${a.agreement_type?.replace(/_/g,' ')}</span>
+        <span style="float:right;color:${a.status==='active'?'#22c55e':'#f59e0b'};font-size:11px;font-weight:700;text-transform:uppercase">${a.status}</span>
+        <div style="font-size:12px;color:var(--muted);margin-top:4px">Effective: ${a.effective_date||'—'} · Expires: ${a.expiration_date||'—'}</div>
+      </div>`
+    ).join('') || '<div style="color:var(--muted);font-size:13px">No agreements uploaded yet. Upload via CLM Scanner.</div>';
+
+    body.innerHTML = `
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
+        <div>
+          <div style="font-size:12px;color:var(--muted)">MC Number</div><div style="font-family:monospace;font-weight:600">${b.mc_number}</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:8px">DOT Number</div><div>${b.dot_number||'—'}</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:8px">Contact</div><div>${b.contact_name||'—'} · ${b.contact_email||''} · ${b.contact_phone||''}</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:8px">Location</div><div>${b.city||''}${b.state?', '+b.state:''}</div>
+        </div>
+        <div>
+          <div style="font-size:12px;color:var(--muted)">Status</div><div style="color:${statusColor};font-weight:700;text-transform:uppercase">${b.status}</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:8px">Payment Terms</div><div>${b.payment_terms||'—'}</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:8px">Integration</div><div>${b.api_type?.toUpperCase()||'MANUAL'}</div>
+          ${b.edi_partner_id ? `<div style="font-size:12px;color:var(--muted);margin-top:8px">EDI Partner ID</div><div style="font-family:monospace">${b.edi_partner_id}</div>` : ''}
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px">
+        <div style="background:var(--navy);border-radius:8px;padding:12px;text-align:center">
+          <div style="font-size:11px;color:var(--muted)">Score</div>
+          <div style="font-size:22px;font-weight:700;color:${b.scorecard_score>=7?'#22c55e':b.scorecard_score>=4?'#f59e0b':'#ef4444'}">${b.scorecard_score!=null?b.scorecard_score.toFixed(1):'—'}</div>
+        </div>
+        <div style="background:var(--navy);border-radius:8px;padding:12px;text-align:center">
+          <div style="font-size:11px;color:var(--muted)">Avg Pay Days</div>
+          <div style="font-size:22px;font-weight:700;color:var(--gold)">${b.avg_pay_days!=null?b.avg_pay_days.toFixed(0)+'d':'—'}</div>
+        </div>
+        <div style="background:var(--navy);border-radius:8px;padding:12px;text-align:center">
+          <div style="font-size:11px;color:var(--muted)">Total Loads</div>
+          <div style="font-size:22px;font-weight:700;color:var(--text)">${(b.total_loads||0).toLocaleString()}</div>
+        </div>
+        <div style="background:var(--navy);border-radius:8px;padding:12px;text-align:center">
+          <div style="font-size:11px;color:var(--muted)">Dispute Rate</div>
+          <div style="font-size:22px;font-weight:700;color:${b.dispute_rate_pct>5?'#ef4444':b.dispute_rate_pct>2?'#f59e0b':'#22c55e'}">${b.dispute_rate_pct!=null?b.dispute_rate_pct.toFixed(1)+'%':'—'}</div>
+        </div>
+      </div>
+      <div style="margin-bottom:20px">
+        <div style="font-weight:600;color:var(--text);margin-bottom:8px">Broker Agreements</div>
+        ${agrHtml}
+      </div>
+      <div style="margin-bottom:20px">
+        <div style="font-weight:600;color:var(--text);margin-bottom:8px">Recent EDI Transactions</div>
+        <table style="width:100%;border-collapse:collapse;font-size:12px">
+          <thead><tr style="background:var(--navy);color:#fff">
+            <th style="padding:6px 10px;text-align:left">Direction</th>
+            <th style="padding:6px 10px;text-align:left">Type</th>
+            <th style="padding:6px 10px;text-align:left">Load #</th>
+            <th style="padding:6px 10px;text-align:left">Status</th>
+            <th style="padding:6px 10px;text-align:left">Time</th>
+          </tr></thead>
+          <tbody>${agtHtml}</tbody>
+        </table>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        ${b.status==='pending' ? `<button class="btn-navy" onclick="approveBroker('${b.id}','${b.company_name}');closeBrokerDetailModal()">Approve Broker</button>` : ''}
+        ${b.status==='active'  ? `<button onclick="setBrokerStatus('${b.id}','suspended');closeBrokerDetailModal()" style="padding:8px 16px;background:#ef4444;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:600">Suspend</button>` : ''}
+        ${b.status!=='blacklisted' ? `<button onclick="setBrokerStatus('${b.id}','blacklisted');closeBrokerDetailModal()" style="padding:8px 16px;background:#7f1d1d;color:#fca5a5;border:none;border-radius:6px;cursor:pointer;font-weight:600">Blacklist</button>` : ''}
+      </div>`;
+  } catch(e) {
+    body.innerHTML = `<div style="color:#ef4444;padding:20px">Error loading broker: ${e.message}</div>`;
+  }
+}
+
+function closeBrokerDetailModal() {
+  document.getElementById('broker-detail-modal').style.display = 'none';
+}
+
+async function setBrokerStatus(brokerId, newStatus) {
+  try {
+    await apiFetch(`${API}/brokers/${brokerId}/status`, {method:'PATCH', body:JSON.stringify({status:newStatus})});
+    pushNotif(`Broker status → ${newStatus}`, newStatus==='active'?'success':'warn');
+    loadBrokers();
+  } catch(e) { pushNotif(`Status update failed: ${e.message}`, 'error'); }
+}
+
+function showBrokerIntakeModal() {
+  document.getElementById('broker-intake-modal').style.display = 'flex';
+}
+function closeBrokerIntakeModal() {
+  document.getElementById('broker-intake-modal').style.display = 'none';
+  ['bi-company','bi-mc','bi-dot','bi-contact-name','bi-contact-email','bi-contact-phone','bi-city','bi-state','bi-notes','bi-qp-pct'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  const r = document.getElementById('bi-result');
+  if (r) { r.style.display = 'none'; r.textContent = ''; }
+}
+
+async function submitBrokerIntake() {
+  const company = document.getElementById('bi-company')?.value?.trim();
+  const mc      = document.getElementById('bi-mc')?.value?.trim();
+  if (!company || !mc) { alert('Company name and MC number are required.'); return; }
+  const payload = {
+    company_name:           company,
+    mc_number:              mc,
+    dot_number:             document.getElementById('bi-dot')?.value?.trim() || null,
+    contact_name:           document.getElementById('bi-contact-name')?.value?.trim() || null,
+    contact_email:          document.getElementById('bi-contact-email')?.value?.trim() || null,
+    contact_phone:          document.getElementById('bi-contact-phone')?.value?.trim() || null,
+    city:                   document.getElementById('bi-city')?.value?.trim() || null,
+    state:                  document.getElementById('bi-state')?.value?.trim() || null,
+    payment_terms:          document.getElementById('bi-payment-terms')?.value || 'Net-30',
+    quick_pay_discount_pct: parseFloat(document.getElementById('bi-qp-pct')?.value) || null,
+    notes:                  document.getElementById('bi-notes')?.value?.trim() || null,
+  };
+  try {
+    const r = await apiFetch(`${API}/brokers/intake`, {method:'POST', body:JSON.stringify(payload)});
+    const res = document.getElementById('bi-result');
+    if (r.ok) {
+      res.style.display = 'block';
+      res.style.color = '#22c55e';
+      res.textContent = `Broker registered! ID: ${r.broker_id} · Status: ${r.status}`;
+      pushNotif(`Broker registered: ${company}`, 'success');
+      setTimeout(() => { closeBrokerIntakeModal(); loadBrokers(); }, 1800);
+    } else {
+      res.style.display = 'block';
+      res.style.color = '#f59e0b';
+      res.textContent = r.message || 'Broker already registered.';
+    }
+  } catch(e) {
+    const res = document.getElementById('bi-result');
+    res.style.display = 'block'; res.style.color = '#ef4444';
+    res.textContent = `Error: ${e.message}`;
+  }
+}
+
+// ── EDI Log page ──────────────────────────────────────────────────────────────
+async function loadEDILog() {
+  try {
+    const r = await apiFetch(`${API}/edi/log?limit=200`);
+    const items = r.items || [];
+    document.getElementById('edi-total').textContent     = items.length;
+    document.getElementById('edi-204-in').textContent    = items.filter(e => e.transaction_set==='204' && e.direction==='inbound').length;
+    document.getElementById('edi-990-out').textContent   = items.filter(e => e.transaction_set==='990').length;
+    document.getElementById('edi-214-out').textContent   = items.filter(e => e.transaction_set==='214').length;
+    document.getElementById('edi-210-out').textContent   = items.filter(e => e.transaction_set==='210').length;
+
+    const tbody = document.getElementById('edi-log-tbody');
+    if (!items.length) {
+      tbody.innerHTML = '<tr><td colspan="7" style="padding:32px;text-align:center;color:var(--muted)">No EDI transactions yet</td></tr>';
+      return;
+    }
+    tbody.innerHTML = items.map(e => {
+      const statusColor = {processed:'#22c55e', sent:'#22c55e', received:'#f59e0b', failed:'#ef4444', acked:'#60a5fa'}[e.status]||'#94a3b8';
+      const dirColor = e.direction === 'inbound' ? '#22c55e' : '#60a5fa';
+      return `<tr style="border-bottom:1px solid var(--border)">
+        <td style="padding:8px 14px;color:${dirColor};font-weight:600">${e.direction}</td>
+        <td style="padding:8px 14px;font-weight:700;font-size:14px">${e.transaction_set}</td>
+        <td style="padding:8px 14px;font-family:monospace;font-size:12px">${e.load_number||'—'}</td>
+        <td style="padding:8px 14px;font-size:12px;color:var(--muted)">${e.broker_id||'—'}</td>
+        <td style="padding:8px 14px;text-align:center"><span style="color:${statusColor};font-weight:600;font-size:11px;text-transform:uppercase">${e.status}</span></td>
+        <td style="padding:8px 14px;font-size:12px;color:var(--muted)">${new Date(e.created_at).toLocaleString()}</td>
+        <td style="padding:8px 14px;font-size:11px;color:#ef4444">${e.error_detail||''}</td>
+      </tr>`;
+    }).join('');
+  } catch(e) {
+    document.getElementById('edi-log-tbody').innerHTML =
+      `<tr><td colspan="7" style="padding:24px;text-align:center;color:#ef4444">Failed: ${e.message}</td></tr>`;
+  }
+}
+
+// ── Broker Realtime subscription ──────────────────────────────────────────────
+function startBrokerRealtime() {
+  try {
+    sb.channel('broker-live')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'brokers' }, payload => {
+        const b = payload.new || {};
+        pushNotif(`New broker registered: ${b.company_name || b.mc_number} (${b.status})`, 'info');
+        const notif = document.getElementById('broker-notif');
+        if (notif) { notif.style.display = 'inline'; }
+        if (document.getElementById('page-brokers')?.classList.contains('active')) loadBrokers();
+      })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'brokers' }, payload => {
+        const b = payload.new || {};
+        if (b.status === 'active' && payload.old?.status === 'pending') {
+          pushNotif(`Broker approved: ${b.company_name}`, 'success');
+        }
+        if (document.getElementById('page-brokers')?.classList.contains('active')) loadBrokers();
+      })
+      .subscribe();
+
+    sb.channel('edi-live')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'broker_edi_log' }, payload => {
+        const e = payload.new || {};
+        if (e.direction === 'inbound' && e.transaction_set === '204') {
+          pushNotif(`EDI 204 received — Load ${e.load_number || 'unknown'}`, 'info');
+          if (document.getElementById('page-edi-log')?.classList.contains('active')) loadEDILog();
+        }
+      })
+      .subscribe();
+  } catch(err) {
+    console.warn('broker realtime unavailable:', err);
+  }
+}
+
 // ── Supabase Realtime: contracts table (CLM live updates) ─────────────────────
 function startCLMRealtime() {
   try {
@@ -6203,6 +6656,7 @@ async function loadIntegrationStatus() {
 // ── Init realtime + seed notifications ───────────────────────────────────────
 startAgentRealtime();
 startCLMRealtime();
+startBrokerRealtime();
 seedRecentNotifs();
 
 // ══════════════════════════════════════════════════════
