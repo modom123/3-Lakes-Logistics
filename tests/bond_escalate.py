@@ -117,18 +117,23 @@ def main() -> None:
         gaps = "unknown"
         print("   Bond API offline — continuing to Outside Bond")
 
-    # ── 2. Detect error type and route to Outside Bond ────────────────────────
-    task, error_snippet = _detect_task(phase)
-    print(f"\n[ Outside Bond — Task: {task} ]")
+    # ── 2. Pass full error context to Outside Bond — Qwen decides the task ──────
+    _, error_snippet = _detect_task(phase)
+    print(f"\n[ Outside Bond — Qwen reasoning on phase '{phase}' ]")
 
     ob = _post("/api/agents/outside_bond/run", {
-        "task":          task,
+        "task":          "auto",   # Qwen classifies
         "phase":         phase,
         "error_details": error_snippet,
         "context":       {},
     })
 
     if ob:
+        llm = ob.get("llm", "?")
+        reasoning = ob.get("reasoning", "")
+        print(f"   LLM engine: {llm}")
+        if reasoning:
+            print(f"   Reasoning: {reasoning}")
         if ob.get("automated"):
             print(f"   ✓ Automated fix applied: {ob.get('action')}")
             print(f"   Server IP: {ob.get('server_ip', '—')}")

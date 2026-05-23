@@ -100,6 +100,11 @@ class Settings(BaseSettings):
     # Claude AI — CLM contract scanner + autonomous agents
     anthropic_api_key: str = ""
 
+    # OpenRouter — low-cost LLM gateway (Qwen for Outside Bond reasoning)
+    # Get key at https://openrouter.ai/keys
+    openrouter_api_key: str = ""
+    openrouter_model: str = "qwen/qwen-2.5-72b-instruct"  # ~$0.00035/1K tokens
+
     # SendGrid — inbound email parsing for contract documents
     sendgrid_api_key: str = ""
     sendgrid_inbound_secret: str = ""
