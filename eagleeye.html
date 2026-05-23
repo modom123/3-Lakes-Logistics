@@ -2725,6 +2725,8 @@ function nav(id){
     const topbar=document.querySelector('.topbar');
     const top=(ticker?ticker.offsetHeight:0)+(topbar?topbar.offsetHeight:0);
     document.getElementById('page-bond').style.top=top+'px';
+    const content=document.querySelector('.content');
+    if(content) content.scrollTop=0;
   }
   if(id==='carriers'){const n=document.getElementById('carrier-notif');if(n)n.style.display='none';}
   if(id==='invoices'){const n=document.getElementById('invoice-notif');if(n)n.style.display='none';renderInvoices();}
@@ -7676,7 +7678,9 @@ if (typeof nav === 'function') {
 <div class="page" id="page-bond">
 <style>
 /* ── Bond Office ──────────────────────────────────────────────────────────── */
-#page-bond.active{position:fixed;top:93px;left:var(--sidebar-w);right:0;bottom:0;z-index:10;display:flex;flex-direction:column;overflow:hidden;background:var(--bg);}
+/* Suppress the pgIn slide-in animation — Bond is a fixed full-page overlay */
+#page-bond{animation:none;}
+#page-bond.active{position:fixed;top:93px;left:var(--sidebar-w);right:0;bottom:0;z-index:30;display:flex;flex-direction:column;overflow:hidden;background:var(--bg);}
 @media(max-width:768px){#page-bond.active{top:87px;left:0;}}
 .bo-wrap{display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden;background:var(--bg);}
 .bo-header{display:flex;align-items:center;justify-content:space-between;padding:14px 24px;background:var(--navy);flex-shrink:0;border-bottom:2px solid rgba(228,168,48,.3);}
@@ -7693,18 +7697,18 @@ if (typeof nav === 'function') {
 .bo-hdr-btn{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);color:rgba(255,255,255,.8);padding:5px 14px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;transition:background .15s;font-family:var(--ff-b);}
 .bo-hdr-btn:hover{background:rgba(228,168,48,.2);border-color:rgba(228,168,48,.4);color:var(--gold2);}
 /* Tab strip */
-.bo-tabs{display:flex;background:var(--navy2);border-bottom:1px solid rgba(228,168,48,.15);flex-shrink:0;padding:0 20px;gap:2px;}
+.bo-tabs{display:flex;background:var(--navy2);border-bottom:1px solid rgba(228,168,48,.15);flex-shrink:0;padding:0 20px;gap:2px;overflow-x:auto;}
 .bo-tab{background:transparent;border:none;border-bottom:2px solid transparent;padding:10px 18px;font-size:12px;font-weight:600;color:rgba(255,255,255,.45);cursor:pointer;letter-spacing:.3px;transition:color .15s,border-color .15s;font-family:var(--ff-b);white-space:nowrap;display:flex;align-items:center;gap:6px;}
 .bo-tab:hover{color:rgba(255,255,255,.7);}
 .bo-tab.active{color:var(--gold2);border-bottom-color:var(--gold2);}
 .bo-tab-badge{background:var(--red);color:#fff;font-size:9px;font-weight:800;border-radius:10px;padding:1px 6px;font-family:var(--ff-m);}
-/* Tab panes */
-.bo-body{flex:1;min-height:0;overflow:hidden;position:relative;}
-.bo-pane{display:none;height:100%;overflow:hidden;}
-.bo-pane.active{display:flex;flex-direction:column;}
+/* Tab panes — use flex:1 chain so height resolves without height:100% fragility */
+.bo-body{flex:1;min-height:0;overflow:hidden;position:relative;display:flex;flex-direction:column;}
+.bo-pane{display:none;overflow:hidden;}
+.bo-pane.active{display:flex;flex-direction:column;flex:1;min-height:0;}
 
 /* ── Situation Room ───────────────────────────────────────────────────────── */
-.bo-sitroom{display:flex;flex-direction:column;height:100%;overflow:hidden;padding:20px 24px;gap:16px;}
+.bo-sitroom{display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden;padding:20px 24px;gap:16px;}
 .bo-kpi-strip{display:flex;gap:12px;flex-shrink:0;flex-wrap:wrap;}
 .bo-kpi{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 18px;flex:1;min-width:110px;display:flex;flex-direction:column;gap:3px;}
 .bo-kpi-n{font-size:28px;font-weight:900;line-height:1;color:var(--text);}
@@ -7736,9 +7740,11 @@ if (typeof nav === 'function') {
 .bo-brief-empty-text{font-family:var(--ff-m);font-size:10px;letter-spacing:1px;text-align:center;}
 .bo-brief-run-btn{background:var(--gold2);color:#000;border:none;padding:8px 20px;border-radius:6px;font-weight:700;font-size:12px;cursor:pointer;margin-top:6px;}
 .bo-brief-run-btn:hover{background:var(--gold3);}
+/* Brief content area must flex-grow to fill the panel below the header */
+#bo-brief-content{flex:1;overflow:hidden;display:flex;flex-direction:column;}
 
 /* ── Intel Channel ────────────────────────────────────────────────────────── */
-.bo-channel{display:flex;flex-direction:column;height:100%;overflow:hidden;}
+.bo-channel{display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden;}
 .bo-ch-statusbar{display:flex;align-items:center;gap:16px;padding:10px 20px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;flex-wrap:wrap;}
 .bo-ch-stat{display:flex;align-items:center;gap:5px;font-family:var(--ff-m);font-size:10px;color:var(--muted);}
 .bo-ch-stat strong{color:var(--text);}
@@ -7772,7 +7778,7 @@ if (typeof nav === 'function') {
 .bo-empty-text{font-family:var(--ff-m);font-size:10px;letter-spacing:1.2px;}
 
 /* ── Compose Directive ────────────────────────────────────────────────────── */
-.bo-compose{display:flex;height:100%;overflow:hidden;gap:0;}
+.bo-compose{display:flex;flex:1;min-height:0;overflow:hidden;gap:0;}
 .bo-compose-main{flex:1;display:flex;flex-direction:column;padding:20px 24px;gap:14px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--gold2) var(--bg);}
 .bo-compose-main::-webkit-scrollbar{width:5px;}
 .bo-compose-main::-webkit-scrollbar-thumb{background:var(--gold2);border-radius:3px;}
@@ -7797,7 +7803,7 @@ if (typeof nav === 'function') {
 .bo-hist-item strong{color:var(--text);}
 
 /* ── Audit Report ─────────────────────────────────────────────────────────── */
-.bo-audit{display:flex;flex-direction:column;height:100%;overflow:hidden;padding:20px 24px;gap:14px;}
+.bo-audit{display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden;padding:20px 24px;gap:14px;}
 .bo-audit-bar{display:flex;align-items:center;gap:12px;flex-shrink:0;flex-wrap:wrap;}
 .bo-audit-run-btn{background:var(--gold2);color:#000;border:none;padding:9px 22px;border-radius:6px;font-weight:800;font-size:12px;cursor:pointer;letter-spacing:.4px;}
 .bo-audit-run-btn:hover{background:var(--gold3);}
@@ -7817,6 +7823,18 @@ if (typeof nav === 'function') {
 .bo-gap-desc{font-size:11px;color:var(--muted);line-height:1.5;}
 .bo-directive-item{margin-bottom:8px;padding:8px 12px;border-radius:6px;background:var(--bg);border:1px solid var(--border);font-size:12px;color:var(--text);display:flex;gap:8px;align-items:flex-start;}
 .bo-directive-n{font-family:var(--ff-m);font-size:10px;font-weight:700;color:var(--gold2);flex-shrink:0;}
+
+/* ── Bond Office Responsive ───────────────────────────────────────────────── */
+@media(max-width:768px){
+  .bo-sit-grid{grid-template-columns:1fr;}
+  .bo-audit-grid{grid-template-columns:1fr;}
+  .bo-compose{flex-direction:column;}
+  .bo-compose-sidebar{width:100%;border-left:none;border-top:1px solid var(--border);max-height:260px;flex-shrink:0;}
+  .bo-header{padding:10px 14px;}
+  .bo-sub{display:none;}
+  .bo-sitroom{padding:12px 14px;gap:10px;}
+  .bo-audit{padding:12px 14px;}
+}
 </style>
 
 <div class="bo-wrap">
@@ -8346,8 +8364,8 @@ function boRenderBrief(d) {
   const gaps  = d.tech_gaps?.length||0;
   const score = d.health_score ?? null;
   brief.innerHTML = `
-    <div style="display:flex;flex-direction:column;height:100%;">
-      ${score!=null?`<div style="padding:10px 16px 0;display:flex;gap:10px;flex-wrap:wrap;">
+    <div style="display:flex;flex-direction:column;flex:1;min-height:0;">
+      ${score!=null?`<div style="padding:10px 16px 0;display:flex;gap:10px;flex-wrap:wrap;flex-shrink:0;">
         <div style="font-family:var(--ff-m);font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;">Health Score</div>
         <div style="font-family:var(--ff-m);font-size:11px;font-weight:700;color:${score>70?'var(--green)':score>40?'var(--orange)':'var(--red)'};">${score}/100</div>
         <div style="font-family:var(--ff-m);font-size:9px;color:var(--muted);margin-left:8px;text-transform:uppercase;letter-spacing:.8px;">Tech Gaps</div>
