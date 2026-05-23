@@ -388,6 +388,23 @@ def run(payload: dict[str, Any]) -> dict[str, Any]:
         coverage2 = _agent_coverage_report(intel2["by_agent"])
         wakeup_report["_after_wakeup_silent_count"] = str(coverage2["silent_agent_count"])
 
+    # ── Route actionable external gaps to Outside Bond ────────────────────────
+    outside_bond_report: dict[str, Any] = {}
+    if remediate:
+        try:
+            from . import outside_bond as _ob
+            for gap in gaps:
+                fix = gap.get("fix", "").lower()
+                if "bland" in fix or "allowlist" in fix or "ip allowlist" in fix:
+                    outside_bond_report["bland_ai_allowlist"] = _ob.run({
+                        "task": "bland_ai_allowlist",
+                        "phase": scope,
+                        "error_details": gap.get("gap", ""),
+                    })
+                    break
+        except Exception:
+            pass
+
     report = {
         "consultant":    "James Bond",
         "firm":          _FIRM,
@@ -398,9 +415,10 @@ def run(payload: dict[str, Any]) -> dict[str, Any]:
         "coverage":      coverage,
         "lead_pipeline": pipeline,
         "tech_gaps":     gaps,
-        "directives":    directives,
+        "directives":      directives,
         "executive_brief": brief,
-        "remediation":   wakeup_report,
+        "remediation":     wakeup_report,
+        "outside_bond":    outside_bond_report,
     }
 
     mem.remember(
