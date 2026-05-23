@@ -13,11 +13,15 @@ from datetime import datetime, timezone
 from typing import Any
 
 from ..logging_service import log_agent
+from ..settings import get_settings
 from ..supabase_client import get_supabase
 from . import memory as mem
 
 _NAME = "bond_courier"
-_DAYTONA_SANDBOX_ID = "2a50d3c2-f813-49c0-8dec-f9248581c5c6"
+
+
+def _daytona_id() -> str:
+    return get_settings().daytona_sandbox_id
 
 
 def send_directive(
@@ -33,7 +37,7 @@ def send_directive(
         "content":      content,
         "priority":     priority,
         "status":       "pending",
-        "metadata":     metadata or {"sandbox_id": _DAYTONA_SANDBOX_ID},
+        "metadata":     metadata or {"sandbox_id": _daytona_id()},
     }
     result = sb.table("bond_channel").insert(row).execute()
     inserted = result.data[0] if result.data else {}
@@ -113,7 +117,7 @@ def run(payload: dict[str, Any]) -> dict[str, Any]:
         return {
             "agent":            _NAME,
             "action":           "status",
-            "daytona_sandbox":  _DAYTONA_SANDBOX_ID,
+            "daytona_sandbox":  _daytona_id(),
             "total_messages":   len(rows),
             "pending_outbound": pending_out,
             "unread_inbound":   unread_in,

@@ -97,6 +97,9 @@ class Settings(BaseSettings):
     redis_url: str = ""
     backup_api_url: str = ""
 
+    # Daytona — External Bond sandbox workspace
+    daytona_sandbox_id: str = "2a50d3c2-f813-49c0-8dec-f9248581c5c6"
+
     # Claude AI — CLM contract scanner + autonomous agents
     anthropic_api_key: str = ""
 

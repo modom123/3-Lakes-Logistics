@@ -22,10 +22,9 @@ from fastapi import APIRouter, Depends, Header, HTTPException
 from pydantic import BaseModel
 
 from ..agents import bond_courier
+from ..settings import get_settings
 from ..supabase_client import get_supabase
 from .deps import require_bearer
-
-_DAYTONA_ID = "2a50d3c2-f813-49c0-8dec-f9248581c5c6"
 
 
 def _require_bond_key(x_bond_key: str | None = Header(default=None)) -> None:
@@ -122,7 +121,7 @@ def external_report(body: ReportIn) -> dict:
         "status":       "pending",
         "metadata":     {
             **(body.metadata or {}),
-            "daytona_id": body.daytona_id or _DAYTONA_ID,
+            "daytona_id": body.daytona_id or get_settings().daytona_sandbox_id,
         },
     }
     result = sb.table("bond_channel").insert(row).execute()

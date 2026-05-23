@@ -21,11 +21,15 @@ from typing import Any
 import httpx
 
 from ..logging_service import log_agent
+from ..settings import get_settings
 from . import bond_courier
 from . import memory as mem
 
 _NAME = "technical_team"
-_DAYTONA_ID = "2a50d3c2-f813-49c0-8dec-f9248581c5c6"
+
+
+def _daytona_id() -> str:
+    return get_settings().daytona_sandbox_id
 
 
 # ── LLM helper ────────────────────────────────────────────────────────────────
@@ -440,7 +444,7 @@ def _run_alexander(failures: list[dict]) -> dict[str, Any]:
         "DOT_API_KEY=<socrata-app-token>   # free at data.transportation.gov",
         "",
         f"# ── Daytona sandbox ─────────────────────────────────────────────────",
-        f"# Sandbox ID: {_DAYTONA_ID}",
+        f"# Sandbox ID: {_daytona_id()}",
         "IEBC_API_URL=https://three-lakes-logistics-api.onrender.com",
         "BOND_API_KEY=<same-value-as-Render>",
         "",
@@ -456,7 +460,7 @@ def _run_alexander(failures: list[dict]) -> dict[str, Any]:
             "steps": [
                 "Run: python -c \"import secrets; print(secrets.token_hex(32))\"",
                 "Add BOND_API_KEY to Render Environment Variables",
-                f"Set IEBC_API_URL + BOND_API_KEY on Daytona sandbox ({_DAYTONA_ID})",
+                f"Set IEBC_API_URL + BOND_API_KEY on Daytona sandbox ({_daytona_id()})",
                 "Test: curl -H 'X-Bond-Key: <key>' <render-url>/api/bond/inbox",
             ],
         },
@@ -972,7 +976,7 @@ def _bond_coordinate(classified: list[dict], results: list[dict]) -> dict[str, A
         "  7. Re-run Test Suite — all 11 domains should pass",
         "",
         "EXTERNAL BOND DIRECTIVE:",
-        f"  Daytona sandbox {_DAYTONA_ID}:",
+        f"  Daytona sandbox {_daytona_id()}:",
         "  · Verify IEBC_API_URL points to the Render API",
         "  · Verify BOND_API_KEY matches the Render env var",
         "  · Run: curl $IEBC_API_URL/api/health/ping",
@@ -1406,7 +1410,7 @@ def _build_mission_directive(
         f"╚══════════════════════════════════════════════════════════════╝",
         f"",
         f"FROM:     James Bond · IEBC Internal · {ts}",
-        f"TO:       External Bond · Daytona {_DAYTONA_ID}",
+        f"TO:       External Bond · Daytona {_daytona_id()}",
         f"PRIORITY: {priority}",
         f"API:      {_API_BASE}",
         f"REPO:     https://github.com/{_REPO}",
@@ -1512,7 +1516,7 @@ def run_autonomous_mission(failures: list[dict], iteration: int = 1) -> dict[str
             f"Missing env vars on Render: {missing_env}\n"
             f"Render API: https://three-lakes-logistics-api.onrender.com\n"
             f"Repo: modom123/3-lakes-logistics (push to main)\n"
-            f"Daytona sandbox: {_DAYTONA_ID}\n\n"
+            f"Daytona sandbox: {_daytona_id()}\n\n"
             "Write numbered FIX instructions. Each fix must be immediately executable by External Bond. "
             "End with: POST /api/bond/report when all done."
         ),
@@ -1533,7 +1537,7 @@ def run_autonomous_mission(failures: list[dict], iteration: int = 1) -> dict[str
                 "iteration":       iteration,
                 "failure_count":   len(classified),
                 "internal_fixed":  len(autofix.get("fixed", [])),
-                "sandbox_id":      _DAYTONA_ID,
+                "sandbox_id":      _daytona_id(),
             },
         )
         ext_sent   = True
@@ -1570,7 +1574,7 @@ def run_autonomous_mission(failures: list[dict], iteration: int = 1) -> dict[str
         "external_bond": {
             "sent":       ext_sent,
             "message_id": ext_msg_id,
-            "sandbox_id": _DAYTONA_ID,
+            "sandbox_id": _daytona_id(),
         },
         "timestamp":    datetime.now(timezone.utc).isoformat(),
     }
