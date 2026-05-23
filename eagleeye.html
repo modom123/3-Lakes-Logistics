@@ -7826,16 +7826,94 @@ if (typeof nav === 'function') {
 .bo-directive-item{margin-bottom:8px;padding:8px 12px;border-radius:6px;background:var(--bg);border:1px solid var(--border);font-size:12px;color:var(--text);display:flex;gap:8px;align-items:flex-start;}
 .bo-directive-n{font-family:var(--ff-m);font-size:10px;font-weight:700;color:var(--gold2);flex-shrink:0;}
 
+/* ── Lucas Sterling Design Upgrade — Bond Office v2 ──────────────────────── */
+/* Ops-centre dark feel: wrap goes near-black */
+.bo-wrap{background:#080e1a;}
+/* Header: cinematic gradient + stronger gold border + depth shadow */
+.bo-header{background:linear-gradient(135deg,#0b1d40 0%,#081530 100%);border-bottom:2px solid rgba(228,168,48,.5);box-shadow:0 4px 24px rgba(0,0,0,.45);}
+/* Badge: inner glow */
+.bo-badge{border-color:rgba(228,168,48,.65);box-shadow:0 0 14px rgba(228,168,48,.22),inset 0 0 8px rgba(228,168,48,.06);}
+/* Tab strip: dark + higher-contrast active */
+.bo-tabs{background:#060d1c;border-bottom:1px solid rgba(228,168,48,.22);}
+.bo-tab.active{background:rgba(228,168,48,.07);text-shadow:0 0 10px rgba(228,168,48,.45);}
+/* KPI cards: top status stripe + tabular numbers */
+.bo-kpi{border-top:3px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);}
+.bo-kpi.ok{border-top-color:var(--green);}
+.bo-kpi.warn{border-top-color:var(--orange);}
+.bo-kpi.crit{border-top-color:var(--red);}
+.bo-kpi.gold{border-top-color:var(--gold2);}
+.bo-kpi-n{font-variant-numeric:tabular-nums;}
+/* Panels: lower-opacity surface on dark bg */
+.bo-intel-panel,.bo-brief-panel,.bo-audit-main,.bo-audit-side{background:rgba(255,255,255,.03);border-color:rgba(255,255,255,.1);}
+.bo-panel-hdr{background:rgba(255,255,255,.03);}
+/* Intel feed items: hover gold accent */
+.bo-intel-item{background:rgba(255,255,255,.03);border-color:rgba(255,255,255,.08);transition:border-color .15s,background .15s;}
+.bo-intel-item:hover{border-color:rgba(228,168,48,.45);background:rgba(228,168,48,.05);}
+/* Outbound bubbles: subtle gold tint */
+.bo-msg.out .bo-msg-bubble{background:linear-gradient(135deg,#0e1d3f 0%,#152040 100%);border:1px solid rgba(228,168,48,.25);}
+/* Channel statusbar: ops-centre dark */
+.bo-ch-statusbar{background:#060d1c;border-bottom-color:rgba(255,255,255,.1);}
+.bo-ch-stat strong{font-variant-numeric:tabular-nums;}
+/* Send button: depth + hover glow */
+.bo-send-btn{background:linear-gradient(135deg,#0b1d40,#101e3a);box-shadow:0 2px 10px rgba(228,168,48,.18);}
+.bo-send-btn:hover{background:rgba(228,168,48,.13);box-shadow:0 4px 20px rgba(228,168,48,.35);border-color:var(--gold2);}
+/* Audit run button: gold glow */
+.bo-audit-run-btn{box-shadow:0 2px 12px rgba(228,168,48,.3);letter-spacing:.5px;}
+.bo-audit-run-btn:hover:not(:disabled){box-shadow:0 4px 22px rgba(228,168,48,.55);}
+/* Gap items: slide-right hover */
+.bo-gap-item{transition:transform .12s,box-shadow .12s;}
+.bo-gap-item:hover{transform:translateX(3px);box-shadow:-3px 0 10px rgba(0,0,0,.18);}
+/* Directive items: hover accent */
+.bo-directive-item{transition:background .12s,border-color .12s;}
+.bo-directive-item:hover{background:rgba(228,168,48,.06);border-color:rgba(228,168,48,.3);}
+/* Brief body: slightly more readable */
+.bo-brief-body{font-size:12.5px;line-height:1.72;letter-spacing:.01em;}
+/* Connection dot: stronger live glow */
+.bo-conn-dot.live{box-shadow:0 0 10px var(--green),0 0 4px var(--green);}
+/* Template buttons: gold focus */
+.bo-tpl-btn:hover{background:rgba(228,168,48,.07);}
+/* Compose textarea focus: gold ring */
+.bo-textarea:focus{border-color:var(--gold2);box-shadow:0 0 0 2px rgba(228,168,48,.12);}
+
+/* ── UI Status Tab ────────────────────────────────────────────────────────── */
+.bo-uistatus{display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden;padding:20px 24px;gap:16px;}
+.bo-uistat-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;flex-shrink:0;}
+.bo-uistat-card{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:16px 18px;display:flex;flex-direction:column;gap:8px;}
+.bo-uistat-hd{display:flex;align-items:center;justify-content:space-between;}
+.bo-uistat-name{font-weight:800;font-size:13px;color:#fff;display:flex;align-items:center;gap:7px;}
+.bo-uistat-badge{font-family:var(--ff-m);font-size:9px;font-weight:700;letter-spacing:.8px;padding:2px 8px;border-radius:10px;border:1px solid;}
+.bo-uistat-score{font-family:var(--ff-h);font-size:38px;font-weight:900;line-height:1;font-variant-numeric:tabular-nums;}
+.bo-uistat-sublabel{font-family:var(--ff-m);font-size:9px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);margin-top:1px;}
+.bo-uistat-run{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);color:rgba(255,255,255,.8);padding:5px 14px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;font-family:var(--ff-b);transition:background .15s,border-color .15s;}
+.bo-uistat-run:hover{background:rgba(228,168,48,.15);border-color:rgba(228,168,48,.4);color:var(--gold2);}
+.bo-uistat-run:disabled{opacity:.4;cursor:not-allowed;}
+.bo-uistat-issues{flex:1;min-height:0;overflow:hidden;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.1);border-radius:10px;display:flex;flex-direction:column;}
+.bo-uistat-issues-hdr{padding:10px 14px;border-bottom:1px solid rgba(255,255,255,.08);font-weight:700;font-size:12px;color:var(--text);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+.bo-uistat-issues-body{flex:1;overflow-y:auto;padding:10px 14px;display:flex;flex-direction:column;gap:8px;scrollbar-width:thin;scrollbar-color:var(--gold2) transparent;}
+.bo-uiissue{padding:9px 12px;border-radius:7px;border-left:3px solid var(--border);background:rgba(255,255,255,.03);}
+.bo-uiissue.crit{border-left-color:var(--red);}
+.bo-uiissue.high{border-left-color:var(--orange);}
+.bo-uiissue.med{border-left-color:var(--gold2);}
+.bo-uiissue.ok{border-left-color:var(--green);}
+.bo-uiissue-label{font-weight:700;font-size:11px;color:var(--text);margin-bottom:2px;}
+.bo-uiissue-desc{font-size:10px;color:var(--muted);line-height:1.45;}
+.bo-clearance{font-family:var(--ff-h);font-size:22px;font-weight:900;letter-spacing:.5px;}
+.bo-clearance.pass{color:var(--green);}
+.bo-clearance.fail{color:var(--red);}
+.bo-clearance.cond{color:var(--orange);}
+
 /* ── Bond Office Responsive ───────────────────────────────────────────────── */
 @media(max-width:768px){
   .bo-sit-grid{grid-template-columns:1fr;}
   .bo-audit-grid{grid-template-columns:1fr;}
+  .bo-uistat-grid{grid-template-columns:1fr;}
   .bo-compose{flex-direction:column;}
   .bo-compose-sidebar{width:100%;border-left:none;border-top:1px solid var(--border);max-height:260px;flex-shrink:0;}
   .bo-header{padding:10px 14px;}
   .bo-sub{display:none;}
   .bo-sitroom{padding:12px 14px;gap:10px;}
   .bo-audit{padding:12px 14px;}
+  .bo-uistatus{padding:12px 14px;}
 }
 </style>
 
@@ -7865,6 +7943,7 @@ if (typeof nav === 'function') {
     <button class="bo-tab" id="botab-channel" onclick="boTab('channel')">💬 Intel Channel <span class="bo-tab-badge" id="bo-ch-badge" style="display:none">0</span></button>
     <button class="bo-tab" id="botab-compose" onclick="boTab('compose')">✉️ Compose</button>
     <button class="bo-tab" id="botab-audit" onclick="boTab('audit')">🔍 Audit Report</button>
+    <button class="bo-tab" id="botab-uistatus" onclick="boTab('uistatus')">🎨 UI Status <span class="bo-tab-badge" id="bo-ui-badge" style="display:none">!</span></button>
   </div>
 
   <!-- ── Tab Body ── -->
@@ -8073,6 +8152,87 @@ if (typeof nav === 'function') {
       </div>
     </div>
 
+    <!-- ════ UI STATUS ════ -->
+    <div class="bo-pane" id="bopane-uistatus">
+      <div class="bo-uistatus">
+
+        <!-- Agent score cards -->
+        <div class="bo-uistat-grid">
+
+          <!-- Lucas Sterling card -->
+          <div class="bo-uistat-card" id="bo-lucas-card">
+            <div class="bo-uistat-hd">
+              <div class="bo-uistat-name">
+                <div class="ec-avatar" style="width:30px;height:30px;font-size:12px;border-radius:7px;background:#012a1a;color:#06b6d4;display:flex;align-items:center;justify-content:center;font-weight:800;font-style:italic;flex-shrink:0;">LS</div>
+                Lucas Sterling
+                <span class="bo-uistat-badge" style="color:#06b6d4;border-color:rgba(6,182,212,.4);background:rgba(6,182,212,.1);">NODE 101</span>
+              </div>
+              <button class="bo-uistat-run" id="bo-lucas-run-btn" onclick="boRunLucasAudit()">▶ Run Audit</button>
+            </div>
+            <div style="display:flex;align-items:flex-end;gap:12px;">
+              <div>
+                <div class="bo-uistat-score" id="bo-lucas-score" style="color:#06b6d4;">—</div>
+                <div class="bo-uistat-sublabel">UI Health Score</div>
+              </div>
+              <div style="flex:1;min-width:0;">
+                <div style="font-size:10px;color:var(--muted);margin-bottom:3px;font-family:var(--ff-m);letter-spacing:.5px;">CRITICAL ISSUES</div>
+                <div style="font-size:20px;font-weight:900;color:var(--red);font-variant-numeric:tabular-nums;" id="bo-lucas-crit">—</div>
+              </div>
+              <div style="flex:1;min-width:0;">
+                <div style="font-size:10px;color:var(--muted);margin-bottom:3px;font-family:var(--ff-m);letter-spacing:.5px;">IMPROVEMENTS</div>
+                <div style="font-size:20px;font-weight:900;color:var(--gold2);font-variant-numeric:tabular-nums;" id="bo-lucas-impr">—</div>
+              </div>
+            </div>
+            <div id="bo-lucas-summary" style="font-size:11px;color:var(--muted);line-height:1.55;min-height:28px;font-style:italic;">Run audit to see Lucas's assessment.</div>
+            <div id="bo-lucas-ts" style="font-family:var(--ff-m);font-size:9px;color:rgba(255,255,255,.25);letter-spacing:.5px;">Never run</div>
+          </div>
+
+          <!-- Chloe Sinclair card -->
+          <div class="bo-uistat-card" id="bo-chloe-card">
+            <div class="bo-uistat-hd">
+              <div class="bo-uistat-name">
+                <div class="ec-avatar" style="width:30px;height:30px;font-size:12px;border-radius:7px;background:#1e0033;color:#a855f7;display:flex;align-items:center;justify-content:center;font-weight:800;font-style:italic;flex-shrink:0;">CS</div>
+                Chloe Sinclair
+                <span class="bo-uistat-badge" style="color:#a855f7;border-color:rgba(168,85,247,.4);background:rgba(168,85,247,.1);">NODE 128</span>
+              </div>
+              <button class="bo-uistat-run" id="bo-chloe-run-btn" onclick="boRunChloeQA()">▶ Run QA</button>
+            </div>
+            <div style="display:flex;align-items:flex-end;gap:12px;">
+              <div>
+                <div class="bo-clearance" id="bo-chloe-clearance" style="color:var(--muted);">—</div>
+                <div class="bo-uistat-sublabel">QA Clearance</div>
+              </div>
+              <div style="flex:1;min-width:0;">
+                <div style="font-size:10px;color:var(--muted);margin-bottom:3px;font-family:var(--ff-m);letter-spacing:.5px;">VIEWPORT ISSUES</div>
+                <div style="font-size:20px;font-weight:900;color:var(--orange);font-variant-numeric:tabular-nums;" id="bo-chloe-vp">—</div>
+              </div>
+              <div style="flex:1;min-width:0;">
+                <div style="font-size:10px;color:var(--muted);margin-bottom:3px;font-family:var(--ff-m);letter-spacing:.5px;">MOBILE FAILS</div>
+                <div style="font-size:20px;font-weight:900;color:var(--red);font-variant-numeric:tabular-nums;" id="bo-chloe-mob">—</div>
+              </div>
+            </div>
+            <div id="bo-chloe-notes" style="font-size:11px;color:var(--muted);line-height:1.55;min-height:28px;font-style:italic;">Run QA scan to see Chloe's verdict.</div>
+            <div id="bo-chloe-ts" style="font-family:var(--ff-m);font-size:9px;color:rgba(255,255,255,.25);letter-spacing:.5px;">Never run</div>
+          </div>
+        </div>
+
+        <!-- Issues panel -->
+        <div class="bo-uistat-issues">
+          <div class="bo-uistat-issues-hdr">
+            <span>📋 Lucas's Active Directives &amp; Chloe's Findings</span>
+            <span id="bo-uistat-issue-count" style="font-family:var(--ff-m);font-size:10px;color:var(--muted);">—</span>
+          </div>
+          <div class="bo-uistat-issues-body" id="bo-uistat-issues-body">
+            <div class="bo-brief-empty" style="padding:30px 0;">
+              <div class="bo-brief-empty-icon">🎨</div>
+              <div class="bo-brief-empty-text">RUN LUCAS AUDIT OR CHLOE QA TO SEE ISSUES</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
   </div><!-- /bo-body -->
 </div><!-- /bo-wrap -->
 </div>
@@ -8083,7 +8243,7 @@ if (typeof nav === 'function') {
 
 // ── Tab switching
 function boTab(id) {
-  ['sitroom','channel','compose','audit'].forEach(t => {
+  ['sitroom','channel','compose','audit','uistatus'].forEach(t => {
     document.getElementById('botab-'+t)?.classList.toggle('active', t===id);
     document.getElementById('bopane-'+t)?.classList.toggle('active', t===id);
   });
@@ -8091,6 +8251,7 @@ function boTab(id) {
   if (id==='sitroom')   boLoadSitRoom();
   if (id==='compose')   boLoadComposeHistory();
   if (id==='audit')     boRenderLastAudit();
+  if (id==='uistatus')  boLoadUIStatus();
 }
 
 function boRefreshAll() {
@@ -8443,6 +8604,101 @@ function boRenderAuditResults(d) {
     return _orig ? _orig(id) : undefined;
   };
 })();
+
+// ── UI Status Tab — Lucas Sterling & Chloe Sinclair ──────────────────────────
+async function boLoadUIStatus() {
+  // Pull from org memory (no re-run) — show cached results if available
+  try {
+    const [lm, cm] = await Promise.all([
+      apiFetch('/api/memory/lucas_sterling/last_ui_audit','GET').catch(()=>null),
+      apiFetch('/api/memory/chloe_sinclair/last_viewport_audit','GET').catch(()=>null),
+    ]);
+    if(lm?.value) _boRenderLucas(lm.value);
+    if(cm?.value) _boRenderChloe(cm.value);
+  } catch(e) { /* memory offline — show stale if any */ }
+}
+
+async function boRunLucasAudit() {
+  const btn = document.getElementById('bo-lucas-run-btn');
+  if(btn){ btn.disabled=true; btn.textContent='Running…'; }
+  try {
+    const d = await apiFetch('/api/agents/lucas_sterling/run','POST',{scope:'full'});
+    _boRenderLucas(d);
+    // clear the UI badge if clearance improves
+    document.getElementById('bo-ui-badge').style.display='none';
+  } catch(e) {
+    document.getElementById('bo-lucas-summary').textContent = 'Lucas offline: '+boEsc(e.message);
+  } finally {
+    if(btn){ btn.disabled=false; btn.textContent='▶ Run Audit'; }
+  }
+}
+
+async function boRunChloeQA() {
+  const btn = document.getElementById('bo-chloe-run-btn');
+  if(btn){ btn.disabled=true; btn.textContent='Scanning…'; }
+  try {
+    const d = await apiFetch('/api/agents/chloe_sinclair/run','POST',{scope:'full'});
+    _boRenderChloe(d);
+    if(d.escalate_to_lucas) {
+      document.getElementById('bo-ui-badge').style.display='';
+      document.getElementById('bo-ui-badge').textContent='!';
+    }
+  } catch(e) {
+    document.getElementById('bo-chloe-notes').textContent = 'Chloe offline: '+boEsc(e.message);
+  } finally {
+    if(btn){ btn.disabled=false; btn.textContent='▶ Run QA'; }
+  }
+}
+
+function _boRenderLucas(d) {
+  const score = d.health_score ?? '—';
+  const crit  = (d.critical_issues||[]).length;
+  const impr  = (d.improvements||[]).length;
+  const el = document.getElementById('bo-lucas-score');
+  if(el){ el.textContent=score; el.style.color = score>=85?'var(--green)':score>=65?'var(--orange)':'var(--red)'; }
+  const c=document.getElementById('bo-lucas-crit'); if(c) c.textContent=crit;
+  const i=document.getElementById('bo-lucas-impr'); if(i) i.textContent=impr;
+  const s=document.getElementById('bo-lucas-summary'); if(s) s.textContent=d.summary||'';
+  const ts=document.getElementById('bo-lucas-ts'); if(ts) ts.textContent=d.timestamp?'Last run: '+boFmtAge(d.timestamp):'';
+  _boMergeUIIssues();
+}
+
+function _boRenderChloe(d) {
+  const cl = (d.clearance||'').toUpperCase();
+  const clEl = document.getElementById('bo-chloe-clearance');
+  if(clEl){
+    clEl.textContent = cl||'—';
+    clEl.className = 'bo-clearance ' + (cl==='PASS'?'pass':cl==='FAIL'?'fail':'cond');
+  }
+  const vp=document.getElementById('bo-chloe-vp'); if(vp) vp.textContent=(d.viewport_issues||[]).length;
+  const mb=document.getElementById('bo-chloe-mob'); if(mb) mb.textContent=(d.mobile_failures||[]).length;
+  const n=document.getElementById('bo-chloe-notes'); if(n) n.textContent=d.qa_notes||'';
+  const ts=document.getElementById('bo-chloe-ts'); if(ts) ts.textContent=d.timestamp?'Last run: '+boFmtAge(d.timestamp):'';
+  _boMergeUIIssues();
+}
+
+function _boMergeUIIssues() {
+  // Combine Lucas directives + Chloe viewport issues into one list
+  const body = document.getElementById('bo-uistat-issues-body'); if(!body) return;
+  const items = [];
+  // Lucas directives from last stored data
+  try {
+    const lScore = parseInt(document.getElementById('bo-lucas-score')?.textContent)||0;
+    // pull directives from card summary — we show them on next audit render
+  } catch(e){}
+  // Chloe viewport issues
+  const vpCount = parseInt(document.getElementById('bo-chloe-vp')?.textContent)||0;
+  const mobCount = parseInt(document.getElementById('bo-chloe-mob')?.textContent)||0;
+  if(vpCount===0 && mobCount===0 && parseInt(document.getElementById('bo-lucas-crit')?.textContent)===0) {
+    body.innerHTML='<div class="bo-brief-empty" style="padding:20px 0;"><div class="bo-brief-empty-icon">✅</div><div class="bo-brief-empty-text">ALL CLEAR — NO CRITICAL ISSUES</div></div>';
+    document.getElementById('bo-uistat-issue-count').textContent='0 issues';
+    return;
+  }
+  document.getElementById('bo-uistat-issue-count').textContent=(vpCount+mobCount)+' issues';
+  body.innerHTML = '<div class="bo-uiissue med"><div class="bo-uiissue-label">📊 Lucas: '+document.getElementById('bo-lucas-crit')?.textContent+' critical, '+document.getElementById('bo-lucas-impr')?.textContent+' improvements</div><div class="bo-uiissue-desc">'+boEsc(document.getElementById('bo-lucas-summary')?.textContent||'')+'</div></div>'+
+    (vpCount?'<div class="bo-uiissue high"><div class="bo-uiissue-label">🖥️ Chloe: '+vpCount+' viewport issue(s)</div><div class="bo-uiissue-desc">Cross-browser rendering anomalies detected. Run Chloe QA for full details.</div></div>':'')+
+    (mobCount?'<div class="bo-uiissue crit"><div class="bo-uiissue-label">📱 Chloe: '+mobCount+' mobile failure(s)</div><div class="bo-uiissue-desc">Layout breaks detected on mobile breakpoints. Escalation to Lucas active.</div></div>':'');
+}
 
 // ── Legacy aliases (for test suite Bond escalation compatibility)
 window.bondLoadThread  = boLoadThread;
