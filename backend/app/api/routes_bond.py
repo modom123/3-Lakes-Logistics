@@ -11,7 +11,7 @@ External endpoints (X-Bond-Key auth) — called by External Bond on Daytona:
   GET  /bond/inbox               poll for pending IEBC directives
   POST /bond/report              post report / feedback / suggestion back
 
-Set BOND_API_KEY in Railway env vars. External Bond must pass the same
+Set BOND_API_KEY in Render environment variables. External Bond must pass the same
 value in the X-Bond-Key request header.
 """
 from __future__ import annotations
