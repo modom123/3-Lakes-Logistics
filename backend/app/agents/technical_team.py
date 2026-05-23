@@ -1,11 +1,12 @@
 """IEBC Technical Team — automated remediation system.
 
-Three specialists analyze test-suite failures and produce fix artifacts:
-  winston_cole     → diagnostic scripts, code-level fixes, endpoint debugging
-  isabella_nash    → schema analysis, SQL migrations, database fixes
-  alexander_kane   → API integration, environment config, credential setup
+Domain experts investigate test-suite failures using their live data access:
+  winston_carmichael  → Carrier + Fleet failures (active_carriers, loads tables)
+  isabella_cruz       → Leads failures (leads table, outreach pipeline)
+  alexander_wright    → Bond Channel + external API failures (FMCSA/DOT APIs)
+  katerina_rostova    → Health + Dashboard + Telemetry failures (SLA audit)
 
-Bond coordinates the team and can escalate to External Bond via bond_courier.
+Atlas orchestrates state. Bond coordinates and escalates to External Bond.
 
 Payload:
   action="remediate"   failures=[{domain, test_name, error}, ...]
@@ -63,20 +64,25 @@ def _llm(
         return None
 
 SPECIALISTS: dict[str, dict] = {
-    "winston_cole": {
-        "name":    "Winston Cole",
-        "role":    "Lead Test Engineer",
-        "handles": {"code_bug", "endpoint_error", "timeout", "response_shape"},
+    "winston_carmichael": {
+        "name":    "Winston Carmichael",
+        "role":    "VP Client Success",
+        "domains": {"Carriers", "Fleet"},
     },
-    "isabella_nash": {
-        "name":    "Isabella Nash",
-        "role":    "Systems Analyst",
-        "handles": {"schema_error", "missing_table", "data_shape", "database"},
+    "isabella_cruz": {
+        "name":    "Isabella Cruz",
+        "role":    "VP Omnichannel Outreach",
+        "domains": {"Leads"},
     },
-    "alexander_kane": {
-        "name":    "Alexander Kane",
-        "role":    "Integration Engineer",
-        "handles": {"api_key", "auth", "config", "connection", "env_var"},
+    "alexander_wright": {
+        "name":    "Alexander Wright",
+        "role":    "VP Market Intelligence",
+        "domains": {"Bond Channel"},
+    },
+    "katerina_rostova": {
+        "name":    "Katerina Rostova",
+        "role":    "Head of Process Automation",
+        "domains": {"Health", "Dashboard", "Telemetry"},
     },
 }
 
@@ -104,328 +110,321 @@ def _classify(test_name: str, domain: str, error: str) -> str:
     return "code_bug"
 
 
-def _assign(failure_type: str) -> str:
+def _assign(failure_type: str, domain: str = "") -> str:
+    """Assign by domain first — routes failures to the agent who owns that data."""
     for sid, info in SPECIALISTS.items():
-        if failure_type in info["handles"]:
+        if domain in info.get("domains", set()):
             return sid
-    return "winston_cole"
+    return "katerina_rostova"
 
 
-# ── Winston Cole — diagnostic scripts & code fixes ────────────────────────────
+# ── Winston Carmichael — Carrier & Fleet health ───────────────────────────────
 
-def _winston_analyze(failures: list[dict]) -> dict[str, Any]:
-    mine = [f for f in failures if f.get("specialist") == "winston_cole"]
+def _run_winston(failures: list[dict]) -> dict[str, Any]:
+    mine = [f for f in failures if f.get("specialist") == "winston_carmichael"]
     if not mine:
-        return {"specialist": "winston_cole", "status": "no_assignment", "artifacts": []}
+        return {"specialist": "winston_carmichael", "name": "Winston Carmichael",
+                "role": "VP Client Success", "status": "no_assignment", "artifacts": []}
 
-    # Build per-domain diagnostic checks
-    check_blocks: list[str] = []
-    for f in mine:
-        domain = f["domain"]
-        error  = f.get("error", "")
-        endpoint_map = {
-            "Health":        [
-                ('GET',  '/api/health/ping',    None),
-                ('GET',  '/api/health/full',    None),
-            ],
-            "Carriers":      [('GET', '/api/carriers/', None)],
-            "Fleet":         [('GET', '/api/fleet/',    None)],
-            "Leads":         [('GET', '/api/leads/',    None)],
-            "Telemetry":     [
-                ('GET',  '/api/telemetry/latest', None),
-                ('POST', '/api/telemetry/ping',   {
-                    "carrier_id": "test-001", "truck_id": "truck-001",
-                    "eld_provider": "samsara", "lat": 34.05, "lng": -118.24,
-                    "speed_mph": 55.0, "heading_deg": 270.0,
-                }),
-            ],
-            "Dashboard":     [('GET', '/api/dashboard/kpis', None)],
-            "Bond Channel":  [
-                ('GET', '/api/bond/thread', None),
-                ('GET', '/api/bond/status', None),
-            ],
-        }
-        for method, path, body in endpoint_map.get(domain, []):
-            if method == "GET":
-                check_blocks.append(
-                    f"r = requests.get(BASE + '{path}', headers=H)\n"
-                    f"print(f'{domain} {path}: {{r.status_code}} {{r.text[:300]}}')"
-                )
-            else:
-                check_blocks.append(
-                    f"r = requests.post(BASE + '{path}', headers=H, json={body!r})\n"
-                    f"print(f'{domain} {path}: {{r.status_code}} {{r.text[:300]}}')"
-                )
-
-    script = (
-        '"""Winston Cole — IEBC Diagnostic Script.\n'
-        'Run: python winston_diagnostic.py\n'
-        'Replace TOKEN with your Eagle Eye bearer token.\n"""\n'
-        "import requests\n\n"
-        "BASE = 'https://three-lakes-logistics-api.onrender.com'\n"
-        "H = {'Content-Type': 'application/json', 'Authorization': 'Bearer <YOUR_TOKEN>'}\n\n"
-        + "\n\n".join(check_blocks)
-        + "\n\nprint('\\n=== Winston diagnostic complete ===')\n"
-    )
+    # Call Winston's real carrier assessment from active_carriers + loads tables
+    real_data: dict[str, Any] = {}
+    real_data_error = ""
+    try:
+        from . import winston as winston_agent
+        real_data = winston_agent.assess_carriers()
+    except Exception as exc:
+        real_data_error = str(exc)[:120]
 
     diagnoses = []
     for f in mine:
-        error = f.get("error", "")
         domain = f["domain"]
-        if "500" in error or "server error" in error.lower():
-            cause = f"Backend exception in {domain} — check Render logs for traceback"
-            steps = [
-                "Open Render dashboard → your service → Logs",
-                "Search for 'ERROR' or 'Traceback' near the test run time",
-                "Fix the failing import or route handler",
-                "Redeploy and re-run the test suite",
-            ]
-        elif "shape" in error.lower() or "count" in error.lower():
-            cause = f"{domain} returned wrong JSON shape — router may be returning raw list instead of {{count, items}}"
-            steps = [
-                f"Open backend/app/api/routes_{domain.lower()}.py",
-                "Verify the list endpoint wraps results in {count: N, items: [...]}",
-                "Fix and redeploy",
-            ]
+        error  = f.get("error", "")
+        if real_data:
+            carriers_count = real_data.get("carriers_assessed", "?")
+            healthy        = real_data.get("healthy_carriers", "?")
+            at_risk        = real_data.get("at_risk_count", "?")
+            if "500" in error or "server error" in error.lower():
+                cause = (
+                    f"Backend exception in {domain} — DB has {carriers_count} carriers "
+                    f"({healthy} healthy, {at_risk} at-risk). Route handler is crashing."
+                )
+                steps = [
+                    "Open Render dashboard → your service → Logs",
+                    "Search for 'ERROR' or 'Traceback' near the test run time",
+                    "Fix the failing import or route handler and redeploy",
+                ]
+            elif "shape" in error.lower() or "count" in error.lower():
+                cause = (
+                    f"{domain} returned wrong JSON shape — DB has {carriers_count} carriers "
+                    "but route may be returning raw list instead of {count, items}"
+                )
+                steps = [
+                    f"Open backend/app/api/routes_{domain.lower()}.py",
+                    "Verify list endpoint wraps results: {count: N, items: [...]}",
+                    "Fix and redeploy",
+                ]
+            else:
+                cause = (
+                    f"{domain} failure — Winston confirms {carriers_count} carriers in DB "
+                    f"({at_risk} at-risk). Likely a route or auth issue, not missing data."
+                )
+                steps = [
+                    f"Verify /api/{domain.lower()}/ in Render logs",
+                    "Compare response against expected {count, items} contract",
+                    "Check API_BEARER_TOKEN env var is set on Render",
+                ]
         else:
-            cause = f"Unexpected {domain} response — run diagnostic script to trace"
-            steps = [
-                "Run winston_diagnostic.py and capture output",
-                "Compare status code and body against expected contract",
-                "Fix code or environment config accordingly",
-            ]
+            if "500" in error or "server error" in error.lower():
+                cause = f"Backend exception in {domain} — check Render logs for traceback"
+                steps = [
+                    "Open Render dashboard → your service → Logs",
+                    "Search for 'ERROR' or 'Traceback' near the test run time",
+                    "Fix the failing import or route handler and redeploy",
+                ]
+            elif "shape" in error.lower() or "count" in error.lower():
+                cause = f"{domain} returned wrong JSON shape — route returns raw list instead of {{count, items}}"
+                steps = [
+                    f"Open backend/app/api/routes_{domain.lower()}.py",
+                    "Verify list endpoint wraps results in {count: N, items: [...]}",
+                    "Fix and redeploy",
+                ]
+            else:
+                cause = f"Unexpected {domain} response — diagnose the route"
+                steps = [
+                    "Check Render logs at the test run timestamp",
+                    "Compare response against expected contract",
+                    "Fix code or environment config accordingly",
+                ]
         diagnoses.append({"domain": domain, "test": f["test_name"], "cause": cause, "steps": steps})
 
-    # LLM enhancement: ask Claude to write actual code fixes
+    artifacts: list[dict] = [
+        {
+            "type":    "diagnosis",
+            "title":   (
+                f"Winston's Carrier Health Analysis ({real_data.get('carriers_assessed','?')} assessed)"
+                if real_data else "Root Cause Analysis"
+            ),
+            "content": diagnoses,
+        }
+    ]
+
+    if real_data:
+        summary_lines = [
+            "# Winston Carmichael — Live Carrier Health Snapshot",
+            f"# Run: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}",
+            "",
+            f"carriers_assessed = {real_data.get('carriers_assessed', '?')}",
+            f"healthy_carriers  = {real_data.get('healthy_carriers', '?')}",
+            f"at_risk_count     = {real_data.get('at_risk_count', '?')}",
+            f"never_loaded      = {real_data.get('never_loaded_count', '?')}",
+            f"retention_pct     = {real_data.get('retention_rate_pct', '?')}%",
+            "",
+            f"# Recommended action: {real_data.get('recommended_action', '?')}",
+        ]
+        for c in real_data.get("at_risk_carriers", [])[:5]:
+            summary_lines.append(
+                f"#   [{c.get('priority','?').upper()}] {c.get('name','?')} — {c.get('risk_reason','?')}"
+            )
+        if real_data_error:
+            summary_lines += ["", f"# Warning — DB unreachable: {real_data_error}"]
+        artifacts.append({
+            "type":    "python",
+            "title":   "Live Carrier Health Snapshot",
+            "content": "\n".join(summary_lines),
+        })
+
     llm_fix = _llm(
         system=(
-            "You are Winston Cole, Lead Test Engineer for IEBC. "
-            "You receive failing API test details and write precise, runnable Python code fixes or patches. "
+            "You are Winston Carmichael, VP Client Success at 3 Lakes Logistics. "
+            "You have direct access to carrier and load data and pinpoint exactly "
+            "why Carrier or Fleet API tests are failing. "
             "Be concise. Return only code and brief comments — no prose."
         ),
         user=(
-            f"These API tests are failing:\n{json.dumps(mine, indent=2)}\n\n"
-            "For each failure: identify the most likely root cause, then write the minimal Python code change "
-            "or shell command that fixes it. Format as:\n"
-            "# [Domain] [Test]\n# Cause: ...\n<code fix or command>\n\n"
+            f"Failing API tests:\n{json.dumps(mine, indent=2)}\n\n"
+            + (f"Live carrier health data:\n{json.dumps(real_data, indent=2)}\n\n" if real_data else "")
+            + "For each failure: state the most likely root cause given the live data, "
+            "then write the minimal Python code change or shell command that fixes it. "
+            "Format as:\n# [Domain] [Test]\n# Cause: ...\n<code fix or command>\n\n"
         ),
         model="claude-haiku-4-5-20251001",
         max_tokens=700,
     )
     if llm_fix:
         artifacts.append({
-            "type":     "python",
-            "title":    "Winston's AI-Generated Code Fix",
-            "filename": "winston_ai_fix.py",
-            "content":  llm_fix,
+            "type":    "python",
+            "title":   "Winston's AI-Assisted Code Fix",
+            "content": llm_fix,
         })
 
     return {
-        "specialist":       "winston_cole",
-        "name":             "Winston Cole",
-        "role":             "Lead Test Engineer",
-        "assigned_count":   len(mine),
-        "status":           "complete",
-        "artifacts": [
-            {
-                "type":     "python",
-                "title":    "Diagnostic Runner (run in terminal)",
-                "filename": "winston_diagnostic.py",
-                "content":  script,
-            },
-            {
-                "type":     "diagnosis",
-                "title":    "Root Cause Analysis",
-                "content":  diagnoses,
-            },
-        ],
+        "specialist":     "winston_carmichael",
+        "name":           "Winston Carmichael",
+        "role":           "VP Client Success",
+        "assigned_count": len(mine),
+        "status":         "complete",
+        "artifacts":      artifacts,
     }
 
 
-# ── Isabella Nash — schema analysis & SQL migrations ─────────────────────────
+# ── Isabella Cruz — Leads pipeline & outreach ────────────────────────────────
 
-def _isabella_analyze(failures: list[dict]) -> dict[str, Any]:
-    mine = [f for f in failures if f.get("specialist") == "isabella_nash"]
+def _run_isabella(failures: list[dict]) -> dict[str, Any]:
+    mine = [f for f in failures if f.get("specialist") == "isabella_cruz"]
     if not mine:
-        return {"specialist": "isabella_nash", "status": "no_assignment", "artifacts": []}
+        return {"specialist": "isabella_cruz", "name": "Isabella Cruz",
+                "role": "VP Omnichannel Outreach", "status": "no_assignment", "artifacts": []}
+
+    real_data: dict[str, Any] = {}
+    try:
+        from . import isabella as isabella_agent
+        real_data = isabella_agent.build_campaign(segment="New", limit=20)
+    except Exception:
+        pass
 
     now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
-    blocks: list[str] = [
-        f"-- Isabella Nash — Schema Verification & Fix Script",
+    sql_blocks: list[str] = [
+        "-- Isabella Cruz — Leads Pipeline Verification",
         f"-- Generated: {now}",
-        f"-- Run in Supabase SQL Editor (Settings → SQL Editor)",
+        "",
+        "-- Check leads table exists and has data:",
+        "SELECT COUNT(*) AS lead_count FROM leads;",
+        "SELECT status, COUNT(*) FROM leads GROUP BY status ORDER BY COUNT(*) DESC;",
+        "",
+        "-- Verify columns match expected shape:",
+        "SELECT id, business_name, status, score FROM leads ORDER BY score DESC LIMIT 5;",
         "",
     ]
-
-    domains = {f["domain"] for f in mine}
-
-    if "Bond Channel" in domains or any("bond" in f.get("error","").lower() for f in mine):
-        blocks += [
-            "-- ── Bond Channel table ──────────────────────────────────────────",
-            "SELECT EXISTS (",
-            "  SELECT 1 FROM information_schema.tables",
-            "  WHERE table_schema = 'public' AND table_name = 'bond_channel'",
-            ") AS bond_channel_exists;",
-            "",
-            "-- Create if missing:",
-            "CREATE TABLE IF NOT EXISTS bond_channel (",
-            "  id           UUID        DEFAULT gen_random_uuid() PRIMARY KEY,",
-            "  direction    TEXT        NOT NULL CHECK (direction IN ('internal_to_external','external_to_internal')),",
-            "  from_label   TEXT        NOT NULL,",
-            "  message_type TEXT        NOT NULL DEFAULT 'directive'",
-            "               CHECK (message_type IN ('directive','report','feedback','suggestion','acknowledgment')),",
-            "  content      TEXT        NOT NULL,",
-            "  priority     TEXT        NOT NULL DEFAULT 'normal'",
-            "               CHECK (priority IN ('critical','high','normal','low')),",
-            "  status       TEXT        NOT NULL DEFAULT 'pending'",
-            "               CHECK (status IN ('pending','delivered','read','actioned')),",
-            "  metadata     JSONB       DEFAULT '{}',",
-            "  created_at   TIMESTAMPTZ DEFAULT now(),",
-            "  updated_at   TIMESTAMPTZ DEFAULT now()",
-            ");",
-            "CREATE INDEX IF NOT EXISTS bond_channel_direction_status",
-            "  ON bond_channel (direction, status, created_at);",
-            "",
+    if real_data:
+        sql_blocks += [
+            f"-- Live: {real_data.get('total_leads_in_segment','?')} leads in 'New' segment "
+            f"· avg score {real_data.get('avg_lead_score','?')}",
+            "-- If test fails but data exists: check /api/leads/ response shape.",
         ]
 
-    for domain in domains:
-        if domain == "Health":
-            blocks += [
-                "-- ── Health / Supabase connectivity ─────────────────────────────",
-                "SELECT now() AS supabase_time, current_database() AS db;",
-                "SELECT COUNT(*) AS memory_rows FROM agent_memory;",
-                "",
+    diagnoses = []
+    for f in mine:
+        domain = f["domain"]
+        error  = f.get("error", "")
+        if real_data and real_data.get("total_leads_in_segment", 0) > 0:
+            total = real_data["total_leads_in_segment"]
+            avg   = real_data["avg_lead_score"]
+            cause = (
+                f"Leads API failing but DB has {total} leads (avg score {avg}). "
+                "Route handler or response envelope is the issue, not missing data."
+            )
+            steps = [
+                "Check /api/leads/ returns {count: N, items: [...]}",
+                "Verify API_BEARER_TOKEN in Render env vars",
+                "Check Render logs for Python exceptions at the test run timestamp",
             ]
-        elif domain == "Leads":
-            blocks += [
-                "-- ── Leads table ────────────────────────────────────────────────",
-                "SELECT column_name, data_type, is_nullable",
-                "FROM information_schema.columns WHERE table_name = 'leads'",
-                "ORDER BY ordinal_position;",
-                "SELECT COUNT(*) AS lead_count FROM leads;",
-                "",
+        elif "count" in error.lower() or "items" in error.lower():
+            cause = "Leads endpoint not returning expected {count, items} envelope"
+            steps = [
+                "Open backend/app/api/routes_leads.py",
+                "Wrap list return: return {count: len(data), items: data}",
+                "Push fix and redeploy",
             ]
-        elif domain == "Carriers":
-            blocks += [
-                "-- ── Carriers table ─────────────────────────────────────────────",
-                "SELECT column_name, data_type FROM information_schema.columns",
-                "WHERE table_name = 'carriers' ORDER BY ordinal_position;",
-                "SELECT COUNT(*) FROM carriers;",
-                "",
+        else:
+            cause = f"Leads API failure — {error[:80]}"
+            steps = [
+                "Check Render logs for exception",
+                "Verify leads table: SELECT COUNT(*) FROM leads;",
+                "Verify SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY on Render",
             ]
-        elif domain == "Fleet":
-            blocks += [
-                "-- ── Fleet table ────────────────────────────────────────────────",
-                "SELECT column_name, data_type FROM information_schema.columns",
-                "WHERE table_name IN ('trucks','fleet','loads') ORDER BY table_name, ordinal_position;",
-                "",
-            ]
-        elif domain == "Telemetry":
-            blocks += [
-                "-- ── Telemetry table ────────────────────────────────────────────",
-                "SELECT table_name FROM information_schema.tables",
-                "WHERE table_name ILIKE '%telemetry%';",
-                "SELECT COUNT(*) FROM telemetry_pings;",
-                "",
-            ]
+        diagnoses.append({"domain": domain, "test": f["test_name"], "cause": cause, "steps": steps})
 
-    # LLM enhancement: targeted SQL for the exact failures
+    artifacts: list[dict] = [
+        {
+            "type":    "sql",
+            "title":   "Leads Pipeline Verification (Supabase SQL Editor)",
+            "content": "\n".join(sql_blocks),
+        },
+        {
+            "type":    "diagnosis",
+            "title":   (
+                f"Isabella's Pipeline Analysis ({real_data.get('total_leads_in_segment','?')} leads live)"
+                if real_data else "Pipeline Analysis"
+            ),
+            "content": diagnoses,
+        },
+    ]
+
     llm_sql = _llm(
         system=(
-            "You are Isabella Nash, Systems Analyst for IEBC. "
-            "You write precise, safe SQL for Supabase (PostgreSQL 15). "
-            "Only use CREATE TABLE IF NOT EXISTS, CREATE INDEX IF NOT EXISTS, ALTER TABLE ADD COLUMN IF NOT EXISTS. "
-            "No destructive statements. Return only SQL with brief comments."
+            "You are Isabella Cruz, VP Omnichannel Outreach at 3 Lakes Logistics. "
+            "You understand the leads pipeline: leads table, outreach campaigns, Vance calls, Echo SMS. "
+            "Write precise, safe SQL for Supabase (PostgreSQL 15). "
+            "Only use SELECT and CREATE/ALTER IF NOT EXISTS. No destructive statements. "
+            "Return only SQL with brief comments."
         ),
         user=(
-            f"These database-related test failures occurred:\n{json.dumps(mine, indent=2)}\n\n"
-            "Write the exact SQL statements needed to fix each failure. "
-            "Include a VERIFY SELECT after each fix."
+            f"Failing lead API tests:\n{json.dumps(mine, indent=2)}\n\n"
+            + (f"Live pipeline data:\n{json.dumps(real_data, indent=2)}\n\n" if real_data else "")
+            + "Write the exact SQL to verify the leads schema and diagnose the failures. "
+            "Include a final SELECT to confirm."
         ),
         model="claude-haiku-4-5-20251001",
         max_tokens=700,
     )
     if llm_sql:
         artifacts.append({
-            "type":     "sql",
-            "title":    "Isabella's AI-Generated Schema Fix",
-            "filename": "isabella_ai_fix.sql",
-            "content":  llm_sql,
+            "type":    "sql",
+            "title":   "Isabella's AI-Generated Schema Fix",
+            "content": llm_sql,
         })
 
     return {
-        "specialist":     "isabella_nash",
-        "name":           "Isabella Nash",
-        "role":           "Systems Analyst",
+        "specialist":     "isabella_cruz",
+        "name":           "Isabella Cruz",
+        "role":           "VP Omnichannel Outreach",
         "assigned_count": len(mine),
         "status":         "complete",
-        "artifacts": [
-            {
-                "type":     "sql",
-                "title":    "Schema Verification & Migration (Supabase SQL Editor)",
-                "filename": "isabella_schema_fix.sql",
-                "content":  "\n".join(blocks),
-            },
-        ],
+        "artifacts":      artifacts,
     }
 
 
-# ── Alexander Kane — environment config & API integration ─────────────────────
+# ── Alexander Wright — Bond Channel & external API integration ───────────────
 
-def _alexander_analyze(failures: list[dict]) -> dict[str, Any]:
-    mine = [f for f in failures if f.get("specialist") == "alexander_kane"]
+def _run_alexander(failures: list[dict]) -> dict[str, Any]:
+    mine = [f for f in failures if f.get("specialist") == "alexander_wright"]
     if not mine:
-        return {"specialist": "alexander_kane", "status": "no_assignment", "artifacts": []}
+        return {"specialist": "alexander_wright", "name": "Alexander Wright",
+                "role": "VP Market Intelligence", "status": "no_assignment", "artifacts": []}
+
+    ext_api_ok   = False
+    ext_api_note = ""
+    try:
+        from . import alexander as alexander_agent
+        mkt = alexander_agent.analyze_market(limit=5)
+        ext_api_ok   = mkt.get("records_fetched", 0) > 0
+        ext_api_note = (
+            f"FMCSA DOT API: {mkt.get('records_fetched', 0)} records — "
+            + ("reachable" if ext_api_ok else "no data returned")
+        )
+    except Exception as exc:
+        ext_api_note = f"FMCSA DOT API: unreachable ({str(exc)[:80]})"
 
     now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
-    domains = {f["domain"] for f in mine}
-
     env_lines = [
-        f"# Alexander Kane — Render Environment Variables",
+        "# Alexander Wright — Render Environment Variables",
         f"# Generated: {now}",
-        "# ── How to apply ─────────────────────────────────────────────────────",
-        "# Render Dashboard → your service → Environment → Add each variable → Save Changes",
-        "# Render auto-redeploys after saving.",
+        "# Render Dashboard → your service → Environment → Add variables → Save Changes",
         "",
-        "# ── Core (required by all domains) ──────────────────────────────────",
-        "SUPABASE_URL=https://<project-ref>.supabase.co",
-        "SUPABASE_KEY=<service-role-key>   # Settings → API → service_role (NOT anon)",
-        "API_TOKEN=<your-eagle-eye-bearer-token>",
+        "# ── Bond Channel ─────────────────────────────────────────────────────",
+        "# Generate: python -c \"import secrets; print(secrets.token_hex(32))\"",
+        "BOND_API_KEY=<32-byte-hex-secret>",
         "",
-    ]
-
-    if "Bond Channel" in domains or any(
-        f.get("failure_type") in ("api_key", "auth", "connection") for f in mine
-    ):
-        env_lines += [
-            "# ── Bond Channel ─────────────────────────────────────────────────",
-            "# Generate: python -c \"import secrets; print(secrets.token_hex(32))\"",
-            "BOND_API_KEY=<32-byte-hex-secret>",
-            "",
-            "# ── Daytona sandbox (set on Daytona, not Render) ─────────────────",
-            f"# Sandbox ID: {_DAYTONA_ID}",
-            "IEBC_API_URL=https://three-lakes-logistics-api.onrender.com",
-            "BOND_API_KEY=<same-value-as-above>",
-            "",
-        ]
-
-    if "Health" in domains:
-        env_lines += [
-            "# ── Stripe (needed for /api/health/full) ────────────────────────",
-            "STRIPE_SECRET_KEY=sk_live_<your-key>",
-            "STRIPE_WEBHOOK_SECRET=whsec_<your-secret>",
-            "",
-        ]
-
-    if "Telemetry" in domains:
-        env_lines += [
-            "# ── ELD / Telemetry ──────────────────────────────────────────────",
-            "ELD_API_KEY=<samsara-or-motive-api-key>",
-            "",
-        ]
-
-    env_lines += [
-        "# ── Verify bond endpoint after setting BOND_API_KEY ─────────────────",
+        f"# External API: {ext_api_note}",
+        "# ── DOT/FMCSA (optional) ─────────────────────────────────────────────",
+        "DOT_API_KEY=<socrata-app-token>   # free at data.transportation.gov",
+        "",
+        f"# ── Daytona sandbox ─────────────────────────────────────────────────",
+        f"# Sandbox ID: {_DAYTONA_ID}",
+        "IEBC_API_URL=https://three-lakes-logistics-api.onrender.com",
+        "BOND_API_KEY=<same-value-as-Render>",
+        "",
+        "# ── Verify Bond endpoint after setting BOND_API_KEY ──────────────────",
         "# curl -H 'X-Bond-Key: <your-key>'",
         "#      https://three-lakes-logistics-api.onrender.com/api/bond/inbox",
         "# Expected: 200 {messages: [...]}",
@@ -433,15 +432,7 @@ def _alexander_analyze(failures: list[dict]) -> dict[str, Any]:
 
     checklist_items = [
         {
-            "area": "Supabase",
-            "steps": [
-                "Supabase → Project Settings → API → copy service_role secret",
-                "Add SUPABASE_URL and SUPABASE_KEY to Render Environment",
-                "Run Isabella's SQL script to verify/create tables",
-            ],
-        },
-        {
-            "area": "Bond Channel",
+            "area":  "Bond API Key",
             "steps": [
                 "Run: python -c \"import secrets; print(secrets.token_hex(32))\"",
                 "Add BOND_API_KEY to Render Environment Variables",
@@ -450,59 +441,215 @@ def _alexander_analyze(failures: list[dict]) -> dict[str, Any]:
             ],
         },
         {
-            "area": "Verify",
+            "area":  "External API Status",
             "steps": [
-                "After all env vars set → Render auto-redeploys",
-                "Wait ~60s for deploy to complete",
-                "Go to Eagle Eye → Test Suite → Run All Domains",
-                "All 7 domains should show PASS",
+                f"Alexander's FMCSA check: {ext_api_note}",
+                "If outbound APIs unreachable: check Render outbound network / DOT_API_KEY",
+                "Bond Channel failures are usually env config, not outbound connectivity",
+            ],
+        },
+        {
+            "area":  "Verify",
+            "steps": [
+                "After env vars set → Render auto-redeploys (~60s)",
+                "Eagle Eye → Test Suite → Run All Domains",
+                "Bond Channel domain should show PASS",
             ],
         },
     ]
 
-    # LLM enhancement: precise integration steps for exact failures
+    artifacts: list[dict] = [
+        {
+            "type":    "env",
+            "title":   "Render Environment Variables Template",
+            "content": "\n".join(env_lines),
+        },
+        {
+            "type":    "checklist",
+            "title":   f"Integration Setup Checklist (FMCSA {'✓' if ext_api_ok else '✗'})",
+            "content": checklist_items,
+        },
+    ]
+
     llm_config = _llm(
         system=(
-            "You are Alexander Kane, Integration Engineer for IEBC. "
-            "You write exact, copy-paste-ready environment variable configs and API setup steps. "
-            "Be precise. Include the exact Render dashboard path, exact curl verification commands, "
+            "You are Alexander Wright, VP Market Intelligence at 3 Lakes Logistics. "
+            "You are an expert in external API integrations: FMCSA DOT API, Bond Channel, Render env vars. "
+            "Write exact, copy-paste-ready environment variable configs and API setup steps. "
+            "Include exact Render dashboard path, exact curl verification commands, "
             "and how to generate any secrets. No filler."
         ),
         user=(
-            f"These API/auth/config test failures occurred:\n{json.dumps(mine, indent=2)}\n\n"
+            f"Failing Bond Channel / integration tests:\n{json.dumps(mine, indent=2)}\n\n"
+            f"External API connectivity: {ext_api_note}\n\n"
             "Write the exact steps to fix each: which env vars to set, how to generate them, "
-            "how to set them on Render, and the exact curl command to verify each fix."
+            "how to set on Render, and the exact curl command to verify each fix."
         ),
         model="claude-haiku-4-5-20251001",
         max_tokens=700,
     )
     if llm_config:
         artifacts.append({
-            "type":     "env",
-            "title":    "Alexander's AI-Generated Integration Fix",
-            "filename": "alexander_ai_fix.sh",
-            "content":  llm_config,
+            "type":    "env",
+            "title":   "Alexander's AI-Generated Integration Fix",
+            "content": llm_config,
         })
 
     return {
-        "specialist":     "alexander_kane",
-        "name":           "Alexander Kane",
-        "role":           "Integration Engineer",
+        "specialist":     "alexander_wright",
+        "name":           "Alexander Wright",
+        "role":           "VP Market Intelligence",
         "assigned_count": len(mine),
         "status":         "complete",
-        "artifacts": [
-            {
-                "type":     "env",
-                "title":    "Render Environment Variables Template",
-                "filename": ".env.render.template",
-                "content":  "\n".join(env_lines),
-            },
-            {
-                "type":     "checklist",
-                "title":    "Integration Setup Checklist",
-                "content":  checklist_items,
-            },
-        ],
+        "artifacts":      artifacts,
+    }
+
+
+# ── Katerina Rostova — Health, Dashboard & Telemetry (SLA audit) ─────────────
+
+def _run_katerina(failures: list[dict]) -> dict[str, Any]:
+    mine = [f for f in failures if f.get("specialist") == "katerina_rostova"]
+    if not mine:
+        return {"specialist": "katerina_rostova", "name": "Katerina Rostova",
+                "role": "Head of Process Automation", "status": "no_assignment", "artifacts": []}
+
+    real_data: dict[str, Any] = {}
+    try:
+        from . import katerina as katerina_agent
+        real_data = katerina_agent.audit_sla()
+    except Exception:
+        pass
+
+    diagnoses = []
+    for f in mine:
+        domain = f["domain"]
+        error  = f.get("error", "")
+        if real_data:
+            loads_scanned  = real_data.get("loads_scanned", "?")
+            sla_violations = real_data.get("sla_violations", "?")
+            critical       = real_data.get("critical_violations", "?")
+            if domain == "Health":
+                cause = (
+                    f"Backend health endpoint failing — Katerina's SLA audit scanned "
+                    f"{loads_scanned} loads, found {sla_violations} violations. "
+                    "Likely a Supabase connectivity or env var issue."
+                )
+                steps = [
+                    "Verify SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in Render",
+                    "Check /api/health/full — if supabase='error', fix DB credentials",
+                    "Check /api/health/full — if stripe='error', set STRIPE_SECRET_KEY",
+                ]
+            elif domain == "Dashboard":
+                cause = (
+                    f"Dashboard KPIs failing — Katerina found {sla_violations} SLA violations "
+                    f"({critical} critical). Load pipeline may be stalled, breaking KPI queries."
+                )
+                steps = [
+                    "Check Render logs for exceptions in /api/dashboard/kpis",
+                    f"Top SLA violations: {real_data.get('top_violations', [{}])[:1]}",
+                    "Verify loads table is accessible: SELECT COUNT(*) FROM loads;",
+                ]
+            elif domain == "Telemetry":
+                cause = (
+                    f"Telemetry endpoint failing — Katerina audited {loads_scanned} loads. "
+                    "Telemetry ping table may be missing or schema out of date."
+                )
+                steps = [
+                    "Run: SELECT table_name FROM information_schema.tables WHERE table_name ILIKE '%telemetry%';",
+                    "If missing: run sql/driver_schema_additions.sql in Supabase",
+                    "Check Render logs for import errors in telemetry route",
+                ]
+            else:
+                cause = f"Process failure in {domain} — {error[:80]}"
+                steps = ["Check Render logs", "Verify Supabase connectivity", "Re-run after fix"]
+        else:
+            cause = f"Could not reach DB for {domain} audit — env config likely broken"
+            steps = [
+                "Verify SUPABASE_URL is correct in Render environment",
+                "Verify SUPABASE_SERVICE_ROLE_KEY is the service_role key (not anon)",
+                "Check Render logs for connection refused errors",
+            ]
+        diagnoses.append({"domain": domain, "test": f["test_name"], "cause": cause, "steps": steps})
+
+    checklist_items = [
+        {
+            "area":  "Supabase Connectivity",
+            "steps": [
+                "Supabase → Project Settings → API → copy service_role secret",
+                "Add SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY to Render",
+                "Run: curl <render-url>/api/health/full → expect {ok: true}",
+            ],
+        },
+        {
+            "area":  "Load Pipeline & SLA",
+            "steps": (
+                [
+                    f"Katerina SLA audit: {real_data.get('loads_scanned','?')} loads, "
+                    f"{real_data.get('sla_violations','?')} violations, "
+                    f"{real_data.get('critical_violations','?')} critical",
+                ]
+                if real_data else ["SLA data unavailable — DB unreachable"]
+            ) + [
+                "Critical violations mean load statuses are stalled — check automation triggers",
+                "Run Katerina agent via Eagle Eye → IEBC Executive Command to see violations",
+            ],
+        },
+        {
+            "area":  "Telemetry Schema",
+            "steps": [
+                "Supabase SQL Editor: SELECT COUNT(*) FROM telemetry_pings;",
+                "If table missing: run sql/driver_schema_additions.sql",
+                "Set ELD_API_KEY env var if using live ELD data",
+            ],
+        },
+    ]
+
+    artifacts: list[dict] = [
+        {
+            "type":    "diagnosis",
+            "title":   (
+                f"Katerina's Process & SLA Analysis ({real_data.get('loads_scanned','?')} loads)"
+                if real_data else "Process Analysis"
+            ),
+            "content": diagnoses,
+        },
+        {
+            "type":    "checklist",
+            "title":   "Infrastructure & SLA Remediation Checklist",
+            "content": checklist_items,
+        },
+    ]
+
+    llm_plan = _llm(
+        system=(
+            "You are Katerina Rostova, Head of Process Automation at 3 Lakes Logistics. "
+            "Your job is auditing load SLA violations and mapping failures to corrective automation steps. "
+            "Write precise, numbered remediation steps for infrastructure failures. "
+            "Include exact SQL, exact env var names, and exact Render dashboard paths."
+        ),
+        user=(
+            f"Failing Health/Dashboard/Telemetry tests:\n{json.dumps(mine, indent=2)}\n\n"
+            + (f"Live SLA audit data:\n{json.dumps(real_data, indent=2)}\n\n" if real_data else "")
+            + "Write the exact remediation steps for each failure. "
+            "Prioritize by impact. Include SQL verification after each step."
+        ),
+        model="claude-haiku-4-5-20251001",
+        max_tokens=700,
+    )
+    if llm_plan:
+        artifacts.append({
+            "type":    "checklist",
+            "title":   "Katerina's AI-Generated Remediation Plan",
+            "content": [{"area": "AI Analysis", "steps": llm_plan.split("\n")}],
+        })
+
+    return {
+        "specialist":     "katerina_rostova",
+        "name":           "Katerina Rostova",
+        "role":           "Head of Process Automation",
+        "assigned_count": len(mine),
+        "status":         "complete",
+        "artifacts":      artifacts,
     }
 
 
@@ -515,7 +662,7 @@ def _bond_coordinate(classified: list[dict], results: list[dict]) -> dict[str, A
 
     lines = [
         "IEBC TECHNICAL TEAM REMEDIATION REPORT",
-        f"Coordinator: James Bond, IEBC Consultant",
+        "Coordinator: James Bond, IEBC Consultant",
         f"Timestamp: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}",
         f"Failures: {len(classified)} across {len(domains)} domain(s): {', '.join(domains)}",
         "",
@@ -529,10 +676,11 @@ def _bond_coordinate(classified: list[dict], results: list[dict]) -> dict[str, A
     lines += [
         "",
         "PRIORITY FIX ORDER:",
-        "  1. Run Isabella's SQL script in Supabase to verify/create tables",
-        "  2. Apply Alexander's env vars to Render Environment",
-        "  3. Run Winston's diagnostic script to confirm endpoints respond",
-        "  4. Re-run Test Suite — all 7 domains should pass",
+        "  1. Katerina's checklist — verify Supabase connectivity and SLA pipeline",
+        "  2. Isabella's SQL — verify/create leads table and check schema",
+        "  3. Alexander's env vars — set BOND_API_KEY on Render + Daytona",
+        "  4. Winston's health snapshot — confirm carrier data accessible",
+        "  5. Re-run Test Suite — all 7 domains should pass",
         "",
         "EXTERNAL BOND DIRECTIVE:",
         f"  Daytona sandbox {_DAYTONA_ID}:",
@@ -541,7 +689,7 @@ def _bond_coordinate(classified: list[dict], results: list[dict]) -> dict[str, A
         "  · Run: curl $IEBC_API_URL/api/health/ping",
         "  · Report connectivity status back to IEBC Internal",
         "",
-        "BOND TO COMMANDER: Isabella's SQL first, then Alexander's env vars, then re-test.",
+        "BOND TO COMMANDER: Katerina's infrastructure check first, then Isabella's schema, then re-test.",
     ]
 
     escalate = any(
@@ -1039,7 +1187,7 @@ def run_autonomous_mission(failures: list[dict], iteration: int = 1) -> dict[str
     classified = []
     for f in failures:
         ftype = _classify(f.get("test_name",""), f.get("domain",""), f.get("error",""))
-        sid   = _assign(ftype)
+        sid   = _assign(ftype, f.get("domain",""))
         classified.append({**f, "failure_type": ftype, "specialist": sid})
 
     # Phase 1 — internal autofix
@@ -1152,7 +1300,7 @@ def run(payload: dict[str, Any]) -> dict[str, Any]:
         classified = []
         for f in raw:
             ftype = _classify(f.get("test_name",""), f.get("domain",""), f.get("error",""))
-            sid   = _assign(ftype)
+            sid   = _assign(ftype, f.get("domain",""))
             classified.append({**f, "failure_type": ftype, "specialist": sid})
         result = _autofix(classified)
         mem.remember(
@@ -1182,18 +1330,19 @@ def run(payload: dict[str, Any]) -> dict[str, Any]:
     if not raw:
         return {"agent": _NAME, "error": "failures list is required"}
 
-    # Classify + assign
+    # Classify + assign by domain (real agents own their domain data)
     classified = []
     for f in raw:
-        ftype    = _classify(f.get("test_name",""), f.get("domain",""), f.get("error",""))
-        sid      = _assign(ftype)
+        ftype = _classify(f.get("test_name",""), f.get("domain",""), f.get("error",""))
+        sid   = _assign(ftype, f.get("domain",""))
         classified.append({**f, "failure_type": ftype, "specialist": sid})
 
-    # Run specialists in parallel (sequential here — no async needed)
-    winston   = _winston_analyze(classified)
-    isabella  = _isabella_analyze(classified)
-    alexander = _alexander_analyze(classified)
-    results   = [winston, isabella, alexander]
+    # Deploy real domain experts
+    winston  = _run_winston(classified)
+    isabella = _run_isabella(classified)
+    alexander = _run_alexander(classified)
+    katerina  = _run_katerina(classified)
+    results   = [winston, isabella, alexander, katerina]
 
     coordination = _bond_coordinate(classified, results)
 
@@ -1230,15 +1379,16 @@ def run(payload: dict[str, Any]) -> dict[str, Any]:
     )
 
     return {
-        "agent":       _NAME,
-        "action":      "remediate",
+        "agent":         _NAME,
+        "action":        "remediate",
         "failure_count": len(classified),
-        "failures":    classified,
+        "failures":      classified,
         "specialists": {
-            "winston_cole":   winston,
-            "isabella_nash":  isabella,
-            "alexander_kane": alexander,
+            "winston_carmichael": winston,
+            "isabella_cruz":      isabella,
+            "alexander_wright":   alexander,
+            "katerina_rostova":   katerina,
         },
         "coordination": coordination,
-        "timestamp":   datetime.now(timezone.utc).isoformat(),
+        "timestamp":    datetime.now(timezone.utc).isoformat(),
     }

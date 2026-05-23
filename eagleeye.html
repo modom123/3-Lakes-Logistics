@@ -8028,43 +8028,55 @@ setInterval(()=>{if(document.getElementById('page-bond')?.classList.contains('ac
     </div>
   </div>
 
-  <!-- IEBC Technical Team -->
+  <!-- IEBC Technical Team — real domain experts -->
   <div class="ts-team">
     <div class="ts-team-card">
       <div class="ts-team-avatar" style="background:rgba(59,130,246,.15);color:#3b82f6;">WC</div>
       <div class="ts-team-info">
-        <div class="ts-team-name">Winston Cole</div>
-        <div class="ts-team-role">Lead Test Engineer</div>
+        <div class="ts-team-name">Winston Carmichael</div>
+        <div class="ts-team-role">VP Client Success · Carriers &amp; Fleet</div>
         <div class="ts-team-status">
           <div class="ts-team-dot active" id="ts-dot-winston"></div>
           <span id="ts-status-winston" style="color:var(--muted)">On Duty</span>
         </div>
       </div>
-      <span class="ts-team-assign" onclick="tsAssignRun('winston','Winston Cole')">Run All →</span>
+      <span class="ts-team-assign" onclick="tsAssignRun('winston','Winston Carmichael')">Run All →</span>
     </div>
     <div class="ts-team-card">
-      <div class="ts-team-avatar" style="background:rgba(139,92,246,.15);color:#8b5cf6;">IN</div>
+      <div class="ts-team-avatar" style="background:rgba(139,92,246,.15);color:#8b5cf6;">IC</div>
       <div class="ts-team-info">
-        <div class="ts-team-name">Isabella Nash</div>
-        <div class="ts-team-role">Systems Analyst</div>
+        <div class="ts-team-name">Isabella Cruz</div>
+        <div class="ts-team-role">VP Omnichannel Outreach · Leads</div>
         <div class="ts-team-status">
           <div class="ts-team-dot active" id="ts-dot-isabella"></div>
           <span id="ts-status-isabella" style="color:var(--muted)">On Duty</span>
         </div>
       </div>
-      <span class="ts-team-assign" onclick="tsAssignRun('isabella','Isabella Nash')">Run All →</span>
+      <span class="ts-team-assign" onclick="tsAssignRun('isabella','Isabella Cruz')">Run All →</span>
     </div>
     <div class="ts-team-card">
-      <div class="ts-team-avatar" style="background:rgba(16,185,129,.15);color:#10b981;">AK</div>
+      <div class="ts-team-avatar" style="background:rgba(16,185,129,.15);color:#10b981;">AW</div>
       <div class="ts-team-info">
-        <div class="ts-team-name">Alexander Kane</div>
-        <div class="ts-team-role">Integration Engineer</div>
+        <div class="ts-team-name">Alexander Wright</div>
+        <div class="ts-team-role">VP Market Intelligence · Bond Channel</div>
         <div class="ts-team-status">
           <div class="ts-team-dot active" id="ts-dot-alexander"></div>
           <span id="ts-status-alexander" style="color:var(--muted)">On Duty</span>
         </div>
       </div>
-      <span class="ts-team-assign" onclick="tsAssignRun('alexander','Alexander Kane')">Run All →</span>
+      <span class="ts-team-assign" onclick="tsAssignRun('alexander','Alexander Wright')">Run All →</span>
+    </div>
+    <div class="ts-team-card">
+      <div class="ts-team-avatar" style="background:rgba(245,158,11,.15);color:#f59e0b;">KR</div>
+      <div class="ts-team-info">
+        <div class="ts-team-name">Katerina Rostova</div>
+        <div class="ts-team-role">Head of Process Automation · Health &amp; SLA</div>
+        <div class="ts-team-status">
+          <div class="ts-team-dot active" id="ts-dot-katerina"></div>
+          <span id="ts-status-katerina" style="color:var(--muted)">On Duty</span>
+        </div>
+      </div>
+      <span class="ts-team-assign" onclick="tsAssignRun('katerina','Katerina Rostova')">Run All →</span>
     </div>
   </div>
 
@@ -8473,9 +8485,10 @@ function tsUpdateSummary() {
 
 // ── IEBC Team assignment ────────────────────────────────────────────────────
 const TS_TEAM = {
-  winston:  { name: 'Winston Cole',    role: 'Lead Test Engineer' },
-  isabella: { name: 'Isabella Nash',   role: 'Systems Analyst' },
-  alexander:{ name: 'Alexander Kane',  role: 'Integration Engineer' },
+  winston:  { name: 'Winston Carmichael', role: 'VP Client Success' },
+  isabella: { name: 'Isabella Cruz',      role: 'VP Omnichannel Outreach' },
+  alexander:{ name: 'Alexander Wright',   role: 'VP Market Intelligence' },
+  katerina: { name: 'Katerina Rostova',   role: 'Head of Process Automation' },
 };
 let _tsCurrentAssignee = null;
 
@@ -8577,9 +8590,10 @@ function tsRenderRemediationConsole(data) {
   // Specialist cards
   const specs = data.specialists || {};
   const SPEC_META = {
-    winston_cole:   { initials:'WC', color:'#3b82f6', bg:'rgba(59,130,246,.15)' },
-    isabella_nash:  { initials:'IN', color:'#8b5cf6', bg:'rgba(139,92,246,.15)' },
-    alexander_kane: { initials:'AK', color:'#10b981', bg:'rgba(16,185,129,.15)' },
+    winston_carmichael: { initials:'WC', color:'#3b82f6', bg:'rgba(59,130,246,.15)' },
+    isabella_cruz:      { initials:'IC', color:'#8b5cf6', bg:'rgba(139,92,246,.15)' },
+    alexander_wright:   { initials:'AW', color:'#10b981', bg:'rgba(16,185,129,.15)' },
+    katerina_rostova:   { initials:'KR', color:'#f59e0b', bg:'rgba(245,158,11,.15)'  },
   };
   const container = document.getElementById('ts-rcon-specialists');
   container.innerHTML = '';
