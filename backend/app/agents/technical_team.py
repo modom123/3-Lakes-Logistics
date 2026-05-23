@@ -77,12 +77,22 @@ SPECIALISTS: dict[str, dict] = {
     "alexander_wright": {
         "name":    "Alexander Wright",
         "role":    "VP Market Intelligence",
-        "domains": {"Bond Channel"},
+        "domains": {"Bond Channel", "Integration"},
     },
     "katerina_rostova": {
         "name":    "Katerina Rostova",
         "role":    "Head of Process Automation",
-        "domains": {"Health", "Dashboard", "Telemetry"},
+        "domains": {"Health", "Dashboard", "Telemetry", "Triggers"},
+    },
+    "penny": {
+        "name":    "Penny",
+        "role":    "Stripe & Payments Specialist",
+        "domains": {"Driver"},
+    },
+    "shield": {
+        "name":    "Shield",
+        "role":    "Security & Compliance Specialist",
+        "domains": {"Security"},
     },
 }
 
@@ -97,8 +107,18 @@ def _classify(test_name: str, domain: str, error: str) -> str:
         return "database"
     if any(k in txt for k in ("bond_api_key", "x-bond-key", "api_key", "api key")):
         return "api_key"
+    if any(k in txt for k in ("forgery", "forged", "signature", "webhook", "stripe-signature")):
+        return "webhook_security"
+    if any(k in txt for k in ("privilege", "escalation", "horizontal", "exec dashboard", "exec route")):
+        return "privilege_escalation"
+    if any(k in txt for k in ("idempotency", "double payout", "duplicate", "paid twice")):
+        return "idempotency"
+    if any(k in txt for k in ("brute force", "rate limit", "credential stuffing", "max attempts")):
+        return "rate_limit"
     if any(k in txt for k in ("401", "403", "unauthorized", "auth guard", "forbidden")):
         return "auth"
+    if any(k in txt for k in ("adobe", "twilio", "dat board", "email parse", "integration")):
+        return "integration"
     if any(k in txt for k in ("422", "env", "environment", "render env", "not configured")):
         return "config"
     if any(k in txt for k in ("connection", "connect", "unreachable", "timeout")):
@@ -653,6 +673,273 @@ def _run_katerina(failures: list[dict]) -> dict[str, Any]:
     }
 
 
+# ── Penny — Driver, Payout & Stripe integrity ────────────────────────────────
+
+def _run_penny(failures: list[dict]) -> dict[str, Any]:
+    mine = [f for f in failures if f.get("specialist") == "penny"]
+    if not mine:
+        return {"specialist": "penny", "name": "Penny", "role": "Stripe & Payments Specialist",
+                "status": "no_assignment", "artifacts": []}
+
+    stripe_ok   = False
+    stripe_note = ""
+    try:
+        from . import penny as penny_agent
+        # Verify Stripe key is configured by attempting the run entrypoint
+        penny_agent.run({})
+        stripe_ok   = True
+        stripe_note = "Stripe agent reachable — key configured"
+    except Exception as exc:
+        stripe_note = f"Stripe agent error: {str(exc)[:100]}"
+
+    diagnoses = []
+    for f in mine:
+        domain = f["domain"]
+        error  = f.get("error", "")
+        ftype  = f.get("failure_type", "")
+        if ftype == "idempotency":
+            cause = (
+                "Payout idempotency guard missing — /api/payout/request can be submitted twice "
+                "for the same load_id, causing duplicate driver payments."
+            )
+            steps = [
+                "Open backend/app/api/routes_payout.py — find request_payout()",
+                "Add idempotency key check: query payout_history for existing load_id before processing",
+                "Return 409 Conflict if same load_id+driver_id already paid",
+                "Add a unique index: CREATE UNIQUE INDEX IF NOT EXISTS ux_payout_load "
+                "ON payout_history(load_id, driver_id);",
+                "Test: POST same load_id twice — second must return 409",
+            ]
+        elif ftype == "rate_limit":
+            cause = (
+                "Driver auth endpoint has no rate limiting — brute force login is possible. "
+                "Blueprint requires max 5 attempts before lockout."
+            )
+            steps = [
+                "Add slowapi or fastapi-limiter to requirements.txt",
+                "Decorate /api/driver-auth/login with @limiter.limit('5/minute')",
+                "Return 429 Too Many Requests after threshold",
+                "Test: 6 rapid bad PINs — 6th must return 429",
+            ]
+        elif ftype == "auth":
+            cause = (
+                f"Driver auth guard failing in {domain} domain — "
+                f"either token validation broken or test using wrong token format."
+            )
+            steps = [
+                "Verify require_driver_token() in routes_driver_auth.py reads Authorization header",
+                "Confirm test token format: 'Bearer <token>'",
+                "Check active_drivers table has the test driver row",
+                "Run: GET /api/driver-auth/me with a known-good token",
+            ]
+        else:
+            cause = f"Driver/{domain} failure: {error[:100]}"
+            steps = [
+                "Check Render logs for driver/payout route errors",
+                f"Verify {domain.lower()} route handler in backend/app/api/",
+                "Confirm Stripe env vars: STRIPE_SECRET_KEY set on Render",
+            ]
+        diagnoses.append({"domain": domain, "test": f["test_name"], "cause": cause, "steps": steps})
+
+    artifacts: list[dict] = [
+        {
+            "type":    "diagnosis",
+            "title":   f"Penny's Driver & Payment Analysis ({stripe_note})",
+            "content": diagnoses,
+        },
+        {
+            "type":    "checklist",
+            "title":   "Payment & Driver Auth Remediation",
+            "content": [
+                {
+                    "area":  "Payout Idempotency",
+                    "steps": [
+                        "Add unique constraint on payout_history(load_id, driver_id)",
+                        "Check for existing payout before processing: SELECT id FROM payout_history WHERE load_id=$1 AND driver_id=$2",
+                        "Return 409 Conflict on duplicate — never process twice",
+                    ],
+                },
+                {
+                    "area":  "Driver Auth Rate Limiting",
+                    "steps": [
+                        "Install slowapi: pip install slowapi",
+                        "Add @limiter.limit('5/minute') to /api/driver-auth/login",
+                        "Verify STRIPE_SECRET_KEY is in Render env vars",
+                    ],
+                },
+            ],
+        },
+    ]
+
+    llm_plan = _llm(
+        system=(
+            "You are Penny, Stripe & Payments Specialist at 3 Lakes Logistics. "
+            "You own driver authentication, payout processing, and Stripe subscription lifecycle. "
+            "Write precise remediation steps for driver auth and financial logic failures. "
+            "Focus on: idempotency, rate limiting, Stripe key configuration, payout math."
+        ),
+        user=(
+            f"Failing Driver/Security tests:\n{json.dumps(mine, indent=2)}\n\n"
+            f"Stripe status: {stripe_note}\n\n"
+            "Write numbered remediation steps. Include exact code changes and SQL."
+        ),
+        model="claude-haiku-4-5-20251001",
+        max_tokens=700,
+    )
+    if llm_plan:
+        artifacts.append({
+            "type":    "checklist",
+            "title":   "Penny's AI-Generated Remediation Plan",
+            "content": [{"area": "AI Analysis", "steps": llm_plan.split("\n")}],
+        })
+
+    return {
+        "specialist":     "penny",
+        "name":           "Penny",
+        "role":           "Stripe & Payments Specialist",
+        "assigned_count": len(mine),
+        "status":         "complete",
+        "artifacts":      artifacts,
+    }
+
+
+# ── Shield — Security, Webhooks & CDL compliance ─────────────────────────────
+
+def _run_shield(failures: list[dict]) -> dict[str, Any]:
+    mine = [f for f in failures if f.get("specialist") == "shield"]
+    if not mine:
+        return {"specialist": "shield", "name": "Shield", "role": "Security & Compliance Specialist",
+                "status": "no_assignment", "artifacts": []}
+
+    cdl_data: dict[str, Any] = {}
+    cdl_note = ""
+    try:
+        from . import shield as shield_agent
+        cdl_data = shield_agent.run_cdl_sweep()
+        checked  = cdl_data.get("carriers_checked", 0)
+        alerts   = len(cdl_data.get("cdl_alerts", []))
+        cdl_note = f"CDL sweep: {checked} carriers, {alerts} expiry alert(s)"
+    except Exception as exc:
+        cdl_note = f"CDL sweep unavailable: {str(exc)[:80]}"
+
+    diagnoses = []
+    for f in mine:
+        domain = f["domain"]
+        error  = f.get("error", "")
+        ftype  = f.get("failure_type", "")
+        if ftype == "webhook_security":
+            cause = (
+                "Webhook signature verification missing or broken — "
+                "forged Stripe/Vapi/Motive requests are not rejected. "
+                "An attacker can manipulate financial ledgers without a valid signature."
+            )
+            steps = [
+                "Open backend/app/api/routes_webhooks.py",
+                "Verify stripe: penny.verify_and_parse(payload, sig) — raises ValueError on bad sig → returns 400",
+                "Add STRIPE_WEBHOOK_SECRET to Render env vars (get from Stripe Dashboard → Webhooks)",
+                "For Vapi/Motive: add X-Vapi-Signature or shared-secret header validation",
+                "Test: POST /api/webhooks/stripe with no Stripe-Signature → must return 400",
+            ]
+        elif ftype == "privilege_escalation":
+            cause = (
+                "Horizontal privilege escalation possible — driver tokens accepted on executive routes. "
+                "Blueprint requires executive routes to verify IEBC API token, not driver tokens."
+            )
+            steps = [
+                "Open backend/app/api/routes_executives.py",
+                "Verify all routes use require_bearer (IEBC API token) not require_driver_token",
+                "Confirm require_bearer checks against settings.api_bearer_token",
+                "Test: GET /api/executives/dashboard with fake driver token → must return 401/403",
+            ]
+        elif ftype == "auth":
+            cause = f"Security auth test failing in {domain}: {error[:100]}"
+            steps = [
+                f"Check {domain.lower()} route auth dependency in backend/app/api/",
+                "Verify require_bearer or equivalent is applied to the route",
+                "Confirm no route is accidentally left without auth guard",
+            ]
+        else:
+            cause = f"Security/Integration failure in {domain}: {error[:100]}"
+            steps = [
+                "Review security middleware in backend/app/",
+                "Check webhook handler error responses (must be 4xx not 5xx)",
+                "Verify external service graceful degradation paths",
+            ]
+        diagnoses.append({"domain": domain, "test": f["test_name"], "cause": cause, "steps": steps})
+
+    artifacts: list[dict] = [
+        {
+            "type":    "diagnosis",
+            "title":   f"Shield's Security Analysis ({cdl_note})",
+            "content": diagnoses,
+        },
+        {
+            "type":    "checklist",
+            "title":   "Security Hardening Checklist",
+            "content": [
+                {
+                    "area":  "Webhook Signature Verification",
+                    "steps": [
+                        "Set STRIPE_WEBHOOK_SECRET in Render env vars",
+                        "Verify penny.verify_and_parse raises ValueError on missing/bad sig",
+                        "Add similar signature check to Vapi and Motive webhook handlers",
+                        "All forged webhook tests must return 400, never 200",
+                    ],
+                },
+                {
+                    "area":  "Privilege Escalation Prevention",
+                    "steps": [
+                        "Audit routes_executives.py — all routes must use require_bearer",
+                        "Audit routes_agents.py — all routes must use require_bearer",
+                        "Driver tokens (require_driver_token) must NOT access executive routes",
+                        "Run privilege escalation tests after fix to confirm 401/403",
+                    ],
+                },
+                {
+                    "area":  "CDL & Compliance Status",
+                    "steps": [cdl_note] + [
+                        f"Alert: {a.get('driver_id','?')} CDL expires {a.get('expiry','?')}"
+                        for a in (cdl_data.get("cdl_alerts") or [])[:3]
+                    ],
+                },
+            ],
+        },
+    ]
+
+    llm_plan = _llm(
+        system=(
+            "You are Shield, Security & Compliance Specialist at 3 Lakes Logistics. "
+            "You own webhook signature verification, FMCSA safety checks, CDL monitoring, "
+            "and preventing privilege escalation. "
+            "Write precise, numbered security remediation steps. "
+            "Include exact code locations, env var names, and verification commands."
+        ),
+        user=(
+            f"Failing Security/Integration tests:\n{json.dumps(mine, indent=2)}\n\n"
+            f"CDL sweep: {cdl_note}\n\n"
+            "Write remediation steps for each security failure. "
+            "Prioritize: webhook forgery prevention first, then privilege escalation."
+        ),
+        model="claude-haiku-4-5-20251001",
+        max_tokens=700,
+    )
+    if llm_plan:
+        artifacts.append({
+            "type":    "checklist",
+            "title":   "Shield's AI-Generated Security Plan",
+            "content": [{"area": "AI Analysis", "steps": llm_plan.split("\n")}],
+        })
+
+    return {
+        "specialist":     "shield",
+        "name":           "Shield",
+        "role":           "Security & Compliance Specialist",
+        "assigned_count": len(mine),
+        "status":         "complete",
+        "artifacts":      artifacts,
+    }
+
+
 # ── Bond coordination ─────────────────────────────────────────────────────────
 
 def _bond_coordinate(classified: list[dict], results: list[dict]) -> dict[str, Any]:
@@ -676,20 +963,23 @@ def _bond_coordinate(classified: list[dict], results: list[dict]) -> dict[str, A
     lines += [
         "",
         "PRIORITY FIX ORDER:",
-        "  1. Katerina's checklist — verify Supabase connectivity and SLA pipeline",
-        "  2. Isabella's SQL — verify/create leads table and check schema",
-        "  3. Alexander's env vars — set BOND_API_KEY on Render + Daytona",
-        "  4. Winston's health snapshot — confirm carrier data accessible",
-        "  5. Re-run Test Suite — all 7 domains should pass",
+        "  1. Shield's security audit — webhook signature verification + privilege escalation blocks",
+        "  2. Katerina's checklist — verify Supabase connectivity, SLA pipeline, triggers",
+        "  3. Isabella's SQL — verify/create leads table and check schema",
+        "  4. Alexander's env vars — set BOND_API_KEY on Render + Daytona; verify integration endpoints",
+        "  5. Winston's health snapshot — confirm carrier data accessible",
+        "  6. Penny's payment audit — payout idempotency + driver auth rate limiting",
+        "  7. Re-run Test Suite — all 11 domains should pass",
         "",
         "EXTERNAL BOND DIRECTIVE:",
         f"  Daytona sandbox {_DAYTONA_ID}:",
         "  · Verify IEBC_API_URL points to the Render API",
         "  · Verify BOND_API_KEY matches the Render env var",
         "  · Run: curl $IEBC_API_URL/api/health/ping",
+        "  · Verify STRIPE_WEBHOOK_SECRET is set on Render (Shield priority)",
         "  · Report connectivity status back to IEBC Internal",
         "",
-        "BOND TO COMMANDER: Katerina's infrastructure check first, then Isabella's schema, then re-test.",
+        "BOND TO COMMANDER: Shield's security hardening first, then Katerina's infrastructure, then re-test.",
     ]
 
     escalate = any(
@@ -1338,11 +1628,13 @@ def run(payload: dict[str, Any]) -> dict[str, Any]:
         classified.append({**f, "failure_type": ftype, "specialist": sid})
 
     # Deploy real domain experts
-    winston  = _run_winston(classified)
-    isabella = _run_isabella(classified)
+    winston   = _run_winston(classified)
+    isabella  = _run_isabella(classified)
     alexander = _run_alexander(classified)
     katerina  = _run_katerina(classified)
-    results   = [winston, isabella, alexander, katerina]
+    penny     = _run_penny(classified)
+    shield    = _run_shield(classified)
+    results   = [winston, isabella, alexander, katerina, penny, shield]
 
     coordination = _bond_coordinate(classified, results)
 
@@ -1388,6 +1680,8 @@ def run(payload: dict[str, Any]) -> dict[str, Any]:
             "isabella_cruz":      isabella,
             "alexander_wright":   alexander,
             "katerina_rostova":   katerina,
+            "penny":              penny,
+            "shield":             shield,
         },
         "coordination": coordination,
         "timestamp":    datetime.now(timezone.utc).isoformat(),

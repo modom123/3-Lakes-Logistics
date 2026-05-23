@@ -8590,16 +8590,28 @@ setInterval(()=>{ if(document.getElementById('page-bond')?.classList.contains('a
   <!-- IEBC Technical Team — real domain experts -->
   <div class="ts-team">
     <div class="ts-team-card">
-      <div class="ts-team-avatar" style="background:rgba(59,130,246,.15);color:#3b82f6;">WC</div>
+      <div class="ts-team-avatar" style="background:rgba(220,38,38,.15);color:#dc2626;">SH</div>
       <div class="ts-team-info">
-        <div class="ts-team-name">Winston Carmichael</div>
-        <div class="ts-team-role">VP Client Success · Carriers &amp; Fleet</div>
+        <div class="ts-team-name">Shield</div>
+        <div class="ts-team-role">Security &amp; Compliance · Security domain</div>
         <div class="ts-team-status">
-          <div class="ts-team-dot active" id="ts-dot-winston"></div>
-          <span id="ts-status-winston" style="color:var(--muted)">On Duty</span>
+          <div class="ts-team-dot active" id="ts-dot-shield"></div>
+          <span id="ts-status-shield" style="color:var(--muted)">On Duty</span>
         </div>
       </div>
-      <span class="ts-team-assign" onclick="tsAssignRun('winston','Winston Carmichael')">Run All →</span>
+      <span class="ts-team-assign" onclick="tsAssignRun('shield','Shield')">Run All →</span>
+    </div>
+    <div class="ts-team-card">
+      <div class="ts-team-avatar" style="background:rgba(245,158,11,.15);color:#f59e0b;">KR</div>
+      <div class="ts-team-info">
+        <div class="ts-team-name">Katerina Rostova</div>
+        <div class="ts-team-role">Head of Process Automation · Health, Telemetry, Triggers</div>
+        <div class="ts-team-status">
+          <div class="ts-team-dot active" id="ts-dot-katerina"></div>
+          <span id="ts-status-katerina" style="color:var(--muted)">On Duty</span>
+        </div>
+      </div>
+      <span class="ts-team-assign" onclick="tsAssignRun('katerina','Katerina Rostova')">Run All →</span>
     </div>
     <div class="ts-team-card">
       <div class="ts-team-avatar" style="background:rgba(139,92,246,.15);color:#8b5cf6;">IC</div>
@@ -8617,7 +8629,7 @@ setInterval(()=>{ if(document.getElementById('page-bond')?.classList.contains('a
       <div class="ts-team-avatar" style="background:rgba(16,185,129,.15);color:#10b981;">AW</div>
       <div class="ts-team-info">
         <div class="ts-team-name">Alexander Wright</div>
-        <div class="ts-team-role">VP Market Intelligence · Bond Channel</div>
+        <div class="ts-team-role">VP Market Intelligence · Bond Channel &amp; Integration</div>
         <div class="ts-team-status">
           <div class="ts-team-dot active" id="ts-dot-alexander"></div>
           <span id="ts-status-alexander" style="color:var(--muted)">On Duty</span>
@@ -8626,16 +8638,28 @@ setInterval(()=>{ if(document.getElementById('page-bond')?.classList.contains('a
       <span class="ts-team-assign" onclick="tsAssignRun('alexander','Alexander Wright')">Run All →</span>
     </div>
     <div class="ts-team-card">
-      <div class="ts-team-avatar" style="background:rgba(245,158,11,.15);color:#f59e0b;">KR</div>
+      <div class="ts-team-avatar" style="background:rgba(59,130,246,.15);color:#3b82f6;">WC</div>
       <div class="ts-team-info">
-        <div class="ts-team-name">Katerina Rostova</div>
-        <div class="ts-team-role">Head of Process Automation · Health &amp; SLA</div>
+        <div class="ts-team-name">Winston Carmichael</div>
+        <div class="ts-team-role">VP Client Success · Carriers &amp; Fleet</div>
         <div class="ts-team-status">
-          <div class="ts-team-dot active" id="ts-dot-katerina"></div>
-          <span id="ts-status-katerina" style="color:var(--muted)">On Duty</span>
+          <div class="ts-team-dot active" id="ts-dot-winston"></div>
+          <span id="ts-status-winston" style="color:var(--muted)">On Duty</span>
         </div>
       </div>
-      <span class="ts-team-assign" onclick="tsAssignRun('katerina','Katerina Rostova')">Run All →</span>
+      <span class="ts-team-assign" onclick="tsAssignRun('winston','Winston Carmichael')">Run All →</span>
+    </div>
+    <div class="ts-team-card">
+      <div class="ts-team-avatar" style="background:rgba(236,72,153,.15);color:#ec4899;">PN</div>
+      <div class="ts-team-info">
+        <div class="ts-team-name">Penny</div>
+        <div class="ts-team-role">Stripe &amp; Payments · Driver domain</div>
+        <div class="ts-team-status">
+          <div class="ts-team-dot active" id="ts-dot-penny"></div>
+          <span id="ts-status-penny" style="color:var(--muted)">On Duty</span>
+        </div>
+      </div>
+      <span class="ts-team-assign" onclick="tsAssignRun('penny','Penny')">Run All →</span>
     </div>
   </div>
 
@@ -9324,10 +9348,12 @@ function tsUpdateSummary() {
 
 // ── IEBC Team assignment ────────────────────────────────────────────────────
 const TS_TEAM = {
-  winston:  { name: 'Winston Carmichael', role: 'VP Client Success' },
+  shield:   { name: 'Shield',             role: 'Security & Compliance Specialist' },
+  katerina: { name: 'Katerina Rostova',   role: 'Head of Process Automation' },
   isabella: { name: 'Isabella Cruz',      role: 'VP Omnichannel Outreach' },
   alexander:{ name: 'Alexander Wright',   role: 'VP Market Intelligence' },
-  katerina: { name: 'Katerina Rostova',   role: 'Head of Process Automation' },
+  winston:  { name: 'Winston Carmichael', role: 'VP Client Success' },
+  penny:    { name: 'Penny',              role: 'Stripe & Payments Specialist' },
 };
 let _tsCurrentAssignee = null;
 
@@ -9429,10 +9455,12 @@ function tsRenderRemediationConsole(data) {
   // Specialist cards
   const specs = data.specialists || {};
   const SPEC_META = {
+    shield:             { initials:'SH', color:'#dc2626', bg:'rgba(220,38,38,.15)'   },
     winston_carmichael: { initials:'WC', color:'#3b82f6', bg:'rgba(59,130,246,.15)' },
     isabella_cruz:      { initials:'IC', color:'#8b5cf6', bg:'rgba(139,92,246,.15)' },
     alexander_wright:   { initials:'AW', color:'#10b981', bg:'rgba(16,185,129,.15)' },
-    katerina_rostova:   { initials:'KR', color:'#f59e0b', bg:'rgba(245,158,11,.15)'  },
+    katerina_rostova:   { initials:'KR', color:'#f59e0b', bg:'rgba(245,158,11,.15)' },
+    penny:              { initials:'PN', color:'#ec4899', bg:'rgba(236,72,153,.15)'  },
   };
   const container = document.getElementById('ts-rcon-specialists');
   container.innerHTML = '';
