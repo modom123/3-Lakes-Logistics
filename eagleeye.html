@@ -25,6 +25,7 @@
   --shadow:0 2px 20px rgba(11,37,69,.08);
   --shadow-lg:0 8px 48px rgba(11,37,69,.14);
   --sidebar-w:240px;
+  --surface:#FFFFFF; --bg:#F8F9FC; --gold1:#D4960E;
 }
 html,body{height:100%;overflow:hidden;}
 body{font-family:var(--ff-b);color:var(--text);background:var(--off);display:flex;}
@@ -7667,210 +7668,768 @@ if (typeof nav === 'function') {
 <!-- BOND OFFICE PAGE -->
 <div class="page" id="page-bond">
 <style>
-.bond-layout{display:flex;height:calc(100vh - 116px);overflow:hidden;gap:0;border-radius:12px;background:var(--white);border:1px solid var(--border);box-shadow:var(--shadow);}
-.bond-thread-panel{flex:1;display:flex;flex-direction:column;overflow:hidden;border-right:1px solid var(--border);}
-.bond-thread-hdr{padding:16px 22px;border-bottom:1px solid var(--border);background:var(--white);display:flex;align-items:center;gap:12px;flex-shrink:0;}
-.bond-thread-title{font-family:var(--ff-h);font-size:17px;font-weight:800;color:var(--navy);flex:1;}
-.bond-thread-body{flex:1;overflow-y:auto;padding:20px 22px;display:flex;flex-direction:column;gap:14px;background:var(--off);}
-.bond-msg{max-width:80%;padding:12px 16px;border-radius:12px;font-size:13px;line-height:1.6;}
-.bond-msg-meta{font-family:var(--ff-m);font-size:10px;margin-bottom:5px;}
-.bond-msg-content{white-space:pre-wrap;word-break:break-word;}
-.bond-msg-footer{font-family:var(--ff-m);font-size:9px;margin-top:6px;opacity:.6;}
-.bond-msg.outbound{align-self:flex-end;background:var(--navy);color:rgba(255,255,255,.92);border-bottom-right-radius:3px;}
-.bond-msg.outbound .bond-msg-meta{color:var(--gold2);}
-.bond-msg.inbound{align-self:flex-start;background:var(--white);color:var(--text);border:1px solid var(--border);border-bottom-left-radius:3px;box-shadow:0 1px 8px rgba(11,37,69,.06);}
-.bond-msg.inbound .bond-msg-meta{color:var(--green);}
-.bond-tag{display:inline-block;padding:2px 7px;border-radius:4px;font-family:var(--ff-m);font-size:9px;font-weight:500;letter-spacing:.5px;text-transform:uppercase;}
-.bond-tag-dir{background:rgba(11,37,69,.08);color:var(--navy2);}
-.bond-tag-crit{background:rgba(220,38,38,.1);color:var(--red);}
-.bond-tag-high{background:rgba(234,88,12,.1);color:var(--orange);}
-.bond-tag-norm{background:rgba(5,150,105,.08);color:var(--green);}
-.bond-tag-report{background:rgba(37,99,235,.1);color:var(--blue);}
-.bond-tag-feedback{background:rgba(228,168,48,.12);color:var(--gold);}
-.bond-tag-suggestion{background:rgba(124,58,237,.1);color:#7c3aed;}
-.bond-divider{text-align:center;font-family:var(--ff-m);font-size:9px;color:var(--muted);letter-spacing:1.5px;padding:4px 0;position:relative;}
-.bond-divider::before,.bond-divider::after{content:"";position:absolute;top:50%;width:40%;height:1px;background:var(--border);}
-.bond-divider::before{left:0;}.bond-divider::after{right:0;}
-.bond-composer{width:370px;flex-shrink:0;display:flex;flex-direction:column;overflow:hidden;background:var(--white);}
-.bond-composer-hdr{padding:16px 22px;border-bottom:1px solid var(--border);}
-.bond-composer-title{font-family:var(--ff-h);font-size:15px;font-weight:800;color:var(--navy);}
-.bond-composer-body{flex:1;overflow-y:auto;padding:20px 22px;display:flex;flex-direction:column;gap:14px;}
-.bond-fl{font-family:var(--ff-m);font-size:10px;color:var(--muted);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:5px;}
-.bond-sc{background:var(--off);border:1px solid var(--border);border-radius:10px;padding:14px 16px;display:flex;flex-direction:column;gap:8px;}
-.bond-sr{display:flex;justify-content:space-between;align-items:center;}
-.bond-sl{font-family:var(--ff-m);font-size:10px;color:var(--muted);letter-spacing:.5px;}
-.bond-sv{font-family:var(--ff-m);font-size:12px;font-weight:700;color:var(--navy);}
-.bond-sv-g{color:var(--green);}.bond-sv-o{color:var(--orange);}
-.bond-empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:var(--muted);}
-.bond-empty-icon{font-size:42px;}.bond-empty-text{font-family:var(--ff-m);font-size:11px;letter-spacing:1px;}
+/* ── Bond Office ──────────────────────────────────────────────────────────── */
+#page-bond.active{display:flex;flex-direction:column;overflow:hidden;}
+.bo-wrap{display:flex;flex-direction:column;flex:1;height:calc(100vh - 60px);overflow:hidden;background:var(--bg);}
+.bo-header{display:flex;align-items:center;justify-content:space-between;padding:14px 24px;background:var(--navy);flex-shrink:0;border-bottom:2px solid rgba(228,168,48,.3);}
+.bo-header-left{display:flex;align-items:center;gap:14px;}
+.bo-badge{width:44px;height:44px;border-radius:10px;background:rgba(228,168,48,.15);border:1.5px solid rgba(228,168,48,.35);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;}
+.bo-title{font-family:var(--ff-h);font-size:18px;font-weight:900;color:#fff;letter-spacing:.3px;}
+.bo-sub{font-size:10px;color:rgba(228,168,48,.75);letter-spacing:.5px;margin-top:1px;font-family:var(--ff-m);}
+.bo-header-right{display:flex;align-items:center;gap:10px;}
+.bo-conn{display:flex;align-items:center;gap:6px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:20px;padding:4px 12px;}
+.bo-conn-dot{width:7px;height:7px;border-radius:50%;background:var(--muted);flex-shrink:0;}
+.bo-conn-dot.live{background:var(--green);box-shadow:0 0 6px var(--green);}
+.bo-conn-dot.err{background:var(--red);}
+.bo-conn-label{font-family:var(--ff-m);font-size:9px;color:rgba(255,255,255,.6);letter-spacing:1px;text-transform:uppercase;}
+.bo-hdr-btn{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);color:rgba(255,255,255,.8);padding:5px 14px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;transition:background .15s;font-family:var(--ff-b);}
+.bo-hdr-btn:hover{background:rgba(228,168,48,.2);border-color:rgba(228,168,48,.4);color:var(--gold2);}
+/* Tab strip */
+.bo-tabs{display:flex;background:var(--navy2);border-bottom:1px solid rgba(228,168,48,.15);flex-shrink:0;padding:0 20px;gap:2px;}
+.bo-tab{background:transparent;border:none;border-bottom:2px solid transparent;padding:10px 18px;font-size:12px;font-weight:600;color:rgba(255,255,255,.45);cursor:pointer;letter-spacing:.3px;transition:color .15s,border-color .15s;font-family:var(--ff-b);white-space:nowrap;display:flex;align-items:center;gap:6px;}
+.bo-tab:hover{color:rgba(255,255,255,.7);}
+.bo-tab.active{color:var(--gold2);border-bottom-color:var(--gold2);}
+.bo-tab-badge{background:var(--red);color:#fff;font-size:9px;font-weight:800;border-radius:10px;padding:1px 6px;font-family:var(--ff-m);}
+/* Tab panes */
+.bo-body{flex:1;overflow:hidden;position:relative;}
+.bo-pane{display:none;height:100%;overflow:hidden;}
+.bo-pane.active{display:flex;flex-direction:column;}
+
+/* ── Situation Room ───────────────────────────────────────────────────────── */
+.bo-sitroom{display:flex;flex-direction:column;height:100%;overflow:hidden;padding:20px 24px;gap:16px;}
+.bo-kpi-strip{display:flex;gap:12px;flex-shrink:0;flex-wrap:wrap;}
+.bo-kpi{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 18px;flex:1;min-width:110px;display:flex;flex-direction:column;gap:3px;}
+.bo-kpi-n{font-size:28px;font-weight:900;line-height:1;color:var(--text);}
+.bo-kpi-l{font-family:var(--ff-m);font-size:9px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);margin-top:2px;}
+.bo-kpi-sub{font-size:10px;color:var(--muted);}
+.bo-kpi.ok .bo-kpi-n{color:var(--green);}
+.bo-kpi.warn .bo-kpi-n{color:var(--orange);}
+.bo-kpi.crit .bo-kpi-n{color:var(--red);}
+.bo-kpi.gold .bo-kpi-n{color:var(--gold2);}
+.bo-sit-grid{flex:1;display:grid;grid-template-columns:1fr 380px;gap:16px;min-height:0;overflow:hidden;}
+.bo-intel-panel,.bo-brief-panel{background:var(--surface);border:1px solid var(--border);border-radius:10px;display:flex;flex-direction:column;overflow:hidden;}
+.bo-panel-hdr{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--border);flex-shrink:0;}
+.bo-panel-title{font-weight:700;font-size:13px;color:var(--text);display:flex;align-items:center;gap:7px;}
+.bo-panel-action{font-size:11px;font-weight:600;color:var(--gold2);cursor:pointer;background:none;border:none;padding:0;font-family:var(--ff-b);}
+.bo-intel-feed{flex:1;overflow-y:auto;padding:10px 14px;display:flex;flex-direction:column;gap:8px;scrollbar-width:thin;scrollbar-color:var(--gold2) var(--surface);}
+.bo-intel-feed::-webkit-scrollbar{width:4px;}
+.bo-intel-feed::-webkit-scrollbar-thumb{background:var(--gold2);border-radius:3px;}
+.bo-intel-item{display:flex;gap:10px;align-items:flex-start;padding:9px 10px;border-radius:7px;border:1px solid var(--border);background:var(--bg);}
+.bo-intel-icon{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;}
+.bo-intel-body{flex:1;min-width:0;}
+.bo-intel-agent{font-weight:700;font-size:11px;color:var(--text);}
+.bo-intel-detail{font-size:11px;color:var(--muted);margin-top:2px;line-height:1.45;}
+.bo-intel-ts{font-family:var(--ff-m);font-size:9px;color:var(--muted);flex-shrink:0;margin-top:2px;}
+.bo-brief-body{flex:1;overflow-y:auto;padding:14px 16px;font-size:12px;line-height:1.65;color:var(--text);white-space:pre-wrap;scrollbar-width:thin;scrollbar-color:var(--gold2) var(--surface);}
+.bo-brief-body::-webkit-scrollbar{width:4px;}
+.bo-brief-body::-webkit-scrollbar-thumb{background:var(--gold2);border-radius:3px;}
+.bo-brief-empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;color:var(--muted);padding:20px;}
+.bo-brief-empty-icon{font-size:32px;}
+.bo-brief-empty-text{font-family:var(--ff-m);font-size:10px;letter-spacing:1px;text-align:center;}
+.bo-brief-run-btn{background:var(--gold2);color:#000;border:none;padding:8px 20px;border-radius:6px;font-weight:700;font-size:12px;cursor:pointer;margin-top:6px;}
+.bo-brief-run-btn:hover{background:var(--gold3);}
+
+/* ── Intel Channel ────────────────────────────────────────────────────────── */
+.bo-channel{display:flex;flex-direction:column;height:100%;overflow:hidden;}
+.bo-ch-statusbar{display:flex;align-items:center;gap:16px;padding:10px 20px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;flex-wrap:wrap;}
+.bo-ch-stat{display:flex;align-items:center;gap:5px;font-family:var(--ff-m);font-size:10px;color:var(--muted);}
+.bo-ch-stat strong{color:var(--text);}
+.bo-ch-thread{flex:1;overflow-y:auto;padding:20px 24px;display:flex;flex-direction:column;gap:12px;background:var(--bg);scrollbar-width:thin;scrollbar-color:var(--gold2) var(--bg);}
+.bo-ch-thread::-webkit-scrollbar{width:5px;}
+.bo-ch-thread::-webkit-scrollbar-thumb{background:var(--gold2);border-radius:3px;}
+.bo-msg{max-width:78%;display:flex;flex-direction:column;}
+.bo-msg.out{align-self:flex-end;align-items:flex-end;}
+.bo-msg.in{align-self:flex-start;align-items:flex-start;}
+.bo-msg-meta{display:flex;align-items:center;gap:5px;margin-bottom:4px;}
+.bo-msg-from{font-family:var(--ff-m);font-size:9px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;}
+.bo-msg.out .bo-msg-from{color:var(--gold2);}
+.bo-msg.in .bo-msg-from{color:var(--green);}
+.bo-msg-bubble{padding:11px 15px;border-radius:12px;font-size:12px;line-height:1.65;white-space:pre-wrap;word-break:break-word;}
+.bo-msg.out .bo-msg-bubble{background:var(--navy);color:rgba(255,255,255,.88);border-bottom-right-radius:3px;}
+.bo-msg.in .bo-msg-bubble{background:var(--surface);color:var(--text);border:1px solid var(--border);border-bottom-left-radius:3px;box-shadow:0 1px 6px rgba(11,37,69,.06);}
+.bo-msg-foot{font-family:var(--ff-m);font-size:9px;color:var(--muted);margin-top:3px;}
+.bo-tag{display:inline-flex;align-items:center;padding:1px 7px;border-radius:4px;font-family:var(--ff-m);font-size:8px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;margin-right:4px;}
+.bo-tag-dir{background:rgba(11,37,69,.08);color:var(--navy2);}
+.bo-tag-report{background:rgba(37,99,235,.1);color:var(--blue);}
+.bo-tag-crit{background:rgba(220,38,38,.1);color:var(--red);}
+.bo-tag-high{background:rgba(234,88,12,.1);color:var(--orange);}
+.bo-tag-norm{background:rgba(5,150,105,.08);color:var(--green);}
+.bo-tag-low{background:rgba(90,106,130,.1);color:var(--muted);}
+.bo-tag-feedback{background:rgba(228,168,48,.12);color:var(--gold);}
+.bo-divider{text-align:center;font-family:var(--ff-m);font-size:9px;color:var(--muted);letter-spacing:1.5px;padding:6px 0;position:relative;}
+.bo-divider::before,.bo-divider::after{content:'';position:absolute;top:50%;width:42%;height:1px;background:var(--border);}
+.bo-divider::before{left:0;}.bo-divider::after{right:0;}
+.bo-empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:var(--muted);}
+.bo-empty-icon{font-size:40px;}
+.bo-empty-text{font-family:var(--ff-m);font-size:10px;letter-spacing:1.2px;}
+
+/* ── Compose Directive ────────────────────────────────────────────────────── */
+.bo-compose{display:flex;height:100%;overflow:hidden;gap:0;}
+.bo-compose-main{flex:1;display:flex;flex-direction:column;padding:20px 24px;gap:14px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--gold2) var(--bg);}
+.bo-compose-main::-webkit-scrollbar{width:5px;}
+.bo-compose-main::-webkit-scrollbar-thumb{background:var(--gold2);border-radius:3px;}
+.bo-compose-sidebar{width:320px;flex-shrink:0;border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;}
+.bo-fl{font-family:var(--ff-m);font-size:9px;color:var(--muted);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px;}
+.bo-compose-label{font-weight:700;font-size:13px;color:var(--text);margin-bottom:4px;}
+.bo-compose-sub{font-size:11px;color:var(--muted);margin-bottom:12px;}
+.bo-textarea{width:100%;min-height:140px;padding:12px 14px;border:1.5px solid var(--border);border-radius:8px;font-family:var(--ff-b);font-size:13px;color:var(--text);background:var(--surface);resize:vertical;outline:none;transition:border-color .15s;line-height:1.6;}
+.bo-textarea:focus{border-color:var(--gold2);}
+.bo-select{width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:var(--ff-b);font-size:12px;color:var(--text);background:var(--surface);outline:none;cursor:pointer;}
+.bo-send-btn{background:var(--navy);color:var(--gold2);border:1.5px solid var(--gold2);padding:11px 28px;border-radius:7px;font-weight:800;font-size:13px;cursor:pointer;letter-spacing:.4px;transition:background .15s;font-family:var(--ff-b);}
+.bo-send-btn:hover{background:rgba(228,168,48,.12);}
+.bo-send-btn:disabled{opacity:.45;cursor:not-allowed;}
+.bo-tpl-grid{display:flex;flex-direction:column;gap:6px;padding:14px 16px;border-bottom:1px solid var(--border);}
+.bo-tpl-title{font-family:var(--ff-m);font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:4px;}
+.bo-tpl-btn{text-align:left;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:7px 10px;font-size:11px;color:var(--text);cursor:pointer;transition:border-color .12s,color .12s;font-weight:500;}
+.bo-tpl-btn:hover{border-color:var(--gold2);color:var(--gold2);}
+.bo-hist-feed{flex:1;overflow-y:auto;padding:0 16px 14px;display:flex;flex-direction:column;gap:7px;scrollbar-width:thin;scrollbar-color:var(--gold2) var(--surface);}
+.bo-hist-feed::-webkit-scrollbar{width:4px;}
+.bo-hist-feed::-webkit-scrollbar-thumb{background:var(--gold2);border-radius:3px;}
+.bo-hist-item{font-size:10px;line-height:1.5;border-left:2px solid var(--border);padding:4px 8px;color:var(--muted);}
+.bo-hist-item strong{color:var(--text);}
+
+/* ── Audit Report ─────────────────────────────────────────────────────────── */
+.bo-audit{display:flex;flex-direction:column;height:100%;overflow:hidden;padding:20px 24px;gap:14px;}
+.bo-audit-bar{display:flex;align-items:center;gap:12px;flex-shrink:0;flex-wrap:wrap;}
+.bo-audit-run-btn{background:var(--gold2);color:#000;border:none;padding:9px 22px;border-radius:6px;font-weight:800;font-size:12px;cursor:pointer;letter-spacing:.4px;}
+.bo-audit-run-btn:hover{background:var(--gold3);}
+.bo-audit-run-btn:disabled{opacity:.5;cursor:not-allowed;}
+.bo-audit-ts{font-family:var(--ff-m);font-size:10px;color:var(--muted);}
+.bo-audit-grid{flex:1;display:grid;grid-template-columns:1fr 340px;gap:16px;min-height:0;overflow:hidden;}
+.bo-audit-main,.bo-audit-side{background:var(--surface);border:1px solid var(--border);border-radius:10px;display:flex;flex-direction:column;overflow:hidden;}
+.bo-audit-body{flex:1;overflow-y:auto;padding:14px 16px;scrollbar-width:thin;scrollbar-color:var(--gold2) var(--surface);}
+.bo-audit-body::-webkit-scrollbar{width:4px;}
+.bo-audit-body::-webkit-scrollbar-thumb{background:var(--gold2);border-radius:3px;}
+.bo-gap-item{margin-bottom:12px;padding:10px 12px;border-radius:7px;border-left:3px solid var(--border);background:var(--bg);}
+.bo-gap-item.crit{border-left-color:var(--red);}
+.bo-gap-item.high{border-left-color:var(--orange);}
+.bo-gap-item.med{border-left-color:var(--gold2);}
+.bo-gap-item.ok{border-left-color:var(--green);}
+.bo-gap-label{font-weight:700;font-size:12px;color:var(--text);margin-bottom:3px;}
+.bo-gap-desc{font-size:11px;color:var(--muted);line-height:1.5;}
+.bo-directive-item{margin-bottom:8px;padding:8px 12px;border-radius:6px;background:var(--bg);border:1px solid var(--border);font-size:12px;color:var(--text);display:flex;gap:8px;align-items:flex-start;}
+.bo-directive-n{font-family:var(--ff-m);font-size:10px;font-weight:700;color:var(--gold2);flex-shrink:0;}
 </style>
 
-<div class="bond-layout">
-  <!-- Thread -->
-  <div class="bond-thread-panel">
-    <div class="bond-thread-hdr">
-      <div class="bond-thread-title">🕵️ Bond Channel — IEBC ↔ Daytona</div>
-      <span id="bond-msg-count" style="font-family:var(--ff-m);font-size:11px;color:var(--muted);">Loading…</span>
-      <button class="btn-sync" style="padding:6px 14px;font-size:11px;" onclick="bondLoadThread()">↺ Refresh</button>
-    </div>
-    <div class="bond-thread-body" id="bond-thread-body">
-      <div class="bond-empty">
-        <div class="bond-empty-icon">🕳️</div>
-        <div class="bond-empty-text">NO MESSAGES YET — SEND A DIRECTIVE BELOW</div>
+<div class="bo-wrap">
+
+  <!-- ── Header ── -->
+  <div class="bo-header">
+    <div class="bo-header-left">
+      <div class="bo-badge">🕵️</div>
+      <div>
+        <div class="bo-title">Bond Office</div>
+        <div class="bo-sub">James Bond · IEBC Consultant · Reports to Commander &amp; CC Gulley · Daytona <span id="bo-sandbox-id" style="color:rgba(255,255,255,.5)">2a50d3c2…c5c6</span></div>
       </div>
+    </div>
+    <div class="bo-header-right">
+      <div class="bo-conn">
+        <div class="bo-conn-dot" id="bo-conn-dot"></div>
+        <span class="bo-conn-label" id="bo-conn-label">checking…</span>
+      </div>
+      <button class="bo-hdr-btn" onclick="boRefreshAll()">↺ Refresh All</button>
     </div>
   </div>
 
-  <!-- Composer + Status -->
-  <div class="bond-composer">
-    <div class="bond-composer-hdr">
-      <div class="bond-composer-title">Send Directive</div>
-    </div>
-    <div class="bond-composer-body">
-
-      <div>
-        <div class="bond-fl">Directive to External Bond</div>
-        <textarea id="bond-directive" style="width:100%;min-height:120px;padding:9px 12px;border:1.5px solid var(--border);border-radius:7px;font-family:var(--ff-b);font-size:13px;color:var(--text);background:var(--off);resize:vertical;outline:none;transition:border-color .18s;" onfocus="this.style.borderColor='var(--navy)'" onblur="this.style.borderColor='var(--border)'" placeholder="Instruct External Bond to perform a task, share intel, or request a report…"></textarea>
-      </div>
-
-      <div>
-        <div class="bond-fl">Priority</div>
-        <select id="bond-priority" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:7px;font-family:var(--ff-b);font-size:13px;color:var(--text);background:var(--off);outline:none;">
-          <option value="normal">Normal</option>
-          <option value="high">High</option>
-          <option value="critical">Critical</option>
-          <option value="low">Low</option>
-        </select>
-      </div>
-
-      <button class="btn-sync" style="width:100%;justify-content:center;padding:10px;" onclick="bondSendDirective()">▶ Send to External Bond</button>
-
-      <div style="display:flex;gap:8px;">
-        <button class="btn-sync" style="flex:1;justify-content:center;font-size:11px;padding:7px;background:var(--navy2);" onclick="bondRunAudit()">🔍 Bond Audit</button>
-        <button class="btn-sync" style="flex:1;justify-content:center;font-size:11px;padding:7px;background:var(--navy2);" onclick="bondPollExternal()">🔄 Poll External</button>
-      </div>
-
-      <div style="text-align:center;font-family:var(--ff-m);font-size:9px;color:var(--muted);letter-spacing:1.5px;border-top:1px solid var(--border);padding-top:10px;">CONNECTION STATUS</div>
-
-      <div class="bond-sc">
-        <div class="bond-sr">
-          <span class="bond-sl">DAYTONA SANDBOX</span>
-          <span class="bond-sv" style="font-size:9px;" title="2a50d3c2-f813-49c0-8dec-f9248581c5c6">2a50d3c2…c5c6</span>
-        </div>
-        <div class="bond-sr">
-          <span class="bond-sl">TOTAL MESSAGES</span>
-          <span class="bond-sv" id="bond-stat-total">—</span>
-        </div>
-        <div class="bond-sr">
-          <span class="bond-sl">PENDING OUTBOUND</span>
-          <span class="bond-sv bond-sv-o" id="bond-stat-out">—</span>
-        </div>
-        <div class="bond-sr">
-          <span class="bond-sl">UNREAD INBOUND</span>
-          <span class="bond-sv bond-sv-g" id="bond-stat-in">—</span>
-        </div>
-        <div class="bond-sr">
-          <span class="bond-sl">CHANNEL</span>
-          <span class="bond-sv bond-sv-g" id="bond-stat-active">—</span>
-        </div>
-      </div>
-
-      <button onclick="bondLoadStatus()" style="width:100%;padding:7px;border:1.5px solid var(--border);border-radius:7px;background:transparent;color:var(--navy);font-size:11px;font-family:var(--ff-b);cursor:pointer;font-weight:600;transition:border-color .18s;" onmouseover="this.style.borderColor='var(--navy)'" onmouseout="this.style.borderColor='var(--border)'">↺ Refresh Status</button>
-
-    </div>
+  <!-- ── Tab Strip ── -->
+  <div class="bo-tabs">
+    <button class="bo-tab active" id="botab-sitroom" onclick="boTab('sitroom')">📊 Situation Room</button>
+    <button class="bo-tab" id="botab-channel" onclick="boTab('channel')">💬 Intel Channel <span class="bo-tab-badge" id="bo-ch-badge" style="display:none">0</span></button>
+    <button class="bo-tab" id="botab-compose" onclick="boTab('compose')">✉️ Compose</button>
+    <button class="bo-tab" id="botab-audit" onclick="boTab('audit')">🔍 Audit Report</button>
   </div>
-</div>
+
+  <!-- ── Tab Body ── -->
+  <div class="bo-body">
+
+    <!-- ════ SITUATION ROOM ════ -->
+    <div class="bo-pane active" id="bopane-sitroom">
+      <div class="bo-sitroom">
+
+        <!-- KPI Strip -->
+        <div class="bo-kpi-strip">
+          <div class="bo-kpi" id="bo-kpi-carriers">
+            <div class="bo-kpi-n" id="bokpi-carriers">—</div>
+            <div class="bo-kpi-l">Carriers</div>
+            <div class="bo-kpi-sub" id="bokpi-carriers-sub">active fleet</div>
+          </div>
+          <div class="bo-kpi" id="bo-kpi-loads">
+            <div class="bo-kpi-n" id="bokpi-loads">—</div>
+            <div class="bo-kpi-l">Open Loads</div>
+            <div class="bo-kpi-sub" id="bokpi-loads-sub">in pipeline</div>
+          </div>
+          <div class="bo-kpi" id="bo-kpi-leads">
+            <div class="bo-kpi-n" id="bokpi-leads">—</div>
+            <div class="bo-kpi-l">Leads</div>
+            <div class="bo-kpi-sub" id="bokpi-leads-sub">pipeline</div>
+          </div>
+          <div class="bo-kpi" id="bo-kpi-sla">
+            <div class="bo-kpi-n" id="bokpi-sla">—</div>
+            <div class="bo-kpi-l">SLA Violations</div>
+            <div class="bo-kpi-sub" id="bokpi-sla-sub">load pipeline</div>
+          </div>
+          <div class="bo-kpi" id="bo-kpi-msgs">
+            <div class="bo-kpi-n gold" id="bokpi-msgs">—</div>
+            <div class="bo-kpi-l">Bond Messages</div>
+            <div class="bo-kpi-sub" id="bokpi-msgs-sub">channel</div>
+          </div>
+        </div>
+
+        <!-- 2-col: Intel Feed + Bond Brief -->
+        <div class="bo-sit-grid">
+
+          <div class="bo-intel-panel">
+            <div class="bo-panel-hdr">
+              <div class="bo-panel-title">📡 Intelligence Feed <span style="font-size:10px;font-weight:400;color:var(--muted);margin-left:4px;">Agent Activity · What IEBC Is Seeing Right Now</span></div>
+              <button class="bo-panel-action" onclick="boLoadIntelFeed()">↺</button>
+            </div>
+            <div class="bo-intel-feed" id="bo-intel-feed">
+              <div class="bo-empty"><div class="bo-empty-icon">📡</div><div class="bo-empty-text">LOADING INTEL…</div></div>
+            </div>
+          </div>
+
+          <div class="bo-brief-panel">
+            <div class="bo-panel-hdr">
+              <div class="bo-panel-title">🕵️ Bond's Last Brief</div>
+              <button class="bo-panel-action" onclick="boRunAuditAndBrief()">Run Audit →</button>
+            </div>
+            <div id="bo-brief-content">
+              <div class="bo-brief-empty">
+                <div class="bo-brief-empty-icon">📋</div>
+                <div class="bo-brief-empty-text">NO AUDIT RUN YET<br>Bond reviews the org, surfaces gaps,<br>and reports to Commander</div>
+                <button class="bo-brief-run-btn" onclick="boRunAuditAndBrief()">Run Bond Audit</button>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- ════ INTEL CHANNEL ════ -->
+    <div class="bo-pane" id="bopane-channel">
+      <div class="bo-channel">
+        <div class="bo-ch-statusbar">
+          <div class="bo-ch-stat">SANDBOX <strong id="bo-sb-id">2a50d3c2…c5c6</strong></div>
+          <div class="bo-ch-stat">TOTAL <strong id="bo-ch-total">—</strong></div>
+          <div class="bo-ch-stat">PENDING OUT <strong id="bo-ch-out" style="color:var(--orange)">—</strong></div>
+          <div class="bo-ch-stat">UNREAD IN <strong id="bo-ch-in" style="color:var(--green)">—</strong></div>
+          <div class="bo-ch-stat">CHANNEL <strong id="bo-ch-active" style="color:var(--green)">—</strong></div>
+          <div style="margin-left:auto;display:flex;gap:8px;">
+            <button class="bo-hdr-btn" style="background:var(--surface);color:var(--text);border-color:var(--border);font-size:10px;" onclick="boPollExternal()">📡 Poll External</button>
+            <button class="bo-hdr-btn" style="background:var(--surface);color:var(--text);border-color:var(--border);font-size:10px;" onclick="boLoadThread()">↺ Refresh</button>
+          </div>
+        </div>
+        <div class="bo-ch-thread" id="bo-thread">
+          <div class="bo-empty"><div class="bo-empty-icon">🕳️</div><div class="bo-empty-text">NO MESSAGES — SEND A DIRECTIVE BELOW</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════ COMPOSE DIRECTIVE ════ -->
+    <div class="bo-pane" id="bopane-compose">
+      <div class="bo-compose">
+        <div class="bo-compose-main">
+          <div>
+            <div class="bo-compose-label">Compose Directive</div>
+            <div class="bo-compose-sub">Send operational instructions, intel requests, or mission briefs to External Bond on Daytona.</div>
+          </div>
+          <div>
+            <div class="bo-fl">Directive Content</div>
+            <textarea class="bo-textarea" id="bo-directive-text" style="min-height:180px;" placeholder="Write your directive… Be specific: what External Bond should do, what to verify, what to report back."></textarea>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+            <div>
+              <div class="bo-fl">Priority</div>
+              <select class="bo-select" id="bo-priority">
+                <option value="normal">Normal</option>
+                <option value="high">High</option>
+                <option value="critical">Critical — Immediate Action</option>
+                <option value="low">Low — FYI</option>
+              </select>
+            </div>
+            <div>
+              <div class="bo-fl">Message Type</div>
+              <select class="bo-select" id="bo-msg-type">
+                <option value="directive">Directive</option>
+                <option value="report">Report Request</option>
+                <option value="acknowledgment">Acknowledgment</option>
+                <option value="feedback">Feedback</option>
+                <option value="suggestion">Suggestion</option>
+              </select>
+            </div>
+          </div>
+          <div style="display:flex;gap:10px;align-items:center;">
+            <button class="bo-send-btn" id="bo-send-btn" onclick="boSendDirective()">▶ Send to External Bond</button>
+            <span id="bo-send-status" style="font-family:var(--ff-m);font-size:10px;color:var(--muted);"></span>
+          </div>
+          <!-- Recent outbound history -->
+          <div style="margin-top:8px;">
+            <div class="bo-fl">Recent Outbound</div>
+            <div id="bo-recent-outbound" style="display:flex;flex-direction:column;gap:6px;">
+              <div style="font-size:11px;color:var(--muted);font-style:italic;">Loading…</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sidebar: Quick Templates -->
+        <div class="bo-compose-sidebar">
+          <div class="bo-tpl-grid">
+            <div class="bo-tpl-title">Quick Templates</div>
+            <button class="bo-tpl-btn" onclick="boFillTemplate('connectivity')">📡 API Connectivity Check</button>
+            <button class="bo-tpl-btn" onclick="boFillTemplate('health')">❤️ Full Health Report</button>
+            <button class="bo-tpl-btn" onclick="boFillTemplate('schema')">🗄️ Schema Verification</button>
+            <button class="bo-tpl-btn" onclick="boFillTemplate('deploy')">🚀 Render Deploy Status</button>
+            <button class="bo-tpl-btn" onclick="boFillTemplate('intel')">🔍 Market Intel Request</button>
+            <button class="bo-tpl-btn" onclick="boFillTemplate('status')">📋 Full Status Report</button>
+          </div>
+          <div style="padding:12px 16px 6px;flex-shrink:0;">
+            <div class="bo-tpl-title" style="margin-bottom:8px;">Inbound Messages</div>
+          </div>
+          <div class="bo-hist-feed" id="bo-inbound-feed">
+            <div style="font-size:11px;color:var(--muted);font-style:italic;padding:4px 0;">Loading…</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════ AUDIT REPORT ════ -->
+    <div class="bo-pane" id="bopane-audit">
+      <div class="bo-audit">
+        <div class="bo-audit-bar">
+          <button class="bo-audit-run-btn" id="bo-audit-btn" onclick="boRunFullAudit()">🔍 Run Bond Audit</button>
+          <div>
+            <div style="font-size:11px;font-weight:600;color:var(--text);" id="bo-audit-scope-label">Full org audit — all 24 agents</div>
+            <div class="bo-audit-ts" id="bo-audit-last-ts">Last run: never</div>
+          </div>
+          <div style="margin-left:auto;display:flex;gap:8px;">
+            <select class="bo-select" id="bo-audit-scope" style="width:auto;padding:6px 10px;font-size:11px;">
+              <option value="full">Full Audit</option>
+              <option value="tech">Tech &amp; Infrastructure</option>
+              <option value="ops">Operations &amp; Loads</option>
+              <option value="leads">Leads &amp; Pipeline</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="bo-audit-grid">
+          <div class="bo-audit-main">
+            <div class="bo-panel-hdr">
+              <div class="bo-panel-title">📊 Findings &amp; Tech Gaps</div>
+              <span id="bo-audit-gap-count" style="font-family:var(--ff-m);font-size:10px;color:var(--muted);">—</span>
+            </div>
+            <div class="bo-audit-body" id="bo-audit-gaps">
+              <div class="bo-brief-empty" style="padding:30px 0;">
+                <div class="bo-brief-empty-icon">🔍</div>
+                <div class="bo-brief-empty-text">RUN AUDIT TO SEE FINDINGS</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="bo-audit-side">
+            <div class="bo-panel-hdr">
+              <div class="bo-panel-title">📋 Directives to Commander</div>
+            </div>
+            <div class="bo-audit-body" id="bo-audit-directives">
+              <div class="bo-brief-empty" style="padding:20px 0;">
+                <div class="bo-brief-empty-icon">📋</div>
+                <div class="bo-brief-empty-text">AWAITING AUDIT</div>
+              </div>
+            </div>
+            <div style="padding:10px 14px;border-top:1px solid var(--border);flex-shrink:0;">
+              <div class="bo-fl" style="margin-bottom:6px;">Executive Brief</div>
+              <div id="bo-exec-brief" style="font-size:11px;color:var(--muted);line-height:1.6;max-height:140px;overflow-y:auto;scrollbar-width:thin;">Run audit to generate brief.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /bo-body -->
+</div><!-- /bo-wrap -->
 </div>
 <!-- END BOND OFFICE -->
 
 <script>
-// ── Bond Office ─────────────────────────────────────────────────────────────
-function bondMsgTypeTag(t){
-  const m={directive:'bond-tag-dir',report:'bond-tag-report',feedback:'bond-tag-feedback',suggestion:'bond-tag-suggestion',acknowledgment:'bond-tag-norm'};
-  return `<span class="bond-tag ${m[t]||'bond-tag-norm'}">${t}</span>`;
-}
-function bondPriorityTag(p){
-  const m={critical:'bond-tag-crit',high:'bond-tag-high',normal:'bond-tag-norm',low:'bond-tag-dir'};
-  return `<span class="bond-tag ${m[p]||'bond-tag-norm'}">${p}</span>`;
-}
-function bondFmtTime(ts){
-  if(!ts)return'';
-  return new Date(ts).toLocaleString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit',hour12:true});
-}
-function bondEsc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+// ── Bond Office ──────────────────────────────────────────────────────────────
 
-function bondRenderThread(msgs){
-  const body=document.getElementById('bond-thread-body');
-  const cnt=document.getElementById('bond-msg-count');
-  if(cnt)cnt.textContent=msgs.length+' message'+(msgs.length!==1?'s':'');
-  if(!msgs.length){body.innerHTML='<div class="bond-empty"><div class="bond-empty-icon">🕳️</div><div class="bond-empty-text">NO MESSAGES YET</div></div>';return;}
-  let html='',lastDate=null;
-  msgs.forEach(m=>{
-    const ds=new Date(m.created_at).toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
-    if(ds!==lastDate){html+=`<div class="bond-divider">${ds}</div>`;lastDate=ds;}
-    const cls=m.direction==='internal_to_external'?'outbound':'inbound';
-    html+=`<div class="bond-msg ${cls}"><div class="bond-msg-meta">${bondEsc(m.from_label)} &nbsp; ${bondMsgTypeTag(m.message_type)} ${bondPriorityTag(m.priority)}</div><div class="bond-msg-content">${bondEsc(m.content)}</div><div class="bond-msg-footer">${bondFmtTime(m.created_at)} &bull; ${m.status}</div></div>`;
+// ── Tab switching
+function boTab(id) {
+  ['sitroom','channel','compose','audit'].forEach(t => {
+    document.getElementById('botab-'+t)?.classList.toggle('active', t===id);
+    document.getElementById('bopane-'+t)?.classList.toggle('active', t===id);
   });
-  body.innerHTML=html;
-  body.scrollTop=body.scrollHeight;
-  const unread=msgs.filter(m=>m.direction==='external_to_internal'&&m.status==='pending').length;
-  const badge=document.getElementById('bond-notif');
-  if(badge){badge.textContent=unread;badge.style.display=unread?'inline':'none';}
+  if (id==='channel')   boLoadThread(), boLoadStatus();
+  if (id==='sitroom')   boLoadSitRoom();
+  if (id==='compose')   boLoadComposeHistory();
+  if (id==='audit')     boRenderLastAudit();
 }
 
-async function bondLoadThread(){
-  try{const d=await apiFetch('/api/bond/thread?limit=100');bondRenderThread(d.messages||[]);}
-  catch(e){console.warn('Bond thread load failed',e);}
+function boRefreshAll() {
+  boLoadStatus();
+  boLoadThread();
+  boLoadSitRoom();
 }
-async function bondSendDirective(){
-  const content=document.getElementById('bond-directive').value.trim();
-  const priority=document.getElementById('bond-priority').value;
-  if(!content){alert('Enter a directive first.');return;}
-  try{
-    await apiFetch('/api/bond/directive','POST',{content,priority});
-    document.getElementById('bond-directive').value='';
-    await bondLoadThread();await bondLoadStatus();
-  }catch(e){alert('Send failed: '+e.message);}
+
+// ── Helpers
+function boEsc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function boFmtTime(ts){ if(!ts)return''; return new Date(ts).toLocaleString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit',hour12:true}); }
+function boFmtAge(ts){
+  if(!ts)return'';
+  const m=Math.round((Date.now()-new Date(ts))/60000);
+  if(m<1)return'just now'; if(m<60)return m+'m ago';
+  const h=Math.round(m/60); if(h<24)return h+'h ago';
+  return Math.round(h/24)+'d ago';
 }
-async function bondLoadStatus(){
-  try{
-    const d=await apiFetch('/api/bond/status');
-    document.getElementById('bond-stat-total').textContent=d.total_messages??'—';
-    document.getElementById('bond-stat-out').textContent=d.pending_outbound??'—';
-    document.getElementById('bond-stat-in').textContent=d.unread_inbound??'—';
-    document.getElementById('bond-stat-active').textContent=d.channel_active?'ACTIVE':'INACTIVE';
-  }catch(e){console.warn('Bond status failed',e);}
+function boTagType(t){ const m={directive:'dir',report:'report',feedback:'feedback',suggestion:'feedback',acknowledgment:'norm'}; return `<span class="bo-tag bo-tag-${m[t]||'norm'}">${t}</span>`; }
+function boTagPri(p){ const m={critical:'crit',high:'high',normal:'norm',low:'low'}; return `<span class="bo-tag bo-tag-${m[p]||'norm'}">${p}</span>`; }
+
+// ── Status / connection
+async function boLoadStatus() {
+  try {
+    const d = await apiFetch('/api/bond/status');
+    const dot   = document.getElementById('bo-conn-dot');
+    const label = document.getElementById('bo-conn-label');
+    const alive = d.connected || d.channel_active;
+    if(dot){ dot.className = 'bo-conn-dot ' + (alive?'live':'err'); }
+    if(label){ label.textContent = alive ? 'CONNECTED' : 'DISCONNECTED'; }
+
+    const set = (id, v) => { const el=document.getElementById(id); if(el)el.textContent=v??'—'; };
+    set('bo-ch-total',  d.total_messages);
+    set('bo-ch-out',    d.pending_outbound);
+    set('bo-ch-in',     d.unread_inbound);
+    set('bo-ch-active', d.channel_active ? 'ACTIVE' : 'INACTIVE');
+    set('bokpi-msgs',   d.total_messages);
+    if(d.total_messages!=null){ document.getElementById('bokpi-msgs-sub').textContent=(d.unread_inbound||0)+' unread'; }
+    const badge = document.getElementById('bo-ch-badge');
+    const unread = d.unread_inbound||0;
+    if(badge){ badge.textContent=unread; badge.style.display=unread?'inline':'none'; }
+  } catch(e){ console.warn('Bond status failed',e); }
 }
-async function bondRunAudit(){
-  try{
-    const d=await apiFetch('/api/agents/james_bond/run','POST',{scope:'full',top_n:5});
-    const brief=d.executive_brief||JSON.stringify(d,null,2);
-    await apiFetch('/api/bond/directive','POST',{content:'[AUTO AUDIT]
-'+brief,priority:'high'});
-    await bondLoadThread();
-  }catch(e){alert('Audit failed: '+e.message);}
+
+// ── Thread
+function boRenderThread(msgs) {
+  const body = document.getElementById('bo-thread');
+  if(!msgs||!msgs.length){
+    body.innerHTML='<div class="bo-empty"><div class="bo-empty-icon">🕳️</div><div class="bo-empty-text">NO MESSAGES YET — SEND A DIRECTIVE</div></div>';
+    return;
+  }
+  let html='', lastDate=null;
+  msgs.forEach(m => {
+    const ds = new Date(m.created_at).toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
+    if(ds!==lastDate){ html+=`<div class="bo-divider">${ds}</div>`; lastDate=ds; }
+    const cls = m.direction==='internal_to_external' ? 'out' : 'in';
+    const from = cls==='out' ? 'Internal Bond → External' : '← External Bond';
+    html += `<div class="bo-msg ${cls}">
+      <div class="bo-msg-meta"><span class="bo-msg-from">${boEsc(from)}</span>${boTagType(m.message_type)} ${boTagPri(m.priority)}</div>
+      <div class="bo-msg-bubble">${boEsc(m.content)}</div>
+      <div class="bo-msg-foot">${boFmtTime(m.created_at)} · ${m.status}</div>
+    </div>`;
+  });
+  body.innerHTML = html;
+  body.scrollTop = body.scrollHeight;
+  // badge
+  const unread = msgs.filter(m=>m.direction==='external_to_internal'&&m.status==='pending').length;
+  const notif  = document.getElementById('bond-notif');
+  if(notif){ notif.textContent=unread; notif.style.display=unread?'inline':'none'; }
+  const badge  = document.getElementById('bo-ch-badge');
+  if(badge){ badge.textContent=unread; badge.style.display=unread?'inline':'none'; }
 }
-async function bondPollExternal(){
-  try{
+
+async function boLoadThread() {
+  try { const d=await apiFetch('/api/bond/thread?limit=100'); boRenderThread(d.messages||[]); }
+  catch(e){ console.warn('Bond thread failed',e); }
+}
+
+// ── Send Directive
+async function boSendDirective() {
+  const content  = document.getElementById('bo-directive-text')?.value.trim();
+  const priority = document.getElementById('bo-priority')?.value;
+  const msg_type = document.getElementById('bo-msg-type')?.value;
+  if(!content){ alert('Write a directive first.'); return; }
+  const btn = document.getElementById('bo-send-btn');
+  const st  = document.getElementById('bo-send-status');
+  if(btn){ btn.disabled=true; btn.textContent='Sending…'; }
+  try {
+    await apiFetch('/api/bond/directive','POST',{content,priority,message_type:msg_type});
+    if(btn){ btn.textContent='▶ Send to External Bond'; btn.disabled=false; }
+    if(st)st.textContent='✓ Sent '+new Date().toLocaleTimeString();
+    document.getElementById('bo-directive-text').value='';
+    boLoadThread(); boLoadStatus(); boLoadComposeHistory();
+  } catch(e) {
+    if(btn){ btn.disabled=false; btn.textContent='▶ Send to External Bond'; }
+    if(st)st.textContent='✗ '+e.message;
+    alert('Send failed: '+e.message);
+  }
+}
+
+// ── Templates
+const BO_TEMPLATES = {
+  connectivity: `CONNECTIVITY VERIFICATION\n\nPlease run the following checks and report results:\n1. curl $IEBC_API_URL/api/health/ping\n   Expected: "ok"\n2. curl $IEBC_API_URL/api/health/full\n   Expected: {"ok": true, "services": {"supabase": "ok"}}\n3. curl -H "X-Bond-Key: $BOND_API_KEY" $IEBC_API_URL/api/bond/inbox\n   Expected: HTTP 200\n\nReport: HTTP status codes, response bodies, and any errors encountered.`,
+  health: `FULL HEALTH REPORT REQUEST\n\nPlease provide a complete health snapshot:\n1. API connectivity status (ping + full health)\n2. Supabase database connectivity\n3. BOND_API_KEY configured and functional\n4. Any environment variables missing or misconfigured\n5. Last deploy timestamp and status\n\nReturn a structured report: system=OK/DEGRADED/DOWN for each.`,
+  schema: `SCHEMA VERIFICATION REQUEST\n\nPlease verify the following tables exist and have data:\n- active_carriers (SELECT COUNT(*) FROM active_carriers;)\n- loads (SELECT COUNT(*) FROM loads;)\n- leads (SELECT COUNT(*) FROM leads;)\n- agent_memory (SELECT COUNT(*) FROM agent_memory;)\n- bond_channel (SELECT COUNT(*) FROM bond_channel;)\n- telemetry_pings (SELECT COUNT(*) FROM telemetry_pings;)\n\nRun in Supabase SQL Editor and report row counts. If any table is missing, run the corresponding migration from sql/ in the repo.`,
+  deploy: `RENDER DEPLOY STATUS\n\nPlease check the current deployment:\n1. Go to https://dashboard.render.com\n2. Open the 3-lakes-logistics-api service\n3. Verify: last deploy succeeded, no crashes in logs\n4. Check environment variables are set: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, API_BEARER_TOKEN, BOND_API_KEY\n5. Report: deploy status, last deploy time, any errors in logs`,
+  intel: `MARKET INTELLIGENCE REQUEST\n\nPlease gather current market intelligence:\n1. Run: curl $IEBC_API_URL/api/agents/alexander/run -X POST -H "Authorization: Bearer $API_TOKEN" -d \'{"action": "analyze"}\'\n2. Report: top states by carrier density, fleet capacity trends\n3. Identify any markets with high demand and low competition\n\nThis intel will feed Naomi's targeting model.`,
+  status: `FULL STATUS REPORT — $(date)\n\nRequired status checks:\n1. API health (ping + full)\n2. Database: row counts for carriers, loads, leads, agent_memory\n3. Bond channel: message count, pending/unread\n4. Last 5 agent runs (from agent_memory table)\n5. Any critical SLA violations\n\nFormat your response as a structured report with OK/WARN/FAIL for each system. Post response to /api/bond/report when complete.`,
+};
+function boFillTemplate(key) {
+  const el = document.getElementById('bo-directive-text');
+  if(el && BO_TEMPLATES[key]) el.value = BO_TEMPLATES[key];
+  const priEl = document.getElementById('bo-priority');
+  if(priEl && key==='connectivity') priEl.value='high';
+  if(priEl && key==='health') priEl.value='normal';
+}
+
+async function boLoadComposeHistory() {
+  const outDiv = document.getElementById('bo-recent-outbound');
+  const inDiv  = document.getElementById('bo-inbound-feed');
+  try {
+    const d = await apiFetch('/api/bond/thread?limit=30');
+    const msgs = d.messages||[];
+    const out  = msgs.filter(m=>m.direction==='internal_to_external').slice(-5).reverse();
+    const inb  = msgs.filter(m=>m.direction==='external_to_internal').slice(-8).reverse();
+    if(outDiv){
+      if(!out.length){ outDiv.innerHTML='<div style="font-size:11px;color:var(--muted);font-style:italic;">No outbound messages yet.</div>'; }
+      else { outDiv.innerHTML = out.map(m=>`<div class="bo-hist-item"><strong>${boTagType(m.message_type)} ${boTagPri(m.priority)}</strong><br>${boEsc((m.content||'').slice(0,100))}… <span style="color:var(--muted)">${boFmtAge(m.created_at)}</span></div>`).join(''); }
+    }
+    if(inDiv){
+      if(!inb.length){ inDiv.innerHTML='<div style="font-size:11px;color:var(--muted);padding:4px 0;font-style:italic;">No inbound messages.</div>'; }
+      else { inDiv.innerHTML = inb.map(m=>`<div class="bo-hist-item"><strong>${boTagPri(m.priority)}</strong> ${boFmtAge(m.created_at)}<br>${boEsc((m.content||'').slice(0,80))}…</div>`).join(''); }
+    }
+  } catch(e){ console.warn('Compose history failed',e); }
+}
+
+// ── Poll External
+async function boPollExternal() {
+  try {
     const d=await apiFetch('/api/agents/bond_courier/run','POST',{action:'poll'});
-    await bondLoadThread();
-    if(d.count>0)alert(d.count+' new message(s) from External Bond.');
-  }catch(e){alert('Poll failed: '+e.message);}
+    await boLoadThread(); await boLoadStatus();
+    if(d.count>0) toast(d.count+' new message(s) from External Bond.','success');
+    else toast('No new messages from External Bond.','info');
+  } catch(e){ alert('Poll failed: '+e.message); }
 }
 
-// Hook nav() to auto-load Bond Office on selection
+// ── Situation Room
+async function boLoadSitRoom() {
+  boLoadStatus();
+  // Load KPIs
+  try {
+    const d = await apiFetch('/api/dashboard/kpis');
+    const n = (id,v,cls) => {
+      const el=document.getElementById(id); if(el)el.textContent=v??'—';
+      if(cls){ const p=el?.closest('.bo-kpi'); if(p){p.className='bo-kpi '+cls;} }
+    };
+    n('bokpi-carriers', d.total_carriers ?? d.carrier_count ?? '—');
+    n('bokpi-loads',    d.open_loads     ?? d.active_loads  ?? '—', (d.open_loads||0)>0?'ok':'');
+    n('bokpi-leads',    d.total_leads    ?? d.lead_count    ?? '—');
+    n('bokpi-sla',      d.sla_violations ?? '—', (d.sla_violations||0)>2?'warn':'ok');
+    if(d.sla_violations!=null) document.getElementById('bokpi-sla-sub').textContent=(d.critical_violations||0)+' critical';
+  } catch(e){ console.warn('KPI load failed',e); }
+
+  // Intel Feed
+  boLoadIntelFeed();
+}
+
+const BO_AGENT_META = {
+  winston:   { icon:'👥', color:'#3b82f6', bg:'rgba(59,130,246,.12)' },
+  isabella:  { icon:'📣', color:'#8b5cf6', bg:'rgba(139,92,246,.12)' },
+  alexander: { icon:'📊', color:'#10b981', bg:'rgba(16,185,129,.12)' },
+  katerina:  { icon:'⚙️', color:'#f59e0b', bg:'rgba(245,158,11,.12)' },
+  naomi:     { icon:'🎯', color:'#3b82f6', bg:'rgba(59,130,246,.12)' },
+  vance:     { icon:'📞', color:'#10b981', bg:'rgba(16,185,129,.12)' },
+  scout:     { icon:'🔍', color:'#6366f1', bg:'rgba(99,102,241,.12)' },
+  penny:     { icon:'💰', color:'#f59e0b', bg:'rgba(245,158,11,.12)' },
+  sofia:     { icon:'📈', color:'#ec4899', bg:'rgba(236,72,153,.12)'  },
+  james_bond:{ icon:'🕵️', color:'#e4a830', bg:'rgba(228,168,48,.15)' },
+  default:   { icon:'🤖', color:'#5a6a82', bg:'rgba(90,106,130,.1)'  },
+};
+
+async function boLoadIntelFeed() {
+  const feed = document.getElementById('bo-intel-feed');
+  if(!feed)return;
+  feed.innerHTML='<div class="bo-empty"><div class="bo-empty-icon">⏳</div><div class="bo-empty-text">LOADING…</div></div>';
+  try {
+    // Pull agent memory for the top agents
+    const agents = ['winston','isabella','alexander','katerina','naomi','vance','penny','sofia','james_bond'];
+    const items = [];
+    // Try to get org brain summary
+    try {
+      const org = await apiFetch('/api/agents/james_bond/run','POST',{scope:'full',top_n:3});
+      if(org.executive_brief){
+        items.push({
+          agent:'james_bond', key:'executive_brief',
+          value: org.executive_brief.slice(0,180),
+          ts: new Date().toISOString(),
+        });
+      }
+      if(org.tech_gaps?.length){
+        items.push({
+          agent:'james_bond', key:'top_tech_gap',
+          value: org.tech_gaps[0]?.description || JSON.stringify(org.tech_gaps[0]).slice(0,120),
+          ts: new Date().toISOString(),
+        });
+      }
+    } catch(_){}
+    // Bond channel unread count
+    try {
+      const bs = await apiFetch('/api/bond/status');
+      if((bs.unread_inbound||0)>0){
+        items.push({agent:'james_bond',key:'unread_messages',value:`${bs.unread_inbound} unread message(s) from External Bond on Daytona`,ts:new Date().toISOString()});
+      }
+      items.push({agent:'james_bond',key:'channel',value:`Bond channel ${bs.channel_active?'ACTIVE':'inactive'} · ${bs.total_messages||0} total messages`,ts:new Date().toISOString()});
+    } catch(_){}
+    // Carriers
+    try {
+      const c = await apiFetch('/api/carriers/');
+      const ct = Array.isArray(c)?c.length:(c?.count??null);
+      if(ct!=null) items.push({agent:'winston',key:'carrier_count',value:`${ct} carrier(s) in active fleet`,ts:new Date().toISOString()});
+    } catch(_){}
+    // Leads
+    try {
+      const l = await apiFetch('/api/leads/?limit=1');
+      if(l?.count!=null) items.push({agent:'isabella',key:'lead_pipeline',value:`${l.count} lead(s) in pipeline`,ts:new Date().toISOString()});
+    } catch(_){}
+
+    if(!items.length){
+      feed.innerHTML='<div class="bo-empty"><div class="bo-empty-icon">📡</div><div class="bo-empty-text">NO INTEL YET — RUN AGENTS</div></div>';
+      return;
+    }
+    feed.innerHTML = items.map(item => {
+      const meta = BO_AGENT_META[item.agent] || BO_AGENT_META.default;
+      const agentName = item.agent.replace('_',' ').replace(/\b\w/g,c=>c.toUpperCase());
+      return `<div class="bo-intel-item">
+        <div class="bo-intel-icon" style="background:${meta.bg};color:${meta.color};">${meta.icon}</div>
+        <div class="bo-intel-body">
+          <div class="bo-intel-agent">${agentName}</div>
+          <div class="bo-intel-detail">${boEsc(item.value)}</div>
+        </div>
+        <div class="bo-intel-ts">${boFmtAge(item.ts)}</div>
+      </div>`;
+    }).join('');
+  } catch(e){
+    feed.innerHTML='<div style="padding:14px;font-size:11px;color:var(--red);">Intel feed error: '+boEsc(e.message)+'</div>';
+  }
+}
+
+// ── Audit
+let _boLastAudit = null;
+
+async function boRunAuditAndBrief() {
+  const btn = document.querySelector('.bo-brief-run-btn');
+  if(btn){ btn.disabled=true; btn.textContent='Running…'; }
+  const brief = document.getElementById('bo-brief-content');
+  if(brief) brief.innerHTML='<div class="bo-brief-empty"><div class="bo-brief-empty-icon">⏳</div><div class="bo-brief-empty-text">Bond is analyzing the org…</div></div>';
+  try {
+    const d = await apiFetch('/api/agents/james_bond/run','POST',{scope:'full',top_n:5});
+    _boLastAudit = d;
+    boRenderBrief(d);
+    boRenderAuditResults(d);
+    if(btn){ btn.disabled=false; btn.textContent='Run Audit →'; }
+  } catch(e) {
+    if(brief) brief.innerHTML=`<div class="bo-brief-empty"><div class="bo-brief-empty-icon">✗</div><div class="bo-brief-empty-text" style="color:var(--red)">Audit failed: ${boEsc(e.message)}</div></div>`;
+    if(btn){ btn.disabled=false; btn.textContent='Run Audit →'; }
+  }
+}
+
+function boRenderBrief(d) {
+  const brief = document.getElementById('bo-brief-content');
+  if(!brief)return;
+  const text = d.executive_brief || d.summary || JSON.stringify(d).slice(0,400);
+  const gaps  = d.tech_gaps?.length||0;
+  const score = d.health_score ?? null;
+  brief.innerHTML = `
+    <div style="display:flex;flex-direction:column;height:100%;">
+      ${score!=null?`<div style="padding:10px 16px 0;display:flex;gap:10px;flex-wrap:wrap;">
+        <div style="font-family:var(--ff-m);font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;">Health Score</div>
+        <div style="font-family:var(--ff-m);font-size:11px;font-weight:700;color:${score>70?'var(--green)':score>40?'var(--orange)':'var(--red)'};">${score}/100</div>
+        <div style="font-family:var(--ff-m);font-size:9px;color:var(--muted);margin-left:8px;text-transform:uppercase;letter-spacing:.8px;">Tech Gaps</div>
+        <div style="font-family:var(--ff-m);font-size:11px;font-weight:700;color:${gaps>3?'var(--red)':gaps>0?'var(--orange)':'var(--green)'};">${gaps}</div>
+      </div>`:''}
+      <div class="bo-brief-body">${boEsc(text)}</div>
+    </div>`;
+}
+
+async function boRunFullAudit() {
+  const btn = document.getElementById('bo-audit-btn');
+  const scope = document.getElementById('bo-audit-scope')?.value || 'full';
+  if(btn){ btn.disabled=true; btn.textContent='⏳ Running…'; }
+  const ts = document.getElementById('bo-audit-last-ts');
+  try {
+    const d = await apiFetch('/api/agents/james_bond/run','POST',{scope,top_n:7});
+    _boLastAudit = d;
+    boRenderAuditResults(d);
+    boRenderBrief(d);
+    if(ts) ts.textContent='Last run: just now';
+    if(btn){ btn.disabled=false; btn.textContent='🔍 Run Bond Audit'; }
+  } catch(e) {
+    if(btn){ btn.disabled=false; btn.textContent='🔍 Run Bond Audit'; }
+    const el=document.getElementById('bo-audit-gaps');
+    if(el) el.innerHTML=`<div style="padding:16px;color:var(--red);font-size:12px;">Audit failed: ${boEsc(e.message)}</div>`;
+  }
+}
+
+function boRenderLastAudit() { if(_boLastAudit) boRenderAuditResults(_boLastAudit); }
+
+function boRenderAuditResults(d) {
+  const gapsEl = document.getElementById('bo-audit-gaps');
+  const dirEl  = document.getElementById('bo-audit-directives');
+  const briefEl= document.getElementById('bo-exec-brief');
+  const cntEl  = document.getElementById('bo-audit-gap-count');
+  const gaps   = d.tech_gaps || [];
+  const dirs   = d.directives || d.action_items || [];
+  if(cntEl) cntEl.textContent = gaps.length+' gap(s) found';
+  if(briefEl) briefEl.textContent = d.executive_brief || 'No brief generated.';
+
+  if(gapsEl){
+    if(!gaps.length){
+      gapsEl.innerHTML='<div class="bo-brief-empty" style="padding:20px 0;"><div class="bo-brief-empty-icon">✅</div><div class="bo-brief-empty-text">NO GAPS DETECTED</div></div>';
+    } else {
+      const sev = {critical:'crit',high:'high',medium:'med',low:'ok'};
+      gapsEl.innerHTML = gaps.map((g,i)=>{
+        const cls = sev[g.severity||g.priority||'medium']||'med';
+        const title = g.domain||g.area||g.title||`Gap ${i+1}`;
+        const desc  = g.description||g.detail||g.recommendation||JSON.stringify(g).slice(0,120);
+        return `<div class="bo-gap-item ${cls}"><div class="bo-gap-label">${boEsc(title)}</div><div class="bo-gap-desc">${boEsc(desc)}</div></div>`;
+      }).join('');
+    }
+  }
+
+  if(dirEl){
+    if(!dirs.length){
+      dirEl.innerHTML='<div style="padding:12px;font-size:11px;color:var(--muted);">No directives — org health nominal.</div>';
+    } else {
+      dirEl.innerHTML = dirs.map((d,i)=>`
+        <div class="bo-directive-item">
+          <span class="bo-directive-n">${String(i+1).padStart(2,'0')}</span>
+          <span>${boEsc(typeof d==='string'?d:(d.action||d.directive||JSON.stringify(d).slice(0,100)))}</span>
+        </div>`).join('');
+    }
+  }
+}
+
+// ── Hook nav() to auto-load on page switch
 (function(){
-  const _orig=window.nav;
-  window.nav=function(id){
-    if(id==='bond'){bondLoadThread();bondLoadStatus();}
-    return _orig(id);
+  const _orig = window.nav;
+  window.nav = function(id) {
+    if(id==='bond'){ boLoadStatus(); boLoadThread(); boLoadSitRoom(); }
+    return _orig ? _orig(id) : undefined;
   };
 })();
 
-// Auto-refresh every 30s when Bond page is active
-setInterval(()=>{if(document.getElementById('page-bond')?.classList.contains('active'))bondLoadThread();},30000);
-setInterval(()=>{if(document.getElementById('page-bond')?.classList.contains('active'))bondLoadStatus();},60000);
+// ── Legacy aliases (for test suite Bond escalation compatibility)
+window.bondLoadThread  = boLoadThread;
+window.bondLoadStatus  = boLoadStatus;
+window.bondSendDirective = boSendDirective;
+window.bondRunAudit    = boRunAuditAndBrief;
+window.bondPollExternal= boPollExternal;
+window.bondRenderThread= boRenderThread;
+
+// ── Auto-refresh when Bond page is active
+setInterval(()=>{ if(document.getElementById('page-bond')?.classList.contains('active')){ boLoadThread(); boLoadStatus(); } }, 30000);
+setInterval(()=>{ if(document.getElementById('page-bond')?.classList.contains('active')) boLoadSitRoom(); }, 120000);
 </script>
+
+
 
 <!-- ═══════════════════════════ TEST SUITE PAGE ═══════════════════════════ -->
 <div class="page" id="page-tests">
