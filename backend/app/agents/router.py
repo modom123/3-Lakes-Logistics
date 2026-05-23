@@ -6,7 +6,7 @@ from typing import Any, Callable
 from . import (
     alexander, atlas, audit, beacon, bond_courier, echo, isabella, james_bond,
     katerina, naomi, nova, orbit, penny, pulse, scout, settler, shield,
-    signal, sofia, sonny, vance, victoria, winston,
+    signal, sofia, sonny, technical_team, vance, victoria, winston,
 )
 
 _DISPATCH: dict[str, Callable[[dict[str, Any]], dict[str, Any]]] = {
@@ -31,8 +31,9 @@ _DISPATCH: dict[str, Callable[[dict[str, Any]], dict[str, Any]]] = {
     "katerina":     katerina.run,
     "winston":      winston.run,
     "naomi":        naomi.run,
-    "james_bond":   james_bond.run,
-    "bond_courier": bond_courier.run,
+    "james_bond":     james_bond.run,
+    "bond_courier":   bond_courier.run,
+    "technical_team": technical_team.run,
 }
 
 

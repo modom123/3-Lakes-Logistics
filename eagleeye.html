@@ -7935,6 +7935,50 @@ setInterval(()=>{if(document.getElementById('page-bond')?.classList.contains('ac
 .ts-bond-fix-btn{background:var(--gold2);color:#000;border:none;padding:7px 18px;border-radius:5px;font-weight:800;font-size:12px;cursor:pointer;letter-spacing:.3px;white-space:nowrap;}
 .ts-bond-fix-btn:hover{background:var(--gold1);}
 .ts-bond-fix-btn:disabled{opacity:.5;cursor:not-allowed;}
+/* Remediation Console */
+.ts-rcon{display:none;margin-bottom:24px;}
+.ts-rcon.visible{display:block;}
+.ts-rcon-title{font-size:13px;font-weight:700;color:var(--gold2);letter-spacing:.5px;text-transform:uppercase;margin-bottom:12px;display:flex;align-items:center;gap:8px;}
+.ts-rcon-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px;margin-bottom:14px;}
+.ts-rcon-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;}
+.ts-rcon-head{display:flex;align-items:center;gap:10px;padding:11px 14px;border-bottom:1px solid var(--border);}
+.ts-rcon-avatar{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:12px;flex-shrink:0;}
+.ts-rcon-info{flex:1;}
+.ts-rcon-name{font-weight:700;font-size:13px;}
+.ts-rcon-role{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;}
+.ts-rcon-status{font-size:10px;font-weight:700;padding:2px 8px;border-radius:12px;text-transform:uppercase;}
+.ts-rcon-status.working{background:rgba(228,168,48,.15);color:var(--gold2);}
+.ts-rcon-status.done{background:rgba(16,185,129,.15);color:#10b981;}
+.ts-rcon-status.idle{background:rgba(255,255,255,.07);color:var(--muted);}
+.ts-rcon-body{padding:10px 12px;display:flex;flex-direction:column;gap:8px;}
+.ts-artifact{background:var(--bg);border:1px solid var(--border);border-radius:6px;overflow:hidden;}
+.ts-artifact-head{display:flex;align-items:center;justify-content:space-between;padding:6px 10px;border-bottom:1px solid var(--border);background:rgba(255,255,255,.03);}
+.ts-artifact-type{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;padding:2px 7px;border-radius:3px;}
+.ts-artifact-type.python{background:rgba(59,130,246,.2);color:#3b82f6;}
+.ts-artifact-type.sql{background:rgba(16,185,129,.2);color:#10b981;}
+.ts-artifact-type.env{background:rgba(245,158,11,.2);color:#f59e0b;}
+.ts-artifact-type.checklist{background:rgba(139,92,246,.2);color:#8b5cf6;}
+.ts-artifact-type.diagnosis{background:rgba(239,68,68,.15);color:#ef4444;}
+.ts-artifact-title{font-size:10px;color:var(--muted);flex:1;margin:0 8px;}
+.ts-copy-btn{font-size:9px;font-weight:700;background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:3px;padding:2px 7px;cursor:pointer;letter-spacing:.3px;}
+.ts-copy-btn:hover{border-color:var(--gold2);color:var(--gold2);}
+.ts-artifact-content{max-height:200px;overflow-y:scroll;padding:8px 10px;font-family:var(--ff-m);font-size:10px;line-height:1.6;color:var(--text);white-space:pre;scrollbar-width:thin;scrollbar-color:var(--gold2) var(--surface);}
+.ts-artifact-content::-webkit-scrollbar{width:5px;}
+.ts-artifact-content::-webkit-scrollbar-track{background:var(--surface);}
+.ts-artifact-content::-webkit-scrollbar-thumb{background:var(--gold2);border-radius:3px;}
+.ts-checklist-item{margin-bottom:8px;}
+.ts-checklist-area{font-size:10px;font-weight:700;color:var(--gold2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px;}
+.ts-checklist-step{font-size:11px;color:var(--text);padding:2px 0 2px 12px;position:relative;}
+.ts-checklist-step::before{content:'→';position:absolute;left:0;color:var(--muted);}
+/* Bond directive card */
+.ts-rcon-bond{background:var(--surface);border:1px solid rgba(228,168,48,.3);border-radius:10px;padding:14px 16px;margin-bottom:14px;}
+.ts-rcon-bond-head{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+.ts-rcon-bond-title{font-weight:700;font-size:13px;color:var(--gold2);}
+.ts-rcon-bond-sub{font-size:10px;color:var(--muted);}
+.ts-rcon-directive{background:var(--bg);border:1px solid var(--border);border-radius:6px;max-height:180px;overflow-y:scroll;padding:10px 12px;font-family:var(--ff-m);font-size:10px;line-height:1.7;color:var(--text);white-space:pre-wrap;scrollbar-width:thin;scrollbar-color:var(--gold2) var(--surface);}
+.ts-rcon-directive::-webkit-scrollbar{width:5px;}
+.ts-rcon-directive::-webkit-scrollbar-thumb{background:var(--gold2);border-radius:3px;}
+.ts-escalated-tag{font-size:9px;font-weight:800;background:rgba(228,168,48,.15);color:var(--gold2);padding:2px 8px;border-radius:10px;text-transform:uppercase;letter-spacing:.5px;margin-left:auto;}
 </style>
 <div class="ts-wrap">
   <div class="ts-topbar">
@@ -7988,8 +8032,29 @@ setInterval(()=>{if(document.getElementById('page-bond')?.classList.contains('ac
   <!-- Bond Fix Bar — appears when failures detected -->
   <div class="ts-bond-bar" id="ts-bond-bar">
     <span style="font-size:20px">🕵️</span>
-    <div class="ts-bond-bar-txt"><strong>James Bond</strong> — IEBC Consultant is standing by. <span id="ts-bond-bar-msg">Failures detected across domains.</span> Send a directive for root-cause analysis and fix recommendations.</div>
-    <button class="ts-bond-fix-btn" id="ts-bond-fix-btn" onclick="tsEscalateToBond()">Fix with Bond →</button>
+    <div class="ts-bond-bar-txt"><strong>James Bond</strong> — IEBC Consultant is standing by. <span id="ts-bond-bar-msg">Failures detected across domains.</span> Technical team will analyze and produce fix artifacts.</div>
+    <button class="ts-bond-fix-btn" id="ts-bond-fix-btn" onclick="tsEscalateToBond()">Deploy Technical Team →</button>
+  </div>
+
+  <!-- Remediation Console — populated by tsEscalateToBond() -->
+  <div class="ts-rcon" id="ts-rcon">
+    <div class="ts-rcon-title">
+      <span>🛠</span> IEBC Remediation Console
+      <span id="ts-rcon-escalated" class="ts-escalated-tag" style="display:none">Escalated to External Bond</span>
+    </div>
+    <!-- Bond directive card -->
+    <div class="ts-rcon-bond" id="ts-rcon-bond-card" style="display:none">
+      <div class="ts-rcon-bond-head">
+        <span style="font-size:22px">🕵️</span>
+        <div>
+          <div class="ts-rcon-bond-title">James Bond — Coordination Directive</div>
+          <div class="ts-rcon-bond-sub">IEBC Consultant · Sent to External Bond on Daytona</div>
+        </div>
+      </div>
+      <div class="ts-rcon-directive" id="ts-rcon-directive"></div>
+    </div>
+    <!-- Specialist panels -->
+    <div class="ts-rcon-grid" id="ts-rcon-specialists"></div>
   </div>
 
   <div class="ts-summary">
@@ -8350,10 +8415,7 @@ async function tsAssignRun(memberId, memberName) {
 }
 
 // ── Bond escalation ─────────────────────────────────────────────────────────
-async function tsEscalateToBond() {
-  const btn = document.getElementById('ts-bond-fix-btn');
-  btn.disabled = true; btn.textContent = 'Sending…';
-  // Collect all failures
+function tsCollectFailures() {
   const failures = [];
   TS_DOMAINS.forEach(dom => {
     const box = document.getElementById(`tsresults-${dom.id}`);
@@ -8364,34 +8426,139 @@ async function tsEscalateToBond() {
       const chip = row.querySelector('.chip');
       const msg  = row.querySelector('.ts-msg');
       const det  = row.querySelector('.ts-detail');
-      if (chip && msg) lastTest = msg.textContent;
+      if (chip && msg && !det) lastTest = msg.textContent;
       if (chip?.classList.contains('f')) {
-        const errDetail = det ? det.textContent : '';
-        failures.push(`[${dom.label}] ${lastTest}${errDetail ? ' — ' + errDetail : ''}`);
+        failures.push({
+          domain:    dom.label,
+          test_name: lastTest,
+          error:     det ? det.textContent : msg?.textContent || '',
+        });
       }
     });
   });
+  return failures;
+}
+
+function tsRenderArtifact(art) {
+  if (art.type === 'diagnosis') {
+    const items = Array.isArray(art.content) ? art.content : [];
+    const html = items.map(d => `
+      <div style="margin-bottom:10px;padding:8px;background:rgba(239,68,68,.05);border-radius:4px;border-left:2px solid #ef4444;">
+        <div style="font-size:10px;font-weight:700;color:#ef4444;margin-bottom:3px;">[${d.domain}] ${d.test}</div>
+        <div style="font-size:10px;color:var(--text);margin-bottom:4px;"><strong>Cause:</strong> ${d.cause}</div>
+        ${d.steps.map((s,i) => `<div style="font-size:10px;color:var(--muted);padding-left:10px;">${i+1}. ${s}</div>`).join('')}
+      </div>`).join('');
+    return `<div style="padding:10px;max-height:200px;overflow-y:scroll;scrollbar-width:thin;scrollbar-color:var(--gold2) var(--surface);">${html}</div>`;
+  }
+  if (art.type === 'checklist') {
+    const items = Array.isArray(art.content) ? art.content : [];
+    const html = items.map(grp => `
+      <div class="ts-checklist-item">
+        <div class="ts-checklist-area">${grp.area}</div>
+        ${(grp.steps||[]).map(s => `<div class="ts-checklist-step">${s}</div>`).join('')}
+      </div>`).join('');
+    return `<div style="padding:10px;max-height:200px;overflow-y:scroll;scrollbar-width:thin;scrollbar-color:var(--gold2) var(--surface);">${html}</div>`;
+  }
+  // python / sql / env — code block
+  const escaped = String(art.content).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  return `<div class="ts-artifact-content">${escaped}</div>`;
+}
+
+function tsRenderRemediationConsole(data) {
+  const rcon = document.getElementById('ts-rcon');
+  rcon.classList.add('visible');
+
+  // Bond directive card
+  const coord = data.coordination || {};
+  if (coord.directive) {
+    document.getElementById('ts-rcon-bond-card').style.display = '';
+    document.getElementById('ts-rcon-directive').textContent = coord.directive;
+    if (coord.escalate_to_external) {
+      document.getElementById('ts-rcon-escalated').style.display = '';
+    }
+  }
+
+  // Specialist cards
+  const specs = data.specialists || {};
+  const SPEC_META = {
+    winston_cole:   { initials:'WC', color:'#3b82f6', bg:'rgba(59,130,246,.15)' },
+    isabella_nash:  { initials:'IN', color:'#8b5cf6', bg:'rgba(139,92,246,.15)' },
+    alexander_kane: { initials:'AK', color:'#10b981', bg:'rgba(16,185,129,.15)' },
+  };
+  const container = document.getElementById('ts-rcon-specialists');
+  container.innerHTML = '';
+  for (const [sid, spec] of Object.entries(specs)) {
+    const meta = SPEC_META[sid] || { initials:'??', color:'var(--gold2)', bg:'rgba(228,168,48,.1)' };
+    const isActive = spec.status === 'complete';
+    const card = document.createElement('div');
+    card.className = 'ts-rcon-card';
+    const artHtml = (spec.artifacts || []).map(art => `
+      <div class="ts-artifact">
+        <div class="ts-artifact-head">
+          <span class="ts-artifact-type ${art.type}">${art.type}</span>
+          <span class="ts-artifact-title">${art.title}</span>
+          ${art.content && typeof art.content === 'string' ? `<button class="ts-copy-btn" onclick="tscopArt(this, ${JSON.stringify(art.content).replace(/'/g,"&#39;")})">Copy</button>` : ''}
+        </div>
+        ${tsRenderArtifact(art)}
+      </div>`).join('');
+    card.innerHTML = `
+      <div class="ts-rcon-head">
+        <div class="ts-rcon-avatar" style="background:${meta.bg};color:${meta.color};">${meta.initials}</div>
+        <div class="ts-rcon-info">
+          <div class="ts-rcon-name">${spec.name||sid}</div>
+          <div class="ts-rcon-role">${spec.role||''}</div>
+        </div>
+        <span class="ts-rcon-status ${isActive?'done':'idle'}">${isActive?`Done · ${spec.assigned_count||0} fixed`:'No assignment'}</span>
+      </div>
+      <div class="ts-rcon-body">
+        ${isActive ? artHtml : '<div style="font-size:11px;color:var(--muted);padding:8px 0;">No failures assigned to this specialist.</div>'}
+      </div>`;
+    container.appendChild(card);
+  }
+}
+
+function tscopArt(btn, text) {
+  navigator.clipboard.writeText(text).then(() => {
+    btn.textContent = 'Copied!';
+    setTimeout(() => btn.textContent = 'Copy', 1800);
+  });
+}
+
+async function tsEscalateToBond() {
+  const btn = document.getElementById('ts-bond-fix-btn');
+  btn.disabled = true; btn.textContent = '⏳ Deploying Team…';
+  const failures = tsCollectFailures();
+  if (!failures.length) {
+    toast('No failures to remediate', 'error');
+    btn.disabled = false; btn.textContent = 'Deploy Technical Team →';
+    return;
+  }
   const assignee = _tsCurrentAssignee ? TS_TEAM[_tsCurrentAssignee]?.name : 'IEBC Team';
-  const content =
-    `TEST SUITE FAILURE REPORT\n` +
-    `Reported by: ${assignee}\n` +
-    `Timestamp: ${new Date().toISOString()}\n` +
-    `API Base: ${API_BASE}\n\n` +
-    `FAILURES (${failures.length}):\n` +
-    failures.map((f,i) => `${i+1}. ${f}`).join('\n') +
-    `\n\nREQUEST: Analyze each failure, identify root cause, and provide step-by-step fix directives for each domain.`;
+  // Show console immediately with working state
+  document.getElementById('ts-rcon').classList.add('visible');
+  document.getElementById('ts-rcon-specialists').innerHTML =
+    '<div style="color:var(--muted);font-size:12px;padding:12px;">Winston, Isabella and Alexander are analyzing failures…</div>';
   try {
-    await apiFetch('/api/bond/directive', 'POST', {
-      content,
-      priority: failures.length >= 3 ? 'high' : 'normal',
-      metadata: { source: 'test_suite', failures_count: failures.length, assigned_to: assignee }
+    const data = await apiFetch('/api/agents/technical_team/run', 'POST', {
+      action: 'remediate',
+      failures,
+      requested_by: assignee,
     });
-    toast('🕵️ Bond received the failure report — check Bond Office for analysis', 'success');
-    btn.textContent = '✓ Sent to Bond';
-    setTimeout(() => { btn.disabled = false; btn.textContent = 'Fix with Bond →'; }, 5000);
+    tsRenderRemediationConsole(data);
+    const escalated = data.coordination?.escalate_to_external;
+    toast(
+      escalated
+        ? '🕵️ Team deployed — Bond directive sent to External Bond'
+        : '🛠 IEBC Team analysis complete — review artifacts below',
+      'success'
+    );
+    btn.textContent = '✓ Team Deployed';
+    setTimeout(() => { btn.disabled = false; btn.textContent = 'Deploy Technical Team →'; }, 6000);
   } catch(e) {
-    toast('Failed to reach Bond: ' + e.message, 'error');
-    btn.disabled = false; btn.textContent = 'Fix with Bond →';
+    document.getElementById('ts-rcon-specialists').innerHTML =
+      `<div style="color:#ef4444;font-size:12px;padding:12px;">Remediation failed: ${e.message}</div>`;
+    toast('Remediation error: ' + e.message, 'error');
+    btn.disabled = false; btn.textContent = 'Deploy Technical Team →';
   }
 }
 

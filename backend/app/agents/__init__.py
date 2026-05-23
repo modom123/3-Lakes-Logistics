@@ -27,6 +27,7 @@ from . import (
     signal,          # emergency 800-number
     sofia,           # invoice reconciliation & AR
     sonny,           # load board scraper
+    technical_team,  # IEBC remediation — Winston, Isabella, Alexander + Bond escalation
     vance,           # outbound prospecting voice
     victoria,        # CGO growth snapshot
     winston,         # carrier retention & at-risk monitoring
@@ -36,5 +37,6 @@ __all__ = [
     "alexander", "atlas", "audit", "beacon", "bond_courier", "cc_gulley",
     "echo", "isabella", "james_bond", "katerina", "mark_odom", "motive_webhook",
     "naomi", "nova", "orbit", "penny", "prompts", "pulse", "router", "scout",
-    "settler", "shield", "signal", "sofia", "sonny", "vance", "victoria", "winston",
+    "settler", "shield", "signal", "sofia", "sonny", "technical_team",
+    "vance", "victoria", "winston",
 ]
