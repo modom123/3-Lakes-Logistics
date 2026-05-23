@@ -9647,6 +9647,71 @@ const TS_TEAM = {
   winston:  { name: 'Winston Carmichael', role: 'VP Client Success' },
   penny:    { name: 'Penny',              role: 'Stripe & Payments Specialist' },
 };
+
+// Maps each test domain to the agent who owns it
+const TS_DOMAIN_AGENTS = {
+  health:      'katerina',
+  telemetry:   'katerina',
+  dashboard:   'katerina',
+  triggers:    'katerina',
+  carriers:    'winston',
+  fleet:       'winston',
+  leads:       'isabella',
+  bond:        'alexander',
+  integration: 'alexander',
+  security:    'shield',
+  driver:      'penny',
+};
+
+async function tsDiagnoseFailures(failures, logFn) {
+  // Group failed domains → find unique owners → call each agent once in parallel
+  const failedDomIds = [...new Set(failures.map(f =>
+    TS_DOMAINS.find(d => d.label === f.domain)?.id
+  ).filter(Boolean))];
+
+  // Deduplicate: one call per agent even if it owns multiple failed domains
+  const agentToScope = {};
+  failedDomIds.forEach(domId => {
+    const agentId = TS_DOMAIN_AGENTS[domId];
+    if (agentId) agentToScope[agentId] = (agentToScope[agentId] || []).concat(domId);
+  });
+
+  if (!Object.keys(agentToScope).length) return {};
+
+  if (logFn) logFn('  🔍 Calling domain agents for pre-diagnosis: ' + Object.keys(agentToScope).map(id => TS_TEAM[id]?.name || id).join(', ') + '…');
+
+  const results = await Promise.allSettled(
+    Object.entries(agentToScope).map(async ([agentId, doms]) => {
+      try {
+        const d = await apiFetch(`/api/agents/${agentId}/run`, 'POST', { scope: 'full' });
+        // Mark agent's dot as active during this run
+        const dot = document.getElementById(`ts-dot-${agentId}`);
+        const lbl = document.getElementById(`ts-status-${agentId}`);
+        if (dot) dot.className = 'ts-team-dot active';
+        if (lbl) { lbl.textContent = 'Diagnosing…'; lbl.style.color = 'var(--gold2)'; }
+        setTimeout(() => {
+          if (lbl) { lbl.textContent = 'Diagnosis done'; lbl.style.color = ''; }
+        }, 2000);
+        return [agentId, d];
+      } catch(e) {
+        return [agentId, { error: e.message }];
+      }
+    })
+  );
+
+  const diagnostics = {};
+  results.forEach(r => {
+    if (r.status === 'fulfilled') {
+      const [agentId, d] = r.value;
+      diagnostics[agentId] = d;
+      if (logFn && !d.error) {
+        const summary = d.summary || d.brief || d.qa_notes || d.status_summary || '';
+        if (summary) logFn(`  ✓ ${TS_TEAM[agentId]?.name || agentId}: ${summary.slice(0,100)}`);
+      }
+    }
+  });
+  return diagnostics;
+}
 let _tsCurrentAssignee = null;
 
 async function tsAssignRun(memberId, memberName) {
@@ -9807,11 +9872,16 @@ async function tsEscalateToBond() {
   // Show console immediately with working state
   document.getElementById('ts-rcon').classList.add('visible');
   document.getElementById('ts-rcon-specialists').innerHTML =
-    '<div style="color:var(--muted);font-size:12px;padding:12px;">Winston, Isabella and Alexander are analyzing failures…</div>';
+    '<div style="color:var(--muted);font-size:12px;padding:12px;">Domain agents diagnosing failures…</div>';
+  // Step 1: domain owner agents diagnose their failures first
+  const domain_diagnostics = await tsDiagnoseFailures(failures, null);
+  document.getElementById('ts-rcon-specialists').innerHTML =
+    '<div style="color:var(--muted);font-size:12px;padding:12px;">Technical team applying fixes…</div>';
   try {
     const data = await apiFetch('/api/agents/technical_team/run', 'POST', {
       action: 'remediate',
       failures,
+      domain_diagnostics,
       requested_by: assignee,
     });
     tsRenderRemediationConsole(data);
@@ -9875,13 +9945,16 @@ async function tsRunAutofix() {
   log.innerHTML = '';
 
   tsAutofixLog('Self-Heal Engine starting…');
-  tsAutofixLog(`Sending ${_tsLastFailures.length} failure(s) to technical_team.autofix`);
+  tsAutofixLog('Step 1 — domain agents diagnosing failures…');
+  const domain_diagnostics = await tsDiagnoseFailures(_tsLastFailures, tsAutofixLog);
+  tsAutofixLog(`Step 2 — sending ${_tsLastFailures.length} failure(s) + ${Object.keys(domain_diagnostics).length} diagnos${Object.keys(domain_diagnostics).length===1?'is':'es'} to technical_team.autofix`);
 
   let data;
   try {
     data = await apiFetch('/api/agents/technical_team/run', 'POST', {
-      action:   'autofix',
-      failures: _tsLastFailures,
+      action:            'autofix',
+      failures:          _tsLastFailures,
+      domain_diagnostics,
     });
   } catch(e) {
     tsAutofixLog(`Autofix call failed: ${e.message}`, 'err');
@@ -10043,12 +10116,14 @@ async function tsUnleashBothBonds() {
 
   mlLog(`Found ${failures.length} failure(s) across: ${[...new Set(failures.map(f=>f.domain))].join(', ')}`, 'warn');
 
-  // ── Phase 2: Internal autofix ───────────────────────────────────────────
-  mlLog('Phase 2 — Internal self-heal (Winston, Isabella, Alexander)…', 'bond');
+  // ── Phase 2: Domain diagnosis then internal autofix ────────────────────
+  mlLog('Phase 2a — Domain agents diagnosing their failures…', 'bond');
+  const domain_diagnostics = await tsDiagnoseFailures(failures, mlLog);
+  mlLog(`Phase 2b — Internal self-heal with ${Object.keys(domain_diagnostics).length} pre-diagnos${Object.keys(domain_diagnostics).length===1?'is':'es'} (Winston, Isabella, Alexander…)`, 'bond');
   let autofixData = {};
   try {
     autofixData = await apiFetch('/api/agents/technical_team/run', 'POST', {
-      action: 'autofix', failures
+      action: 'autofix', failures, domain_diagnostics
     });
     const fixed  = autofixData.fixed?.length  || 0;
     const manual = autofixData.needs_manual?.length || 0;

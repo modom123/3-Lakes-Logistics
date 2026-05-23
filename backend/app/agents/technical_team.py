@@ -142,9 +142,32 @@ def _assign(failure_type: str, domain: str = "") -> str:
     return "katerina_rostova"
 
 
+# ── Domain diagnosis context helper ───────────────────────────────────────────
+
+def _diag(agent_id: str, domain_diagnostics: dict | None) -> str:
+    """Return pre-diagnosis string for a specialist, or empty string."""
+    if not domain_diagnostics:
+        return ""
+    raw = domain_diagnostics.get(agent_id, {})
+    if not raw:
+        return ""
+    # Extract best available summary field
+    text = (
+        raw.get("summary") or raw.get("brief") or raw.get("executive_brief")
+        or raw.get("qa_notes") or raw.get("status_summary") or ""
+    )
+    if not text:
+        # Build from top-level scalar fields
+        text = "; ".join(
+            f"{k}={v}" for k, v in raw.items()
+            if isinstance(v, (str, int, float, bool)) and k not in ("agent","node","firm","timestamp")
+        )
+    return str(text)[:600]
+
+
 # ── Winston Carmichael — Carrier & Fleet health ───────────────────────────────
 
-def _run_winston(failures: list[dict]) -> dict[str, Any]:
+def _run_winston(failures: list[dict], domain_diagnostics: dict | None = None) -> dict[str, Any]:
     mine = [f for f in failures if f.get("specialist") == "winston_carmichael"]
     if not mine:
         return {"specialist": "winston_carmichael", "name": "Winston Carmichael",
@@ -257,6 +280,7 @@ def _run_winston(failures: list[dict]) -> dict[str, Any]:
             "content": "\n".join(summary_lines),
         })
 
+    winston_diag = _diag("winston", domain_diagnostics)
     llm_fix = _llm(
         system=(
             "You are Winston Carmichael, VP Client Success at 3 Lakes Logistics. "
@@ -265,7 +289,8 @@ def _run_winston(failures: list[dict]) -> dict[str, Any]:
             "Be concise. Return only code and brief comments — no prose."
         ),
         user=(
-            f"Failing API tests:\n{json.dumps(mine, indent=2)}\n\n"
+            (f"Winston agent pre-diagnosis:\n{winston_diag}\n\n" if winston_diag else "")
+            + f"Failing API tests:\n{json.dumps(mine, indent=2)}\n\n"
             + (f"Live carrier health data:\n{json.dumps(real_data, indent=2)}\n\n" if real_data else "")
             + "For each failure: state the most likely root cause given the live data, "
             "then write the minimal Python code change or shell command that fixes it. "
@@ -293,7 +318,7 @@ def _run_winston(failures: list[dict]) -> dict[str, Any]:
 
 # ── Isabella Cruz — Leads pipeline & outreach ────────────────────────────────
 
-def _run_isabella(failures: list[dict]) -> dict[str, Any]:
+def _run_isabella(failures: list[dict], domain_diagnostics: dict | None = None) -> dict[str, Any]:
     mine = [f for f in failures if f.get("specialist") == "isabella_cruz"]
     if not mine:
         return {"specialist": "isabella_cruz", "name": "Isabella Cruz",
@@ -374,6 +399,7 @@ def _run_isabella(failures: list[dict]) -> dict[str, Any]:
         },
     ]
 
+    isabella_diag = _diag("isabella", domain_diagnostics)
     llm_sql = _llm(
         system=(
             "You are Isabella Cruz, VP Omnichannel Outreach at 3 Lakes Logistics. "
@@ -383,7 +409,8 @@ def _run_isabella(failures: list[dict]) -> dict[str, Any]:
             "Return only SQL with brief comments."
         ),
         user=(
-            f"Failing lead API tests:\n{json.dumps(mine, indent=2)}\n\n"
+            (f"Isabella agent pre-diagnosis:\n{isabella_diag}\n\n" if isabella_diag else "")
+            + f"Failing lead API tests:\n{json.dumps(mine, indent=2)}\n\n"
             + (f"Live pipeline data:\n{json.dumps(real_data, indent=2)}\n\n" if real_data else "")
             + "Write the exact SQL to verify the leads schema and diagnose the failures. "
             "Include a final SELECT to confirm."
@@ -410,7 +437,7 @@ def _run_isabella(failures: list[dict]) -> dict[str, Any]:
 
 # ── Alexander Wright — Bond Channel & external API integration ───────────────
 
-def _run_alexander(failures: list[dict]) -> dict[str, Any]:
+def _run_alexander(failures: list[dict], domain_diagnostics: dict | None = None) -> dict[str, Any]:
     mine = [f for f in failures if f.get("specialist") == "alexander_wright"]
     if not mine:
         return {"specialist": "alexander_wright", "name": "Alexander Wright",
@@ -495,6 +522,7 @@ def _run_alexander(failures: list[dict]) -> dict[str, Any]:
         },
     ]
 
+    alexander_diag = _diag("alexander", domain_diagnostics)
     llm_config = _llm(
         system=(
             "You are Alexander Wright, VP Market Intelligence at 3 Lakes Logistics. "
@@ -504,9 +532,10 @@ def _run_alexander(failures: list[dict]) -> dict[str, Any]:
             "and how to generate any secrets. No filler."
         ),
         user=(
-            f"Failing Bond Channel / integration tests:\n{json.dumps(mine, indent=2)}\n\n"
-            f"External API connectivity: {ext_api_note}\n\n"
-            "Write the exact steps to fix each: which env vars to set, how to generate them, "
+            (f"Alexander agent pre-diagnosis:\n{alexander_diag}\n\n" if alexander_diag else "")
+            + f"Failing Bond Channel / integration tests:\n{json.dumps(mine, indent=2)}\n\n"
+            + f"External API connectivity: {ext_api_note}\n\n"
+            + "Write the exact steps to fix each: which env vars to set, how to generate them, "
             "how to set on Render, and the exact curl command to verify each fix."
         ),
         model="claude-haiku-4-5-20251001",
@@ -531,7 +560,7 @@ def _run_alexander(failures: list[dict]) -> dict[str, Any]:
 
 # ── Katerina Rostova — Health, Dashboard & Telemetry (SLA audit) ─────────────
 
-def _run_katerina(failures: list[dict]) -> dict[str, Any]:
+def _run_katerina(failures: list[dict], domain_diagnostics: dict | None = None) -> dict[str, Any]:
     mine = [f for f in failures if f.get("specialist") == "katerina_rostova"]
     if not mine:
         return {"specialist": "katerina_rostova", "name": "Katerina Rostova",
@@ -644,6 +673,7 @@ def _run_katerina(failures: list[dict]) -> dict[str, Any]:
         },
     ]
 
+    katerina_diag = _diag("katerina", domain_diagnostics)
     llm_plan = _llm(
         system=(
             "You are Katerina Rostova, Head of Process Automation at 3 Lakes Logistics. "
@@ -652,7 +682,8 @@ def _run_katerina(failures: list[dict]) -> dict[str, Any]:
             "Include exact SQL, exact env var names, and exact Render dashboard paths."
         ),
         user=(
-            f"Failing Health/Dashboard/Telemetry tests:\n{json.dumps(mine, indent=2)}\n\n"
+            (f"Katerina agent pre-diagnosis:\n{katerina_diag}\n\n" if katerina_diag else "")
+            + f"Failing Health/Dashboard/Telemetry tests:\n{json.dumps(mine, indent=2)}\n\n"
             + (f"Live SLA audit data:\n{json.dumps(real_data, indent=2)}\n\n" if real_data else "")
             + "Write the exact remediation steps for each failure. "
             "Prioritize by impact. Include SQL verification after each step."
@@ -679,7 +710,7 @@ def _run_katerina(failures: list[dict]) -> dict[str, Any]:
 
 # ── Penny — Driver, Payout & Stripe integrity ────────────────────────────────
 
-def _run_penny(failures: list[dict]) -> dict[str, Any]:
+def _run_penny(failures: list[dict], domain_diagnostics: dict | None = None) -> dict[str, Any]:
     mine = [f for f in failures if f.get("specialist") == "penny"]
     if not mine:
         return {"specialist": "penny", "name": "Penny", "role": "Stripe & Payments Specialist",
@@ -775,6 +806,7 @@ def _run_penny(failures: list[dict]) -> dict[str, Any]:
         },
     ]
 
+    penny_diag = _diag("penny", domain_diagnostics)
     llm_plan = _llm(
         system=(
             "You are Penny, Stripe & Payments Specialist at 3 Lakes Logistics. "
@@ -783,9 +815,10 @@ def _run_penny(failures: list[dict]) -> dict[str, Any]:
             "Focus on: idempotency, rate limiting, Stripe key configuration, payout math."
         ),
         user=(
-            f"Failing Driver/Security tests:\n{json.dumps(mine, indent=2)}\n\n"
-            f"Stripe status: {stripe_note}\n\n"
-            "Write numbered remediation steps. Include exact code changes and SQL."
+            (f"Penny agent pre-diagnosis:\n{penny_diag}\n\n" if penny_diag else "")
+            + f"Failing Driver/Security tests:\n{json.dumps(mine, indent=2)}\n\n"
+            + f"Stripe status: {stripe_note}\n\n"
+            + "Write numbered remediation steps. Include exact code changes and SQL."
         ),
         model="claude-haiku-4-5-20251001",
         max_tokens=700,
@@ -809,7 +842,7 @@ def _run_penny(failures: list[dict]) -> dict[str, Any]:
 
 # ── Shield — Security, Webhooks & CDL compliance ─────────────────────────────
 
-def _run_shield(failures: list[dict]) -> dict[str, Any]:
+def _run_shield(failures: list[dict], domain_diagnostics: dict | None = None) -> dict[str, Any]:
     mine = [f for f in failures if f.get("specialist") == "shield"]
     if not mine:
         return {"specialist": "shield", "name": "Shield", "role": "Security & Compliance Specialist",
@@ -910,6 +943,7 @@ def _run_shield(failures: list[dict]) -> dict[str, Any]:
         },
     ]
 
+    shield_diag = _diag("shield", domain_diagnostics)
     llm_plan = _llm(
         system=(
             "You are Shield, Security & Compliance Specialist at 3 Lakes Logistics. "
@@ -919,9 +953,10 @@ def _run_shield(failures: list[dict]) -> dict[str, Any]:
             "Include exact code locations, env var names, and verification commands."
         ),
         user=(
-            f"Failing Security/Integration tests:\n{json.dumps(mine, indent=2)}\n\n"
-            f"CDL sweep: {cdl_note}\n\n"
-            "Write remediation steps for each security failure. "
+            (f"Shield agent pre-diagnosis:\n{shield_diag}\n\n" if shield_diag else "")
+            + f"Failing Security/Integration tests:\n{json.dumps(mine, indent=2)}\n\n"
+            + f"CDL sweep: {cdl_note}\n\n"
+            + "Write remediation steps for each security failure. "
             "Prioritize: webhook forgery prevention first, then privilege escalation."
         ),
         model="claude-haiku-4-5-20251001",
@@ -1591,6 +1626,7 @@ def run(payload: dict[str, Any]) -> dict[str, Any]:
 
     if action == "autofix":
         raw = payload.get("failures", [])
+        domain_diagnostics = payload.get("domain_diagnostics") or {}
         classified = []
         for f in raw:
             ftype = _classify(f.get("test_name",""), f.get("domain",""), f.get("error",""))
@@ -1624,6 +1660,8 @@ def run(payload: dict[str, Any]) -> dict[str, Any]:
     if not raw:
         return {"agent": _NAME, "error": "failures list is required"}
 
+    domain_diagnostics = payload.get("domain_diagnostics") or {}
+
     # Classify + assign by domain (real agents own their domain data)
     classified = []
     for f in raw:
@@ -1631,13 +1669,13 @@ def run(payload: dict[str, Any]) -> dict[str, Any]:
         sid   = _assign(ftype, f.get("domain",""))
         classified.append({**f, "failure_type": ftype, "specialist": sid})
 
-    # Deploy real domain experts
-    winston   = _run_winston(classified)
-    isabella  = _run_isabella(classified)
-    alexander = _run_alexander(classified)
-    katerina  = _run_katerina(classified)
-    penny     = _run_penny(classified)
-    shield    = _run_shield(classified)
+    # Deploy real domain experts — pass pre-diagnosis context from domain agents
+    winston   = _run_winston(classified,   domain_diagnostics)
+    isabella  = _run_isabella(classified,  domain_diagnostics)
+    alexander = _run_alexander(classified, domain_diagnostics)
+    katerina  = _run_katerina(classified,  domain_diagnostics)
+    penny     = _run_penny(classified,     domain_diagnostics)
+    shield    = _run_shield(classified,    domain_diagnostics)
     results   = [winston, isabella, alexander, katerina, penny, shield]
 
     coordination = _bond_coordinate(classified, results)
