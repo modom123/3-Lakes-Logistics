@@ -4515,7 +4515,9 @@ const AGENT_META = {
   isabella:  {icon:'📣', label:'Isabella',  desc:'Outreach campaign builder'},
   katerina:  {icon:'⚙️', label:'Katerina',  desc:'SLA audit & process automation'},
   winston:   {icon:'🤝', label:'Winston',   desc:'Carrier retention & at-risk'},
-  naomi:     {icon:'🎯', label:'Naomi',     desc:'Predictive lead scoring'},
+  naomi:        {icon:'🎯', label:'Naomi',        desc:'Predictive lead scoring'},
+  reagan_cole:  {icon:'📑', label:'Reagan Cole',  desc:'CLM intake & extraction manager'},
+  marcus_webb:  {icon:'⚖️', label:'Marcus Webb',  desc:'CLM settlement & compliance manager'},
 };
 
 function diagLog(msg,isError=false){
@@ -5849,6 +5851,85 @@ function startAgentRealtime() {
   }
 }
 
+// ── Supabase Realtime: contracts table (CLM live updates) ─────────────────────
+function startCLMRealtime() {
+  try {
+    sb.channel('clm-contracts-live')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'contracts' }, payload => {
+        const c = payload.new;
+        if (!c) return;
+        const label = (c.contract_type || 'contract').replace(/_/g,' ');
+        const conf  = c.confidence_score ? Math.round(c.confidence_score * 100) + '%' : '?%';
+        _pushNotif({
+          id:     'clm_ins_' + c.id,
+          agent:  'reagan_cole',
+          action: 'contract_scanned',
+          result: `New ${label} · ${c.counterparty_name || 'Unknown'} · ${conf} confidence`,
+          ts:     c.created_at || new Date().toISOString(),
+        });
+        // Badge the CLM nav item
+        const badge = document.getElementById('clm-notif');
+        if (badge) badge.style.display = '';
+        // If CLM page is open, refresh the list
+        if (document.getElementById('page-clm')?.classList.contains('active')) {
+          loadCLMList();
+        }
+      })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'contracts' }, payload => {
+        const c = payload.new;
+        if (!c) return;
+        // Notify on milestone advances and auto-approval
+        if (c.auto_approved && !payload.old?.auto_approved) {
+          _pushNotif({
+            id:     'clm_appr_' + c.id,
+            agent:  'marcus_webb',
+            action: 'auto_approved',
+            result: `Contract auto-approved · ${c.counterparty_name || c.load_number || c.id.slice(0,8)}`,
+            ts:     new Date().toISOString(),
+          });
+        }
+        if ((c.milestone_pct || 0) > (payload.old?.milestone_pct || 0)) {
+          _pushNotif({
+            id:     'clm_ms_' + c.id + '_' + c.milestone_pct,
+            agent:  'marcus_webb',
+            action: 'milestone_advanced',
+            result: `Milestone ${c.milestone_pct}% · ${c.counterparty_name || c.load_number || 'Contract'}`,
+            ts:     new Date().toISOString(),
+          });
+        }
+        if (document.getElementById('page-clm')?.classList.contains('active')) {
+          loadCLMList();
+        }
+      })
+      .subscribe();
+
+    // Document vault — notify when driver uploads BOL/POD
+    sb.channel('clm-vault-live')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'document_vault' }, payload => {
+        const d = payload.new;
+        if (!d) return;
+        const driverDocs = new Set(['bol','pod','rate_con','rate_confirmation','invoice']);
+        if (!driverDocs.has(d.doc_type)) return;
+        const label = {bol:'BOL',pod:'POD',rate_con:'Rate Con',rate_confirmation:'Rate Con',invoice:'Invoice'}[d.doc_type] || d.doc_type;
+        _pushNotif({
+          id:     'vault_ins_' + d.id,
+          agent:  'reagan_cole',
+          action: 'document_uploaded',
+          result: `${label} uploaded · ${d.filename || 'unknown'} · scan queued`,
+          ts:     d.uploaded_at || new Date().toISOString(),
+        });
+        if (document.getElementById('page-vault')?.classList.contains('active')) {
+          loadVault();
+        }
+      })
+      .subscribe();
+
+  } catch(e) {
+    // Realtime unavailable — CLM list will refresh on nav only
+    console.warn('[CLM Realtime] Not available:', e.message);
+  }
+}
+
 let _lastPollTs = null;
 async function pollAgentLog() {
   try {
@@ -6121,6 +6202,7 @@ async function loadIntegrationStatus() {
 
 // ── Init realtime + seed notifications ───────────────────────────────────────
 startAgentRealtime();
+startCLMRealtime();
 seedRecentNotifs();
 
 // ══════════════════════════════════════════════════════
@@ -9778,12 +9860,14 @@ function tsUpdateSummary() {
 
 // ── IEBC Team assignment ────────────────────────────────────────────────────
 const TS_TEAM = {
-  shield:   { name: 'Shield',             role: 'Security & Compliance Specialist' },
-  katerina: { name: 'Katerina Rostova',   role: 'Head of Process Automation' },
-  isabella: { name: 'Isabella Cruz',      role: 'VP Omnichannel Outreach' },
-  alexander:{ name: 'Alexander Wright',   role: 'VP Market Intelligence' },
-  winston:  { name: 'Winston Carmichael', role: 'VP Client Success' },
-  penny:    { name: 'Penny',              role: 'Stripe & Payments Specialist' },
+  shield:       { name: 'Shield',             role: 'Security & Compliance Specialist' },
+  katerina:     { name: 'Katerina Rostova',   role: 'Head of Process Automation' },
+  isabella:     { name: 'Isabella Cruz',      role: 'VP Omnichannel Outreach' },
+  alexander:    { name: 'Alexander Wright',   role: 'VP Market Intelligence' },
+  winston:      { name: 'Winston Carmichael', role: 'VP Client Success' },
+  penny:        { name: 'Penny',              role: 'Stripe & Payments Specialist' },
+  reagan_cole:  { name: 'Reagan Cole',        role: 'CLM Intake & Extraction Manager' },
+  marcus_webb:  { name: 'Marcus Webb',        role: 'CLM Settlement & Compliance Manager' },
 };
 
 // Maps each test domain to the agent who owns it

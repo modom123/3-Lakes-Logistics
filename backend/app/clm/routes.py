@@ -850,3 +850,55 @@ def compliance_audit(contract_id: UUID, _: str = Depends(require_bearer)):
     """Run SOD + GAAP compliance audit on a contract (step 149)."""
     result = step_149_compliance_audit(None, contract_id, {})
     return result
+
+
+# ── CLM workflow orchestration ────────────────────────────────────────────────
+
+@router.post("/workflow/start", status_code=202)
+def start_clm_workflow(body: dict, _: str = Depends(require_bearer)) -> dict:
+    """Kick off the full CLM post-scan workflow for a contract (steps 124-131).
+
+    Body: {contract_id: UUID, carrier_id?: UUID}
+    Runs in background: digital_twin → leakage_check → counterparty_lookup
+    → duplicate_detect → expiry_schedule → blacklist_check → rate_benchmark
+    → auto_approve
+    """
+    contract_id_str = body.get("contract_id")
+    carrier_id_str  = body.get("carrier_id")
+
+    if not contract_id_str:
+        raise HTTPException(400, "contract_id is required")
+
+    # Validate UUID
+    try:
+        UUID(contract_id_str)
+    except ValueError:
+        raise HTTPException(400, f"Invalid contract_id: {contract_id_str}")
+
+    from ..triggers import fire_clm_workflow  # noqa: PLC0415
+    fire_clm_workflow(contract_id_str, carrier_id_str)
+
+    log.info("clm_workflow started contract=%s", contract_id_str)
+    return {
+        "ok": True,
+        "contract_id": contract_id_str,
+        "steps": [124, 125, 126, 127, 128, 129, 130, 131],
+        "status": "queued",
+        "note": "CLM workflow steps 124-131 running in background",
+    }
+
+
+@router.post("/agents/reagan-cole/run", status_code=202)
+def run_reagan_cole(_: str = Depends(require_bearer)) -> dict:
+    """Manually trigger Reagan Cole — CLM Intake & Extraction Manager."""
+    from ..triggers import fire_reagan_cole  # noqa: PLC0415
+    fire_reagan_cole()
+    return {"ok": True, "agent": "reagan_cole", "status": "queued"}
+
+
+@router.post("/agents/marcus-webb/run", status_code=202)
+def run_marcus_webb(_: str = Depends(require_bearer)) -> dict:
+    """Manually trigger Marcus Webb — CLM Settlement & Compliance Manager."""
+    from ..triggers import fire_marcus_webb  # noqa: PLC0415
+    fire_marcus_webb()
+    return {"ok": True, "agent": "marcus_webb", "status": "queued"}

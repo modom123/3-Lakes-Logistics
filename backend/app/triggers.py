@@ -18,7 +18,10 @@ Trigger map
   daily 07:30 UTC cron      →  fire_winston()     — carrier health + churn signals
   daily 08:00 UTC cron      →  fire_isabella()    — campaign builder (leads + re-engagement)
   daily 08:15 UTC cron      →  fire_sofia()       — financial reconciliation
+  daily 09:00 UTC cron      →  fire_reagan_cole() — CLM intake & extraction sweep
+  daily 09:30 UTC cron      →  fire_marcus_webb() — CLM settlement & compliance sweep
   vault doc uploaded/classified → fire_vault_scan(doc_id)
+  contract scan complete    →  fire_clm_workflow(contract_id) — chain steps 124-131
 """
 from __future__ import annotations
 
@@ -299,6 +302,67 @@ def fire_follow_up_reminders() -> None:
         except Exception as exc:  # noqa: BLE001
             log.error("fire_follow_up_reminders failed: %s", exc)
     _bg(_run)
+
+
+def fire_reagan_cole() -> None:
+    """Run Reagan Cole daily — CLM intake & extraction sweep."""
+    def _run():
+        try:
+            from .agents.reagan_cole import run as reagan_run  # noqa: PLC0415
+            log.info("daily_agent: reagan_cole starting")
+            result = reagan_run({})
+            log.info(
+                "daily_agent: reagan_cole done backlog=%s requeued=%s avg_conf=%s",
+                result.get("pipeline_health", {}).get("extraction_backlog"),
+                result.get("vault_audit", {}).get("requeued"),
+                result.get("extraction_metrics", {}).get("avg_confidence"),
+            )
+        except Exception as exc:  # noqa: BLE001
+            log.error("daily_agent: reagan_cole failed: %s", exc)
+    _bg(_run)
+
+
+def fire_marcus_webb() -> None:
+    """Run Marcus Webb daily — CLM settlement & compliance sweep."""
+    def _run():
+        try:
+            from .agents.marcus_webb import run as marcus_run  # noqa: PLC0415
+            log.info("daily_agent: marcus_webb starting")
+            result = marcus_run({})
+            log.info(
+                "daily_agent: marcus_webb done approved=%s gl_posted=%s disputes=%s",
+                result.get("auto_approvals", {}).get("auto_approved"),
+                result.get("gl_postings", {}).get("gl_posted"),
+                result.get("dispute_escalations", {}).get("escalated_count"),
+            )
+        except Exception as exc:  # noqa: BLE001
+            log.error("daily_agent: marcus_webb failed: %s", exc)
+    _bg(_run)
+
+
+def fire_clm_workflow(contract_id: str, carrier_id: str | None = None) -> None:
+    """Chain CLM steps 124-131 after a contract has been scanned (step 123 done).
+
+    Called automatically after extract_vault_doc completes on a contract-linked doc.
+    Runs: digital_twin → revenue_leakage → counterparty_lookup → duplicate_detect
+          → expiry_schedule → blacklist_check → rate_benchmark → auto_approve
+    """
+    def _run():
+        try:
+            from .execution_engine.executor import run_step  # noqa: PLC0415
+            from uuid import UUID  # noqa: PLC0415
+            cid = UUID(contract_id)
+            vid = UUID(carrier_id) if carrier_id else None
+            for step_num in (124, 125, 126, 127, 128, 129, 130, 131):
+                try:
+                    run_step(step_num, vid, cid, {})
+                except Exception as exc:  # noqa: BLE001
+                    log.warning("fire_clm_workflow step=%d contract=%s: %s", step_num, contract_id, exc)
+            log.info("fire_clm_workflow complete contract=%s", contract_id)
+        except Exception as exc:  # noqa: BLE001
+            log.error("fire_clm_workflow failed contract=%s: %s", contract_id, exc)
+    t = threading.Thread(target=_run, daemon=True)
+    t.start()
 
 
 def fire_vault_scan(doc_id: str) -> None:

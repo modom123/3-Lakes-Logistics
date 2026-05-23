@@ -5,8 +5,8 @@ from typing import Any, Callable
 
 from . import (
     alexander, atlas, audit, beacon, bond_courier, chloe_sinclair, echo,
-    isabella, james_bond, katerina, lucas_sterling, naomi, nova, orbit,
-    outside_bond, penny, pulse, scout, settler, shield, signal, sofia,
+    isabella, james_bond, katerina, lucas_sterling, marcus_webb, naomi, nova, orbit,
+    outside_bond, penny, pulse, reagan_cole, scout, settler, shield, signal, sofia,
     sonny, technical_team, vance, victoria, winston,
 )
 
@@ -32,6 +32,8 @@ _DISPATCH: dict[str, Callable[[dict[str, Any]], dict[str, Any]]] = {
     "katerina":       katerina.run,
     "winston":        winston.run,
     "naomi":          naomi.run,
+    "reagan_cole":    reagan_cole.run,
+    "marcus_webb":    marcus_webb.run,
     "james_bond":       james_bond.run,
     "outside_bond":     outside_bond.run,
     "bond_courier":     bond_courier.run,

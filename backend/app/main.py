@@ -79,6 +79,8 @@ def _start_scheduler(app: FastAPI) -> None:
             fire_email_campaign,
             fire_social_post,
             fire_follow_up_reminders,
+            fire_reagan_cole,
+            fire_marcus_webb,
         )
         from .agents.memory import prune_interactions
         from .email.imap_poller import poll_all as poll_all_mailboxes
@@ -98,6 +100,8 @@ def _start_scheduler(app: FastAPI) -> None:
         scheduler.add_job(fire_isabella, CronTrigger(hour=8, minute=0), id="isabella_daily", replace_existing=True)
         scheduler.add_job(fire_sofia, CronTrigger(hour=8, minute=15), id="sofia_daily", replace_existing=True)
         scheduler.add_job(fire_mark_odom, CronTrigger(hour=8, minute=30), id="mark_odom_daily", replace_existing=True)
+        scheduler.add_job(fire_reagan_cole, CronTrigger(hour=9, minute=0), id="reagan_cole_daily", replace_existing=True)
+        scheduler.add_job(fire_marcus_webb, CronTrigger(hour=9, minute=30), id="marcus_webb_daily", replace_existing=True)
         scheduler.add_job(fire_vance_batch, CronTrigger(hour=13, minute=0), id="vance_batch_daily", replace_existing=True)
         scheduler.add_job(fire_sms_campaign, CronTrigger(hour=14, minute=0), id="sms_outreach_daily", replace_existing=True)
         scheduler.add_job(fire_email_campaign, CronTrigger(hour=14, minute=30), id="email_outreach_daily", replace_existing=True)

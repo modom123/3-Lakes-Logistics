@@ -426,6 +426,38 @@ def extract_vault_doc(doc_id: str) -> dict:
         doc_id, method, confidence, len(warnings),
     )
 
+    # ── Fire downstream CLM workflow if doc is linked to a contract ───────────
+    contract_id_linked = doc.get("contract_id")
+    if not contract_id_linked:
+        # Try to find a contract with this load_number or vault scan result
+        load_num = extracted.get("load_number")
+        if load_num:
+            try:
+                found = (
+                    sb.table("contracts")
+                    .select("id,carrier_id")
+                    .eq("load_number", load_num)
+                    .limit(1)
+                    .execute()
+                    .data
+                )
+                if found:
+                    contract_id_linked = found[0]["id"]
+            except Exception:
+                pass
+
+    if contract_id_linked and contract_type in (
+        "rate_confirmation", "dedicated_lane_agreement",
+        "broker_carrier_agreement", "master_service_agreement",
+        "shipper_carrier_agreement",
+    ):
+        try:
+            from ..triggers import fire_clm_workflow  # noqa: PLC0415
+            fire_clm_workflow(contract_id_linked)
+        except Exception as wf_exc:  # noqa: BLE001
+            log.warning("extract_vault_doc: clm_workflow fire failed for contract %s: %s",
+                        contract_id_linked, wf_exc)
+
     return {
         "ok":         True,
         "doc_id":     doc_id,
@@ -433,6 +465,7 @@ def extract_vault_doc(doc_id: str) -> dict:
         "confidence": confidence,
         "warnings":   warnings,
         "extracted":  extracted,
+        "contract_id": contract_id_linked,
     }
 
 
