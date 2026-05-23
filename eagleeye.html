@@ -5139,11 +5139,16 @@ async function loadCLMList(){
   const t=document.getElementById('clm-table');
   t.innerHTML='<div class="loading"><div class="spin"></div>Loading…</div>';
   try{
-    const res=await apiFetch('/api/clm/');
-    const data=await res.json();
-    document.getElementById('clm-total').textContent=data.length||0;
-    document.getElementById('clm-active').textContent=data.filter(c=>c.status==='active').length;
-    document.getElementById('clm-review').textContent=data.filter(c=>c.status==='draft').length;
+    // Gap 1+2: use /summary for dashboard metrics, then /list for table rows
+    const [sumRes, listRes]=await Promise.all([apiFetch('/api/clm/summary'),apiFetch('/api/clm/')]);
+    const summary=await sumRes.json();
+    const data=await listRes.json();
+    document.getElementById('clm-total').textContent=summary.total||0;
+    document.getElementById('clm-active').textContent=summary.active||0;
+    document.getElementById('clm-review').textContent=summary.flagged||0;
+    // Gap 2: avg confidence was never populated — now correctly set from summary
+    const confEl=document.getElementById('clm-confidence');
+    if(confEl) confEl.textContent=summary.avg_confidence_pct!=null?summary.avg_confidence_pct+'%':'—';
     if(!data.length){t.innerHTML='<div style="padding:20px;color:var(--muted);text-align:center">No contracts yet. Click "Scan Contract" to process your first rate confirmation.</div>';return;}
     t.innerHTML=`<table class="tbl"><thead><tr><th>Type</th><th>Counterparty</th><th>Route</th><th>Rate</th><th>Terms</th><th>Milestone</th><th>Status</th><th>Date</th></tr></thead>
       <tbody>${data.map(c=>`<tr>

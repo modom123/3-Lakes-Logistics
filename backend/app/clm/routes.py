@@ -1,6 +1,7 @@
 """CLM REST endpoints — contract scanning, CRUD, milestones, and GL triggers.
 
 New endpoints added for execution engine steps 121-150:
+  GET  /api/clm/summary                — dashboard KPI summary (counts, revenue, confidence)
   POST /api/clm/email-inbound          — SendGrid inbound webhook parse
   POST /api/clm/rate-benchmark         — rate vs. market comparison
   GET  /api/clm/blacklist              — list bad-pay brokers
@@ -14,6 +15,7 @@ New endpoints added for execution engine steps 121-150:
   GET  /api/clm/{id}/export            — export contract package
   POST /api/clm/{id}/archive           — archive executed contract
   POST /api/clm/{id}/compliance-audit  — run compliance audit
+  POST /api/clm/{id}/complete          — mark CLM workflow complete (step 150)
 """
 from __future__ import annotations
 
@@ -47,12 +49,68 @@ from .steps import (
     step_121_email_inbound_parse,
     step_130_rate_benchmark,
     step_143_archive_executed,
+    step_144_analytics_update,
     step_148_contract_export,
     step_149_compliance_audit,
+    step_150_clm_complete,
 )
 
 router = APIRouter()
 log = get_logger("3ll.clm.routes")
+
+
+# ── Dashboard summary (gap 1) ─────────────────────────────────────────────────
+
+@router.get("/summary")
+def get_summary(_: str = Depends(require_bearer)) -> dict:
+    """Single-call CLM dashboard snapshot: counts, revenue, avg confidence, recent activity."""
+    sb = get_supabase()
+
+    contracts = sb.table("contracts").select(
+        "id,status,confidence_score,rate_total,revenue_recognized,created_at"
+    ).order("created_at", desc=True).limit(500).execute().data or []
+
+    total = len(contracts)
+    active = sum(1 for c in contracts if c.get("status") == "active")
+    executed = sum(1 for c in contracts if c.get("status") == "executed")
+    flagged = sum(1 for c in contracts if c.get("status") == "draft")
+    archived = sum(1 for c in contracts if c.get("status") == "archived")
+
+    confs = [float(c["confidence_score"]) for c in contracts if c.get("confidence_score") is not None]
+    avg_confidence = round(sum(confs) / len(confs) * 100, 1) if confs else None
+
+    revenue_recognized = sum(
+        float(c.get("rate_total") or 0) for c in contracts if c.get("revenue_recognized")
+    )
+    revenue_pending = sum(
+        float(c.get("rate_total") or 0)
+        for c in contracts
+        if not c.get("revenue_recognized") and c.get("status") in ("active", "executed")
+    )
+
+    recent = [
+        {
+            "id": c["id"],
+            "status": c.get("status"),
+            "created_at": c.get("created_at"),
+        }
+        for c in contracts[:5]
+    ]
+
+    open_disputes = sb.table("clm_disputes").select("id").in_("status", ["open", "escalated"]).execute().data or []
+
+    return {
+        "total": total,
+        "active": active,
+        "executed": executed,
+        "flagged": flagged,
+        "archived": archived,
+        "avg_confidence_pct": avg_confidence,
+        "revenue_recognized": round(revenue_recognized, 2),
+        "revenue_pending": round(revenue_pending, 2),
+        "open_disputes": len(open_disputes),
+        "recent": recent,
+    }
 
 
 # ── Contract scan & CRUD ─────────────────────────────────────────────────────
@@ -113,6 +171,12 @@ def scan_and_create(req: ContractScanRequest, _: str = Depends(require_bearer)):
 
     log.info("contract scanned id=%s type=%s confidence=%.2f", contract_id, req.contract_type, confidence)
 
+    # Gap 4: auto-refresh analytics after every scan so dashboard stays current
+    try:
+        step_144_analytics_update(None, None, {})
+    except Exception:
+        pass
+
     extra = extracted.pop("extra", {}) if isinstance(extracted.get("extra"), dict) else {}
     safe_vars = {k: v for k, v in extracted.items() if k in ExtractedContractVars.model_fields}
     return ContractScanResponse(
@@ -170,7 +234,13 @@ def set_milestone(
 
 @router.post("/{contract_id}/invoice")
 def recognize_revenue(contract_id: UUID, _: str = Depends(require_bearer)):
-    return trigger_invoice(contract_id)
+    result = trigger_invoice(contract_id)
+    # Gap 4: keep analytics current after every revenue recognition event
+    try:
+        step_144_analytics_update(None, None, {})
+    except Exception:
+        pass
+    return result
 
 
 @router.get("/{contract_id}/events")
@@ -678,4 +748,21 @@ def export_contract(contract_id: UUID, _: str = Depends(require_bearer)):
 def compliance_audit(contract_id: UUID, _: str = Depends(require_bearer)):
     """Run SOD + GAAP compliance audit on a contract (step 149)."""
     result = step_149_compliance_audit(None, contract_id, {})
+    return result
+
+
+# ── CLM complete (gap 3) ──────────────────────────────────────────────────────
+
+@router.post("/{contract_id}/complete", status_code=200)
+def clm_complete(contract_id: UUID, _: str = Depends(require_bearer)):
+    """Mark CLM workflow complete — writes terminal atomic ledger event (step 150)."""
+    result = step_150_clm_complete(None, contract_id, {})
+    if not result.get("complete"):
+        raise HTTPException(400, result.get("reason", "Could not complete CLM workflow"))
+    # Refresh analytics so the dashboard reflects the newly executed contract
+    try:
+        step_144_analytics_update(None, None, {})
+    except Exception:
+        pass
+    log.info("CLM workflow complete contract=%s status=%s", contract_id, result.get("final_status"))
     return result
