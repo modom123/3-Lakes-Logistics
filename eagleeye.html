@@ -7827,8 +7827,16 @@ if (typeof nav === 'function') {
 .bo-directive-n{font-family:var(--ff-m);font-size:10px;font-weight:700;color:var(--gold2);flex-shrink:0;}
 
 /* ── Lucas Sterling Design Upgrade — Bond Office v2 ──────────────────────── */
-/* Ops-centre dark feel: wrap goes near-black */
-.bo-wrap{background:#080e1a;}
+/* Ops-centre dark feel: redefine CSS vars so ALL descendant text/border/surface
+   automatically uses dark-theme values — no per-element overrides needed */
+.bo-wrap{
+  background:#080e1a;
+  --text:#ffffff;
+  --muted:rgba(255,255,255,.6);
+  --border:rgba(255,255,255,.13);
+  --surface:rgba(255,255,255,.05);
+  --bg:#080e1a;
+}
 /* Header: cinematic gradient + stronger gold border + depth shadow */
 .bo-header{background:linear-gradient(135deg,#0b1d40 0%,#081530 100%);border-bottom:2px solid rgba(228,168,48,.5);box-shadow:0 4px 24px rgba(0,0,0,.45);}
 /* Badge: inner glow */
