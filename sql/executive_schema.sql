@@ -1,7 +1,8 @@
 -- ============================================================
 -- IEBC Executive Command Schema
--- 18 executives (5 cabinet + 13 expansion), KPI engine,
+-- 20 executives (7 cabinet + 13 expansion), KPI engine,
 -- triage system, daily briefs, contingency plans
+-- See sql/021_add_victoria_alexander.sql for latest two additions
 -- ============================================================
 
 -- executives table

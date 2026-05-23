@@ -24,21 +24,25 @@ You call owner-operators and small fleets to enroll them in the Founders program
 Personality: Confident, direct, blue-collar. Never oversell or pushy.
 You're a peer, not a salesman.
 
-Your goal: Qualify on: DOT# age, fleet size, current dispatch situation, pain points.
-If they're interested, offer a 15-min call with our Commander (human).
+Your goal: Qualify them, then get them to sign up RIGHT NOW on the call. That is the primary objective.
+Secondary: if they won't sign up now, book a 15-min onboarding call.
+Last resort: get their email so we can follow up.
+
+Sign-up link (send via text while on the call if they're ready): https://3lakeslogistics.com/signup
+Onboarding booking link: https://calendly.com/3lakes/commander-call
+
+Close priority order:
+1. "I can text you the sign-up link right now — takes 3 minutes, you're locked in."
+2. "Want me to get you 15 minutes with our onboarding team tomorrow?"
+3. "What's a good email? I'll send you everything."
 
 Rules:
 - Lead with curiosity: "How long you been running your own authority?"
 - Listen more than you talk
 - If they're not interested, accept it gracefully and wish them well
 - Never pressure or follow up too hard
-- If they seem open, say: "Perfect. Let me get you scheduled with our Commander for a quick 15-min call tomorrow?"
-
-Script variables available:
-- prospect_name: Their name
-- company_name: Their company
-- dot_number: DOT# (if known)
-- current_pain: Their stated pain point (if known)
+- When they're warm, push for the sign-up first: "I can text you the link right now and you're in — takes 3 minutes."
+- If they hesitate on sign-up, offer the 15-min call: "No worries — let me get you a quick call with our onboarding team instead."
 
 Keep responses conversational and natural. Sound like you're actually talking to them."""
 
@@ -77,21 +81,23 @@ def start_outbound_call(
     if s.bland_ai_api_key == s.bland_ai_org_id and s.bland_ai_api_key.startswith("org_"):
         return {"status": "error", "error": "BLAND_AI_API_KEY appears to be set to org_id value; verify in dashboard"}
 
-    # Build the conversation context
-    context = f"""Calling {prospect_name} at {company_name or 'unknown company'}.
-DOT#: {dot_number or 'unknown'}
-Known pain point: {current_pain or 'none provided'}
-Goal: Qualify and offer demo call with Commander."""
+    # Fold call context into the task prompt so Bland receives a single coherent instruction
+    full_task = (
+        VANCE_SYSTEM_PROMPT
+        + f"\n\n--- CALL CONTEXT ---\n"
+        + f"You are calling {prospect_name} at {company_name or 'their company'}.\n"
+        + (f"DOT#: {dot_number}\n" if dot_number else "")
+        + (f"Known pain point: {current_pain}\n" if current_pain else "")
+        + "Goal: Qualify and, if interested, offer a 15-min Commander call."
+    )
 
     try:
         payload = {
             "phone_number": phone,
-            "task": VANCE_SYSTEM_PROMPT,
-            "context": context,
-            "model": "claude-opus",  # Use Claude for better reasoning
+            "task": full_task,
+            "model": "enhanced",   # Valid Bland models: base | turbo | enhanced
             "language": "en",
-            "voice": "male",  # Neutral, professional voice
-            "reduce_latency": True,  # Optimize for conversational speed
+            "max_duration": 10,    # Cap at 10 minutes per call
             "metadata": {
                 "lead_id": lead_id,
                 "prospect_name": prospect_name,
@@ -101,11 +107,11 @@ Goal: Qualify and offer demo call with Commander."""
             },
         }
 
-        if s.bland_ai_org_id:
-            payload["organization_id"] = s.bland_ai_org_id
+        if s.bland_ai_voice:
+            payload["voice"] = s.bland_ai_voice  # Set BLAND_AI_VOICE in env to use a specific voice
 
         if webhook_url:
-            payload["webhook_url"] = webhook_url
+            payload["webhook"] = webhook_url
 
         r = httpx.post(
             f"{BLAND_API_URL}/calls",
@@ -113,7 +119,17 @@ Goal: Qualify and offer demo call with Commander."""
             json=payload,
             timeout=20,
         )
-        r.raise_for_status()
+
+        if not r.is_success:
+            body = r.text
+            log_agent(
+                "vance",
+                "bland_call_failed",
+                carrier_id=None,
+                payload={"lead_id": lead_id, "phone": phone, "status_code": r.status_code},
+                error=body,
+            )
+            return {"status": "error", "error": f"Bland {r.status_code}: {body}"}
 
         data = r.json()
         call_id = data.get("call_id")
@@ -133,19 +149,9 @@ Goal: Qualify and offer demo call with Commander."""
         return {
             "status": "started",
             "call_id": call_id,
-            "cost_estimate": 0.06,  # Base $0.06/min + Claude LLM costs
+            "cost_estimate": 0.06,
         }
 
-    except httpx.HTTPError as e:
-        error_msg = str(e)
-        log_agent(
-            "vance",
-            "bland_call_failed",
-            carrier_id=None,
-            payload={"lead_id": lead_id, "phone": phone},
-            error=error_msg,
-        )
-        return {"status": "error", "error": error_msg}
     except Exception as e:  # noqa: BLE001
         error_msg = f"Unexpected error: {str(e)}"
         log_agent("vance", "bland_call_error", carrier_id=None, payload={"lead_id": lead_id}, error=error_msg)
@@ -193,22 +199,32 @@ def handle_bland_webhook(event: dict[str, Any]) -> dict[str, Any]:
             result="success",
         )
 
-        # Parse Bland's analysis for decision signals
-        success = analysis.get("success", False)
-        reason = analysis.get("reason", "unknown")
+        # Detect interest from Bland's analysis — check multiple possible fields
+        success = (
+            analysis.get("success")
+            or analysis.get("goal_completion")
+            or analysis.get("converted")
+            or analysis.get("interested")
+            or False
+        )
+        reason = analysis.get("reason") or analysis.get("summary") or "unknown"
         outcome = "interested" if success else "not_interested"
 
-        # Trigger follow-up sequence if interested
+        # Also grab email if Bland extracted it from the conversation
+        extracted_email = analysis.get("email") or analysis.get("prospect_email") or prospect_email
+
+        # Trigger follow-up for interested prospects — even if no email (SMS-only path)
         follow_up_result = None
-        if outcome == "interested" and prospect_email and phone_number:
+        if outcome == "interested" and phone_number:
             follow_up_result = run_follow_up({
                 "lead_id": lead_id,
                 "prospect_name": prospect_name,
-                "prospect_email": prospect_email,
+                "prospect_email": extracted_email,
                 "company_name": company_name,
                 "phone_number": phone_number,
                 "call_outcome": "interested",
                 "call_id": call_id,
+                "transcript": transcript,
             })
 
         return {

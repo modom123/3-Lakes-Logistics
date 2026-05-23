@@ -6,6 +6,7 @@ from .routes_leads         import router as leads_router
 from .routes_dashboard     import router as dashboard_router
 from .routes_founders      import router as founders_router
 from .routes_agents        import router as agents_router
+from .routes_bond          import router as bond_router
 from .routes_webhooks           import router as webhooks_router
 from .routes_bland_webhooks     import router as bland_webhooks_router
 from .routes_prospecting        import router as prospecting_router
@@ -23,12 +24,17 @@ from .routes_adobe_webhooks import router as adobe_webhooks_router
 from .routes_adobe_intake   import router as adobe_intake_router
 from .routes_dat           import router as dat_router
 from .routes_fmcsa         import router as fmcsa_router
+from .routes_memory        import router as memory_router
+from .routes_carrier_brain import router as carrier_brain_router
+from .routes_revenue_brain import router as revenue_brain_router
+from .routes_mailboxes     import router as mailboxes_router
 
 from ..clm             import clm_router
 from ..email_ingest    import router as email_ingest_router
 from ..execution_engine import execution_router
 from ..atomic_ledger   import atomic_ledger_router
 from ..compliance      import compliance_router
+from ..studio          import studio_router
 
 __all__ = [
     "intake_router",
@@ -40,6 +46,7 @@ __all__ = [
     "dashboard_router",
     "founders_router",
     "agents_router",
+    "bond_router",
     "webhooks_router",
     "bland_webhooks_router",
     "prospecting_router",
@@ -63,4 +70,9 @@ __all__ = [
     "executives_router",
     "dat_router",
     "fmcsa_router",
+    "memory_router",
+    "carrier_brain_router",
+    "revenue_brain_router",
+    "mailboxes_router",
+    "studio_router",
 ]

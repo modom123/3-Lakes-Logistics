@@ -9,7 +9,16 @@ Trigger map
   load status → Booked      →  fire_dispatch(carrier_id, load_id)
   load status → En Route    →  fire_transit(carrier_id, load_id)
   load status → Delivered   →  fire_settlement(carrier_id, load_id)
+  daily 05:30 UTC cron      →  NEXUS prune (APScheduler)
   daily 06:00 UTC cron      →  fire_compliance_sweep()
+  daily 06:30 UTC cron      →  fire_analytics_update()
+  daily 06:45 UTC cron      →  fire_alexander()   — market intel (feeds Naomi)
+  daily 07:00 UTC cron      →  fire_victoria()    — strategic snapshot
+  daily 07:15 UTC cron      →  fire_naomi()       — lead scoring
+  daily 07:30 UTC cron      →  fire_winston()     — carrier health + churn signals
+  daily 08:00 UTC cron      →  fire_isabella()    — campaign builder (leads + re-engagement)
+  daily 08:15 UTC cron      →  fire_sofia()       — financial reconciliation
+  vault doc uploaded/classified → fire_vault_scan(doc_id)
 """
 from __future__ import annotations
 
@@ -84,3 +93,232 @@ def fire_compliance_sweep() -> None:
 def fire_analytics_update() -> None:
     """Trigger analytics domain (runs after settlement or on schedule)."""
     _bg(_run_domain_safe, "analytics", None, None, "analytics_refresh")
+
+
+def fire_alexander() -> None:
+    """Run Alexander Wright daily — market intelligence from FMCSA census."""
+    def _run():
+        try:
+            from .agents.alexander import run as alexander_run  # noqa: PLC0415
+            log.info("daily_agent: alexander starting")
+            result = alexander_run({})
+            log.info("daily_agent: alexander done states_analyzed=%s", result.get("states_analyzed"))
+        except Exception as exc:  # noqa: BLE001
+            log.error("daily_agent: alexander failed: %s", exc)
+    _bg(_run)
+
+
+def fire_victoria() -> None:
+    """Run Victoria Roth daily — strategic snapshot + org brain directive."""
+    def _run():
+        try:
+            from .agents.victoria import run as victoria_run  # noqa: PLC0415
+            log.info("daily_agent: victoria starting")
+            result = victoria_run({})
+            log.info("daily_agent: victoria done signals=%s", len(result.get("signals", [])))
+        except Exception as exc:  # noqa: BLE001
+            log.error("daily_agent: victoria failed: %s", exc)
+    _bg(_run)
+
+
+def fire_naomi() -> None:
+    """Run Naomi daily — lead scoring + FMCSA prospect pull."""
+    def _run():
+        try:
+            from .agents.naomi import run as naomi_run  # noqa: PLC0415
+            log.info("daily_agent: naomi starting")
+            result = naomi_run({})
+            log.info("daily_agent: naomi done leads_ranked=%s", result.get("leads_ranked"))
+        except Exception as exc:  # noqa: BLE001
+            log.error("daily_agent: naomi failed: %s", exc)
+    _bg(_run)
+
+
+def fire_winston() -> None:
+    """Run Winston Carmichael daily — carrier health + churn signals."""
+    def _run():
+        try:
+            from .agents.winston import run as winston_run  # noqa: PLC0415
+            log.info("daily_agent: winston starting")
+            result = winston_run({})
+            log.info(
+                "daily_agent: winston done at_risk=%s retention=%s%%",
+                result.get("at_risk_count"), result.get("retention_rate_pct"),
+            )
+        except Exception as exc:  # noqa: BLE001
+            log.error("daily_agent: winston failed: %s", exc)
+    _bg(_run)
+
+
+def fire_isabella() -> None:
+    """Run Isabella Cruz daily — lead campaigns + carrier re-engagement."""
+    def _run():
+        try:
+            from .agents.isabella import run as isabella_run  # noqa: PLC0415
+            log.info("daily_agent: isabella starting (leads)")
+            result_leads = isabella_run({"segment": "New", "limit": 50})
+            log.info("daily_agent: isabella leads done size=%s", result_leads.get("campaign_size"))
+
+            # Re-engagement campaign for at-risk carriers (reads Winston's carrier brain data)
+            from .agents.isabella import run_carrier_reengagement  # noqa: PLC0415
+            log.info("daily_agent: isabella starting (carrier re-engagement)")
+            result_carriers = run_carrier_reengagement()
+            log.info(
+                "daily_agent: isabella re-engagement done targeted=%s",
+                result_carriers.get("carriers_targeted"),
+            )
+        except Exception as exc:  # noqa: BLE001
+            log.error("daily_agent: isabella failed: %s", exc)
+    _bg(_run)
+
+
+def fire_sofia() -> None:
+    """Run Sofia Chen daily — financial reconciliation."""
+    def _run():
+        try:
+            from .agents.sofia import run as sofia_run  # noqa: PLC0415
+            log.info("daily_agent: sofia starting")
+            result = sofia_run({})
+            log.info(
+                "daily_agent: sofia done missing_invoices=%s collection_rate=%s%%",
+                result.get("missing_invoices"), result.get("collection_rate_pct"),
+            )
+        except Exception as exc:  # noqa: BLE001
+            log.error("daily_agent: sofia failed: %s", exc)
+    _bg(_run)
+
+
+def fire_vance_batch() -> None:
+    """Run Vance batch daily — outbound calls to high-score leads (score >= 8)."""
+    def _run():
+        try:
+            from .agents.vance import run_batch  # noqa: PLC0415
+            log.info("daily_agent: vance_batch starting")
+            result = run_batch()
+            log.info(
+                "daily_agent: vance_batch done queued=%s errors=%s",
+                result.get("calls_queued"), result.get("errors"),
+            )
+        except Exception as exc:  # noqa: BLE001
+            log.error("daily_agent: vance_batch failed: %s", exc)
+    _bg(_run)
+
+
+def fire_sms_campaign() -> None:
+    """Run SMS campaigner daily — bulk SMS to Tier B leads (score 4-7)."""
+    def _run():
+        try:
+            from .agents.sms_campaigner import send_batch  # noqa: PLC0415
+            log.info("daily_agent: sms_campaign starting")
+            result = send_batch()
+            log.info(
+                "daily_agent: sms_campaign done sent=%s failed=%s",
+                result.get("sent"), result.get("failed"),
+            )
+        except Exception as exc:  # noqa: BLE001
+            log.error("daily_agent: sms_campaign failed: %s", exc)
+    _bg(_run)
+
+
+def fire_email_campaign() -> None:
+    """Run email campaigner daily — cold outreach to leads with email addresses."""
+    def _run():
+        try:
+            from .agents.email_campaigner import send_batch  # noqa: PLC0415
+            log.info("daily_agent: email_campaign starting")
+            result = send_batch()
+            log.info(
+                "daily_agent: email_campaign done sent=%s failed=%s",
+                result.get("sent"), result.get("failed"),
+            )
+        except Exception as exc:  # noqa: BLE001
+            log.error("daily_agent: email_campaign failed: %s", exc)
+    _bg(_run)
+
+
+def fire_social_post() -> None:
+    """Run social poster weekly — posts to Facebook, Instagram, LinkedIn."""
+    def _run():
+        try:
+            from .agents.social import post_all  # noqa: PLC0415
+            log.info("weekly_agent: social_post starting")
+            result = post_all()
+            log.info(
+                "weekly_agent: social_post done fb=%s ig=%s li=%s",
+                result.get("facebook", {}).get("status"),
+                result.get("instagram", {}).get("status"),
+                result.get("linkedin", {}).get("status"),
+            )
+        except Exception as exc:  # noqa: BLE001
+            log.error("weekly_agent: social_post failed: %s", exc)
+    _bg(_run)
+
+
+def fire_mark_odom() -> None:
+    """Run Mark Odom daily — Commander brief + tier-3 review + strategic directives."""
+    def _run():
+        try:
+            from .agents.mark_odom import run as mark_odom_run  # noqa: PLC0415
+            log.info("daily_agent: mark_odom starting")
+            result = mark_odom_run({})
+            log.info(
+                "daily_agent: mark_odom done decisions=%s tier3_open=%s",
+                len(result.get("commander_decisions", [])),
+                result.get("fleet_metrics", {}).get("open_tier3_escalations"),
+            )
+        except Exception as exc:  # noqa: BLE001
+            log.error("daily_agent: mark_odom failed: %s", exc)
+    _bg(_run)
+
+
+def fire_cc_gulley() -> None:
+    """Run CC Gulley daily — strategic plan + 30/60/90-day roadmap + risk assessment."""
+    def _run():
+        try:
+            from .agents.cc_gulley import run as cc_gulley_run  # noqa: PLC0415
+            log.info("daily_agent: cc_gulley starting")
+            result = cc_gulley_run({})
+            log.info(
+                "daily_agent: cc_gulley done priorities=%s risks=%s",
+                len(result.get("priorities_30d", [])),
+                len(result.get("strategic_risks", [])),
+            )
+        except Exception as exc:  # noqa: BLE001
+            log.error("daily_agent: cc_gulley failed: %s", exc)
+    _bg(_run)
+
+
+def fire_follow_up_reminders() -> None:
+    """Hourly job — sends 24h SMS reminders to Interested leads whose time has come."""
+    def _run():
+        try:
+            from .prospecting.follow_up import send_due_reminders  # noqa: PLC0415
+            result = send_due_reminders()
+            log.info("fire_follow_up_reminders sent=%s eligible=%s",
+                     result.get("sent"), result.get("eligible"))
+        except Exception as exc:  # noqa: BLE001
+            log.error("fire_follow_up_reminders failed: %s", exc)
+    _bg(_run)
+
+
+def fire_vault_scan(doc_id: str) -> None:
+    """Trigger background AI extraction for a vault document.
+
+    Called after upload or classification for scannable doc types
+    (rate_con, bol, pod, broker_agreement).
+    """
+    def _scan():
+        try:
+            from .clm.doc_extractor import extract_vault_doc  # noqa: PLC0415
+            log.info("fire_vault_scan doc_id=%s", doc_id)
+            result = extract_vault_doc(doc_id)
+            log.info(
+                "fire_vault_scan complete doc_id=%s method=%s confidence=%.3f",
+                doc_id, result.get("method"), result.get("confidence", 0),
+            )
+        except Exception as exc:  # noqa: BLE001
+            log.error("fire_vault_scan failed doc_id=%s: %s", doc_id, exc)
+
+    t = threading.Thread(target=_scan, daemon=True)
+    t.start()
+

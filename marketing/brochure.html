@@ -1,0 +1,692 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>3 Lakes Logistics — Trifold Brochure</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
+<style>
+  /* ============ Tokens ============ */
+  :root {
+    --navy: #0B2545;
+    --midnight: #061629;
+    --ink: #0A1A2F;
+    --paper: #F5F8FB;
+    --paper-2: #EAF0F7;
+    --line: rgba(11,37,69,0.10);
+    --cyan: #4FB3F2;
+    --cyan-dark: #1B6BB9;
+    --green: #34D399;
+    --green-dark: #0a8c5e;
+    --amber: #F5B847;
+    --mute-dark: rgba(245,248,251,0.66);
+    --mute-light: rgba(11,37,69,0.58);
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: #1a1f2e; font-family: 'Space Grotesk', system-ui, sans-serif; color: #0A1A2F; }
+
+  /* Page wrapper — letterboxes the trifolds nicely on screen */
+  .stage {
+    min-height: 100vh;
+    padding: 40px 20px 80px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 40px;
+  }
+
+  /* Page label */
+  .label {
+    color: rgba(255,255,255,0.55);
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 12px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    align-self: flex-start;
+    max-width: 1056px;
+    margin-left: auto;
+    margin-right: auto;
+    width: 100%;
+  }
+
+  /* 11"×8.5" landscape at 96dpi = 1056 × 816 */
+  .page {
+    width: 1056px;
+    height: 816px;
+    background: var(--paper);
+    box-shadow: 0 30px 80px rgba(0,0,0,0.45);
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    position: relative;
+    overflow: hidden;
+  }
+  /* Fold guides (subtle dashed lines between panels) */
+  .page::before, .page::after {
+    content: '';
+    position: absolute;
+    top: 0; bottom: 0;
+    width: 1px;
+    background: repeating-linear-gradient(
+      to bottom,
+      rgba(11,37,69,0.16) 0 6px,
+      transparent 6px 12px
+    );
+    pointer-events: none;
+    z-index: 30;
+  }
+  .page::before { left: 33.333%; }
+  .page::after  { left: 66.666%; }
+
+  .panel {
+    padding: 38px 32px;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .panel.navy   { background: var(--navy);    color: var(--paper); }
+  .panel.dark   { background: var(--midnight); color: var(--paper); }
+  .panel.light  { background: var(--paper);   color: var(--ink); }
+  .panel.tint   { background: var(--paper-2); color: var(--ink); }
+
+  /* Top brand mark */
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+  }
+  .brand .mark {
+    width: 30px; height: 30px;
+    border-radius: 7px;
+    background: linear-gradient(140deg, var(--cyan), #2A6BC9);
+    display: grid; place-items: center;
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700; color: #fff; font-size: 16px;
+    letter-spacing: 0;
+  }
+  .brand .mark.dark { background: linear-gradient(140deg, var(--navy), #1B3A6B); }
+
+  .eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    color: var(--green);
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .eyebrow.cyan { color: var(--cyan); }
+  .eyebrow.cyan-dark { color: var(--cyan-dark); }
+  .eyebrow .dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: currentColor;
+    box-shadow: 0 0 0 3px rgba(52,211,153,0.20);
+  }
+
+  h1, h2, h3 { margin: 0; letter-spacing: -0.02em; font-weight: 600; line-height: 1.05; text-wrap: balance; }
+  p { margin: 0; line-height: 1.45; }
+
+  .mono { font-family: 'JetBrains Mono', monospace; }
+
+  /* ============ Decorative circuit ============ */
+  .circuit {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.5;
+    z-index: 0;
+  }
+  .panel > * { position: relative; z-index: 1; }
+
+  /* ============ Cover (front panel) ============ */
+  .cover-title {
+    font-size: 56px;
+    line-height: 0.96;
+    font-weight: 700;
+    letter-spacing: -0.035em;
+    margin-top: auto;
+  }
+  .cover-title em {
+    font-style: normal;
+    background: linear-gradient(120deg, var(--cyan) 0%, var(--green) 100%);
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .cover-foot {
+    margin-top: 24px;
+    color: var(--mute-dark);
+    font-size: 13px;
+    line-height: 1.5;
+  }
+
+  /* ============ QR card ============ */
+  .qr-card {
+    background: var(--paper);
+    color: var(--ink);
+    border-radius: 16px;
+    padding: 18px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.18);
+  }
+  .qr-card.compact { padding: 12px; }
+  .qr-card .qr-svg { display: block; }
+  .qr-card .qr-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--mute-light);
+    text-align: center;
+  }
+  .qr-card .qr-cta {
+    font-size: 14px; font-weight: 600;
+    color: var(--navy);
+    text-align: center;
+  }
+  /* Recolor the QR inside the card */
+  .qr-card .qr-svg rect[fill="#000000"] { fill: var(--navy); }
+  .qr-card .qr-svg rect[fill="#FFFFFF"] { fill: transparent; }
+
+  /* ============ Generic pieces ============ */
+  .stat-row {
+    display: flex;
+    align-items: baseline;
+    gap: 14px;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .stat-row:last-child { border-bottom: none; }
+  .stat-row .v {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: 38px;
+    line-height: 1;
+    letter-spacing: -0.03em;
+    color: var(--navy);
+    min-width: 110px;
+  }
+  .stat-row .l { font-size: 14px; line-height: 1.35; color: var(--mute-light); }
+
+  .feat-row {
+    display: grid;
+    grid-template-columns: 36px 1fr;
+    gap: 14px;
+    padding: 14px 0;
+    border-bottom: 1px solid rgba(245,248,251,0.12);
+  }
+  .feat-row:last-child { border-bottom: none; }
+  .feat-row .n {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    color: var(--cyan);
+  }
+  .feat-row .h { font-size: 17px; font-weight: 600; letter-spacing: -0.01em; }
+  .feat-row .d { font-size: 12.5px; color: var(--mute-dark); margin-top: 3px; line-height: 1.45; }
+
+  .price-card {
+    background: linear-gradient(160deg, rgba(79,179,242,0.16), rgba(52,211,153,0.08));
+    border: 1px solid rgba(79,179,242,0.30);
+    border-radius: 18px;
+    padding: 22px 24px;
+  }
+  .price-card .h {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--green-dark);
+    display: inline-flex; align-items: center; gap: 8px;
+  }
+  .price-card .h .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); }
+  .price-card .price {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: 64px;
+    line-height: 0.95;
+    letter-spacing: -0.04em;
+    color: var(--navy);
+    margin-top: 6px;
+    display: flex; align-items: flex-start;
+  }
+  .price-card .price .c { font-size: 28px; margin-top: 8px; color: var(--cyan-dark); font-weight: 600; }
+  .price-card .price .per { font-size: 14px; color: var(--mute-light); margin-top: 22px; margin-left: 8px; font-weight: 500; letter-spacing: -0.01em; }
+  .price-card .desc { font-size: 13px; color: var(--mute-light); margin-top: 8px; line-height: 1.45; }
+
+  .check-list { display: flex; flex-direction: column; gap: 7px; margin-top: 14px; }
+  .check-list .item {
+    display: grid; grid-template-columns: 16px 1fr; gap: 8px; align-items: baseline;
+    font-size: 12.5px; line-height: 1.4;
+  }
+  .check-list .item .chk { color: var(--green-dark); font-weight: 700; }
+
+  /* Contact list */
+  .contact-list {
+    display: flex; flex-direction: column; gap: 12px;
+    margin-top: 18px;
+  }
+  .contact-list .row {
+    display: grid; grid-template-columns: 60px 1fr; gap: 12px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    color: var(--paper);
+    align-items: baseline;
+  }
+  .contact-list .k {
+    color: var(--cyan);
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    font-size: 10px;
+  }
+
+  /* Section header for inside spread panels */
+  .section-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    opacity: 0.5;
+    margin-bottom: 14px;
+  }
+
+  /* Tickets list (steps) */
+  .steps { display: flex; flex-direction: column; gap: 12px; margin-top: 14px; }
+  .step { display: grid; grid-template-columns: 28px 1fr; gap: 12px; align-items: baseline; }
+  .step .n {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    color: var(--cyan);
+    padding-top: 2px;
+  }
+  .step .t { font-size: 13px; line-height: 1.45; }
+  .step .t strong { font-weight: 600; color: var(--navy); }
+
+  /* Print rules */
+  @media print {
+    body, html { background: white; }
+    .stage { padding: 0; gap: 0; min-height: 0; }
+    .label, .panel-help { display: none !important; }
+    .page {
+      box-shadow: none;
+      page-break-after: always;
+      width: 11in; height: 8.5in;
+    }
+    .page::before, .page::after {
+      background: repeating-linear-gradient(to bottom, rgba(0,0,0,0.18) 0 4px, transparent 4px 10px);
+    }
+  }
+
+  /* Help banner on screen */
+  .panel-help {
+    max-width: 1056px;
+    margin: 0 auto;
+    width: 100%;
+    color: rgba(255,255,255,0.55);
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    text-align: center;
+    line-height: 1.7;
+    padding-top: 8px;
+  }
+</style>
+</head>
+<body>
+
+<div class="stage">
+
+  <!-- ============================================================
+       PAGE 1 — OUTSIDE (back cover · inside flap · front cover)
+       Reads right-to-left when folded
+       ============================================================ -->
+
+  <div class="label">Page 1 · Outside spread</div>
+
+  <div class="page" id="page-outside">
+
+    <!-- LEFT PANEL = BACK COVER (when folded, this sits behind the front) -->
+    <div class="panel navy">
+      <svg class="circuit" viewBox="0 0 350 770" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+        <g fill="none" stroke="#4FB3F2" stroke-width="0.8" opacity="0.5">
+          <path d="M0,80 L120,80 L150,110 L260,110" />
+          <path d="M350,200 L240,200 L210,230 L80,230" />
+          <path d="M0,520 L130,520 L160,490 L280,490" />
+        </g>
+        <g fill="#34D399"><circle cx="260" cy="110" r="2"/><circle cx="80" cy="230" r="2"/><circle cx="280" cy="490" r="2"/></g>
+      </svg>
+
+      <div class="brand">
+        <div class="mark">3L</div>
+        <span>3 Lakes Logistics</span>
+      </div>
+
+      <div style="margin-top: auto;">
+        <div class="eyebrow" style="color: var(--green);">
+          <span class="dot"></span>Get in touch
+        </div>
+        <h2 style="font-size: 34px; line-height: 1.0; margin-top: 14px; color: var(--paper);">
+          Talk to a real<br/>dispatcher.
+        </h2>
+        <p style="font-size: 13px; color: var(--mute-dark); margin-top: 14px; line-height: 1.5;">
+          24/7. Real humans answer. No bots between you and your next load.
+        </p>
+
+        <div class="contact-list">
+          <div class="row"><span class="k">Call</span><span>(555) 000 · 1234</span></div>
+          <div class="row"><span class="k">Mail</span><span style="text-transform: lowercase; letter-spacing: 0.02em;">info@3lakeslogistics.com</span></div>
+          <div class="row"><span class="k">Web</span><span style="text-transform: lowercase; letter-spacing: 0.02em;">3lakeslogistics.com</span></div>
+        </div>
+      </div>
+
+      <div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid rgba(143,200,243,0.18);
+                  font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 0.14em;
+                  text-transform: uppercase; color: rgba(245,248,251,0.4); line-height: 1.7;">
+        Delivering trust across America<br/>
+        FMCSA Licensed · Bonded · Insured<br/>
+        © 2025 3 Lakes Logistics LLC
+      </div>
+    </div>
+
+    <!-- MIDDLE PANEL = INSIDE FLAP (folds in; teaser before fully opening) -->
+    <div class="panel tint">
+      <div class="brand">
+        <div class="mark dark">3L</div>
+        <span style="color: var(--mute-light);">The numbers</span>
+      </div>
+
+      <div style="margin-top: 56px;">
+        <div class="eyebrow cyan-dark" style="margin-bottom: 16px;">
+          <span class="dot"></span>What you get
+        </div>
+        <h2 style="font-size: 38px; line-height: 1.0; color: var(--ink);">
+          One truck.<br/>One platform.<br/>One flat fee.
+        </h2>
+      </div>
+
+      <div style="margin-top: 32px;">
+        <div class="stat-row">
+          <div class="v" style="color: var(--cyan-dark);">+22¢</div>
+          <div class="l">Above-market RPM, every booked load — AI-negotiated in under 60 seconds.</div>
+        </div>
+        <div class="stat-row">
+          <div class="v" style="color: var(--green-dark);">+$400</div>
+          <div class="l">Average monthly recovery from detention, lumper, and TONU claims.</div>
+        </div>
+        <div class="stat-row">
+          <div class="v">100%</div>
+          <div class="l">Continuous FMCSA-ready compliance. ELD · CSA · IFTA · insurance.</div>
+        </div>
+        <div class="stat-row">
+          <div class="v">155+</div>
+          <div class="l">Automations running 24/7 — for the cost of a single tank of diesel.</div>
+        </div>
+      </div>
+
+      <div style="margin-top: auto; padding-top: 18px;
+                  font-family: 'JetBrains Mono', monospace; font-size: 10px;
+                  letter-spacing: 0.14em; text-transform: uppercase; color: var(--mute-light);">
+        Open inside →
+      </div>
+    </div>
+
+    <!-- RIGHT PANEL = FRONT COVER (what people see first, folded) -->
+    <div class="panel dark">
+      <svg class="circuit" viewBox="0 0 350 770" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+        <g fill="none" stroke="#4FB3F2" stroke-width="0.9" opacity="0.6">
+          <path d="M0,140 L130,140 L160,170 L290,170" />
+          <path d="M350,260 L220,260 L190,290 L60,290" />
+          <path d="M0,420 L140,420 L170,390 L290,390" />
+          <path d="M350,560 L240,560 L210,590 L100,590" />
+          <path d="M0,690 L140,690 L170,720 L260,720" />
+        </g>
+        <g fill="#4FB3F2">
+          <circle cx="290" cy="170" r="2.5"/>
+          <circle cx="60" cy="290" r="2.5"/>
+          <circle cx="290" cy="390" r="2.5"/>
+        </g>
+        <g fill="#34D399">
+          <circle cx="100" cy="590" r="2.5"/>
+          <circle cx="260" cy="720" r="2.5"/>
+        </g>
+      </svg>
+
+      <div class="brand">
+        <div class="mark">3L</div>
+        <span>3 Lakes Logistics</span>
+      </div>
+
+      <div style="margin-top: 36px;">
+        <div class="eyebrow"><span class="dot"></span>Founders pricing · live</div>
+      </div>
+
+      <h1 class="cover-title" style="color: var(--paper); margin-top: 12px;">
+        Automated<br/>American<br/><em>Trucking.</em>
+      </h1>
+
+      <p class="cover-foot">
+        A flat-fee operating system for owner-operators — AI dispatch, paperless compliance, and revenue recovery on autopilot.
+      </p>
+
+      <!-- QR + sign-up CTA -->
+      <div style="margin-top: auto; padding-top: 20px;">
+        <div class="qr-card">
+          <div id="qr-cover" class="qr-svg"></div>
+          <div class="qr-cta">Scan to claim your Founders spot</div>
+          <div class="qr-label">3lakeslogistics.com/signup</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel-help">Fold along dashed lines · Right panel is the front cover</div>
+
+  <!-- ============================================================
+       PAGE 2 — INSIDE (problem · platform · pricing & sign-up)
+       Reads left → right when fully opened
+       ============================================================ -->
+
+  <div class="label">Page 2 · Inside spread</div>
+
+  <div class="page" id="page-inside">
+
+    <!-- LEFT PANEL — The problem -->
+    <div class="panel light">
+      <div class="brand">
+        <div class="mark dark">3L</div>
+        <span style="color: var(--mute-light);">01 · The problem</span>
+      </div>
+
+      <div style="margin-top: 38px;">
+        <div class="eyebrow cyan-dark"><span class="dot"></span>Where your dollars go</div>
+        <h2 style="font-size: 36px; line-height: 1.0; margin-top: 14px; color: var(--ink);">
+          Your truck<br/>is leaking<br/><span style="color: var(--navy); border-bottom: 3px solid var(--green); padding-bottom: 2px;">$1,200/mo.</span>
+        </h2>
+      </div>
+
+      <p style="font-size: 13.5px; color: var(--mute-light); margin-top: 22px; max-width: 320px; line-height: 1.5;">
+        Most dispatchers take a 30% cut. Paperwork swallows two days a week. Most carriers never claim the detention they're owed.
+      </p>
+
+      <div style="margin-top: 28px;">
+        <div class="stat-row">
+          <div class="v">30%+</div>
+          <div class="l"><strong style="color: var(--ink); font-weight: 600;">Commission</strong> — to dispatchers and brokers on every load.</div>
+        </div>
+        <div class="stat-row">
+          <div class="v">14 hrs</div>
+          <div class="l"><strong style="color: var(--ink); font-weight: 600;">Paperwork</strong> — weekly. Rate cons, BOLs, PODs, factoring submissions.</div>
+        </div>
+        <div class="stat-row">
+          <div class="v">$400</div>
+          <div class="l"><strong style="color: var(--ink); font-weight: 600;">Lost claims</strong> — detention, TONU, lumper, accessorial. Forfeited.</div>
+        </div>
+      </div>
+
+      <div style="margin-top: auto; padding-top: 16px;
+                  font-family: 'JetBrains Mono', monospace; font-size: 10px;
+                  letter-spacing: 0.14em; text-transform: uppercase; color: var(--mute-light);">
+        → Solution next panel
+      </div>
+    </div>
+
+    <!-- MIDDLE PANEL — The platform (navy) -->
+    <div class="panel navy">
+      <svg class="circuit" viewBox="0 0 350 770" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+        <g fill="none" stroke="#4FB3F2" stroke-width="0.8" opacity="0.4">
+          <path d="M0,120 L150,120 L180,150 L280,150" />
+          <path d="M350,380 L240,380 L210,410 L80,410" />
+          <path d="M0,640 L140,640 L170,670 L260,670" />
+        </g>
+        <g fill="#34D399"><circle cx="280" cy="150" r="2"/><circle cx="80" cy="410" r="2"/><circle cx="260" cy="670" r="2"/></g>
+      </svg>
+
+      <div class="section-num" style="color: rgba(245,248,251,0.5);">02 · The platform</div>
+
+      <div class="eyebrow"><span class="dot"></span>Solution</div>
+      <h2 style="font-size: 38px; line-height: 1.0; margin-top: 14px; color: var(--paper);">
+        One platform.<br/>
+        <span style="color: var(--green);">155+ automations.</span>
+      </h2>
+      <p style="font-size: 13px; color: var(--mute-dark); margin-top: 14px; line-height: 1.5;">
+        Everything dispatch, compliance, paperwork, and revenue recovery — running for one flat monthly rate.
+      </p>
+
+      <div style="margin-top: 24px;">
+        <div class="feat-row">
+          <div class="n">01</div>
+          <div>
+            <div class="h" style="color: var(--paper);">AI Dispatch &amp; Load Matching</div>
+            <div class="d">Agents scan DAT, Truckstop &amp; direct shippers 24/7. Auto-negotiate. Auto-book.</div>
+          </div>
+        </div>
+        <div class="feat-row">
+          <div class="n">02</div>
+          <div>
+            <div class="h" style="color: var(--paper);">Shield Compliance</div>
+            <div class="d">Continuous ELD, CSA, insurance, and IFTA monitoring with proactive alerts.</div>
+          </div>
+        </div>
+        <div class="feat-row">
+          <div class="n">03</div>
+          <div>
+            <div class="h" style="color: var(--paper);">Revenue Recovery</div>
+            <div class="d">Detention, TONU, lumper, and accessorial claims filed automatically.</div>
+          </div>
+        </div>
+        <div class="feat-row">
+          <div class="n">04</div>
+          <div>
+            <div class="h" style="color: var(--paper);">Paperless Back Office</div>
+            <div class="d">OCR + AI route BOLs, PODs, rate cons, and factoring submissions.</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-top: auto; padding-top: 16px;
+                  font-family: 'JetBrains Mono', monospace; font-size: 10px;
+                  letter-spacing: 0.14em; text-transform: uppercase; color: var(--mute-dark);">
+        → Sign up next panel
+      </div>
+    </div>
+
+    <!-- RIGHT PANEL — Pricing + sign up QR -->
+    <div class="panel light">
+      <div class="section-num" style="color: var(--mute-light);">03 · Sign up</div>
+
+      <div class="eyebrow cyan-dark"><span class="dot"></span>Founders pricing</div>
+      <h2 style="font-size: 32px; line-height: 1.0; margin-top: 14px; color: var(--ink);">
+        Flat fee.<br/>
+        No commission.<br/>
+        <span style="color: var(--cyan-dark);">Ever.</span>
+      </h2>
+
+      <div class="price-card" style="margin-top: 22px;">
+        <div class="h"><span class="dot"></span>Founders · 1,000 trucks only</div>
+        <div class="price">
+          <span class="c">$</span>300<span class="per">/mo · locked for life</span>
+        </div>
+        <div class="desc">For the first 1,000 carriers. Same rate, every year, for the life of your authority. After truck 1,000, Pro is $500/mo.</div>
+
+        <div class="check-list">
+          <div class="item"><span class="chk">✓</span><span>Full AI Dispatch &amp; Load Matching</span></div>
+          <div class="item"><span class="chk">✓</span><span>Shield Compliance monitoring</span></div>
+          <div class="item"><span class="chk">✓</span><span>Automated revenue recovery</span></div>
+          <div class="item"><span class="chk">✓</span><span>24/7 AI + human dispatch</span></div>
+          <div class="item"><span class="chk">✓</span><span>0% commission on every load</span></div>
+        </div>
+      </div>
+
+      <!-- QR + sign up CTA -->
+      <div style="margin-top: 18px; display: flex; gap: 16px; align-items: center;">
+        <div class="qr-card compact" style="flex-shrink: 0;">
+          <div id="qr-signup" class="qr-svg"></div>
+        </div>
+        <div>
+          <div style="font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--green-dark);">
+            Scan to sign up
+          </div>
+          <div style="font-size: 17px; font-weight: 600; color: var(--ink); margin-top: 4px; letter-spacing: -0.01em; line-height: 1.2;">
+            Claim your<br/>Founders spot
+          </div>
+          <div class="mono" style="font-size: 10px; color: var(--mute-light); margin-top: 6px; letter-spacing: 0.05em;">
+            3lakeslogistics.com/signup
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-top: auto; padding-top: 14px; border-top: 1px solid var(--line);
+                  font-family: 'JetBrains Mono', monospace; font-size: 9.5px;
+                  letter-spacing: 0.14em; text-transform: uppercase; color: var(--mute-light); line-height: 1.7;">
+        Or call 661-466-9932<br/>
+        info@3lakeslogistics.com
+      </div>
+    </div>
+  </div>
+
+  <div class="panel-help">Inside spread · Fully open · Reads left → right · Cmd+P / Ctrl+P to print double-sided</div>
+
+</div>
+
+<script>
+  // Generate QR codes. qrcode-generator returns SVG markup.
+  function makeQR(url, sizePx) {
+    var qr = qrcode(0, 'M');
+    qr.addData(url);
+    qr.make();
+    // Build SVG manually so we can control size + colors
+    var count = qr.getModuleCount();
+    var cell = sizePx / count;
+    var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' + sizePx + '" height="' + sizePx + '" viewBox="0 0 ' + sizePx + ' ' + sizePx + '" shape-rendering="crispEdges">';
+    svg += '<rect width="' + sizePx + '" height="' + sizePx + '" fill="#FFFFFF"/>';
+    for (var r = 0; r < count; r++) {
+      for (var c = 0; c < count; c++) {
+        if (qr.isDark(r, c)) {
+          svg += '<rect x="' + (c * cell).toFixed(2) + '" y="' + (r * cell).toFixed(2) + '" width="' + cell.toFixed(2) + '" height="' + cell.toFixed(2) + '" fill="#000000"/>';
+        }
+      }
+    }
+    svg += '</svg>';
+    return svg;
+  }
+
+  document.getElementById('qr-cover').innerHTML = makeQR('https://3lakeslogistics.com/signup', 168);
+  document.getElementById('qr-signup').innerHTML = makeQR('https://3lakeslogistics.com/signup', 124);
+</script>
+
+</body>
+</html>

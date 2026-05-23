@@ -1,122 +1,123 @@
-"""Post-Vance call follow-up orchestration.
+"""Post-call follow-up orchestration for interested Vance prospects.
 
-After Vance qualifies an interested prospect, automatically:
-1. Send welcome email with demo video
-2. Schedule SMS reminder in 24h if no booking
-3. Track conversion metrics
+Sequence after a qualified call:
+  1. Immediate: branded email with Calendly + intake links
+  2. Immediate: SMS with booking + intake links (if email missing, SMS is the primary)
+  3. 24h later: SMS reminder if they haven't booked yet
+     — driven by APScheduler hourly job checking leads.stage='Interested'
 """
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 import httpx
 
 from ..logging_service import log_agent
 from ..settings import get_settings
+from ..supabase_client import get_supabase
+from ..studio.registry import BOOKING_URL, SIGNUP_URL, WEBSITE_URL, BRAND_STATS
 
 
-DEMO_VIDEO_URL = "https://3lakeslogistics.com/demo.mp4"
-CALENDLY_BOOKING_URL = "https://calendly.com/3lakes/commander-call"
+# ── Email template ─────────────────────────────────────────────────────────────
 
+def _build_follow_up_html(prospect_name: str, company_name: str) -> str:
+    first = prospect_name.split()[0] if prospect_name else "there"
+    company_str = f" at {company_name}" if company_name else ""
+    return f"""<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Your 3 Lakes Onboarding Call</title></head>
+<body style="margin:0;padding:0;background:#f0f4f8;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:32px 16px;">
+<table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;">
+
+  <!-- Header -->
+  <tr><td style="background:#0B2545;border-radius:10px 10px 0 0;padding:32px;text-align:center;">
+    <div style="font-size:28px;font-weight:900;color:#fff;letter-spacing:1px;">3 LAKES LOGISTICS</div>
+    <div style="color:#4FB3F2;font-size:13px;margin-top:6px;letter-spacing:2px;text-transform:uppercase;">Automated American Trucking</div>
+  </td></tr>
+
+  <!-- Body -->
+  <tr><td style="background:#fff;padding:36px 40px;">
+    <p style="font-size:17px;color:#0B2545;margin:0 0 18px;">Hey {first},</p>
+    <p style="font-size:15px;color:#374151;line-height:1.7;margin:0 0 18px;">
+      Great talking with you{company_str}. As promised, here are your next steps to lock in
+      <strong>Founders pricing</strong> before we hit our 1,000-truck cap.
+    </p>
+
+    <!-- Stats bar -->
+    <table width="100%" cellpadding="0" cellspacing="0" style="background:#061629;border-radius:8px;margin:20px 0;">
+      <tr>
+        <td align="center" style="padding:16px 8px;border-right:1px solid #1e3a5f;">
+          <div style="font-size:22px;font-weight:800;color:#34D399;">{BRAND_STATS["rpm_above_market"]}</div>
+          <div style="font-size:11px;color:#9CA3AF;margin-top:3px;">per mile above market</div>
+        </td>
+        <td align="center" style="padding:16px 8px;border-right:1px solid #1e3a5f;">
+          <div style="font-size:22px;font-weight:800;color:#34D399;">{BRAND_STATS["monthly_recovery"]}</div>
+          <div style="font-size:11px;color:#9CA3AF;margin-top:3px;">recovered per month</div>
+        </td>
+        <td align="center" style="padding:16px 8px;">
+          <div style="font-size:22px;font-weight:800;color:#34D399;">{BRAND_STATS["flat_fee"]}</div>
+          <div style="font-size:11px;color:#9CA3AF;margin-top:3px;">flat, lifetime locked</div>
+        </td>
+      </tr>
+    </table>
+
+    <p style="font-size:15px;color:#374151;line-height:1.7;margin:20px 0 4px;">
+      <strong>Ready to lock in your spot?</strong> Takes 3 minutes — you're in as a Founder:
+    </p>
+    <table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:8px 0 20px;">
+      <a href="{SIGNUP_URL}" style="display:inline-block;background:#34D399;color:#0B2545;font-weight:800;font-size:16px;padding:16px 40px;border-radius:7px;text-decoration:none;letter-spacing:0.3px;">
+        Sign Up Now — Lock Founders Pricing &rarr;
+      </a>
+    </td></tr></table>
+
+    <p style="font-size:14px;color:#6B7280;text-align:center;margin:-12px 0 20px;">
+      — or —
+    </p>
+
+    <p style="font-size:14px;color:#374151;line-height:1.7;margin:0 0 8px;">
+      Have questions first? Book a free 15-min call with our onboarding team:
+    </p>
+    <table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:8px 0 20px;">
+      <a href="{BOOKING_URL}" style="display:inline-block;background:#0B2545;color:#fff;font-weight:700;font-size:14px;padding:12px 32px;border-radius:7px;text-decoration:none;">
+        Book a 15-Min Onboarding Call &rarr;
+      </a>
+    </td></tr></table>
+
+    <p style="font-size:13px;color:#6B7280;margin:24px 0 0;">
+      Questions? Reply to this email or visit <a href="{WEBSITE_URL}" style="color:#4FB3F2;">{WEBSITE_URL}</a>.
+    </p>
+  </td></tr>
+
+  <!-- Footer -->
+  <tr><td style="background:#f8fafc;border-radius:0 0 10px 10px;padding:20px 40px;text-align:center;border-top:1px solid #e5e7eb;">
+    <p style="font-size:11px;color:#9CA3AF;margin:0;">
+      3 Lakes Logistics &middot; info@3lakeslogistics.com<br>
+      <a href="{WEBSITE_URL}/unsubscribe" style="color:#9CA3AF;">Unsubscribe</a>
+    </p>
+  </td></tr>
+
+</table></td></tr></table>
+</body></html>"""
+
+
+# ── Delivery helpers ───────────────────────────────────────────────────────────
 
 def send_follow_up_email(
     lead_id: str,
     prospect_name: str,
     prospect_email: str,
     company_name: str,
-    phone_number: str,
+    **_kwargs: Any,
 ) -> dict[str, Any]:
-    """Send follow-up email with demo video + booking link after interested prospect.
-
-    Args:
-        lead_id: Internal lead ID
-        prospect_name: Prospect's name
-        prospect_email: Email address
-        company_name: Their company
-        phone_number: Their phone number (for reference)
-
-    Returns:
-        {"status": "sent", "message_id": "..."} or {"status": "error", "error": "..."}
-    """
     s = get_settings()
-    if not s.postmark_server_token:
-        return {"status": "error", "error": "postmark not configured"}
+    if not s.postmark_server_token or not prospect_email:
+        return {"status": "skipped", "reason": "postmark not configured or no email"}
 
-    subject = f"Your 3 Lakes Founders Program Demo — {prospect_name}"
-
-    html_body = f"""
-<!DOCTYPE html>
-<html>
-<head>
-    <style>
-        body {{ font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; line-height: 1.6; color: #333; }}
-        .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
-        .header {{ background: #1e40af; color: white; padding: 20px; border-radius: 8px 8px 0 0; text-align: center; }}
-        .header h1 {{ margin: 0; font-size: 24px; }}
-        .content {{ background: #f9fafb; padding: 30px; border-radius: 0 0 8px 8px; }}
-        .section {{ margin: 20px 0; }}
-        .cta-button {{ display: inline-block; background: #1e40af; color: white; padding: 12px 24px; border-radius: 6px; text-decoration: none; font-weight: bold; margin: 10px 0; }}
-        .video-container {{ margin: 20px 0; text-align: center; }}
-        .benefits {{ background: white; padding: 15px; border-left: 4px solid #1e40af; margin: 15px 0; }}
-        .benefit-item {{ margin: 8px 0; }}
-        .footer {{ color: #666; font-size: 12px; margin-top: 20px; padding-top: 20px; border-top: 1px solid #ddd; }}
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="header">
-            <h1>Welcome to 3 Lakes Logistics! 🚚</h1>
-            <p>Your path to automated dispatch & full load earnings</p>
-        </div>
-
-        <div class="content">
-            <p>Hi {prospect_name},</p>
-
-            <p>Thanks for taking my call! I'm pumped about the opportunity to get {company_name} enrolled in the Founders program.</p>
-
-            <div class="video-container">
-                <p><strong>Watch this 3-minute overview:</strong></p>
-                <a href="{DEMO_VIDEO_URL}" class="cta-button">📹 Watch Demo Video</a>
-            </div>
-
-            <div class="section">
-                <h3>Here's what you get:</h3>
-                <div class="benefits">
-                    <div class="benefit-item">✓ <strong>$300/month</strong> lifetime lock (Founders only)</div>
-                    <div class="benefit-item">✓ <strong>100% of load earnings</strong> — no commission</div>
-                    <div class="benefit-item">✓ <strong>Full automation</strong> — loads dispatched to your app</div>
-                    <div class="benefit-item">✓ <strong>Dedicated support</strong> — human Commander always available</div>
-                </div>
-            </div>
-
-            <div class="section">
-                <p>Next step: Let's hop on a quick 15-minute call with our Commander to dive into YOUR specific situation and answer any questions.</p>
-
-                <p style="text-align: center;">
-                    <a href="{CALENDLY_BOOKING_URL}" class="cta-button">📅 Book Your Demo Call</a>
-                </p>
-            </div>
-
-            <div class="section">
-                <p><strong>If that link doesn't work:</strong> Reply to this email or call me back at {phone_number}.</p>
-            </div>
-
-            <p>Looking forward to helping {company_name} scale!</p>
-
-            <p>Vance<br>
-            3 Lakes Logistics<br>
-            <em>Turning owner-operators into founders</em></p>
-
-            <div class="footer">
-                <p>This email was sent because you expressed interest in the Founders program during our call.</p>
-                <p><a href="https://3lakeslogistics.com/unsubscribe">Unsubscribe</a></p>
-            </div>
-        </div>
-    </div>
-</body>
-</html>
-"""
+    first = prospect_name.split()[0] if prospect_name else "there"
+    subject = f"Your 3 Lakes onboarding link, {first} — lock in Founders pricing"
 
     try:
         r = httpx.post(
@@ -129,132 +130,122 @@ def send_follow_up_email(
                 "From": s.postmark_from_email,
                 "To": prospect_email,
                 "Subject": subject,
-                "HtmlBody": html_body,
-                "Metadata": {
-                    "lead_id": lead_id,
-                    "type": "vance_follow_up",
-                },
+                "HtmlBody": _build_follow_up_html(prospect_name, company_name),
+                "MessageStream": "outbound",
+                "Metadata": {"lead_id": lead_id, "type": "vance_follow_up"},
             },
             timeout=15,
         )
         r.raise_for_status()
+        msg_id = r.json().get("MessageID")
+        log_agent("vance_follow_up", "email_sent",
+                  payload={"lead_id": lead_id, "to": prospect_email}, result=msg_id)
+        return {"status": "sent", "message_id": msg_id}
+    except Exception as exc:  # noqa: BLE001
+        log_agent("vance_follow_up", "email_failed", payload={"lead_id": lead_id}, error=str(exc))
+        return {"status": "error", "error": str(exc)}
 
-        data = r.json()
-        message_id = data.get("MessageID")
 
-        log_agent(
-            "vance",
-            "follow_up_email_sent",
-            payload={
-                "lead_id": lead_id,
-                "prospect": prospect_name,
-                "company": company_name,
-                "email": prospect_email,
-            },
-            result=message_id,
+def send_follow_up_sms(
+    lead_id: str,
+    prospect_name: str,
+    phone_number: str,
+    reminder: bool = False,
+) -> dict[str, Any]:
+    """Send immediate post-call SMS (reminder=False) or 24h reminder (reminder=True)."""
+    s = get_settings()
+    if not s.twilio_account_sid or not s.twilio_auth_token or not s.twilio_from_number:
+        return {"status": "skipped", "reason": "twilio not configured"}
+    if not phone_number:
+        return {"status": "skipped", "reason": "no phone number"}
+
+    first = prospect_name.split()[0] if prospect_name else "there"
+    if reminder:
+        body = (
+            f"Hey {first}, don't let Founders pricing slip — "
+            f"sign up in 3 min: {SIGNUP_URL} "
+            f"Or book a call: {BOOKING_URL} "
+            f"Reply STOP to opt out."
+        )
+    else:
+        body = (
+            f"Hey {first}! Great chatting. Sign up now and lock Founders pricing ($300/mo for life): {SIGNUP_URL} "
+            f"Or book a 15-min call: {BOOKING_URL} "
+            f"Reply STOP to opt out."
         )
 
-        return {
-            "status": "sent",
-            "message_id": message_id,
-            "follow_up_reminder_scheduled_at": (datetime.utcnow() + timedelta(hours=24)).isoformat(),
-        }
-
-    except Exception as e:  # noqa: BLE001
-        error_msg = str(e)
-        log_agent(
-            "vance",
-            "follow_up_email_failed",
-            payload={"lead_id": lead_id, "prospect": prospect_name},
-            error=error_msg,
+    try:
+        r = httpx.post(
+            f"https://api.twilio.com/2010-04-01/Accounts/{s.twilio_account_sid}/Messages.json",
+            auth=(s.twilio_account_sid, s.twilio_auth_token),
+            data={"From": s.twilio_from_number, "To": phone_number, "Body": body},
+            timeout=15,
         )
-        return {"status": "error", "error": error_msg}
+        r.raise_for_status()
+        sid = r.json().get("sid")
+        action = "reminder_sent" if reminder else "sms_sent"
+        log_agent("vance_follow_up", action,
+                  payload={"lead_id": lead_id, "phone": phone_number}, result=sid)
+        return {"status": "sent", "sid": sid}
+    except Exception as exc:  # noqa: BLE001
+        log_agent("vance_follow_up", "sms_failed", payload={"lead_id": lead_id}, error=str(exc))
+        return {"status": "error", "error": str(exc)}
 
 
-def send_sms_reminder(
+def schedule_follow_up_reminder(
     lead_id: str,
     prospect_name: str,
     phone_number: str,
 ) -> dict[str, Any]:
-    """Send SMS reminder to book demo call if they haven't booked in 24h.
-
-    Args:
-        lead_id: Internal lead ID
-        prospect_name: Prospect's name
-        phone_number: Phone number to text
-
-    Returns:
-        {"status": "sent", "message_sid": "..."} or {"status": "error", "error": "..."}
-    """
-    s = get_settings()
-    if not s.twilio_account_sid or not s.twilio_auth_token:
-        return {"status": "error", "error": "twilio not configured"}
-
-    message_text = f"""Hi {prospect_name}! Quick reminder: Book your 15-min call with our Commander to lock in your Founders pricing ($300/mo lifetime). {CALENDLY_BOOKING_URL}"""
-
+    """Mark lead stage=Interested + next_touch_at=24h so the hourly job fires the reminder."""
+    remind_at = (datetime.now(timezone.utc) + timedelta(hours=24)).isoformat()
     try:
-        # Twilio SMS API
-        auth = (s.twilio_account_sid, s.twilio_auth_token)
-        r = httpx.post(
-            f"https://api.twilio.com/2010-04-01/Accounts/{s.twilio_account_sid}/Messages.json",
-            auth=auth,
-            data={
-                "From": s.twilio_from_number,
-                "To": phone_number,
-                "Body": message_text,
-            },
-            timeout=15,
+        db = get_supabase()
+        db.table("leads").update({
+            "stage": "Interested",
+            "next_touch_at": remind_at,
+        }).eq("id", lead_id).execute()
+        log_agent("vance_follow_up", "reminder_scheduled",
+                  payload={"lead_id": lead_id}, result=f"due={remind_at}")
+        return {"status": "scheduled", "remind_at": remind_at}
+    except Exception as exc:  # noqa: BLE001
+        log_agent("vance_follow_up", "reminder_schedule_failed",
+                  payload={"lead_id": lead_id}, error=str(exc))
+        return {"status": "error", "error": str(exc)}
+
+
+def send_due_reminders() -> dict[str, Any]:
+    """Called hourly by APScheduler. Sends 24h SMS to Interested leads whose time has come."""
+    db = get_supabase()
+    now = datetime.now(timezone.utc).isoformat()
+
+    rows = (
+        db.table("leads")
+        .select("id,contact_name,phone")
+        .eq("stage", "Interested")
+        .not_.is_("phone", "null")
+        .not_.is_("next_touch_at", "null")
+        .lte("next_touch_at", now)
+        .neq("do_not_contact", True)
+        .limit(50)
+        .execute()
+    ).data or []
+
+    sent = 0
+    for row in rows:
+        send_follow_up_sms(
+            lead_id=str(row["id"]),
+            prospect_name=row.get("contact_name") or "there",
+            phone_number=row.get("phone") or "",
+            reminder=True,
         )
-        r.raise_for_status()
+        # Advance stage so reminder doesn't fire again
+        db.table("leads").update({
+            "stage": "Follow-Up Sent",
+            "next_touch_at": None,
+        }).eq("id", row["id"]).execute()
+        sent += 1
 
-        data = r.json()
-        message_sid = data.get("sid")
-
-        log_agent(
-            "vance",
-            "sms_reminder_sent",
-            payload={"lead_id": lead_id, "phone": phone_number},
-            result=message_sid,
-        )
-
-        return {"status": "sent", "message_sid": message_sid}
-
-    except Exception as e:  # noqa: BLE001
-        error_msg = str(e)
-        log_agent(
-            "vance",
-            "sms_reminder_failed",
-            payload={"lead_id": lead_id, "phone": phone_number},
-            error=error_msg,
-        )
-        return {"status": "error", "error": error_msg}
-
-
-def schedule_follow_up_reminder(lead_id: str, prospect_name: str, phone_number: str) -> dict[str, Any]:
-    """Schedule SMS reminder for 24h later if prospect doesn't book.
-
-    This would typically be called by the execution engine to set up a delayed task.
-    For now, returns a placeholder for the execution engine to handle scheduling.
-
-    Args:
-        lead_id: Internal lead ID
-        prospect_name: Prospect's name
-        phone_number: Phone number for reminder
-
-    Returns:
-        {"status": "scheduled", "remind_at": "..."}
-    """
-    remind_at = (datetime.utcnow() + timedelta(hours=24)).isoformat()
-
-    log_agent(
-        "vance",
-        "sms_reminder_scheduled",
-        payload={"lead_id": lead_id, "prospect": prospect_name},
-        result=f"reminder scheduled for {remind_at}",
-    )
-
-    return {
-        "status": "scheduled",
-        "remind_at": remind_at,
-        "note": "Execution engine should check if booking was made before sending SMS",
-    }
+    log_agent("vance_follow_up", "reminders_batch",
+              result=f"sent={sent} eligible={len(rows)}")
+    return {"sent": sent, "eligible": len(rows)}

@@ -1,71 +1,74 @@
-"""Vance Follow-Up Agent — Step 36.
+"""Vance Follow-Up Agent — fires immediately after an interested call completes.
 
-After Vance qualifies an interested prospect:
-1. Send demo video email
-2. Schedule 24h SMS reminder if no booking
-3. Track conversion funnel
+Sequence:
+  1. Email (Calendly + intake link) — if email available
+  2. SMS  (Calendly + intake link) — immediate, regardless of email
+  3. Schedule 24h SMS reminder    — via leads.stage + APScheduler hourly job
 """
 from __future__ import annotations
 
 from typing import Any
 
-from ..prospecting.follow_up import send_follow_up_email, schedule_follow_up_reminder
+from ..prospecting.follow_up import (
+    send_follow_up_email,
+    send_follow_up_sms,
+    schedule_follow_up_reminder,
+)
 from ..logging_service import log_agent
 
 
 def run(payload: dict[str, Any]) -> dict[str, Any]:
-    """Trigger follow-up sequence for interested prospects.
+    """Trigger follow-up sequence for an interested prospect.
 
-    Expected payload (from Vance's webhook handler):
+    Expected payload (passed from bland_client.handle_bland_webhook):
     {
-        "lead_id": "lead_123",
+        "lead_id": "uuid",
         "prospect_name": "John Smith",
-        "prospect_email": "john@smithtrucking.com",
+        "prospect_email": "john@smithtrucking.com",  # may be empty
         "company_name": "Smith Trucking",
         "phone_number": "+15551234567",
-        "call_outcome": "interested",  # or "not_interested", "call_failed"
-        "transcript": "...",
-        "call_id": "call_abc123"
+        "call_outcome": "interested",
+        "call_id": "bland_call_id"
     }
     """
-    lead_id = payload.get("lead_id", "")
+    lead_id       = payload.get("lead_id", "")
     prospect_name = payload.get("prospect_name", "")
     prospect_email = payload.get("prospect_email", "")
-    company_name = payload.get("company_name", "")
-    phone_number = payload.get("phone_number", "")
-    call_outcome = payload.get("call_outcome", "")
+    company_name  = payload.get("company_name", "")
+    phone_number  = payload.get("phone_number", "")
+    call_outcome  = payload.get("call_outcome", "")
 
-    if not call_outcome == "interested":
+    if call_outcome != "interested":
         return {
             "agent": "vance_follow_up",
             "status": "skipped",
-            "reason": f"outcome was {call_outcome}, not interested",
+            "reason": f"outcome was '{call_outcome}', not interested",
         }
 
-    if not prospect_email or not phone_number:
+    if not phone_number and not prospect_email:
         return {
             "agent": "vance_follow_up",
             "status": "error",
-            "error": "email and phone required for follow-up",
+            "error": "need at least phone or email to follow up",
         }
 
-    # Step 1: Send follow-up email with demo video
+    # Step 1: Email (Calendly + intake links)
     email_result = send_follow_up_email(
         lead_id=lead_id,
         prospect_name=prospect_name,
         prospect_email=prospect_email,
         company_name=company_name,
-        phone_number=phone_number,
     )
 
-    if email_result.get("status") != "sent":
-        return {
-            "agent": "vance_follow_up",
-            "status": "error",
-            "error": f"email failed: {email_result.get('error')}",
-        }
+    # Step 2: Immediate SMS with links
+    sms_result = send_follow_up_sms(
+        lead_id=lead_id,
+        prospect_name=prospect_name,
+        phone_number=phone_number,
+        reminder=False,
+    )
 
-    # Step 2: Schedule SMS reminder for 24h later
+    # Step 3: Schedule 24h reminder SMS in the DB
     reminder_result = schedule_follow_up_reminder(
         lead_id=lead_id,
         prospect_name=prospect_name,
@@ -74,21 +77,20 @@ def run(payload: dict[str, Any]) -> dict[str, Any]:
 
     log_agent(
         "vance_follow_up",
-        "follow_up_sequence_started",
-        payload={
-            "lead_id": lead_id,
-            "prospect": prospect_name,
-            "company": company_name,
-        },
-        result="email sent + 24h reminder scheduled",
+        "sequence_fired",
+        payload={"lead_id": lead_id, "prospect": prospect_name, "company": company_name},
+        result=(
+            f"email={email_result.get('status')} "
+            f"sms={sms_result.get('status')} "
+            f"reminder={reminder_result.get('status')}"
+        ),
     )
 
     return {
         "agent": "vance_follow_up",
         "status": "success",
         "lead_id": lead_id,
-        "prospect": prospect_name,
-        "email_sent": True,
-        "message_id": email_result.get("message_id"),
-        "sms_reminder_scheduled_at": reminder_result.get("remind_at"),
+        "email": email_result,
+        "sms": sms_result,
+        "reminder_24h": reminder_result,
     }

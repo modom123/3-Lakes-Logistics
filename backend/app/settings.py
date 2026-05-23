@@ -35,6 +35,7 @@ class Settings(BaseSettings):
     bland_ai_api_key: str = ""
     bland_ai_webhook_secret: str = ""
     bland_ai_org_id: str = ""
+    bland_ai_voice: str = ""  # Optional voice ID from your Bland dashboard; leave empty for default
 
     elevenlabs_api_key: str = ""
 
@@ -44,7 +45,20 @@ class Settings(BaseSettings):
     # Email ingest pipeline
     sendgrid_inbound_email: str = "loads@3lakeslogistics.com"
 
+    # Hostinger mailboxes — IMAP (imap.hostinger.com:993) + SMTP (smtp.hostinger.com:587)
+    # Set one password per mailbox. Login = full email address.
+    email_loads_password: str = ""   # loads@3lakeslogistics.com
+    email_sales_password: str = ""   # sales@3lakeslogistics.com
+    email_info_password:  str = ""   # info@3lakeslogistics.com
+    email_mark_password:  str = ""   # mark@3lakeslogistics.com
+    email_cece_password:  str = ""   # cece@3lakeslogistics.com
+
     fmcsa_webkey: str = ""
+
+    # US DOT open data (data.transportation.gov) — Socrata app token
+    # Used by Alexander Wright agent for market intelligence
+    # Free token at https://data.transportation.gov/login
+    dot_api_key: str = ""
 
     google_maps_api_key: str = ""
     google_vision_credentials_json: str = ""
@@ -64,6 +78,17 @@ class Settings(BaseSettings):
     adobe_account_id: str = ""
     adobe_api_endpoint: str = "https://api.na1.adobesign.com"
 
+    # Social media — Facebook, Instagram, LinkedIn, TikTok, YouTube
+    facebook_page_id: str = ""
+    facebook_access_token: str = ""
+    instagram_account_id: str = ""
+    linkedin_access_token: str = ""
+    linkedin_organization_id: str = ""
+    tiktok_access_token: str = ""
+    tiktok_open_id: str = ""
+    tiktok_image_url: str = ""   # public URL of a branded image to post (e.g. https://3lakeslogistics.com/social-card.png)
+    youtube_access_token: str = ""  # OAuth2 token with youtube scope
+
     render_api_key: str = ""
 
     sentry_dsn: str = ""
@@ -74,6 +99,11 @@ class Settings(BaseSettings):
 
     # Claude AI — CLM contract scanner + autonomous agents
     anthropic_api_key: str = ""
+
+    # OpenRouter — low-cost LLM gateway (Qwen for Outside Bond reasoning)
+    # Get key at https://openrouter.ai/keys
+    openrouter_api_key: str = ""
+    openrouter_model: str = "qwen/qwen-2.5-72b-instruct"  # ~$0.00035/1K tokens
 
     # SendGrid — inbound email parsing for contract documents
     sendgrid_api_key: str = ""

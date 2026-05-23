@@ -78,19 +78,58 @@ def h92_document_vault_upload_pod(carrier_id, contract_id, payload):
 # ── Step 93: scout.extract_pod ────────────────────────────────────────────────
 
 def h93_scout_extract_pod(carrier_id, contract_id, payload):
+    """Extract structured data from the most recent POD vault document.
+
+    Priority: vault doc lookup via carrier/contract → falls back to raw_text in payload.
+    Uses doc_extractor (PyPDF2 or Claude Vision) so scanned PDFs are fully supported.
+    """
+    from ...clm.doc_extractor import extract_vault_doc  # noqa: PLC0415
+
+    sb = _db()
+    doc_id = payload.get("doc_id") or payload.get("vault_doc_id")
+
+    # Look up the most recent POD in the vault for this carrier/contract
+    if not doc_id and sb:
+        try:
+            q = sb.table("document_vault").select("id").eq("doc_type", "pod")
+            if contract_id:
+                q = q.eq("contract_id", str(contract_id))
+            elif carrier_id:
+                q = q.eq("carrier_id", str(carrier_id))
+            rows = q.order("uploaded_at", desc=True).limit(1).execute().data or []
+            if rows:
+                doc_id = rows[0]["id"]
+        except Exception as exc:  # noqa: BLE001
+            log_agent("scout", "extract_pod_lookup", carrier_id=str(carrier_id) if carrier_id else None,
+                      result=f"vault_lookup_failed:{exc}")
+
+    if doc_id:
+        try:
+            result = extract_vault_doc(doc_id)
+            extracted = result.get("extracted", {})
+            confidence = result.get("confidence", 0.0)
+            warnings = result.get("warnings", [])
+            log_agent("scout", "extract_pod", carrier_id=str(carrier_id) if carrier_id else None,
+                      result=f"vault doc_id={doc_id} method={result.get('method')} confidence={confidence:.3f}")
+            return {"extracted": extracted, "confidence": confidence, "warnings": warnings,
+                    "method": result.get("method"), "doc_id": doc_id}
+        except Exception as e:  # noqa: BLE001
+            log_agent("scout", "extract_pod", carrier_id=str(carrier_id) if carrier_id else None,
+                      result=f"vault_extract_failed:{e}")
+
+    # Fallback: raw_text in payload (for manual/API-driven triggers)
     raw_text = payload.get("raw_text") or payload.get("pod_text")
-    s = get_settings()
-    if not raw_text or not s.anthropic_api_key:
-        return {"extracted": scout.ocr_document(None), "confidence": 0.0,
-                "note": "no_text_or_anthropic_not_configured"}
-    try:
-        from ...clm.scanner import scan_contract
-        extracted, confidence, warnings = scan_contract(raw_text, "pod")
-        log_agent("scout", "extract_pod", carrier_id=str(carrier_id) if carrier_id else None,
-                  result=f"confidence={confidence}")
-        return {"extracted": extracted, "confidence": confidence, "warnings": warnings}
-    except Exception as e:  # noqa: BLE001
-        return {"extracted": {}, "confidence": 0.0, "error": str(e)}
+    if raw_text:
+        try:
+            from ...clm.scanner import scan_contract  # noqa: PLC0415
+            extracted, confidence, warnings = scan_contract(raw_text, "pod")
+            log_agent("scout", "extract_pod", carrier_id=str(carrier_id) if carrier_id else None,
+                      result=f"raw_text confidence={confidence}")
+            return {"extracted": extracted, "confidence": confidence, "warnings": warnings, "method": "raw_text"}
+        except Exception as e:  # noqa: BLE001
+            return {"extracted": {}, "confidence": 0.0, "error": str(e)}
+
+    return {"extracted": {}, "confidence": 0.0, "note": "no_vault_doc_and_no_raw_text"}
 
 
 # ── Step 94: clm.link_pod_to_contract ────────────────────────────────────────
