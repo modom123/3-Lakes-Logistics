@@ -1383,7 +1383,8 @@ td.td-name{font-weight:600;color:var(--navy);}
           <h2>Lead Pipeline</h2>
         </div>
         <div class="page-hdr-r" style="display:flex;gap:8px">
-          <button class="btn-out" onclick="migrateAirtableLeads()" title="Import 129 leads from Airtable">📥 Import from Airtable</button>
+          <button class="btn-out" onclick="bondPullAirtableLeads(event)" title="Bond pulls + scores + dedupes from Airtable '3 Lakes Business Hub'">🕵️ Bond: Pull Leads</button>
+          <button class="btn-out" onclick="migrateAirtableLeads()" title="Import leads from Airtable (Atlas route)">📥 Import from Airtable</button>
           <button class="btn-out" onclick="debugAirtable()" title="Check Airtable connection + list tables">🔍 Debug Airtable</button>
           <button class="btn-out" onclick="loadLeadsPipeline()">Refresh</button>
         </div>
@@ -5906,6 +5907,52 @@ async function migrateAirtableLeads() {
 
   btn.disabled = false;
   btn.textContent = '📥 Import from Airtable';
+}
+
+async function bondPullAirtableLeads(e) {
+  const btn = e.target;
+  const cardEl = document.getElementById('airtable-migration-card');
+  const statusEl = document.getElementById('migration-status');
+  btn.disabled = true; btn.textContent = '⏳ Bond dispatched…';
+  cardEl.style.display = 'block';
+  statusEl.innerHTML = '<div style="padding:4px 0;color:var(--navy)">🕵️ Bond connecting to Airtable <em>3 Lakes Business Hub</em>…</div>';
+  try {
+    const d = await apiFetch('/api/agents/james_bond/run','POST',{scope:'airtable_leads'});
+    const data = await d.json();
+    if (data.status === 'BLOCKED') {
+      statusEl.innerHTML = `<div style="padding:4px 0;color:var(--red);line-height:1.7">
+        <div style="font-weight:700">🔒 Bond Blocked — ${data.reason}</div>
+        <div style="margin-top:8px;font-size:12px">${data.action||''}</div>
+      </div>`;
+      toast('Bond blocked: AIRTABLE_API_KEY not set', 'error');
+    } else if (data.status === 'ERROR') {
+      statusEl.innerHTML = `<div style="padding:4px 0;color:var(--red);line-height:1.7">
+        <div style="font-weight:700">❌ Bond Error: ${data.reason}</div>
+      </div>`;
+      toast('Bond Airtable pull failed', 'error');
+    } else {
+      statusEl.innerHTML = `<div style="padding:4px 0;line-height:1.8;color:var(--navy)">
+        <div style="font-weight:700;font-size:14px;color:var(--green)">✅ Bond Mission Complete</div>
+        <div style="margin-top:8px;font-size:13px">
+          <div>📋 Table: <strong>${data.table_used||'—'}</strong></div>
+          <div>📊 Pulled: <strong>${data.records_pulled||0}</strong></div>
+          <div style="color:var(--green)">✔️ Inserted: <strong>${data.inserted||0}</strong></div>
+          ${(data.duplicates_skipped||0)>0?`<div style="color:var(--muted)">⏭ Dupes skipped: <strong>${data.duplicates_skipped}</strong></div>`:''}
+        </div>
+        ${data.directive?`<div style="margin-top:10px;font-size:11px;font-style:italic;color:var(--navy-mid)">${data.directive}</div>`:''}
+      </div>`;
+      toast(`🕵️ Bond: ${data.inserted||0} leads inserted`, 'success');
+      _pushNotif({id:'bond_leads_'+Date.now(),agent:'james_bond',action:'airtable_leads_pull',
+        result:`${data.inserted} leads inserted · ${data.duplicates_skipped} dupes`,ts:new Date().toISOString()});
+      await new Promise(r=>setTimeout(r,1200));
+      await loadLeadsPipeline();
+      setTimeout(()=>{cardEl.style.display='none';},6000);
+    }
+  } catch(err) {
+    statusEl.innerHTML = `<div style="padding:4px 0;color:var(--red)"><strong>❌ Bond failed:</strong> ${err.message}</div>`;
+    toast('Bond Airtable pull error: '+err.message,'error');
+  }
+  btn.disabled=false; btn.textContent='🕵️ Bond: Pull Leads';
 }
 
 // ══════════════════════════════════════════════════════

@@ -479,8 +479,18 @@ def _attempt_agent_wakeup(silent_agents: list[str]) -> dict[str, Any]:
 
 
 def run(payload: dict[str, Any]) -> dict[str, Any]:
-    """Execute a James Bond consulting audit with auto-remediation."""
+    """Execute a James Bond consulting audit with auto-remediation.
+
+    Special scope values:
+      'airtable_leads' — pull all leads from the Airtable '3 Lakes Business Hub'
+                         base, deduplicate against Supabase, score, and insert.
+    """
     scope: str       = str(payload.get("scope", "full")).lower()
+
+    # ── Airtable leads pull mission ──────────────────────────────────────────
+    if scope == "airtable_leads":
+        return _mission_pull_airtable_leads(payload)
+
     agent_focus: str | None = payload.get("agent_focus")
     top_n: int       = int(payload.get("top_n", 5))
     remediate: bool  = bool(payload.get("remediate", True))
@@ -609,3 +619,252 @@ def run(payload: dict[str, Any]) -> dict[str, Any]:
     )
 
     return {"agent": _NAME, **report}
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# AIRTABLE LEADS MISSION
+# Bond pulls from "3 Lakes Business Hub" base, scores, deduplicates, inserts.
+# ═══════════════════════════════════════════════════════════════════════════════
+
+import logging as _logging
+import urllib.request as _urllib_req
+import urllib.error  as _urllib_err
+
+_bond_log = _logging.getLogger("3ll.james_bond.airtable")
+
+_AIRTABLE_API   = "https://api.airtable.com/v0"
+_LEAD_STATUSES  = {"new lead", "new", "prospect", "interested", "contacted"}
+
+# Known table names in "3 Lakes Business Hub" to try in order
+_TABLE_CANDIDATES = [
+    "Carrier Leads",
+    "table 1",
+    "Leads",
+    "carrier leads",
+    "Lead Pipeline",
+]
+
+
+def _airtable_get(url: str, api_key: str) -> dict:
+    req = _urllib_req.Request(url, headers={"Authorization": f"Bearer {api_key}"})
+    with _urllib_req.urlopen(req, timeout=20) as resp:
+        import json as _j
+        return _j.loads(resp.read().decode())
+
+
+def _fetch_airtable_table(base_id: str, api_key: str, table: str, offset: str | None = None) -> dict:
+    import urllib.parse as _up
+    encoded = _up.quote(table, safe="")
+    url = f"{_AIRTABLE_API}/{base_id}/{encoded}?pageSize=100"
+    if offset:
+        url += f"&offset={offset}"
+    return _airtable_get(url, api_key)
+
+
+def _pull_all_records(base_id: str, api_key: str, table: str) -> list[dict]:
+    """Paginate through all records in one Airtable table."""
+    records: list[dict] = []
+    offset = None
+    while True:
+        page = _fetch_airtable_table(base_id, api_key, table, offset)
+        records.extend(page.get("records", []))
+        offset = page.get("offset")
+        if not offset:
+            break
+    return records
+
+
+def _discover_table(base_id: str, api_key: str) -> tuple[str, list[dict]]:
+    """Try each candidate table name; return (table_name, records) for the first that works."""
+    for table in _TABLE_CANDIDATES:
+        try:
+            records = _pull_all_records(base_id, api_key, table)
+            if records:
+                _bond_log.info("airtable table found: '%s' (%d records)", table, len(records))
+                return table, records
+        except _urllib_err.HTTPError as e:
+            if e.code in (404, 422):
+                continue
+            raise
+    raise ValueError(
+        f"No accessible table found in base {base_id}. "
+        f"Tried: {_TABLE_CANDIDATES}. Check table names in '3 Lakes Business Hub'."
+    )
+
+
+def _map_record(fields: dict) -> dict:
+    """Map Airtable field names → Supabase leads schema."""
+    def _f(*keys):
+        for k in keys:
+            v = fields.get(k) or fields.get(k.lower()) or fields.get(k.title())
+            if v:
+                return str(v).strip()
+        return None
+
+    phone = _f("phone_number", "phone", "Phone", "Phone Number")
+    # Normalize phone to digits-only for dedup
+    phone_digits = "".join(c for c in (phone or "") if c.isdigit())
+
+    status_raw = (_f("status", "Status", "stage", "Stage") or "New Lead").strip()
+    status = status_raw if status_raw.lower() in _LEAD_STATUSES else "New Lead"
+
+    return {
+        "business_name":  _f("prospect_name", "company_name", "Company Name",
+                              "business_name", "Business Name", "name", "Name") or "Unknown",
+        "contact_name":   _f("contact_name", "Contact Name", "owner", "Owner"),
+        "phone":          phone,
+        "phone_digits":   phone_digits,  # used for dedup, stripped before insert
+        "email":          _f("email", "Email"),
+        "status":         status,
+        "source":         "airtable_3lakes_hub",
+        "notes":          _f("notes", "Notes"),
+        "state":          _f("state", "State"),
+        "location":       _f("location", "Location", "city", "City"),
+        "truck_type":     _f("truck_type", "Truck Type", "equipment", "Equipment"),
+        "website":        _f("website", "Website"),
+        "lead_source":    _f("lead_source", "Lead Source", "source_channel"),
+        "score":          0,  # will be set by scoring below
+    }
+
+
+def _score(lead: dict) -> int:
+    """Simple lead scoring: phone=30, email=20, known truck=20, website=10, notes=10, state=10."""
+    score = 0
+    if lead.get("phone"):          score += 30
+    if lead.get("email"):          score += 20
+    tt = (lead.get("truck_type") or "").lower()
+    if tt and tt not in ("unknown", "other", ""):  score += 20
+    if lead.get("website"):        score += 10
+    if lead.get("notes"):          score += 10
+    if lead.get("state"):          score += 10
+    return score
+
+
+def _existing_phones(sb) -> set[str]:
+    """Fetch all digit-normalized phone numbers already in leads table."""
+    rows = sb.table("leads").select("phone").execute().data or []
+    result = set()
+    for r in rows:
+        p = r.get("phone") or ""
+        digits = "".join(c for c in p if c.isdigit())
+        if digits:
+            result.add(digits)
+    return result
+
+
+def _mission_pull_airtable_leads(payload: dict) -> dict:
+    """Bond's Airtable leads pull mission.
+
+    Connects to '3 Lakes Business Hub', discovers the carrier leads table,
+    maps records to the Supabase leads schema, deduplicates by phone,
+    scores each lead, and bulk-inserts.
+    """
+    from ..settings import get_settings
+    from ..supabase_client import get_supabase
+
+    s       = get_settings()
+    api_key = payload.get("airtable_api_key") or s.airtable_api_key
+    base_id = payload.get("airtable_base_id") or s.airtable_base_id or "appyRkym1i9mXEnzP"
+
+    if not api_key:
+        return {
+            "agent":   _NAME,
+            "mission": "airtable_leads_pull",
+            "status":  "BLOCKED",
+            "reason":  "AIRTABLE_API_KEY not set. Add it to Render env vars or pass in payload.",
+            "action":  "Set AIRTABLE_API_KEY in Render dashboard → Environment → Add variable",
+        }
+
+    _bond_log.info("Bond: pulling Airtable leads base=%s", base_id)
+
+    # 1. Discover table + pull all records
+    try:
+        table_name, raw_records = _discover_table(base_id, api_key)
+    except Exception as exc:
+        return {
+            "agent":   _NAME,
+            "mission": "airtable_leads_pull",
+            "status":  "ERROR",
+            "reason":  str(exc),
+        }
+
+    # 2. Map records
+    mapped: list[dict] = []
+    for rec in raw_records:
+        try:
+            lead = _map_record(rec.get("fields", {}))
+            lead["score"] = _score(lead)
+            mapped.append(lead)
+        except Exception as exc:
+            _bond_log.warning("skipped record %s: %s", rec.get("id"), exc)
+
+    # 3. Deduplicate against existing leads (by phone digits)
+    sb = get_supabase()
+    existing = _existing_phones(sb)
+    dupes, to_insert = 0, []
+    for lead in mapped:
+        digits = lead.pop("phone_digits", "")
+        if digits and digits in existing:
+            dupes += 1
+        else:
+            if digits:
+                existing.add(digits)  # prevent intra-batch dupes
+            # Strip None values before insert
+            clean = {k: v for k, v in lead.items() if v is not None}
+            to_insert.append(clean)
+
+    # 4. Bulk insert in batches of 50
+    inserted, failed = 0, 0
+    BATCH = 50
+    for i in range(0, len(to_insert), BATCH):
+        batch = to_insert[i:i + BATCH]
+        try:
+            sb.table("leads").insert(batch).execute()
+            inserted += len(batch)
+        except Exception as exc:
+            _bond_log.error("batch insert failed i=%d: %s", i, exc)
+            # Fall back to one-by-one to maximize success
+            for lead in batch:
+                try:
+                    sb.table("leads").insert(lead).execute()
+                    inserted += 1
+                except Exception:
+                    failed += 1
+
+    # 5. Write mission result to Bond memory
+    mem.remember(
+        _NAME, "airtable_leads_pull",
+        {
+            "table":     table_name,
+            "base_id":   base_id,
+            "pulled":    len(raw_records),
+            "inserted":  inserted,
+            "dupes":     dupes,
+            "failed":    failed,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        },
+        confidence=1.0, source_agent=_NAME,
+        summary=f"Pulled {len(raw_records)} from Airtable → inserted {inserted}, skipped {dupes} dupes",
+    )
+    log_agent(
+        _NAME, "airtable_leads_pull",
+        payload={"base_id": base_id, "table": table_name},
+        result=f"pulled={len(raw_records)} inserted={inserted} dupes={dupes} failed={failed}",
+    )
+
+    return {
+        "agent":         _NAME,
+        "mission":       "airtable_leads_pull",
+        "status":        "SUCCESS" if inserted > 0 else "PARTIAL",
+        "airtable_base": base_id,
+        "table_used":    table_name,
+        "records_pulled": len(raw_records),
+        "inserted":      inserted,
+        "duplicates_skipped": dupes,
+        "failed":        failed,
+        "directive":     (
+            f"BOND DIRECTIVE: {inserted} leads inserted from '3 Lakes Business Hub'. "
+            f"Vance can now begin outbound on {inserted} new prospects. "
+            f"{dupes} duplicate{'s' if dupes != 1 else ''} skipped."
+        ),
+    }
