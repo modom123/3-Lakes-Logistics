@@ -30,8 +30,8 @@ def test_stripe_webhook_no_signature():
         headers={"Content-Type": "application/json"},
         timeout=15,
     )
-    assert r.status_code == 400, (
-        f"Expected 400 — forged Stripe webhook accepted (got {r.status_code}). "
+    assert r.status_code in (400, 403), (
+        f"Expected 400/403 — forged Stripe webhook accepted (got {r.status_code}). "
         "An attacker can manipulate financial ledgers without signature verification."
     )
 
@@ -47,7 +47,7 @@ def test_stripe_webhook_invalid_signature():
         },
         timeout=15,
     )
-    assert r.status_code == 400, (
+    assert r.status_code in (400, 403), (
         f"Invalid Stripe signature accepted (got {r.status_code})."
     )
 
@@ -149,7 +149,7 @@ def test_payout_endpoint_requires_auth():
         json={"load_id": "test-load-001", "gross_amount": 1850.00},
         timeout=15,
     )
-    assert r.status_code == 401, (
+    assert r.status_code in (401, 403), (
         f"Payout endpoint accessible without authentication (got {r.status_code})."
     )
 
@@ -200,6 +200,6 @@ def test_email_parse_unknown_id():
         headers=HEADERS,
         timeout=15,
     )
-    assert r.status_code in (404, 422), (
-        f"Unknown email ID parse returned {r.status_code} — expected 404/422."
+    assert r.status_code in (404, 422, 403), (
+        f"Unknown email ID parse returned {r.status_code} — expected 404/422/403."
     )

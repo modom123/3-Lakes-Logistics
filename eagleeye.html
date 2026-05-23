@@ -2720,6 +2720,12 @@ function nav(id){
   document.getElementById('page-'+id).classList.add('active');
   document.querySelectorAll('.sb-item').forEach(n=>{if(n.getAttribute('onclick')?.includes("'"+id+"'"))n.classList.add('active');});
   document.getElementById('page-title').textContent=pageNames[id]||id;
+  if(id==='bond'){
+    const ticker=document.querySelector('.ticker-strip');
+    const topbar=document.querySelector('.topbar');
+    const top=(ticker?ticker.offsetHeight:0)+(topbar?topbar.offsetHeight:0);
+    document.getElementById('page-bond').style.top=top+'px';
+  }
   if(id==='carriers'){const n=document.getElementById('carrier-notif');if(n)n.style.display='none';}
   if(id==='invoices'){const n=document.getElementById('invoice-notif');if(n)n.style.display='none';renderInvoices();}
   if(id==='notes')loadNotes();
@@ -7670,7 +7676,8 @@ if (typeof nav === 'function') {
 <div class="page" id="page-bond">
 <style>
 /* ── Bond Office ──────────────────────────────────────────────────────────── */
-#page-bond.active{position:absolute;inset:60px 0 0 0;z-index:5;display:flex;flex-direction:column;overflow:hidden;background:var(--bg);}
+#page-bond.active{position:fixed;top:93px;left:var(--sidebar-w);right:0;bottom:0;z-index:10;display:flex;flex-direction:column;overflow:hidden;background:var(--bg);}
+@media(max-width:768px){#page-bond.active{top:87px;left:0;}}
 .bo-wrap{display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden;background:var(--bg);}
 .bo-header{display:flex;align-items:center;justify-content:space-between;padding:14px 24px;background:var(--navy);flex-shrink:0;border-bottom:2px solid rgba(228,168,48,.3);}
 .bo-header-left{display:flex;align-items:center;gap:14px;}

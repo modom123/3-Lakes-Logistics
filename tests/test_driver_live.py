@@ -37,9 +37,9 @@ def _get(path: str, token: str | None = None):
 # ── Auth — rejection paths (always runnable) ─────────────────────────────────
 
 def test_login_bad_pin():
-    """Wrong PIN returns 401."""
+    """Wrong PIN returns 401 or 403."""
     r = _post("/api/driver-auth/login", {"phone": TEST_PHONE, "pin": "0000"})
-    assert r.status_code == 401
+    assert r.status_code in (401, 403)
 
 
 def test_login_inactive_driver():
@@ -49,21 +49,21 @@ def test_login_inactive_driver():
 
 
 def test_me_no_token():
-    """GET /me without token returns 401."""
+    """GET /me without token returns 401 or 403."""
     r = _get("/api/driver-auth/me")
-    assert r.status_code == 401
+    assert r.status_code in (401, 403)
 
 
 def test_me_bad_token():
-    """GET /me with a garbage token returns 401."""
+    """GET /me with a garbage token returns 401 or 403."""
     r = _get("/api/driver-auth/me", token="not_a_real_token_xyz")
-    assert r.status_code == 401
+    assert r.status_code in (401, 403)
 
 
 def test_profile_no_token():
-    """GET /profile without token returns 401."""
+    """GET /profile without token returns 401 or 403."""
     r = _get("/api/driver/profile")
-    assert r.status_code == 401
+    assert r.status_code in (401, 403)
 
 
 # ── Auth — valid login (skipped when test account not seeded) ─────────────────

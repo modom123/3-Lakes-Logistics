@@ -36,6 +36,10 @@ from typing import Any
 from ..logging_service import log_agent
 from . import memory as mem
 
+# ── Agent wakeup map: agent_name → callable that accepts a payload dict ───────
+# Populated lazily on first use to avoid circular imports at module load.
+_WAKEUP_MAP: dict[str, Any] = {}
+
 _NAME = "james_bond"
 _FIRM = "IEBC"
 
@@ -308,11 +312,59 @@ def _executive_summary(
     """).strip()
 
 
+def _load_wakeup_map() -> None:
+    """Lazily populate _WAKEUP_MAP on first remediation attempt."""
+    if _WAKEUP_MAP:
+        return
+    candidates = {
+        "alexander": ("alexander",),
+        "beacon":    ("beacon",),
+        "isabella":  ("isabella",),
+        "katerina":  ("katerina",),
+        "naomi":     ("naomi",),
+        "penny":     ("penny",),
+        "scout":     ("scout",),
+        "shield":    ("shield",),
+        "victoria":  ("victoria",),
+        "vance":     ("vance",),
+        "winston":   ("winston",),
+    }
+    for name, (mod_name,) in candidates.items():
+        try:
+            import importlib
+            mod = importlib.import_module(f"..{mod_name}", package=__package__)
+            if hasattr(mod, "run"):
+                _WAKEUP_MAP[name] = mod.run
+        except Exception:
+            pass
+
+
+def _attempt_agent_wakeup(silent_agents: list[str]) -> dict[str, Any]:
+    """Call run({}) on each silent agent to populate their memory.
+
+    Returns a remediation report: {agent: 'woken'|'failed'|'skipped'}.
+    """
+    _load_wakeup_map()
+    results: dict[str, str] = {}
+    for agent in silent_agents[:5]:  # max 5 at once to avoid overload
+        runner = _WAKEUP_MAP.get(agent)
+        if runner is None:
+            results[agent] = "skipped — no runner registered"
+            continue
+        try:
+            runner({})
+            results[agent] = "woken"
+        except Exception as exc:
+            results[agent] = f"failed — {str(exc)[:80]}"
+    return results
+
+
 def run(payload: dict[str, Any]) -> dict[str, Any]:
-    """Execute a James Bond consulting audit."""
+    """Execute a James Bond consulting audit with auto-remediation."""
     scope: str       = str(payload.get("scope", "full")).lower()
     agent_focus: str | None = payload.get("agent_focus")
     top_n: int       = int(payload.get("top_n", 5))
+    remediate: bool  = bool(payload.get("remediate", True))
 
     intel = _gather_org_intelligence()
     by_agent = intel["by_agent"]
@@ -327,6 +379,15 @@ def run(payload: dict[str, Any]) -> dict[str, Any]:
     directives = _build_directives(coverage, pipeline, gaps)
     brief    = _executive_summary(coverage, pipeline, gaps, directives)
 
+    # ── Auto-remediation: wake silent agents ─────────────────────────────────
+    wakeup_report: dict[str, str] = {}
+    if remediate and coverage["silent_agents"]:
+        wakeup_report = _attempt_agent_wakeup(coverage["silent_agents"])
+        # Re-gather coverage after wakeup to reflect fixes
+        intel2 = _gather_org_intelligence()
+        coverage2 = _agent_coverage_report(intel2["by_agent"])
+        wakeup_report["_after_wakeup_silent_count"] = str(coverage2["silent_agent_count"])
+
     report = {
         "consultant":    "James Bond",
         "firm":          _FIRM,
@@ -339,6 +400,7 @@ def run(payload: dict[str, Any]) -> dict[str, Any]:
         "tech_gaps":     gaps,
         "directives":    directives,
         "executive_brief": brief,
+        "remediation":   wakeup_report,
     }
 
     mem.remember(
