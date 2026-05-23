@@ -49,9 +49,9 @@ _NAME = "james_bond"
 _FIRM = "IEBC"
 
 _KNOWN_AGENTS = [
-    "alexander", "atlas", "audit", "beacon", "cc_gulley", "echo",
-    "isabella", "katerina", "mark_odom", "naomi", "nova", "orbit",
-    "penny", "pulse", "scout", "settler", "shield", "signal",
+    "alexander", "atlas", "audit", "beacon", "cc_gulley", "chloe_sinclair",
+    "echo", "isabella", "katerina", "lucas_sterling", "mark_odom", "naomi",
+    "nova", "orbit", "penny", "pulse", "scout", "settler", "shield", "signal",
     "sofia", "sonny", "vance", "victoria", "winston",
 ]
 
@@ -64,8 +64,10 @@ _EXPECTED_MEMORY_KEYS: dict[str, list[str]] = {
     "victoria":  ["growth_snapshot"],
     "winston":   ["at_risk_carriers"],
     "penny":     ["billing_health"],
-    "atlas":     ["pipeline_state"],
-    "beacon":    ["last_brief"],
+    "atlas":          ["pipeline_state"],
+    "beacon":         ["last_brief"],
+    "lucas_sterling": ["last_ui_audit", "ui_directives", "pending_fixes"],
+    "chloe_sinclair": ["last_viewport_audit", "visual_anomalies", "qa_clearance"],
 }
 
 _TECH_DOMAINS = [
