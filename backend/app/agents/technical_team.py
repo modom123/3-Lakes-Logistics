@@ -447,6 +447,220 @@ def _bond_coordinate(classified: list[dict], results: list[dict]) -> dict[str, A
     }
 
 
+# ── Self-healing engine ───────────────────────────────────────────────────────
+
+_BOND_CHANNEL_DDL = """
+CREATE TABLE IF NOT EXISTS bond_channel (
+    id           UUID        DEFAULT gen_random_uuid() PRIMARY KEY,
+    direction    TEXT        NOT NULL CHECK (direction IN ('internal_to_external','external_to_internal')),
+    from_label   TEXT        NOT NULL,
+    message_type TEXT        NOT NULL DEFAULT 'directive'
+                 CHECK (message_type IN ('directive','report','feedback','suggestion','acknowledgment')),
+    content      TEXT        NOT NULL,
+    priority     TEXT        NOT NULL DEFAULT 'normal'
+                 CHECK (priority IN ('critical','high','normal','low')),
+    status       TEXT        NOT NULL DEFAULT 'pending'
+                 CHECK (status IN ('pending','delivered','read','actioned')),
+    metadata     JSONB       DEFAULT '{}',
+    created_at   TIMESTAMPTZ DEFAULT now(),
+    updated_at   TIMESTAMPTZ DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS bond_channel_direction_status
+    ON bond_channel (direction, status, created_at);
+""".strip()
+
+
+def _env_status() -> dict[str, bool]:
+    from ..settings import get_settings
+    import os
+    s = get_settings()
+    return {
+        "SUPABASE_URL":              bool(s.supabase_url),
+        "SUPABASE_SERVICE_ROLE_KEY": bool(s.supabase_service_role_key),
+        "SUPABASE_ANON_KEY":         bool(s.supabase_anon_key),
+        "API_BEARER_TOKEN":          bool(s.api_bearer_token),
+        "BOND_API_KEY":              bool(os.getenv("BOND_API_KEY")),
+        "ANTHROPIC_API_KEY":         bool(s.anthropic_api_key),
+        "STRIPE_SECRET_KEY":         bool(s.stripe_secret_key),
+        "RENDER_API_KEY":            bool(s.render_api_key),
+    }
+
+
+def _table_exists(table_name: str) -> bool:
+    try:
+        get_supabase().table(table_name).select("*").limit(0).execute()
+        return True
+    except Exception:
+        return False
+
+
+def _exec_sql_via_rpc(ddl: str) -> tuple[bool, str]:
+    """Attempt DDL via Supabase RPC exec_sql function, then httpx fallback."""
+    from ..settings import get_settings
+    import httpx, os
+
+    # Try via supabase-py RPC
+    try:
+        get_supabase().rpc("exec_sql", {"sql_statement": ddl}).execute()
+        return True, "executed via RPC"
+    except Exception:
+        pass
+
+    # Fallback: httpx direct to Supabase REST with service role
+    s = get_settings()
+    key = s.supabase_service_role_key or s.supabase_anon_key
+    if not s.supabase_url or not key:
+        return False, "SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY not set"
+    try:
+        r = httpx.post(
+            f"{s.supabase_url}/rest/v1/rpc/exec_sql",
+            headers={
+                "apikey": key,
+                "Authorization": f"Bearer {key}",
+                "Content-Type": "application/json",
+            },
+            json={"sql_statement": ddl},
+            timeout=15,
+        )
+        if r.is_success:
+            return True, "executed via REST RPC"
+        return False, f"HTTP {r.status_code}: {r.text[:200]}"
+    except Exception as exc:
+        return False, f"httpx error: {exc}"
+
+
+def _trigger_render_deploy(render_api_key: str, service_name: str = "three-lakes-logistics-api") -> tuple[bool, str]:
+    """List Render services and trigger a manual deploy on the matching one."""
+    import httpx
+    try:
+        headers = {"Authorization": f"Bearer {render_api_key}", "Accept": "application/json"}
+        # List services to find the service ID
+        r = httpx.get("https://api.render.com/v1/services?limit=20", headers=headers, timeout=15)
+        if not r.is_success:
+            return False, f"Could not list Render services: {r.status_code}"
+        services = r.json()
+        service_id = None
+        for svc in services:
+            name = (svc.get("service", {}) or svc).get("name", "")
+            if service_name.lower() in name.lower():
+                service_id = (svc.get("service", {}) or svc).get("id")
+                break
+        if not service_id:
+            return False, f"Service '{service_name}' not found in Render account"
+        dr = httpx.post(
+            f"https://api.render.com/v1/services/{service_id}/deploys",
+            headers={**headers, "Content-Type": "application/json"},
+            json={"clearCache": "do_not_clear"},
+            timeout=15,
+        )
+        if dr.is_success:
+            return True, f"Deploy triggered (service={service_id})"
+        return False, f"Deploy failed: {dr.status_code} {dr.text[:200]}"
+    except Exception as exc:
+        return False, f"Render API error: {exc}"
+
+
+def _autofix(classified: list[dict]) -> dict[str, Any]:
+    """Attempt automated repairs. Returns {fixed, needs_manual, env_status, table_status}."""
+    from ..settings import get_settings
+    s = get_settings()
+
+    env  = _env_status()
+    fixed: list[dict]        = []
+    needs_manual: list[dict] = []
+    attempted: list[dict]    = []
+
+    # ── 1. Table existence checks ─────────────────────────────────────────────
+    critical_tables = ["bond_channel", "agent_memory", "leads", "carriers"]
+    table_status = {t: _table_exists(t) for t in critical_tables}
+
+    # Auto-create bond_channel if missing
+    if not table_status.get("bond_channel"):
+        ok, msg = _exec_sql_via_rpc(_BOND_CHANNEL_DDL)
+        if ok:
+            table_status["bond_channel"] = True
+            fixed.append({"area": "Schema", "action": "Created bond_channel table", "detail": msg})
+        else:
+            needs_manual.append({
+                "area":   "Schema",
+                "action": "Create bond_channel table",
+                "how":    "Open Supabase SQL Editor → run sql/bond_channel.sql from the repo",
+                "reason": msg,
+            })
+
+    # ── 2. Env var audit ──────────────────────────────────────────────────────
+    required_core = ["SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY", "API_BEARER_TOKEN"]
+    missing_core  = [k for k in required_core if not env.get(k)]
+    if missing_core:
+        needs_manual.append({
+            "area":   "Config",
+            "action": "Set missing environment variables",
+            "how":    f"Render Dashboard → Environment → add: {', '.join(missing_core)}",
+            "reason": "Core env vars absent — all endpoints will fail",
+        })
+    else:
+        fixed.append({"area": "Config", "action": "Core env vars verified present"})
+
+    if not env.get("BOND_API_KEY"):
+        needs_manual.append({
+            "area":   "Config",
+            "action": "Set BOND_API_KEY",
+            "how":    "Generate: python -c \"import secrets; print(secrets.token_hex(32))\" then add to Render + Daytona",
+            "reason": "Bond Channel external auth will reject all requests",
+        })
+
+    # ── 3. Failure-specific repairs ───────────────────────────────────────────
+    for f in classified:
+        ftype  = f.get("failure_type", "")
+        domain = f.get("domain", "")
+
+        if ftype == "code_bug":
+            needs_manual.append({
+                "area":   "Code",
+                "action": f"Fix endpoint in {domain}",
+                "how":    "Open Render → Logs → find Traceback → fix code → push to main",
+                "reason": "Backend exception — requires code change and deploy",
+            })
+
+        if ftype == "connection" and env.get("SUPABASE_URL") and env.get("SUPABASE_SERVICE_ROLE_KEY"):
+            # Try a live Supabase ping
+            try:
+                get_supabase().table("agent_memory").select("*").limit(0).execute()
+                fixed.append({"area": "Connection", "action": "Supabase connectivity verified"})
+            except Exception as exc:
+                needs_manual.append({
+                    "area":   "Connection",
+                    "action": "Supabase connection failed",
+                    "how":    "Verify SUPABASE_URL is correct and SUPABASE_SERVICE_ROLE_KEY is the service_role key (not anon)",
+                    "reason": str(exc)[:120],
+                })
+
+    # ── 4. Trigger Render redeploy if fixes were applied ─────────────────────
+    if fixed and s.render_api_key:
+        ok, msg = _trigger_render_deploy(s.render_api_key)
+        if ok:
+            fixed.append({"area": "Deploy", "action": "Render redeploy triggered", "detail": msg})
+        else:
+            attempted.append({"area": "Deploy", "action": "Render redeploy", "result": msg})
+    elif fixed and not s.render_api_key:
+        needs_manual.append({
+            "area":   "Deploy",
+            "action": "Manually redeploy on Render",
+            "how":    "Render Dashboard → Manual Deploy → Deploy latest commit (or set RENDER_API_KEY for auto-deploy)",
+            "reason": "RENDER_API_KEY not set — cannot trigger programmatic deploy",
+        })
+
+    return {
+        "fixed":        fixed,
+        "needs_manual": needs_manual,
+        "attempted":    attempted,
+        "env_status":   env,
+        "table_status": table_status,
+        "auto_fixed_count": len(fixed),
+        "manual_count":     len(needs_manual),
+    }
+
+
 # ── Main run ──────────────────────────────────────────────────────────────────
 
 def run(payload: dict[str, Any]) -> dict[str, Any]:
@@ -455,6 +669,28 @@ def run(payload: dict[str, Any]) -> dict[str, Any]:
     if action == "status":
         last = mem.recall(_NAME, "last_remediation")
         return {"agent": _NAME, "action": "status", "last_remediation": last}
+
+    if action == "autofix":
+        raw = payload.get("failures", [])
+        classified = []
+        for f in raw:
+            ftype = _classify(f.get("test_name",""), f.get("domain",""), f.get("error",""))
+            sid   = _assign(ftype)
+            classified.append({**f, "failure_type": ftype, "specialist": sid})
+        result = _autofix(classified)
+        mem.remember(
+            _NAME, "last_autofix",
+            {"timestamp": datetime.now(timezone.utc).isoformat(), **result},
+            confidence=0.85,
+            summary=f"Autofix: {result['auto_fixed_count']} fixed, {result['manual_count']} need manual",
+        )
+        log_agent(_NAME, "autofix",
+                  payload={"failure_count": len(classified)},
+                  result=f"fixed={result['auto_fixed_count']} manual={result['manual_count']}")
+        return {"agent": _NAME, "action": "autofix", **result}
+
+    if action == "env_check":
+        return {"agent": _NAME, "action": "env_check", "env_status": _env_status()}
 
     if action != "remediate":
         return {"agent": _NAME, "error": f"unknown action: {action}"}
