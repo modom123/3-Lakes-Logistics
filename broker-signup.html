@@ -1,0 +1,676 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Broker Partner Registration — 3 Lakes Logistics</title>
+<meta name="description" content="Register your brokerage with 3 Lakes Logistics — 1,000-truck fleet, real-time tracking, fast payment, EDI support.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --navy:    #0B2545;
+  --deep:    #061629;
+  --gold:    #C8902A;
+  --gold-lt: #F5B847;
+  --green:   #22c55e;
+  --red:     #ef4444;
+  --text:    #f1f5f9;
+  --muted:   #94a3b8;
+  --border:  rgba(255,255,255,.10);
+  --surface: rgba(255,255,255,.05);
+  --card:    rgba(11,37,69,.6);
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  background: var(--deep);
+  color: var(--text);
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+  min-height: 100vh;
+  line-height: 1.6;
+}
+
+/* ── Nav ── */
+nav {
+  position: sticky; top: 0; z-index: 100;
+  background: rgba(6,22,41,.95);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  padding: 0 24px;
+  display: flex; align-items: center; gap: 32px;
+  height: 60px;
+}
+.nav-logo { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+.nav-logo-icon { width: 36px; height: 36px; background: var(--gold); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+.nav-logo-text { font-weight: 700; font-size: 15px; color: var(--text); line-height: 1.2; }
+.nav-logo-sub  { font-size: 10px; color: var(--muted); font-weight: 400; }
+.nav-links { display: flex; gap: 24px; margin-left: auto; }
+.nav-links a { color: var(--muted); text-decoration: none; font-size: 14px; font-weight: 500; transition: color .2s; }
+.nav-links a:hover { color: var(--gold); }
+.nav-cta { background: var(--gold); color: var(--deep); padding: 8px 18px; border-radius: 6px; font-weight: 700; font-size: 13px; text-decoration: none; margin-left: 8px; }
+
+/* ── Hero ── */
+.hero {
+  background: linear-gradient(135deg, var(--deep) 0%, #0d2d52 50%, #071d37 100%);
+  padding: 80px 24px 60px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+.hero::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: radial-gradient(ellipse at 60% 0%, rgba(200,144,42,.12) 0%, transparent 70%);
+  pointer-events: none;
+}
+.hero-eyebrow {
+  display: inline-block;
+  background: rgba(200,144,42,.15);
+  border: 1px solid rgba(200,144,42,.4);
+  color: var(--gold-lt);
+  padding: 5px 14px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  margin-bottom: 20px;
+}
+.hero h1 {
+  font-size: clamp(28px, 5vw, 52px);
+  font-weight: 700;
+  line-height: 1.15;
+  margin-bottom: 16px;
+  max-width: 640px;
+  margin-left: auto; margin-right: auto;
+}
+.hero h1 span { color: var(--gold); }
+.hero-sub {
+  color: var(--muted);
+  font-size: 16px;
+  max-width: 520px;
+  margin: 0 auto 36px;
+}
+
+/* ── Stats strip ── */
+.stats-strip {
+  display: flex; justify-content: center; gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+.stat-pill {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 20px;
+  text-align: center;
+}
+.stat-val { font-size: 22px; font-weight: 700; color: var(--gold); }
+.stat-lbl { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+/* ── Layout ── */
+.main {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 48px 24px 80px;
+  display: grid;
+  grid-template-columns: 1fr 420px;
+  gap: 40px;
+  align-items: start;
+}
+@media(max-width: 860px) { .main { grid-template-columns: 1fr; } }
+
+/* ── Why card ── */
+.why-section h2 { font-size: 22px; font-weight: 700; margin-bottom: 20px; }
+.why-item {
+  display: flex; gap: 14px; align-items: flex-start;
+  margin-bottom: 22px;
+}
+.why-icon {
+  width: 40px; height: 40px; flex-shrink: 0;
+  background: rgba(200,144,42,.12);
+  border: 1px solid rgba(200,144,42,.3);
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px;
+}
+.why-title  { font-weight: 600; font-size: 15px; margin-bottom: 3px; }
+.why-body   { font-size: 13px; color: var(--muted); line-height: 1.5; }
+
+.edi-box {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+  margin-top: 32px;
+}
+.edi-box h3 { font-size: 14px; font-weight: 700; color: var(--gold); margin-bottom: 10px; letter-spacing: .05em; text-transform: uppercase; }
+.edi-tag {
+  display: inline-block;
+  background: #1e3a8a; color: #93c5fd;
+  padding: 3px 10px; border-radius: 4px;
+  font-size: 12px; font-weight: 700;
+  margin-right: 6px; margin-bottom: 6px;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* ── Form card ── */
+.form-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 32px;
+  position: sticky; top: 76px;
+}
+.form-card h2 { font-size: 20px; font-weight: 700; margin-bottom: 4px; }
+.form-card .fc-sub { font-size: 13px; color: var(--muted); margin-bottom: 24px; }
+
+.step-bar {
+  display: flex; gap: 6px; margin-bottom: 24px;
+}
+.step-dot {
+  height: 4px; flex: 1; border-radius: 2px;
+  background: var(--border);
+  transition: background .3s;
+}
+.step-dot.done { background: var(--gold); }
+.step-dot.active { background: var(--gold-lt); }
+
+.field-group { margin-bottom: 14px; }
+label.fl { display: block; font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 5px; }
+.fi {
+  width: 100%; padding: 10px 12px;
+  background: rgba(255,255,255,.07);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-size: 14px;
+  font-family: inherit;
+  transition: border-color .2s;
+  outline: none;
+}
+.fi:focus { border-color: var(--gold); }
+.fi::placeholder { color: var(--muted); }
+select.fi option { background: var(--navy); }
+
+.row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media(max-width:420px) { .row2 { grid-template-columns: 1fr; } }
+
+.btn-submit {
+  width: 100%; padding: 13px;
+  background: var(--gold);
+  color: var(--deep);
+  font-weight: 700; font-size: 15px;
+  border: none; border-radius: 8px; cursor: pointer;
+  transition: opacity .2s, transform .1s;
+  margin-top: 4px;
+}
+.btn-submit:hover { opacity: .92; }
+.btn-submit:active { transform: scale(.98); }
+.btn-submit:disabled { opacity: .5; cursor: not-allowed; }
+
+.step-nav { display: flex; justify-content: space-between; margin-top: 16px; }
+.btn-back {
+  background: none; border: 1px solid var(--border); color: var(--muted);
+  padding: 9px 18px; border-radius: 8px; cursor: pointer; font-size: 13px;
+}
+.btn-back:hover { border-color: var(--gold); color: var(--text); }
+.btn-next {
+  background: var(--navy); border: 1px solid var(--gold); color: var(--gold);
+  padding: 9px 22px; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 13px;
+}
+.btn-next:hover { background: var(--gold); color: var(--deep); }
+
+.err-msg { color: var(--red); font-size: 12px; margin-top: 4px; display: none; }
+.success-state { text-align: center; padding: 20px 0; display: none; }
+.success-icon { font-size: 48px; margin-bottom: 12px; }
+.success-title { font-size: 20px; font-weight: 700; margin-bottom: 8px; }
+.success-body  { font-size: 13px; color: var(--muted); line-height: 1.6; }
+.success-id { font-family: 'JetBrains Mono', monospace; color: var(--gold); font-size: 12px; margin-top: 10px; }
+
+/* ── Process section ── */
+.process-section { max-width: 900px; margin: 0 auto; padding: 0 24px 80px; }
+.process-section h2 { text-align: center; font-size: 24px; font-weight: 700; margin-bottom: 32px; }
+.process-steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; }
+.process-step {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 22px 18px;
+  text-align: center;
+  position: relative;
+}
+.process-num {
+  width: 32px; height: 32px;
+  background: var(--gold);
+  color: var(--deep);
+  font-weight: 700; font-size: 14px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  margin: 0 auto 12px;
+}
+.process-step h3 { font-size: 14px; font-weight: 600; margin-bottom: 6px; }
+.process-step p  { font-size: 12px; color: var(--muted); }
+
+/* ── Footer ── */
+footer {
+  border-top: 1px solid var(--border);
+  padding: 24px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 12px;
+}
+footer a { color: var(--gold); text-decoration: none; }
+
+/* ── Spinner ── */
+@keyframes spin { to { transform: rotate(360deg); } }
+.spin { width: 16px; height: 16px; border: 2px solid rgba(200,144,42,.3); border-top-color: var(--gold); border-radius: 50%; animation: spin .7s linear infinite; display: inline-block; vertical-align: middle; margin-right: 6px; }
+</style>
+</head>
+<body>
+
+<!-- Nav -->
+<nav>
+  <a class="nav-logo" href="/">
+    <div class="nav-logo-icon">🚛</div>
+    <div>
+      <div class="nav-logo-text">3 Lakes Logistics</div>
+      <div class="nav-logo-sub">Broker Partner Portal</div>
+    </div>
+  </a>
+  <div class="nav-links">
+    <a href="#why">Why Partner</a>
+    <a href="#process">How It Works</a>
+    <a href="mailto:dispatch@3lakeslogistics.com">Contact</a>
+    <a class="nav-cta" href="#signup-form">Register Now</a>
+  </div>
+</nav>
+
+<!-- Hero -->
+<section class="hero">
+  <div class="hero-eyebrow">Broker Partner Registration</div>
+  <h1>Move More Freight<br>with <span>3 Lakes Logistics</span></h1>
+  <p class="hero-sub">1,000-truck fleet. Real-time ELD tracking. EDI 204/990/214/210. Fast payment cycles. Register your brokerage and start booking loads today.</p>
+  <div class="stats-strip">
+    <div class="stat-pill"><div class="stat-val">1,000+</div><div class="stat-lbl">Active Trucks</div></div>
+    <div class="stat-pill"><div class="stat-val">48</div><div class="stat-lbl">States Covered</div></div>
+    <div class="stat-pill"><div class="stat-val">EDI</div><div class="stat-lbl">204 · 990 · 214 · 210</div></div>
+    <div class="stat-pill"><div class="stat-val">Net-30</div><div class="stat-lbl">Standard Payment</div></div>
+    <div class="stat-pill"><div class="stat-val">97%</div><div class="stat-lbl">On-Time Delivery</div></div>
+  </div>
+</section>
+
+<!-- Main content -->
+<div class="main" id="why">
+
+  <!-- Left: Why Partner -->
+  <div class="why-section">
+    <h2>Why Broker With 3 Lakes?</h2>
+
+    <div class="why-item">
+      <div class="why-icon">📡</div>
+      <div>
+        <div class="why-title">Full EDI Support</div>
+        <div class="why-body">We receive EDI 204 load tenders and respond with 990 acceptance in real time. Send 214 status updates and 210 invoices automatically. Zero manual emails for high-volume lanes.</div>
+      </div>
+    </div>
+
+    <div class="why-item">
+      <div class="why-icon">📍</div>
+      <div>
+        <div class="why-title">Real-Time GPS Visibility</div>
+        <div class="why-body">Every truck transmits ELD pings every 15 minutes. You get live load status — pickup confirmed, in transit, delivered — pushed to your TMS automatically via 214.</div>
+      </div>
+    </div>
+
+    <div class="why-item">
+      <div class="why-icon">⚡</div>
+      <div>
+        <div class="why-title">Fast Payment Processing</div>
+        <div class="why-body">Standard Net-30 terms. QuickPay options available at negotiated discount rates. AI-verified PODs and BOLs mean invoices process without disputes.</div>
+      </div>
+    </div>
+
+    <div class="why-item">
+      <div class="why-icon">📋</div>
+      <div>
+        <div class="why-title">Compliant & Insured</div>
+        <div class="why-body">FMCSA-rated Satisfactory. $1M auto liability, $100K cargo. Drug &amp; alcohol clearinghouse compliant. CTPAT eligible. All documents available on demand.</div>
+      </div>
+    </div>
+
+    <div class="why-item">
+      <div class="why-icon">🤖</div>
+      <div>
+        <div class="why-title">AI-Powered Dispatch</div>
+        <div class="why-body">Our AI dispatch engine auto-matches loads to the best available driver within minutes of receiving a tender. High acceptance rate, low TONU risk.</div>
+      </div>
+    </div>
+
+    <div class="edi-box">
+      <h3>EDI Capabilities</h3>
+      <span class="edi-tag">204</span> Load Tender (inbound)
+      <span class="edi-tag">990</span> Tender Response
+      <span class="edi-tag">214</span> Shipment Status
+      <span class="edi-tag">210</span> Freight Invoice
+      <div style="margin-top:12px;font-size:12px;color:var(--muted)">Provide your EDI partner ID and ISA qualifier after registration. We'll configure your connection within 1 business day.</div>
+    </div>
+  </div>
+
+  <!-- Right: Form -->
+  <div id="signup-form">
+    <div class="form-card">
+      <h2>Broker Registration</h2>
+      <p class="fc-sub">Takes 3 minutes. Your application is reviewed within 1 business day.</p>
+
+      <!-- Step progress -->
+      <div class="step-bar">
+        <div class="step-dot done active" id="step-dot-1"></div>
+        <div class="step-dot" id="step-dot-2"></div>
+        <div class="step-dot" id="step-dot-3"></div>
+      </div>
+
+      <!-- Step 1: Company -->
+      <div id="step-1">
+        <div style="font-size:12px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.06em;margin-bottom:14px">Step 1 of 3 — Company Info</div>
+
+        <div class="field-group">
+          <label class="fl">Company Name *</label>
+          <input class="fi" id="f-company" placeholder="e.g. Coyote Logistics LLC" required>
+        </div>
+        <div class="row2">
+          <div class="field-group">
+            <label class="fl">MC Number *</label>
+            <input class="fi" id="f-mc" placeholder="MC-123456" required>
+          </div>
+          <div class="field-group">
+            <label class="fl">DOT Number</label>
+            <input class="fi" id="f-dot" placeholder="USDOT-123456">
+          </div>
+        </div>
+        <div class="row2">
+          <div class="field-group">
+            <label class="fl">City</label>
+            <input class="fi" id="f-city" placeholder="Chicago">
+          </div>
+          <div class="field-group">
+            <label class="fl">State</label>
+            <input class="fi" id="f-state" placeholder="IL" maxlength="2">
+          </div>
+        </div>
+        <div id="err-step1" class="err-msg">Please enter your company name and MC number.</div>
+        <div class="step-nav">
+          <div></div>
+          <button class="btn-next" onclick="nextStep(1)">Next →</button>
+        </div>
+      </div>
+
+      <!-- Step 2: Contact & Payment -->
+      <div id="step-2" style="display:none">
+        <div style="font-size:12px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.06em;margin-bottom:14px">Step 2 of 3 — Contact &amp; Terms</div>
+
+        <div class="field-group">
+          <label class="fl">Contact Name *</label>
+          <input class="fi" id="f-contact-name" placeholder="Jane Smith">
+        </div>
+        <div class="row2">
+          <div class="field-group">
+            <label class="fl">Email *</label>
+            <input class="fi" id="f-email" type="email" placeholder="jane@brokerage.com">
+          </div>
+          <div class="field-group">
+            <label class="fl">Phone</label>
+            <input class="fi" id="f-phone" placeholder="(555) 000-0000">
+          </div>
+        </div>
+        <div class="row2">
+          <div class="field-group">
+            <label class="fl">Payment Terms</label>
+            <select class="fi" id="f-payment-terms">
+              <option value="Net-30">Net-30 (Standard)</option>
+              <option value="Net-45">Net-45</option>
+              <option value="Net-15">Net-15</option>
+              <option value="QuickPay">QuickPay</option>
+              <option value="Net-7">Net-7</option>
+            </select>
+          </div>
+          <div class="field-group">
+            <label class="fl">Avg Monthly Loads</label>
+            <select class="fi" id="f-volume">
+              <option value="">Select range</option>
+              <option value="1-10">1–10</option>
+              <option value="11-50">11–50</option>
+              <option value="51-200">51–200</option>
+              <option value="200+">200+</option>
+            </select>
+          </div>
+        </div>
+        <div id="err-step2" class="err-msg">Please enter contact name and email.</div>
+        <div class="step-nav">
+          <button class="btn-back" onclick="prevStep(2)">← Back</button>
+          <button class="btn-next" onclick="nextStep(2)">Next →</button>
+        </div>
+      </div>
+
+      <!-- Step 3: Integration & Notes -->
+      <div id="step-3" style="display:none">
+        <div style="font-size:12px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.06em;margin-bottom:14px">Step 3 of 3 — Integration</div>
+
+        <div class="field-group">
+          <label class="fl">Integration Type</label>
+          <select class="fi" id="f-api-type" onchange="toggleEDIField()">
+            <option value="manual">Manual (email/portal)</option>
+            <option value="edi">EDI (X12 204/990/214/210)</option>
+            <option value="rest">REST API</option>
+          </select>
+        </div>
+        <div id="edi-field-wrap" style="display:none">
+          <div class="field-group">
+            <label class="fl">EDI Partner / Sender ID</label>
+            <input class="fi" id="f-edi-partner" placeholder="e.g. CHROBINSON or your ISA06 ID">
+            <div style="font-size:11px;color:var(--muted);margin-top:4px">We'll confirm EDI setup after approval.</div>
+          </div>
+        </div>
+        <div class="field-group" style="margin-top:4px">
+          <label class="fl">Additional Notes</label>
+          <textarea class="fi" id="f-notes" rows="3" placeholder="Lanes, equipment preferences, or anything else we should know…" style="resize:vertical"></textarea>
+        </div>
+
+        <div style="margin:16px 0;padding:12px;background:rgba(200,144,42,.08);border:1px solid rgba(200,144,42,.2);border-radius:8px;font-size:12px;color:var(--muted)">
+          By submitting this form you agree that 3 Lakes Logistics may contact you to complete the broker-carrier agreement and verify your MC authority.
+        </div>
+
+        <div id="err-step3" class="err-msg"></div>
+        <div class="step-nav">
+          <button class="btn-back" onclick="prevStep(3)">← Back</button>
+          <button class="btn-submit" id="submit-btn" onclick="submitForm()">Submit Application</button>
+        </div>
+      </div>
+
+      <!-- Success state -->
+      <div class="success-state" id="success-state">
+        <div class="success-icon">✅</div>
+        <div class="success-title">Application Received!</div>
+        <div class="success-body">
+          Thank you for registering with 3 Lakes Logistics.<br>
+          Our team will review your application within <strong>1 business day</strong>.<br>
+          We'll reach out to <strong id="success-email"></strong> to finalize your broker-carrier agreement.
+        </div>
+        <div class="success-id" id="success-broker-id"></div>
+        <div style="margin-top:20px;font-size:13px;color:var(--muted)">
+          Questions? Email <a href="mailto:dispatch@3lakeslogistics.com" style="color:var(--gold)">dispatch@3lakeslogistics.com</a>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div><!-- /main -->
+
+<!-- Process section -->
+<section class="process-section" id="process">
+  <h2>How Registration Works</h2>
+  <div class="process-steps">
+    <div class="process-step">
+      <div class="process-num">1</div>
+      <h3>Submit Form</h3>
+      <p>Fill out company info, contact details, and preferred integration type.</p>
+    </div>
+    <div class="process-step">
+      <div class="process-num">2</div>
+      <h3>Review (1 day)</h3>
+      <p>Our team verifies MC authority and reviews your application in Eagle Eye.</p>
+    </div>
+    <div class="process-step">
+      <div class="process-num">3</div>
+      <h3>Sign Agreement</h3>
+      <p>We send a broker-carrier agreement via Adobe Sign. Takes 5 minutes.</p>
+    </div>
+    <div class="process-step">
+      <div class="process-num">4</div>
+      <h3>EDI / API Setup</h3>
+      <p>If EDI, we configure your ISA06 partner ID. If REST, we share API credentials.</p>
+    </div>
+    <div class="process-step">
+      <div class="process-num">5</div>
+      <h3>Book First Load</h3>
+      <p>Send your first 204 tender or submit a load via portal. AI dispatch in minutes.</p>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div style="margin-bottom:8px">
+    <strong style="color:var(--text)">3 Lakes Logistics</strong> &nbsp;·&nbsp;
+    <a href="mailto:dispatch@3lakeslogistics.com">dispatch@3lakeslogistics.com</a>
+    &nbsp;·&nbsp; FMCSA Satisfactory Rating
+  </div>
+  <div>© 2025 3 Lakes Logistics LLC. All rights reserved. &nbsp;|&nbsp; <a href="/privacy-policy.html">Privacy Policy</a></div>
+</footer>
+
+<script>
+// ── Backend URL detection ─────────────────────────────────────────────────────
+const API_BASE = (() => {
+  const h = window.location.hostname;
+  if (h === 'localhost' || h === '127.0.0.1') return 'http://localhost:8080/api';
+  // Production: same origin backend
+  return window.location.origin.replace(/:\d+$/, '') + '/api';
+})();
+
+// ── Step navigation ───────────────────────────────────────────────────────────
+let currentStep = 1;
+
+function showStep(n) {
+  [1,2,3].forEach(i => {
+    const el = document.getElementById(`step-${i}`);
+    if (el) el.style.display = i === n ? 'block' : 'none';
+    const dot = document.getElementById(`step-dot-${i}`);
+    if (dot) {
+      dot.classList.remove('done','active');
+      if (i < n)  dot.classList.add('done');
+      if (i === n) dot.classList.add('done','active');
+    }
+  });
+  currentStep = n;
+}
+
+function nextStep(from) {
+  const err = document.getElementById(`err-step${from}`);
+  if (err) err.style.display = 'none';
+
+  if (from === 1) {
+    const company = document.getElementById('f-company')?.value?.trim();
+    const mc      = document.getElementById('f-mc')?.value?.trim();
+    if (!company || !mc) { if(err) err.style.display = 'block'; return; }
+  }
+  if (from === 2) {
+    const name  = document.getElementById('f-contact-name')?.value?.trim();
+    const email = document.getElementById('f-email')?.value?.trim();
+    if (!name || !email) { if(err) err.style.display = 'block'; return; }
+  }
+  showStep(from + 1);
+  window.scrollTo({ top: document.getElementById('signup-form').offsetTop - 80, behavior: 'smooth' });
+}
+
+function prevStep(from) {
+  showStep(from - 1);
+}
+
+function toggleEDIField() {
+  const type = document.getElementById('f-api-type')?.value;
+  document.getElementById('edi-field-wrap').style.display = type === 'edi' ? 'block' : 'none';
+}
+
+// ── Form submission ───────────────────────────────────────────────────────────
+async function submitForm() {
+  const btn = document.getElementById('submit-btn');
+  const err = document.getElementById('err-step3');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spin"></span> Submitting…';
+  err.style.display = 'none';
+
+  const payload = {
+    company_name:   document.getElementById('f-company')?.value?.trim(),
+    mc_number:      document.getElementById('f-mc')?.value?.trim(),
+    dot_number:     document.getElementById('f-dot')?.value?.trim() || null,
+    contact_name:   document.getElementById('f-contact-name')?.value?.trim() || null,
+    contact_email:  document.getElementById('f-email')?.value?.trim() || null,
+    contact_phone:  document.getElementById('f-phone')?.value?.trim() || null,
+    city:           document.getElementById('f-city')?.value?.trim() || null,
+    state:          document.getElementById('f-state')?.value?.trim()?.toUpperCase() || null,
+    payment_terms:  document.getElementById('f-payment-terms')?.value || 'Net-30',
+    notes: [
+      document.getElementById('f-volume')?.value ? `Volume: ${document.getElementById('f-volume').value} loads/month` : '',
+      document.getElementById('f-api-type')?.value !== 'manual' ? `Integration: ${document.getElementById('f-api-type').value}` : '',
+      document.getElementById('f-edi-partner')?.value?.trim() ? `EDI Partner ID: ${document.getElementById('f-edi-partner').value.trim()}` : '',
+      document.getElementById('f-notes')?.value?.trim() || '',
+    ].filter(Boolean).join(' | ') || null,
+  };
+
+  try {
+    const resp = await fetch(`${API_BASE}/brokers/intake`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const data = await resp.json();
+
+    if (resp.ok && (data.ok || data.broker_id)) {
+      // Show success
+      document.getElementById('step-3').style.display = 'none';
+      const s = document.getElementById('success-state');
+      s.style.display = 'block';
+      document.getElementById('success-email').textContent = payload.contact_email || 'your email';
+      document.getElementById('success-broker-id').textContent = `Application ID: ${data.broker_id}`;
+      [1,2,3].forEach(i => {
+        const dot = document.getElementById(`step-dot-${i}`);
+        if (dot) { dot.classList.remove('active'); dot.classList.add('done'); }
+      });
+      // Track in localStorage
+      try { localStorage.setItem('3ll_broker_app', JSON.stringify({broker_id: data.broker_id, company: payload.company_name})); } catch(e){}
+    } else {
+      err.textContent = data.message || data.detail || 'Submission failed. Please try again.';
+      err.style.display = 'block';
+      btn.disabled = false;
+      btn.textContent = 'Submit Application';
+    }
+  } catch(e) {
+    err.textContent = `Network error: ${e.message}. Please email dispatch@3lakeslogistics.com directly.`;
+    err.style.display = 'block';
+    btn.disabled = false;
+    btn.textContent = 'Submit Application';
+  }
+}
+
+// Allow Enter key to advance steps
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && currentStep < 3) {
+    e.preventDefault();
+    nextStep(currentStep);
+  }
+});
+</script>
+</body>
+</html>
