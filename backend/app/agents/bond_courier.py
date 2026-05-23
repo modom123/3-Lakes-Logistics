@@ -17,7 +17,7 @@ from ..supabase_client import get_supabase
 from . import memory as mem
 
 _NAME = "bond_courier"
-_DAYTONA_SANDBOX_ID = "dtn_de4285148e3f305bfb077d37073c7992fa9021760e7cfe2938c761425c975ffc"
+_DAYTONA_SANDBOX_ID = "2a50d3c2-f813-49c0-8dec-f9248581c5c6"
 
 
 def send_directive(
