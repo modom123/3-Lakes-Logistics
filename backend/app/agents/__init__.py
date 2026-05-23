@@ -1,11 +1,12 @@
-"""29 AI agent personas. Each module is self-contained and callable
-through agent_router.dispatch(). See prompts.py for system prompts.
+"""30 AI agent personas + 1 bridge courier. Each module is self-contained
+and callable through agent_router.dispatch(). See prompts.py for system prompts.
 """
 from . import (
     alexander,       # DOT market intelligence (VP Market Intelligence)
     atlas,           # master orchestrator
     audit,           # credit checks, fuel advances
     beacon,          # executive summaries
+    bond_courier,    # IEBC <-> Daytona message bridge
     cc_gulley,       # Chief Strategy Officer — 30/60/90-day strategic roadmap
     echo,            # SMS driver support
     isabella,        # omnichannel outreach campaign builder
@@ -17,7 +18,7 @@ from . import (
     nova,            # broker check-call emails
     orbit,           # geofence arrivals
     penny,           # Stripe billing
-    prompts,         # all 29 system prompts
+    prompts,         # all 30 system prompts
     pulse,           # weekly fleet wellness
     router,          # agent_router
     scout,           # OCR for BOL/Rate Con
@@ -32,8 +33,8 @@ from . import (
 )
 
 __all__ = [
-    "alexander", "atlas", "audit", "beacon", "cc_gulley", "echo", "isabella",
-    "james_bond", "katerina", "mark_odom", "motive_webhook", "naomi", "nova",
-    "orbit", "penny", "prompts", "pulse", "router", "scout", "settler",
-    "shield", "signal", "sofia", "sonny", "vance", "victoria", "winston",
+    "alexander", "atlas", "audit", "beacon", "bond_courier", "cc_gulley",
+    "echo", "isabella", "james_bond", "katerina", "mark_odom", "motive_webhook",
+    "naomi", "nova", "orbit", "penny", "prompts", "pulse", "router", "scout",
+    "settler", "shield", "signal", "sofia", "sonny", "vance", "victoria", "winston",
 ]
