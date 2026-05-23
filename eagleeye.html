@@ -1537,22 +1537,49 @@ td.td-name{font-weight:600;color:var(--navy);}
             <div class="fg">
               <label class="fl">Document Type</label>
               <select class="fsel" id="clm-doc-type">
+                <option value="auto">🤖 Auto-Detect Type</option>
                 <option value="rate_confirmation">Rate Confirmation</option>
                 <option value="bol">Bill of Lading (BOL)</option>
                 <option value="pod">Proof of Delivery (POD)</option>
+                <option value="invoice">Invoice</option>
                 <option value="broker_agreement">Broker Agreement</option>
               </select>
             </div>
           </div>
-          <div class="form-row">
-            <div class="fg">
-              <label class="fl">Paste Contract Text</label>
-              <textarea class="fi" id="clm-raw-text" rows="8" placeholder="Paste rate confirmation, BOL, POD, or broker agreement text here…" style="resize:vertical;font-size:12px;font-family:monospace"></textarea>
+          <!-- Scan tabs -->
+          <div style="display:flex;gap:0;margin-bottom:12px;border:1px solid var(--border);border-radius:6px;overflow:hidden">
+            <button id="clm-tab-text" onclick="clmTab('text')" style="flex:1;padding:8px;font-size:12px;font-weight:600;border:none;cursor:pointer;background:var(--navy);color:#fff">📋 Paste Text</button>
+            <button id="clm-tab-file" onclick="clmTab('file')" style="flex:1;padding:8px;font-size:12px;font-weight:600;border:none;cursor:pointer;background:var(--surface);color:var(--muted)">📸 Upload File / Photo</button>
+          </div>
+          <!-- Text tab -->
+          <div id="clm-pane-text">
+            <div class="form-row">
+              <div class="fg">
+                <label class="fl">Paste Document Text</label>
+                <textarea class="fi" id="clm-raw-text" rows="8" placeholder="Paste rate confirmation, BOL, POD, invoice, or broker agreement text here…" style="resize:vertical;font-size:12px;font-family:monospace"></textarea>
+              </div>
+            </div>
+            <div style="display:flex;gap:8px;margin-top:8px">
+              <button class="btn-navy" onclick="runCLMScan()" id="clm-scan-btn">🤖 Scan with Claude AI</button>
+              <button class="btn-out" onclick="document.getElementById('clm-scan-panel').style.display='none'">Cancel</button>
             </div>
           </div>
-          <div style="display:flex;gap:8px;margin-top:8px">
-            <button class="btn-navy" onclick="runCLMScan()" id="clm-scan-btn">🤖 Scan with Claude AI</button>
-            <button class="btn-out" onclick="document.getElementById('clm-scan-panel').style.display='none'">Cancel</button>
+          <!-- File/Photo tab -->
+          <div id="clm-pane-file" style="display:none">
+            <div id="clm-file-drop" onclick="document.getElementById('clm-file-input').click()" style="border:2px dashed var(--border);border-radius:8px;padding:28px;text-align:center;cursor:pointer;margin-bottom:12px;transition:border-color .2s" ondragover="event.preventDefault();this.style.borderColor='var(--gold)'" ondragleave="this.style.borderColor='var(--border)'" ondrop="handleCLMDrop(event)">
+              <div style="font-size:28px;margin-bottom:6px">📄</div>
+              <div style="font-weight:600;margin-bottom:4px">Drop file here or click to browse</div>
+              <div style="font-size:11px;color:var(--muted)">PDF · JPG · PNG · HEIC (iPhone) · max 25MB</div>
+              <div id="clm-file-name" style="margin-top:8px;font-size:13px;color:var(--gold);font-weight:600"></div>
+            </div>
+            <input type="file" id="clm-file-input" style="display:none" accept=".pdf,.jpg,.jpeg,.png,.gif,.webp,.heic,.heif" onchange="previewCLMFile(this)">
+            <!-- Camera capture for mobile -->
+            <button onclick="document.getElementById('clm-camera-input').click()" style="width:100%;padding:9px;margin-bottom:12px;border:1px solid var(--border);border-radius:6px;background:var(--surface);cursor:pointer;font-size:13px;color:var(--text)">📷 Take Photo (Mobile)</button>
+            <input type="file" id="clm-camera-input" style="display:none" accept="image/*" capture="environment" onchange="previewCLMFile(this)">
+            <div style="display:flex;gap:8px;margin-top:4px">
+              <button class="btn-navy" onclick="runCLMScanFile()" id="clm-scan-file-btn">🤖 Scan with Claude AI</button>
+              <button class="btn-out" onclick="document.getElementById('clm-scan-panel').style.display='none'">Cancel</button>
+            </div>
           </div>
         </div>
       </div>
@@ -1631,13 +1658,16 @@ td.td-name{font-weight:600;color:var(--navy);}
           <div style="font-size:17px;font-weight:700">Upload Document</div>
           <button onclick="closeVaultUpload()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted)">✕</button>
         </div>
-        <div id="vault-upload-drop" onclick="document.getElementById('vault-file-input').click()" style="border:2px dashed var(--border);border-radius:8px;padding:32px;text-align:center;cursor:pointer;margin-bottom:16px;transition:border-color .2s" ondragover="event.preventDefault();this.style.borderColor='var(--gold)'" ondragleave="this.style.borderColor='var(--border)'" ondrop="handleVaultDrop(event)">
-          <div style="font-size:32px;margin-bottom:8px">📄</div>
+        <div id="vault-upload-drop" onclick="document.getElementById('vault-file-input').click()" style="border:2px dashed var(--border);border-radius:8px;padding:28px;text-align:center;cursor:pointer;margin-bottom:10px;transition:border-color .2s" ondragover="event.preventDefault();this.style.borderColor='var(--gold)'" ondragleave="this.style.borderColor='var(--border)'" ondrop="handleVaultDrop(event)">
+          <div style="font-size:28px;margin-bottom:6px">📄</div>
           <div style="font-weight:600;margin-bottom:4px">Drop file here or click to browse</div>
-          <div style="font-size:12px;color:var(--muted)">PDF, JPG, PNG, DOCX — max 25MB</div>
+          <div style="font-size:11px;color:var(--muted)">PDF · JPG · PNG · HEIC (iPhone) · DOCX — max 25MB</div>
           <div id="vault-file-name" style="margin-top:8px;font-size:13px;color:var(--gold);font-weight:600"></div>
         </div>
-        <input type="file" id="vault-file-input" style="display:none" accept=".pdf,.jpg,.jpeg,.png,.docx,.xlsx" onchange="previewVaultFile(this)">
+        <input type="file" id="vault-file-input" style="display:none" accept=".pdf,.jpg,.jpeg,.png,.gif,.webp,.heic,.heif,.docx,.xlsx" onchange="previewVaultFile(this)">
+        <!-- Mobile camera capture -->
+        <button onclick="document.getElementById('vault-camera-input').click()" style="width:100%;padding:8px;margin-bottom:14px;border:1px solid var(--border);border-radius:6px;background:var(--surface);cursor:pointer;font-size:13px;color:var(--text)">📷 Take Photo (Mobile Camera)</button>
+        <input type="file" id="vault-camera-input" style="display:none" accept="image/*" capture="environment" onchange="previewVaultFile(this)">
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
           <div>
             <label style="font-size:11px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px">DOCUMENT TYPE</label>
@@ -5134,6 +5164,35 @@ function showCLMScan(){
   const p=document.getElementById('clm-scan-panel');
   p.style.display=p.style.display==='none'?'block':'none';
 }
+function clmTab(t){
+  document.getElementById('clm-pane-text').style.display=t==='text'?'':'none';
+  document.getElementById('clm-pane-file').style.display=t==='file'?'':'none';
+  document.getElementById('clm-tab-text').style.background=t==='text'?'var(--navy)':'var(--surface)';
+  document.getElementById('clm-tab-text').style.color=t==='text'?'#fff':'var(--muted)';
+  document.getElementById('clm-tab-file').style.background=t==='file'?'var(--navy)':'var(--surface)';
+  document.getElementById('clm-tab-file').style.color=t==='file'?'#fff':'var(--muted)';
+}
+function previewCLMFile(input){
+  const f=input.files[0];
+  if(!f)return;
+  document.getElementById('clm-file-name').textContent=f.name+' ('+Math.round(f.size/1024)+'KB)';
+  // Copy to main file input in case the camera input was used
+  if(input.id!=='clm-file-input'){
+    try{
+      const dt=new DataTransfer();dt.items.add(f);
+      document.getElementById('clm-file-input').files=dt.files;
+    }catch(e){}
+  }
+}
+function handleCLMDrop(e){
+  e.preventDefault();
+  e.currentTarget.style.borderColor='var(--border)';
+  const f=e.dataTransfer.files[0];
+  if(f){
+    try{const dt=new DataTransfer();dt.items.add(f);document.getElementById('clm-file-input').files=dt.files;}catch(e){}
+    document.getElementById('clm-file-name').textContent=f.name+' ('+Math.round(f.size/1024)+'KB)';
+  }
+}
 
 async function loadCLMList(){
   const t=document.getElementById('clm-table');
@@ -5143,7 +5202,9 @@ async function loadCLMList(){
     const data=await res.json();
     document.getElementById('clm-total').textContent=data.length||0;
     document.getElementById('clm-active').textContent=data.filter(c=>c.status==='active').length;
-    document.getElementById('clm-review').textContent=data.filter(c=>c.status==='draft').length;
+    document.getElementById('clm-review').textContent=data.filter(c=>c.flagged_for_review).length;
+    const avgConf=data.length?Math.round(data.reduce((s,c)=>s+(c.confidence_score||0),0)/data.length*100):0;
+    const confEl=document.getElementById('clm-confidence');if(confEl)confEl.textContent=avgConf+'%';
     if(!data.length){t.innerHTML='<div style="padding:20px;color:var(--muted);text-align:center">No contracts yet. Click "Scan Contract" to process your first rate confirmation.</div>';return;}
     t.innerHTML=`<table class="tbl"><thead><tr><th>Type</th><th>Counterparty</th><th>Route</th><th>Rate</th><th>Terms</th><th>Milestone</th><th>Status</th><th>Date</th></tr></thead>
       <tbody>${data.map(c=>`<tr>
@@ -5180,6 +5241,38 @@ async function runCLMScan(){
     document.getElementById('clm-scan-panel').style.display='none';
     loadCLMList();
     toast('✅ Contract scanned — '+data.fields_extracted+' fields extracted');
+  }catch(e){alert('Scan failed: '+e.message);}
+  btn.disabled=false;btn.textContent='🤖 Scan with Claude AI';
+}
+
+async function runCLMScanFile(){
+  const input=document.getElementById('clm-file-input');
+  const btn=document.getElementById('clm-scan-file-btn');
+  const docType=document.getElementById('clm-doc-type').value;
+  if(!input.files.length){alert('Select or photograph a document first');return;}
+  const file=input.files[0];
+  if(file.size>26214400){alert('File too large — max 25 MB');return;}
+  btn.disabled=true;btn.textContent='Scanning…';
+  try{
+    const fd=new FormData();
+    fd.append('file',file);
+    fd.append('contract_type',docType==='auto'?'auto':docType);
+    const r=await fetch(API_BASE+'/api/clm/scan/file',{method:'POST',headers:{'Authorization':'Bearer '+API_TOKEN},body:fd});
+    const data=await r.json();
+    if(!r.ok){alert('Scan failed: '+(data.detail||JSON.stringify(data)));return;}
+    const conf=Math.round((data.confidence_score||0)*100);
+    const detected=data.detected_type||docType;
+    document.getElementById('clm-result-conf').textContent=`${conf}% confidence · ${data.fields_extracted} fields · ${detected.replace(/_/g,' ')}`;
+    document.getElementById('clm-result-conf').className=`badge badge-${conf>=80?'green':conf>=60?'orange':'red'}`;
+    const vars=data.extracted_vars||{};
+    const rows=Object.entries(vars).filter(([k,v])=>v!==null&&v!==undefined&&v!==''&&v!==false&&k!=='extra')
+      .map(([k,v])=>`<tr><td style="color:var(--muted);font-size:11px;padding:4px 8px;white-space:nowrap">${k.replace(/_/g,' ')}</td><td style="font-weight:600;padding:4px 8px">${Array.isArray(v)?v.map(i=>typeof i==='object'?JSON.stringify(i):i).join(', '):String(v)}</td></tr>`).join('');
+    document.getElementById('clm-result-body').innerHTML=`<table style="width:100%;border-collapse:collapse">${rows}</table>
+      ${data.warnings?.length?`<div style="margin-top:8px;padding:8px 12px;background:#fef3c7;border-radius:6px;font-size:12px;color:#92400e">⚠️ ${data.warnings.join(' · ')}</div>`:''}`;
+    document.getElementById('clm-result-panel').style.display='block';
+    document.getElementById('clm-scan-panel').style.display='none';
+    loadCLMList();
+    toast(`✅ ${detected.replace(/_/g,' ')} scanned — ${data.fields_extracted} fields extracted`);
   }catch(e){alert('Scan failed: '+e.message);}
   btn.disabled=false;btn.textContent='🤖 Scan with Claude AI';
 }
@@ -5316,7 +5409,12 @@ function openVaultUpload(){
 function closeVaultUpload(){document.getElementById('vault-upload-modal').style.display='none';}
 function previewVaultFile(input){
   const f=input.files[0];
-  if(f)document.getElementById('vault-file-name').textContent=f.name+' ('+Math.round(f.size/1024)+'KB)';
+  if(!f)return;
+  document.getElementById('vault-file-name').textContent=f.name+' ('+Math.round(f.size/1024)+'KB)';
+  // If camera input was used, copy file to the main input
+  if(input.id!=='vault-file-input'){
+    try{const dt=new DataTransfer();dt.items.add(f);document.getElementById('vault-file-input').files=dt.files;}catch(e){}
+  }
 }
 function handleVaultDrop(e){
   e.preventDefault();

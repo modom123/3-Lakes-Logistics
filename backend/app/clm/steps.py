@@ -62,6 +62,11 @@ def step_121_email_inbound_parse(
         "delivery": "pod",
         "agreement": "broker_agreement",
         "carrier packet": "broker_agreement",
+        "invoice": "invoice",
+        "inv_": "invoice",
+        "inv-": "invoice",
+        "billing": "invoice",
+        "freight bill": "invoice",
     }
 
     for att in attachments:
@@ -112,7 +117,7 @@ def step_121_email_inbound_parse(
     }
 
 
-_SCANNABLE_TYPES = {"rate_confirmation", "bol", "pod", "broker_agreement"}
+_SCANNABLE_TYPES = {"rate_confirmation", "bol", "pod", "broker_agreement", "invoice"}
 
 
 def step_122_doc_classify(
@@ -149,6 +154,8 @@ def step_122_doc_classify(
             final_type = "pod"
         elif any(t in fname for t in ["agreement", "carrier packet", "broker"]):
             final_type = "broker_agreement"
+        elif any(t in fname for t in ["invoice", "inv_", "inv-", "billing", "freight bill"]):
+            final_type = "invoice"
         elif any(t in fname for t in ["insurance", "coi", "certificate"]):
             final_type = "insurance"
         elif any(t in fname for t in ["w9", "w-9", "tax"]):

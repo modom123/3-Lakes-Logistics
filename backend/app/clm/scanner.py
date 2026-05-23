@@ -1,7 +1,8 @@
 """Claude-powered contract scanner and variable extractor.
 
 Uses claude-sonnet-4-6 to extract 100+ structured variables from any logistics
-document: rate confirmations, BOLs, PODs, and broker agreements.
+document: rate confirmations, BOLs, PODs, broker agreements, and invoices.
+Supports PDFs, images (JPEG, PNG, GIF, WEBP), and phone photos (HEIC/HEIF).
 """
 from __future__ import annotations
 
@@ -17,9 +18,32 @@ log = logging.getLogger("3ll.clm.scanner")
 
 _SYSTEM = """You are a logistics contract analyst for 3 Lakes Logistics.
 Extract structured variables from trucking documents: rate confirmations, BOLs,
-PODs, and broker agreements. Always respond with a single valid JSON object.
-Use null for any field not present. Use ISO 8601 dates (YYYY-MM-DD).
+PODs, broker agreements, and freight invoices. Always respond with a single valid
+JSON object. Use null for any field not present. Use ISO 8601 dates (YYYY-MM-DD).
 Be precise with dollar amounts and locations."""
+
+_CLASSIFY_SYSTEM = """You are a trucking document classifier. Given a document,
+identify what type it is and return ONLY a JSON object with one key "doc_type".
+Valid values: rate_confirmation, bol, pod, broker_agreement, invoice, w9,
+insurance, compliance, other. No explanation — only valid JSON."""
+
+_CLASSIFY_PROMPT = """What type of trucking/logistics document is this?
+
+Return ONLY: {{"doc_type": "<type>"}}
+
+Valid types:
+- rate_confirmation — rate confirmation, load tender, rate con
+- bol              — bill of lading
+- pod              — proof of delivery, delivery receipt
+- broker_agreement — carrier-broker operating agreement, carrier packet
+- invoice          — freight invoice, carrier invoice, billing statement
+- w9               — IRS W-9 tax form
+- insurance        — certificate of insurance, COI
+- compliance       — authority, FMCSA registration, drug test, MVR
+- other            — anything else
+
+Document:
+{document_text}"""
 
 _RATE_CONF_PROMPT = """Extract all variables from this rate confirmation / load tender.
 
@@ -84,11 +108,38 @@ extra (any additional fields)
 Document:
 {document_text}"""
 
+_INVOICE_PROMPT = """Extract all variables from this freight invoice / carrier invoice.
+
+Return JSON with these fields (null if absent):
+invoice_number, invoice_date (YYYY-MM-DD), due_date (YYYY-MM-DD),
+bill_to_name, bill_to_address, bill_to_city, bill_to_state, bill_to_zip,
+remit_to_name, remit_to_address, remit_to_city, remit_to_state, remit_to_zip,
+carrier_name, carrier_mc, carrier_dot,
+broker_name, broker_mc,
+load_number, bol_number, pro_number,
+origin_city, origin_state, destination_city, destination_state,
+pickup_date (YYYY-MM-DD), delivery_date (YYYY-MM-DD),
+line_items (array of {{description, quantity, unit_price, amount}}),
+linehaul_amount (number), fuel_surcharge (number), detention_amount (number),
+lumper_fee (number), tonu_amount (number),
+accessorial_charges (array of {{type, amount}}),
+subtotal (number), tax_amount (number), total_amount_due (number),
+amount_paid (number), balance_due (number),
+payment_terms (string e.g. "Net-30"), quick_pay_discount_pct (number),
+factoring_company (string), factoring_notice (true/false),
+bank_name, bank_routing, bank_account,
+check_payable_to (string),
+extra (any additional fields not listed above)
+
+Document:
+{document_text}"""
+
 _REQUIRED_FIELDS: dict[str, list[str]] = {
     "rate_confirmation": ["broker_name", "rate_total", "origin_city", "destination_city", "pickup_date"],
     "bol": ["bol_number", "shipper_name", "consignee_name", "commodity"],
     "pod": ["load_number", "consignee_name", "delivery_date"],
     "broker_agreement": ["broker_name", "carrier_name", "payment_terms"],
+    "invoice": ["invoice_number", "total_amount_due", "carrier_name"],
 }
 
 _PROMPTS: dict[str, str] = {
@@ -96,7 +147,59 @@ _PROMPTS: dict[str, str] = {
     "bol": _BOL_PROMPT,
     "pod": _POD_PROMPT,
     "broker_agreement": _BROKER_AGREEMENT_PROMPT,
+    "invoice": _INVOICE_PROMPT,
 }
+
+
+_KNOWN_TYPES = frozenset(_PROMPTS.keys())
+
+
+def classify_document_type(raw_text: str) -> str:
+    """Ask Claude to identify what kind of logistics document this is.
+
+    Returns one of: rate_confirmation, bol, pod, broker_agreement, invoice,
+    w9, insurance, compliance, other.
+    Falls back to "rate_confirmation" on any error.
+    """
+    s = get_settings()
+    client = anthropic.Anthropic(api_key=s.anthropic_api_key)
+
+    prompt = _CLASSIFY_PROMPT.format(document_text=raw_text[:8_000])
+    try:
+        message = client.messages.create(
+            model="claude-sonnet-4-6",
+            max_tokens=64,
+            system=_CLASSIFY_SYSTEM,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        text = message.content[0].text.strip()
+        if text.startswith("```"):
+            lines = text.split("\n")
+            text = "\n".join(lines[1:-1] if lines[-1].strip() == "```" else lines[1:])
+        result = json.loads(text)
+        doc_type = str(result.get("doc_type", "other")).lower().strip()
+        log.info("classify_document_type → %s", doc_type)
+        return doc_type
+    except Exception as exc:
+        log.warning("classify_document_type failed: %s — defaulting to rate_confirmation", exc)
+        return "rate_confirmation"
+
+
+def classify_and_scan(
+    raw_text: str,
+    hint: str | None = None,
+) -> tuple[str, dict[str, Any], float, list[str]]:
+    """Classify a document then extract all its variables.
+
+    If hint is provided and is a known type, skips the classify step.
+    Returns (detected_type, extracted_vars, confidence, warnings).
+    """
+    contract_type = hint if hint and hint in _KNOWN_TYPES else None
+    if not contract_type:
+        contract_type = classify_document_type(raw_text)
+
+    extracted, confidence, warnings = scan_contract(raw_text, contract_type)
+    return contract_type, extracted, confidence, warnings
 
 
 def scan_contract(

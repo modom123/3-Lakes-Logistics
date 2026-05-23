@@ -20,7 +20,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, UploadFile, File, Form
 
 from ..api.deps import require_bearer
 from ..supabase_client import get_supabase
@@ -41,7 +41,8 @@ from .models import (
     RateBenchmarkRequest,
     RateBenchmarkResult,
 )
-from .scanner import scan_contract
+from .scanner import scan_contract, classify_and_scan
+from .doc_extractor import extract_bytes, extract_vault_doc
 from .engine import post_contract_event, trigger_invoice, update_milestone
 from .steps import (
     step_121_email_inbound_parse,
@@ -122,6 +123,98 @@ def scan_and_create(req: ContractScanRequest, _: str = Depends(require_bearer)):
         fields_extracted=fields_extracted,
         warnings=warnings,
     )
+
+
+@router.post("/scan/file")
+async def scan_file_upload(
+    file: UploadFile = File(...),
+    contract_type: str = Form("auto"),
+    carrier_id: str = Form(None),
+    _: str = Depends(require_bearer),
+) -> dict:
+    """Scan any document file with Claude AI — auto-detects document type.
+
+    Accepts: PDF, JPG, JPEG, PNG, GIF, WEBP, HEIC, HEIF (iPhone photos).
+    Pass contract_type="auto" (default) to let Claude classify the document;
+    or pass a specific type to skip classification.
+
+    Creates a contract record and returns extracted variables.
+    """
+    content = await file.read()
+    filename = file.filename or "upload"
+    mime = (file.content_type or "").lower().strip() or None
+
+    # auto / unknown → pass None so extract_bytes auto-classifies
+    hint = contract_type if contract_type and contract_type != "auto" else None
+
+    extracted, confidence, warnings = extract_bytes(content, filename, hint, mime)
+
+    # Determine final contract_type (extract_bytes auto-detects but doesn't return it)
+    # Infer from extracted fields
+    detected_type = hint or _infer_type_from_extracted(extracted)
+
+    sb = get_supabase()
+    insert_data: dict = {
+        "contract_type": detected_type,
+        "extracted_vars": extracted,
+        "status": "active",
+        "confidence_score": confidence,
+        "counterparty_name": (
+            extracted.get("broker_name")
+            or extracted.get("carrier_name")
+            or extracted.get("bill_to_name")
+            or extracted.get("shipper_name")
+        ),
+        "rate_total": extracted.get("rate_total") or extracted.get("total_amount_due"),
+        "rate_per_mile": extracted.get("rate_per_mile"),
+        "origin_city": extracted.get("origin_city"),
+        "destination_city": extracted.get("destination_city"),
+        "pickup_date": extracted.get("pickup_date"),
+        "delivery_date": extracted.get("delivery_date"),
+        "payment_terms": extracted.get("payment_terms"),
+        "load_number": extracted.get("load_number") or extracted.get("invoice_number"),
+    }
+    if carrier_id:
+        insert_data["carrier_id"] = carrier_id
+
+    result = sb.table("contracts").insert(insert_data).execute()
+    contract = result.data[0]
+    contract_id = UUID(contract["id"])
+    fields_extracted = len([v for v in extracted.values() if v is not None])
+
+    post_contract_event(contract_id, "scanned", "clm.scanner.file", {
+        "filename": filename,
+        "detected_type": detected_type,
+        "confidence": confidence,
+        "fields_extracted": fields_extracted,
+        "warnings": warnings,
+    })
+
+    log.info("file-scan id=%s type=%s file=%s confidence=%.2f", contract_id, detected_type, filename, confidence)
+
+    extra = extracted.pop("extra", {}) if isinstance(extracted.get("extra"), dict) else {}
+    safe_vars = {k: v for k, v in extracted.items() if k in ExtractedContractVars.model_fields}
+    return {
+        "contract_id": str(contract_id),
+        "detected_type": detected_type,
+        "extracted_vars": {**safe_vars, "extra": extra},
+        "confidence_score": confidence,
+        "fields_extracted": fields_extracted,
+        "warnings": warnings,
+    }
+
+
+def _infer_type_from_extracted(extracted: dict) -> str:
+    """Guess contract type from which fields are populated."""
+    if extracted.get("invoice_number") or extracted.get("total_amount_due"):
+        return "invoice"
+    if extracted.get("bol_number") and extracted.get("consignee_name"):
+        return "bol"
+    if extracted.get("load_number") and extracted.get("consignee_name") and not extracted.get("rate_total"):
+        return "pod"
+    if extracted.get("termination_notice_days") or extracted.get("governing_law_state"):
+        return "broker_agreement"
+    return "rate_confirmation"
 
 
 @router.get("/")
@@ -302,12 +395,20 @@ async def upload_vault_doc(
     signed = _signed_url(storage_path, "documents")
 
     # Auto-scan scannable doc types in the background
-    _SCANNABLE = {"rate_con", "rate_confirmation", "bol", "pod", "broker_agreement", "agreement"}
+    _SCANNABLE = {
+        "rate_con", "rate_confirmation", "bol", "pod",
+        "broker_agreement", "agreement", "invoice", "other",
+    }
+    scan_queued = False
     if doc_id and doc_type in _SCANNABLE:
-        from ..triggers import fire_vault_scan
-        fire_vault_scan(doc_id)
+        try:
+            from ..triggers import fire_vault_scan  # noqa: PLC0415
+            fire_vault_scan(doc_id)
+            scan_queued = True
+        except Exception as exc:  # noqa: BLE001
+            log.warning("vault upload: scan queue failed for %s: %s", doc_id, exc)
 
-    return {"ok": True, "doc_id": doc_id, "filename": safe_name, "size_kb": size_kb, "url": signed, "scan_queued": doc_type in _SCANNABLE}
+    return {"ok": True, "doc_id": doc_id, "filename": safe_name, "size_kb": size_kb, "url": signed, "scan_queued": scan_queued}
 
 
 class _SendPayload:
@@ -419,13 +520,83 @@ def scan_vault_doc(doc_id: str, _: str = Depends(require_bearer)) -> dict:
     """Extract structured data from a vault document using Claude AI.
 
     Chooses PDF text extraction (PyPDF2) for digital PDFs, or Claude Vision
-    for scanned PDFs and images. Results stored in document_vault.extracted_data.
+    for scanned/image PDFs, JPEGs, PNGs, and HEIC phone photos.
+    Auto-detects document type (rate con, BOL, POD, invoice, etc.) when unknown.
+    Results stored in document_vault.extracted_data.
     """
-    from .doc_extractor import extract_vault_doc
     result = extract_vault_doc(doc_id)
     if "error" in result:
         raise HTTPException(422, result["error"])
     return result
+
+
+@router.post("/vault/scan/batch")
+async def batch_scan_vault(
+    body: dict,
+    background_tasks: BackgroundTasks,
+    _: str = Depends(require_bearer),
+) -> dict:
+    """Queue background extraction for multiple vault documents.
+
+    Body: {"doc_ids": ["uuid1", "uuid2", ...]} — up to 100 at once.
+    Returns immediately; scans run in background.
+    For high-volume ingestion pipelines.
+    """
+    doc_ids: list[str] = body.get("doc_ids") or []
+    if not doc_ids:
+        raise HTTPException(400, "doc_ids list is required")
+    if len(doc_ids) > 100:
+        raise HTTPException(400, "Maximum 100 documents per batch request")
+
+    def _run_batch(ids: list[str]) -> None:
+        for did in ids:
+            try:
+                extract_vault_doc(did)
+            except Exception as exc:  # noqa: BLE001
+                log.error("batch_scan: error on doc_id=%s: %s", did, exc)
+
+    background_tasks.add_task(_run_batch, doc_ids)
+    log.info("batch_scan queued %d docs", len(doc_ids))
+    return {"ok": True, "queued": len(doc_ids), "doc_ids": doc_ids}
+
+
+@router.post("/vault/scan/auto")
+async def auto_scan_pending(
+    background_tasks: BackgroundTasks,
+    limit: int = 50,
+    _: str = Depends(require_bearer),
+) -> dict:
+    """Queue background extraction for all unscanned vault documents.
+
+    Picks up to `limit` documents where extracted_at IS NULL.
+    Useful for bulk backfill after a batch upload.
+    """
+    sb = get_supabase()
+    pending = (
+        sb.table("document_vault")
+        .select("id")
+        .is_("extracted_at", "null")
+        .neq("doc_type", "folder")
+        .order("uploaded_at", desc=False)
+        .limit(max(1, min(limit, 200)))
+        .execute()
+        .data
+    ) or []
+
+    doc_ids = [d["id"] for d in pending]
+
+    def _run_pending(ids: list[str]) -> None:
+        for did in ids:
+            try:
+                extract_vault_doc(did)
+            except Exception as exc:  # noqa: BLE001
+                log.error("auto_scan: error on doc_id=%s: %s", did, exc)
+
+    if doc_ids:
+        background_tasks.add_task(_run_pending, doc_ids)
+
+    log.info("auto_scan queued %d pending docs", len(doc_ids))
+    return {"ok": True, "queued": len(doc_ids)}
 
 
 @router.delete("/vault/{doc_id}")

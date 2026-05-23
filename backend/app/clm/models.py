@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from datetime import date, datetime
-from typing import Any
+from typing import Any, Literal
 from uuid import UUID
 
 from pydantic import BaseModel, Field
@@ -61,6 +61,83 @@ class ExtractedContractVars(BaseModel):
     dispute_resolution: str | None = None
 
     # Overflow for any additional variables Claude finds
+    extra: dict[str, Any] = Field(default_factory=dict)
+
+
+class InvoiceLineItem(BaseModel):
+    description: str | None = None
+    quantity: float | None = None
+    unit_price: float | None = None
+    amount: float | None = None
+
+
+class InvoiceExtractedVars(BaseModel):
+    """AI-extracted variables from a freight invoice."""
+    # Invoice identity
+    invoice_number: str | None = None
+    invoice_date: str | None = None
+    due_date: str | None = None
+
+    # Parties — bill to
+    bill_to_name: str | None = None
+    bill_to_address: str | None = None
+    bill_to_city: str | None = None
+    bill_to_state: str | None = None
+    bill_to_zip: str | None = None
+
+    # Parties — remit to
+    remit_to_name: str | None = None
+    remit_to_address: str | None = None
+    remit_to_city: str | None = None
+    remit_to_state: str | None = None
+    remit_to_zip: str | None = None
+
+    # Carrier / broker
+    carrier_name: str | None = None
+    carrier_mc: str | None = None
+    carrier_dot: str | None = None
+    broker_name: str | None = None
+    broker_mc: str | None = None
+
+    # Load reference
+    load_number: str | None = None
+    bol_number: str | None = None
+    pro_number: str | None = None
+
+    # Lane
+    origin_city: str | None = None
+    origin_state: str | None = None
+    destination_city: str | None = None
+    destination_state: str | None = None
+    pickup_date: str | None = None
+    delivery_date: str | None = None
+
+    # Charges
+    line_items: list[InvoiceLineItem] = Field(default_factory=list)
+    linehaul_amount: float | None = None
+    fuel_surcharge: float | None = None
+    detention_amount: float | None = None
+    lumper_fee: float | None = None
+    tonu_amount: float | None = None
+    accessorial_charges: list[dict] = Field(default_factory=list)
+
+    # Totals
+    subtotal: float | None = None
+    tax_amount: float | None = None
+    total_amount_due: float | None = None
+    amount_paid: float | None = None
+    balance_due: float | None = None
+
+    # Payment
+    payment_terms: str | None = None
+    quick_pay_discount_pct: float | None = None
+    factoring_company: str | None = None
+    factoring_notice: bool | None = None
+    bank_name: str | None = None
+    bank_routing: str | None = None
+    bank_account: str | None = None
+    check_payable_to: str | None = None
+
     extra: dict[str, Any] = Field(default_factory=dict)
 
 
