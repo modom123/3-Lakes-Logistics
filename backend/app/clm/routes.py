@@ -59,6 +59,45 @@ router = APIRouter()
 log = get_logger("3ll.clm.routes")
 
 
+def _auto_register_broker(broker_name: str, broker_mc: str, payment_terms: str | None = None) -> None:
+    """Register a broker the first time their MC appears in a scanned contract.
+
+    Sends the onboarding welcome email only once (on first-ever appearance).
+    Subsequent scans with the same MC are silently ignored.
+    """
+    from ..api.routes_brokers import _upsert_broker, send_broker_welcome
+    import asyncio
+
+    sb = get_supabase()
+    existing = sb.table("brokers").select("id,onboarding_sent,email").eq("broker_mc", broker_mc).limit(1).execute().data
+
+    if existing:
+        # Already known — skip re-sending welcome
+        return
+
+    broker = _upsert_broker(
+        broker_name=broker_name,
+        broker_mc=broker_mc,
+        payment_terms=payment_terms or "Net-30",
+        source="clm_scan",
+    )
+    log.info("broker auto-registered via CLM scan broker_id=%s mc=%s", broker["id"], broker_mc)
+
+    # Only send email if we have an address — typically not available from rate cons,
+    # but included here so it fires automatically if the extractor ever captures it.
+    if broker.get("email"):
+        try:
+            loop = asyncio.get_event_loop()
+            loop.run_until_complete(
+                send_broker_welcome(
+                    broker["id"], broker_name, broker_mc,
+                    broker.get("contact_name"), broker["email"], "clm_scan",
+                )
+            )
+        except Exception as exc:
+            log.warning("broker auto-welcome email failed mc=%s: %s", broker_mc, exc)
+
+
 # ── Dashboard summary (gap 1) ─────────────────────────────────────────────────
 
 @router.get("/summary")
@@ -176,6 +215,15 @@ def scan_and_create(req: ContractScanRequest, _: str = Depends(require_bearer)):
         step_144_analytics_update(None, None, {})
     except Exception:
         pass
+
+    # Auto-register broker and send onboarding email on first appearance of a new MC
+    broker_mc = extracted.get("broker_mc")
+    broker_name = extracted.get("broker_name")
+    if broker_mc and broker_name:
+        try:
+            _auto_register_broker(broker_name, broker_mc, extracted.get("payment_terms"))
+        except Exception as exc:
+            log.warning("broker auto-register failed mc=%s: %s", broker_mc, exc)
 
     extra = extracted.pop("extra", {}) if isinstance(extracted.get("extra"), dict) else {}
     safe_vars = {k: v for k, v in extracted.items() if k in ExtractedContractVars.model_fields}

@@ -28,6 +28,7 @@ from .api import (
     memory_router,
     carrier_brain_router,
     revenue_brain_router,
+    brokers_router,
     mailboxes_router,
     driver_auth_router,
     driver_router,
@@ -144,6 +145,7 @@ def create_app() -> FastAPI:
     app.include_router(memory_router,          prefix="/api",              tags=["nexus"])
     app.include_router(intake_router,          prefix="/api/carriers",     tags=["intake"])
     app.include_router(carriers_router,        prefix="/api/carriers",     tags=["carriers"])
+    app.include_router(brokers_router,         prefix="/api/brokers",      tags=["brokers"])
     app.include_router(fleet_router,           prefix="/api/fleet",        tags=["fleet"])
     app.include_router(fleet_public_router,    prefix="/api/fleet",        tags=["fleet-public"])
     app.include_router(telemetry_router,       prefix="/api/telemetry",    tags=["telemetry"])
