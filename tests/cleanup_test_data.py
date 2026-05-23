@@ -105,6 +105,37 @@ for name_prefix in ["Great Lakes Express", "Motor City Haulers",
     print(f"   {name_prefix[:25]:<25}: {n} row(s) removed")
     total_deleted += n
 
+# ── CLM test contracts ────────────────────────────────────────────
+print("\n[ clm — contracts ]")
+for phrase in ["Titan Manufacturing Corp", "Midwest Hauling Co.", "Blue Sky Logistics",
+               "Test Bad Broker CLM", "CLM Test Broker LLC", "Concurrent Test Broker",
+               "Parallel Carrier", "Honest Hauler LLC", "Delta Transport LLC"]:
+    n = _delete("contracts", "counterparty_name", f"%{phrase}%", match_type="like")
+    if n:
+        print(f"   {phrase[:32]:<32}: {n} row(s) removed")
+    total_deleted += n
+
+# ── CLM broker blacklist test entries ─────────────────────────────
+print("\n[ clm — broker_blacklist ]")
+for mc in ["CLM-TEST-MC-99999"]:
+    n = _delete("broker_blacklist", "broker_mc", mc)
+    if n:
+        print(f"   MC# {mc}: {n} row(s) removed")
+    total_deleted += n
+
+# ── Broker intake test entries ────────────────────────────────────
+print("\n[ brokers ]")
+for mc in ["CLM-TEST-INTAKE-88888", "CLM-TEST-MC-99999"]:
+    n = _delete("brokers", "broker_mc", mc)
+    if n:
+        print(f"   MC# {mc}: {n} row(s) removed")
+    total_deleted += n
+
+n = _delete("brokers", "email", "broker%clm-test.internal", match_type="like")
+if n:
+    print(f"   *@clm-test.internal: {n} row(s) removed")
+total_deleted += n
+
 # ── Summary ────────────────────────────────────────────────────────
 print(f"\n━━ Cleanup complete — {total_deleted} total row(s) removed ━━━━━━━━━━━━━━━━")
 print("   Production DB is clean for business hours.\n")

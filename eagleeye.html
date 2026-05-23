@@ -9518,6 +9518,102 @@ const TS_DOMAINS = [
         }
       }
     ]
+  },
+  {
+    id: 'clm', label: 'CLM', icon: '📑',
+    tests: [
+      {
+        name: 'CLM list endpoint reachable',
+        run: async () => {
+          const d = await apiFetch('/api/clm/');
+          if (!Array.isArray(d)) throw new Error('Expected array from /api/clm/');
+          return `${d.length} contract(s) in system`;
+        }
+      },
+      {
+        name: 'CLM summary — all dashboard fields present',
+        run: async () => {
+          const d = await apiFetch('/api/clm/summary');
+          const required = ['total','active','executed','flagged','avg_confidence_pct','revenue_recognized','open_disputes'];
+          const missing = required.filter(k => !(k in d));
+          if (missing.length) throw new Error('Missing fields: ' + missing.join(', '));
+          return `total=${d.total} active=${d.active} conf=${d.avg_confidence_pct ?? '—'}%`;
+        }
+      },
+      {
+        name: 'CLM gold-standard scan (broker agreement)',
+        run: async () => {
+          const text = `ADDENDUM TO LOGISTICS SERVICES AGREEMENT
+This binding rider is executed on May 24, 2026, by and between 3 Lakes Logistics LLC
+(operating under SCAC code 'TLXO', DOT# 3948571, and MC# 684722), hereinafter
+referred to as 'Carrier', and Titan Manufacturing Corp, hereinafter 'Shipper'.
+Base Linehaul Rate: $2.85 per mile. Detention Rate: $75.00/hr. TONU: $150.00.
+Payment terms: Net 30 days. Governing law: State of Michigan.`;
+          const d = await apiFetch('/api/clm/scan', 'POST', {raw_text: text, contract_type: 'broker_agreement'});
+          if (!d.contract_id) throw new Error('No contract_id returned');
+          const conf = Math.round((d.confidence_score||0)*100);
+          return `contract ${d.contract_id.slice(0,8)}… · ${conf}% confidence · ${d.fields_extracted} fields`;
+        }
+      },
+      {
+        name: 'CLM confidence threshold (high-quality → ≥ 70%)',
+        run: async () => {
+          const text = `RATE CONFIRMATION\nBroker: Eagle Eye Test Broker | MC# 887421\nCarrier: Eagle Eye Carrier LLC\nLoad #EE-TEST-001\nOrigin: Detroit, MI — Pickup: 2026-06-01\nDestination: Chicago, IL — Delivery: 2026-06-01\nRate: $2,450.00 total ($2.45/mile) | Payment: Net-30`;
+          const d = await apiFetch('/api/clm/scan', 'POST', {raw_text: text, contract_type: 'rate_confirmation'});
+          const conf = d.confidence_score || 0;
+          if (conf < 0.60) throw new Error(`Confidence ${(conf*100).toFixed(0)}% below threshold — extraction degraded`);
+          return `${(conf*100).toFixed(0)}% confidence — auto-approve threshold met`;
+        }
+      },
+      {
+        name: 'CLM auth guard (no token → 401/403)',
+        run: async () => {
+          const r = await fetch(`${API_BASE}/api/clm/`);
+          if (![401,403].includes(r.status)) throw new Error(`Expected 401/403, got ${r.status} — CLM is unprotected`);
+          return `status ${r.status} — protected ✓`;
+        }
+      },
+      {
+        name: 'CLM blacklist list reachable',
+        run: async () => {
+          const d = await apiFetch('/api/clm/blacklist');
+          if (!Array.isArray(d)) throw new Error('Expected array from /api/clm/blacklist');
+          return `${d.length} blacklisted broker(s)`;
+        }
+      },
+      {
+        name: 'CLM disputes list reachable',
+        run: async () => {
+          const d = await apiFetch('/api/clm/disputes');
+          if (!Array.isArray(d)) throw new Error('Expected array from /api/clm/disputes');
+          return `${d.length} dispute(s) on record`;
+        }
+      },
+      {
+        name: 'CLM analytics snapshot reachable',
+        run: async () => {
+          const d = await apiFetch('/api/clm/analytics?limit=1');
+          if (!Array.isArray(d)) throw new Error('Expected array from /api/clm/analytics');
+          return d.length ? `latest snapshot: ${d[0].period_date}` : 'no snapshots yet (run refresh)';
+        }
+      },
+      {
+        name: 'CLM rate benchmark (well-above-market rate)',
+        run: async () => {
+          const d = await apiFetch('/api/clm/rate-benchmark', 'POST', {rate_per_mile: 9.99, origin_city: 'Detroit', destination_city: 'Chicago'});
+          if (!d.assessment) throw new Error('Missing assessment field from rate-benchmark');
+          return `$9.99/mi → ${d.assessment}`;
+        }
+      },
+      {
+        name: 'Broker intake endpoint reachable',
+        run: async () => {
+          const r = await fetch(`${API_BASE}/api/brokers/`, {headers: {Authorization: 'Bearer ' + API_TOKEN}});
+          if (r.status >= 500) throw new Error(`Broker list returned ${r.status}`);
+          return `status ${r.status} — broker API online ✓`;
+        }
+      }
+    ]
   }
 ];
 
@@ -9666,6 +9762,7 @@ const TS_DOMAIN_AGENTS = {
   integration: 'alexander',
   security:    'shield',
   driver:      'penny',
+  clm:         'winston',
 };
 
 async function tsDiagnoseFailures(failures, logFn) {

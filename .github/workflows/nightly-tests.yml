@@ -17,6 +17,7 @@ on:
           - live
           - carriers
           - driver
+          - clm
 
 concurrency:
   group: nightly-tests
@@ -116,6 +117,19 @@ jobs:
           API_BEARER_TOKEN: ${{ secrets.API_BEARER_TOKEN }}
         run: python tests/bond_escalate.py carriers
 
+      # ── Phase 6: CLM (gold-standard extraction, all endpoints, security) ─────
+      - name: 'Phase 6 — CLM Contract Lifecycle Management'
+        id: clm
+        if: inputs.suite == 'all' || inputs.suite == 'clm' || inputs.suite == ''
+        run: pytest tests/test_clm.py -v --tb=short --no-header
+        continue-on-error: true
+
+      - name: 'Bond Handoff — CLM failures'
+        if: always() && steps.clm.outcome == 'failure'
+        env:
+          API_BEARER_TOKEN: ${{ secrets.API_BEARER_TOKEN }}
+        run: python tests/bond_escalate.py clm
+
       # ── Cleanup — delete all test data written during this run ──────────────
       - name: Cleanup test data
         if: always()
@@ -142,6 +156,7 @@ jobs:
           echo "  Phase 3 Driver:      ${{ steps.driver.outcome      || 'skipped' }}"
           echo "  Phase 4 Integration: ${{ steps.integration.outcome || 'skipped' }}"
           echo "  Phase 5 Carriers:    ${{ steps.carriers.outcome    || 'skipped' }}"
+          echo "  Phase 6 CLM:         ${{ steps.clm.outcome         || 'skipped' }}"
           echo ""
           echo "Agents on duty:"
           echo "  🔴 Shield       — Security domain"
