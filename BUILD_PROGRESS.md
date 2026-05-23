@@ -186,7 +186,7 @@
 - [ ] 112. Create app listing (screenshots, description, privacy policy)
 - [ ] 113. Submit to Google Play Store
 - [ ] 114. Wait for Google review (1-3 days)
-- [ ] 115. Deploy backend to production server (Railway/Heroku/AWS)
+- [ ] 115. Deploy backend to production server (Render — see RENDER_ENV_SETUP.md)
 - [ ] 116. Set up auto-scaling for 1000 trucks
 - [ ] 117. Configure CDN for static assets
 - [ ] 118. Set up SSL/TLS certificates (Let's Encrypt)

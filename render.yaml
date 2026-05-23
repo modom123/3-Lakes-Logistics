@@ -1,0 +1,55 @@
+services:
+  - type: web
+    name: 3-lakes-logistics-api
+    env: docker
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /api/health/ping
+    autoDeploy: true
+    envVars:
+      - key: ENV
+        value: production
+      - key: PORT
+        value: 8080
+      # All secrets below are set in the Render dashboard — do NOT add values here
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: API_BEARER_TOKEN
+        sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: OPENROUTER_API_KEY
+        sync: false
+      - key: OPENROUTER_MODEL
+        value: qwen/qwen-2.5-72b-instruct
+      - key: DAYTONA_SANDBOX_ID
+        sync: false
+      - key: BLAND_AI_API_KEY
+        sync: false
+      - key: BLAND_AI_ORG_ID
+        sync: false
+      - key: BLAND_AI_WEBHOOK_SECRET
+        sync: false
+      - key: TWILIO_ACCOUNT_SID
+        sync: false
+      - key: TWILIO_AUTH_TOKEN
+        sync: false
+      - key: TWILIO_FROM_NUMBER
+        value: "+13135469006"
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+      - key: SENDGRID_API_KEY
+        sync: false
+      - key: POSTMARK_SERVER_TOKEN
+        sync: false
+      - key: ADOBE_CLIENT_ID
+        sync: false
+      - key: ADOBE_CLIENT_SECRET
+        sync: false
+      - key: BOND_API_KEY
+        sync: false
