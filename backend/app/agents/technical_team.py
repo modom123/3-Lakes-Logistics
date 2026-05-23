@@ -663,87 +663,258 @@ def _autofix(classified: list[dict]) -> dict[str, Any]:
 
 # ── Dual-Bond autonomous mission ─────────────────────────────────────────────
 
+_API_BASE = "https://three-lakes-logistics-api.onrender.com"
+_REPO     = "modom123/3-lakes-logistics"
+
+# Maps failure type → exact executable fix block
+def _executable_fix(f: dict, fix_num: int) -> str:
+    ftype  = f.get("failure_type", "code_bug")
+    domain = f.get("domain", "?")
+    error  = f.get("error",  "unknown error")
+    test   = f.get("test_name", "?")
+
+    sep = "─" * 58
+
+    if ftype == "missing_table" or ("bond" in domain.lower() and ftype == "schema_error"):
+        return f"""{sep}
+FIX {fix_num} [SQL — EXECUTE NOW]: Create bond_channel table
+{sep}
+OPEN: https://app.supabase.com → your project → SQL Editor → New Query
+PASTE AND RUN:
+
+{_BOND_CHANNEL_DDL}
+
+VERIFY (run immediately after):
+  SELECT COUNT(*) FROM bond_channel;
+  -- Expected: returns a row with count = 0
+
+DONE? Report: fixes_applied = ["bond_channel table created"]
+"""
+
+    if ftype in ("api_key", "auth") and "bond" in domain.lower():
+        return f"""{sep}
+FIX {fix_num} [ENV VAR — EXECUTE NOW]: Set BOND_API_KEY on both sides
+{sep}
+STEP 1 — Generate the key (run this command):
+  python -c "import secrets; print(secrets.token_hex(32))"
+  -- Copy the output. This is your BOND_API_KEY.
+
+STEP 2 — Set on Render:
+  Go to: https://dashboard.render.com → 3-lakes-logistics-api → Environment
+  Add:   BOND_API_KEY = <your-generated-key>
+  Click: Save Changes  (auto-redeploys in ~60s)
+
+STEP 3 — Set on Daytona sandbox (your side):
+  export BOND_API_KEY=<same-key>
+  export IEBC_API_URL={_API_BASE}
+
+VERIFY (after Render redeploy completes):
+  curl -H "X-Bond-Key: <your-key>" {_API_BASE}/api/bond/inbox
+  -- Expected: HTTP 200  {{"messages": []}}
+
+DONE? Report: fixes_applied = ["BOND_API_KEY configured on Render + Daytona"]
+"""
+
+    if ftype in ("connection", "database"):
+        return f"""{sep}
+FIX {fix_num} [ENV VAR — EXECUTE NOW]: Fix Supabase connection
+{sep}
+STEP 1 — Get credentials:
+  Go to: https://app.supabase.com → your project → Settings → API
+  Copy:  Project URL  (looks like https://xxxx.supabase.co)
+  Copy:  service_role secret  (NOT the anon key — use service_role)
+
+STEP 2 — Set on Render:
+  SUPABASE_URL             = https://<project-ref>.supabase.co
+  SUPABASE_SERVICE_ROLE_KEY = <service-role-secret>
+
+STEP 3 — Trigger redeploy:
+  Render Dashboard → Manual Deploy → Deploy latest commit
+  Wait ~60s for deploy to complete.
+
+VERIFY:
+  curl {_API_BASE}/api/health/full
+  -- Expected: {{"ok": true, "services": {{"supabase": "ok"}}}}
+
+DONE? Report: fixes_applied = ["Supabase env vars set, health/full passes"]
+"""
+
+    if ftype in ("code_bug", "endpoint_error"):
+        route_map = {
+            "Carriers":     "backend/app/api/routes_carriers.py",
+            "Fleet":        "backend/app/api/routes_fleet.py",
+            "Leads":        "backend/app/api/routes_leads.py",
+            "Telemetry":    "backend/app/api/routes_telemetry.py",
+            "Dashboard":    "backend/app/api/routes_dashboard.py",
+            "Bond Channel": "backend/app/api/routes_bond.py",
+            "Health":       "backend/app/api/health.py",
+        }
+        route_file = route_map.get(domain, f"backend/app/api/routes_{domain.lower().replace(' ','_')}.py")
+        return f"""{sep}
+FIX {fix_num} [CODE FIX — EXECUTE NOW]: Fix {domain} endpoint
+{sep}
+FAILURE: {test}
+ERROR:   {error}
+
+STEP 1 — Diagnose:
+  curl -H "Authorization: Bearer taiOFL40cCr5V0pH89hUks8jXVPlOkm2WxKvd3f6BoE" \\
+       {_API_BASE}/api/{domain.lower().replace(' ','-')}/
+  -- If HTTP 500: check Render Logs for traceback
+  -- If wrong shape: route returns raw list instead of {{count, items}}
+
+STEP 2 — Clone repo and check route file:
+  git clone https://github.com/{_REPO}.git
+  cd 3-lakes-logistics
+  cat {route_file}
+
+STEP 3 — Common fix (wrong response shape):
+  Find the list endpoint returning a raw list and wrap it:
+  BEFORE:  return res.data
+  AFTER:   return {{"count": len(res.data), "items": res.data}}
+
+STEP 4 — Push fix:
+  git add {route_file}
+  git commit -m "fix: {domain.lower()} list endpoint response shape"
+  git push origin main
+  -- Render auto-deploys on push to main (~90s)
+
+VERIFY (after deploy):
+  curl -H "Authorization: Bearer taiOFL40cCr5V0pH89hUks8jXVPlOkm2WxKvd3f6BoE" \\
+       {_API_BASE}/api/{domain.lower().replace(' ','-')}/
+  -- Expected: {{"count": N, "items": [...]}}
+
+DONE? Report: fixes_applied = ["{domain} route fixed"], code_pushed = true
+"""
+
+    if ftype == "response_shape":
+        return f"""{sep}
+FIX {fix_num} [CODE FIX — EXECUTE NOW]: Fix {domain} response shape
+{sep}
+FAILURE: {test}
+ERROR:   {error}
+
+The endpoint is not returning the expected {{count, items}} envelope.
+
+STEP 1 — Pull repo:
+  git clone https://github.com/{_REPO}.git && cd 3-lakes-logistics
+
+STEP 2 — Search for the broken return:
+  grep -n "return res.data\\|return items\\|return data" backend/app/api/
+
+STEP 3 — Wrap the response:
+  Change any bare list return to:
+  return {{"count": len(items), "items": items}}
+
+STEP 4 — Push:
+  git add -A && git commit -m "fix: {domain.lower()} response envelope" && git push origin main
+
+DONE? Report: fixes_applied = ["{domain} shape fixed + pushed"]
+"""
+
+    # Default
+    return f"""{sep}
+FIX {fix_num} [DIAGNOSE + FIX]: {domain} — {test}
+{sep}
+ERROR: {error}
+
+STEP 1: curl -H "Authorization: Bearer taiOFL40cCr5V0pH89hUks8jXVPlOkm2WxKvd3f6BoE" \\
+             {_API_BASE}/api/{domain.lower().replace(' ','-')}/
+
+STEP 2: Check Render Logs for exceptions at that timestamp.
+
+STEP 3: Identify fix (missing env var / bad query / import error).
+
+STEP 4: Apply fix and either:
+  - Set env var in Render dashboard, OR
+  - Push code fix: git push origin main
+
+DONE? Report: fixes_applied = ["describe what you did"]
+"""
+
+
 def _build_mission_directive(
     classified: list[dict],
     autofix: dict,
     bond_brief: str,
     iteration: int = 1,
 ) -> str:
-    domains   = sorted({f["domain"] for f in classified})
+    env     = autofix.get("env_status", {})
+    fixed   = autofix.get("fixed", [])
+    manual  = autofix.get("needs_manual", [])
+    ts      = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+
+    # Only send remaining failures (those not already fixed internally)
+    fixed_areas = {f.get("area","").lower() for f in fixed}
     remaining = [
         f for f in classified
-        if not any(
-            fix.get("area", "").lower() in f.get("domain", "").lower()
-            for fix in autofix.get("fixed", [])
-        )
+        if not any(a in f.get("domain","").lower() for a in fixed_areas)
     ]
+    priority = "CRITICAL" if len(remaining) >= 3 else "HIGH"
 
     lines = [
-        f"╔══════════════════════════════════════════════════════════╗",
-        f"║  DUAL-BOND AUTONOMOUS MISSION DIRECTIVE  ·  Iteration {iteration}  ║",
-        f"╚══════════════════════════════════════════════════════════╝",
+        f"╔══════════════════════════════════════════════════════════════╗",
+        f"║  BOND-TO-BOND EXECUTABLE FIX DIRECTIVE  ·  Iteration {iteration:<6}║",
+        f"╚══════════════════════════════════════════════════════════════╝",
         f"",
-        f"FROM:     James Bond · IEBC Internal · {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}",
+        f"FROM:     James Bond · IEBC Internal · {ts}",
         f"TO:       External Bond · Daytona {_DAYTONA_ID}",
-        f"PRIORITY: {'CRITICAL' if len(remaining) >= 3 else 'HIGH'}",
+        f"PRIORITY: {priority}",
+        f"API:      {_API_BASE}",
+        f"REPO:     https://github.com/{_REPO}",
         f"",
-        f"STRATEGIC BRIEF:",
-        bond_brief or "System health restoration required.",
-        f"",
-        f"TEST SUITE STATUS:",
-        f"  Total failures : {len(classified)} across {len(domains)} domain(s): {', '.join(domains)}",
-        f"  Internal fixes : {len(autofix.get('fixed', []))} applied automatically",
-        f"  Still failing  : {len(remaining)} require External Bond action",
+        f"━━ SITUATION ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
+        f"Test suite: {len(classified)} failure(s) across {len({f['domain'] for f in classified})} domain(s)",
+        f"Internal team fixed: {len(fixed)} item(s) automatically",
+        f"Remaining for you:   {len(remaining)} fix instruction(s) below",
         f"",
     ]
 
-    if autofix.get("fixed"):
-        lines.append("ALREADY FIXED INTERNALLY:")
-        for f in autofix["fixed"]:
+    if fixed:
+        lines.append("━━ ALREADY DONE (internal team) ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+        for f in fixed:
             lines.append(f"  ✓ [{f.get('area','?')}] {f.get('action','')}")
         lines.append("")
 
-    if remaining:
-        lines.append("FAILURES REQUIRING YOUR ACTION:")
-        for i, f in enumerate(remaining, 1):
-            lines += [
-                f"  {i}. Domain: {f['domain']}  ·  Test: {f['test_name']}",
-                f"     Type: {f.get('failure_type','?')}  ·  Error: {f.get('error','')}",
-            ]
-        lines.append("")
-
-    manual = autofix.get("needs_manual", [])
-    if manual:
-        lines.append("MANUAL ACTIONS STILL NEEDED (internal team cannot auto-apply):")
-        for m in manual:
-            lines += [
-                f"  • [{m.get('area','?')}] {m.get('action','')}",
-                f"    HOW: {m.get('how','')}",
-            ]
-        lines.append("")
-
-    env = autofix.get("env_status", {})
-    missing_env = [k for k, v in env.items() if not v]
-    if missing_env:
+    if not remaining:
         lines += [
-            "MISSING ENVIRONMENT VARIABLES (detected from Render):",
-            *[f"  ✗ {k}" for k in missing_env],
+            "━━ NO REMAINING FAILURES ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
+            "Internal team resolved all failures. Run the test suite to confirm.",
             "",
         ]
+    else:
+        lines += [
+            f"━━ YOUR {len(remaining)} FIX INSTRUCTION(S) — EXECUTE IN ORDER ━━━━━━━━━━",
+            "Do not investigate. Execute each step. Verify. Report completion.",
+            "",
+        ]
+        seen = set()
+        fix_num = 1
+        for f in remaining:
+            key = (f.get("failure_type"), f.get("domain"))
+            if key in seen:
+                continue
+            seen.add(key)
+            lines.append(_executable_fix(f, fix_num))
+            fix_num += 1
 
     lines += [
-        "YOUR MISSION:",
-        "  1. For each remaining failure — diagnose from Daytona sandbox",
-        "  2. Write the fix: Python code patch / SQL migration / env var value",
-        "  3. If code fix: push to modom123/3-lakes-logistics main branch",
-        "  4. If SQL fix: provide the exact SQL statement",
-        "  5. If env var: provide the exact variable name and instructions to obtain value",
-        "  6. Reply to this directive via POST /api/bond/report with:",
-        "     { 'fixes_applied': [...], 'sql_run': [...], 'env_vars_needed': [...], 'code_pushed': bool }",
-        "",
-        "  Verify Render API is reachable: curl https://three-lakes-logistics-api.onrender.com/api/health/ping",
-        "",
-        "BOND DIRECTIVE TO COMMANDER: External Bond has all context. Stand by for fix report.",
+        "━━ WHEN ALL FIXES ARE DONE ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
+        f"POST {_API_BASE}/api/bond/report",
+        f"Header: X-Bond-Key: <BOND_API_KEY>",
+        f"Body (JSON):",
+        f'  {{',
+        f'    "message_type": "report",',
+        f'    "content": "FIXES COMPLETE — [describe each fix applied]",',
+        f'    "metadata": {{',
+        f'      "fixes_applied": ["fix 1 description", "fix 2 description"],',
+        f'      "code_pushed":   true,',
+        f'      "sql_executed":  true,',
+        f'      "env_vars_set":  ["BOND_API_KEY"],',
+        f'      "ready_to_test": true',
+        f'    }}',
+        f'  }}',
+        f"",
+        f"BOND DIRECTIVE: Execute fixes now. Do not wait. Report when each step completes.",
     ]
 
     return "\n".join(lines)
