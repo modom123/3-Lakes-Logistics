@@ -53,33 +53,68 @@ jobs:
 
       # ── Phase 1: Security (no data writes — safe to run first) ─────────────
       - name: 'Phase 1 — Security & Authorization'
+        id: security
         if: inputs.suite == 'all' || inputs.suite == 'security' || inputs.suite == ''
         run: pytest tests/test_security.py -v --tb=short --no-header
         continue-on-error: true
 
+      - name: 'Bond Handoff — Security failures'
+        if: always() && steps.security.outcome == 'failure'
+        env:
+          API_BEARER_TOKEN: ${{ secrets.API_BEARER_TOKEN }}
+        run: python tests/bond_escalate.py security
+
       # ── Phase 2: Smoke (read-only) ─────────────────────────────────────────
       - name: 'Phase 2 — Live API smoke tests'
+        id: live
         if: inputs.suite == 'all' || inputs.suite == 'live' || inputs.suite == ''
         run: pytest tests/test_live_api.py -v --tb=short --no-header
         continue-on-error: true
 
+      - name: 'Bond Handoff — Live API failures'
+        if: always() && steps.live.outcome == 'failure'
+        env:
+          API_BEARER_TOKEN: ${{ secrets.API_BEARER_TOKEN }}
+        run: python tests/bond_escalate.py live
+
       # ── Phase 3: Driver auth guards (read-only) ────────────────────────────
       - name: 'Phase 3 — Driver API live tests'
+        id: driver
         if: inputs.suite == 'all' || inputs.suite == 'driver' || inputs.suite == ''
         run: pytest tests/test_driver_live.py -v --tb=short --no-header
         continue-on-error: true
 
+      - name: 'Bond Handoff — Driver failures'
+        if: always() && steps.driver.outcome == 'failure'
+        env:
+          API_BEARER_TOKEN: ${{ secrets.API_BEARER_TOKEN }}
+        run: python tests/bond_escalate.py driver
+
       # ── Phase 4: Integration & concurrency (writes telemetry + triggers) ───
       - name: 'Phase 4 — Integration, concurrency & webhook tracing'
+        id: integration
         if: inputs.suite == 'all' || inputs.suite == 'integration' || inputs.suite == ''
         run: pytest tests/test_integration.py -v --tb=short --no-header
         continue-on-error: true
 
+      - name: 'Bond Handoff — Integration failures'
+        if: always() && steps.integration.outcome == 'failure'
+        env:
+          API_BEARER_TOKEN: ${{ secrets.API_BEARER_TOKEN }}
+        run: python tests/bond_escalate.py integration
+
       # ── Phase 5: Full carrier lifecycle (data writes — run last) ───────────
       - name: 'Phase 5 — 5-Carriers full lifecycle'
+        id: carriers
         if: inputs.suite == 'all' || inputs.suite == 'carriers' || inputs.suite == ''
         run: pytest tests/test_5_carriers_full.py -v --tb=short --no-header
         continue-on-error: true
+
+      - name: 'Bond Handoff — Carriers failures'
+        if: always() && steps.carriers.outcome == 'failure'
+        env:
+          API_BEARER_TOKEN: ${{ secrets.API_BEARER_TOKEN }}
+        run: python tests/bond_escalate.py carriers
 
       # ── Cleanup — delete all test data written during this run ──────────────
       - name: Cleanup test data
@@ -101,6 +136,13 @@ jobs:
           echo ""
           echo "Suite run: ${{ inputs.suite || 'all (scheduled)' }}"
           echo ""
+          echo "Phase outcomes:"
+          echo "  Phase 1 Security:    ${{ steps.security.outcome    || 'skipped' }}"
+          echo "  Phase 2 Live API:    ${{ steps.live.outcome        || 'skipped' }}"
+          echo "  Phase 3 Driver:      ${{ steps.driver.outcome      || 'skipped' }}"
+          echo "  Phase 4 Integration: ${{ steps.integration.outcome || 'skipped' }}"
+          echo "  Phase 5 Carriers:    ${{ steps.carriers.outcome    || 'skipped' }}"
+          echo ""
           echo "Agents on duty:"
           echo "  🔴 Shield       — Security domain"
           echo "  🟡 Katerina     — Health, Telemetry, Triggers"
@@ -108,6 +150,7 @@ jobs:
           echo "  🟢 Alexander    — Bond Channel, Integration"
           echo "  🔵 Winston      — Carriers, Fleet"
           echo "  🩷 Penny        — Driver, Payout"
+          echo "  🕵️  Bond         — Escalation handler (fires on any failure)"
           echo ""
-          echo "Check GitHub Actions → test results for pass/fail details."
-          echo "Failed domains auto-route to the owning IEBC specialist."
+          echo "Failed phases auto-route to Bond → executive escalation created."
+          echo "Check Eagle Eye → IEBC Executive Command for active escalations."

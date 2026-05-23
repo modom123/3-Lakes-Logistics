@@ -2102,10 +2102,10 @@ td.td-name{font-weight:600;color:var(--navy);}
           <div style="font-size:12px;color:#5A6A82;">AI Infrastructure Founder · 30+ Years · $100M+ Portfolio Management · IEBC Architect</div>
         </div>
       </div>
-      <p>25-executive org structure — 9 cabinet + 16 expansion. KPI engine, 3-tier triage, contingency plans, daily State of the Fleet brief by Dr. Evelyn Sterling.</p>
+      <p>25-executive org structure — 9 cabinet + 16 expansion + James Bond (IEBC Consultant). KPI engine, 3-tier triage, contingency plans, daily State of the Fleet brief by Dr. Evelyn Sterling.</p>
     </div>
     <div class="ec-hero-stats">
-      <div class="ec-stat"><div class="ec-stat-n">25</div><div class="ec-stat-l">Executives</div></div>
+      <div class="ec-stat"><div class="ec-stat-n">26</div><div class="ec-stat-l">Executives</div></div>
       <div class="ec-stat"><div class="ec-stat-n">9</div><div class="ec-stat-l">Cabinet</div></div>
       <div class="ec-stat"><div class="ec-stat-n">5</div><div class="ec-stat-l">Contingencies</div></div>
       <div class="ec-stat"><div class="ec-stat-n">200</div><div class="ec-stat-l">Auto Steps</div></div>
@@ -2192,7 +2192,7 @@ td.td-name{font-weight:600;color:var(--navy);}
 
   <!-- Org Chart — All 25 Executives -->
   <div class="ec-card">
-    <div class="ec-sec-hd"><h2>Org Chart — 25 Executives</h2><span class="ec-count-badge">IEBC Workforce</span></div>
+    <div class="ec-sec-hd"><h2>Org Chart — 26 Executives</h2><span class="ec-count-badge">IEBC Workforce</span></div>
     <table class="ec-table" id="ec-org-table">
       <thead>
         <tr>
@@ -3943,7 +3943,8 @@ async function ecLoadExecutives(){
       return ac-bc||(a.department||'').localeCompare(b.department||'');
     });
     if(!all.length){tbody.innerHTML='<tr><td colspan="6" class="ec-empty">No executive data found — check API.</td></tr>';return;}
-    tbody.innerHTML=all.map(ex=>{
+    const bondRow='<tr style="background:#0d0d1a;border-left:3px solid #f5c842;"><td><div class="ec-name-cell"><div class="ec-avatar" style="background:#1C1C2E;color:#f5c842;font-style:italic">JB</div><span class="ec-title-text" style="color:#f5c842">James Bond<span class="ec-cabinet-badge" style="background:#1C1C2E;color:#f5c842;border:1px solid #f5c842">IEBC</span></span></div></td><td style="font-size:12px;color:#aaa;font-style:italic">IEBC Consultant</td><td><span class="ec-dept-pill" style="background:rgba(245,200,66,.15);color:#f5c842">consulting</span></td><td style="font-size:12px;color:#aaa">Mark Odom (CEO)</td><td style="font-size:12px;font-weight:600;color:#f5c842">Integration Health Score</td><td style="font-family:var(--ff-m);font-size:11px;color:#aaa">All 11 domains green</td></tr>';
+    tbody.innerHTML=bondRow+all.map(ex=>{
       const isCmd=!ex.reports_to;
       const isCab=ex.reports_to==='commander';
       const reportsLabel=isCmd?'<span style="color:#0B1F4B;font-weight:700">Top — Commander</span>':(ex.reports_to==='commander'?'Mark Odom (CEO)':esc(ex.reports_to||'—'));
