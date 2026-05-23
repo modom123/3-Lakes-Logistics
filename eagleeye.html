@@ -94,7 +94,7 @@ body{font-family:var(--ff-b);color:var(--text);background:var(--off);display:fle
 .sb-conn.connecting{background:rgba(228,168,48,.12);color:var(--gold2);border-color:rgba(228,168,48,.25);}
 
 /* ── MAIN ── */
-#main{flex:1;overflow:hidden;display:flex;flex-direction:column;min-width:0;}
+#main{flex:1;overflow:hidden;display:flex;flex-direction:column;min-width:0;position:relative;}
 
 .topbar{
   height:60px;flex-shrink:0;
@@ -7669,8 +7669,8 @@ if (typeof nav === 'function') {
 <div class="page" id="page-bond">
 <style>
 /* ── Bond Office ──────────────────────────────────────────────────────────── */
-#page-bond.active{display:flex;flex-direction:column;overflow:hidden;}
-.bo-wrap{display:flex;flex-direction:column;flex:1;height:calc(100vh - 60px);overflow:hidden;background:var(--bg);}
+#page-bond.active{position:absolute;inset:60px 0 0 0;z-index:5;display:flex;flex-direction:column;overflow:hidden;background:var(--bg);}
+.bo-wrap{display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden;background:var(--bg);}
 .bo-header{display:flex;align-items:center;justify-content:space-between;padding:14px 24px;background:var(--navy);flex-shrink:0;border-bottom:2px solid rgba(228,168,48,.3);}
 .bo-header-left{display:flex;align-items:center;gap:14px;}
 .bo-badge{width:44px;height:44px;border-radius:10px;background:rgba(228,168,48,.15);border:1.5px solid rgba(228,168,48,.35);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;}
@@ -7691,7 +7691,7 @@ if (typeof nav === 'function') {
 .bo-tab.active{color:var(--gold2);border-bottom-color:var(--gold2);}
 .bo-tab-badge{background:var(--red);color:#fff;font-size:9px;font-weight:800;border-radius:10px;padding:1px 6px;font-family:var(--ff-m);}
 /* Tab panes */
-.bo-body{flex:1;overflow:hidden;position:relative;}
+.bo-body{flex:1;min-height:0;overflow:hidden;position:relative;}
 .bo-pane{display:none;height:100%;overflow:hidden;}
 .bo-pane.active{display:flex;flex-direction:column;}
 
@@ -8796,6 +8796,18 @@ const TS_DOMAINS = [
           if (r.status >= 500) throw new Error(`HTTP ${r.status}`);
           return `OPTIONS ${r.status}`;
         }
+      },
+      {
+        name: 'Carrier intake POST (test carrier)',
+        run: async () => {
+          const d = await apiFetch('/api/carriers/intake', 'POST', {
+            name: 'Eagle Eye Test Carrier', dot: '9000001', mc: '900001',
+            email: 'test@eagleeye.internal', phone: '+13135550001',
+            truck_type: 'dry_van', truck_count: 1
+          });
+          if (!d || d.error) throw new Error(d?.error || 'No response');
+          return `intake accepted — id ${d.carrier_id || d.id || '?'}`;
+        }
       }
     ]
   },
@@ -8815,6 +8827,17 @@ const TS_DOMAINS = [
           const r = await fetch(`${API_BASE}/api/fleet/public`);
           if (r.status >= 500) throw new Error(`HTTP ${r.status}`);
           return `status ${r.status}`;
+        }
+      },
+      {
+        name: 'HOS update (test driver)',
+        run: async () => {
+          const d = await apiFetch('/api/telemetry/hos', 'POST', {
+            carrier_id: 'EE-TEST-001', driver_code: 'Eagle Eye Test Driver',
+            duty_status: 'off_duty', drive_remaining_min: 660, shift_remaining_min: 840
+          });
+          if (!d || d.error) throw new Error(d?.error || 'No response');
+          return `HOS recorded — status off_duty`;
         }
       }
     ]
@@ -8836,6 +8859,18 @@ const TS_DOMAINS = [
           const d = await apiFetch('/api/leads/?limit=5');
           if (d.count > 5) throw new Error(`Expected ≤5, got ${d.count}`);
           return `limit=5 → ${d.count} returned`;
+        }
+      },
+      {
+        name: 'Lead create (test prospect)',
+        run: async () => {
+          const d = await apiFetch('/api/leads/', 'POST', {
+            name: 'Eagle Eye Test Prospect', phone: '+13135559999',
+            email: 'prospect@eagleeye.internal', dot: '9999999',
+            source: 'manual', score: 85
+          });
+          if (!d || d.error) throw new Error(d?.error || 'No response');
+          return `lead created — id ${d.id || d.lead_id || '?'}`;
         }
       }
     ]
@@ -8886,6 +8921,101 @@ const TS_DOMAINS = [
           const d = await apiFetch('/api/execution/domains');
           const domains = Array.isArray(d) ? d : (d?.domains || []);
           return `${domains.length} domain(s) registered`;
+        }
+      },
+      {
+        name: 'Founders inventory',
+        run: async () => {
+          const d = await apiFetch('/api/founders/inventory');
+          const items = Array.isArray(d) ? d : (d?.items || d?.inventory || []);
+          return `${items.length} item(s) in inventory`;
+        }
+      }
+    ]
+  },
+  {
+    id: 'triggers', label: 'Triggers', icon: '⚡',
+    tests: [
+      {
+        name: 'Trigger status',
+        run: async () => {
+          const d = await apiFetch('/api/triggers/status');
+          return `engine status: ${JSON.stringify(d).slice(0,80)}`;
+        }
+      },
+      {
+        name: 'Compliance trigger (all carriers)',
+        run: async () => {
+          const d = await apiFetch('/api/triggers/compliance', 'POST', { carrier_ids: [] });
+          if (!d || d.error) throw new Error(d?.error || 'No response');
+          return `compliance sweep fired — ${JSON.stringify(d).slice(0,60)}`;
+        }
+      },
+      {
+        name: 'Analytics trigger',
+        run: async () => {
+          const d = await apiFetch('/api/triggers/analytics', 'POST', {});
+          if (!d || d.error) throw new Error(d?.error || 'No response');
+          return `analytics triggered — ${JSON.stringify(d).slice(0,60)}`;
+        }
+      }
+    ]
+  },
+  {
+    id: 'driver', label: 'Driver', icon: '🧑‍✈️',
+    tests: [
+      {
+        name: 'Driver auth bad PIN → 401',
+        run: async () => {
+          const r = await fetch(`${API_BASE}/api/driver-auth/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ phone: '555-000-0001', pin: '0000' })
+          });
+          if (r.status !== 401) throw new Error(`Expected 401, got ${r.status}`);
+          return `status ${r.status} — bad PIN rejected`;
+        }
+      },
+      {
+        name: 'Driver auth GET /me (no token) → 401',
+        run: async () => {
+          const r = await fetch(`${API_BASE}/api/driver-auth/me`);
+          if (r.status !== 401) throw new Error(`Expected 401, got ${r.status}`);
+          return `status ${r.status} — unauthenticated blocked`;
+        }
+      },
+      {
+        name: 'Driver auth GET /me (bad token) → 401',
+        run: async () => {
+          const r = await fetch(`${API_BASE}/api/driver-auth/me`, {
+            headers: { Authorization: 'Bearer not_a_real_token_xyz' }
+          });
+          if (r.status !== 401) throw new Error(`Expected 401, got ${r.status}`);
+          return `status ${r.status} — bad token rejected`;
+        }
+      },
+      {
+        name: 'Driver profile guard (no token) → 401',
+        run: async () => {
+          const r = await fetch(`${API_BASE}/api/driver/profile`);
+          if (r.status !== 401) throw new Error(`Expected 401, got ${r.status}`);
+          return `status ${r.status} — profile protected`;
+        }
+      },
+      {
+        name: 'Payout history guard (no token) → 401',
+        run: async () => {
+          const r = await fetch(`${API_BASE}/api/payout/history`);
+          if (r.status !== 401) throw new Error(`Expected 401, got ${r.status}`);
+          return `status ${r.status} — payout history protected`;
+        }
+      },
+      {
+        name: 'Payout status guard (no token) → 401',
+        run: async () => {
+          const r = await fetch(`${API_BASE}/api/payout/status`);
+          if (r.status !== 401) throw new Error(`Expected 401, got ${r.status}`);
+          return `status ${r.status} — payout status protected`;
         }
       }
     ]
