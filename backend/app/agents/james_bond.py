@@ -14,6 +14,10 @@ Mission:
   what is broken or under-optimised, and delivers one crisp consulting
   report per run — zero filler, maximum signal.
 
+LLM strategy:
+  Gap analysis & directives → Qwen via OpenRouter (~$0.00035/1K tokens)
+  Executive brief           → Qwen first, Claude fallback if Qwen unavailable
+
 Outputs (written to org memory for Commander and CC Gulley to consume):
   james_bond/last_audit     — full JSON audit report
   james_bond/tech_gaps      — prioritised technology gap list
@@ -29,6 +33,7 @@ API surface:
 """
 from __future__ import annotations
 
+import json
 import textwrap
 from datetime import datetime, timezone
 from typing import Any
@@ -72,6 +77,110 @@ _TECH_DOMAINS = [
     "Error handling & fallbacks",
     "Security & credential hygiene",
 ]
+
+_OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
+
+_QWEN_GAP_SYSTEM = """You are James Bond, IEBC Consultant. You are analyzing a 28-agent AI logistics operation.
+You have been given org memory data and a preliminary gap list from automated scans.
+
+Your job: identify ADDITIONAL gaps, efficiency opportunities, and risks that the automated scan missed.
+
+Respond ONLY with a JSON object — no markdown, no prose:
+{
+  "additional_gaps": [
+    {"priority": "HIGH|MEDIUM|LOW", "domain": "<one of the tech domains>", "gap": "<specific finding>", "fix": "<exact action>"}
+  ],
+  "efficiency_opportunities": ["<1-2 sentence recommendation>"],
+  "risk_summary": "<1 sentence overall risk posture>"
+}
+
+Tech domains: LLM provider, Memory / org brain, External API integrations, Agent coverage gaps,
+Data pipeline health, Error handling & fallbacks, Security & credential hygiene.
+
+Keep additional_gaps to at most 3 new findings not already covered by the preliminary scan.
+Be specific and actionable — no filler."""
+
+_QWEN_BRIEF_SYSTEM = """You are James Bond, IEBC Consultant writing an executive brief for the Commander
+of a 28-agent AI trucking operation. This is a $0.00035/token model — make every token count.
+
+Structure: one tight paragraph of findings, then one crisp directive sentence.
+Tone: direct, intelligent, slightly dry. No bullet points. No filler.
+End with exactly: BOND DIRECTIVE TO COMMANDER: [one sentence action].
+
+You have full authority to flag critical issues and recommend immediate action."""
+
+
+def _call_qwen(system: str, user: str, max_tokens: int = 600) -> str | None:
+    """Call Qwen-2.5-72B via OpenRouter. Returns raw text or None on failure."""
+    from ..settings import get_settings
+    import httpx
+    s = get_settings()
+    if not s.openrouter_api_key:
+        return None
+    try:
+        r = httpx.post(
+            _OPENROUTER_URL,
+            headers={
+                "Authorization": f"Bearer {s.openrouter_api_key}",
+                "HTTP-Referer": "https://3lakeslogistics.com",
+                "X-Title": "3 Lakes Logistics — James Bond IEBC",
+                "Content-Type": "application/json",
+            },
+            json={
+                "model": s.openrouter_model,
+                "messages": [
+                    {"role": "system", "content": system},
+                    {"role": "user",   "content": user},
+                ],
+                "temperature": 0.1,
+                "max_tokens": max_tokens,
+            },
+            timeout=25,
+        )
+        if r.status_code == 200:
+            return r.json()["choices"][0]["message"]["content"].strip()
+    except Exception:
+        pass
+    return None
+
+
+def _qwen_enrich_gaps(
+    coverage: dict[str, Any],
+    pipeline: dict[str, Any],
+    org_mems: list[dict],
+    preliminary_gaps: list[dict],
+) -> tuple[list[dict], list[str], str]:
+    """Ask Qwen to find additional gaps beyond the rule-based scan.
+
+    Returns (extra_gaps, opportunities, risk_summary).
+    """
+    context = (
+        f"Active agents: {coverage['active_agent_count']}, "
+        f"Silent: {coverage['silent_agent_count']} ({coverage['silent_agents'][:5]})\n"
+        f"Missing memory keys: {coverage['missing_key_gaps']}\n"
+        f"Lead pipeline: {pipeline['tier_a_leads']} Tier-A, {pipeline['tier_b_leads']} Tier-B, "
+        f"connect rate: {pipeline['connect_rate']}\n"
+        f"Org memory entries: {len(org_mems)}\n"
+        f"Preliminary gaps already found:\n"
+        + "\n".join(f"- [{g['priority']}] {g['gap']}" for g in preliminary_gaps[:5])
+    )
+    raw = _call_qwen(_QWEN_GAP_SYSTEM, f"Analyze this org state:\n{context}", max_tokens=700)
+    if not raw:
+        return [], [], ""
+    try:
+        if raw.startswith("```"):
+            raw = raw.split("```")[1]
+            if raw.startswith("json"):
+                raw = raw[4:]
+        parsed = json.loads(raw)
+        extra   = parsed.get("additional_gaps", [])
+        opps    = parsed.get("efficiency_opportunities", [])
+        risk    = parsed.get("risk_summary", "")
+        # Validate structure
+        extra = [g for g in extra if isinstance(g, dict) and "gap" in g and "fix" in g]
+        return extra, opps, risk
+    except Exception:
+        return [], [], ""
 
 
 def _gather_org_intelligence() -> dict[str, Any]:
@@ -237,13 +346,10 @@ def _llm_brief(
     pipeline: dict[str, Any],
     gaps: list[dict[str, Any]],
     directives: list[str],
+    opportunities: list[str] | None = None,
+    risk_summary: str = "",
 ) -> str | None:
-    """Call Claude Sonnet to write a sharper consultant brief. Returns None on failure."""
-    from ..settings import get_settings
-    import httpx as _httpx
-    key = get_settings().anthropic_api_key
-    if not key:
-        return None
+    """Write the executive brief. Tries Qwen first (cheap), falls back to Claude Sonnet."""
     context = (
         f"Agent coverage: {coverage['active_agent_count']} active, {coverage['silent_agent_count']} silent\n"
         f"Silent agents: {coverage['silent_agents']}\n"
@@ -252,8 +358,23 @@ def _llm_brief(
         f"Vance connect rate: {pipeline['connect_rate']}\n"
         f"Top gaps: {[g['gap'] for g in gaps[:3]]}\n"
         f"Directives: {directives[:3]}\n"
-        f"Timestamp: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}"
+        + (f"Risk posture: {risk_summary}\n" if risk_summary else "")
+        + (f"Opportunities: {opportunities[:2]}\n" if opportunities else "")
+        + f"Timestamp: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}"
     )
+    prompt = f"Write my consulting brief from this data:\n{context}"
+
+    # ── Qwen first (~8x cheaper than Claude Sonnet) ───────────────────────────
+    result = _call_qwen(_QWEN_BRIEF_SYSTEM, prompt, max_tokens=500)
+    if result:
+        return result
+
+    # ── Claude Sonnet fallback ────────────────────────────────────────────────
+    from ..settings import get_settings
+    import httpx as _httpx
+    key = get_settings().anthropic_api_key
+    if not key:
+        return None
     try:
         r = _httpx.post(
             "https://api.anthropic.com/v1/messages",
@@ -263,16 +384,10 @@ def _llm_brief(
                 "content-type": "application/json",
             },
             json={
-                "model":      "claude-sonnet-4-6",
+                "model": "claude-sonnet-4-6",
                 "max_tokens": 500,
-                "system": (
-                    "You are James Bond, IEBC Consultant. You write sharp, no-filler executive briefs "
-                    "for the Commander of a 28-agent AI trucking operation. "
-                    "Structure: one paragraph of findings, one crisp directive. "
-                    "Tone: direct, intelligent, slightly dry. Never use bullet points. "
-                    "End every brief with: BOND DIRECTIVE TO COMMANDER: [one sentence action]."
-                ),
-                "messages": [{"role": "user", "content": f"Write my consulting brief from this data:\n{context}"}],
+                "system": _QWEN_BRIEF_SYSTEM,
+                "messages": [{"role": "user", "content": prompt}],
             },
             timeout=30,
         )
@@ -287,9 +402,11 @@ def _executive_summary(
     pipeline: dict[str, Any],
     gaps: list[dict[str, Any]],
     directives: list[str],
+    opportunities: list[str] | None = None,
+    risk_summary: str = "",
 ) -> str:
-    # Try LLM-powered brief first
-    llm = _llm_brief(coverage, pipeline, gaps, directives)
+    # Try LLM-powered brief (Qwen → Claude fallback)
+    llm = _llm_brief(coverage, pipeline, gaps, directives, opportunities, risk_summary)
     if llm:
         return llm
 
@@ -376,8 +493,19 @@ def run(payload: dict[str, Any]) -> dict[str, Any]:
     coverage = _agent_coverage_report(by_agent)
     pipeline = _assess_lead_pipeline(intel["by_agent"])
     gaps     = _identify_tech_gaps(coverage, org_mems, top_n=top_n)
+
+    # ── Qwen enrichment: find gaps the rule-based scan missed ────────────────
+    extra_gaps, opportunities, risk_summary = _qwen_enrich_gaps(
+        coverage, pipeline, org_mems, gaps
+    )
+    if extra_gaps:
+        # Merge and re-sort; cap total at top_n + 3 so Qwen adds signal, not noise
+        _w = {"HIGH": 0, "MEDIUM": 1, "LOW": 2}
+        gaps = sorted(gaps + extra_gaps, key=lambda g: _w.get(g.get("priority", "LOW"), 3))
+        gaps = gaps[:top_n + 3]
+
     directives = _build_directives(coverage, pipeline, gaps)
-    brief    = _executive_summary(coverage, pipeline, gaps, directives)
+    brief = _executive_summary(coverage, pipeline, gaps, directives, opportunities, risk_summary)
 
     # ── Auto-remediation: wake silent agents ─────────────────────────────────
     wakeup_report: dict[str, str] = {}
@@ -415,10 +543,14 @@ def run(payload: dict[str, Any]) -> dict[str, Any]:
         "coverage":      coverage,
         "lead_pipeline": pipeline,
         "tech_gaps":     gaps,
-        "directives":      directives,
-        "executive_brief": brief,
-        "remediation":     wakeup_report,
-        "outside_bond":    outside_bond_report,
+        "directives":        directives,
+        "executive_brief":   brief,
+        "opportunities":     opportunities,
+        "risk_summary":      risk_summary,
+        "qwen_enriched":     bool(extra_gaps),
+        "high_gap_count":    sum(1 for g in gaps if g.get("priority") == "HIGH"),
+        "remediation":       wakeup_report,
+        "outside_bond":      outside_bond_report,
     }
 
     mem.remember(
