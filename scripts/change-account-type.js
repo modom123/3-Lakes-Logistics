@@ -3,221 +3,206 @@
  *
  * Run: node scripts/change-account-type.js
  *
- * Prerequisites:
- *   - Chrome must be open and logged into play.google.com/console as nwtcinvestment@gmail.com
- *   - npx playwright install chromium  (first time only)
+ * This opens a visible browser window. Log in if prompted, then press Enter.
  */
 
 const { execSync, spawnSync } = require('child_process');
 const path = require('path');
+const readline = require('readline');
 
 // Auto-install playwright if missing
 function hasMod(m) { try { require.resolve(m); return true; } catch { return false; } }
 if (!hasMod('playwright')) {
-  console.log('Installing playwright...');
+  console.log('Installing playwright (one-time setup)...');
   execSync('npm install playwright', { cwd: path.join(__dirname, '..'), stdio: 'inherit' });
   execSync('npx playwright install chromium', { cwd: path.join(__dirname, '..'), stdio: 'inherit' });
-  const r = spawnSync(process.execPath, [__filename, ...process.argv.slice(2)], { stdio: 'inherit', env: process.env });
+  const r = spawnSync(process.execPath, [__filename], { stdio: 'inherit', env: process.env });
   process.exit(r.status ?? 0);
 }
 
 const { chromium } = require('playwright');
 
-const DEV_ID  = '6880853885521839099';
-const DUNS    = '145025174';
-const ORG     = '3 Lakes Logistics';
-const EMAIL   = 'nwtcinvestment@gmail.com';
-
+const DEV_ID      = '6880853885521839099';
+const DUNS        = '145025174';
+const ORG_NAME    = '3 Lakes Logistics';
 const ACCOUNT_URL = `https://play.google.com/console/u/0/developers/${DEV_ID}/account/developer-details?tab=aboutYou`;
+
+function pause(prompt) {
+  return new Promise(resolve => {
+    const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+    rl.question(prompt, () => { rl.close(); resolve(); });
+  });
+}
 
 async function wait(ms) { return new Promise(r => setTimeout(r, ms)); }
 
 async function shot(page, label) {
   const p = path.join(__dirname, `acct-${label}.png`);
   await page.screenshot({ path: p, fullPage: false });
-  console.log(`  📸 Screenshot: scripts/acct-${label}.png`);
+  console.log(`  Screenshot saved → scripts/acct-${label}.png`);
 }
 
-(async () => {
-  console.log('=== Bond: Change Account Type Individual → Organization ===\n');
-
-  // Connect to existing Chrome (must already be open and logged in)
-  let browser;
-  try {
-    browser = await chromium.connectOverCDP('http://localhost:9222');
-    console.log('✓ Connected to existing Chrome session');
-  } catch (e) {
-    console.log('No Chrome found on port 9222 — launching new browser window.');
-    console.log('Log into play.google.com/console as ' + EMAIL + ', then re-run this script.\n');
-    browser = await chromium.launch({ headless: false, slowMo: 300 });
-  }
-
-  const context = browser.contexts()[0] || await browser.newContext();
-  const page    = context.pages()[0]    || await context.newPage();
-
-  // ── Step 1: Go directly to the About You / account details tab ────────────
-  console.log('\n[1/4] Navigating to Account Details...');
-  await page.goto(ACCOUNT_URL, { waitUntil: 'domcontentloaded', timeout: 60000 });
-  await wait(5000);
-  console.log('  URL:', page.url().slice(0, 100));
-  await shot(page, '1-account-page');
-
-  // Dump visible text so we can see what's on the page
-  const pageText = await page.evaluate(() => document.body.innerText).catch(() => '');
-  console.log('\n  Page text (first 600 chars):');
-  console.log('  ' + pageText.slice(0, 600).replace(/\n/g, '\n  '));
-
-  // ── Step 2: Click "Change account type" button ───────────────────────────
-  console.log('\n[2/4] Looking for "Change account type" button...');
-
-  const changeSelectors = [
-    'button:has-text("Change account type")',
-    'a:has-text("Change account type")',
-    '[role="button"]:has-text("Change account type")',
-    'button:has-text("Change")',
-    'text=Change account type',
-  ];
-
-  let clicked = false;
-  for (const sel of changeSelectors) {
-    try {
-      const el = page.locator(sel).first();
-      if (await el.isVisible({ timeout: 3000 })) {
-        await el.click();
-        console.log(`  ✓ Clicked: ${sel}`);
-        clicked = true;
-        break;
-      }
-    } catch {}
-  }
-
-  if (!clicked) {
-    // Last resort: JS click by button text
-    clicked = await page.evaluate(() => {
-      const all = [...document.querySelectorAll('button, a, [role="button"]')];
-      const btn = all.find(e => e.innerText?.toLowerCase().includes('change account type'));
-      if (btn) { btn.click(); return true; }
-      return false;
-    });
-    if (clicked) console.log('  ✓ Clicked via JS');
-  }
-
-  if (!clicked) {
-    console.log('  ✗ "Change account type" button not found.');
-    console.log('    Check screenshot: scripts/acct-1-account-page.png');
-    console.log('    The button may not be visible if account is already Organization type.');
-    await browser.close();
-    return;
-  }
-
-  await wait(4000);
-  await shot(page, '2-after-click');
-
-  // Dump updated page text
-  const afterText = await page.evaluate(() => document.body.innerText).catch(() => '');
-  console.log('\n  Page text after click (first 600 chars):');
-  console.log('  ' + afterText.slice(0, 600).replace(/\n/g, '\n  '));
-
-  // ── Step 3: Fill DUNS and org name ───────────────────────────────────────
-  console.log('\n[3/4] Filling organization details...');
-
-  // DUNS number
-  const dunsSelectors = [
-    'input[placeholder*="DUNS" i]',
-    'input[aria-label*="DUNS" i]',
-    'input[name*="duns" i]',
-    'input[id*="duns" i]',
-    'label:has-text("DUNS") + * input',
-    'label:has-text("D-U-N-S") + * input',
-    'mat-form-field:has-text("DUNS") input',
-  ];
-  let dunsFound = false;
-  for (const sel of dunsSelectors) {
-    try {
-      const el = page.locator(sel).first();
-      if (await el.isVisible({ timeout: 3000 })) {
-        await el.click();
-        await el.fill(DUNS);
-        console.log(`  ✓ DUNS filled: ${DUNS}`);
-        dunsFound = true;
-        break;
-      }
-    } catch {}
-  }
-  if (!dunsFound) console.log('  ⚠ DUNS field not found — may appear after next step or not be required');
-
-  // Org name (may already be pre-filled as "3 Lakes Logistics")
-  const orgSelectors = [
-    'input[placeholder*="organization name" i]',
-    'input[aria-label*="organization" i]',
-    'input[name*="org" i]',
-    'mat-form-field:has-text("organization") input',
-    'mat-form-field:has-text("Organization") input',
-  ];
-  for (const sel of orgSelectors) {
+async function tryClick(page, selectors, description) {
+  for (const sel of selectors) {
     try {
       const el = page.locator(sel).first();
       if (await el.isVisible({ timeout: 2000 })) {
-        const current = await el.inputValue();
-        if (!current) {
-          await el.fill(ORG);
-          console.log(`  ✓ Org name filled: ${ORG}`);
-        } else {
-          console.log(`  ✓ Org name already set: ${current}`);
-        }
-        break;
+        await el.click();
+        console.log(`  ✓ Clicked ${description}`);
+        return true;
       }
     } catch {}
   }
+  // JS fallback — search by text
+  const found = await page.evaluate((desc) => {
+    const all = [...document.querySelectorAll('button, a, [role="button"], [role="link"], span')];
+    const el = all.find(e => e.innerText?.trim().toLowerCase().includes(desc.toLowerCase()));
+    if (el) { el.click(); return el.innerText.trim(); }
+    return null;
+  }, description);
+  if (found) {
+    console.log(`  ✓ JS-clicked "${found}"`);
+    return true;
+  }
+  return false;
+}
+
+async function tryFill(page, selectors, value, label) {
+  for (const sel of selectors) {
+    try {
+      const el = page.locator(sel).first();
+      if (await el.isVisible({ timeout: 2000 })) {
+        await el.click();
+        await el.fill(value);
+        console.log(`  ✓ Filled ${label}: ${value}`);
+        return true;
+      }
+    } catch {}
+  }
+  console.log(`  ⚠ ${label} field not found`);
+  return false;
+}
+
+(async () => {
+  console.log('=== Bond: Change Account Type → Organization ===\n');
+
+  // Always launch a visible browser — no CDP needed
+  const browser = await chromium.launch({
+    headless: false,
+    slowMo: 150,
+    args: ['--start-maximized'],
+  });
+
+  const context = await browser.newContext({ viewport: null });
+  const page    = await context.newPage();
+
+  // ── Step 1: Open Play Console ─────────────────────────────────────────────
+  console.log('[1/4] Opening Play Console...');
+  await page.goto('https://play.google.com/console', {
+    waitUntil: 'domcontentloaded',
+    timeout: 60000,
+  });
+  await wait(4000);
+
+  // Check if we need to log in
+  const url1 = page.url();
+  const text1 = await page.evaluate(() => document.body.innerText).catch(() => '');
+  console.log('  URL:', url1.slice(0, 80));
+
+  if (url1.includes('accounts.google.com') || text1.includes('Sign in')) {
+    console.log('\n  ⚠  Google sign-in required.');
+    console.log('  Log in as nwtcinvestment@gmail.com in the browser window.');
+    await pause('  Press Enter once you are logged into Play Console... ');
+    await wait(3000);
+  }
+
+  // ── Step 2: Navigate directly to account details ──────────────────────────
+  console.log('\n[2/4] Going to Account Details...');
+  await page.goto(ACCOUNT_URL, { waitUntil: 'domcontentloaded', timeout: 60000 });
+  await wait(5000);
+  await shot(page, '1-account-page');
+
+  const text2 = await page.evaluate(() => document.body.innerText).catch(() => '');
+  console.log('  URL:', page.url().slice(0, 90));
+  console.log('  Page preview:', text2.slice(0, 300).replace(/\n+/g, ' | '));
+
+  // ── Step 3: Click "Change account type" ───────────────────────────────────
+  console.log('\n[3/4] Clicking "Change account type"...');
+
+  const clicked = await tryClick(page, [
+    'button:has-text("Change account type")',
+    'a:has-text("Change account type")',
+    '[role="button"]:has-text("Change account type")',
+    'span:has-text("Change account type")',
+  ], 'Change account type');
+
+  if (!clicked) {
+    console.log('\n  Button not found automatically.');
+    console.log('  In the browser window, click "Change account type" manually.');
+    await pause('  Press Enter after you have clicked it... ');
+  }
+
+  await wait(5000);
+  await shot(page, '2-after-click');
+
+  const text3 = await page.evaluate(() => document.body.innerText).catch(() => '');
+  console.log('  Page after click:', text3.slice(0, 300).replace(/\n+/g, ' | '));
+
+  // ── Step 4: Fill form ─────────────────────────────────────────────────────
+  console.log('\n[4/4] Filling organization details...');
+
+  // DUNS
+  await tryFill(page, [
+    'input[placeholder*="DUNS" i]',
+    'input[aria-label*="DUNS" i]',
+    'input[id*="duns" i]',
+    'input[name*="duns" i]',
+    'mat-form-field:has-text("DUNS") input',
+    'mat-form-field:has-text("D-U-N-S") input',
+  ], DUNS, 'DUNS');
+
+  // Org name (may be pre-filled)
+  await tryFill(page, [
+    'input[placeholder*="organization" i]',
+    'input[aria-label*="organization" i]',
+    'mat-form-field:has-text("organization") input',
+  ], ORG_NAME, 'Org name');
 
   await wait(1000);
   await shot(page, '3-form-filled');
 
-  // ── Step 4: Submit ────────────────────────────────────────────────────────
-  console.log('\n[4/4] Submitting...');
-
-  const submitSelectors = [
+  // Submit
+  const submitted = await tryClick(page, [
     'button:has-text("Change account type")',
     'button:has-text("Submit")',
-    'button:has-text("Save")',
     'button:has-text("Confirm")',
+    'button:has-text("Save")',
     'button:has-text("Continue")',
     'button[type="submit"]:not([disabled])',
-  ];
-
-  let submitted = false;
-  for (const sel of submitSelectors) {
-    try {
-      const el = page.locator(sel).first();
-      if (await el.isVisible({ timeout: 3000 })) {
-        await el.click();
-        console.log(`  ✓ Submitted via: ${sel}`);
-        submitted = true;
-        break;
-      }
-    } catch {}
-  }
+  ], 'Submit');
 
   if (!submitted) {
-    console.log('  ⚠ Submit button not found — check screenshot');
+    console.log('\n  Submit button not found automatically.');
+    console.log('  Click the Submit / Confirm / Save button in the browser window.');
+    await pause('  Press Enter after submitting... ');
   }
 
   await wait(6000);
   await shot(page, '4-final');
 
   const finalText = await page.evaluate(() => document.body.innerText).catch(() => '');
-  console.log('\n  Final page text (first 400 chars):');
-  console.log('  ' + finalText.slice(0, 400).replace(/\n/g, '\n  '));
   console.log('\n  Final URL:', page.url().slice(0, 100));
+  console.log('  Final page:', finalText.slice(0, 300).replace(/\n+/g, ' | '));
 
   console.log('\n=== Done ===');
-  console.log('Check screenshots in scripts/acct-*.png');
-  console.log('If account type changed successfully, run the full setup next:');
-  console.log('  node scripts/bond-play-console-setup.js');
+  console.log('Screenshots saved in scripts/acct-*.png');
+  console.log('\nKeeping browser open — press Ctrl+C to close when finished.');
 
+  // Keep browser open so user can review
+  await pause('Press Enter to close the browser... ');
   await browser.close();
+
 })().catch(err => {
   console.error('\n✗ Error:', err.message);
-  console.error('Make sure Chrome is open at play.google.com/console logged in as ' + EMAIL);
   process.exit(1);
 });
