@@ -6,11 +6,13 @@
   "scripts": {
     "dev": "capacitor serve",
     "build": "mkdir -p public public/shared && cp eagleeye.html public/eagleeye.html && cp index.html public/index.html && cp privacy-policy.html public/ && cp data-safety.html public/ 2>/dev/null; cp shared/config.js public/shared/config.js && node scripts/inject-config.js; exit 0",
-    "cap:add:ios": "capacitor add ios",
+    "build:mobile": "bash scripts/build-mobile.sh",
     "cap:add:android": "capacitor add android",
+    "cap:add:ios": "capacitor add ios",
     "cap:sync": "capacitor sync",
-    "cap:open:ios": "capacitor open ios",
+    "cap:sync:android": "npm run build:mobile && capacitor sync android",
     "cap:open:android": "capacitor open android",
+    "cap:open:ios": "capacitor open ios",
     "cap:build:ios": "capacitor build ios",
     "cap:build:android": "capacitor build android"
   },
