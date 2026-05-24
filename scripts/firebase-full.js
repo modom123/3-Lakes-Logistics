@@ -108,10 +108,10 @@ function pause(msg) {
     console.log('║  ACTION: Log Firebase CLI into new56money@gmail.com      ║');
     console.log('╚══════════════════════════════════════════════════════════╝\n');
 
-    // Re-login Firebase CLI as new56money@gmail.com
-    console.log('  Running: firebase login --reauth');
+    // Skip reauth — user must login manually first
+    console.log('  Checking current Firebase login...');
     try {
-      execSync('firebase login --reauth', { stdio: 'inherit', timeout: 120000 });
+      execSync('firebase login:list', { stdio: 'inherit', timeout: 10000 });
     } catch {}
 
     // List projects available to this account
