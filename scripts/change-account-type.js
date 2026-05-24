@@ -307,7 +307,10 @@ async function dumpInputs(page) {
       await wait(1500);
       const picked = await page.evaluate(() => {
         const opts = [...document.querySelectorAll('mat-option, [role="option"]')];
-        const target = opts.find(o => /english/i.test(o.textContent || '')) || opts[0];
+        const target = opts.find(o => /english.*united states/i.test(o.textContent || ''))
+                  || opts.find(o => /english \(us\)/i.test(o.textContent || ''))
+                  || opts.find(o => /^english$/i.test(o.textContent?.trim() || ''))
+                  || opts[0];
         if (target) { target.click(); return target.textContent?.trim(); }
         return null;
       });
@@ -349,6 +352,21 @@ async function dumpInputs(page) {
     if (filled.length) console.log('  Filled:', filled.join(', '));
 
     await wait(500);
+
+    // Click "Verify email address" if present and enabled
+    const emailVerified = await page.evaluate(() => {
+      const dlg = document.querySelector('mat-dialog-container, [role="dialog"]');
+      if (!dlg) return null;
+      const btn = [...dlg.querySelectorAll('button')]
+        .find(b => /verify email/i.test(b.innerText || ''));
+      if (btn && !btn.disabled) { btn.click(); return 'clicked'; }
+      if (btn && btn.disabled) return 'disabled';
+      return 'not found';
+    });
+    if (emailVerified === 'clicked') {
+      console.log('  ✓ Clicked "Verify email address" — check nwtcinvestment@gmail.com for a code');
+      await pause('  Enter the verification code in the browser, then press Enter here... ');
+    }
 
     // Click Next inside the dialog (JS, bypasses disabled)
     const nextRes = await page.evaluate(() => {
