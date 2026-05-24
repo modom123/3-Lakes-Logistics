@@ -33,52 +33,73 @@ const DIST_URL         = `https://console.firebase.google.com/project/${FIREBASE
 async function wait(ms) { return new Promise(r => setTimeout(r, ms)); }
 
 // ── Find and extract AAB ───────────────────────────────────────────────────
-function findAab() {
-  // Check if already extracted
-  if (fs.existsSync(EXTRACT_DIR)) {
-    const existing = fs.readdirSync(EXTRACT_DIR).find(f => f.endsWith('.aab'));
-    if (existing) return path.join(EXTRACT_DIR, existing);
-  }
-
-  // Find the most recently modified zip in Downloads that contains "3 lakes"
-  const zips = fs.readdirSync(DOWNLOADS_DIR)
-    .filter(f => /\.(zip)$/i.test(f))
-    .map(f => ({ name: f, mtime: fs.statSync(path.join(DOWNLOADS_DIR, f)).mtimeMs }))
-    .sort((a, b) => b.mtime - a.mtime);
-
-  console.log('  Zips found in Downloads:');
-  zips.slice(0, 5).forEach(z => console.log(`    ${z.name}`));
-
-  // Pick the largest recent zip (most likely to be the AAB artifact)
-  const aabZip = zips.find(z =>
-    !/logs/.test(z.name) && fs.statSync(path.join(DOWNLOADS_DIR, z.name)).size > 1_000_000
-  );
-
-  if (!aabZip) return null;
-
-  const zipPath = path.join(DOWNLOADS_DIR, aabZip.name);
-  console.log(`\n  Extracting: ${aabZip.name}`);
-
-  if (!fs.existsSync(EXTRACT_DIR)) fs.mkdirSync(EXTRACT_DIR, { recursive: true });
-
+function listRecursive(dir, indent = '  ') {
   try {
-    execSync(`powershell -Command "Expand-Archive -Path '${zipPath}' -DestinationPath '${EXTRACT_DIR}' -Force"`, { stdio: 'pipe' });
-  } catch {
-    // Try 7zip or built-in unzip
-    execSync(`tar -xf "${zipPath}" -C "${EXTRACT_DIR}"`, { stdio: 'pipe' });
-  }
-
-  // Find the AAB inside extracted folder (may be nested)
-  function findRecursive(dir) {
     for (const f of fs.readdirSync(dir, { withFileTypes: true })) {
       const full = path.join(dir, f.name);
-      if (f.isDirectory()) { const r = findRecursive(full); if (r) return r; }
-      if (f.name.endsWith('.aab')) return full;
+      const size = f.isFile() ? ` (${(fs.statSync(full).size/1024).toFixed(0)}kb)` : '';
+      console.log(`${indent}${f.name}${size}`);
+      if (f.isDirectory()) listRecursive(full, indent + '  ');
     }
-    return null;
-  }
+  } catch {}
+}
 
-  return findRecursive(EXTRACT_DIR);
+function findRecursive(dir, ext) {
+  for (const f of fs.readdirSync(dir, { withFileTypes: true })) {
+    const full = path.join(dir, f.name);
+    if (f.isDirectory()) { const r = findRecursive(full, ext); if (r) return r; }
+    if (f.name.toLowerCase().endsWith(ext)) return full;
+  }
+  return null;
+}
+
+function extractZip(zipPath, destDir) {
+  if (!fs.existsSync(destDir)) fs.mkdirSync(destDir, { recursive: true });
+  try {
+    execSync(`powershell -Command "Expand-Archive -LiteralPath '${zipPath}' -DestinationPath '${destDir}' -Force"`, { stdio: 'pipe', timeout: 30000 });
+    return true;
+  } catch (e) {
+    console.log('  PowerShell extract failed:', e.message?.slice(0,100));
+    try {
+      execSync(`tar -xf "${zipPath}" -C "${destDir}"`, { stdio: 'pipe', timeout: 30000 });
+      return true;
+    } catch (e2) {
+      console.log('  tar extract failed:', e2.message?.slice(0,100));
+      return false;
+    }
+  }
+}
+
+function findAab() {
+  // Check all zips in Downloads, try each one
+  const zips = fs.readdirSync(DOWNLOADS_DIR)
+    .filter(f => /\.zip$/i.test(f))
+    .map(f => ({ name: f, full: path.join(DOWNLOADS_DIR, f), size: fs.statSync(path.join(DOWNLOADS_DIR, f)).size, mtime: fs.statSync(path.join(DOWNLOADS_DIR, f)).mtimeMs }))
+    .filter(z => !/logs/.test(z.name) && z.size > 500_000)
+    .sort((a, b) => b.mtime - a.mtime);
+
+  console.log(`  Candidate zips:`);
+  zips.forEach(z => console.log(`    ${z.name} (${(z.size/1024/1024).toFixed(1)} MB)`));
+
+  for (const zip of zips) {
+    const destDir = path.join(os.tmpdir(), '3lakes-extract-' + Date.now());
+    console.log(`\n  Trying: ${zip.name}`);
+    const ok = extractZip(zip.full, destDir);
+    if (!ok) continue;
+
+    console.log('  Contents:');
+    listRecursive(destDir);
+
+    // Look for .aab first, then .apk
+    let found = findRecursive(destDir, '.aab');
+    if (!found) found = findRecursive(destDir, '.apk');
+    if (found) {
+      console.log(`  ✓ Found: ${found}`);
+      return found;
+    }
+    console.log('  No AAB/APK in this zip — trying next...');
+  }
+  return null;
 }
 
 (async () => {
