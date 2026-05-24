@@ -4,8 +4,7 @@
  * Run: node scripts\create-app.js
  *
  * Prerequisites:
- *   - Chrome must be open on the "Create app" page in Play Console
- *   - OR just be logged into play.google.com/console
+ *   - Chrome must be open and logged into play.google.com/console
  */
 
 const { execSync, spawnSync } = require('child_process');
@@ -51,31 +50,57 @@ const CREATE_URL = `https://play.google.com/console/u/0/developers/${DEV_ID}/cre
 function pause(msg) {
   return new Promise(resolve => {
     const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-    rl.question(msg, () => { rl.close(); resolve(); });
+    rl.question(msg, ans => { rl.close(); resolve(ans ? ans.trim() : ''); });
   });
 }
 async function wait(ms) { return new Promise(r => setTimeout(r, ms)); }
 
-async function jsClick(page, text) {
-  return page.evaluate((t) => {
-    const all = [...document.querySelectorAll('button, [role="button"], mat-radio-button, label')];
-    const el = all.find(e => (e.innerText || e.textContent || '').trim().toLowerCase().includes(t.toLowerCase()));
-    if (el) { el.removeAttribute('disabled'); el.click(); return (el.innerText||'').trim().slice(0,40); }
-    return null;
-  }, text);
+// Fill an input by its position among all visible inputs on the form (0-based)
+async function fillByIndex(page, idx, value, selector = 'input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]):not([type="file"]), textarea') {
+  return page.evaluate(({ idx, value, selector }) => {
+    const inputs = [...document.querySelectorAll(selector)].filter(e => {
+      const s = window.getComputedStyle(e);
+      return s.display !== 'none' && s.visibility !== 'hidden' && e.offsetParent !== null;
+    });
+    const inp = inputs[idx];
+    if (!inp) return false;
+    inp.focus();
+    inp.value = value;
+    inp.dispatchEvent(new Event('input', { bubbles: true }));
+    inp.dispatchEvent(new Event('change', { bubbles: true }));
+    inp.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true }));
+    return true;
+  }, { idx, value, selector });
 }
 
-async function jsSet(page, ariaLabel, value) {
+// Fill by aria-label or placeholder (case-insensitive substring)
+async function jsSet(page, label, value) {
   return page.evaluate(({ lbl, val }) => {
     const inp = [...document.querySelectorAll('input, textarea')]
-      .find(e => (e.getAttribute('aria-label') || e.placeholder || '').toLowerCase().includes(lbl.toLowerCase()));
+      .find(e => {
+        const a = (e.getAttribute('aria-label') || e.placeholder || e.getAttribute('formcontrolname') || '').toLowerCase();
+        return a.includes(lbl.toLowerCase());
+      });
     if (!inp) return false;
+    inp.focus();
     inp.value = val;
     inp.dispatchEvent(new Event('input', { bubbles: true }));
     inp.dispatchEvent(new Event('change', { bubbles: true }));
     inp.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true }));
     return true;
-  }, { lbl: ariaLabel, val: value });
+  }, { lbl: label, val: value });
+}
+
+async function jsClick(page, text, exact = false) {
+  return page.evaluate(({ t, exact }) => {
+    const all = [...document.querySelectorAll('button, [role="button"], mat-radio-button, label')];
+    const el = all.find(e => {
+      const txt = (e.innerText || e.textContent || '').trim();
+      return exact ? txt === t : txt.toLowerCase().includes(t.toLowerCase());
+    });
+    if (el) { el.removeAttribute('disabled'); el.click(); return (el.innerText || '').trim().slice(0, 40); }
+    return null;
+  }, { t: text, exact });
 }
 
 (async () => {
@@ -95,116 +120,191 @@ async function jsSet(page, ariaLabel, value) {
   }
 
   // ── Step 1: Navigate to Create App ────────────────────────────────────────
-  console.log('\n[1] Navigating to Create App...');
-  const currentUrl = page.url();
-  if (!currentUrl.includes('create-app')) {
-    await page.goto(CREATE_URL, { waitUntil: 'domcontentloaded', timeout: 60000 });
-    await wait(4000);
-  } else {
-    console.log('  Already on Create App page ✓');
-    await wait(2000);
-  }
-  console.log('  URL:', page.url().slice(0, 90));
+  console.log('\n[1] Navigating to Create App page...');
+  await page.goto(CREATE_URL, { waitUntil: 'domcontentloaded', timeout: 60000 });
+  await wait(5000);
 
-  // Dump page to see what form fields are present
+  const currentUrl = page.url();
+  console.log('  URL:', currentUrl.slice(0, 100));
+
+  // Check if redirected to verification
+  if (currentUrl.includes('android-developer-verification') || currentUrl.includes('developer-details')) {
+    console.log('\n  ⚠  Google is requiring account verification before you can create an app.');
+    console.log('  This means the account type change to "Organization" must be completed first.');
+    console.log('\n  What to do:');
+    console.log('  1. In the browser, go to: Account → Developer details → Change account type');
+    console.log('  2. Fill in the Organization details and complete email verification manually');
+    console.log('  3. Once account type is changed, run this script again');
+    console.log('\n  Alternatively, contact Google Play support:');
+    console.log('  https://support.google.com/googleplay/android-developer/contact/publishing');
+    await pause('\n  Press Enter to close... ');
+    await browser.close();
+    return;
+  }
+
+  // Dump form to understand the page structure
   const formDump = await page.evaluate(() => {
-    const inputs = [...document.querySelectorAll('input, textarea, mat-select, [role="listbox"]')]
-      .map(e => ({
-        tag: e.tagName, aria: e.getAttribute('aria-label') || '',
-        ph: e.placeholder || '', val: (e.value || '').slice(0, 40),
+    const inputs = [...document.querySelectorAll('input, textarea')]
+      .filter(e => {
+        const s = window.getComputedStyle(e);
+        return s.display !== 'none' && s.visibility !== 'hidden';
+      })
+      .map((e, i) => ({
+        i, tag: e.tagName, type: e.type || '',
+        aria: e.getAttribute('aria-label') || '',
+        ph: e.placeholder || '',
+        fcn: e.getAttribute('formcontrolname') || '',
+        val: (e.value || '').slice(0, 40),
       }));
     const btns = [...document.querySelectorAll('button, mat-radio-button')]
       .map(e => (e.innerText || '').trim().slice(0, 50))
       .filter(t => t.length > 1);
     return { inputs, btns };
   });
-  console.log('\n  Form fields:');
-  formDump.inputs.forEach((f, i) => console.log(`    [${i}] <${f.tag}> aria="${f.aria}" placeholder="${f.ph}" value="${f.val}"`));
-  console.log('\n  Buttons:', formDump.btns.join(' | '));
+
+  console.log('\n  Visible form fields:');
+  formDump.inputs.forEach(f =>
+    console.log(`    [${f.i}] <${f.tag} type="${f.type}"> aria="${f.aria}" placeholder="${f.ph}" formcontrolname="${f.fcn}" value="${f.val}"`)
+  );
+  console.log('\n  Buttons:', formDump.btns.slice(0, 10).join(' | '));
 
   // ── Step 2: Fill App Name ─────────────────────────────────────────────────
   console.log('\n[2] Filling app name...');
-  const nameOk = await jsSet(page, 'app name', APP.name);
+
+  // Try multiple approaches
+  let nameOk = await jsSet(page, 'app name', APP.name);
+  if (!nameOk) nameOk = await jsSet(page, 'appName', APP.name);
+  if (!nameOk) nameOk = await jsSet(page, 'name', APP.name);
+  if (!nameOk) {
+    // Fill the first non-search, non-hidden text input on the page
+    nameOk = await page.evaluate((val) => {
+      const inputs = [...document.querySelectorAll('input[type="text"], input:not([type])')].filter(e => {
+        const aria = e.getAttribute('aria-label') || '';
+        if (aria.toLowerCase().includes('search')) return false;
+        const s = window.getComputedStyle(e);
+        return s.display !== 'none' && s.visibility !== 'hidden' && e.offsetParent !== null;
+      });
+      // Skip the search field (index 0), use the next one
+      const inp = inputs.find(e => !(e.getAttribute('aria-label') || '').toLowerCase().includes('search'));
+      if (!inp) return false;
+      inp.focus();
+      inp.value = val;
+      inp.dispatchEvent(new Event('input', { bubbles: true }));
+      inp.dispatchEvent(new Event('change', { bubbles: true }));
+      inp.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true }));
+      return true;
+    }, APP.name);
+  }
+
   if (nameOk) console.log(`  ✓ App name: ${APP.name}`);
-  else console.log('  ⚠ App name field not found — check browser');
+  else {
+    console.log('  ⚠ Could not auto-fill app name — please type it manually in the browser');
+    await pause('  Type the app name in Chrome, then press Enter here to continue... ');
+  }
+  await wait(800);
 
   // ── Step 3: Select language ───────────────────────────────────────────────
   console.log('\n[3] Selecting language...');
-  // Click language dropdown
   await page.evaluate(() => {
     const sel = [...document.querySelectorAll('[role="listbox"], mat-select')]
-      .find(e => (e.getAttribute('aria-label') || '').toLowerCase().includes('language'));
+      .find(e => (e.getAttribute('aria-label') || e.getAttribute('aria-labelledby') || e.id || '').toLowerCase().includes('language'));
     if (sel) sel.click();
   });
   await wait(1500);
-  await page.evaluate(() => {
+  const langSet = await page.evaluate(() => {
     const opt = [...document.querySelectorAll('mat-option, [role="option"]')]
       .find(o => /english.*united states/i.test(o.textContent || ''));
-    if (opt) opt.click();
+    if (opt) { opt.click(); return true; }
+    return false;
   });
-  console.log('  ✓ Language: English (United States)');
-  await wait(1000);
+  console.log(langSet ? '  ✓ Language: English (United States)' : '  (language already set or not found)');
+  await wait(800);
 
-  // ── Step 4: App or Game → App ─────────────────────────────────────────────
+  // ── Step 4: Select "App" (not Game) ──────────────────────────────────────
   console.log('\n[4] Selecting "App" type...');
-  const appR = await jsClick(page, 'App');
-  console.log('  ✓ Selected:', appR || '(may already be selected)');
+  const appSet = await page.evaluate(() => {
+    // Look for mat-radio-button with exact text "App"
+    const radios = [...document.querySelectorAll('mat-radio-button, [role="radio"]')];
+    const appRadio = radios.find(r => /^app$/i.test((r.innerText || r.textContent || '').trim()));
+    if (appRadio) { appRadio.click(); return 'App'; }
+    // Fallback: label containing only "App"
+    const labels = [...document.querySelectorAll('label')];
+    const appLabel = labels.find(l => /^app$/i.test((l.innerText || '').trim()));
+    if (appLabel) { appLabel.click(); return 'App (label)'; }
+    return null;
+  });
+  console.log(appSet ? `  ✓ Selected: ${appSet}` : '  (may already be selected)');
   await wait(500);
 
-  // ── Step 5: Free or Paid → Free ───────────────────────────────────────────
+  // ── Step 5: Free ──────────────────────────────────────────────────────────
   console.log('\n[5] Selecting "Free"...');
-  const freeR = await jsClick(page, 'Free');
-  console.log('  ✓ Selected:', freeR || '(may already be selected)');
+  const freeSet = await page.evaluate(() => {
+    const radios = [...document.querySelectorAll('mat-radio-button, [role="radio"]')];
+    const r = radios.find(e => /^free$/i.test((e.innerText || e.textContent || '').trim()));
+    if (r) { r.click(); return true; }
+    return false;
+  });
+  console.log(freeSet ? '  ✓ Free selected' : '  (may already be selected)');
   await wait(500);
 
-  // ── Step 6: Check all declaration checkboxes ──────────────────────────────
-  console.log('\n[6] Checking declarations...');
+  // ── Step 6: Checkboxes ───────────────────────────────────────────────────
+  console.log('\n[6] Checking declaration checkboxes...');
   const checked = await page.evaluate(() => {
     const boxes = [...document.querySelectorAll('input[type="checkbox"]')];
     let count = 0;
     boxes.forEach(cb => { if (!cb.checked) { cb.click(); count++; } });
     return count;
   });
-  console.log(`  ✓ Checked ${checked} declaration checkbox(es)`);
+  console.log(`  ✓ Checked ${checked} checkbox(es)`);
   await wait(500);
 
-  // ── Step 7: Click Create App ──────────────────────────────────────────────
+  // ── Step 7: Create app ───────────────────────────────────────────────────
   console.log('\n[7] Clicking "Create app"...');
-  const createRes = await page.evaluate(() => {
+  const created = await page.evaluate(() => {
     const btn = [...document.querySelectorAll('button')]
-      .find(b => /create app/i.test(b.innerText || ''));
-    if (btn) { btn.removeAttribute('disabled'); btn.click(); return true; }
+      .find(b => /create\s*app/i.test(b.innerText || ''));
+    if (btn) {
+      btn.removeAttribute('disabled');
+      btn.click();
+      return true;
+    }
     return false;
   });
 
-  if (!createRes) {
-    console.log('  "Create app" button not found — click it manually.');
-    await pause('  Press Enter after clicking Create app... ');
+  if (!created) {
+    console.log('  "Create app" button not found — click it manually in Chrome.');
+    await pause('  Press Enter after the app is created... ');
   } else {
-    console.log('  ✓ Clicked "Create app"');
+    console.log('  ✓ Clicked "Create app" — waiting for navigation...');
+    await wait(8000);
   }
 
-  await wait(8000);
-  console.log('\n  URL after create:', page.url().slice(0, 100));
+  const postUrl = page.url();
+  console.log('\n  URL after create:', postUrl.slice(0, 100));
 
-  // Check if we landed on the app dashboard
-  const appUrl = page.url();
-  const appId  = appUrl.match(/app\/(\d+)/)?.[1];
+  if (postUrl.includes('android-developer-verification')) {
+    console.log('\n  ⚠  Redirected to account verification again.');
+    console.log('  Google requires the Organization account type change before creating apps.');
+    console.log('  Complete the account type change in Play Console, then re-run this script.');
+    await pause('\n  Press Enter to close... ');
+    await browser.close();
+    return;
+  }
+
+  const appId = postUrl.match(/app\/(\d+)/)?.[1];
   if (appId) {
     console.log(`  ✓ App created! App ID: ${appId}`);
   } else {
-    console.log('  App ID not found in URL — check browser for errors');
-    await pause('  Press Enter when the app is created and you are on the app dashboard... ');
+    await pause('  Press Enter once you are on the app dashboard... ');
   }
 
-  // ── Step 8: Go to Store Listing ───────────────────────────────────────────
+  // ── Step 8: Store listing ────────────────────────────────────────────────
   console.log('\n[8] Navigating to Main store listing...');
-  const currentAppUrl = page.url();
-  const baseAppUrl    = currentAppUrl.match(/(.*\/app\/\d+)/)?.[1] || currentAppUrl;
+  const appUrl     = page.url();
+  const baseAppUrl = appUrl.match(/(.*\/app\/\d+)/)?.[1] || appUrl;
   await page.goto(`${baseAppUrl}/store-listing`, { waitUntil: 'domcontentloaded', timeout: 30000 });
   await wait(4000);
 
-  // Fill short description
   console.log('\n[9] Filling store listing...');
   await jsSet(page, 'short description', APP.shortDesc);
   console.log('  ✓ Short description filled');
@@ -214,7 +314,7 @@ async function jsSet(page, ariaLabel, value) {
   console.log('  ✓ Full description filled');
   await wait(500);
 
-  // ── Step 9: Upload screenshots ────────────────────────────────────────────
+  // ── Step 9: Upload screenshots one by one ────────────────────────────────
   console.log('\n[10] Uploading screenshots...');
   const screensDir = path.join(__dirname, '..', 'fastlane', 'metadata', 'android', 'en-US', 'images', 'phoneScreenshots');
   const shots = fs.existsSync(screensDir)
@@ -224,28 +324,34 @@ async function jsSet(page, ariaLabel, value) {
 
   if (shots.length > 0) {
     const fileInputs = await page.locator('input[type="file"]').all();
+    console.log(`  Found ${fileInputs.length} file input(s)`);
     if (fileInputs.length > 0) {
-      await fileInputs[0].setInputFiles(shots);
-      await wait(6000);
-      console.log('  ✓ Screenshots uploaded');
+      for (let i = 0; i < shots.length; i++) {
+        try {
+          await fileInputs[0].setInputFiles(shots[i]);
+          console.log(`  ✓ Uploaded: ${path.basename(shots[i])}`);
+          await wait(3000);
+        } catch (e) {
+          console.log(`  ⚠ Could not upload ${path.basename(shots[i])}: ${e.message.slice(0, 80)}`);
+        }
+      }
     } else {
-      console.log('  No file input found on store listing — may need to scroll');
+      console.log('  No file input found — may need to scroll to screenshot section');
     }
   }
 
-  // Save store listing
+  // Save
   await page.evaluate(() => {
     const btn = [...document.querySelectorAll('button')]
-      .find(b => /save/i.test(b.innerText || ''));
+      .find(b => /^save$/i.test((b.innerText || '').trim()));
     if (btn) btn.click();
   });
+  await wait(2000);
   console.log('  ✓ Saved store listing');
 
   console.log('\n=== Done ===');
-  console.log('App created and store listing filled.');
-  console.log('Next: upload the signed AAB via Releases → Production → Create new release');
-  console.log('\nKeeping browser open...');
-  await pause('Press Enter to close browser... ');
+  console.log('App listing created and store details filled.');
+  await pause('\nPress Enter to close browser... ');
   await browser.close();
 
 })().catch(err => {
