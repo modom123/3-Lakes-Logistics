@@ -37,90 +37,62 @@ async function shot(page, name) {
   const context = browser.contexts()[0] || await browser.newContext();
   const page    = context.pages()[0]    || await context.newPage();
 
-  // ── Go directly to the /account page (we know this URL works) ─────────────
-  console.log('\n[1/5] Opening Developer Account page...');
+  // ── Go to /account page ───────────────────────────────────────────────────
+  console.log('[1/4] Opening account page...');
   await page.goto(
     `https://play.google.com/console/u/0/developers/${DEV_ID}/account`,
     { waitUntil: 'domcontentloaded', timeout: 60000 }
   );
   await wait(5000);
-  console.log('  URL:', page.url().slice(0, 90));
   await shot(page, '1-account');
 
-  // Print all clickable elements so we can see what's there
-  const clickables = await page.evaluate(() =>
-    [...document.querySelectorAll('a, button, [role="button"], [tabindex="0"]')]
-      .map(e => e.innerText?.trim() || e.getAttribute('aria-label') || '')
-      .filter(t => t && t.length > 1 && t.length < 80)
-      .filter((v,i,a) => a.indexOf(v) === i)
-  );
-  console.log('  Clickable elements:', clickables.join(' | '));
+  // ── Click "About you" row (has arrow_right_alt, leads to edit form) ───────
+  console.log('[2/4] Clicking "About you" row...');
 
-  // ── Click "Account type" row to open the edit form ────────────────────────
-  console.log('\n[2/5] Clicking Account type to change it...');
-
-  // The "Account type" row has an arrow — click the row or the arrow
+  // Use JS to find and click the "About you" element (it's a clickable row/card)
   const clicked = await page.evaluate(() => {
-    // Find element containing "Account type"
-    const all = [...document.querySelectorAll('*')];
-    // Try the row/card containing "Account type" text
-    const candidates = all.filter(e =>
-      e.children.length < 5 &&
-      e.innerText?.includes('Account type') &&
-      e.innerText?.length < 200
-    );
-    if (candidates.length > 0) {
-      // Click the last (most specific) match
-      candidates[candidates.length - 1].click();
-      return 'clicked Account type element';
-    }
+    const all = [...document.querySelectorAll('a, button, [role="button"], [tabindex="0"], [class*="row"], [class*="card"], [class*="item"], [class*="link"]')];
+    // Find element whose text contains "About you" but is small (not the whole page)
+    const el = all.find(e => {
+      const t = e.innerText?.trim();
+      return t && t.includes('About you') && t.length < 300;
+    });
+    if (el) { el.click(); return el.tagName + ' / ' + el.className.slice(0, 60); }
+
+    // Fallback: find ANY element with exactly "About you" text
+    const all2 = [...document.querySelectorAll('*')];
+    const el2 = all2.find(e => e.childElementCount < 4 && e.innerText?.trim().startsWith('About you'));
+    if (el2) { el2.click(); return 'fallback: ' + el2.tagName + ' / ' + el2.className.slice(0, 60); }
     return 'not found';
   });
-  console.log('  JS click result:', clicked);
-  await wait(3000);
-  await shot(page, '2-after-acct-type-click');
+  console.log('  Clicked:', clicked);
+  await wait(4000);
   console.log('  URL:', page.url().slice(0, 90));
+  await shot(page, '2-about-you');
 
-  // Check if a form/modal appeared or we navigated somewhere
-  const afterText = await page.evaluate(() => document.body.innerText);
-  console.log('  Page text:', afterText.slice(0, 400).replace(/\n+/g, ' '));
+  const pageText = await page.evaluate(() => document.body.innerText);
+  console.log('  Page text:', pageText.slice(0, 500).replace(/\n+/g, ' '));
 
-  // If we navigated to an edit page, look for the Organization option
-  // Also try clicking an arrow_right_alt or edit button near "Account type"
-  if (!afterText.includes('Organization') && !afterText.includes('organization')) {
-    console.log('  Organization option not visible yet — trying arrow/edit button...');
-    // Try clicking arrow_right_alt SVG or button near "Account type"
-    await page.evaluate(() => {
-      const els = [...document.querySelectorAll('*')];
-      // Find the row that has "Account type" and click its last child (usually the arrow)
-      const row = els.find(e =>
-        e.innerText?.trim() === 'Account type' ||
-        (e.innerText?.includes('Account type') && e.innerText?.includes('Personal') && e.innerText?.length < 100)
-      );
-      if (row) {
-        // Click the row itself or its arrow child
-        const arrow = row.querySelector('[class*="arrow"], mat-icon, [data-mat-icon-name]') || row;
-        arrow.click();
-      }
-    });
-    await wait(3000);
-    await shot(page, '2b-after-arrow-click');
-    console.log('  URL after arrow:', page.url().slice(0, 90));
-  }
+  // ── If we're on an edit page, handle it ───────────────────────────────────
+  console.log('[3/4] Looking for account type and name fields...');
 
-  // ── Select Organization ────────────────────────────────────────────────────
-  console.log('\n[3/5] Selecting Organization...');
-  const currentText = await page.evaluate(() => document.body.innerText);
-  console.log('  Page text:', currentText.slice(0, 500).replace(/\n+/g, ' '));
-
+  // Log all inputs
   const inputs = await page.evaluate(() =>
-    [...document.querySelectorAll('input, mat-radio-button, [role="radio"]')]
-      .map(e => `${e.tagName} type=${e.type||''} value=${e.value||''} text="${e.innerText?.trim().slice(0,40)||''}" label="${e.getAttribute('aria-label')||''}"`)
+    [...document.querySelectorAll('input, mat-radio-button, [role="radio"], select, textarea')]
+      .map(e => `${e.tagName} type=${e.type||''} value="${e.value||''}" label="${e.getAttribute('aria-label')||''}" placeholder="${e.getAttribute('placeholder')||''}" text="${e.innerText?.trim().slice(0,40)||''}"`)
   );
-  console.log('  Inputs:', inputs.join('\n  '));
+  console.log('  Inputs:\n  ' + inputs.join('\n  '));
 
-  // Click Organization option
-  let orgFound = false;
+  // Log all buttons
+  const btns = await page.evaluate(() =>
+    [...document.querySelectorAll('button, [role="button"]')]
+      .map(e => e.innerText?.trim() || e.getAttribute('aria-label') || '')
+      .filter(t => t && t.length < 60)
+  );
+  console.log('  Buttons:', btns.join(' | '));
+
+  // Try to select Organization
+  let orgSelected = false;
   for (const sel of [
     'input[value="organization" i]',
     'input[value="ORGANIZATION"]',
@@ -133,77 +105,59 @@ async function shot(page, name) {
       const el = page.locator(sel).first();
       if (await el.isVisible({ timeout: 2000 })) {
         await el.click();
-        await wait(1000);
+        await wait(1500);
         console.log('  Selected Organization via:', sel);
-        orgFound = true;
+        orgSelected = true;
         break;
       }
     } catch {}
   }
-  if (!orgFound) console.log('  Organization option not found on this page');
-  await shot(page, '3-org-select');
 
-  // ── Fill name field ────────────────────────────────────────────────────────
-  console.log('\n[4/5] Filling in org name and DUNS...');
-
-  // Find name input (skip search boxes)
+  // Fill developer/org name
   const allInputs = await page.locator('input[type="text"], input:not([type])').all();
   for (const inp of allInputs) {
     const label = await inp.getAttribute('aria-label').catch(() => '') || '';
     const placeholder = await inp.getAttribute('placeholder').catch(() => '') || '';
     const val = await inp.inputValue().catch(() => '');
-    console.log(`  Input: label="${label}" placeholder="${placeholder}" value="${val}"`);
     if (label.toLowerCase().includes('search') || placeholder.toLowerCase().includes('search')) continue;
     if (label || placeholder || val) {
+      console.log(`  Filling: label="${label}" placeholder="${placeholder}" current="${val}"`);
       await inp.click({ clickCount: 3 });
       await inp.fill(ORG_NAME);
-      console.log('  Set name to:', ORG_NAME);
       break;
     }
   }
 
-  // DUNS
-  for (const sel of [
-    'input[aria-label*="DUNS" i]',
-    'input[placeholder*="DUNS" i]',
-    'input[formcontrolname*="duns" i]',
-    'input[id*="duns" i]',
-  ]) {
+  // Fill DUNS if present
+  for (const sel of ['input[aria-label*="DUNS" i]','input[placeholder*="DUNS" i]','input[formcontrolname*="duns" i]']) {
     try {
       const el = page.locator(sel).first();
       if (await el.isVisible({ timeout: 2000 })) {
-        await el.click({ clickCount: 3 });
-        await el.fill(DUNS);
-        console.log('  Filled DUNS:', DUNS);
-        break;
+        await el.click({ clickCount: 3 }); await el.fill(DUNS);
+        console.log('  Filled DUNS:', DUNS); break;
       }
     } catch {}
   }
 
-  await shot(page, '4-before-save');
+  await shot(page, '3-filled');
 
   // ── Save ──────────────────────────────────────────────────────────────────
-  console.log('\n[5/5] Saving...');
-  for (const sel of [
-    'button:has-text("Save")',
-    'button:has-text("Submit")',
-    'button:has-text("Continue")',
-    'button[type="submit"]:not([disabled])',
-  ]) {
+  console.log('[4/4] Saving...');
+  let saved = false;
+  for (const sel of ['button:has-text("Save")','button:has-text("Submit")','button:has-text("Continue")','button[type="submit"]:not([disabled])']) {
     try {
       const el = page.locator(sel).first();
       if (await el.isVisible({ timeout: 3000 })) {
-        await el.click();
-        await wait(5000);
-        console.log('  Clicked:', sel);
-        break;
+        await el.click(); await wait(5000);
+        console.log('  Clicked:', sel); saved = true; break;
       }
     } catch {}
   }
+  if (!saved) console.log('  No save button found');
 
-  await shot(page, '5-done');
-  const finalText = await page.evaluate(() => document.body.innerText);
-  console.log('  Result:', finalText.slice(0, 300).replace(/\n+/g, ' '));
+  await shot(page, '4-done');
+  const result = await page.evaluate(() => document.body.innerText);
+  console.log('  Final page:', result.slice(0, 300).replace(/\n+/g, ' '));
 
   await browser.close();
   console.log('\nDone.');
