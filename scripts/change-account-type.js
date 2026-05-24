@@ -177,75 +177,119 @@ async function dumpInputs(page) {
   console.log('  Next click:', r);
   await wait(3000);
 
-  // ── Multi-step dialog loop — fill fields and keep clicking Next ──────────
+  // ── Multi-step dialog loop — fill fields INSIDE the dialog only ──────────
   console.log('\n[5] Working through dialog steps...');
 
   for (let step = 3; step <= 10; step++) {
-    const dlg = await dialogStep(`step ${step}`);
-    await wait(1500);
+    await wait(2000);
 
-    // Dump all visible inputs in this step
-    const inputs = await page.locator('input:visible, textarea:visible').all();
-    console.log(`  Inputs on step ${step}: ${inputs.length}`);
-    for (let i = 0; i < inputs.length; i++) {
-      const lbl = (await inputs[i].getAttribute('aria-label').catch(() => '') || '');
-      const val = (await inputs[i].inputValue().catch(() => '') || '');
-      console.log(`    [${i}] aria="${lbl}" value="${val}"`);
-    }
+    // Get full dialog text and all inputs INSIDE the dialog
+    const dialogInfo = await page.evaluate(() => {
+      const dlg = document.querySelector('mat-dialog-container, [role="dialog"], .cdk-overlay-pane mat-card');
+      if (!dlg) return null;
 
-    // Fill known fields by aria-label
-    for (const inp of inputs) {
-      const lbl = ((await inp.getAttribute('aria-label').catch(() => '')) || '').toLowerCase();
-      const val = (await inp.inputValue().catch(() => '') || '');
+      const inputs = [...dlg.querySelectorAll('input, textarea, mat-select, select')].map(el => ({
+        tag:         el.tagName,
+        ariaLabel:   el.getAttribute('aria-label') || '',
+        placeholder: el.placeholder || '',
+        id:          el.id || '',
+        type:        el.type || '',
+        value:       el.value || '',
+        visible:     el.offsetParent !== null,
+        disabled:    el.disabled,
+      }));
 
-      if ((lbl.includes('duns') || lbl.includes('d-u-n-s')) && !val) {
-        await inp.click(); await inp.fill(DUNS);
-        console.log(`  ✓ Filled DUNS: ${DUNS}`);
+      const buttons = [...dlg.querySelectorAll('button, [role="button"]')].map(el => ({
+        text:     (el.innerText || '').trim(),
+        disabled: el.disabled,
+        aria:     el.getAttribute('aria-label') || '',
+      }));
 
-      } else if (lbl.includes('phone') && !val) {
-        await inp.click(); await inp.fill(ORG_PHONE);
-        console.log(`  ✓ Filled phone: ${ORG_PHONE}`);
+      return {
+        text:    dlg.innerText?.slice(0, 600),
+        inputs,
+        buttons,
+      };
+    });
 
-      } else if ((lbl.includes('organization') && lbl.includes('name')) && !val) {
-        await inp.click(); await inp.fill(ORG_NAME);
-        console.log(`  ✓ Filled org name: ${ORG_NAME}`);
-      }
-    }
-
-    // Also fill any select/dropdown for "organization type"
-    await page.evaluate(() => {
-      const selects = [...document.querySelectorAll('mat-select, select')];
-      for (const s of selects) {
-        // log them so we can see
-        console.log('SELECT:', s.getAttribute('aria-label'), s.value);
-      }
-    }).catch(() => {});
-
-    await wait(1000);
-
-    // Click Next (JS, bypassing disabled)
-    const nextRes = await jsClickButton(page, 'Next');
-    console.log(`  Next → ${nextRes}`);
-
-    if (nextRes === 'not found') {
-      // Try Submit/Save/Confirm
-      for (const lbl of ['Submit', 'Save', 'Confirm', 'Change account type', 'Done']) {
-        const res = await jsClickButton(page, lbl);
-        if (res !== 'not found') { console.log(`  ✓ Final: ${res}`); break; }
-      }
-      console.log('  No more Next/Submit buttons — may be done or need manual step.');
-      await pause('  Press Enter to finish... ');
+    if (!dialogInfo) {
+      console.log(`  No dialog on step ${step} — done!`);
       break;
     }
 
-    await wait(3000);
+    console.log(`\n  --- Dialog step ${step} ---`);
+    console.log('  Text:', dialogInfo.text?.replace(/\n+/g, ' | ').slice(0, 300));
+    console.log(`  Inputs (${dialogInfo.inputs.length}):`);
+    dialogInfo.inputs.forEach((inp, i) =>
+      console.log(`    [${i}] <${inp.tag}> aria="${inp.ariaLabel}" placeholder="${inp.placeholder}" value="${inp.value}" visible=${inp.visible} disabled=${inp.disabled}`)
+    );
+    console.log(`  Buttons:`);
+    dialogInfo.buttons.forEach((b, i) =>
+      console.log(`    [${i}] "${b.text}" aria="${b.aria}" disabled=${b.disabled}`)
+    );
 
-    // Check if dialog is gone (success)
+    // Fill fields inside the dialog
+    const filled = await page.evaluate(({ DUNS, ORG_PHONE, ORG_NAME }) => {
+      const dlg = document.querySelector('mat-dialog-container, [role="dialog"], .cdk-overlay-pane mat-card');
+      if (!dlg) return [];
+      const log = [];
+      const inputs = [...dlg.querySelectorAll('input, textarea')];
+      for (const inp of inputs) {
+        const lbl = (inp.getAttribute('aria-label') || inp.placeholder || inp.id || '').toLowerCase();
+        if (!inp.value) {
+          if (lbl.includes('duns') || lbl.includes('d-u-n-s')) {
+            inp.value = DUNS;
+            inp.dispatchEvent(new Event('input', { bubbles: true }));
+            inp.dispatchEvent(new Event('change', { bubbles: true }));
+            log.push(`DUNS → ${DUNS}`);
+          } else if (lbl.includes('phone')) {
+            inp.value = ORG_PHONE;
+            inp.dispatchEvent(new Event('input', { bubbles: true }));
+            inp.dispatchEvent(new Event('change', { bubbles: true }));
+            log.push(`phone → ${ORG_PHONE}`);
+          } else if (lbl.includes('org') || lbl.includes('company') || lbl.includes('business name')) {
+            inp.value = ORG_NAME;
+            inp.dispatchEvent(new Event('input', { bubbles: true }));
+            inp.dispatchEvent(new Event('change', { bubbles: true }));
+            log.push(`org → ${ORG_NAME}`);
+          }
+        }
+      }
+      return log;
+    }, { DUNS, ORG_PHONE, ORG_NAME });
+
+    if (filled.length) console.log('  Filled:', filled.join(', '));
+
+    await wait(500);
+
+    // Click Next inside the dialog (JS, bypasses disabled)
+    const nextRes = await page.evaluate(() => {
+      const dlg = document.querySelector('mat-dialog-container, [role="dialog"], .cdk-overlay-pane mat-card');
+      if (!dlg) return 'no dialog';
+      const btns = [...dlg.querySelectorAll('button, [role="button"]')];
+      // Prefer Next, then Submit/Confirm/Save/Done/Change
+      const order = ['next', 'submit', 'confirm', 'save', 'done', 'change'];
+      for (const key of order) {
+        const btn = btns.find(b => (b.innerText || b.getAttribute('aria-label') || '').trim().toLowerCase().includes(key));
+        if (btn) {
+          btn.removeAttribute('disabled');
+          btn.disabled = false;
+          btn.click();
+          return `clicked "${(btn.innerText || '').trim()}"`;
+        }
+      }
+      return 'no button found';
+    });
+    console.log(`  Button click → ${nextRes}`);
+
+    await wait(2000);
+
+    // Check if dialog closed
     const stillOpen = await page.evaluate(() =>
       !!document.querySelector('mat-dialog-container, [role="dialog"]')
     );
     if (!stillOpen) {
-      console.log(`  ✓ Dialog closed after step ${step} — account type change submitted!`);
+      console.log(`  ✓ Dialog closed — account type change submitted!`);
       break;
     }
   }
