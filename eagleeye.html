@@ -8000,6 +8000,27 @@ if (typeof nav === 'function') {
 .bo-clearance.fail{color:var(--red);}
 .bo-clearance.cond{color:var(--orange);}
 
+/* ── Bond Actions Log ─────────────────────────────────────────────────────── */
+.ba-item{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg);margin-bottom:8px;transition:border-color .15s;}
+.ba-item.blocked{border-color:rgba(239,68,68,.4);background:rgba(239,68,68,.04);}
+.ba-item.success{border-color:rgba(16,185,129,.35);background:rgba(16,185,129,.04);}
+.ba-item.warning{border-color:rgba(245,158,11,.4);background:rgba(245,158,11,.04);}
+.ba-item.info{border-color:rgba(99,102,241,.3);background:rgba(99,102,241,.04);}
+.ba-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-top:5px;}
+.ba-dot.blocked{background:#ef4444;}
+.ba-dot.success{background:#10b981;}
+.ba-dot.warning{background:#f59e0b;}
+.ba-dot.info{background:#6366f1;}
+.ba-dot.error{background:#ef4444;}
+.ba-body{flex:1;min-width:0;}
+.ba-mission{font-size:9px;font-family:var(--ff-m);letter-spacing:.8px;text-transform:uppercase;color:var(--muted);margin-bottom:3px;}
+.ba-msg{font-size:12px;color:var(--text);line-height:1.5;}
+.ba-action{font-size:11px;color:var(--gold);margin-top:5px;line-height:1.5;}
+.ba-ts{font-size:10px;color:var(--muted);white-space:nowrap;flex-shrink:0;}
+.ba-dismiss{background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px;padding:0 2px;line-height:1;flex-shrink:0;}
+.ba-dismiss:hover{color:var(--text);}
+.ba-section-hdr{font-size:9px;font-family:var(--ff-m);letter-spacing:1.2px;color:var(--muted);text-transform:uppercase;padding:8px 4px 4px;border-bottom:1px solid var(--border);margin-bottom:6px;}
+
 /* ── Bond Office Responsive ───────────────────────────────────────────────── */
 @media(max-width:768px){
   .bo-sit-grid{grid-template-columns:1fr;}
@@ -8037,6 +8058,7 @@ if (typeof nav === 'function') {
 
   <!-- ── Tab Strip ── -->
   <div class="bo-tabs">
+    <button class="bo-tab" id="botab-actions" onclick="boTab('actions');boLoadActions()">📋 Actions <span class="bo-tab-badge" id="bo-act-badge" style="display:none">0</span></button>
     <button class="bo-tab active" id="botab-sitroom" onclick="boTab('sitroom')">📊 Situation Room</button>
     <button class="bo-tab" id="botab-channel" onclick="boTab('channel')">💬 Intel Channel <span class="bo-tab-badge" id="bo-ch-badge" style="display:none">0</span></button>
     <button class="bo-tab" id="botab-compose" onclick="boTab('compose')">✉️ Compose</button>
@@ -8047,6 +8069,21 @@ if (typeof nav === 'function') {
 
   <!-- ── Tab Body ── -->
   <div class="bo-body">
+
+    <!-- ════ BOND ACTIONS ════ -->
+    <div class="bo-pane" id="bopane-actions">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px 8px;">
+        <div>
+          <div style="font-size:13px;font-weight:800;color:var(--text);letter-spacing:.3px;">BOND ACTIONS LOG</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px;">Autonomous mission results · blockers · pending items</div>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button class="bo-panel-action" onclick="boRunCredAudit()" title="Run credential audit now">🔍 Audit</button>
+          <button class="bo-panel-action" onclick="boLoadActions()">↺ Refresh</button>
+        </div>
+      </div>
+      <div id="bo-actions-list" style="padding:0 12px 12px;overflow-y:auto;flex:1;"></div>
+    </div>
 
     <!-- ════ SITUATION ROOM ════ -->
     <div class="bo-pane active" id="bopane-sitroom">
@@ -8355,7 +8392,7 @@ if (typeof nav === 'function') {
 
 // ── Tab switching
 function boTab(id) {
-  ['sitroom','channel','compose','audit','uistatus','vault'].forEach(t => {
+  ['actions','sitroom','channel','compose','audit','uistatus','vault'].forEach(t => {
     document.getElementById('botab-'+t)?.classList.toggle('active', t===id);
     document.getElementById('bopane-'+t)?.classList.toggle('active', t===id);
   });
@@ -8364,6 +8401,100 @@ function boTab(id) {
   if (id==='compose')   boLoadComposeHistory();
   if (id==='audit')     boRenderLastAudit();
   if (id==='uistatus')  boLoadUIStatus();
+  if (id==='actions')   boLoadActions();
+}
+
+// ── Bond Actions Log ──────────────────────────────────────────────────────────
+const _BA_TYPE_META = {
+  blocked: { dot:'blocked', label:'BLOCKED',  icon:'🔴' },
+  success: { dot:'success', label:'DONE',     icon:'✅' },
+  warning: { dot:'warning', label:'WARNING',  icon:'🟡' },
+  info:    { dot:'info',    label:'INFO',      icon:'🔵' },
+  error:   { dot:'error',   label:'ERROR',     icon:'🔴' },
+};
+
+async function boLoadActions() {
+  const list = document.getElementById('bo-actions-list');
+  if (!list) return;
+  list.innerHTML = '<div style="padding:16px;color:var(--muted);font-size:12px">⏳ Loading Bond actions…</div>';
+  try {
+    const r = await apiFetch('/api/agents/james_bond/run','POST',{scope:'get_actions'});
+    const d = await r.json();
+    const actions = d.actions || [];
+    const blocked = actions.filter(a => a.type==='blocked' && !a.resolved);
+
+    // Update badge
+    const badge = document.getElementById('bo-act-badge');
+    if (badge) {
+      badge.textContent = blocked.length;
+      badge.style.display = blocked.length ? '' : 'none';
+    }
+
+    if (!actions.length) {
+      list.innerHTML = '<div class="bo-empty" style="padding:40px"><div class="bo-empty-icon">📋</div><div class="bo-empty-text">NO ACTIONS YET — BOND IS STANDING BY</div></div>';
+      return;
+    }
+
+    // Sort: blocked first, then warnings, then others by ts desc
+    const order = {blocked:0,warning:1,error:2,info:3,success:4};
+    const sorted = [...actions].sort((a,b) => {
+      const ta = a.resolved ? 9 : (order[a.type]??5);
+      const tb = b.resolved ? 9 : (order[b.type]??5);
+      if (ta !== tb) return ta - tb;
+      return new Date(b.ts) - new Date(a.ts);
+    });
+
+    const activeItems  = sorted.filter(a => !a.resolved);
+    const resolvedItems = sorted.filter(a => a.resolved).slice(0,20);
+
+    let html = '';
+    if (activeItems.length) {
+      html += `<div class="ba-section-hdr">ACTIVE (${activeItems.length})</div>`;
+      html += activeItems.map(a => baRenderItem(a)).join('');
+    }
+    if (resolvedItems.length) {
+      html += `<div class="ba-section-hdr" style="margin-top:12px">RECENT COMPLETED</div>`;
+      html += resolvedItems.map(a => baRenderItem(a)).join('');
+    }
+    list.innerHTML = html;
+  } catch(e) {
+    list.innerHTML = `<div style="padding:14px;font-size:11px;color:var(--red)">Actions load error: ${boEsc(e.message)}</div>`;
+  }
+}
+
+function baRenderItem(a) {
+  const meta = _BA_TYPE_META[a.type] || _BA_TYPE_META.info;
+  const mission = (a.mission||'').replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase());
+  const age = boFmtAge(a.ts);
+  const dismissBtn = !a.resolved
+    ? `<button class="ba-dismiss" onclick="baDismiss('${boEsc(a.id)}')" title="Dismiss">✕</button>`
+    : '';
+  return `<div class="ba-item ${a.type}" id="ba-${boEsc(a.id)}">
+    <div class="ba-dot ${a.type}"></div>
+    <div class="ba-body">
+      <div class="ba-mission">${meta.icon} ${mission}</div>
+      <div class="ba-msg">${boEsc(a.message||'')}</div>
+      ${a.action_required ? `<div class="ba-action">→ ${boEsc(a.action_required)}</div>` : ''}
+    </div>
+    <div class="ba-ts">${age}</div>
+    ${dismissBtn}
+  </div>`;
+}
+
+async function baDismiss(actionId) {
+  const el = document.getElementById('ba-' + actionId);
+  if (el) el.style.opacity = '0.4';
+  await apiFetch('/api/agents/james_bond/run','POST',{scope:'dismiss_action', action_id: actionId});
+  setTimeout(boLoadActions, 300);
+}
+
+async function boRunCredAudit() {
+  const btn = document.querySelector('#bopane-actions .bo-panel-action');
+  if (btn) { const orig=btn.textContent; btn.textContent='⏳ Running…'; btn.disabled=true;
+    await apiFetch('/api/agents/james_bond/run','POST',{scope:'get_credentials'});
+    btn.textContent=orig; btn.disabled=false; }
+  else await apiFetch('/api/agents/james_bond/run','POST',{scope:'get_credentials'});
+  boLoadActions();
 }
 
 // ── Bond Credential Vault ─────────────────────────────────────────────────────
@@ -8469,6 +8600,7 @@ function boRefreshAll() {
   boLoadStatus();
   boLoadThread();
   boLoadSitRoom();
+  boLoadActions();
 }
 
 // ── Helpers
@@ -8811,7 +8943,7 @@ function boRenderAuditResults(d) {
 (function(){
   const _orig = window.nav;
   window.nav = function(id) {
-    if(id==='bond'){ boLoadStatus(); boLoadThread(); boLoadSitRoom(); }
+    if(id==='bond'){ boLoadStatus(); boLoadThread(); boLoadSitRoom(); boLoadActions(); }
     return _orig ? _orig(id) : undefined;
   };
 })();
@@ -8922,6 +9054,7 @@ window.bondRenderThread= boRenderThread;
 // ── Auto-refresh when Bond page is active
 setInterval(()=>{ if(document.getElementById('page-bond')?.classList.contains('active')){ boLoadThread(); boLoadStatus(); } }, 30000);
 setInterval(()=>{ if(document.getElementById('page-bond')?.classList.contains('active')) boLoadSitRoom(); }, 120000);
+setInterval(()=>{ if(document.getElementById('page-bond')?.classList.contains('active')) boLoadActions(); }, 45000);
 </script>
 
 

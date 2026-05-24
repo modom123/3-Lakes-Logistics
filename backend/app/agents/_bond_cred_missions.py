@@ -124,6 +124,41 @@ def mission_get_credentials(payload: dict) -> dict:
             at_status = "unreachable"
 
     set_count = sum(1 for r in results if r["status"] in ("set", "vault"))
+
+    # Log actionable blockers for each missing optional credential
+    _CRED_ACTIONS = {
+        "airtable_api_key":      ("airtable_leads",  "AIRTABLE_API_KEY missing — Bond cannot import leads from Airtable",
+                                   "Paste key in Lead Pipeline → Bond card, or store via Bond Office → Credential Vault."),
+        "render_api_key":        ("set_render_env",   "RENDER_API_KEY missing — Bond cannot auto-persist env vars to Render",
+                                   "Add RENDER_API_KEY in Render Dashboard → Your Service → Environment."),
+        "anthropic_api_key":     ("clm_scanner",      "ANTHROPIC_API_KEY missing — CLM contract scanner offline",
+                                   "Add ANTHROPIC_API_KEY in Render Dashboard → Environment."),
+        "openrouter_api_key":    ("outside_bond",     "OPENROUTER_API_KEY missing — Outside Bond reasoning offline",
+                                   "Add OPENROUTER_API_KEY in Render Dashboard → Environment."),
+        "postmark_server_token": ("email_delivery",   "POSTMARK_SERVER_TOKEN missing — carrier onboarding emails offline",
+                                   "Add POSTMARK_SERVER_TOKEN in Render Dashboard → Environment."),
+        "vapi_api_key":          ("vance_calls",      "VAPI_API_KEY missing — Vance voice calling offline",
+                                   "Add VAPI_API_KEY in Render Dashboard → Environment."),
+        "bland_ai_api_key":      ("vance_outbound",   "BLAND_AI_API_KEY missing — Vance outbound calls offline",
+                                   "Add BLAND_AI_API_KEY in Render Dashboard → Environment."),
+    }
+    try:
+        from . import james_bond as _jb
+        for r in results:
+            attr = r["key"].lower()
+            if r["status"] == "missing" and attr in _CRED_ACTIONS:
+                mission_tag, msg, action = _CRED_ACTIONS[attr]
+                _jb._log_action("blocked", mission_tag, msg, action_required=action)
+        # Log overall credential health as info
+        _jb._log_action(
+            "info", "get_credentials",
+            f"Credential audit: {set_count}/{len(results)} set"
+            + (f" · {len(missing_required)} required missing" if missing_required else " · all required present"),
+            resolved=True,
+        )
+    except Exception:
+        pass
+
     log_agent(
         _NAME, "get_credentials",
         payload={},
@@ -160,6 +195,15 @@ def mission_fetch_supabase_keys(payload: dict) -> dict:
         or _vault_get("SUPABASE_ACCESS_TOKEN")
     )
     if not access_token:
+        try:
+            from . import james_bond as _jb
+            _jb._log_action(
+                "blocked", "fetch_supabase_keys",
+                "Cannot fetch Supabase keys — SUPABASE_ACCESS_TOKEN not set",
+                action_required="Get a personal access token at supabase.com/dashboard/account/tokens, then paste it in Bond Office → Credential Vault → Fetch Supabase Keys.",
+            )
+        except Exception:
+            pass
         return {
             "agent":   _NAME,
             "mission": "fetch_supabase_keys",
@@ -269,6 +313,16 @@ def mission_fetch_supabase_keys(payload: dict) -> dict:
         result=f"fetched={list(fetched.keys())} render_set={render_set}",
     )
 
+    try:
+        from . import james_bond as _jb
+        _jb._log_action(
+            "success", "fetch_supabase_keys",
+            f"Fetched Supabase keys: {', '.join(fetched.keys())}"
+            + (f" · also set in Render" if render_set else ""),
+            resolved=True,
+        )
+    except Exception:
+        pass
     return {
         "agent":        _NAME,
         "mission":      "fetch_supabase_keys",

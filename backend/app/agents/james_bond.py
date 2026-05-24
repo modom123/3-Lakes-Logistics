@@ -514,8 +514,40 @@ def run(payload: dict[str, Any]) -> dict[str, Any]:
         v = payload.get("value", "")
         if k and v:
             _vault_set(k, v)
+            _log_action("success", "store_credential", f"{k} saved to Bond vault")
             return {"agent": _NAME, "mission": "store_credential", "status": "SUCCESS", "key": k}
         return {"agent": _NAME, "mission": "store_credential", "status": "ERROR", "reason": "key and value required"}
+
+    # ── Bond Actions Log: read ────────────────────────────────────────────────
+    if scope == "get_actions":
+        log = get_actions_log()
+        blocked = [e for e in log if e.get("type") == "blocked" and not e.get("resolved")]
+        return {
+            "agent":   _NAME,
+            "mission": "get_actions",
+            "status":  "OK",
+            "actions": log,
+            "blocked_count": len(blocked),
+        }
+
+    # ── Bond Actions Log: dismiss a single entry ──────────────────────────────
+    if scope == "dismiss_action":
+        action_id = payload.get("action_id", "")
+        log = get_actions_log()
+        updated = []
+        for e in log:
+            if e.get("id") == action_id:
+                e = {**e, "resolved": True}
+            updated.append(e)
+        try:
+            mem.remember(
+                _ACTIONS_AGENT, _ACTIONS_KEY, updated,
+                confidence=1.0, source_agent=_NAME,
+                summary=f"Bond action dismissed: {action_id}",
+            )
+        except Exception:
+            pass
+        return {"agent": _NAME, "mission": "dismiss_action", "status": "OK", "action_id": action_id}
 
     agent_focus: str | None = payload.get("agent_focus")
     top_n: int       = int(payload.get("top_n", 5))
@@ -680,6 +712,79 @@ def _vault_set(key: str, value: str) -> None:
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
+# BOND ACTIONS LOG
+# Persistent log of every mission outcome — success, blocked, warning, info.
+# Stored in agent_memory as agent_name='bond_actions', key='action_log'.
+# Eagle Eye Bond Office → Actions tab reads this directly.
+# ═══════════════════════════════════════════════════════════════════════════════
+
+_ACTIONS_AGENT = "bond_actions"
+_ACTIONS_KEY   = "action_log"
+
+
+def _log_action(
+    type: str,         # "blocked" | "success" | "warning" | "info" | "error"
+    mission: str,
+    message: str,
+    action_required: str | None = None,
+    resolved: bool = False,
+) -> None:
+    """Append an entry to Bond's persistent actions log (surfaces in Bond Office)."""
+    try:
+        existing = mem.recall(_ACTIONS_AGENT, _ACTIONS_KEY)
+        log: list[dict] = []
+        if existing:
+            v = existing.get("memory_value")
+            if isinstance(v, list):
+                log = v
+            elif isinstance(v, dict) and isinstance(v.get("log"), list):
+                log = v["log"]
+
+        entry: dict = {
+            "id":       f"{mission}_{int(datetime.now(timezone.utc).timestamp())}",
+            "type":     type,
+            "mission":  mission,
+            "message":  message,
+            "ts":       datetime.now(timezone.utc).isoformat(),
+            "resolved": resolved,
+        }
+        if action_required:
+            entry["action_required"] = action_required
+
+        # Dedupe: if an identical unresolved blocked entry already exists, replace it
+        if type == "blocked":
+            log = [e for e in log if not (e.get("mission") == mission
+                                          and e.get("type") == "blocked"
+                                          and not e.get("resolved"))]
+
+        log = [entry] + log[:99]  # keep last 100
+
+        mem.remember(
+            _ACTIONS_AGENT, _ACTIONS_KEY, log,
+            confidence=1.0, source_agent=_NAME,
+            summary=f"Bond action: [{type.upper()}] {mission} — {message[:60]}",
+        )
+    except Exception:
+        pass  # never let logging crash a mission
+
+
+def get_actions_log() -> list[dict]:
+    """Return the current Bond actions log (used by get_actions scope)."""
+    try:
+        existing = mem.recall(_ACTIONS_AGENT, _ACTIONS_KEY)
+        if not existing:
+            return []
+        v = existing.get("memory_value")
+        if isinstance(v, list):
+            return v
+        if isinstance(v, dict) and isinstance(v.get("log"), list):
+            return v["log"]
+    except Exception:
+        pass
+    return []
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
 # AIRTABLE LEADS MISSION
 # Bond pulls from "3 Lakes Business Hub" base, scores, deduplicates, inserts.
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -830,6 +935,11 @@ def _mission_pull_airtable_leads(payload: dict) -> dict:
     base_id = payload.get("airtable_base_id") or s.airtable_base_id or "appyRkym1i9mXEnzP"
 
     if not api_key:
+        _log_action(
+            "blocked", "airtable_leads",
+            "Cannot import Airtable leads — AIRTABLE_API_KEY not set",
+            action_required="Paste your Airtable personal access token in Eagle Eye → Lead Pipeline → Bond card, OR store it via Bond Office → Credential Vault.",
+        )
         return {
             "agent":   _NAME,
             "mission": "airtable_leads_pull",
@@ -922,10 +1032,18 @@ def _mission_pull_airtable_leads(payload: dict) -> dict:
         result=f"pulled={len(raw_records)} inserted={inserted} dupes={dupes} failed={failed}",
     )
 
+    status = "SUCCESS" if inserted > 0 else "PARTIAL"
+    _log_action(
+        "success" if inserted > 0 else "warning",
+        "airtable_leads",
+        f"Imported {inserted} lead(s) from Airtable '{table_name}' "
+        f"({dupes} duplicate{'s' if dupes != 1 else ''} skipped{', ' + str(failed) + ' failed' if failed else ''})",
+        resolved=True,
+    )
     return {
         "agent":         _NAME,
         "mission":       "airtable_leads_pull",
-        "status":        "SUCCESS" if inserted > 0 else "PARTIAL",
+        "status":        status,
         "airtable_base": base_id,
         "table_used":    table_name,
         "records_pulled": len(raw_records),
@@ -1034,6 +1152,11 @@ def _mission_set_render_env(payload: dict) -> dict:
 
     render_key = s.render_api_key
     if not render_key:
+        _log_action(
+            "blocked", "set_render_env",
+            "Cannot set Render environment variables — RENDER_API_KEY not set",
+            action_required="Add RENDER_API_KEY in Render Dashboard → Your Service → Environment. Get your API key at render.com/settings.",
+        )
         return {
             "agent":   _NAME,
             "mission": "set_render_env",
@@ -1146,6 +1269,13 @@ def _mission_set_render_env(payload: dict) -> dict:
         result=f"set={len(updates)} deploy_id={deploy_id}",
     )
 
+    keys_str = ", ".join(updates.keys())
+    _log_action(
+        "success", "set_render_env",
+        f"Set {len(updates)} Render env var(s): {keys_str}"
+        + (f" — deploy {deploy_id} triggered" if deploy_id else ""),
+        resolved=True,
+    )
     return {
         "agent":              _NAME,
         "mission":            "set_render_env",
