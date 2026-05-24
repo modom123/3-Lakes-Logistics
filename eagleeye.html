@@ -8038,6 +8038,7 @@ if (typeof nav === 'function') {
     <button class="bo-tab" id="botab-compose" onclick="boTab('compose')">✉️ Compose</button>
     <button class="bo-tab" id="botab-audit" onclick="boTab('audit')">🔍 Audit Report</button>
     <button class="bo-tab" id="botab-uistatus" onclick="boTab('uistatus')">🎨 UI Status <span class="bo-tab-badge" id="bo-ui-badge" style="display:none">!</span></button>
+    <button class="bo-tab" id="botab-vault" onclick="boTab('vault');boLoadVault()">🔑 Credential Vault</button>
   </div>
 
   <!-- ── Tab Body ── -->
@@ -8327,6 +8328,19 @@ if (typeof nav === 'function') {
       </div>
     </div>
 
+    <!-- ── Credential Vault pane ─────────────────────────────────────── -->
+    <div class="bo-pane" id="bopane-vault">
+      <div style="display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden">
+        <div class="bo-panel-hdr" style="flex-shrink:0;padding:14px 20px">
+          <div class="bo-panel-title">🔑 Bond Credential Vault</div>
+          <button class="bo-panel-action" onclick="boLoadVault()">↺ Refresh</button>
+        </div>
+        <div id="bo-vault-body" style="flex:1;overflow-y:auto;scrollbar-width:thin">
+          <div style="padding:16px;color:var(--muted);font-size:12px">Click the tab to load credential status.</div>
+        </div>
+      </div>
+    </div>
+
   </div><!-- /bo-body -->
 </div><!-- /bo-wrap -->
 </div>
@@ -8337,7 +8351,7 @@ if (typeof nav === 'function') {
 
 // ── Tab switching
 function boTab(id) {
-  ['sitroom','channel','compose','audit','uistatus'].forEach(t => {
+  ['sitroom','channel','compose','audit','uistatus','vault'].forEach(t => {
     document.getElementById('botab-'+t)?.classList.toggle('active', t===id);
     document.getElementById('bopane-'+t)?.classList.toggle('active', t===id);
   });
@@ -8346,6 +8360,105 @@ function boTab(id) {
   if (id==='compose')   boLoadComposeHistory();
   if (id==='audit')     boRenderLastAudit();
   if (id==='uistatus')  boLoadUIStatus();
+}
+
+// ── Bond Credential Vault ─────────────────────────────────────────────────────
+async function boLoadVault() {
+  const body = document.getElementById('bo-vault-body');
+  if (!body) return;
+  body.innerHTML = '<div style="padding:16px;color:var(--muted);font-size:12px">🔍 Bond auditing credentials…</div>';
+  try {
+    const r = await apiFetch('/api/agents/james_bond/run','POST',{scope:'get_credentials'});
+    const d = await r.json();
+    const creds = d.credentials || [];
+    const statusIcon = s => s==='set'?'✅':s==='vault'?'🔐':'❌';
+    const statusColor = s => s==='set'?'var(--green)':s==='vault'?'#e4a830':'var(--red)';
+    const sourceLabel = s => s==='env'?'Render env':s==='bond_vault'?'Bond vault':s||'—';
+
+    body.innerHTML = `
+      <div style="padding:16px 20px">
+        <div style="display:flex;align-items:center;gap:16px;margin-bottom:16px;flex-wrap:wrap">
+          <div style="font-size:22px;font-weight:900;color:${d.status==='OK'?'var(--green)':'var(--orange)'}">
+            ${d.set_count}/${creds.length} set
+          </div>
+          ${d.supabase_healthy?'<span style="color:var(--green);font-size:12px">✅ Supabase connected</span>':'<span style="color:var(--red);font-size:12px">❌ Supabase unreachable</span>'}
+          ${d.airtable_key_status?`<span style="color:${d.airtable_key_status==='valid'?'var(--green)':'var(--orange)'};font-size:12px">Airtable: ${d.airtable_key_status}</span>`:''}
+          <button class="btn-out" style="margin-left:auto;font-size:11px" onclick="boFetchSupabaseKeys()">⚡ Fetch Supabase Keys</button>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:8px">
+          ${creds.map(c=>`
+            <div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px 12px;display:flex;align-items:center;gap:10px">
+              <span style="font-size:16px">${statusIcon(c.status)}</span>
+              <div style="flex:1;min-width:0">
+                <div style="font-size:11px;font-weight:700;font-family:var(--ff-m);color:var(--text)">${c.key}</div>
+                <div style="font-size:10px;color:var(--muted)">${c.label}</div>
+              </div>
+              <div style="text-align:right;flex-shrink:0">
+                <div style="font-size:10px;color:${statusColor(c.status)};font-weight:600">${c.status.toUpperCase()}</div>
+                ${c.source?`<div style="font-size:9px;color:var(--muted)">${sourceLabel(c.source)}</div>`:''}
+                ${c.hint?`<div style="font-size:9px;font-family:var(--ff-m);color:var(--muted)">…${c.hint}</div>`:''}
+              </div>
+            </div>
+          `).join('')}
+        </div>
+        ${d.missing_required?.length?`
+          <div style="margin-top:16px;padding:12px;background:rgba(220,38,38,.08);border:1px solid rgba(220,38,38,.3);border-radius:8px">
+            <div style="font-weight:700;font-size:12px;color:var(--red);margin-bottom:6px">⚠️ Missing required credentials</div>
+            <div style="font-size:11px;color:var(--text)">${d.missing_required.join(' · ')}</div>
+          </div>`:''
+        }
+        <div style="margin-top:12px;padding:12px;background:rgba(228,168,48,.06);border:1px solid rgba(228,168,48,.2);border-radius:8px">
+          <div style="font-weight:700;font-size:11px;color:#e4a830;margin-bottom:8px">🔑 Store a credential in Bond Vault</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <input id="vault-key-in" placeholder="ENV_VAR_NAME" style="flex:0 0 180px;padding:6px 10px;border:1px solid rgba(0,0,0,.15);border-radius:5px;font-size:12px;font-family:var(--ff-m)">
+            <input id="vault-val-in" type="password" placeholder="value" style="flex:1;min-width:160px;padding:6px 10px;border:1px solid rgba(0,0,0,.15);border-radius:5px;font-size:12px">
+            <button class="btn-out" style="font-size:11px;background:#e4a830;color:#fff;border-color:#e4a830" onclick="boStoreCredential()">🕵️ Store</button>
+          </div>
+          <div id="vault-store-status" style="margin-top:6px;font-size:11px;display:none"></div>
+        </div>
+      </div>
+    `;
+  } catch(e) {
+    body.innerHTML = `<div style="padding:16px;color:var(--red);font-size:12px">Error: ${e.message}</div>`;
+  }
+}
+
+async function boFetchSupabaseKeys() {
+  const token = prompt('Supabase personal access token (from supabase.com/dashboard/account/tokens):');
+  if (!token) return;
+  toast('🕵️ Bond fetching Supabase keys…', 'info');
+  try {
+    const r = await apiFetch('/api/agents/james_bond/run','POST',{scope:'fetch_supabase_keys',supabase_access_token:token});
+    const d = await r.json();
+    if (d.status==='SUCCESS') {
+      toast(`✅ Fetched: ${(d.keys_fetched||[]).join(', ')}`, 'success');
+      setTimeout(boLoadVault, 800);
+    } else {
+      toast('Bond: '+d.reason, 'error');
+    }
+  } catch(e) { toast('Error: '+e.message,'error'); }
+}
+
+async function boStoreCredential() {
+  const k = document.getElementById('vault-key-in').value.trim().toUpperCase();
+  const v = document.getElementById('vault-val-in').value.trim();
+  const st = document.getElementById('vault-store-status');
+  if (!k || !v) { st.style.display='block'; st.textContent='Key and value are required.'; st.style.color='var(--red)'; return; }
+  st.style.display='block'; st.style.color='var(--muted)'; st.textContent='Storing…';
+  try {
+    const r = await apiFetch('/api/agents/james_bond/run','POST',{scope:'store_credential',key:k,value:v});
+    const d = await r.json();
+    if (d.status==='SUCCESS') {
+      st.style.color='var(--green)'; st.textContent=`✅ ${k} stored in Bond vault`;
+      document.getElementById('vault-key-in').value='';
+      document.getElementById('vault-val-in').value='';
+      // Also try to set in Render
+      apiFetch('/api/agents/james_bond/run','POST',{scope:'set_render_env',key:k,value:v,deploy:false}).catch(()=>{});
+      setTimeout(boLoadVault, 1000);
+    } else {
+      st.style.color='var(--red)'; st.textContent='Error: '+d.reason;
+    }
+  } catch(e) { st.style.color='var(--red)'; st.textContent='Error: '+e.message; }
 }
 
 function boRefreshAll() {

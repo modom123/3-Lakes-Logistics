@@ -72,6 +72,10 @@ class Settings(BaseSettings):
     airtable_api_key: str = ""
     airtable_base_id: str = ""
 
+    # Supabase personal access token — used by Bond to call Supabase Management API
+    # (different from service_role_key). Get one at supabase.com/dashboard/account/tokens
+    supabase_access_token: str = ""
+
     # Adobe Sign — e-signature integration
     adobe_client_id: str = ""
     adobe_client_secret: str = ""

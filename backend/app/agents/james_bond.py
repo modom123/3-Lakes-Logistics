@@ -482,10 +482,13 @@ def run(payload: dict[str, Any]) -> dict[str, Any]:
     """Execute a James Bond consulting audit with auto-remediation.
 
     Special scope values:
-      'airtable_leads' — pull all leads from the Airtable '3 Lakes Business Hub'
-                         base, deduplicate against Supabase, score, and insert.
+      'airtable_leads'       — pull leads from Airtable '3 Lakes Business Hub'
+      'set_render_env'       — set an env var on the Render service
+      'get_credentials'      — audit all credential health; auto-fetch where possible
+      'fetch_supabase_keys'  — pull anon/service_role from Supabase Management API
+      'store_credential'     — save a credential to the Bond vault (Supabase)
     """
-    scope: str       = str(payload.get("scope", "full")).lower()
+    scope: str = str(payload.get("scope", "full")).lower()
 
     # ── Airtable leads pull mission ──────────────────────────────────────────
     if scope == "airtable_leads":
@@ -494,6 +497,25 @@ def run(payload: dict[str, Any]) -> dict[str, Any]:
     # ── Render env-var setter mission ─────────────────────────────────────────
     if scope == "set_render_env":
         return _mission_set_render_env(payload)
+
+    # ── Credential audit ─────────────────────────────────────────────────────
+    if scope == "get_credentials":
+        from ._bond_cred_missions import mission_get_credentials
+        return mission_get_credentials(payload)
+
+    # ── Supabase Management API key fetch ────────────────────────────────────
+    if scope == "fetch_supabase_keys":
+        from ._bond_cred_missions import mission_fetch_supabase_keys
+        return mission_fetch_supabase_keys(payload)
+
+    # ── Store a single credential in the vault ───────────────────────────────
+    if scope == "store_credential":
+        k = payload.get("key", "")
+        v = payload.get("value", "")
+        if k and v:
+            _vault_set(k, v)
+            return {"agent": _NAME, "mission": "store_credential", "status": "SUCCESS", "key": k}
+        return {"agent": _NAME, "mission": "store_credential", "status": "ERROR", "reason": "key and value required"}
 
     agent_focus: str | None = payload.get("agent_focus")
     top_n: int       = int(payload.get("top_n", 5))
@@ -623,6 +645,38 @@ def run(payload: dict[str, Any]) -> dict[str, Any]:
     )
 
     return {"agent": _NAME, **report}
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# BOND VAULT — secure credential store backed by agent_memory
+# Agent name: 'bond_vault'  |  memory_key: the credential env-var name
+# Values are stored in memory_value["value"] (JSONB).
+# Access is restricted to service-role callers via Supabase RLS.
+# ═══════════════════════════════════════════════════════════════════════════════
+
+_VAULT_AGENT = "bond_vault"
+
+
+def _vault_get(key: str) -> str | None:
+    """Read a credential from the Bond vault. Returns None if not found."""
+    row = mem.recall(_VAULT_AGENT, key)
+    if row:
+        v = row.get("memory_value")
+        if isinstance(v, dict):
+            return v.get("value") or None
+        if isinstance(v, str) and v:
+            return v
+    return None
+
+
+def _vault_set(key: str, value: str) -> None:
+    """Persist a credential in the Bond vault (agent_memory)."""
+    mem.remember(
+        _VAULT_AGENT, key,
+        {"value": value, "updated": datetime.now(timezone.utc).isoformat()},
+        confidence=1.0, source_agent=_NAME,
+        summary=f"Bond vault: {key} stored",
+    )
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -767,7 +821,12 @@ def _mission_pull_airtable_leads(payload: dict) -> dict:
     from ..supabase_client import get_supabase
 
     s       = get_settings()
-    api_key = payload.get("airtable_api_key") or s.airtable_api_key
+    _from_payload = bool(payload.get("airtable_api_key"))
+    api_key = (
+        payload.get("airtable_api_key")         # 1. caller provided
+        or s.airtable_api_key                   # 2. Render env var
+        or _vault_get("AIRTABLE_API_KEY")        # 3. Bond vault (Supabase)
+    )
     base_id = payload.get("airtable_base_id") or s.airtable_base_id or "appyRkym1i9mXEnzP"
 
     if not api_key:
@@ -775,8 +834,8 @@ def _mission_pull_airtable_leads(payload: dict) -> dict:
             "agent":   _NAME,
             "mission": "airtable_leads_pull",
             "status":  "BLOCKED",
-            "reason":  "AIRTABLE_API_KEY not set. Add it to Render env vars or pass in payload.",
-            "action":  "Set AIRTABLE_API_KEY in Render dashboard → Environment → Add variable",
+            "reason":  "AIRTABLE_API_KEY not set in env, payload, or Bond vault.",
+            "action":  "Paste your Airtable personal access token in Eagle Eye → Lead Pipeline → Bond: Pull All Leads",
         }
 
     _bond_log.info("Bond: pulling Airtable leads base=%s", base_id)
@@ -835,7 +894,14 @@ def _mission_pull_airtable_leads(payload: dict) -> dict:
                 except Exception:
                     failed += 1
 
-    # 5. Write mission result to Bond memory
+    # 5. Auto-save key to vault so future pulls need no credentials
+    if _from_payload and api_key:
+        try:
+            _vault_set("AIRTABLE_API_KEY", api_key)
+        except Exception:
+            pass
+
+    # 6. Write mission result to Bond memory
     mem.remember(
         _NAME, "airtable_leads_pull",
         {
