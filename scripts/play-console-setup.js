@@ -17,6 +17,8 @@
 
 const { chromium } = require('playwright');
 
+const DEV_ID = '6880853885521839099';
+
 // ── All org details pre-filled ────────────────────────────────────────────────
 const ORG = {
   name:         '3 Lakes Logistics',
@@ -85,8 +87,8 @@ async function step(msg, fn) {
 
   // ── STEP 2: Change account to Organization ────────────────────────────────────
   await step('Navigating to Account details to change to Organization', async () => {
-    // Go to account settings
-    await page.goto('https://play.google.com/console/u/0/developers/account-details', {
+    // Go to account settings — must include developer ID in path
+    await page.goto(`https://play.google.com/console/u/0/developers/${DEV_ID}/account/developer-details?tab=aboutYou`, {
       waitUntil: 'networkidle'
     });
     await page.waitForTimeout(2000);
@@ -152,7 +154,7 @@ async function step(msg, fn) {
 
   // ── STEP 3: Create the app ────────────────────────────────────────────────────
   await step('Navigating to Create App', async () => {
-    await page.goto('https://play.google.com/console/u/0/developers/create-app', {
+    await page.goto(`https://play.google.com/console/u/0/developers/${DEV_ID}/create-app`, {
       waitUntil: 'networkidle'
     });
     await page.waitForTimeout(2000);
