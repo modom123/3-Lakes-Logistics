@@ -97,8 +97,16 @@ class Settings(BaseSettings):
     redis_url: str = ""
     backup_api_url: str = ""
 
+    # Daytona — External Bond sandbox workspace
+    daytona_sandbox_id: str = "2a50d3c2-f813-49c0-8dec-f9248581c5c6"
+
     # Claude AI — CLM contract scanner + autonomous agents
     anthropic_api_key: str = ""
+
+    # OpenRouter — low-cost LLM gateway (Qwen for Outside Bond reasoning)
+    # Get key at https://openrouter.ai/keys
+    openrouter_api_key: str = ""
+    openrouter_model: str = "qwen/qwen-2.5-72b-instruct"  # ~$0.00035/1K tokens
 
     # SendGrid — inbound email parsing for contract documents
     sendgrid_api_key: str = ""

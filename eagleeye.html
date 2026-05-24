@@ -25,6 +25,7 @@
   --shadow:0 2px 20px rgba(11,37,69,.08);
   --shadow-lg:0 8px 48px rgba(11,37,69,.14);
   --sidebar-w:240px;
+  --surface:#FFFFFF; --bg:#F8F9FC; --gold1:#D4960E;
 }
 html,body{height:100%;overflow:hidden;}
 body{font-family:var(--ff-b);color:var(--text);background:var(--off);display:flex;}
@@ -93,7 +94,7 @@ body{font-family:var(--ff-b);color:var(--text);background:var(--off);display:fle
 .sb-conn.connecting{background:rgba(228,168,48,.12);color:var(--gold2);border-color:rgba(228,168,48,.25);}
 
 /* ── MAIN ── */
-#main{flex:1;overflow:hidden;display:flex;flex-direction:column;min-width:0;}
+#main{flex:1;overflow:hidden;display:flex;flex-direction:column;min-width:0;position:relative;}
 
 .topbar{
   height:60px;flex-shrink:0;
@@ -743,6 +744,16 @@ td.td-name{font-weight:600;color:var(--navy);}
     <div class="sb-item" onclick="nav('clm')"><span class="sb-icon">📑</span> CLM Scanner <span class="sb-badge" id="clm-notif" style="display:none">●</span></div>
     <div class="sb-item" onclick="nav('vault')"><span class="sb-icon">🗄️</span> Document Vault</div>
     <div class="sb-item" onclick="nav('ledger')"><span class="sb-icon">📒</span> Atomic Ledger</div>
+  </div>
+
+  <div class="sb-section">
+    <div class="sb-label">Consulting</div>
+    <div class="sb-item" onclick="nav('bond')"><span class="sb-icon">🕵️</span> Bond Office <span class="sb-badge" id="bond-notif" style="display:none">0</span></div>
+  </div>
+
+  <div class="sb-section">
+    <div class="sb-label">Dev</div>
+    <div class="sb-item" onclick="nav('tests')"><span class="sb-icon">🧪</span> Test Suite</div>
   </div>
 
   <div class="sb-footer">
@@ -2091,10 +2102,10 @@ td.td-name{font-weight:600;color:var(--navy);}
           <div style="font-size:12px;color:#5A6A82;">AI Infrastructure Founder · 30+ Years · $100M+ Portfolio Management · IEBC Architect</div>
         </div>
       </div>
-      <p>25-executive org structure — 9 cabinet + 16 expansion. KPI engine, 3-tier triage, contingency plans, daily State of the Fleet brief by Dr. Evelyn Sterling.</p>
+      <p>27-executive org structure — 9 cabinet + 16 expansion + James Bond, Lucas Sterling &amp; Chloe Sinclair (IEBC Consultants). KPI engine, 3-tier triage, contingency plans, daily State of the Fleet brief by Dr. Evelyn Sterling.</p>
     </div>
     <div class="ec-hero-stats">
-      <div class="ec-stat"><div class="ec-stat-n">25</div><div class="ec-stat-l">Executives</div></div>
+      <div class="ec-stat"><div class="ec-stat-n">28</div><div class="ec-stat-l">Executives</div></div>
       <div class="ec-stat"><div class="ec-stat-n">9</div><div class="ec-stat-l">Cabinet</div></div>
       <div class="ec-stat"><div class="ec-stat-n">5</div><div class="ec-stat-l">Contingencies</div></div>
       <div class="ec-stat"><div class="ec-stat-n">200</div><div class="ec-stat-l">Auto Steps</div></div>
@@ -2181,7 +2192,7 @@ td.td-name{font-weight:600;color:var(--navy);}
 
   <!-- Org Chart — All 25 Executives -->
   <div class="ec-card">
-    <div class="ec-sec-hd"><h2>Org Chart — 25 Executives</h2><span class="ec-count-badge">IEBC Workforce</span></div>
+    <div class="ec-sec-hd"><h2>Org Chart — 28 Executives</h2><span class="ec-count-badge">IEBC Workforce</span></div>
     <table class="ec-table" id="ec-org-table">
       <thead>
         <tr>
@@ -2709,6 +2720,14 @@ function nav(id){
   document.getElementById('page-'+id).classList.add('active');
   document.querySelectorAll('.sb-item').forEach(n=>{if(n.getAttribute('onclick')?.includes("'"+id+"'"))n.classList.add('active');});
   document.getElementById('page-title').textContent=pageNames[id]||id;
+  if(id==='bond'){
+    const ticker=document.querySelector('.ticker-strip');
+    const topbar=document.querySelector('.topbar');
+    const top=(ticker?ticker.offsetHeight:0)+(topbar?topbar.offsetHeight:0);
+    document.getElementById('page-bond').style.top=top+'px';
+    const content=document.querySelector('.content');
+    if(content) content.scrollTop=0;
+  }
   if(id==='carriers'){const n=document.getElementById('carrier-notif');if(n)n.style.display='none';}
   if(id==='invoices'){const n=document.getElementById('invoice-notif');if(n)n.style.display='none';renderInvoices();}
   if(id==='notes')loadNotes();
@@ -3932,7 +3951,10 @@ async function ecLoadExecutives(){
       return ac-bc||(a.department||'').localeCompare(b.department||'');
     });
     if(!all.length){tbody.innerHTML='<tr><td colspan="6" class="ec-empty">No executive data found — check API.</td></tr>';return;}
-    tbody.innerHTML=all.map(ex=>{
+    const bondRow='<tr style="background:#0d0d1a;border-left:3px solid #f5c842;"><td><div class="ec-name-cell"><div class="ec-avatar" style="background:#1C1C2E;color:#f5c842;font-style:italic">JB</div><span class="ec-title-text" style="color:#f5c842">James Bond<span class="ec-cabinet-badge" style="background:#1C1C2E;color:#f5c842;border:1px solid #f5c842">IEBC</span></span></div></td><td style="font-size:12px;color:#aaa;font-style:italic">IEBC Consultant</td><td><span class="ec-dept-pill" style="background:rgba(245,200,66,.15);color:#f5c842">consulting</span></td><td style="font-size:12px;color:#aaa">Mark Odom (CEO)</td><td style="font-size:12px;font-weight:600;color:#f5c842">Integration Health Score</td><td style="font-family:var(--ff-m);font-size:11px;color:#aaa">All 11 domains green</td></tr>'+
+      '<tr style="background:#001a12;border-left:3px solid #06b6d4;"><td><div class="ec-name-cell"><div class="ec-avatar" style="background:#012a1a;color:#06b6d4;font-style:italic">LS</div><span class="ec-title-text" style="color:#06b6d4">Lucas Sterling<span class="ec-cabinet-badge" style="background:#012a1a;color:#06b6d4;border:1px solid #06b6d4">IEBC</span></span></div></td><td style="font-size:12px;color:#aaa;font-style:italic">UI Developer · Node 101</td><td><span class="ec-dept-pill" style="background:rgba(6,182,212,.15);color:#06b6d4">ui/ux</span></td><td style="font-size:12px;color:#aaa">Mark Odom (CEO)</td><td style="font-size:12px;font-weight:600;color:#06b6d4">Eagle Eye UI Health Score</td><td style="font-family:var(--ff-m);font-size:11px;color:#aaa">≥ 90 / no critical issues</td></tr>'+
+      '<tr style="background:#150022;border-left:3px solid #a855f7;"><td><div class="ec-name-cell"><div class="ec-avatar" style="background:#1e0033;color:#a855f7;font-style:italic">CS</div><span class="ec-title-text" style="color:#a855f7">Chloe Sinclair<span class="ec-cabinet-badge" style="background:#1e0033;color:#a855f7;border:1px solid #a855f7">IEBC</span></span></div></td><td style="font-size:12px;color:#aaa;font-style:italic">QA Engineer · Node 128</td><td><span class="ec-dept-pill" style="background:rgba(168,85,247,.15);color:#a855f7">quality</span></td><td style="font-size:12px;color:#aaa">Lucas Sterling</td><td style="font-size:12px;font-weight:600;color:#a855f7">Viewport QA Clearance</td><td style="font-family:var(--ff-m);font-size:11px;color:#aaa">PASS — zero critical issues</td></tr>';
+    tbody.innerHTML=bondRow+all.map(ex=>{
       const isCmd=!ex.reports_to;
       const isCab=ex.reports_to==='commander';
       const reportsLabel=isCmd?'<span style="color:#0B1F4B;font-weight:700">Top — Commander</span>':(ex.reports_to==='commander'?'Mark Odom (CEO)':esc(ex.reports_to||'—'));
@@ -4500,7 +4522,7 @@ async function loadAgents(){
     }).join('');
   }catch(e){
     const grid=document.getElementById('agent-grid');
-    if(grid)grid.innerHTML='<div class="empty-state">Backend offline — set API_BASE_URL in Vercel env vars to connect to Railway.</div>';
+    if(grid)grid.innerHTML='<div class="empty-state">Backend offline — set API_BASE_URL in Render environment to connect.</div>';
   }
 }
 
@@ -7653,6 +7675,2624 @@ if (typeof nav === 'function') {
     <div id="dash-summary-body" style="overflow-y:auto;padding:16px 24px 24px;flex:1"></div>
   </div>
 </div>
+
+<!-- BOND OFFICE PAGE -->
+<div class="page" id="page-bond">
+<style>
+/* ── Bond Office ──────────────────────────────────────────────────────────── */
+/* Suppress the pgIn slide-in animation — Bond is a fixed full-page overlay */
+#page-bond{animation:none;}
+#page-bond.active{position:fixed;top:93px;left:var(--sidebar-w);right:0;bottom:0;z-index:30;display:flex;flex-direction:column;overflow:hidden;background:var(--bg);}
+@media(max-width:768px){#page-bond.active{top:87px;left:0;}}
+.bo-wrap{display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden;background:var(--bg);}
+.bo-header{display:flex;align-items:center;justify-content:space-between;padding:14px 24px;background:var(--navy);flex-shrink:0;border-bottom:2px solid rgba(228,168,48,.3);}
+.bo-header-left{display:flex;align-items:center;gap:14px;}
+.bo-badge{width:44px;height:44px;border-radius:10px;background:rgba(228,168,48,.15);border:1.5px solid rgba(228,168,48,.35);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;}
+.bo-title{font-family:var(--ff-h);font-size:18px;font-weight:900;color:#fff;letter-spacing:.3px;}
+.bo-sub{font-size:10px;color:rgba(228,168,48,.75);letter-spacing:.5px;margin-top:1px;font-family:var(--ff-m);}
+.bo-header-right{display:flex;align-items:center;gap:10px;}
+.bo-conn{display:flex;align-items:center;gap:6px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:20px;padding:4px 12px;}
+.bo-conn-dot{width:7px;height:7px;border-radius:50%;background:var(--muted);flex-shrink:0;}
+.bo-conn-dot.live{background:var(--green);box-shadow:0 0 6px var(--green);}
+.bo-conn-dot.err{background:var(--red);}
+.bo-conn-label{font-family:var(--ff-m);font-size:9px;color:rgba(255,255,255,.6);letter-spacing:1px;text-transform:uppercase;}
+.bo-hdr-btn{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);color:rgba(255,255,255,.8);padding:5px 14px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;transition:background .15s;font-family:var(--ff-b);}
+.bo-hdr-btn:hover{background:rgba(228,168,48,.2);border-color:rgba(228,168,48,.4);color:var(--gold2);}
+/* Tab strip */
+.bo-tabs{display:flex;background:var(--navy2);border-bottom:1px solid rgba(228,168,48,.15);flex-shrink:0;padding:0 20px;gap:2px;overflow-x:auto;}
+.bo-tab{background:transparent;border:none;border-bottom:2px solid transparent;padding:10px 18px;font-size:12px;font-weight:600;color:rgba(255,255,255,.45);cursor:pointer;letter-spacing:.3px;transition:color .15s,border-color .15s;font-family:var(--ff-b);white-space:nowrap;display:flex;align-items:center;gap:6px;}
+.bo-tab:hover{color:rgba(255,255,255,.7);}
+.bo-tab.active{color:var(--gold2);border-bottom-color:var(--gold2);}
+.bo-tab-badge{background:var(--red);color:#fff;font-size:9px;font-weight:800;border-radius:10px;padding:1px 6px;font-family:var(--ff-m);}
+/* Tab panes — use flex:1 chain so height resolves without height:100% fragility */
+.bo-body{flex:1;min-height:0;overflow:hidden;position:relative;display:flex;flex-direction:column;}
+.bo-pane{display:none;overflow:hidden;}
+.bo-pane.active{display:flex;flex-direction:column;flex:1;min-height:0;}
+
+/* ── Situation Room ───────────────────────────────────────────────────────── */
+.bo-sitroom{display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden;padding:20px 24px;gap:16px;}
+.bo-kpi-strip{display:flex;gap:12px;flex-shrink:0;flex-wrap:wrap;}
+.bo-kpi{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 18px;flex:1;min-width:110px;display:flex;flex-direction:column;gap:3px;}
+.bo-kpi-n{font-size:28px;font-weight:900;line-height:1;color:var(--text);}
+.bo-kpi-l{font-family:var(--ff-m);font-size:9px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);margin-top:2px;}
+.bo-kpi-sub{font-size:10px;color:var(--muted);}
+.bo-kpi.ok .bo-kpi-n{color:var(--green);}
+.bo-kpi.warn .bo-kpi-n{color:var(--orange);}
+.bo-kpi.crit .bo-kpi-n{color:var(--red);}
+.bo-kpi.gold .bo-kpi-n{color:var(--gold2);}
+.bo-sit-grid{flex:1;display:grid;grid-template-columns:1fr 380px;gap:16px;min-height:0;overflow:hidden;}
+.bo-intel-panel,.bo-brief-panel{background:var(--surface);border:1px solid var(--border);border-radius:10px;display:flex;flex-direction:column;overflow:hidden;}
+.bo-panel-hdr{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--border);flex-shrink:0;}
+.bo-panel-title{font-weight:700;font-size:13px;color:var(--text);display:flex;align-items:center;gap:7px;}
+.bo-panel-action{font-size:11px;font-weight:600;color:var(--gold2);cursor:pointer;background:none;border:none;padding:0;font-family:var(--ff-b);}
+.bo-intel-feed{flex:1;overflow-y:auto;padding:10px 14px;display:flex;flex-direction:column;gap:8px;scrollbar-width:thin;scrollbar-color:var(--gold2) var(--surface);}
+.bo-intel-feed::-webkit-scrollbar{width:4px;}
+.bo-intel-feed::-webkit-scrollbar-thumb{background:var(--gold2);border-radius:3px;}
+.bo-intel-item{display:flex;gap:10px;align-items:flex-start;padding:9px 10px;border-radius:7px;border:1px solid var(--border);background:var(--bg);}
+.bo-intel-icon{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;}
+.bo-intel-body{flex:1;min-width:0;}
+.bo-intel-agent{font-weight:700;font-size:11px;color:var(--text);}
+.bo-intel-detail{font-size:11px;color:var(--muted);margin-top:2px;line-height:1.45;}
+.bo-intel-ts{font-family:var(--ff-m);font-size:9px;color:var(--muted);flex-shrink:0;margin-top:2px;}
+.bo-brief-body{flex:1;overflow-y:auto;padding:14px 16px;font-size:12px;line-height:1.65;color:var(--text);white-space:pre-wrap;scrollbar-width:thin;scrollbar-color:var(--gold2) var(--surface);}
+.bo-brief-body::-webkit-scrollbar{width:4px;}
+.bo-brief-body::-webkit-scrollbar-thumb{background:var(--gold2);border-radius:3px;}
+.bo-brief-empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;color:var(--muted);padding:20px;}
+.bo-brief-empty-icon{font-size:32px;}
+.bo-brief-empty-text{font-family:var(--ff-m);font-size:10px;letter-spacing:1px;text-align:center;}
+.bo-brief-run-btn{background:var(--gold2);color:#000;border:none;padding:8px 20px;border-radius:6px;font-weight:700;font-size:12px;cursor:pointer;margin-top:6px;}
+.bo-brief-run-btn:hover{background:var(--gold3);}
+/* Brief content area must flex-grow to fill the panel below the header */
+#bo-brief-content{flex:1;overflow:hidden;display:flex;flex-direction:column;}
+
+/* ── Intel Channel ────────────────────────────────────────────────────────── */
+.bo-channel{display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden;}
+.bo-ch-statusbar{display:flex;align-items:center;gap:16px;padding:10px 20px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;flex-wrap:wrap;}
+.bo-ch-stat{display:flex;align-items:center;gap:5px;font-family:var(--ff-m);font-size:10px;color:var(--muted);}
+.bo-ch-stat strong{color:var(--text);}
+.bo-ch-thread{flex:1;overflow-y:auto;padding:20px 24px;display:flex;flex-direction:column;gap:12px;background:var(--bg);scrollbar-width:thin;scrollbar-color:var(--gold2) var(--bg);}
+.bo-ch-thread::-webkit-scrollbar{width:5px;}
+.bo-ch-thread::-webkit-scrollbar-thumb{background:var(--gold2);border-radius:3px;}
+.bo-msg{max-width:78%;display:flex;flex-direction:column;}
+.bo-msg.out{align-self:flex-end;align-items:flex-end;}
+.bo-msg.in{align-self:flex-start;align-items:flex-start;}
+.bo-msg-meta{display:flex;align-items:center;gap:5px;margin-bottom:4px;}
+.bo-msg-from{font-family:var(--ff-m);font-size:9px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;}
+.bo-msg.out .bo-msg-from{color:var(--gold2);}
+.bo-msg.in .bo-msg-from{color:var(--green);}
+.bo-msg-bubble{padding:11px 15px;border-radius:12px;font-size:12px;line-height:1.65;white-space:pre-wrap;word-break:break-word;}
+.bo-msg.out .bo-msg-bubble{background:var(--navy);color:rgba(255,255,255,.88);border-bottom-right-radius:3px;}
+.bo-msg.in .bo-msg-bubble{background:var(--surface);color:var(--text);border:1px solid var(--border);border-bottom-left-radius:3px;box-shadow:0 1px 6px rgba(11,37,69,.06);}
+.bo-msg-foot{font-family:var(--ff-m);font-size:9px;color:var(--muted);margin-top:3px;}
+.bo-tag{display:inline-flex;align-items:center;padding:1px 7px;border-radius:4px;font-family:var(--ff-m);font-size:8px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;margin-right:4px;}
+.bo-tag-dir{background:rgba(11,37,69,.08);color:var(--navy2);}
+.bo-tag-report{background:rgba(37,99,235,.1);color:var(--blue);}
+.bo-tag-crit{background:rgba(220,38,38,.1);color:var(--red);}
+.bo-tag-high{background:rgba(234,88,12,.1);color:var(--orange);}
+.bo-tag-norm{background:rgba(5,150,105,.08);color:var(--green);}
+.bo-tag-low{background:rgba(90,106,130,.1);color:var(--muted);}
+.bo-tag-feedback{background:rgba(228,168,48,.12);color:var(--gold);}
+.bo-divider{text-align:center;font-family:var(--ff-m);font-size:9px;color:var(--muted);letter-spacing:1.5px;padding:6px 0;position:relative;}
+.bo-divider::before,.bo-divider::after{content:'';position:absolute;top:50%;width:42%;height:1px;background:var(--border);}
+.bo-divider::before{left:0;}.bo-divider::after{right:0;}
+.bo-empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:var(--muted);}
+.bo-empty-icon{font-size:40px;}
+.bo-empty-text{font-family:var(--ff-m);font-size:10px;letter-spacing:1.2px;}
+
+/* ── Compose Directive ────────────────────────────────────────────────────── */
+.bo-compose{display:flex;flex:1;min-height:0;overflow:hidden;gap:0;}
+.bo-compose-main{flex:1;display:flex;flex-direction:column;padding:20px 24px;gap:14px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--gold2) var(--bg);}
+.bo-compose-main::-webkit-scrollbar{width:5px;}
+.bo-compose-main::-webkit-scrollbar-thumb{background:var(--gold2);border-radius:3px;}
+.bo-compose-sidebar{width:320px;flex-shrink:0;border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;}
+.bo-fl{font-family:var(--ff-m);font-size:9px;color:var(--muted);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px;}
+.bo-compose-label{font-weight:700;font-size:13px;color:var(--text);margin-bottom:4px;}
+.bo-compose-sub{font-size:11px;color:var(--muted);margin-bottom:12px;}
+.bo-textarea{width:100%;min-height:140px;padding:12px 14px;border:1.5px solid var(--border);border-radius:8px;font-family:var(--ff-b);font-size:13px;color:var(--text);background:var(--surface);resize:vertical;outline:none;transition:border-color .15s;line-height:1.6;}
+.bo-textarea:focus{border-color:var(--gold2);}
+.bo-select{width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:var(--ff-b);font-size:12px;color:var(--text);background:var(--surface);outline:none;cursor:pointer;}
+.bo-send-btn{background:var(--navy);color:var(--gold2);border:1.5px solid var(--gold2);padding:11px 28px;border-radius:7px;font-weight:800;font-size:13px;cursor:pointer;letter-spacing:.4px;transition:background .15s;font-family:var(--ff-b);}
+.bo-send-btn:hover{background:rgba(228,168,48,.12);}
+.bo-send-btn:disabled{opacity:.45;cursor:not-allowed;}
+.bo-tpl-grid{display:flex;flex-direction:column;gap:6px;padding:14px 16px;border-bottom:1px solid var(--border);}
+.bo-tpl-title{font-family:var(--ff-m);font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:4px;}
+.bo-tpl-btn{text-align:left;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:7px 10px;font-size:11px;color:var(--text);cursor:pointer;transition:border-color .12s,color .12s;font-weight:500;}
+.bo-tpl-btn:hover{border-color:var(--gold2);color:var(--gold2);}
+.bo-hist-feed{flex:1;overflow-y:auto;padding:0 16px 14px;display:flex;flex-direction:column;gap:7px;scrollbar-width:thin;scrollbar-color:var(--gold2) var(--surface);}
+.bo-hist-feed::-webkit-scrollbar{width:4px;}
+.bo-hist-feed::-webkit-scrollbar-thumb{background:var(--gold2);border-radius:3px;}
+.bo-hist-item{font-size:10px;line-height:1.5;border-left:2px solid var(--border);padding:4px 8px;color:var(--muted);}
+.bo-hist-item strong{color:var(--text);}
+
+/* ── Audit Report ─────────────────────────────────────────────────────────── */
+.bo-audit{display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden;padding:20px 24px;gap:14px;}
+.bo-audit-bar{display:flex;align-items:center;gap:12px;flex-shrink:0;flex-wrap:wrap;}
+.bo-audit-run-btn{background:var(--gold2);color:#000;border:none;padding:9px 22px;border-radius:6px;font-weight:800;font-size:12px;cursor:pointer;letter-spacing:.4px;}
+.bo-audit-run-btn:hover{background:var(--gold3);}
+.bo-audit-run-btn:disabled{opacity:.5;cursor:not-allowed;}
+.bo-audit-ts{font-family:var(--ff-m);font-size:10px;color:var(--muted);}
+.bo-audit-grid{flex:1;display:grid;grid-template-columns:1fr 340px;gap:16px;min-height:0;overflow:hidden;}
+.bo-audit-main,.bo-audit-side{background:var(--surface);border:1px solid var(--border);border-radius:10px;display:flex;flex-direction:column;overflow:hidden;}
+.bo-audit-body{flex:1;overflow-y:auto;padding:14px 16px;scrollbar-width:thin;scrollbar-color:var(--gold2) var(--surface);}
+.bo-audit-body::-webkit-scrollbar{width:4px;}
+.bo-audit-body::-webkit-scrollbar-thumb{background:var(--gold2);border-radius:3px;}
+.bo-gap-item{margin-bottom:12px;padding:10px 12px;border-radius:7px;border-left:3px solid var(--border);background:var(--bg);}
+.bo-gap-item.crit{border-left-color:var(--red);}
+.bo-gap-item.high{border-left-color:var(--orange);}
+.bo-gap-item.med{border-left-color:var(--gold2);}
+.bo-gap-item.ok{border-left-color:var(--green);}
+.bo-gap-label{font-weight:700;font-size:12px;color:var(--text);margin-bottom:3px;}
+.bo-gap-desc{font-size:11px;color:var(--muted);line-height:1.5;}
+.bo-directive-item{margin-bottom:8px;padding:8px 12px;border-radius:6px;background:var(--bg);border:1px solid var(--border);font-size:12px;color:var(--text);display:flex;gap:8px;align-items:flex-start;}
+.bo-directive-n{font-family:var(--ff-m);font-size:10px;font-weight:700;color:var(--gold2);flex-shrink:0;}
+
+/* ── Lucas Sterling Design Upgrade — Bond Office v2 ──────────────────────── */
+/* Ops-centre dark feel: redefine CSS vars so ALL descendant text/border/surface
+   automatically uses dark-theme values — no per-element overrides needed */
+.bo-wrap{
+  background:#080e1a;
+  --text:#ffffff;
+  --muted:rgba(255,255,255,.6);
+  --border:rgba(255,255,255,.13);
+  --surface:rgba(255,255,255,.05);
+  --bg:#080e1a;
+}
+/* Header: cinematic gradient + stronger gold border + depth shadow */
+.bo-header{background:linear-gradient(135deg,#0b1d40 0%,#081530 100%);border-bottom:2px solid rgba(228,168,48,.5);box-shadow:0 4px 24px rgba(0,0,0,.45);}
+/* Badge: inner glow */
+.bo-badge{border-color:rgba(228,168,48,.65);box-shadow:0 0 14px rgba(228,168,48,.22),inset 0 0 8px rgba(228,168,48,.06);}
+/* Tab strip: dark + higher-contrast active */
+.bo-tabs{background:#060d1c;border-bottom:1px solid rgba(228,168,48,.22);}
+.bo-tab.active{background:rgba(228,168,48,.07);text-shadow:0 0 10px rgba(228,168,48,.45);}
+/* KPI cards: top status stripe + tabular numbers */
+.bo-kpi{border-top:3px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);}
+.bo-kpi.ok{border-top-color:var(--green);}
+.bo-kpi.warn{border-top-color:var(--orange);}
+.bo-kpi.crit{border-top-color:var(--red);}
+.bo-kpi.gold{border-top-color:var(--gold2);}
+.bo-kpi-n{font-variant-numeric:tabular-nums;}
+/* Panels: lower-opacity surface on dark bg */
+.bo-intel-panel,.bo-brief-panel,.bo-audit-main,.bo-audit-side{background:rgba(255,255,255,.03);border-color:rgba(255,255,255,.1);}
+.bo-panel-hdr{background:rgba(255,255,255,.03);}
+/* Intel feed items: hover gold accent */
+.bo-intel-item{background:rgba(255,255,255,.03);border-color:rgba(255,255,255,.08);transition:border-color .15s,background .15s;}
+.bo-intel-item:hover{border-color:rgba(228,168,48,.45);background:rgba(228,168,48,.05);}
+/* Outbound bubbles: subtle gold tint */
+.bo-msg.out .bo-msg-bubble{background:linear-gradient(135deg,#0e1d3f 0%,#152040 100%);border:1px solid rgba(228,168,48,.25);}
+/* Channel statusbar: ops-centre dark */
+.bo-ch-statusbar{background:#060d1c;border-bottom-color:rgba(255,255,255,.1);}
+.bo-ch-stat strong{font-variant-numeric:tabular-nums;}
+/* Send button: depth + hover glow */
+.bo-send-btn{background:linear-gradient(135deg,#0b1d40,#101e3a);box-shadow:0 2px 10px rgba(228,168,48,.18);}
+.bo-send-btn:hover{background:rgba(228,168,48,.13);box-shadow:0 4px 20px rgba(228,168,48,.35);border-color:var(--gold2);}
+/* Audit run button: gold glow */
+.bo-audit-run-btn{box-shadow:0 2px 12px rgba(228,168,48,.3);letter-spacing:.5px;}
+.bo-audit-run-btn:hover:not(:disabled){box-shadow:0 4px 22px rgba(228,168,48,.55);}
+/* Gap items: slide-right hover */
+.bo-gap-item{transition:transform .12s,box-shadow .12s;}
+.bo-gap-item:hover{transform:translateX(3px);box-shadow:-3px 0 10px rgba(0,0,0,.18);}
+/* Directive items: hover accent */
+.bo-directive-item{transition:background .12s,border-color .12s;}
+.bo-directive-item:hover{background:rgba(228,168,48,.06);border-color:rgba(228,168,48,.3);}
+/* Brief body: slightly more readable */
+.bo-brief-body{font-size:12.5px;line-height:1.72;letter-spacing:.01em;}
+/* Connection dot: stronger live glow */
+.bo-conn-dot.live{box-shadow:0 0 10px var(--green),0 0 4px var(--green);}
+/* Template buttons: gold focus */
+.bo-tpl-btn:hover{background:rgba(228,168,48,.07);}
+/* Compose textarea focus: gold ring */
+.bo-textarea:focus{border-color:var(--gold2);box-shadow:0 0 0 2px rgba(228,168,48,.12);}
+
+/* ── UI Status Tab ────────────────────────────────────────────────────────── */
+.bo-uistatus{display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden;padding:20px 24px;gap:16px;}
+.bo-uistat-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;flex-shrink:0;}
+.bo-uistat-card{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:16px 18px;display:flex;flex-direction:column;gap:8px;}
+.bo-uistat-hd{display:flex;align-items:center;justify-content:space-between;}
+.bo-uistat-name{font-weight:800;font-size:13px;color:#fff;display:flex;align-items:center;gap:7px;}
+.bo-uistat-badge{font-family:var(--ff-m);font-size:9px;font-weight:700;letter-spacing:.8px;padding:2px 8px;border-radius:10px;border:1px solid;}
+.bo-uistat-score{font-family:var(--ff-h);font-size:38px;font-weight:900;line-height:1;font-variant-numeric:tabular-nums;}
+.bo-uistat-sublabel{font-family:var(--ff-m);font-size:9px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);margin-top:1px;}
+.bo-uistat-run{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);color:rgba(255,255,255,.8);padding:5px 14px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;font-family:var(--ff-b);transition:background .15s,border-color .15s;}
+.bo-uistat-run:hover{background:rgba(228,168,48,.15);border-color:rgba(228,168,48,.4);color:var(--gold2);}
+.bo-uistat-run:disabled{opacity:.4;cursor:not-allowed;}
+.bo-uistat-issues{flex:1;min-height:0;overflow:hidden;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.1);border-radius:10px;display:flex;flex-direction:column;}
+.bo-uistat-issues-hdr{padding:10px 14px;border-bottom:1px solid rgba(255,255,255,.08);font-weight:700;font-size:12px;color:var(--text);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+.bo-uistat-issues-body{flex:1;overflow-y:auto;padding:10px 14px;display:flex;flex-direction:column;gap:8px;scrollbar-width:thin;scrollbar-color:var(--gold2) transparent;}
+.bo-uiissue{padding:9px 12px;border-radius:7px;border-left:3px solid var(--border);background:rgba(255,255,255,.03);}
+.bo-uiissue.crit{border-left-color:var(--red);}
+.bo-uiissue.high{border-left-color:var(--orange);}
+.bo-uiissue.med{border-left-color:var(--gold2);}
+.bo-uiissue.ok{border-left-color:var(--green);}
+.bo-uiissue-label{font-weight:700;font-size:11px;color:var(--text);margin-bottom:2px;}
+.bo-uiissue-desc{font-size:10px;color:var(--muted);line-height:1.45;}
+.bo-clearance{font-family:var(--ff-h);font-size:22px;font-weight:900;letter-spacing:.5px;}
+.bo-clearance.pass{color:var(--green);}
+.bo-clearance.fail{color:var(--red);}
+.bo-clearance.cond{color:var(--orange);}
+
+/* ── Bond Office Responsive ───────────────────────────────────────────────── */
+@media(max-width:768px){
+  .bo-sit-grid{grid-template-columns:1fr;}
+  .bo-audit-grid{grid-template-columns:1fr;}
+  .bo-uistat-grid{grid-template-columns:1fr;}
+  .bo-compose{flex-direction:column;}
+  .bo-compose-sidebar{width:100%;border-left:none;border-top:1px solid var(--border);max-height:260px;flex-shrink:0;}
+  .bo-header{padding:10px 14px;}
+  .bo-sub{display:none;}
+  .bo-sitroom{padding:12px 14px;gap:10px;}
+  .bo-audit{padding:12px 14px;}
+  .bo-uistatus{padding:12px 14px;}
+}
+</style>
+
+<div class="bo-wrap">
+
+  <!-- ── Header ── -->
+  <div class="bo-header">
+    <div class="bo-header-left">
+      <div class="bo-badge">🕵️</div>
+      <div>
+        <div class="bo-title">Bond Office</div>
+        <div class="bo-sub">James Bond · IEBC Consultant · Reports to Commander &amp; CC Gulley · Daytona <span id="bo-sandbox-id" style="color:rgba(255,255,255,.5)">2a50d3c2…c5c6</span></div>
+      </div>
+    </div>
+    <div class="bo-header-right">
+      <div class="bo-conn">
+        <div class="bo-conn-dot" id="bo-conn-dot"></div>
+        <span class="bo-conn-label" id="bo-conn-label">checking…</span>
+      </div>
+      <button class="bo-hdr-btn" onclick="boRefreshAll()">↺ Refresh All</button>
+    </div>
+  </div>
+
+  <!-- ── Tab Strip ── -->
+  <div class="bo-tabs">
+    <button class="bo-tab active" id="botab-sitroom" onclick="boTab('sitroom')">📊 Situation Room</button>
+    <button class="bo-tab" id="botab-channel" onclick="boTab('channel')">💬 Intel Channel <span class="bo-tab-badge" id="bo-ch-badge" style="display:none">0</span></button>
+    <button class="bo-tab" id="botab-compose" onclick="boTab('compose')">✉️ Compose</button>
+    <button class="bo-tab" id="botab-audit" onclick="boTab('audit')">🔍 Audit Report</button>
+    <button class="bo-tab" id="botab-uistatus" onclick="boTab('uistatus')">🎨 UI Status <span class="bo-tab-badge" id="bo-ui-badge" style="display:none">!</span></button>
+  </div>
+
+  <!-- ── Tab Body ── -->
+  <div class="bo-body">
+
+    <!-- ════ SITUATION ROOM ════ -->
+    <div class="bo-pane active" id="bopane-sitroom">
+      <div class="bo-sitroom">
+
+        <!-- KPI Strip -->
+        <div class="bo-kpi-strip">
+          <div class="bo-kpi" id="bo-kpi-carriers">
+            <div class="bo-kpi-n" id="bokpi-carriers">—</div>
+            <div class="bo-kpi-l">Carriers</div>
+            <div class="bo-kpi-sub" id="bokpi-carriers-sub">active fleet</div>
+          </div>
+          <div class="bo-kpi" id="bo-kpi-loads">
+            <div class="bo-kpi-n" id="bokpi-loads">—</div>
+            <div class="bo-kpi-l">Open Loads</div>
+            <div class="bo-kpi-sub" id="bokpi-loads-sub">in pipeline</div>
+          </div>
+          <div class="bo-kpi" id="bo-kpi-leads">
+            <div class="bo-kpi-n" id="bokpi-leads">—</div>
+            <div class="bo-kpi-l">Leads</div>
+            <div class="bo-kpi-sub" id="bokpi-leads-sub">pipeline</div>
+          </div>
+          <div class="bo-kpi" id="bo-kpi-sla">
+            <div class="bo-kpi-n" id="bokpi-sla">—</div>
+            <div class="bo-kpi-l">SLA Violations</div>
+            <div class="bo-kpi-sub" id="bokpi-sla-sub">load pipeline</div>
+          </div>
+          <div class="bo-kpi" id="bo-kpi-msgs">
+            <div class="bo-kpi-n gold" id="bokpi-msgs">—</div>
+            <div class="bo-kpi-l">Bond Messages</div>
+            <div class="bo-kpi-sub" id="bokpi-msgs-sub">channel</div>
+          </div>
+        </div>
+
+        <!-- 2-col: Intel Feed + Bond Brief -->
+        <div class="bo-sit-grid">
+
+          <div class="bo-intel-panel">
+            <div class="bo-panel-hdr">
+              <div class="bo-panel-title">📡 Intelligence Feed <span style="font-size:10px;font-weight:400;color:var(--muted);margin-left:4px;">Agent Activity · What IEBC Is Seeing Right Now</span></div>
+              <button class="bo-panel-action" onclick="boLoadIntelFeed()">↺</button>
+            </div>
+            <div class="bo-intel-feed" id="bo-intel-feed">
+              <div class="bo-empty"><div class="bo-empty-icon">📡</div><div class="bo-empty-text">LOADING INTEL…</div></div>
+            </div>
+          </div>
+
+          <div class="bo-brief-panel">
+            <div class="bo-panel-hdr">
+              <div class="bo-panel-title">🕵️ Bond's Last Brief</div>
+              <button class="bo-panel-action" onclick="boRunAuditAndBrief()">Run Audit →</button>
+            </div>
+            <div id="bo-brief-content">
+              <div class="bo-brief-empty">
+                <div class="bo-brief-empty-icon">📋</div>
+                <div class="bo-brief-empty-text">NO AUDIT RUN YET<br>Bond reviews the org, surfaces gaps,<br>and reports to Commander</div>
+                <button class="bo-brief-run-btn" onclick="boRunAuditAndBrief()">Run Bond Audit</button>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- ════ INTEL CHANNEL ════ -->
+    <div class="bo-pane" id="bopane-channel">
+      <div class="bo-channel">
+        <div class="bo-ch-statusbar">
+          <div class="bo-ch-stat">SANDBOX <strong id="bo-sb-id">2a50d3c2…c5c6</strong></div>
+          <div class="bo-ch-stat">TOTAL <strong id="bo-ch-total">—</strong></div>
+          <div class="bo-ch-stat">PENDING OUT <strong id="bo-ch-out" style="color:var(--orange)">—</strong></div>
+          <div class="bo-ch-stat">UNREAD IN <strong id="bo-ch-in" style="color:var(--green)">—</strong></div>
+          <div class="bo-ch-stat">CHANNEL <strong id="bo-ch-active" style="color:var(--green)">—</strong></div>
+          <div style="margin-left:auto;display:flex;gap:8px;">
+            <button class="bo-hdr-btn" style="background:var(--surface);color:var(--text);border-color:var(--border);font-size:10px;" onclick="boPollExternal()">📡 Poll External</button>
+            <button class="bo-hdr-btn" style="background:var(--surface);color:var(--text);border-color:var(--border);font-size:10px;" onclick="boLoadThread()">↺ Refresh</button>
+          </div>
+        </div>
+        <div class="bo-ch-thread" id="bo-thread">
+          <div class="bo-empty"><div class="bo-empty-icon">🕳️</div><div class="bo-empty-text">NO MESSAGES — SEND A DIRECTIVE BELOW</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════ COMPOSE DIRECTIVE ════ -->
+    <div class="bo-pane" id="bopane-compose">
+      <div class="bo-compose">
+        <div class="bo-compose-main">
+          <div>
+            <div class="bo-compose-label">Compose Directive</div>
+            <div class="bo-compose-sub">Send operational instructions, intel requests, or mission briefs to External Bond on Daytona.</div>
+          </div>
+          <div>
+            <div class="bo-fl">Directive Content</div>
+            <textarea class="bo-textarea" id="bo-directive-text" style="min-height:180px;" placeholder="Write your directive… Be specific: what External Bond should do, what to verify, what to report back."></textarea>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+            <div>
+              <div class="bo-fl">Priority</div>
+              <select class="bo-select" id="bo-priority">
+                <option value="normal">Normal</option>
+                <option value="high">High</option>
+                <option value="critical">Critical — Immediate Action</option>
+                <option value="low">Low — FYI</option>
+              </select>
+            </div>
+            <div>
+              <div class="bo-fl">Message Type</div>
+              <select class="bo-select" id="bo-msg-type">
+                <option value="directive">Directive</option>
+                <option value="report">Report Request</option>
+                <option value="acknowledgment">Acknowledgment</option>
+                <option value="feedback">Feedback</option>
+                <option value="suggestion">Suggestion</option>
+              </select>
+            </div>
+          </div>
+          <div style="display:flex;gap:10px;align-items:center;">
+            <button class="bo-send-btn" id="bo-send-btn" onclick="boSendDirective()">▶ Send to External Bond</button>
+            <span id="bo-send-status" style="font-family:var(--ff-m);font-size:10px;color:var(--muted);"></span>
+          </div>
+          <!-- Recent outbound history -->
+          <div style="margin-top:8px;">
+            <div class="bo-fl">Recent Outbound</div>
+            <div id="bo-recent-outbound" style="display:flex;flex-direction:column;gap:6px;">
+              <div style="font-size:11px;color:var(--muted);font-style:italic;">Loading…</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sidebar: Quick Templates -->
+        <div class="bo-compose-sidebar">
+          <div class="bo-tpl-grid">
+            <div class="bo-tpl-title">Quick Templates</div>
+            <button class="bo-tpl-btn" onclick="boFillTemplate('connectivity')">📡 API Connectivity Check</button>
+            <button class="bo-tpl-btn" onclick="boFillTemplate('health')">❤️ Full Health Report</button>
+            <button class="bo-tpl-btn" onclick="boFillTemplate('schema')">🗄️ Schema Verification</button>
+            <button class="bo-tpl-btn" onclick="boFillTemplate('deploy')">🚀 Render Deploy Status</button>
+            <button class="bo-tpl-btn" onclick="boFillTemplate('intel')">🔍 Market Intel Request</button>
+            <button class="bo-tpl-btn" onclick="boFillTemplate('status')">📋 Full Status Report</button>
+          </div>
+          <div style="padding:12px 16px 6px;flex-shrink:0;">
+            <div class="bo-tpl-title" style="margin-bottom:8px;">Inbound Messages</div>
+          </div>
+          <div class="bo-hist-feed" id="bo-inbound-feed">
+            <div style="font-size:11px;color:var(--muted);font-style:italic;padding:4px 0;">Loading…</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════ AUDIT REPORT ════ -->
+    <div class="bo-pane" id="bopane-audit">
+      <div class="bo-audit">
+        <div class="bo-audit-bar">
+          <button class="bo-audit-run-btn" id="bo-audit-btn" onclick="boRunFullAudit()">🔍 Run Bond Audit</button>
+          <div>
+            <div style="font-size:11px;font-weight:600;color:var(--text);" id="bo-audit-scope-label">Full org audit — all 24 agents</div>
+            <div class="bo-audit-ts" id="bo-audit-last-ts">Last run: never</div>
+          </div>
+          <div style="margin-left:auto;display:flex;gap:8px;">
+            <select class="bo-select" id="bo-audit-scope" style="width:auto;padding:6px 10px;font-size:11px;">
+              <option value="full">Full Audit</option>
+              <option value="tech">Tech &amp; Infrastructure</option>
+              <option value="ops">Operations &amp; Loads</option>
+              <option value="leads">Leads &amp; Pipeline</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="bo-audit-grid">
+          <div class="bo-audit-main">
+            <div class="bo-panel-hdr">
+              <div class="bo-panel-title">📊 Findings &amp; Tech Gaps</div>
+              <span id="bo-audit-gap-count" style="font-family:var(--ff-m);font-size:10px;color:var(--muted);">—</span>
+            </div>
+            <div class="bo-audit-body" id="bo-audit-gaps">
+              <div class="bo-brief-empty" style="padding:30px 0;">
+                <div class="bo-brief-empty-icon">🔍</div>
+                <div class="bo-brief-empty-text">RUN AUDIT TO SEE FINDINGS</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="bo-audit-side">
+            <div class="bo-panel-hdr">
+              <div class="bo-panel-title">📋 Directives to Commander</div>
+            </div>
+            <div class="bo-audit-body" id="bo-audit-directives">
+              <div class="bo-brief-empty" style="padding:20px 0;">
+                <div class="bo-brief-empty-icon">📋</div>
+                <div class="bo-brief-empty-text">AWAITING AUDIT</div>
+              </div>
+            </div>
+            <div style="padding:10px 14px;border-top:1px solid var(--border);flex-shrink:0;">
+              <div class="bo-fl" style="margin-bottom:6px;">Executive Brief</div>
+              <div id="bo-exec-brief" style="font-size:11px;color:var(--muted);line-height:1.6;max-height:140px;overflow-y:auto;scrollbar-width:thin;">Run audit to generate brief.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════ UI STATUS ════ -->
+    <div class="bo-pane" id="bopane-uistatus">
+      <div class="bo-uistatus">
+
+        <!-- Agent score cards -->
+        <div class="bo-uistat-grid">
+
+          <!-- Lucas Sterling card -->
+          <div class="bo-uistat-card" id="bo-lucas-card">
+            <div class="bo-uistat-hd">
+              <div class="bo-uistat-name">
+                <div class="ec-avatar" style="width:30px;height:30px;font-size:12px;border-radius:7px;background:#012a1a;color:#06b6d4;display:flex;align-items:center;justify-content:center;font-weight:800;font-style:italic;flex-shrink:0;">LS</div>
+                Lucas Sterling
+                <span class="bo-uistat-badge" style="color:#06b6d4;border-color:rgba(6,182,212,.4);background:rgba(6,182,212,.1);">NODE 101</span>
+              </div>
+              <button class="bo-uistat-run" id="bo-lucas-run-btn" onclick="boRunLucasAudit()">▶ Run Audit</button>
+            </div>
+            <div style="display:flex;align-items:flex-end;gap:12px;">
+              <div>
+                <div class="bo-uistat-score" id="bo-lucas-score" style="color:#06b6d4;">—</div>
+                <div class="bo-uistat-sublabel">UI Health Score</div>
+              </div>
+              <div style="flex:1;min-width:0;">
+                <div style="font-size:10px;color:var(--muted);margin-bottom:3px;font-family:var(--ff-m);letter-spacing:.5px;">CRITICAL ISSUES</div>
+                <div style="font-size:20px;font-weight:900;color:var(--red);font-variant-numeric:tabular-nums;" id="bo-lucas-crit">—</div>
+              </div>
+              <div style="flex:1;min-width:0;">
+                <div style="font-size:10px;color:var(--muted);margin-bottom:3px;font-family:var(--ff-m);letter-spacing:.5px;">IMPROVEMENTS</div>
+                <div style="font-size:20px;font-weight:900;color:var(--gold2);font-variant-numeric:tabular-nums;" id="bo-lucas-impr">—</div>
+              </div>
+            </div>
+            <div id="bo-lucas-summary" style="font-size:11px;color:var(--muted);line-height:1.55;min-height:28px;font-style:italic;">Run audit to see Lucas's assessment.</div>
+            <div id="bo-lucas-ts" style="font-family:var(--ff-m);font-size:9px;color:rgba(255,255,255,.25);letter-spacing:.5px;">Never run</div>
+          </div>
+
+          <!-- Chloe Sinclair card -->
+          <div class="bo-uistat-card" id="bo-chloe-card">
+            <div class="bo-uistat-hd">
+              <div class="bo-uistat-name">
+                <div class="ec-avatar" style="width:30px;height:30px;font-size:12px;border-radius:7px;background:#1e0033;color:#a855f7;display:flex;align-items:center;justify-content:center;font-weight:800;font-style:italic;flex-shrink:0;">CS</div>
+                Chloe Sinclair
+                <span class="bo-uistat-badge" style="color:#a855f7;border-color:rgba(168,85,247,.4);background:rgba(168,85,247,.1);">NODE 128</span>
+              </div>
+              <button class="bo-uistat-run" id="bo-chloe-run-btn" onclick="boRunChloeQA()">▶ Run QA</button>
+            </div>
+            <div style="display:flex;align-items:flex-end;gap:12px;">
+              <div>
+                <div class="bo-clearance" id="bo-chloe-clearance" style="color:var(--muted);">—</div>
+                <div class="bo-uistat-sublabel">QA Clearance</div>
+              </div>
+              <div style="flex:1;min-width:0;">
+                <div style="font-size:10px;color:var(--muted);margin-bottom:3px;font-family:var(--ff-m);letter-spacing:.5px;">VIEWPORT ISSUES</div>
+                <div style="font-size:20px;font-weight:900;color:var(--orange);font-variant-numeric:tabular-nums;" id="bo-chloe-vp">—</div>
+              </div>
+              <div style="flex:1;min-width:0;">
+                <div style="font-size:10px;color:var(--muted);margin-bottom:3px;font-family:var(--ff-m);letter-spacing:.5px;">MOBILE FAILS</div>
+                <div style="font-size:20px;font-weight:900;color:var(--red);font-variant-numeric:tabular-nums;" id="bo-chloe-mob">—</div>
+              </div>
+            </div>
+            <div id="bo-chloe-notes" style="font-size:11px;color:var(--muted);line-height:1.55;min-height:28px;font-style:italic;">Run QA scan to see Chloe's verdict.</div>
+            <div id="bo-chloe-ts" style="font-family:var(--ff-m);font-size:9px;color:rgba(255,255,255,.25);letter-spacing:.5px;">Never run</div>
+          </div>
+        </div>
+
+        <!-- Issues panel -->
+        <div class="bo-uistat-issues">
+          <div class="bo-uistat-issues-hdr">
+            <span>📋 Lucas's Active Directives &amp; Chloe's Findings</span>
+            <span id="bo-uistat-issue-count" style="font-family:var(--ff-m);font-size:10px;color:var(--muted);">—</span>
+          </div>
+          <div class="bo-uistat-issues-body" id="bo-uistat-issues-body">
+            <div class="bo-brief-empty" style="padding:30px 0;">
+              <div class="bo-brief-empty-icon">🎨</div>
+              <div class="bo-brief-empty-text">RUN LUCAS AUDIT OR CHLOE QA TO SEE ISSUES</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </div><!-- /bo-body -->
+</div><!-- /bo-wrap -->
+</div>
+<!-- END BOND OFFICE -->
+
+<script>
+// ── Bond Office ──────────────────────────────────────────────────────────────
+
+// ── Tab switching
+function boTab(id) {
+  ['sitroom','channel','compose','audit','uistatus'].forEach(t => {
+    document.getElementById('botab-'+t)?.classList.toggle('active', t===id);
+    document.getElementById('bopane-'+t)?.classList.toggle('active', t===id);
+  });
+  if (id==='channel')   boLoadThread(), boLoadStatus();
+  if (id==='sitroom')   boLoadSitRoom();
+  if (id==='compose')   boLoadComposeHistory();
+  if (id==='audit')     boRenderLastAudit();
+  if (id==='uistatus')  boLoadUIStatus();
+}
+
+function boRefreshAll() {
+  boLoadStatus();
+  boLoadThread();
+  boLoadSitRoom();
+}
+
+// ── Helpers
+function boEsc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function boFmtTime(ts){ if(!ts)return''; return new Date(ts).toLocaleString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit',hour12:true}); }
+function boFmtAge(ts){
+  if(!ts)return'';
+  const m=Math.round((Date.now()-new Date(ts))/60000);
+  if(m<1)return'just now'; if(m<60)return m+'m ago';
+  const h=Math.round(m/60); if(h<24)return h+'h ago';
+  return Math.round(h/24)+'d ago';
+}
+function boTagType(t){ const m={directive:'dir',report:'report',feedback:'feedback',suggestion:'feedback',acknowledgment:'norm'}; return `<span class="bo-tag bo-tag-${m[t]||'norm'}">${t}</span>`; }
+function boTagPri(p){ const m={critical:'crit',high:'high',normal:'norm',low:'low'}; return `<span class="bo-tag bo-tag-${m[p]||'norm'}">${p}</span>`; }
+
+// ── Status / connection
+async function boLoadStatus() {
+  try {
+    const d = await apiFetch('/api/bond/status');
+    const dot   = document.getElementById('bo-conn-dot');
+    const label = document.getElementById('bo-conn-label');
+    const alive = d.connected || d.channel_active;
+    if(dot){ dot.className = 'bo-conn-dot ' + (alive?'live':'err'); }
+    if(label){ label.textContent = alive ? 'CONNECTED' : 'DISCONNECTED'; }
+
+    const set = (id, v) => { const el=document.getElementById(id); if(el)el.textContent=v??'—'; };
+    set('bo-ch-total',  d.total_messages);
+    set('bo-ch-out',    d.pending_outbound);
+    set('bo-ch-in',     d.unread_inbound);
+    set('bo-ch-active', d.channel_active ? 'ACTIVE' : 'INACTIVE');
+    set('bokpi-msgs',   d.total_messages);
+    if(d.total_messages!=null){ document.getElementById('bokpi-msgs-sub').textContent=(d.unread_inbound||0)+' unread'; }
+    const badge = document.getElementById('bo-ch-badge');
+    const unread = d.unread_inbound||0;
+    if(badge){ badge.textContent=unread; badge.style.display=unread?'inline':'none'; }
+  } catch(e){ console.warn('Bond status failed',e); }
+}
+
+// ── Thread
+function boRenderThread(msgs) {
+  const body = document.getElementById('bo-thread');
+  if(!msgs||!msgs.length){
+    body.innerHTML='<div class="bo-empty"><div class="bo-empty-icon">🕳️</div><div class="bo-empty-text">NO MESSAGES YET — SEND A DIRECTIVE</div></div>';
+    return;
+  }
+  let html='', lastDate=null;
+  msgs.forEach(m => {
+    const ds = new Date(m.created_at).toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
+    if(ds!==lastDate){ html+=`<div class="bo-divider">${ds}</div>`; lastDate=ds; }
+    const cls = m.direction==='internal_to_external' ? 'out' : 'in';
+    const from = cls==='out' ? 'Internal Bond → External' : '← External Bond';
+    html += `<div class="bo-msg ${cls}">
+      <div class="bo-msg-meta"><span class="bo-msg-from">${boEsc(from)}</span>${boTagType(m.message_type)} ${boTagPri(m.priority)}</div>
+      <div class="bo-msg-bubble">${boEsc(m.content)}</div>
+      <div class="bo-msg-foot">${boFmtTime(m.created_at)} · ${m.status}</div>
+    </div>`;
+  });
+  body.innerHTML = html;
+  body.scrollTop = body.scrollHeight;
+  // badge
+  const unread = msgs.filter(m=>m.direction==='external_to_internal'&&m.status==='pending').length;
+  const notif  = document.getElementById('bond-notif');
+  if(notif){ notif.textContent=unread; notif.style.display=unread?'inline':'none'; }
+  const badge  = document.getElementById('bo-ch-badge');
+  if(badge){ badge.textContent=unread; badge.style.display=unread?'inline':'none'; }
+}
+
+async function boLoadThread() {
+  try { const d=await apiFetch('/api/bond/thread?limit=100'); boRenderThread(d.messages||[]); }
+  catch(e){ console.warn('Bond thread failed',e); }
+}
+
+// ── Send Directive
+async function boSendDirective() {
+  const content  = document.getElementById('bo-directive-text')?.value.trim();
+  const priority = document.getElementById('bo-priority')?.value;
+  const msg_type = document.getElementById('bo-msg-type')?.value;
+  if(!content){ alert('Write a directive first.'); return; }
+  const btn = document.getElementById('bo-send-btn');
+  const st  = document.getElementById('bo-send-status');
+  if(btn){ btn.disabled=true; btn.textContent='Sending…'; }
+  try {
+    await apiFetch('/api/bond/directive','POST',{content,priority,message_type:msg_type});
+    if(btn){ btn.textContent='▶ Send to External Bond'; btn.disabled=false; }
+    if(st)st.textContent='✓ Sent '+new Date().toLocaleTimeString();
+    document.getElementById('bo-directive-text').value='';
+    boLoadThread(); boLoadStatus(); boLoadComposeHistory();
+  } catch(e) {
+    if(btn){ btn.disabled=false; btn.textContent='▶ Send to External Bond'; }
+    if(st)st.textContent='✗ '+e.message;
+    alert('Send failed: '+e.message);
+  }
+}
+
+// ── Templates
+const BO_TEMPLATES = {
+  connectivity: `CONNECTIVITY VERIFICATION\n\nPlease run the following checks and report results:\n1. curl $IEBC_API_URL/api/health/ping\n   Expected: "ok"\n2. curl $IEBC_API_URL/api/health/full\n   Expected: {"ok": true, "services": {"supabase": "ok"}}\n3. curl -H "X-Bond-Key: $BOND_API_KEY" $IEBC_API_URL/api/bond/inbox\n   Expected: HTTP 200\n\nReport: HTTP status codes, response bodies, and any errors encountered.`,
+  health: `FULL HEALTH REPORT REQUEST\n\nPlease provide a complete health snapshot:\n1. API connectivity status (ping + full health)\n2. Supabase database connectivity\n3. BOND_API_KEY configured and functional\n4. Any environment variables missing or misconfigured\n5. Last deploy timestamp and status\n\nReturn a structured report: system=OK/DEGRADED/DOWN for each.`,
+  schema: `SCHEMA VERIFICATION REQUEST\n\nPlease verify the following tables exist and have data:\n- active_carriers (SELECT COUNT(*) FROM active_carriers;)\n- loads (SELECT COUNT(*) FROM loads;)\n- leads (SELECT COUNT(*) FROM leads;)\n- agent_memory (SELECT COUNT(*) FROM agent_memory;)\n- bond_channel (SELECT COUNT(*) FROM bond_channel;)\n- telemetry_pings (SELECT COUNT(*) FROM telemetry_pings;)\n\nRun in Supabase SQL Editor and report row counts. If any table is missing, run the corresponding migration from sql/ in the repo.`,
+  deploy: `RENDER DEPLOY STATUS\n\nPlease check the current deployment:\n1. Go to https://dashboard.render.com\n2. Open the 3-lakes-logistics-api service\n3. Verify: last deploy succeeded, no crashes in logs\n4. Check environment variables are set: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, API_BEARER_TOKEN, BOND_API_KEY\n5. Report: deploy status, last deploy time, any errors in logs`,
+  intel: `MARKET INTELLIGENCE REQUEST\n\nPlease gather current market intelligence:\n1. Run: curl $IEBC_API_URL/api/agents/alexander/run -X POST -H "Authorization: Bearer $API_TOKEN" -d \'{"action": "analyze"}\'\n2. Report: top states by carrier density, fleet capacity trends\n3. Identify any markets with high demand and low competition\n\nThis intel will feed Naomi's targeting model.`,
+  status: `FULL STATUS REPORT — $(date)\n\nRequired status checks:\n1. API health (ping + full)\n2. Database: row counts for carriers, loads, leads, agent_memory\n3. Bond channel: message count, pending/unread\n4. Last 5 agent runs (from agent_memory table)\n5. Any critical SLA violations\n\nFormat your response as a structured report with OK/WARN/FAIL for each system. Post response to /api/bond/report when complete.`,
+};
+function boFillTemplate(key) {
+  const el = document.getElementById('bo-directive-text');
+  if(el && BO_TEMPLATES[key]) el.value = BO_TEMPLATES[key];
+  const priEl = document.getElementById('bo-priority');
+  if(priEl && key==='connectivity') priEl.value='high';
+  if(priEl && key==='health') priEl.value='normal';
+}
+
+async function boLoadComposeHistory() {
+  const outDiv = document.getElementById('bo-recent-outbound');
+  const inDiv  = document.getElementById('bo-inbound-feed');
+  try {
+    const d = await apiFetch('/api/bond/thread?limit=30');
+    const msgs = d.messages||[];
+    const out  = msgs.filter(m=>m.direction==='internal_to_external').slice(-5).reverse();
+    const inb  = msgs.filter(m=>m.direction==='external_to_internal').slice(-8).reverse();
+    if(outDiv){
+      if(!out.length){ outDiv.innerHTML='<div style="font-size:11px;color:var(--muted);font-style:italic;">No outbound messages yet.</div>'; }
+      else { outDiv.innerHTML = out.map(m=>`<div class="bo-hist-item"><strong>${boTagType(m.message_type)} ${boTagPri(m.priority)}</strong><br>${boEsc((m.content||'').slice(0,100))}… <span style="color:var(--muted)">${boFmtAge(m.created_at)}</span></div>`).join(''); }
+    }
+    if(inDiv){
+      if(!inb.length){ inDiv.innerHTML='<div style="font-size:11px;color:var(--muted);padding:4px 0;font-style:italic;">No inbound messages.</div>'; }
+      else { inDiv.innerHTML = inb.map(m=>`<div class="bo-hist-item"><strong>${boTagPri(m.priority)}</strong> ${boFmtAge(m.created_at)}<br>${boEsc((m.content||'').slice(0,80))}…</div>`).join(''); }
+    }
+  } catch(e){ console.warn('Compose history failed',e); }
+}
+
+// ── Poll External
+async function boPollExternal() {
+  try {
+    const d=await apiFetch('/api/agents/bond_courier/run','POST',{action:'poll'});
+    await boLoadThread(); await boLoadStatus();
+    if(d.count>0) toast(d.count+' new message(s) from External Bond.','success');
+    else toast('No new messages from External Bond.','info');
+  } catch(e){ alert('Poll failed: '+e.message); }
+}
+
+// ── Situation Room
+async function boLoadSitRoom() {
+  boLoadStatus();
+  // Load KPIs
+  try {
+    const d = await apiFetch('/api/dashboard/kpis');
+    const n = (id,v,cls) => {
+      const el=document.getElementById(id); if(el)el.textContent=v??'—';
+      if(cls){ const p=el?.closest('.bo-kpi'); if(p){p.className='bo-kpi '+cls;} }
+    };
+    n('bokpi-carriers', d.total_carriers ?? d.carrier_count ?? '—');
+    n('bokpi-loads',    d.open_loads     ?? d.active_loads  ?? '—', (d.open_loads||0)>0?'ok':'');
+    n('bokpi-leads',    d.total_leads    ?? d.lead_count    ?? '—');
+    n('bokpi-sla',      d.sla_violations ?? '—', (d.sla_violations||0)>2?'warn':'ok');
+    if(d.sla_violations!=null) document.getElementById('bokpi-sla-sub').textContent=(d.critical_violations||0)+' critical';
+  } catch(e){ console.warn('KPI load failed',e); }
+
+  // Intel Feed
+  boLoadIntelFeed();
+}
+
+const BO_AGENT_META = {
+  winston:   { icon:'👥', color:'#3b82f6', bg:'rgba(59,130,246,.12)' },
+  isabella:  { icon:'📣', color:'#8b5cf6', bg:'rgba(139,92,246,.12)' },
+  alexander: { icon:'📊', color:'#10b981', bg:'rgba(16,185,129,.12)' },
+  katerina:  { icon:'⚙️', color:'#f59e0b', bg:'rgba(245,158,11,.12)' },
+  naomi:     { icon:'🎯', color:'#3b82f6', bg:'rgba(59,130,246,.12)' },
+  vance:     { icon:'📞', color:'#10b981', bg:'rgba(16,185,129,.12)' },
+  scout:     { icon:'🔍', color:'#6366f1', bg:'rgba(99,102,241,.12)' },
+  penny:     { icon:'💰', color:'#f59e0b', bg:'rgba(245,158,11,.12)' },
+  sofia:     { icon:'📈', color:'#ec4899', bg:'rgba(236,72,153,.12)'  },
+  james_bond:{ icon:'🕵️', color:'#e4a830', bg:'rgba(228,168,48,.15)' },
+  default:   { icon:'🤖', color:'#5a6a82', bg:'rgba(90,106,130,.1)'  },
+};
+
+async function boLoadIntelFeed() {
+  const feed = document.getElementById('bo-intel-feed');
+  if(!feed)return;
+  feed.innerHTML='<div class="bo-empty"><div class="bo-empty-icon">⏳</div><div class="bo-empty-text">LOADING…</div></div>';
+  try {
+    // Pull agent memory for the top agents
+    const agents = ['winston','isabella','alexander','katerina','naomi','vance','penny','sofia','james_bond'];
+    const items = [];
+    // Try to get org brain summary
+    try {
+      const org = await apiFetch('/api/agents/james_bond/run','POST',{scope:'full',top_n:3});
+      if(org.executive_brief){
+        items.push({
+          agent:'james_bond', key:'executive_brief',
+          value: org.executive_brief.slice(0,180),
+          ts: new Date().toISOString(),
+        });
+      }
+      if(org.tech_gaps?.length){
+        items.push({
+          agent:'james_bond', key:'top_tech_gap',
+          value: org.tech_gaps[0]?.description || JSON.stringify(org.tech_gaps[0]).slice(0,120),
+          ts: new Date().toISOString(),
+        });
+      }
+    } catch(_){}
+    // Bond channel unread count
+    try {
+      const bs = await apiFetch('/api/bond/status');
+      if((bs.unread_inbound||0)>0){
+        items.push({agent:'james_bond',key:'unread_messages',value:`${bs.unread_inbound} unread message(s) from External Bond on Daytona`,ts:new Date().toISOString()});
+      }
+      items.push({agent:'james_bond',key:'channel',value:`Bond channel ${bs.channel_active?'ACTIVE':'inactive'} · ${bs.total_messages||0} total messages`,ts:new Date().toISOString()});
+    } catch(_){}
+    // Carriers
+    try {
+      const c = await apiFetch('/api/carriers/');
+      const ct = Array.isArray(c)?c.length:(c?.count??null);
+      if(ct!=null) items.push({agent:'winston',key:'carrier_count',value:`${ct} carrier(s) in active fleet`,ts:new Date().toISOString()});
+    } catch(_){}
+    // Leads
+    try {
+      const l = await apiFetch('/api/leads/?limit=1');
+      if(l?.count!=null) items.push({agent:'isabella',key:'lead_pipeline',value:`${l.count} lead(s) in pipeline`,ts:new Date().toISOString()});
+    } catch(_){}
+
+    if(!items.length){
+      feed.innerHTML='<div class="bo-empty"><div class="bo-empty-icon">📡</div><div class="bo-empty-text">NO INTEL YET — RUN AGENTS</div></div>';
+      return;
+    }
+    feed.innerHTML = items.map(item => {
+      const meta = BO_AGENT_META[item.agent] || BO_AGENT_META.default;
+      const agentName = item.agent.replace('_',' ').replace(/\b\w/g,c=>c.toUpperCase());
+      return `<div class="bo-intel-item">
+        <div class="bo-intel-icon" style="background:${meta.bg};color:${meta.color};">${meta.icon}</div>
+        <div class="bo-intel-body">
+          <div class="bo-intel-agent">${agentName}</div>
+          <div class="bo-intel-detail">${boEsc(item.value)}</div>
+        </div>
+        <div class="bo-intel-ts">${boFmtAge(item.ts)}</div>
+      </div>`;
+    }).join('');
+  } catch(e){
+    feed.innerHTML='<div style="padding:14px;font-size:11px;color:var(--red);">Intel feed error: '+boEsc(e.message)+'</div>';
+  }
+}
+
+// ── Audit
+let _boLastAudit = null;
+
+async function boRunAuditAndBrief() {
+  const btn = document.querySelector('.bo-brief-run-btn');
+  if(btn){ btn.disabled=true; btn.textContent='Running…'; }
+  const brief = document.getElementById('bo-brief-content');
+  if(brief) brief.innerHTML='<div class="bo-brief-empty"><div class="bo-brief-empty-icon">⏳</div><div class="bo-brief-empty-text">Bond is analyzing the org…</div></div>';
+  try {
+    const d = await apiFetch('/api/agents/james_bond/run','POST',{scope:'full',top_n:5});
+    _boLastAudit = d;
+    boRenderBrief(d);
+    boRenderAuditResults(d);
+    if(btn){ btn.disabled=false; btn.textContent='Run Audit →'; }
+  } catch(e) {
+    if(brief) brief.innerHTML=`<div class="bo-brief-empty"><div class="bo-brief-empty-icon">✗</div><div class="bo-brief-empty-text" style="color:var(--red)">Audit failed: ${boEsc(e.message)}</div></div>`;
+    if(btn){ btn.disabled=false; btn.textContent='Run Audit →'; }
+  }
+}
+
+function boRenderBrief(d) {
+  const brief = document.getElementById('bo-brief-content');
+  if(!brief)return;
+  const text = d.executive_brief || d.summary || JSON.stringify(d).slice(0,400);
+  const gaps  = d.tech_gaps?.length||0;
+  const score = d.health_score ?? null;
+  brief.innerHTML = `
+    <div style="display:flex;flex-direction:column;flex:1;min-height:0;">
+      ${score!=null?`<div style="padding:10px 16px 0;display:flex;gap:10px;flex-wrap:wrap;flex-shrink:0;">
+        <div style="font-family:var(--ff-m);font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;">Health Score</div>
+        <div style="font-family:var(--ff-m);font-size:11px;font-weight:700;color:${score>70?'var(--green)':score>40?'var(--orange)':'var(--red)'};">${score}/100</div>
+        <div style="font-family:var(--ff-m);font-size:9px;color:var(--muted);margin-left:8px;text-transform:uppercase;letter-spacing:.8px;">Tech Gaps</div>
+        <div style="font-family:var(--ff-m);font-size:11px;font-weight:700;color:${gaps>3?'var(--red)':gaps>0?'var(--orange)':'var(--green)'};">${gaps}</div>
+      </div>`:''}
+      <div class="bo-brief-body">${boEsc(text)}</div>
+    </div>`;
+}
+
+async function boRunFullAudit() {
+  const btn = document.getElementById('bo-audit-btn');
+  const scope = document.getElementById('bo-audit-scope')?.value || 'full';
+  if(btn){ btn.disabled=true; btn.textContent='⏳ Running…'; }
+  const ts = document.getElementById('bo-audit-last-ts');
+  try {
+    const d = await apiFetch('/api/agents/james_bond/run','POST',{scope,top_n:7});
+    _boLastAudit = d;
+    boRenderAuditResults(d);
+    boRenderBrief(d);
+    if(ts) ts.textContent='Last run: just now';
+    if(btn){ btn.disabled=false; btn.textContent='🔍 Run Bond Audit'; }
+  } catch(e) {
+    if(btn){ btn.disabled=false; btn.textContent='🔍 Run Bond Audit'; }
+    const el=document.getElementById('bo-audit-gaps');
+    if(el) el.innerHTML=`<div style="padding:16px;color:var(--red);font-size:12px;">Audit failed: ${boEsc(e.message)}</div>`;
+  }
+}
+
+function boRenderLastAudit() { if(_boLastAudit) boRenderAuditResults(_boLastAudit); }
+
+function boRenderAuditResults(d) {
+  const gapsEl = document.getElementById('bo-audit-gaps');
+  const dirEl  = document.getElementById('bo-audit-directives');
+  const briefEl= document.getElementById('bo-exec-brief');
+  const cntEl  = document.getElementById('bo-audit-gap-count');
+  const gaps   = d.tech_gaps || [];
+  const dirs   = d.directives || d.action_items || [];
+  if(cntEl) cntEl.textContent = gaps.length+' gap(s) found';
+  if(briefEl) briefEl.textContent = d.executive_brief || 'No brief generated.';
+
+  if(gapsEl){
+    if(!gaps.length){
+      gapsEl.innerHTML='<div class="bo-brief-empty" style="padding:20px 0;"><div class="bo-brief-empty-icon">✅</div><div class="bo-brief-empty-text">NO GAPS DETECTED</div></div>';
+    } else {
+      const sev = {critical:'crit',high:'high',medium:'med',low:'ok'};
+      gapsEl.innerHTML = gaps.map((g,i)=>{
+        const cls = sev[g.severity||g.priority||'medium']||'med';
+        const title = g.domain||g.area||g.title||`Gap ${i+1}`;
+        const desc  = g.description||g.detail||g.recommendation||JSON.stringify(g).slice(0,120);
+        return `<div class="bo-gap-item ${cls}"><div class="bo-gap-label">${boEsc(title)}</div><div class="bo-gap-desc">${boEsc(desc)}</div></div>`;
+      }).join('');
+    }
+  }
+
+  if(dirEl){
+    if(!dirs.length){
+      dirEl.innerHTML='<div style="padding:12px;font-size:11px;color:var(--muted);">No directives — org health nominal.</div>';
+    } else {
+      dirEl.innerHTML = dirs.map((d,i)=>`
+        <div class="bo-directive-item">
+          <span class="bo-directive-n">${String(i+1).padStart(2,'0')}</span>
+          <span>${boEsc(typeof d==='string'?d:(d.action||d.directive||JSON.stringify(d).slice(0,100)))}</span>
+        </div>`).join('');
+    }
+  }
+}
+
+// ── Hook nav() to auto-load on page switch
+(function(){
+  const _orig = window.nav;
+  window.nav = function(id) {
+    if(id==='bond'){ boLoadStatus(); boLoadThread(); boLoadSitRoom(); }
+    return _orig ? _orig(id) : undefined;
+  };
+})();
+
+// ── UI Status Tab — Lucas Sterling & Chloe Sinclair ──────────────────────────
+async function boLoadUIStatus() {
+  // Pull from org memory (no re-run) — show cached results if available
+  try {
+    const [lm, cm] = await Promise.all([
+      apiFetch('/api/memory/lucas_sterling/last_ui_audit','GET').catch(()=>null),
+      apiFetch('/api/memory/chloe_sinclair/last_viewport_audit','GET').catch(()=>null),
+    ]);
+    if(lm?.value) _boRenderLucas(lm.value);
+    if(cm?.value) _boRenderChloe(cm.value);
+  } catch(e) { /* memory offline — show stale if any */ }
+}
+
+async function boRunLucasAudit() {
+  const btn = document.getElementById('bo-lucas-run-btn');
+  if(btn){ btn.disabled=true; btn.textContent='Running…'; }
+  try {
+    const d = await apiFetch('/api/agents/lucas_sterling/run','POST',{scope:'full'});
+    _boRenderLucas(d);
+    // clear the UI badge if clearance improves
+    document.getElementById('bo-ui-badge').style.display='none';
+  } catch(e) {
+    document.getElementById('bo-lucas-summary').textContent = 'Lucas offline: '+boEsc(e.message);
+  } finally {
+    if(btn){ btn.disabled=false; btn.textContent='▶ Run Audit'; }
+  }
+}
+
+async function boRunChloeQA() {
+  const btn = document.getElementById('bo-chloe-run-btn');
+  if(btn){ btn.disabled=true; btn.textContent='Scanning…'; }
+  try {
+    const d = await apiFetch('/api/agents/chloe_sinclair/run','POST',{scope:'full'});
+    _boRenderChloe(d);
+    if(d.escalate_to_lucas) {
+      document.getElementById('bo-ui-badge').style.display='';
+      document.getElementById('bo-ui-badge').textContent='!';
+    }
+  } catch(e) {
+    document.getElementById('bo-chloe-notes').textContent = 'Chloe offline: '+boEsc(e.message);
+  } finally {
+    if(btn){ btn.disabled=false; btn.textContent='▶ Run QA'; }
+  }
+}
+
+function _boRenderLucas(d) {
+  const score = d.health_score ?? '—';
+  const crit  = (d.critical_issues||[]).length;
+  const impr  = (d.improvements||[]).length;
+  const el = document.getElementById('bo-lucas-score');
+  if(el){ el.textContent=score; el.style.color = score>=85?'var(--green)':score>=65?'var(--orange)':'var(--red)'; }
+  const c=document.getElementById('bo-lucas-crit'); if(c) c.textContent=crit;
+  const i=document.getElementById('bo-lucas-impr'); if(i) i.textContent=impr;
+  const s=document.getElementById('bo-lucas-summary'); if(s) s.textContent=d.summary||'';
+  const ts=document.getElementById('bo-lucas-ts'); if(ts) ts.textContent=d.timestamp?'Last run: '+boFmtAge(d.timestamp):'';
+  _boMergeUIIssues();
+}
+
+function _boRenderChloe(d) {
+  const cl = (d.clearance||'').toUpperCase();
+  const clEl = document.getElementById('bo-chloe-clearance');
+  if(clEl){
+    clEl.textContent = cl||'—';
+    clEl.className = 'bo-clearance ' + (cl==='PASS'?'pass':cl==='FAIL'?'fail':'cond');
+  }
+  const vp=document.getElementById('bo-chloe-vp'); if(vp) vp.textContent=(d.viewport_issues||[]).length;
+  const mb=document.getElementById('bo-chloe-mob'); if(mb) mb.textContent=(d.mobile_failures||[]).length;
+  const n=document.getElementById('bo-chloe-notes'); if(n) n.textContent=d.qa_notes||'';
+  const ts=document.getElementById('bo-chloe-ts'); if(ts) ts.textContent=d.timestamp?'Last run: '+boFmtAge(d.timestamp):'';
+  _boMergeUIIssues();
+}
+
+function _boMergeUIIssues() {
+  // Combine Lucas directives + Chloe viewport issues into one list
+  const body = document.getElementById('bo-uistat-issues-body'); if(!body) return;
+  const items = [];
+  // Lucas directives from last stored data
+  try {
+    const lScore = parseInt(document.getElementById('bo-lucas-score')?.textContent)||0;
+    // pull directives from card summary — we show them on next audit render
+  } catch(e){}
+  // Chloe viewport issues
+  const vpCount = parseInt(document.getElementById('bo-chloe-vp')?.textContent)||0;
+  const mobCount = parseInt(document.getElementById('bo-chloe-mob')?.textContent)||0;
+  if(vpCount===0 && mobCount===0 && parseInt(document.getElementById('bo-lucas-crit')?.textContent)===0) {
+    body.innerHTML='<div class="bo-brief-empty" style="padding:20px 0;"><div class="bo-brief-empty-icon">✅</div><div class="bo-brief-empty-text">ALL CLEAR — NO CRITICAL ISSUES</div></div>';
+    document.getElementById('bo-uistat-issue-count').textContent='0 issues';
+    return;
+  }
+  document.getElementById('bo-uistat-issue-count').textContent=(vpCount+mobCount)+' issues';
+  body.innerHTML = '<div class="bo-uiissue med"><div class="bo-uiissue-label">📊 Lucas: '+document.getElementById('bo-lucas-crit')?.textContent+' critical, '+document.getElementById('bo-lucas-impr')?.textContent+' improvements</div><div class="bo-uiissue-desc">'+boEsc(document.getElementById('bo-lucas-summary')?.textContent||'')+'</div></div>'+
+    (vpCount?'<div class="bo-uiissue high"><div class="bo-uiissue-label">🖥️ Chloe: '+vpCount+' viewport issue(s)</div><div class="bo-uiissue-desc">Cross-browser rendering anomalies detected. Run Chloe QA for full details.</div></div>':'')+
+    (mobCount?'<div class="bo-uiissue crit"><div class="bo-uiissue-label">📱 Chloe: '+mobCount+' mobile failure(s)</div><div class="bo-uiissue-desc">Layout breaks detected on mobile breakpoints. Escalation to Lucas active.</div></div>':'');
+}
+
+// ── Legacy aliases (for test suite Bond escalation compatibility)
+window.bondLoadThread  = boLoadThread;
+window.bondLoadStatus  = boLoadStatus;
+window.bondSendDirective = boSendDirective;
+window.bondRunAudit    = boRunAuditAndBrief;
+window.bondPollExternal= boPollExternal;
+window.bondRenderThread= boRenderThread;
+
+// ── Auto-refresh when Bond page is active
+setInterval(()=>{ if(document.getElementById('page-bond')?.classList.contains('active')){ boLoadThread(); boLoadStatus(); } }, 30000);
+setInterval(()=>{ if(document.getElementById('page-bond')?.classList.contains('active')) boLoadSitRoom(); }, 120000);
+</script>
+
+
+
+<!-- ═══════════════════════════ TEST SUITE PAGE ═══════════════════════════ -->
+<div class="page" id="page-tests">
+<style>
+.ts-wrap{padding:24px 28px;height:calc(100vh - 116px);overflow-y:auto;box-sizing:border-box;}
+.ts-topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px;}
+.ts-title{font-family:var(--ff-p);font-size:22px;font-weight:700;color:var(--gold2);}
+.ts-subtitle{font-size:12px;color:var(--muted);margin-top:2px;}
+.ts-runall{background:var(--gold2);color:#000;border:none;padding:9px 22px;border-radius:6px;font-weight:700;font-size:13px;cursor:pointer;letter-spacing:.4px;}
+.ts-runall:hover{background:var(--gold1);}
+.ts-runall:disabled{opacity:.5;cursor:not-allowed;}
+.ts-summary{display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;}
+.ts-stat{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 18px;min-width:90px;text-align:center;}
+.ts-stat-n{font-size:26px;font-weight:900;}
+.ts-stat-l{font-size:10px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);margin-top:2px;}
+.ts-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:16px;}
+.ts-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;display:flex;flex-direction:column;}
+.ts-card-head{display:flex;align-items:center;justify-content:space-between;padding:14px 16px 10px;border-bottom:1px solid var(--border);}
+.ts-card-title{display:flex;align-items:center;gap:8px;font-weight:700;font-size:14px;}
+.ts-card-icon{font-size:18px;}
+.ts-badge{font-size:10px;font-weight:800;letter-spacing:.6px;padding:3px 9px;border-radius:20px;text-transform:uppercase;}
+.ts-badge.idle{background:rgba(255,255,255,.07);color:var(--muted);}
+.ts-badge.running{background:rgba(228,168,48,.15);color:var(--gold2);}
+.ts-badge.pass{background:rgba(16,185,129,.15);color:#10b981;}
+.ts-badge.fail{background:rgba(239,68,68,.15);color:#ef4444;}
+.ts-badge.partial{background:rgba(245,158,11,.15);color:#f59e0b;}
+.ts-card-body{padding:12px 14px;display:flex;flex-direction:column;gap:8px;flex:1;}
+.ts-run-btn{width:100%;padding:7px 0;border:1px solid var(--border);background:transparent;color:var(--text);border-radius:5px;font-size:12px;font-weight:600;cursor:pointer;letter-spacing:.3px;transition:background .15s,color .15s;}
+.ts-run-btn:hover{background:rgba(228,168,48,.1);border-color:var(--gold2);color:var(--gold2);}
+.ts-run-btn:disabled{opacity:.45;cursor:not-allowed;}
+.ts-results{background:var(--bg);border:1px solid var(--border);border-radius:6px;min-height:80px;max-height:240px;overflow-y:scroll;font-family:var(--ff-m);font-size:11px;padding:8px 10px;display:flex;flex-direction:column;gap:4px;scrollbar-width:thin;scrollbar-color:var(--gold2) var(--surface);}
+.ts-results::-webkit-scrollbar{width:7px;}
+.ts-results::-webkit-scrollbar-track{background:var(--surface);border-radius:4px;}
+.ts-results::-webkit-scrollbar-thumb{background:var(--gold2);border-radius:4px;}
+.ts-results::-webkit-scrollbar-thumb:hover{background:var(--gold1);}
+.ts-row{display:flex;align-items:flex-start;gap:6px;line-height:1.5;}
+.ts-row .chip{flex-shrink:0;font-size:9px;font-weight:800;padding:1px 6px;border-radius:3px;text-transform:uppercase;letter-spacing:.4px;margin-top:1px;}
+.ts-row .chip.p{background:rgba(16,185,129,.2);color:#10b981;}
+.ts-row .chip.f{background:rgba(239,68,68,.2);color:#ef4444;}
+.ts-row .chip.r{background:rgba(228,168,48,.2);color:var(--gold2);}
+.ts-row .ts-msg{flex:1;color:var(--text);}
+.ts-row .ts-detail{color:var(--muted);font-size:10px;}
+.ts-empty{color:var(--muted);font-style:italic;text-align:center;padding:20px 0;}
+.ts-dur{color:var(--muted);font-size:10px;margin-left:auto;flex-shrink:0;}
+/* IEBC Team Panel */
+.ts-team{display:flex;gap:14px;margin-bottom:20px;flex-wrap:wrap;align-items:stretch;}
+.ts-team-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px;display:flex;align-items:center;gap:14px;flex:1;min-width:220px;}
+.ts-team-avatar{width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:16px;flex-shrink:0;border:2px solid var(--gold2);}
+.ts-team-info{flex:1;min-width:0;}
+.ts-team-name{font-weight:700;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.ts-team-role{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-top:2px;}
+.ts-team-status{display:flex;align-items:center;gap:5px;font-size:10px;margin-top:5px;}
+.ts-team-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+.ts-team-dot.active{background:#10b981;box-shadow:0 0 5px #10b981;}
+.ts-team-dot.idle{background:var(--muted);}
+.ts-team-assign{font-size:10px;color:var(--gold2);cursor:pointer;text-decoration:underline;margin-left:auto;flex-shrink:0;font-weight:600;}
+/* Bond Fix Bar */
+.ts-bond-bar{display:none;background:rgba(228,168,48,.08);border:1px solid rgba(228,168,48,.3);border-radius:8px;padding:12px 16px;margin-bottom:18px;align-items:center;gap:14px;flex-wrap:wrap;}
+.ts-bond-bar.visible{display:flex;}
+.ts-bond-bar-txt{flex:1;font-size:12px;color:var(--text);}
+.ts-bond-bar-txt strong{color:var(--gold2);}
+.ts-bond-fix-btn{background:var(--gold2);color:#000;border:none;padding:7px 18px;border-radius:5px;font-weight:800;font-size:12px;cursor:pointer;letter-spacing:.3px;white-space:nowrap;}
+.ts-bond-fix-btn:hover{background:var(--gold1);}
+.ts-bond-fix-btn:disabled{opacity:.5;cursor:not-allowed;}
+/* Remediation Console */
+.ts-rcon{display:none;margin-bottom:24px;}
+.ts-rcon.visible{display:block;}
+.ts-rcon-title{font-size:13px;font-weight:700;color:var(--gold2);letter-spacing:.5px;text-transform:uppercase;margin-bottom:12px;display:flex;align-items:center;gap:8px;}
+.ts-rcon-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px;margin-bottom:14px;}
+.ts-rcon-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;}
+.ts-rcon-head{display:flex;align-items:center;gap:10px;padding:11px 14px;border-bottom:1px solid var(--border);}
+.ts-rcon-avatar{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:12px;flex-shrink:0;}
+.ts-rcon-info{flex:1;}
+.ts-rcon-name{font-weight:700;font-size:13px;}
+.ts-rcon-role{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;}
+.ts-rcon-status{font-size:10px;font-weight:700;padding:2px 8px;border-radius:12px;text-transform:uppercase;}
+.ts-rcon-status.working{background:rgba(228,168,48,.15);color:var(--gold2);}
+.ts-rcon-status.done{background:rgba(16,185,129,.15);color:#10b981;}
+.ts-rcon-status.idle{background:rgba(255,255,255,.07);color:var(--muted);}
+.ts-rcon-body{padding:10px 12px;display:flex;flex-direction:column;gap:8px;}
+.ts-artifact{background:var(--bg);border:1px solid var(--border);border-radius:6px;overflow:hidden;}
+.ts-artifact-head{display:flex;align-items:center;justify-content:space-between;padding:6px 10px;border-bottom:1px solid var(--border);background:rgba(255,255,255,.03);}
+.ts-artifact-type{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;padding:2px 7px;border-radius:3px;}
+.ts-artifact-type.python{background:rgba(59,130,246,.2);color:#3b82f6;}
+.ts-artifact-type.sql{background:rgba(16,185,129,.2);color:#10b981;}
+.ts-artifact-type.env{background:rgba(245,158,11,.2);color:#f59e0b;}
+.ts-artifact-type.checklist{background:rgba(139,92,246,.2);color:#8b5cf6;}
+.ts-artifact-type.diagnosis{background:rgba(239,68,68,.15);color:#ef4444;}
+.ts-artifact-title{font-size:10px;color:var(--muted);flex:1;margin:0 8px;}
+.ts-copy-btn{font-size:9px;font-weight:700;background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:3px;padding:2px 7px;cursor:pointer;letter-spacing:.3px;}
+.ts-copy-btn:hover{border-color:var(--gold2);color:var(--gold2);}
+.ts-artifact-content{max-height:200px;overflow-y:scroll;padding:8px 10px;font-family:var(--ff-m);font-size:10px;line-height:1.6;color:var(--text);white-space:pre;scrollbar-width:thin;scrollbar-color:var(--gold2) var(--surface);}
+.ts-artifact-content::-webkit-scrollbar{width:5px;}
+.ts-artifact-content::-webkit-scrollbar-track{background:var(--surface);}
+.ts-artifact-content::-webkit-scrollbar-thumb{background:var(--gold2);border-radius:3px;}
+.ts-checklist-item{margin-bottom:8px;}
+.ts-checklist-area{font-size:10px;font-weight:700;color:var(--gold2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px;}
+.ts-checklist-step{font-size:11px;color:var(--text);padding:2px 0 2px 12px;position:relative;}
+.ts-checklist-step::before{content:'→';position:absolute;left:0;color:var(--muted);}
+/* Bond directive card */
+.ts-rcon-bond{background:var(--surface);border:1px solid rgba(228,168,48,.3);border-radius:10px;padding:14px 16px;margin-bottom:14px;}
+.ts-rcon-bond-head{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+.ts-rcon-bond-title{font-weight:700;font-size:13px;color:var(--gold2);}
+.ts-rcon-bond-sub{font-size:10px;color:var(--muted);}
+.ts-rcon-directive{background:var(--bg);border:1px solid var(--border);border-radius:6px;max-height:180px;overflow-y:scroll;padding:10px 12px;font-family:var(--ff-m);font-size:10px;line-height:1.7;color:var(--text);white-space:pre-wrap;scrollbar-width:thin;scrollbar-color:var(--gold2) var(--surface);}
+.ts-rcon-directive::-webkit-scrollbar{width:5px;}
+.ts-rcon-directive::-webkit-scrollbar-thumb{background:var(--gold2);border-radius:3px;}
+.ts-escalated-tag{font-size:9px;font-weight:800;background:rgba(228,168,48,.15);color:var(--gold2);padding:2px 8px;border-radius:10px;text-transform:uppercase;letter-spacing:.5px;margin-left:auto;}
+/* Dual-Bond Mission Control */
+.ts-mission{display:none;background:linear-gradient(135deg,rgba(10,10,20,.95),rgba(15,15,30,.98));border:1px solid rgba(228,168,48,.4);border-radius:12px;overflow:hidden;margin-bottom:20px;}
+.ts-mission.active{display:block;}
+.ts-mission-header{display:flex;align-items:center;gap:14px;padding:16px 20px;border-bottom:1px solid rgba(228,168,48,.2);background:rgba(228,168,48,.04);}
+.ts-mission-title{font-family:var(--ff-p);font-size:16px;font-weight:900;color:var(--gold2);letter-spacing:.5px;}
+.ts-mission-sub{font-size:10px;color:var(--muted);margin-top:2px;}
+.ts-mission-badge{font-size:10px;font-weight:800;padding:3px 10px;border-radius:20px;text-transform:uppercase;letter-spacing:.6px;margin-left:auto;}
+.ts-mission-badge.standby{background:rgba(255,255,255,.07);color:var(--muted);}
+.ts-mission-badge.running{background:rgba(228,168,48,.2);color:var(--gold2);animation:pulse-gold 1.5s infinite;}
+.ts-mission-badge.healed{background:rgba(16,185,129,.2);color:#10b981;}
+.ts-mission-badge.partial{background:rgba(245,158,11,.2);color:#f59e0b;}
+@keyframes pulse-gold{0%,100%{opacity:1;}50%{opacity:.5;}}
+.ts-mission-phases{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:1px;background:rgba(228,168,48,.1);}
+.ts-phase{padding:12px 16px;background:rgba(10,10,20,.95);display:flex;flex-direction:column;gap:4px;}
+.ts-phase-label{font-size:9px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);font-weight:700;}
+.ts-phase-val{font-size:13px;font-weight:800;color:var(--text);}
+.ts-phase-val.ok{color:#10b981;}.ts-phase-val.warn{color:#f59e0b;}.ts-phase-val.err{color:#ef4444;}.ts-phase-val.active{color:var(--gold2);}
+.ts-mission-log{max-height:260px;overflow-y:scroll;padding:14px 18px;font-family:var(--ff-m);font-size:11px;line-height:1.7;scrollbar-width:thin;scrollbar-color:var(--gold2) rgba(0,0,0,.3);}
+.ts-mission-log::-webkit-scrollbar{width:5px;}
+.ts-mission-log::-webkit-scrollbar-thumb{background:var(--gold2);border-radius:3px;}
+.ts-ml-line{display:flex;gap:10px;align-items:baseline;}
+.ts-ml-ts{color:rgba(255,255,255,.25);flex-shrink:0;font-size:9px;}
+.ts-ml-txt{flex:1;}
+.ts-ml-txt.ok{color:#10b981;}.ts-ml-txt.warn{color:#f59e0b;}.ts-ml-txt.err{color:#ef4444;}.ts-ml-txt.bond{color:var(--gold2);}
+.ts-mission-directive{background:rgba(0,0,0,.4);border-top:1px solid rgba(228,168,48,.15);padding:14px 18px;}
+.ts-mission-directive-title{font-size:10px;font-weight:700;color:var(--gold2);text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px;}
+.ts-directive-box{background:rgba(0,0,0,.5);border:1px solid rgba(228,168,48,.2);border-radius:6px;max-height:200px;overflow-y:scroll;padding:10px 12px;font-family:var(--ff-m);font-size:10px;color:rgba(255,255,255,.7);white-space:pre-wrap;line-height:1.6;scrollbar-width:thin;scrollbar-color:var(--gold2) rgba(0,0,0,.3);}
+.ts-directive-box::-webkit-scrollbar{width:5px;}
+.ts-directive-box::-webkit-scrollbar-thumb{background:var(--gold2);border-radius:3px;}
+.ts-mission-footer{display:flex;align-items:center;gap:10px;padding:12px 18px;border-top:1px solid rgba(228,168,48,.1);}
+.ts-mission-iter{font-size:10px;color:var(--muted);}
+.ts-retest-btn{background:transparent;border:1px solid var(--gold2);color:var(--gold2);padding:6px 16px;border-radius:5px;font-size:11px;font-weight:700;cursor:pointer;}
+.ts-retest-btn:hover{background:rgba(228,168,48,.1);}
+.ts-unleash-btn{background:var(--gold2);color:#000;border:none;padding:10px 24px;border-radius:6px;font-weight:900;font-size:13px;cursor:pointer;letter-spacing:.4px;}
+.ts-unleash-btn:hover{background:var(--gold1);}
+.ts-unleash-btn:disabled{opacity:.5;cursor:not-allowed;}
+</style>
+<div class="ts-wrap">
+  <div class="ts-topbar">
+    <div>
+      <div class="ts-title">🧪 Test Suite</div>
+      <div class="ts-subtitle">Live smoke tests — runs against <span id="ts-api-url" style="color:var(--gold2)"></span></div>
+    </div>
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+      <button class="ts-runall" onclick="tsRunAll()">▶ Run All Domains</button>
+      <button class="ts-unleash-btn" id="ts-unleash-btn" onclick="tsUnleashBothBonds()">🕵️🕵️ Unleash Both Bonds</button>
+    </div>
+  </div>
+
+  <!-- IEBC Technical Team — real domain experts -->
+  <div class="ts-team">
+    <div class="ts-team-card">
+      <div class="ts-team-avatar" style="background:rgba(220,38,38,.15);color:#dc2626;">SH</div>
+      <div class="ts-team-info">
+        <div class="ts-team-name">Shield</div>
+        <div class="ts-team-role">Security &amp; Compliance · Security domain</div>
+        <div class="ts-team-status">
+          <div class="ts-team-dot active" id="ts-dot-shield"></div>
+          <span id="ts-status-shield" style="color:var(--muted)">On Duty</span>
+        </div>
+      </div>
+      <span class="ts-team-assign" onclick="tsAssignRun('shield','Shield')">Run All →</span>
+    </div>
+    <div class="ts-team-card">
+      <div class="ts-team-avatar" style="background:rgba(245,158,11,.15);color:#f59e0b;">KR</div>
+      <div class="ts-team-info">
+        <div class="ts-team-name">Katerina Rostova</div>
+        <div class="ts-team-role">Head of Process Automation · Health, Telemetry, Triggers</div>
+        <div class="ts-team-status">
+          <div class="ts-team-dot active" id="ts-dot-katerina"></div>
+          <span id="ts-status-katerina" style="color:var(--muted)">On Duty</span>
+        </div>
+      </div>
+      <span class="ts-team-assign" onclick="tsAssignRun('katerina','Katerina Rostova')">Run All →</span>
+    </div>
+    <div class="ts-team-card">
+      <div class="ts-team-avatar" style="background:rgba(139,92,246,.15);color:#8b5cf6;">IC</div>
+      <div class="ts-team-info">
+        <div class="ts-team-name">Isabella Cruz</div>
+        <div class="ts-team-role">VP Omnichannel Outreach · Leads</div>
+        <div class="ts-team-status">
+          <div class="ts-team-dot active" id="ts-dot-isabella"></div>
+          <span id="ts-status-isabella" style="color:var(--muted)">On Duty</span>
+        </div>
+      </div>
+      <span class="ts-team-assign" onclick="tsAssignRun('isabella','Isabella Cruz')">Run All →</span>
+    </div>
+    <div class="ts-team-card">
+      <div class="ts-team-avatar" style="background:rgba(16,185,129,.15);color:#10b981;">AW</div>
+      <div class="ts-team-info">
+        <div class="ts-team-name">Alexander Wright</div>
+        <div class="ts-team-role">VP Market Intelligence · Bond Channel &amp; Integration</div>
+        <div class="ts-team-status">
+          <div class="ts-team-dot active" id="ts-dot-alexander"></div>
+          <span id="ts-status-alexander" style="color:var(--muted)">On Duty</span>
+        </div>
+      </div>
+      <span class="ts-team-assign" onclick="tsAssignRun('alexander','Alexander Wright')">Run All →</span>
+    </div>
+    <div class="ts-team-card">
+      <div class="ts-team-avatar" style="background:rgba(59,130,246,.15);color:#3b82f6;">WC</div>
+      <div class="ts-team-info">
+        <div class="ts-team-name">Winston Carmichael</div>
+        <div class="ts-team-role">VP Client Success · Carriers &amp; Fleet</div>
+        <div class="ts-team-status">
+          <div class="ts-team-dot active" id="ts-dot-winston"></div>
+          <span id="ts-status-winston" style="color:var(--muted)">On Duty</span>
+        </div>
+      </div>
+      <span class="ts-team-assign" onclick="tsAssignRun('winston','Winston Carmichael')">Run All →</span>
+    </div>
+    <div class="ts-team-card">
+      <div class="ts-team-avatar" style="background:rgba(236,72,153,.15);color:#ec4899;">PN</div>
+      <div class="ts-team-info">
+        <div class="ts-team-name">Penny</div>
+        <div class="ts-team-role">Stripe &amp; Payments · Driver domain</div>
+        <div class="ts-team-status">
+          <div class="ts-team-dot active" id="ts-dot-penny"></div>
+          <span id="ts-status-penny" style="color:var(--muted)">On Duty</span>
+        </div>
+      </div>
+      <span class="ts-team-assign" onclick="tsAssignRun('penny','Penny')">Run All →</span>
+    </div>
+  </div>
+
+  <!-- Dual-Bond Mission Control Panel -->
+  <div class="ts-mission" id="ts-mission">
+    <div class="ts-mission-header">
+      <span style="font-size:26px;">🕵️🕵️</span>
+      <div>
+        <div class="ts-mission-title">DUAL-BOND AUTONOMOUS MISSION</div>
+        <div class="ts-mission-sub">Internal Bond + External Bond · Daytona <span id="ts-mission-sandbox" style="color:var(--gold2)">2a50d3c2…c5c6</span></div>
+      </div>
+      <span class="ts-mission-badge standby" id="ts-mission-badge">STANDBY</span>
+    </div>
+    <div class="ts-mission-phases">
+      <div class="ts-phase"><div class="ts-phase-label">Failures</div><div class="ts-phase-val" id="tsp-failures">—</div></div>
+      <div class="ts-phase"><div class="ts-phase-label">Internal Fixed</div><div class="ts-phase-val ok" id="tsp-fixed">—</div></div>
+      <div class="ts-phase"><div class="ts-phase-label">Need Manual</div><div class="ts-phase-val warn" id="tsp-manual">—</div></div>
+      <div class="ts-phase"><div class="ts-phase-label">External Bond</div><div class="ts-phase-val" id="tsp-ext">—</div></div>
+      <div class="ts-phase"><div class="ts-phase-label">Iteration</div><div class="ts-phase-val active" id="tsp-iter">—</div></div>
+      <div class="ts-phase"><div class="ts-phase-label">Tests After Fix</div><div class="ts-phase-val" id="tsp-retest">—</div></div>
+    </div>
+    <div class="ts-mission-log" id="ts-mission-log"></div>
+    <div class="ts-mission-directive" id="ts-mission-directive-wrap" style="display:none;">
+      <div class="ts-mission-directive-title">🕵️ Bond Directive Sent to External Bond</div>
+      <div class="ts-directive-box" id="ts-mission-directive-box"></div>
+    </div>
+    <div class="ts-mission-footer">
+      <span class="ts-mission-iter" id="ts-mission-iter-label"></span>
+      <button class="ts-retest-btn" id="ts-retest-btn" style="display:none;" onclick="tsMissionRetest()">↺ Re-run Tests Now</button>
+      <div style="flex:1;"></div>
+      <button class="ts-retest-btn" id="ts-poll-btn" style="display:none;" onclick="tsPollExternal()">📡 Check External Bond Reply</button>
+    </div>
+  </div>
+
+  <!-- Bond Fix Bar — appears when failures detected -->
+  <div class="ts-bond-bar" id="ts-bond-bar">
+    <span style="font-size:20px">🕵️</span>
+    <div class="ts-bond-bar-txt"><strong>James Bond</strong> — IEBC Consultant is standing by. <span id="ts-bond-bar-msg">Failures detected across domains.</span> Technical team will analyze and produce fix artifacts.</div>
+    <button class="ts-bond-fix-btn" id="ts-bond-fix-btn" onclick="tsEscalateToBond()">Deploy Technical Team →</button>
+  </div>
+
+  <!-- Remediation Console — populated by tsEscalateToBond() -->
+  <div class="ts-rcon" id="ts-rcon">
+    <div class="ts-rcon-title">
+      <span>🛠</span> IEBC Remediation Console
+      <span id="ts-rcon-escalated" class="ts-escalated-tag" style="display:none">Escalated to External Bond</span>
+    </div>
+    <!-- Bond directive card -->
+    <div class="ts-rcon-bond" id="ts-rcon-bond-card" style="display:none">
+      <div class="ts-rcon-bond-head">
+        <span style="font-size:22px">🕵️</span>
+        <div>
+          <div class="ts-rcon-bond-title">James Bond — Coordination Directive</div>
+          <div class="ts-rcon-bond-sub">IEBC Consultant · Sent to External Bond on Daytona</div>
+        </div>
+      </div>
+      <div class="ts-rcon-directive" id="ts-rcon-directive"></div>
+    </div>
+    <!-- Specialist panels -->
+    <div class="ts-rcon-grid" id="ts-rcon-specialists"></div>
+
+    <!-- Auto-Fix panel — appears after remediation renders -->
+    <div id="ts-autofix-panel" style="display:none;margin-top:14px;background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--border);">
+        <div>
+          <div style="font-weight:700;font-size:13px;">⚡ Self-Heal Engine</div>
+          <div style="font-size:10px;color:var(--muted);margin-top:2px;">System will attempt automated repairs, then re-run failed tests to confirm</div>
+        </div>
+        <button id="ts-autofix-btn" style="background:var(--gold2);color:#000;border:none;padding:8px 20px;border-radius:5px;font-weight:800;font-size:12px;cursor:pointer;" onclick="tsRunAutofix()">
+          ⚡ Run Auto-Fix
+        </button>
+      </div>
+      <div id="ts-autofix-log" style="padding:12px 16px;font-family:var(--ff-m);font-size:11px;min-height:60px;display:none;"></div>
+      <!-- env/table status grid -->
+      <div id="ts-autofix-status" style="display:none;padding:12px 16px;border-top:1px solid var(--border);display:none;">
+        <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px;">System Status</div>
+        <div id="ts-autofix-env-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:6px;margin-bottom:10px;"></div>
+        <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px;">Tables</div>
+        <div id="ts-autofix-table-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:6px;"></div>
+      </div>
+      <!-- rerun results -->
+      <div id="ts-rerun-section" style="display:none;padding:12px 16px;border-top:1px solid var(--border);">
+        <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px;">Re-Run Results (Failed Domains Only)</div>
+        <div id="ts-rerun-results" style="display:flex;flex-direction:column;gap:6px;"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="ts-summary">
+    <div class="ts-stat"><div class="ts-stat-n" id="ts-total" style="color:var(--text)">—</div><div class="ts-stat-l">Total Tests</div></div>
+    <div class="ts-stat"><div class="ts-stat-n" id="ts-passed" style="color:#10b981">—</div><div class="ts-stat-l">Passed</div></div>
+    <div class="ts-stat"><div class="ts-stat-n" id="ts-failed" style="color:#ef4444">—</div><div class="ts-stat-l">Failed</div></div>
+    <div class="ts-stat"><div class="ts-stat-n" id="ts-dur-total" style="color:var(--muted)">—</div><div class="ts-stat-l">Duration</div></div>
+    <div class="ts-stat" style="flex:1;text-align:left;padding-left:18px;">
+      <div style="font-size:11px;color:var(--muted)" id="ts-assigned-label">No run in progress</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:2px;letter-spacing:.5px;text-transform:uppercase;">Last Run By</div>
+    </div>
+  </div>
+
+  <div class="ts-grid" id="ts-grid"></div>
+</div>
+</div>
+<!-- ═══════════════════════════ END TEST SUITE ═══════════════════════════ -->
+
+<script>
+// ── Test Suite ─────────────────────────────────────────────────────────────
+const TS_DOMAINS = [
+  {
+    id: 'health', label: 'Health', icon: '❤️',
+    tests: [
+      {
+        name: 'Ping',
+        run: async () => {
+          const r = await fetch(`${API_BASE}/api/health/ping`);
+          if (!r.ok) throw new Error(`HTTP ${r.status}`);
+          const d = await r.json();
+          if (d !== 'ok') throw new Error(`Expected "ok", got ${JSON.stringify(d)}`);
+          return 'pong received';
+        }
+      },
+      {
+        name: 'Full health (Supabase + Stripe)',
+        run: async () => {
+          const r = await fetch(`${API_BASE}/api/health/full`);
+          if (!r.ok) throw new Error(`HTTP ${r.status}`);
+          const d = await r.json();
+          if (!d.ok) throw new Error('Health not ok: ' + JSON.stringify(d));
+          return `supabase=${d.services?.supabase||'?'}`;
+        }
+      },
+      {
+        name: 'Auth guard (no token → 401/403)',
+        run: async () => {
+          const r = await fetch(`${API_BASE}/api/leads/`);
+          if (![401,403].includes(r.status)) throw new Error(`Expected 401/403, got ${r.status}`);
+          return `status ${r.status} — protected`;
+        }
+      }
+    ]
+  },
+  {
+    id: 'carriers', label: 'Carriers', icon: '👥',
+    tests: [
+      {
+        name: 'List carriers',
+        run: async () => {
+          const d = await apiFetch('/api/carriers/');
+          return `${Array.isArray(d) ? d.length : (d?.count ?? '?')} record(s)`;
+        }
+      },
+      {
+        name: 'Carrier intake schema reachable',
+        run: async () => {
+          const r = await fetch(`${API_BASE}/api/carriers/intake`, {
+            method: 'OPTIONS',
+            headers: { Authorization: 'Bearer ' + API_TOKEN }
+          });
+          if (r.status >= 500) throw new Error(`HTTP ${r.status}`);
+          return `OPTIONS ${r.status}`;
+        }
+      },
+      {
+        name: 'Carrier intake POST (test carrier)',
+        run: async () => {
+          const d = await apiFetch('/api/carriers/intake', 'POST', {
+            name: 'Eagle Eye Test Carrier', dot: '9000001', mc: '900001',
+            email: 'test@eagleeye.internal', phone: '+13135550001',
+            truck_type: 'dry_van', truck_count: 1
+          });
+          if (!d || d.error) throw new Error(d?.error || 'No response');
+          return `intake accepted — id ${d.carrier_id || d.id || '?'}`;
+        }
+      }
+    ]
+  },
+  {
+    id: 'fleet', label: 'Fleet', icon: '🚛',
+    tests: [
+      {
+        name: 'List fleet',
+        run: async () => {
+          const d = await apiFetch('/api/fleet/');
+          return `${Array.isArray(d) ? d.length : (d?.count ?? '?')} record(s)`;
+        }
+      },
+      {
+        name: 'Fleet public endpoint',
+        run: async () => {
+          const r = await fetch(`${API_BASE}/api/fleet/public`);
+          if (r.status >= 500) throw new Error(`HTTP ${r.status}`);
+          return `status ${r.status}`;
+        }
+      },
+      {
+        name: 'HOS update (test driver)',
+        run: async () => {
+          const d = await apiFetch('/api/telemetry/hos', 'POST', {
+            carrier_id: 'EE-TEST-001', driver_code: 'Eagle Eye Test Driver',
+            duty_status: 'off_duty', drive_remaining_min: 660, shift_remaining_min: 840
+          });
+          if (!d || d.error) throw new Error(d?.error || 'No response');
+          return `HOS recorded — status off_duty`;
+        }
+      }
+    ]
+  },
+  {
+    id: 'leads', label: 'Leads', icon: '🎯',
+    tests: [
+      {
+        name: 'List leads',
+        run: async () => {
+          const d = await apiFetch('/api/leads/');
+          if (!('count' in d) || !('items' in d)) throw new Error('Missing count/items keys');
+          return `${d.count} lead(s)`;
+        }
+      },
+      {
+        name: 'Leads limit param',
+        run: async () => {
+          const d = await apiFetch('/api/leads/?limit=5');
+          if (d.count > 5) throw new Error(`Expected ≤5, got ${d.count}`);
+          return `limit=5 → ${d.count} returned`;
+        }
+      },
+      {
+        name: 'Lead create (test prospect)',
+        run: async () => {
+          const d = await apiFetch('/api/leads/', 'POST', {
+            name: 'Eagle Eye Test Prospect', phone: '+13135559999',
+            email: 'prospect@eagleeye.internal', dot: '9999999',
+            source: 'manual', score: 85
+          });
+          if (!d || d.error) throw new Error(d?.error || 'No response');
+          return `lead created — id ${d.id || d.lead_id || '?'}`;
+        }
+      }
+    ]
+  },
+  {
+    id: 'telemetry', label: 'Telemetry', icon: '🛰️',
+    tests: [
+      {
+        name: 'Latest positions shape',
+        run: async () => {
+          const d = await apiFetch('/api/telemetry/latest');
+          if (!('count' in d) || !Array.isArray(d.items)) throw new Error('Bad shape');
+          return `${d.count} position(s)`;
+        }
+      },
+      {
+        name: 'Ping ingestion',
+        run: async () => {
+          const d = await apiFetch('/api/telemetry/ping', 'POST', {
+            carrier_id: 'test-carrier-001', truck_id: 'test-truck-001',
+            eld_provider: 'samsara', lat: 34.0522, lng: -118.2437,
+            speed_mph: 55.5, heading_deg: 270.0
+          });
+          if (!d.ok) throw new Error('ok !== true');
+          return 'ping accepted';
+        }
+      }
+    ]
+  },
+  {
+    id: 'dashboard', label: 'Dashboard', icon: '📊',
+    tests: [
+      {
+        name: 'KPIs endpoint',
+        run: async () => {
+          const r = await fetch(`${API_BASE}/api/dashboard/kpis`, {
+            headers: { Authorization: 'Bearer ' + API_TOKEN }
+          });
+          if (!r.ok) throw new Error(`HTTP ${r.status}`);
+          const d = await r.json();
+          const keys = Object.keys(d).length;
+          return `${keys} metric(s) returned`;
+        }
+      },
+      {
+        name: 'Execution domains',
+        run: async () => {
+          const d = await apiFetch('/api/execution/domains');
+          const domains = Array.isArray(d) ? d : (d?.domains || []);
+          return `${domains.length} domain(s) registered`;
+        }
+      },
+      {
+        name: 'Founders inventory',
+        run: async () => {
+          const d = await apiFetch('/api/founders/inventory');
+          const items = Array.isArray(d) ? d : (d?.items || d?.inventory || []);
+          return `${items.length} item(s) in inventory`;
+        }
+      }
+    ]
+  },
+  {
+    id: 'triggers', label: 'Triggers', icon: '⚡',
+    tests: [
+      {
+        name: 'Trigger status',
+        run: async () => {
+          const d = await apiFetch('/api/triggers/status');
+          return `engine status: ${JSON.stringify(d).slice(0,80)}`;
+        }
+      },
+      {
+        name: 'Compliance trigger (all carriers)',
+        run: async () => {
+          const d = await apiFetch('/api/triggers/compliance', 'POST', { carrier_ids: [] });
+          if (!d || d.error) throw new Error(d?.error || 'No response');
+          return `compliance sweep fired — ${JSON.stringify(d).slice(0,60)}`;
+        }
+      },
+      {
+        name: 'Analytics trigger',
+        run: async () => {
+          const d = await apiFetch('/api/triggers/analytics', 'POST', {});
+          if (!d || d.error) throw new Error(d?.error || 'No response');
+          return `analytics triggered — ${JSON.stringify(d).slice(0,60)}`;
+        }
+      }
+    ]
+  },
+  {
+    id: 'driver', label: 'Driver', icon: '🧑‍✈️',
+    tests: [
+      {
+        name: 'Driver auth bad PIN → 401',
+        run: async () => {
+          const r = await fetch(`${API_BASE}/api/driver-auth/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ phone: '555-000-0001', pin: '0000' })
+          });
+          if (r.status !== 401) throw new Error(`Expected 401, got ${r.status}`);
+          return `status ${r.status} — bad PIN rejected`;
+        }
+      },
+      {
+        name: 'Driver auth GET /me (no token) → 401',
+        run: async () => {
+          const r = await fetch(`${API_BASE}/api/driver-auth/me`);
+          if (r.status !== 401) throw new Error(`Expected 401, got ${r.status}`);
+          return `status ${r.status} — unauthenticated blocked`;
+        }
+      },
+      {
+        name: 'Driver auth GET /me (bad token) → 401',
+        run: async () => {
+          const r = await fetch(`${API_BASE}/api/driver-auth/me`, {
+            headers: { Authorization: 'Bearer not_a_real_token_xyz' }
+          });
+          if (r.status !== 401) throw new Error(`Expected 401, got ${r.status}`);
+          return `status ${r.status} — bad token rejected`;
+        }
+      },
+      {
+        name: 'Driver profile guard (no token) → 401',
+        run: async () => {
+          const r = await fetch(`${API_BASE}/api/driver/profile`);
+          if (r.status !== 401) throw new Error(`Expected 401, got ${r.status}`);
+          return `status ${r.status} — profile protected`;
+        }
+      },
+      {
+        name: 'Payout history guard (no token) → 401',
+        run: async () => {
+          const r = await fetch(`${API_BASE}/api/payout/history`);
+          if (r.status !== 401) throw new Error(`Expected 401, got ${r.status}`);
+          return `status ${r.status} — payout history protected`;
+        }
+      },
+      {
+        name: 'Payout status guard (no token) → 401',
+        run: async () => {
+          const r = await fetch(`${API_BASE}/api/payout/status`);
+          if (r.status !== 401) throw new Error(`Expected 401, got ${r.status}`);
+          return `status ${r.status} — payout status protected`;
+        }
+      }
+    ]
+  },
+  {
+    id: 'bond', label: 'Bond Channel', icon: '🕵️',
+    tests: [
+      {
+        name: 'Bond thread endpoint',
+        run: async () => {
+          const d = await apiFetch('/api/bond/thread');
+          const msgs = Array.isArray(d) ? d : (d?.messages || d?.thread || []);
+          return `${msgs.length} message(s) in thread`;
+        }
+      },
+      {
+        name: 'Bond status',
+        run: async () => {
+          const d = await apiFetch('/api/bond/status');
+          return `sandbox=${d.sandbox_id?.slice(0,8)||'?'}… connected=${d.connected??'?'}`;
+        }
+      },
+      {
+        name: 'External inbox auth guard',
+        run: async () => {
+          const r = await fetch(`${API_BASE}/api/bond/inbox`);
+          if (![401,403,422].includes(r.status)) throw new Error(`Expected 401/403/422, got ${r.status}`);
+          return `status ${r.status} — X-Bond-Key required`;
+        }
+      }
+    ]
+  },
+  {
+    id: 'security', label: 'Security', icon: '🔒',
+    tests: [
+      {
+        name: 'Stripe webhook forgery (no signature) → 400',
+        run: async () => {
+          const r = await fetch(`${API_BASE}/api/webhooks/stripe`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ type: 'charge.succeeded', data: {} })
+          });
+          if (r.status !== 400) throw new Error(`Expected 400 — forged Stripe webhook accepted (got ${r.status})`);
+          return `status ${r.status} — forgery rejected ✓`;
+        }
+      },
+      {
+        name: 'Stripe webhook invalid signature → 400',
+        run: async () => {
+          const r = await fetch(`${API_BASE}/api/webhooks/stripe`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Stripe-Signature': 't=9999,v1=fakesig,v0=nope' },
+            body: JSON.stringify({ type: 'payment_intent.succeeded' })
+          });
+          if (r.status !== 400) throw new Error(`Invalid Stripe signature accepted (got ${r.status})`);
+          return `status ${r.status} — bad signature rejected ✓`;
+        }
+      },
+      {
+        name: 'Horizontal privilege escalation — exec dashboard → 401/403',
+        run: async () => {
+          const r = await fetch(`${API_BASE}/api/executives/dashboard`, {
+            headers: { 'Authorization': 'Bearer fake_driver_token_not_exec_abc123' }
+          });
+          if (![401,403].includes(r.status)) throw new Error(`Driver token reached exec dashboard (got ${r.status})`);
+          return `status ${r.status} — escalation blocked ✓`;
+        }
+      },
+      {
+        name: 'Executive escalations — unauthorized POST → 401/403',
+        run: async () => {
+          const r = await fetch(`${API_BASE}/api/executives/escalations`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer fake_driver_token_xyz' },
+            body: JSON.stringify({ message: 'injected', priority: 'critical' })
+          });
+          if (![401,403].includes(r.status)) throw new Error(`Unauthorized escalation injection succeeded (got ${r.status})`);
+          return `status ${r.status} — injection blocked ✓`;
+        }
+      },
+      {
+        name: 'Executive routes — no auth → 401/403',
+        run: async () => {
+          const paths = ['/api/executives/dashboard', '/api/executives/kpis', '/api/executives/escalations'];
+          for (const p of paths) {
+            const r = await fetch(`${API_BASE}${p}`);
+            if (![401,403].includes(r.status)) throw new Error(`${p} accessible without auth (got ${r.status})`);
+          }
+          return `all ${paths.length} exec routes protected ✓`;
+        }
+      },
+      {
+        name: 'Payout endpoint auth guard → 401',
+        run: async () => {
+          const r = await fetch(`${API_BASE}/api/payout/request`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ load_id: 'test', gross_amount: 1850 })
+          });
+          if (r.status !== 401) throw new Error(`Payout accessible without auth (got ${r.status})`);
+          return `status ${r.status} — financial route protected ✓`;
+        }
+      }
+    ]
+  },
+  {
+    id: 'integration', label: 'Integration', icon: '🔗',
+    tests: [
+      {
+        name: 'Twilio webhook SMS trace (valid-ish payload)',
+        run: async () => {
+          const body = new URLSearchParams({ From: '+13135550001', To: '+13135559000', Body: 'Test SMS', MessageSid: 'SM_ee_test_001' });
+          const r = await fetch(`${API_BASE}/api/comms/webhook/twilio`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: body.toString()
+          });
+          if (r.status >= 500) throw new Error(`Twilio SMS webhook crashed (got ${r.status})`);
+          return `status ${r.status} — SMS event processed ✓`;
+        }
+      },
+      {
+        name: 'Twilio webhook malformed payload (graceful)',
+        run: async () => {
+          const r = await fetch(`${API_BASE}/api/comms/webhook/twilio`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: 'garbage=&&=broken&'
+          });
+          if (r.status >= 500) throw new Error(`Malformed Twilio payload crashed server (got ${r.status})`);
+          return `status ${r.status} — graceful degradation ✓`;
+        }
+      },
+      {
+        name: 'Adobe Sign callback event trace',
+        run: async () => {
+          const r = await fetch(`${API_BASE}/api/webhooks/adobe/agreement-signed`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ event: 'AGREEMENT_ACTION_COMPLETED', agreement: { id: 'test-001', status: 'SIGNED' } })
+          });
+          if (r.status >= 500) throw new Error(`Adobe callback crashed server (got ${r.status})`);
+          return `status ${r.status} — Adobe event handled ✓`;
+        }
+      },
+      {
+        name: 'Email parse — unknown ID → 404 not 500',
+        run: async () => {
+          const r = await fetch(`${API_BASE}/api/email/FAKE-EMAIL-ID-000/parse-rate-confirmation`, {
+            method: 'POST',
+            headers: { Authorization: 'Bearer ' + API_TOKEN }
+          });
+          if (r.status >= 500) throw new Error(`Unknown email ID parse crashed (got ${r.status})`);
+          if (![404,422].includes(r.status)) throw new Error(`Expected 404/422 for unknown ID, got ${r.status}`);
+          return `status ${r.status} — graceful 404 ✓`;
+        }
+      },
+      {
+        name: 'DAT load board endpoint reachable',
+        run: async () => {
+          const r = await fetch(`${API_BASE}/api/loads/fetch-dat`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + API_TOKEN },
+            body: JSON.stringify({ origin: 'Chicago, IL', destination: 'Detroit, MI', equipment: 'dry_van' })
+          });
+          if (r.status >= 500) throw new Error(`DAT load board returned ${r.status}`);
+          return `status ${r.status} — external integration reachable ✓`;
+        }
+      },
+      {
+        name: 'Email log endpoint reachable',
+        run: async () => {
+          const r = await fetch(`${API_BASE}/api/email-log`, {
+            headers: { Authorization: 'Bearer ' + API_TOKEN }
+          });
+          if (!r.ok) throw new Error(`Email log unreachable: ${r.status}`);
+          return `status ${r.status} — email log accessible ✓`;
+        }
+      }
+    ]
+  }
+];
+
+let _tsRunning = false;
+
+function tsRenderGrid() {
+  document.getElementById('ts-api-url').textContent = API_BASE;
+  const grid = document.getElementById('ts-grid');
+  grid.innerHTML = TS_DOMAINS.map(dom => `
+    <div class="ts-card" id="tscard-${dom.id}">
+      <div class="ts-card-head">
+        <div class="ts-card-title">
+          <span class="ts-card-icon">${dom.icon}</span>
+          <span>${dom.label}</span>
+          <span style="font-size:11px;color:var(--muted);font-weight:400">(${dom.tests.length} test${dom.tests.length!==1?'s':''})</span>
+        </div>
+        <span class="ts-badge idle" id="tsbadge-${dom.id}">IDLE</span>
+      </div>
+      <div class="ts-card-body">
+        <button class="ts-run-btn" id="tsbtn-${dom.id}" onclick="tsRunDomain('${dom.id}')">▶ Run ${dom.label} Tests</button>
+        <div class="ts-results" id="tsresults-${dom.id}">
+          <div class="ts-empty">No results yet — click Run to start</div>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+async function tsRunDomain(domainId) {
+  const dom = TS_DOMAINS.find(d => d.id === domainId);
+  if (!dom) return;
+  const badge  = document.getElementById(`tsbadge-${domainId}`);
+  const btn    = document.getElementById(`tsbtn-${domainId}`);
+  const box    = document.getElementById(`tsresults-${domainId}`);
+  badge.className = 'ts-badge running'; badge.textContent = 'RUNNING';
+  btn.disabled = true;
+  box.innerHTML = '';
+
+  let passed = 0, failed = 0;
+  for (const t of dom.tests) {
+    const row = document.createElement('div');
+    row.className = 'ts-row';
+    const chip = document.createElement('span');
+    chip.className = 'chip r'; chip.textContent = 'RUN';
+    const msg  = document.createElement('span'); msg.className = 'ts-msg'; msg.textContent = t.name;
+    const dur  = document.createElement('span'); dur.className = 'ts-dur';
+    row.append(chip, msg, dur);
+    box.appendChild(row);
+    box.scrollTop = box.scrollHeight;
+
+    const t0 = performance.now();
+    try {
+      const detail = await t.run();
+      const ms = Math.round(performance.now() - t0);
+      chip.className = 'chip p'; chip.textContent = 'PASS';
+      dur.textContent = `${ms}ms`;
+      if (detail) {
+        const d = document.createElement('div');
+        d.className = 'ts-row';
+        d.innerHTML = `<span style="width:30px"></span><span class="ts-detail">${detail}</span>`;
+        box.appendChild(d);
+      }
+      passed++;
+    } catch(e) {
+      const ms = Math.round(performance.now() - t0);
+      chip.className = 'chip f'; chip.textContent = 'FAIL';
+      dur.textContent = `${ms}ms`;
+      const d = document.createElement('div');
+      d.className = 'ts-row';
+      d.innerHTML = `<span style="width:30px"></span><span class="ts-detail" style="color:#ef4444">${e.message}</span>`;
+      box.appendChild(d);
+      failed++;
+    }
+    box.scrollTop = box.scrollHeight;
+  }
+
+  if (failed === 0) {
+    badge.className = 'ts-badge pass'; badge.textContent = `PASS ${passed}/${passed}`;
+  } else if (passed === 0) {
+    badge.className = 'ts-badge fail'; badge.textContent = `FAIL 0/${passed+failed}`;
+  } else {
+    badge.className = 'ts-badge partial'; badge.textContent = `${passed}/${passed+failed} PASS`;
+  }
+  btn.disabled = false;
+  tsUpdateSummary();
+}
+
+async function tsRunAll() {
+  if (_tsRunning) return;
+  _tsRunning = true;
+  document.querySelector('.ts-runall').disabled = true;
+  document.querySelector('.ts-runall').textContent = '⏳ Running…';
+  const t0 = performance.now();
+  for (const dom of TS_DOMAINS) {
+    await tsRunDomain(dom.id);
+  }
+  const totalMs = Math.round(performance.now() - t0);
+  document.getElementById('ts-dur-total').textContent = `${(totalMs/1000).toFixed(1)}s`;
+  document.querySelector('.ts-runall').disabled = false;
+  document.querySelector('.ts-runall').textContent = '▶ Run All Domains';
+  _tsRunning = false;
+}
+
+function tsUpdateSummary() {
+  let total = 0, passed = 0, failed = 0;
+  TS_DOMAINS.forEach(dom => {
+    const box = document.getElementById(`tsresults-${dom.id}`);
+    if (!box) return;
+    box.querySelectorAll('.chip.p').forEach(() => { total++; passed++; });
+    box.querySelectorAll('.chip.f').forEach(() => { total++; failed++; });
+  });
+  document.getElementById('ts-total').textContent  = total  || '—';
+  document.getElementById('ts-passed').textContent = passed || '—';
+  document.getElementById('ts-failed').textContent = failed || '—';
+  // Show/hide Bond fix bar
+  const bar = document.getElementById('ts-bond-bar');
+  if (failed > 0) {
+    document.getElementById('ts-bond-bar-msg').textContent =
+      `${failed} failure${failed!==1?'s':''} detected across domains.`;
+    bar.classList.add('visible');
+  } else if (total > 0) {
+    bar.classList.remove('visible');
+  }
+}
+
+// ── IEBC Team assignment ────────────────────────────────────────────────────
+const TS_TEAM = {
+  shield:   { name: 'Shield',             role: 'Security & Compliance Specialist' },
+  katerina: { name: 'Katerina Rostova',   role: 'Head of Process Automation' },
+  isabella: { name: 'Isabella Cruz',      role: 'VP Omnichannel Outreach' },
+  alexander:{ name: 'Alexander Wright',   role: 'VP Market Intelligence' },
+  winston:  { name: 'Winston Carmichael', role: 'VP Client Success' },
+  penny:    { name: 'Penny',              role: 'Stripe & Payments Specialist' },
+};
+
+// Maps each test domain to the agent who owns it
+const TS_DOMAIN_AGENTS = {
+  health:      'katerina',
+  telemetry:   'katerina',
+  dashboard:   'katerina',
+  triggers:    'katerina',
+  carriers:    'winston',
+  fleet:       'winston',
+  leads:       'isabella',
+  bond:        'alexander',
+  integration: 'alexander',
+  security:    'shield',
+  driver:      'penny',
+};
+
+async function tsDiagnoseFailures(failures, logFn) {
+  // Group failed domains → find unique owners → call each agent once in parallel
+  const failedDomIds = [...new Set(failures.map(f =>
+    TS_DOMAINS.find(d => d.label === f.domain)?.id
+  ).filter(Boolean))];
+
+  // Deduplicate: one call per agent even if it owns multiple failed domains
+  const agentToScope = {};
+  failedDomIds.forEach(domId => {
+    const agentId = TS_DOMAIN_AGENTS[domId];
+    if (agentId) agentToScope[agentId] = (agentToScope[agentId] || []).concat(domId);
+  });
+
+  if (!Object.keys(agentToScope).length) return {};
+
+  if (logFn) logFn('  🔍 Calling domain agents for pre-diagnosis: ' + Object.keys(agentToScope).map(id => TS_TEAM[id]?.name || id).join(', ') + '…');
+
+  const results = await Promise.allSettled(
+    Object.entries(agentToScope).map(async ([agentId, doms]) => {
+      try {
+        const d = await apiFetch(`/api/agents/${agentId}/run`, 'POST', { scope: 'full' });
+        // Mark agent's dot as active during this run
+        const dot = document.getElementById(`ts-dot-${agentId}`);
+        const lbl = document.getElementById(`ts-status-${agentId}`);
+        if (dot) dot.className = 'ts-team-dot active';
+        if (lbl) { lbl.textContent = 'Diagnosing…'; lbl.style.color = 'var(--gold2)'; }
+        setTimeout(() => {
+          if (lbl) { lbl.textContent = 'Diagnosis done'; lbl.style.color = ''; }
+        }, 2000);
+        return [agentId, d];
+      } catch(e) {
+        return [agentId, { error: e.message }];
+      }
+    })
+  );
+
+  const diagnostics = {};
+  results.forEach(r => {
+    if (r.status === 'fulfilled') {
+      const [agentId, d] = r.value;
+      diagnostics[agentId] = d;
+      if (logFn && !d.error) {
+        const summary = d.summary || d.brief || d.qa_notes || d.status_summary || '';
+        if (summary) logFn(`  ✓ ${TS_TEAM[agentId]?.name || agentId}: ${summary.slice(0,100)}`);
+      }
+    }
+  });
+  return diagnostics;
+}
+let _tsCurrentAssignee = null;
+
+async function tsAssignRun(memberId, memberName) {
+  if (_tsRunning) { toast('A run is already in progress', 'error'); return; }
+  _tsCurrentAssignee = memberId;
+  // Mark member as running
+  Object.keys(TS_TEAM).forEach(id => {
+    const dot = document.getElementById(`ts-dot-${id}`);
+    const lbl = document.getElementById(`ts-status-${id}`);
+    if (!dot || !lbl) return;
+    if (id === memberId) {
+      dot.className = 'ts-team-dot active';
+      lbl.textContent = 'Running Tests…';
+      lbl.style.color = 'var(--gold2)';
+    } else {
+      dot.className = 'ts-team-dot idle';
+      lbl.textContent = 'Standby';
+      lbl.style.color = '';
+    }
+  });
+  document.getElementById('ts-assigned-label').textContent = `${memberName} (${TS_TEAM[memberId].role})`;
+  await tsRunAll();
+  // Restore statuses
+  Object.keys(TS_TEAM).forEach(id => {
+    const dot = document.getElementById(`ts-dot-${id}`);
+    const lbl = document.getElementById(`ts-status-${id}`);
+    if (!dot || !lbl) return;
+    dot.className = 'ts-team-dot active';
+    lbl.textContent = id === memberId ? 'Run Complete' : 'On Duty';
+    lbl.style.color = '';
+  });
+}
+
+// ── Bond escalation ─────────────────────────────────────────────────────────
+function tsCollectFailures() {
+  const failures = [];
+  TS_DOMAINS.forEach(dom => {
+    const box = document.getElementById(`tsresults-${dom.id}`);
+    if (!box) return;
+    const rows = box.querySelectorAll('.ts-row');
+    let lastTest = '';
+    rows.forEach(row => {
+      const chip = row.querySelector('.chip');
+      const msg  = row.querySelector('.ts-msg');
+      const det  = row.querySelector('.ts-detail');
+      if (chip && msg && !det) lastTest = msg.textContent;
+      if (chip?.classList.contains('f')) {
+        failures.push({
+          domain:    dom.label,
+          test_name: lastTest,
+          error:     det ? det.textContent : msg?.textContent || '',
+        });
+      }
+    });
+  });
+  return failures;
+}
+
+function tsRenderArtifact(art) {
+  if (art.type === 'diagnosis') {
+    const items = Array.isArray(art.content) ? art.content : [];
+    const html = items.map(d => `
+      <div style="margin-bottom:10px;padding:8px;background:rgba(239,68,68,.05);border-radius:4px;border-left:2px solid #ef4444;">
+        <div style="font-size:10px;font-weight:700;color:#ef4444;margin-bottom:3px;">[${d.domain}] ${d.test}</div>
+        <div style="font-size:10px;color:var(--text);margin-bottom:4px;"><strong>Cause:</strong> ${d.cause}</div>
+        ${d.steps.map((s,i) => `<div style="font-size:10px;color:var(--muted);padding-left:10px;">${i+1}. ${s}</div>`).join('')}
+      </div>`).join('');
+    return `<div style="padding:10px;max-height:200px;overflow-y:scroll;scrollbar-width:thin;scrollbar-color:var(--gold2) var(--surface);">${html}</div>`;
+  }
+  if (art.type === 'checklist') {
+    const items = Array.isArray(art.content) ? art.content : [];
+    const html = items.map(grp => `
+      <div class="ts-checklist-item">
+        <div class="ts-checklist-area">${grp.area}</div>
+        ${(grp.steps||[]).map(s => `<div class="ts-checklist-step">${s}</div>`).join('')}
+      </div>`).join('');
+    return `<div style="padding:10px;max-height:200px;overflow-y:scroll;scrollbar-width:thin;scrollbar-color:var(--gold2) var(--surface);">${html}</div>`;
+  }
+  // python / sql / env — code block
+  const escaped = String(art.content).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  return `<div class="ts-artifact-content">${escaped}</div>`;
+}
+
+function tsRenderRemediationConsole(data) {
+  const rcon = document.getElementById('ts-rcon');
+  rcon.classList.add('visible');
+
+  // Bond directive card
+  const coord = data.coordination || {};
+  if (coord.directive) {
+    document.getElementById('ts-rcon-bond-card').style.display = '';
+    document.getElementById('ts-rcon-directive').textContent = coord.directive;
+    if (coord.escalate_to_external) {
+      document.getElementById('ts-rcon-escalated').style.display = '';
+    }
+  }
+
+  // Specialist cards
+  const specs = data.specialists || {};
+  const SPEC_META = {
+    shield:             { initials:'SH', color:'#dc2626', bg:'rgba(220,38,38,.15)'   },
+    winston_carmichael: { initials:'WC', color:'#3b82f6', bg:'rgba(59,130,246,.15)' },
+    isabella_cruz:      { initials:'IC', color:'#8b5cf6', bg:'rgba(139,92,246,.15)' },
+    alexander_wright:   { initials:'AW', color:'#10b981', bg:'rgba(16,185,129,.15)' },
+    katerina_rostova:   { initials:'KR', color:'#f59e0b', bg:'rgba(245,158,11,.15)' },
+    penny:              { initials:'PN', color:'#ec4899', bg:'rgba(236,72,153,.15)'  },
+  };
+  const container = document.getElementById('ts-rcon-specialists');
+  container.innerHTML = '';
+  for (const [sid, spec] of Object.entries(specs)) {
+    const meta = SPEC_META[sid] || { initials:'??', color:'var(--gold2)', bg:'rgba(228,168,48,.1)' };
+    const isActive = spec.status === 'complete';
+    const card = document.createElement('div');
+    card.className = 'ts-rcon-card';
+    const artHtml = (spec.artifacts || []).map(art => `
+      <div class="ts-artifact">
+        <div class="ts-artifact-head">
+          <span class="ts-artifact-type ${art.type}">${art.type}</span>
+          <span class="ts-artifact-title">${art.title}</span>
+          ${art.content && typeof art.content === 'string' ? `<button class="ts-copy-btn" onclick="tscopArt(this, ${JSON.stringify(art.content).replace(/'/g,"&#39;")})">Copy</button>` : ''}
+        </div>
+        ${tsRenderArtifact(art)}
+      </div>`).join('');
+    card.innerHTML = `
+      <div class="ts-rcon-head">
+        <div class="ts-rcon-avatar" style="background:${meta.bg};color:${meta.color};">${meta.initials}</div>
+        <div class="ts-rcon-info">
+          <div class="ts-rcon-name">${spec.name||sid}</div>
+          <div class="ts-rcon-role">${spec.role||''}</div>
+        </div>
+        <span class="ts-rcon-status ${isActive?'done':'idle'}">${isActive?`Done · ${spec.assigned_count||0} fixed`:'No assignment'}</span>
+      </div>
+      <div class="ts-rcon-body">
+        ${isActive ? artHtml : '<div style="font-size:11px;color:var(--muted);padding:8px 0;">No failures assigned to this specialist.</div>'}
+      </div>`;
+    container.appendChild(card);
+  }
+}
+
+function tscopArt(btn, text) {
+  navigator.clipboard.writeText(text).then(() => {
+    btn.textContent = 'Copied!';
+    setTimeout(() => btn.textContent = 'Copy', 1800);
+  });
+}
+
+async function tsEscalateToBond() {
+  const btn = document.getElementById('ts-bond-fix-btn');
+  btn.disabled = true; btn.textContent = '⏳ Deploying Team…';
+  const failures = tsCollectFailures();
+  if (!failures.length) {
+    toast('No failures to remediate', 'error');
+    btn.disabled = false; btn.textContent = 'Deploy Technical Team →';
+    return;
+  }
+  _tsLastFailures = failures;  // store for autofix rerun
+  const assignee = _tsCurrentAssignee ? TS_TEAM[_tsCurrentAssignee]?.name : 'IEBC Team';
+  // Show console immediately with working state
+  document.getElementById('ts-rcon').classList.add('visible');
+  document.getElementById('ts-rcon-specialists').innerHTML =
+    '<div style="color:var(--muted);font-size:12px;padding:12px;">Domain agents diagnosing failures…</div>';
+  // Step 1: domain owner agents diagnose their failures first
+  const domain_diagnostics = await tsDiagnoseFailures(failures, null);
+  document.getElementById('ts-rcon-specialists').innerHTML =
+    '<div style="color:var(--muted);font-size:12px;padding:12px;">Technical team applying fixes…</div>';
+  try {
+    const data = await apiFetch('/api/agents/technical_team/run', 'POST', {
+      action: 'remediate',
+      failures,
+      domain_diagnostics,
+      requested_by: assignee,
+    });
+    tsRenderRemediationConsole(data);
+    // Show self-heal panel
+    document.getElementById('ts-autofix-panel').style.display = '';
+    const escalated = data.coordination?.escalate_to_external;
+    toast(
+      escalated
+        ? '🕵️ Team deployed — Bond directive sent to External Bond'
+        : '🛠 IEBC Team analysis complete — review artifacts below',
+      'success'
+    );
+    btn.textContent = '✓ Team Deployed';
+    setTimeout(() => { btn.disabled = false; btn.textContent = 'Deploy Technical Team →'; }, 6000);
+  } catch(e) {
+    document.getElementById('ts-rcon-specialists').innerHTML =
+      `<div style="color:#ef4444;font-size:12px;padding:12px;">Remediation failed: ${e.message}</div>`;
+    toast('Remediation error: ' + e.message, 'error');
+    btn.disabled = false; btn.textContent = 'Deploy Technical Team →';
+  }
+}
+
+// ── Auto-Fix self-heal engine ───────────────────────────────────────────────
+let _tsLastFailures = [];
+
+function tsAutofixLog(msg, type='info') {
+  const log = document.getElementById('ts-autofix-log');
+  log.style.display = '';
+  const colors = {info:'var(--text)', ok:'#10b981', warn:'#f59e0b', err:'#ef4444'};
+  const el = document.createElement('div');
+  el.style.cssText = `padding:2px 0;color:${colors[type]||colors.info};`;
+  el.textContent = `${new Date().toLocaleTimeString()}  ${msg}`;
+  log.appendChild(el);
+  log.scrollTop = log.scrollHeight;
+}
+
+function tsRenderEnvGrid(env) {
+  const grid = document.getElementById('ts-autofix-env-grid');
+  grid.innerHTML = Object.entries(env).map(([k,v]) =>
+    `<div style="display:flex;align-items:center;gap:6px;font-size:10px;padding:4px 8px;background:var(--bg);border-radius:4px;border:1px solid var(--border);">
+      <span style="color:${v?'#10b981':'#ef4444'};font-size:12px;">${v?'✓':'✗'}</span>
+      <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${k}</span>
+    </div>`
+  ).join('');
+}
+
+function tsRenderTableGrid(tables) {
+  const grid = document.getElementById('ts-autofix-table-grid');
+  grid.innerHTML = Object.entries(tables).map(([t,ok]) =>
+    `<div style="display:flex;align-items:center;gap:6px;font-size:10px;padding:4px 8px;background:var(--bg);border-radius:4px;border:1px solid var(--border);">
+      <span style="color:${ok?'#10b981':'#ef4444'};font-size:12px;">${ok?'✓':'✗'}</span>
+      <span>${t}</span>
+    </div>`
+  ).join('');
+}
+
+async function tsRunAutofix() {
+  const btn = document.getElementById('ts-autofix-btn');
+  btn.disabled = true; btn.textContent = '⏳ Fixing…';
+  const log = document.getElementById('ts-autofix-log');
+  log.innerHTML = '';
+
+  tsAutofixLog('Self-Heal Engine starting…');
+  tsAutofixLog('Step 1 — domain agents diagnosing failures…');
+  const domain_diagnostics = await tsDiagnoseFailures(_tsLastFailures, tsAutofixLog);
+  tsAutofixLog(`Step 2 — sending ${_tsLastFailures.length} failure(s) + ${Object.keys(domain_diagnostics).length} diagnos${Object.keys(domain_diagnostics).length===1?'is':'es'} to technical_team.autofix`);
+
+  let data;
+  try {
+    data = await apiFetch('/api/agents/technical_team/run', 'POST', {
+      action:            'autofix',
+      failures:          _tsLastFailures,
+      domain_diagnostics,
+    });
+  } catch(e) {
+    tsAutofixLog(`Autofix call failed: ${e.message}`, 'err');
+    btn.disabled = false; btn.textContent = '⚡ Run Auto-Fix';
+    return;
+  }
+
+  // Show env/table status
+  const statusDiv = document.getElementById('ts-autofix-status');
+  statusDiv.style.display = '';
+  if (data.env_status)   tsRenderEnvGrid(data.env_status);
+  if (data.table_status) tsRenderTableGrid(data.table_status);
+
+  // Log fixed items
+  (data.fixed || []).forEach(f =>
+    tsAutofixLog(`✓ FIXED — [${f.area}] ${f.action}${f.detail?' → '+f.detail:''}`, 'ok')
+  );
+
+  // Log needs_manual items
+  (data.needs_manual || []).forEach(m =>
+    tsAutofixLog(`⚠ MANUAL — [${m.area}] ${m.action}: ${m.how}`, 'warn')
+  );
+
+  // Log attempted
+  (data.attempted || []).forEach(a =>
+    tsAutofixLog(`→ ATTEMPTED — [${a.area}] ${a.action}: ${a.result}`, 'info')
+  );
+
+  if ((data.fixed||[]).length === 0 && (data.needs_manual||[]).length === 0) {
+    tsAutofixLog('Nothing to fix — system looks healthy', 'ok');
+  }
+
+  const fixCount    = (data.fixed||[]).length;
+  const manualCount = (data.needs_manual||[]).length;
+  toast(
+    fixCount > 0
+      ? `⚡ Auto-fixed ${fixCount} item(s) — re-running tests…`
+      : `⚠ ${manualCount} item(s) need manual action — see log`,
+    fixCount > 0 ? 'success' : 'error'
+  );
+
+  // Auto-rerun failed domains
+  if (_tsLastFailures.length > 0) {
+    tsAutofixLog('Re-running failed domains to verify fixes…');
+    const failedDomainIds = [...new Set(_tsLastFailures.map(f =>
+      TS_DOMAINS.find(d => d.label === f.domain)?.id
+    ).filter(Boolean))];
+
+    const rerunSection = document.getElementById('ts-rerun-section');
+    const rerunResults = document.getElementById('ts-rerun-results');
+    rerunSection.style.display = '';
+    rerunResults.innerHTML = '<div style="color:var(--muted);font-size:11px;">Running…</div>';
+
+    const deltas = [];
+    for (const domId of failedDomainIds) {
+      const dom = TS_DOMAINS.find(d => d.id === domId);
+      if (!dom) continue;
+      tsAutofixLog(`Re-running ${dom.label} domain…`);
+      // Count failures before
+      const beforeBox  = document.getElementById(`tsresults-${domId}`);
+      const beforeFail = beforeBox?.querySelectorAll('.chip.f').length || 0;
+      await tsRunDomain(domId);
+      const afterBox   = document.getElementById(`tsresults-${domId}`);
+      const afterFail  = afterBox?.querySelectorAll('.chip.f').length || 0;
+      const afterPass  = afterBox?.querySelectorAll('.chip.p').length || 0;
+      const improved   = afterFail < beforeFail;
+      deltas.push({ domain: dom.label, beforeFail, afterFail, afterPass, improved });
+      tsAutofixLog(
+        improved
+          ? `✓ ${dom.label}: ${beforeFail} → ${afterFail} failures (${beforeFail-afterFail} fixed)`
+          : afterFail === 0
+            ? `✓ ${dom.label}: all tests pass`
+            : `✗ ${dom.label}: still ${afterFail} failure(s)`,
+        afterFail === 0 ? 'ok' : improved ? 'warn' : 'err'
+      );
+    }
+
+    rerunResults.innerHTML = deltas.map(d => `
+      <div style="display:flex;align-items:center;gap:10px;padding:6px 10px;background:var(--bg);border-radius:6px;border:1px solid var(--border);font-size:11px;">
+        <span style="font-size:14px;">${d.afterFail===0?'✅':d.improved?'⚠️':'❌'}</span>
+        <span style="font-weight:600;">${d.domain}</span>
+        <span style="color:var(--muted);">was ${d.beforeFail} fail → now ${d.afterFail} fail / ${d.afterPass} pass</span>
+        <span style="margin-left:auto;font-weight:700;color:${d.afterFail===0?'#10b981':d.improved?'#f59e0b':'#ef4444'}">
+          ${d.afterFail===0?'HEALED':d.improved?'IMPROVED':'STILL FAILING'}
+        </span>
+      </div>`).join('');
+
+    tsUpdateSummary();
+    const allHealed = deltas.every(d => d.afterFail === 0);
+    tsAutofixLog(
+      allHealed ? '✓ All failed domains now passing — system healed!' : 'Some domains still failing — apply manual fixes above then re-run.',
+      allHealed ? 'ok' : 'warn'
+    );
+  }
+
+  btn.disabled = false; btn.textContent = '⚡ Run Auto-Fix Again';
+}
+
+// ── Dual-Bond Autonomous Mission ────────────────────────────────────────────
+let _missionIteration  = 0;
+let _missionPolling    = null;
+let _missionRunning    = false;
+
+function mlLog(msg, type='') {
+  const log = document.getElementById('ts-mission-log');
+  const line = document.createElement('div');
+  line.className = 'ts-ml-line';
+  line.innerHTML = `<span class="ts-ml-ts">${new Date().toLocaleTimeString()}</span><span class="ts-ml-txt ${type}">${msg}</span>`;
+  log.appendChild(line);
+  log.scrollTop = log.scrollHeight;
+}
+
+function missionBadge(state) {
+  const el = document.getElementById('ts-mission-badge');
+  el.className = 'ts-mission-badge ' + state;
+  el.textContent = state.toUpperCase();
+}
+
+function missionPhase(id, val, cls='') {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = val;
+  if (cls) el.className = `ts-phase-val ${cls}`;
+}
+
+async function tsUnleashBothBonds() {
+  if (_missionRunning) { toast('Mission already running', 'error'); return; }
+  _missionRunning = true;
+  _missionIteration++;
+
+  const unleash = document.getElementById('ts-unleash-btn');
+  unleash.disabled = true; unleash.textContent = '⏳ Mission Active…';
+
+  // Activate panel
+  const panel = document.getElementById('ts-mission');
+  panel.classList.add('active');
+  document.getElementById('ts-mission-log').innerHTML = '';
+  missionBadge('running');
+  missionPhase('tsp-iter', _missionIteration, 'active');
+  document.getElementById('ts-mission-directive-wrap').style.display = 'none';
+  document.getElementById('ts-retest-btn').style.display = 'none';
+  document.getElementById('ts-poll-btn').style.display   = 'none';
+
+  // ── Phase 1: Run all tests ──────────────────────────────────────────────
+  mlLog('Phase 1 — Running full test suite…', 'bond');
+  await tsRunAll();
+  const failures = tsCollectFailures();
+  _tsLastFailures = failures;
+  missionPhase('tsp-failures', failures.length, failures.length === 0 ? 'ok' : 'err');
+
+  if (!failures.length) {
+    mlLog('✓ All tests passing — no mission needed!', 'ok');
+    missionBadge('healed');
+    missionPhase('tsp-retest', 'All Green', 'ok');
+    unleash.disabled = false; unleash.textContent = '🕵️🕵️ Unleash Both Bonds';
+    _missionRunning = false;
+    return;
+  }
+
+  mlLog(`Found ${failures.length} failure(s) across: ${[...new Set(failures.map(f=>f.domain))].join(', ')}`, 'warn');
+
+  // ── Phase 2: Domain diagnosis then internal autofix ────────────────────
+  mlLog('Phase 2a — Domain agents diagnosing their failures…', 'bond');
+  const domain_diagnostics = await tsDiagnoseFailures(failures, mlLog);
+  mlLog(`Phase 2b — Internal self-heal with ${Object.keys(domain_diagnostics).length} pre-diagnos${Object.keys(domain_diagnostics).length===1?'is':'es'} (Winston, Isabella, Alexander…)`, 'bond');
+  let autofixData = {};
+  try {
+    autofixData = await apiFetch('/api/agents/technical_team/run', 'POST', {
+      action: 'autofix', failures, domain_diagnostics
+    });
+    const fixed  = autofixData.fixed?.length  || 0;
+    const manual = autofixData.needs_manual?.length || 0;
+    missionPhase('tsp-fixed',  fixed,  fixed  > 0 ? 'ok'   : '');
+    missionPhase('tsp-manual', manual, manual > 0 ? 'warn' : 'ok');
+    (autofixData.fixed || []).forEach(f => mlLog(`  ✓ Fixed: [${f.area}] ${f.action}`, 'ok'));
+    (autofixData.needs_manual || []).forEach(m => mlLog(`  ⚠ Manual needed: [${m.area}] ${m.action}`, 'warn'));
+    if (!fixed && !manual) mlLog('  → No internal fixes applicable', '');
+  } catch(e) {
+    mlLog(`  Internal autofix error: ${e.message}`, 'err');
+  }
+
+  // ── Phase 3: Autonomous dual-bond mission ──────────────────────────────
+  mlLog('Phase 3 — James Bond briefing + External Bond directive…', 'bond');
+  let missionData = {};
+  try {
+    missionData = await apiFetch('/api/agents/technical_team/run', 'POST', {
+      action:    'autonomous',
+      failures,
+      iteration: _missionIteration,
+    });
+
+    const extSent = missionData.external_bond?.sent;
+    missionPhase('tsp-ext', extSent ? 'Directive Sent' : 'Unreachable', extSent ? 'active' : 'err');
+
+    if (extSent) {
+      mlLog('  🕵️ Bond directive transmitted to External Bond on Daytona', 'bond');
+      mlLog(`  Message ID: ${missionData.external_bond?.message_id || 'pending'}`, '');
+    } else {
+      mlLog('  ✗ Could not reach External Bond — check bond channel config', 'err');
+    }
+
+    if (missionData.directive) {
+      document.getElementById('ts-mission-directive-wrap').style.display = '';
+      document.getElementById('ts-mission-directive-box').textContent = missionData.directive;
+    }
+
+    if (missionData.bond_brief) {
+      mlLog('  Bond Brief: ' + missionData.bond_brief.split('\n')[0], 'bond');
+    }
+  } catch(e) {
+    mlLog(`  Mission dispatch error: ${e.message}`, 'err');
+    missionPhase('tsp-ext', 'Error', 'err');
+  }
+
+  // ── Phase 4: Re-run failed domains ─────────────────────────────────────
+  mlLog('Phase 4 — Re-running failed domains to measure progress…', 'bond');
+  const failedDomIds = [...new Set(failures.map(f =>
+    TS_DOMAINS.find(d => d.label === f.domain)?.id
+  ).filter(Boolean))];
+
+  let nowPassing = 0, stillFailing = 0;
+  for (const domId of failedDomIds) {
+    const dom = TS_DOMAINS.find(d => d.id === domId);
+    if (!dom) continue;
+    mlLog(`  Re-testing ${dom.label}…`);
+    await tsRunDomain(domId);
+    const box    = document.getElementById(`tsresults-${domId}`);
+    const fails  = box?.querySelectorAll('.chip.f').length || 0;
+    const passes = box?.querySelectorAll('.chip.p').length || 0;
+    if (fails === 0) {
+      nowPassing++;
+      mlLog(`  ✓ ${dom.label}: HEALED (${passes}/${passes} pass)`, 'ok');
+    } else {
+      stillFailing++;
+      mlLog(`  ✗ ${dom.label}: ${fails} still failing`, 'err');
+    }
+  }
+
+  tsUpdateSummary();
+  missionPhase('tsp-retest',
+    `${nowPassing} healed / ${stillFailing} remain`,
+    stillFailing === 0 ? 'ok' : nowPassing > 0 ? 'warn' : 'err'
+  );
+
+  // ── Final verdict ───────────────────────────────────────────────────────
+  if (stillFailing === 0) {
+    mlLog('✓ MISSION COMPLETE — All domains healed!', 'ok');
+    missionBadge('healed');
+    toast('🕵️🕵️ Both Bonds succeeded — all tests passing!', 'success');
+  } else {
+    const extSent = missionData.external_bond?.sent;
+    mlLog(`⚠ ${stillFailing} domain(s) still failing — External Bond has the directive.`, 'warn');
+    mlLog('  Check Bond Office for External Bond\'s reply, then click Re-run Tests.', '');
+    missionBadge('partial');
+    toast(`⚠ ${nowPassing} healed · ${stillFailing} need External Bond's fix — monitoring…`, 'error');
+    // Show re-run and poll buttons
+    document.getElementById('ts-retest-btn').style.display = '';
+    document.getElementById('ts-poll-btn').style.display   = extSent ? '' : 'none';
+    // Auto-poll bond channel for External Bond reply every 15s
+    _startMissionPoll();
+  }
+
+  document.getElementById('ts-mission-iter-label').textContent =
+    `Iteration ${_missionIteration} complete · ${new Date().toLocaleTimeString()}`;
+
+  unleash.disabled = false;
+  unleash.textContent = stillFailing > 0 ? '🕵️🕵️ Re-Run Mission' : '🕵️🕵️ Unleash Both Bonds';
+  _missionRunning = false;
+}
+
+function _startMissionPoll() {
+  if (_missionPolling) clearInterval(_missionPolling);
+  _missionPolling = setInterval(tsPollExternal, 15000);
+}
+
+async function tsPollExternal() {
+  mlLog('📡 Polling for External Bond reply…', 'bond');
+  try {
+    const data = await apiFetch('/api/bond/thread');
+    const msgs = Array.isArray(data) ? data : (data?.messages || data?.thread || []);
+    const replies = msgs.filter(m =>
+      m.direction === 'external_to_internal' &&
+      (m.metadata?.source === 'dual_bond_autonomous' ||
+       (m.content||'').toLowerCase().includes('fix') ||
+       (m.content||'').toLowerCase().includes('patch') ||
+       (m.content||'').toLowerCase().includes('report'))
+    );
+    if (replies.length) {
+      const latest = replies[replies.length - 1];
+      mlLog(`  🕵️ External Bond replied: "${(latest.content||'').slice(0,120)}…"`, 'ok');
+      mlLog('  Click "Re-run Tests Now" to verify fixes.', 'bond');
+      document.getElementById('ts-retest-btn').style.display = '';
+      if (_missionPolling) { clearInterval(_missionPolling); _missionPolling = null; }
+      toast('🕵️ External Bond has replied — re-run tests to verify!', 'success');
+    } else {
+      mlLog('  External Bond has not replied yet — still waiting…', '');
+    }
+  } catch(e) {
+    mlLog(`  Poll error: ${e.message}`, 'err');
+  }
+}
+
+async function tsMissionRetest() {
+  mlLog('↺ Re-running all failed domains after External Bond fix…', 'bond');
+  const failures = tsCollectFailures();
+  const domIds   = [...new Set(failures.map(f =>
+    TS_DOMAINS.find(d => d.label === f.domain)?.id
+  ).filter(Boolean))];
+  // If no current failures, rerun all
+  const toRun = domIds.length ? domIds : TS_DOMAINS.map(d => d.id);
+  let pass = 0, fail = 0;
+  for (const id of toRun) {
+    await tsRunDomain(id);
+    const box = document.getElementById(`tsresults-${id}`);
+    if ((box?.querySelectorAll('.chip.f').length || 0) === 0) pass++; else fail++;
+  }
+  tsUpdateSummary();
+  missionPhase('tsp-retest', `${pass} healed / ${fail} remain`, fail === 0 ? 'ok' : 'warn');
+  if (fail === 0) {
+    mlLog('✓ ALL TESTS PASSING — Mission successful!', 'ok');
+    missionBadge('healed');
+    if (_missionPolling) { clearInterval(_missionPolling); _missionPolling = null; }
+  } else {
+    mlLog(`⚠ ${fail} domain(s) still failing — consider another mission iteration.`, 'warn');
+  }
+}
+
+// Render grid when page is first visited
+(function patchNavForTests() {
+  const _origNav = nav;
+  nav = function(id) {
+    _origNav(id);
+    if (id === 'tests' && !document.getElementById('ts-grid').children.length) {
+      tsRenderGrid();
+    }
+  };
+})();
+</script>
 
 </body>
 </html>

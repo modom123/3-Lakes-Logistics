@@ -1,38 +1,43 @@
-"""Step 22: agent_router. EAGLE EYE buttons call
-POST /api/agents/{agent}/run which dispatches here.
-"""
+"""agent_router — dispatches POST /api/agents/{agent}/run calls."""
 from __future__ import annotations
 
 from typing import Any, Callable
 
 from . import (
-    alexander, atlas, audit, beacon, echo, isabella, katerina,
-    naomi, nova, orbit, penny, pulse, scout, settler, shield,
-    signal, sofia, sonny, vance, victoria, winston,
+    alexander, atlas, audit, beacon, bond_courier, chloe_sinclair, echo,
+    isabella, james_bond, katerina, lucas_sterling, naomi, nova, orbit,
+    outside_bond, penny, pulse, scout, settler, shield, signal, sofia,
+    sonny, technical_team, vance, victoria, winston,
 )
 
 _DISPATCH: dict[str, Callable[[dict[str, Any]], dict[str, Any]]] = {
-    "vance":     vance.run,
-    "sonny":     sonny.run,
-    "shield":    shield.run,
-    "scout":     scout.run,
-    "penny":     penny.run,
-    "settler":   settler.run,
-    "audit":     audit.run,
-    "nova":      nova.run,
-    "signal":    signal.run,
-    "echo":      echo.run,
-    "atlas":     atlas.run,
-    "beacon":    beacon.run,
-    "orbit":     orbit.run,
-    "pulse":     pulse.run,
-    "victoria":  victoria.run,
-    "alexander": alexander.run,
-    "sofia":     sofia.run,
-    "isabella":  isabella.run,
-    "katerina":  katerina.run,
-    "winston":   winston.run,
-    "naomi":     naomi.run,
+    "vance":          vance.run,
+    "sonny":          sonny.run,
+    "shield":         shield.run,
+    "scout":          scout.run,
+    "penny":          penny.run,
+    "settler":        settler.run,
+    "audit":          audit.run,
+    "nova":           nova.run,
+    "signal":         signal.run,
+    "echo":           echo.run,
+    "atlas":          atlas.run,
+    "beacon":         beacon.run,
+    "orbit":          orbit.run,
+    "pulse":          pulse.run,
+    "victoria":       victoria.run,
+    "alexander":      alexander.run,
+    "sofia":          sofia.run,
+    "isabella":       isabella.run,
+    "katerina":       katerina.run,
+    "winston":        winston.run,
+    "naomi":          naomi.run,
+    "james_bond":       james_bond.run,
+    "outside_bond":     outside_bond.run,
+    "bond_courier":     bond_courier.run,
+    "technical_team":   technical_team.run,
+    "lucas_sterling":   lucas_sterling.run,
+    "chloe_sinclair":   chloe_sinclair.run,
 }
 
 

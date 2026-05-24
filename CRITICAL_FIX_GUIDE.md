@@ -107,8 +107,7 @@ You have two options:
 **OPTION B: Whitelist Production Server IP (More Secure)**
 1. Find your production server's public IP:
    ```bash
-   # If on Cloud Run, Railway, Heroku, etc.
-   # Check your deployment dashboard for outbound IP
+   # Find your Render outbound IP in Render dashboard → Service → Outbound IPs
    ```
 2. In Bland AI Settings, go to **IP Allowlist**
 3. Click **Add IP** → Enter your server's public IP
@@ -197,11 +196,8 @@ SENDGRID_INBOUND_SECRET=<optional_verification_key>
 #### Step 4: Deploy Backend
 Redeploy with updated environment variables:
 ```bash
-# If on Cloud Run
-gcloud run deploy backend --set-env-vars SENDGRID_API_KEY=...
-
-# If on Railway
-railway deploy
+# On Render — push to main and it auto-deploys (render.yaml is configured)
+git push origin main
 
 # If on Heroku
 heroku config:set SENDGRID_API_KEY=...

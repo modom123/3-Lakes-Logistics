@@ -1,0 +1,156 @@
+name: Nightly Test Suite — 2am EST
+
+on:
+  schedule:
+    - cron: '0 7 * * *'   # 2am EST (UTC-5) = 07:00 UTC
+  workflow_dispatch:
+    inputs:
+      suite:
+        description: 'Which suite to run'
+        required: false
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - security
+          - integration
+          - live
+          - carriers
+          - driver
+
+concurrency:
+  group: nightly-tests
+  cancel-in-progress: false   # never kill a running test — wait for it
+
+jobs:
+  test:
+    name: 3 Lakes Logistics — Full API Test Suite
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install test dependencies
+        run: pip install pytest requests
+
+      # Render free tier sleeps after 15 min of inactivity.
+      # Ping twice with a gap to make sure it's fully awake before tests start.
+      - name: Wake Render service
+        run: |
+          echo "→ Pinging Render (cold-start warmup)…"
+          curl -sf https://three-lakes-logistics-api.onrender.com/api/health/ping \
+            --max-time 30 --retry 4 --retry-delay 5 --retry-connrefused || true
+          sleep 8
+          curl -sf https://three-lakes-logistics-api.onrender.com/api/health/ping \
+            --max-time 15 || true
+          echo "→ Render is warm."
+
+      # ── Phase 1: Security (no data writes — safe to run first) ─────────────
+      - name: 'Phase 1 — Security & Authorization'
+        id: security
+        if: inputs.suite == 'all' || inputs.suite == 'security' || inputs.suite == ''
+        run: pytest tests/test_security.py -v --tb=short --no-header
+        continue-on-error: true
+
+      - name: 'Bond Handoff — Security failures'
+        if: always() && steps.security.outcome == 'failure'
+        env:
+          API_BEARER_TOKEN: ${{ secrets.API_BEARER_TOKEN }}
+        run: python tests/bond_escalate.py security
+
+      # ── Phase 2: Smoke (read-only) ─────────────────────────────────────────
+      - name: 'Phase 2 — Live API smoke tests'
+        id: live
+        if: inputs.suite == 'all' || inputs.suite == 'live' || inputs.suite == ''
+        run: pytest tests/test_live_api.py -v --tb=short --no-header
+        continue-on-error: true
+
+      - name: 'Bond Handoff — Live API failures'
+        if: always() && steps.live.outcome == 'failure'
+        env:
+          API_BEARER_TOKEN: ${{ secrets.API_BEARER_TOKEN }}
+        run: python tests/bond_escalate.py live
+
+      # ── Phase 3: Driver auth guards (read-only) ────────────────────────────
+      - name: 'Phase 3 — Driver API live tests'
+        id: driver
+        if: inputs.suite == 'all' || inputs.suite == 'driver' || inputs.suite == ''
+        run: pytest tests/test_driver_live.py -v --tb=short --no-header
+        continue-on-error: true
+
+      - name: 'Bond Handoff — Driver failures'
+        if: always() && steps.driver.outcome == 'failure'
+        env:
+          API_BEARER_TOKEN: ${{ secrets.API_BEARER_TOKEN }}
+        run: python tests/bond_escalate.py driver
+
+      # ── Phase 4: Integration & concurrency (writes telemetry + triggers) ───
+      - name: 'Phase 4 — Integration, concurrency & webhook tracing'
+        id: integration
+        if: inputs.suite == 'all' || inputs.suite == 'integration' || inputs.suite == ''
+        run: pytest tests/test_integration.py -v --tb=short --no-header
+        continue-on-error: true
+
+      - name: 'Bond Handoff — Integration failures'
+        if: always() && steps.integration.outcome == 'failure'
+        env:
+          API_BEARER_TOKEN: ${{ secrets.API_BEARER_TOKEN }}
+        run: python tests/bond_escalate.py integration
+
+      # ── Phase 5: Full carrier lifecycle (data writes — run last) ───────────
+      - name: 'Phase 5 — 5-Carriers full lifecycle'
+        id: carriers
+        if: inputs.suite == 'all' || inputs.suite == 'carriers' || inputs.suite == ''
+        run: pytest tests/test_5_carriers_full.py -v --tb=short --no-header
+        continue-on-error: true
+
+      - name: 'Bond Handoff — Carriers failures'
+        if: always() && steps.carriers.outcome == 'failure'
+        env:
+          API_BEARER_TOKEN: ${{ secrets.API_BEARER_TOKEN }}
+        run: python tests/bond_escalate.py carriers
+
+      # ── Cleanup — delete all test data written during this run ──────────────
+      - name: Cleanup test data
+        if: always()
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: python tests/cleanup_test_data.py
+
+      # ── Final report — collect all results and set job status ───────────────
+      - name: Final summary
+        if: always()
+        run: |
+          echo ""
+          echo "══════════════════════════════════════════"
+          echo "  3 LAKES LOGISTICS — NIGHTLY TEST REPORT"
+          echo "  $(TZ='America/New_York' date '+%Y-%m-%d %I:%M %p EST')"
+          echo "══════════════════════════════════════════"
+          echo ""
+          echo "Suite run: ${{ inputs.suite || 'all (scheduled)' }}"
+          echo ""
+          echo "Phase outcomes:"
+          echo "  Phase 1 Security:    ${{ steps.security.outcome    || 'skipped' }}"
+          echo "  Phase 2 Live API:    ${{ steps.live.outcome        || 'skipped' }}"
+          echo "  Phase 3 Driver:      ${{ steps.driver.outcome      || 'skipped' }}"
+          echo "  Phase 4 Integration: ${{ steps.integration.outcome || 'skipped' }}"
+          echo "  Phase 5 Carriers:    ${{ steps.carriers.outcome    || 'skipped' }}"
+          echo ""
+          echo "Agents on duty:"
+          echo "  🔴 Shield       — Security domain"
+          echo "  🟡 Katerina     — Health, Telemetry, Triggers"
+          echo "  🟣 Isabella     — Leads"
+          echo "  🟢 Alexander    — Bond Channel, Integration"
+          echo "  🔵 Winston      — Carriers, Fleet"
+          echo "  🩷 Penny        — Driver, Payout"
+          echo "  🕵️  Bond         — Escalation handler (fires on any failure)"
+          echo ""
+          echo "Failed phases auto-route to Bond → executive escalation created."
+          echo "Check Eagle Eye → IEBC Executive Command for active escalations."
