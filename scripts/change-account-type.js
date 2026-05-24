@@ -86,15 +86,19 @@ async function tryFill(page, selectors, value, label) {
 (async () => {
   console.log('=== Bond: Change Account Type → Organization ===\n');
 
-  // Always launch a visible browser — no CDP needed
-  const browser = await chromium.launch({
-    headless: false,
-    slowMo: 150,
-    args: ['--start-maximized'],
-  });
-
-  const context = await browser.newContext({ viewport: null });
-  const page    = await context.newPage();
+  // Try to take over existing Chrome first, otherwise launch a new window
+  let browser, context, page;
+  try {
+    browser = await chromium.connectOverCDP('http://localhost:9222');
+    context = browser.contexts()[0] || await browser.newContext();
+    page    = context.pages()[0]    || await context.newPage();
+    console.log('✓ Took over your existing Chrome browser');
+  } catch {
+    console.log('No Chrome on port 9222 — opening a new browser window...');
+    browser  = await chromium.launch({ headless: false, slowMo: 150, args: ['--start-maximized'] });
+    context  = await browser.newContext({ viewport: null });
+    page     = await context.newPage();
+  }
 
   // ── Step 1: Open Play Console ─────────────────────────────────────────────
   console.log('[1/4] Opening Play Console...');
