@@ -107,26 +107,51 @@ async function dumpInputs(page) {
       console.log(`    [${i}] <${b.tag}> "${b.text}" aria="${b.aria}" id="${b.id}"`);
   });
 
-  // ── Click "Change account type" — use exact button match ─────────────────
-  console.log('\n[2] Clicking "Change account type"...');
-
-  // Use Playwright's getByRole for exact button text match (avoids matching parents)
-  const changeBtn = page.getByRole('button', { name: 'Change account type', exact: true });
-  if (await changeBtn.isVisible({ timeout: 5000 }).catch(() => false)) {
-    await changeBtn.click();
-    console.log('  ✓ Clicked "Change account type" button');
+  // ── Clear any unsaved changes first (button is disabled when form is dirty) ─
+  console.log('\n[2] Checking for unsaved changes...');
+  const discardBtn = page.getByRole('button', { name: 'Discard changes', exact: true });
+  if (await discardBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
+    await discardBtn.click();
+    console.log('  ✓ Discarded pending changes (required before account type switch)');
+    await wait(3000);
   } else {
-    // JS fallback: find BUTTON whose own direct text is exactly "Change account type"
+    console.log('  No unsaved changes — proceeding');
+  }
+
+  // ── Click "Change account type" — use exact button match ─────────────────
+  console.log('\n[3] Clicking "Change account type"...');
+
+  // Check if button is disabled and log it
+  const btnDisabled = await page.evaluate(() => {
+    const btn = [...document.querySelectorAll('button')]
+      .find(b => b.innerText?.trim() === 'Change account type');
+    return btn ? { disabled: btn.disabled, classes: btn.className } : null;
+  });
+  if (btnDisabled) {
+    console.log(`  Button state: disabled=${btnDisabled.disabled} class="${btnDisabled.classes}"`);
+    if (btnDisabled.disabled) {
+      console.log('  ⚠ Button is still disabled. This may require identity verification first.');
+      console.log('  Check "Send verification request" button on the page.');
+    }
+  }
+
+  // Use JS click to bypass disabled state if needed (forced click)
+  const changeBtn = page.getByRole('button', { name: 'Change account type', exact: true });
+  try {
+    await changeBtn.click({ force: true, timeout: 8000 });
+    console.log('  ✓ Clicked "Change account type" (forced)');
+  } catch {
+    // JS fallback
     const clicked = await page.evaluate(() => {
-      const btns = [...document.querySelectorAll('button')];
-      const btn = btns.find(b => b.innerText?.trim() === 'Change account type');
+      const btn = [...document.querySelectorAll('button')]
+        .find(b => b.innerText?.trim() === 'Change account type');
       if (btn) { btn.click(); return true; }
       return false;
     });
     if (clicked) {
       console.log('  ✓ JS-clicked "Change account type"');
     } else {
-      console.log('  Button not found — click it manually in the browser.');
+      console.log('  Could not click — try manually in the browser.');
       await pause('  Press Enter after clicking "Change account type"... ');
     }
   }
@@ -134,7 +159,7 @@ async function dumpInputs(page) {
   await wait(4000);
 
   // ── Dialog: "What do you want to update?" → click Next ───────────────────
-  console.log('\n[3] Handling dialog...');
+  console.log('\n[4] Handling dialog...');
   const dialogText = await page.evaluate(() => {
     const d = document.querySelector('mat-dialog-container, [role="dialog"]');
     return d ? d.innerText?.slice(0, 300) : null;
@@ -172,7 +197,7 @@ async function dumpInputs(page) {
   }
 
   // ── Fill DUNS in any visible input that mentions DUNS ────────────────────
-  console.log('\n[4] Filling DUNS...');
+  console.log('\n[5] Filling DUNS...');
   let dunsFilled = false;
   for (let i = 0; i < allInputEls.length; i++) {
     const inp = allInputEls[i];
@@ -193,7 +218,7 @@ async function dumpInputs(page) {
   await wait(1000);
 
   // ── Click Next / Submit / Save to confirm ─────────────────────────────────
-  console.log('\n[5] Clicking Next/Submit...');
+  console.log('\n[6] Clicking Next/Submit...');
   const nextBtn2 = page.getByRole('button', { name: 'Next', exact: true });
   const submitBtn = page.getByRole('button', { name: /submit|save|confirm|change account/i });
   let submitted = false;
