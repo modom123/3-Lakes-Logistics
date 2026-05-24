@@ -24,21 +24,6 @@ async function shot(page, name) {
   console.log('  Screenshot: scripts/acct-' + name + '.png');
 }
 
-// Click the first element whose visible text exactly or partially matches
-async function clickText(page, texts, timeout = 5000) {
-  for (const text of (Array.isArray(texts) ? texts : [texts])) {
-    try {
-      const el = page.locator(`text="${text}"`).first();
-      if (await el.isVisible({ timeout })) { await el.click(); return text; }
-    } catch {}
-    try {
-      const el = page.locator(`a:has-text("${text}"), button:has-text("${text}"), [role="menuitem"]:has-text("${text}")`).first();
-      if (await el.isVisible({ timeout: 2000 })) { await el.click(); return text; }
-    } catch {}
-  }
-  return null;
-}
-
 (async () => {
   console.log('=== Bond: Play Console → Organization ===\n');
 
@@ -52,105 +37,144 @@ async function clickText(page, texts, timeout = 5000) {
   const context = browser.contexts()[0] || await browser.newContext();
   const page    = context.pages()[0]    || await context.newPage();
 
-  // ── Land on the developer dashboard ───────────────────────────────────────
-  console.log('\n[1/4] Opening developer dashboard...');
+  // ── Go directly to the /account page (we know this URL works) ─────────────
+  console.log('\n[1/5] Opening Developer Account page...');
   await page.goto(
-    `https://play.google.com/console/u/0/developers/${DEV_ID}/app-list`,
+    `https://play.google.com/console/u/0/developers/${DEV_ID}/account`,
     { waitUntil: 'domcontentloaded', timeout: 60000 }
   );
   await wait(5000);
   console.log('  URL:', page.url().slice(0, 90));
-  await shot(page, '1-dashboard');
+  await shot(page, '1-account');
 
-  // ── Click Settings in sidebar ──────────────────────────────────────────────
-  console.log('\n[2/4] Clicking Settings...');
-  const clickedSettings = await clickText(page, ['Settings', 'settings']);
-  console.log('  Clicked:', clickedSettings || 'not found');
-  await wait(3000);
-  await shot(page, '2-settings');
-  console.log('  URL:', page.url().slice(0, 90));
-
-  // Print sub-menu items that appeared
-  const menuItems = await page.evaluate(() =>
-    [...document.querySelectorAll('a, [role="menuitem"]')]
-      .map(e => e.innerText?.trim()).filter(t => t && t.length < 60)
+  // Print all clickable elements so we can see what's there
+  const clickables = await page.evaluate(() =>
+    [...document.querySelectorAll('a, button, [role="button"], [tabindex="0"]')]
+      .map(e => e.innerText?.trim() || e.getAttribute('aria-label') || '')
+      .filter(t => t && t.length > 1 && t.length < 80)
       .filter((v,i,a) => a.indexOf(v) === i)
   );
-  console.log('  Menu items now:', menuItems.slice(0, 30).join(' | '));
+  console.log('  Clickable elements:', clickables.join(' | '));
 
-  // ── Click Account details ──────────────────────────────────────────────────
-  console.log('\n[3/4] Clicking Account details...');
-  const clickedAcct = await clickText(page, ['Account details', 'Developer account', 'Account info']);
-  if (clickedAcct) {
-    console.log('  Clicked:', clickedAcct);
-    await wait(4000);
-    await shot(page, '3-account-details');
-    console.log('  URL:', page.url().slice(0, 90));
-  } else {
-    // Try navigating to the settings sub-page URL directly (within existing session)
-    await page.goto(
-      `https://play.google.com/console/u/0/developers/${DEV_ID}/setup/account-details`,
-      { waitUntil: 'domcontentloaded', timeout: 30000 }
+  // ── Click "Account type" row to open the edit form ────────────────────────
+  console.log('\n[2/5] Clicking Account type to change it...');
+
+  // The "Account type" row has an arrow — click the row or the arrow
+  const clicked = await page.evaluate(() => {
+    // Find element containing "Account type"
+    const all = [...document.querySelectorAll('*')];
+    // Try the row/card containing "Account type" text
+    const candidates = all.filter(e =>
+      e.children.length < 5 &&
+      e.innerText?.includes('Account type') &&
+      e.innerText?.length < 200
     );
-    await wait(4000);
-    await shot(page, '3-account-details-direct');
-    console.log('  URL via direct nav:', page.url().slice(0, 90));
+    if (candidates.length > 0) {
+      // Click the last (most specific) match
+      candidates[candidates.length - 1].click();
+      return 'clicked Account type element';
+    }
+    return 'not found';
+  });
+  console.log('  JS click result:', clicked);
+  await wait(3000);
+  await shot(page, '2-after-acct-type-click');
+  console.log('  URL:', page.url().slice(0, 90));
+
+  // Check if a form/modal appeared or we navigated somewhere
+  const afterText = await page.evaluate(() => document.body.innerText);
+  console.log('  Page text:', afterText.slice(0, 400).replace(/\n+/g, ' '));
+
+  // If we navigated to an edit page, look for the Organization option
+  // Also try clicking an arrow_right_alt or edit button near "Account type"
+  if (!afterText.includes('Organization') && !afterText.includes('organization')) {
+    console.log('  Organization option not visible yet — trying arrow/edit button...');
+    // Try clicking arrow_right_alt SVG or button near "Account type"
+    await page.evaluate(() => {
+      const els = [...document.querySelectorAll('*')];
+      // Find the row that has "Account type" and click its last child (usually the arrow)
+      const row = els.find(e =>
+        e.innerText?.trim() === 'Account type' ||
+        (e.innerText?.includes('Account type') && e.innerText?.includes('Personal') && e.innerText?.length < 100)
+      );
+      if (row) {
+        // Click the row itself or its arrow child
+        const arrow = row.querySelector('[class*="arrow"], mat-icon, [data-mat-icon-name]') || row;
+        arrow.click();
+      }
+    });
+    await wait(3000);
+    await shot(page, '2b-after-arrow-click');
+    console.log('  URL after arrow:', page.url().slice(0, 90));
   }
 
-  // Print everything on the current page
-  const pageText = await page.evaluate(() => document.body.innerText);
-  console.log('\n  Page text:', pageText.slice(0, 600).replace(/\n+/g, ' '));
+  // ── Select Organization ────────────────────────────────────────────────────
+  console.log('\n[3/5] Selecting Organization...');
+  const currentText = await page.evaluate(() => document.body.innerText);
+  console.log('  Page text:', currentText.slice(0, 500).replace(/\n+/g, ' '));
 
-  const allInputs = await page.evaluate(() =>
-    [...document.querySelectorAll('input, mat-radio-button, [role="radio"], select')]
-      .map(e => `${e.tagName} type=${e.type||''} value=${e.value||''} label="${e.getAttribute('aria-label')||''}" text="${e.innerText?.trim().slice(0,30)||''}"`)
+  const inputs = await page.evaluate(() =>
+    [...document.querySelectorAll('input, mat-radio-button, [role="radio"]')]
+      .map(e => `${e.tagName} type=${e.type||''} value=${e.value||''} text="${e.innerText?.trim().slice(0,40)||''}" label="${e.getAttribute('aria-label')||''}"`)
   );
-  console.log('\n  All inputs:', allInputs.join('\n  '));
+  console.log('  Inputs:', inputs.join('\n  '));
 
-  // ── Make changes ───────────────────────────────────────────────────────────
-  console.log('\n[4/4] Making changes...');
-
-  // Try to select Organization type
+  // Click Organization option
+  let orgFound = false;
   for (const sel of [
     'input[value="organization" i]',
+    'input[value="ORGANIZATION"]',
     'mat-radio-button:has-text("Organization")',
     '[role="radio"]:has-text("Organization")',
     'label:has-text("Organization")',
+    'text=Organization',
   ]) {
     try {
       const el = page.locator(sel).first();
       if (await el.isVisible({ timeout: 2000 })) {
         await el.click();
         await wait(1000);
-        console.log('  Selected Organization');
+        console.log('  Selected Organization via:', sel);
+        orgFound = true;
         break;
       }
     } catch {}
   }
+  if (!orgFound) console.log('  Organization option not found on this page');
+  await shot(page, '3-org-select');
 
-  // Fill developer name (look for a text input that isn't the search box)
-  const textInputs = await page.locator('input[type="text"], input:not([type])').all();
-  for (const inp of textInputs) {
-    const label = await inp.getAttribute('aria-label').catch(() => '');
-    const placeholder = await inp.getAttribute('placeholder').catch(() => '');
+  // ── Fill name field ────────────────────────────────────────────────────────
+  console.log('\n[4/5] Filling in org name and DUNS...');
+
+  // Find name input (skip search boxes)
+  const allInputs = await page.locator('input[type="text"], input:not([type])').all();
+  for (const inp of allInputs) {
+    const label = await inp.getAttribute('aria-label').catch(() => '') || '';
+    const placeholder = await inp.getAttribute('placeholder').catch(() => '') || '';
     const val = await inp.inputValue().catch(() => '');
-    if (label?.toLowerCase().includes('search') || placeholder?.toLowerCase().includes('search')) continue;
-    if (label || placeholder) {
-      console.log(`  Filling field: label="${label}" placeholder="${placeholder}" current="${val}"`);
+    console.log(`  Input: label="${label}" placeholder="${placeholder}" value="${val}"`);
+    if (label.toLowerCase().includes('search') || placeholder.toLowerCase().includes('search')) continue;
+    if (label || placeholder || val) {
       await inp.click({ clickCount: 3 });
       await inp.fill(ORG_NAME);
+      console.log('  Set name to:', ORG_NAME);
       break;
     }
   }
 
-  // Fill DUNS if visible
-  for (const sel of ['input[aria-label*="DUNS" i]', 'input[placeholder*="DUNS" i]', 'input[formcontrolname*="duns" i]']) {
+  // DUNS
+  for (const sel of [
+    'input[aria-label*="DUNS" i]',
+    'input[placeholder*="DUNS" i]',
+    'input[formcontrolname*="duns" i]',
+    'input[id*="duns" i]',
+  ]) {
     try {
       const el = page.locator(sel).first();
       if (await el.isVisible({ timeout: 2000 })) {
         await el.click({ clickCount: 3 });
         await el.fill(DUNS);
-        console.log('  Filled DUNS');
+        console.log('  Filled DUNS:', DUNS);
         break;
       }
     } catch {}
@@ -158,20 +182,29 @@ async function clickText(page, texts, timeout = 5000) {
 
   await shot(page, '4-before-save');
 
-  // Save
-  for (const sel of ['button:has-text("Save")', 'button:has-text("Submit")', 'button[type="submit"]:not([disabled])']) {
+  // ── Save ──────────────────────────────────────────────────────────────────
+  console.log('\n[5/5] Saving...');
+  for (const sel of [
+    'button:has-text("Save")',
+    'button:has-text("Submit")',
+    'button:has-text("Continue")',
+    'button[type="submit"]:not([disabled])',
+  ]) {
     try {
       const el = page.locator(sel).first();
       if (await el.isVisible({ timeout: 3000 })) {
         await el.click();
         await wait(5000);
-        console.log('  Saved');
+        console.log('  Clicked:', sel);
         break;
       }
     } catch {}
   }
 
   await shot(page, '5-done');
+  const finalText = await page.evaluate(() => document.body.innerText);
+  console.log('  Result:', finalText.slice(0, 300).replace(/\n+/g, ' '));
+
   await browser.close();
-  console.log('\nDone — check screenshots in scripts/acct-*.png');
+  console.log('\nDone.');
 })().catch(e => { console.error('Bond error:', e.message); process.exit(1); });
