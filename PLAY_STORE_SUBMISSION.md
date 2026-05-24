@@ -13,11 +13,17 @@
 
 ## STEP 1 — Generate the signing keystore (one-time)
 
-On any machine that has Java installed, run:
+**On Windows (PowerShell):**
+```powershell
+.\scripts\generate-keystore.ps1
+```
 
+**On Mac / Linux (Terminal):**
 ```bash
 bash scripts/generate-keystore.sh
 ```
+
+> If you get a `keytool not found` error, install Java JDK from **adoptium.net** then restart your terminal.
 
 When prompted:
 - **Keystore password:** choose a strong password and save it in the password manager
