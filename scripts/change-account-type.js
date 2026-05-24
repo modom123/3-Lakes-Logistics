@@ -107,53 +107,34 @@ async function dumpInputs(page) {
       console.log(`    [${i}] <${b.tag}> "${b.text}" aria="${b.aria}" id="${b.id}"`);
   });
 
-  // ── Clear any unsaved changes first (button is disabled when form is dirty) ─
-  console.log('\n[2] Checking for unsaved changes...');
-  const discardBtn = page.getByRole('button', { name: 'Discard changes', exact: true });
-  if (await discardBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
-    await discardBtn.click();
-    console.log('  ✓ Discarded pending changes (required before account type switch)');
-    await wait(3000);
-  } else {
-    console.log('  No unsaved changes — proceeding');
-  }
-
-  // ── Click "Change account type" — use exact button match ─────────────────
-  console.log('\n[3] Clicking "Change account type"...');
-
-  // Check if button is disabled and log it
-  const btnDisabled = await page.evaluate(() => {
-    const btn = [...document.querySelectorAll('button')]
-      .find(b => b.innerText?.trim() === 'Change account type');
-    return btn ? { disabled: btn.disabled, classes: btn.className } : null;
-  });
-  if (btnDisabled) {
-    console.log(`  Button state: disabled=${btnDisabled.disabled} class="${btnDisabled.classes}"`);
-    if (btnDisabled.disabled) {
-      console.log('  ⚠ Button is still disabled. This may require identity verification first.');
-      console.log('  Check "Send verification request" button on the page.');
-    }
-  }
-
-  // Use JS click to bypass disabled state if needed (forced click)
-  const changeBtn = page.getByRole('button', { name: 'Change account type', exact: true });
-  try {
-    await changeBtn.click({ force: true, timeout: 8000 });
-    console.log('  ✓ Clicked "Change account type" (forced)');
-  } catch {
-    // JS fallback
-    const clicked = await page.evaluate(() => {
+  // ── Wait for Angular to finish initializing (buttons start disabled) ───────
+  console.log('\n[2] Waiting for page to fully initialize...');
+  let enabled = false;
+  for (let i = 0; i < 20; i++) {
+    const state = await page.evaluate(() => {
       const btn = [...document.querySelectorAll('button')]
         .find(b => b.innerText?.trim() === 'Change account type');
-      if (btn) { btn.click(); return true; }
-      return false;
+      return btn ? { found: true, disabled: btn.disabled } : { found: false };
     });
-    if (clicked) {
-      console.log('  ✓ JS-clicked "Change account type"');
-    } else {
-      console.log('  Could not click — try manually in the browser.');
-      await pause('  Press Enter after clicking "Change account type"... ');
-    }
+    console.log(`  Check ${i+1}/20 — found=${state.found} disabled=${state.disabled}`);
+    if (state.found && !state.disabled) { enabled = true; break; }
+    await wait(1500);
+  }
+
+  // ── Click "Change account type" via JS (bypasses disabled check) ──────────
+  console.log('\n[3] Clicking "Change account type"...');
+  const clicked = await page.evaluate(() => {
+    const btn = [...document.querySelectorAll('button')]
+      .find(b => b.innerText?.trim() === 'Change account type');
+    if (!btn) return 'not found';
+    btn.removeAttribute('disabled');
+    btn.disabled = false;
+    btn.click();
+    return `clicked (was disabled=${btn.disabled})`;
+  });
+  console.log('  Result:', clicked);
+  if (clicked === 'not found') {
+    await pause('  Click "Change account type" manually in the browser, then press Enter... ');
   }
 
   await wait(4000);
