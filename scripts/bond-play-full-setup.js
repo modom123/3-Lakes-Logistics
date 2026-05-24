@@ -13,11 +13,23 @@
  * Chrome must be open with remote debugging and logged into Google as nwtcinvestment@gmail.com
  */
 
+// Auto-install dependencies before anything else
+const { execSync } = require('child_process');
+const path = require('path');
+const repoRoot = path.join(__dirname, '..');
+try { require('libsodium-wrappers'); } catch {
+  console.log('Installing dependencies...');
+  execSync('npm install', { cwd: repoRoot, stdio: 'inherit' });
+  console.log('Done. Continuing...\n');
+}
+try { require('playwright'); } catch {
+  execSync('npx playwright install chromium', { cwd: repoRoot, stdio: 'inherit' });
+}
+
 const { chromium } = require('playwright');
 const https   = require('https');
 const sodium  = require('libsodium-wrappers');
 const fs      = require('fs');
-const path    = require('path');
 
 const OWNER        = 'modom123';
 const REPO         = '3-lakes-logistics';
