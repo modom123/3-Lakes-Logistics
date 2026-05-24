@@ -171,14 +171,48 @@ function watchForNewZip(watchDir, timeoutMs = 120000) {
   try { execSync('firebase --version', { stdio: 'pipe' }); }
   catch { console.log('  Installing Firebase CLI...'); execSync('npm install -g firebase-tools', { stdio: 'inherit' }); }
 
+  // Get Firebase App ID for Android
+  let appId = '';
+  try {
+    const appsOutput = execSync(
+      `firebase apps:list --project ${FIREBASE_PROJECT} --json`,
+      { stdio: 'pipe', timeout: 15000 }
+    ).toString();
+    const appsJson = JSON.parse(appsOutput);
+    const androidApp = (appsJson.result || []).find(a => a.platform === 'ANDROID');
+    if (androidApp) {
+      appId = androidApp.appId;
+      console.log(`  ✓ Firebase Android App ID: ${appId}`);
+    }
+  } catch (e) {
+    console.log('  Could not auto-detect App ID:', e.message?.slice(0, 80));
+  }
+
+  if (!appId) {
+    console.log('  No Android app found in Firebase project.');
+    console.log('  Creating Android app in Firebase...');
+    try {
+      const createOut = execSync(
+        `firebase apps:create ANDROID com.threelakes.driver --project ${FIREBASE_PROJECT} --json`,
+        { stdio: 'pipe', timeout: 30000 }
+      ).toString();
+      const created = JSON.parse(createOut);
+      appId = created.result?.appId || '';
+      if (appId) console.log(`  ✓ Created app, ID: ${appId}`);
+    } catch (e) {
+      console.log('  Auto-create failed:', e.message?.slice(0, 80));
+    }
+  }
+
   const uploadCmd = [
     `firebase appdistribution:distribute "${aabPath}"`,
+    `--app "${appId || '1:112146856396107954470:android:unknown'}"`,
     `--project ${FIREBASE_PROJECT}`,
     `--testers "${TESTERS}"`,
     `--release-notes "${RELEASE_NOTES}"`,
   ].join(' ');
 
-  console.log(`  $ ${uploadCmd}\n`);
+  console.log(`\n  $ ${uploadCmd}\n`);
   try {
     execSync(uploadCmd, { stdio: 'inherit', timeout: 180000 });
     uploaded = true;
