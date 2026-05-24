@@ -1,5 +1,8 @@
 /**
- * Bond — Convert Play Console account to Organization + set name
+ * Bond — Convert Play Console account to Organization via Developer Verification
+ * Per Google support article 16260648: account type change goes through
+ * the "Android developer verification" page, not Account details.
+ *
  * Developer ID: 6880853885521839099
  * Run: node scripts/bond-play-account-setup.js
  */
@@ -25,7 +28,7 @@ async function shot(page, name) {
 }
 
 (async () => {
-  console.log('=== Bond: Play Console → Organization ===\n');
+  console.log('=== Bond: Play Console → Organization via Developer Verification ===\n');
 
   let browser;
   try {
@@ -37,121 +40,122 @@ async function shot(page, name) {
   const context = browser.contexts()[0] || await browser.newContext();
   const page    = context.pages()[0]    || await context.newPage();
 
-  // ── Go to /account page ───────────────────────────────────────────────────
-  console.log('[1/4] Opening account page...');
+  // ── Navigate to Android Developer Verification ────────────────────────────
+  console.log('\n[1/4] Opening Android Developer Verification page...');
   await page.goto(
-    `https://play.google.com/console/u/0/developers/${DEV_ID}/account`,
+    `https://play.google.com/console/u/0/developers/${DEV_ID}/android-developer-verification`,
     { waitUntil: 'domcontentloaded', timeout: 60000 }
   );
-  await wait(5000);
-  await shot(page, '1-account');
+  await wait(6000);
+  console.log('  URL:', page.url().slice(0, 90));
+  await shot(page, '1-verification');
 
-  // ── Click the first arrow_right_alt button (navigates to account/developer edit) ─
-  console.log('[2/4] Clicking first arrow button to open edit form...');
-  const arrows = await page.evaluate(() =>
+  // Print full page text
+  const text1 = await page.evaluate(() => document.body.innerText);
+  console.log('\n  === PAGE TEXT ===');
+  console.log(text1.slice(0, 1500).replace(/\n{3,}/g, '\n'));
+  console.log('  =================\n');
+
+  // All clickable buttons
+  const btns = await page.evaluate(() =>
     [...document.querySelectorAll('button, a, [role="button"]')]
-      .filter(e => e.innerText?.trim() === 'arrow_right_alt')
-      .map(e => { const r = e.getBoundingClientRect(); return { x: r.left + r.width/2, y: r.top + r.height/2, visible: r.width > 0 && r.height > 0 }; })
-      .filter(a => a.visible)
+      .map(e => e.innerText?.trim() || e.getAttribute('aria-label') || '')
+      .filter(t => t && t.length > 1 && t.length < 80)
+      .filter((v,i,a) => a.indexOf(v) === i)
   );
-  console.log('  Found', arrows.length, 'arrow buttons at y positions:', arrows.map(a => Math.round(a.y)).join(', '));
+  console.log('  Buttons/links:', btns.join(' | '));
 
-  // Click the first arrow (About you section)
-  if (arrows.length > 0) {
-    await page.mouse.click(arrows[0].x, arrows[0].y);
-    await wait(5000);
-    console.log('  URL after click:', page.url());
-    await shot(page, '2-edit-page');
-  }
-
-  // If we navigated, now print everything on this page
-  const editUrl = page.url();
-  const editText = await page.evaluate(() => document.body.innerText);
-  console.log('  Page text:', editText.slice(0, 800).replace(/\n+/g, ' '));
-
-  // Log all inputs on this page
+  // All inputs
   const inputs = await page.evaluate(() =>
+    [...document.querySelectorAll('input, mat-radio-button, [role="radio"], select, textarea')]
+      .map(e => `${e.tagName}[${e.type||''}] value="${e.value||''}" label="${e.getAttribute('aria-label')||''}" placeholder="${e.getAttribute('placeholder')||''}" text="${e.innerText?.trim().slice(0,50)||''}"`)
+  );
+  console.log('  Inputs:\n  ' + inputs.join('\n  '));
+
+  // ── Look for "Get started" or "Start verification" or "Organization" ───────
+  console.log('\n[2/4] Looking for verification start or organization option...');
+
+  // Try to click "Get started", "Start", "Verify", "Organization", etc.
+  const startSelectors = [
+    'button:has-text("Get started")',
+    'button:has-text("Start verification")',
+    'button:has-text("Start")',
+    'button:has-text("Begin")',
+    'button:has-text("Verify")',
+    'button:has-text("Organization")',
+    'button:has-text("Continue")',
+    'a:has-text("Get started")',
+    'mat-radio-button:has-text("Organization")',
+    '[role="radio"]:has-text("Organization")',
+  ];
+  let clicked = null;
+  for (const sel of startSelectors) {
+    try {
+      const el = page.locator(sel).first();
+      if (await el.isVisible({ timeout: 2000 })) {
+        await el.click();
+        await wait(3000);
+        clicked = sel;
+        console.log('  Clicked:', sel);
+        break;
+      }
+    } catch {}
+  }
+  if (!clicked) console.log('  No start/org button found yet');
+  await shot(page, '2-after-start');
+
+  // ── Print what's now on the page ──────────────────────────────────────────
+  console.log('\n[3/4] Page after interaction:');
+  console.log('  URL:', page.url().slice(0, 90));
+  const text2 = await page.evaluate(() => document.body.innerText);
+  console.log('  Text:', text2.slice(0, 1000).replace(/\n{3,}/g, '\n'));
+
+  const inputs2 = await page.evaluate(() =>
     [...document.querySelectorAll('input, mat-radio-button, [role="radio"], select')]
       .map(e => ({
         tag: e.tagName, type: e.type||'', value: e.value||'',
         label: e.getAttribute('aria-label')||'',
         placeholder: e.getAttribute('placeholder')||'',
         text: e.innerText?.trim().slice(0,50)||'',
-        checked: e.checked,
-        rect: (() => { const r = e.getBoundingClientRect(); return {x: Math.round(r.left), y: Math.round(r.top), w: Math.round(r.width), h: Math.round(r.height)}; })()
+        rect: (() => { const r = e.getBoundingClientRect(); return { x: Math.round(r.left), y: Math.round(r.top) }; })()
       }))
   );
-  console.log('\n  All inputs:');
-  inputs.forEach(i => console.log(`    ${i.tag}[${i.type}] value="${i.value}" label="${i.label}" text="${i.text}" at y=${i.rect.y}`));
+  console.log('  Inputs after click:\n  ' + JSON.stringify(inputs2, null, 2).slice(0, 1000));
 
-  // ── Fill the form ─────────────────────────────────────────────────────────
-  console.log('\n[3/4] Filling form...');
+  // ── Fill org name and DUNS if form fields appeared ────────────────────────
+  console.log('\n[4/4] Filling form if available...');
 
-  // Select Organization radio
-  let orgDone = false;
-  for (const inp of inputs) {
-    if (inp.text.toLowerCase().includes('organization') || inp.value.toLowerCase().includes('organization')) {
-      await page.mouse.click(inp.rect.x + inp.rect.w/2, inp.rect.y + inp.rect.h/2);
-      await wait(1000);
-      console.log('  Clicked Organization at y=' + inp.rect.y);
-      orgDone = true;
-      break;
-    }
-  }
-  if (!orgDone) {
-    // Also try by selector
-    for (const sel of ['mat-radio-button:has-text("Organization")','[role="radio"]:has-text("Organization")','label:has-text("Organization")','input[value="organization" i]']) {
-      try {
-        const el = page.locator(sel).first();
-        if (await el.isVisible({ timeout: 2000 })) { await el.click(); await wait(1000); console.log('  Org via selector:', sel); orgDone = true; break; }
-      } catch {}
-    }
-  }
-  if (!orgDone) console.log('  Organization option not found');
-
-  // Re-query inputs after selecting org (may reveal new fields like DUNS)
-  await wait(2000);
-  await shot(page, '3-after-org-select');
-
-  const inputs2 = await page.locator('input[type="text"], input:not([type])').all();
-  for (const inp of inputs2) {
-    const label = await inp.getAttribute('aria-label').catch(() => '') || '';
-    const ph = await inp.getAttribute('placeholder').catch(() => '') || '';
+  const textInputs = await page.locator('input[type="text"], input:not([type])').all();
+  for (const inp of textInputs) {
+    const label = (await inp.getAttribute('aria-label').catch(() => '') || '').toLowerCase();
+    const ph = (await inp.getAttribute('placeholder').catch(() => '') || '').toLowerCase();
     const val = await inp.inputValue().catch(() => '');
-    console.log(`  Text input: label="${label}" ph="${ph}" val="${val}"`);
-    if (label.toLowerCase().includes('search') || ph.toLowerCase().includes('search')) continue;
-    if (label.toLowerCase().includes('duns') || ph.toLowerCase().includes('duns')) {
+    if (label.includes('search') || ph.includes('search')) continue;
+    console.log(`  Field: label="${label}" ph="${ph}" val="${val}"`);
+    if (label.includes('duns') || ph.includes('duns')) {
       await inp.click({ clickCount: 3 }); await inp.fill(DUNS);
-      console.log('  Filled DUNS:', DUNS);
-    } else if (label || ph || val) {
+      console.log('  → Filled DUNS');
+    } else if (label.includes('name') || ph.includes('name') || label.includes('org') || ph.includes('org')) {
       await inp.click({ clickCount: 3 }); await inp.fill(ORG_NAME);
-      console.log('  Filled name to:', ORG_NAME);
+      console.log('  → Filled name:', ORG_NAME);
     }
   }
 
-  await shot(page, '4-before-save');
-
-  // ── Save ──────────────────────────────────────────────────────────────────
-  console.log('\n[4/4] Saving...');
-  let saved = false;
-  for (const sel of ['button:has-text("Save")','button:has-text("Submit")','button:has-text("Continue")','button[type="submit"]:not([disabled])']) {
+  for (const sel of ['button:has-text("Save")','button:has-text("Submit")','button:has-text("Continue")','button:has-text("Next")','button[type="submit"]:not([disabled])']) {
     try {
       const el = page.locator(sel).first();
-      if (await el.isVisible({ timeout: 3000 })) { await el.click(); await wait(6000); console.log('  Saved via:', sel); saved = true; break; }
+      if (await el.isVisible({ timeout: 2000 })) {
+        await el.click(); await wait(4000);
+        console.log('  Submitted via:', sel); break;
+      }
     } catch {}
   }
-  if (!saved) {
-    const btns = await page.evaluate(() =>
-      [...document.querySelectorAll('button')].map(b => b.innerText?.trim()).filter(t=>t)
-    );
-    console.log('  Buttons available:', btns.join(' | '));
-  }
 
-  await shot(page, '5-done');
-  const finalText = await page.evaluate(() => document.body.innerText);
-  console.log('  Final URL:', page.url().slice(0,90));
-  console.log('  Result:', finalText.slice(0, 300).replace(/\n+/g, ' '));
+  await shot(page, '4-done');
+  const final = await page.evaluate(() => document.body.innerText);
+  console.log('\n  Final URL:', page.url().slice(0, 90));
+  console.log('  Final text:', final.slice(0, 500).replace(/\n{3,}/g, '\n'));
 
   await browser.close();
-  console.log('\nDone.');
+  console.log('\nDone — paste the full output so Bond can see what step the verification is on.');
 })().catch(e => { console.error('Bond error:', e.message); process.exit(1); });
