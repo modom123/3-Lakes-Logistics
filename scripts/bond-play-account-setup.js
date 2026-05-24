@@ -16,27 +16,18 @@ if (!hasMod('playwright')) {
 }
 const { chromium } = require('playwright');
 
+const DEV_ID   = '6880853885521839099';
 const ORG_NAME = '3 Lakes Logistics';
 const DUNS     = '145025174';
 
 async function wait(ms) { return new Promise(r => setTimeout(r, ms)); }
 async function shot(page, name) {
-  const p = path.join(__dirname, `acct-${name}.png`);
-  await page.screenshot({ path: p, fullPage: false });
-  console.log('  Screenshot:', `scripts/acct-${name}.png`);
-}
-async function findVisible(page, selectors, timeout = 6000) {
-  for (const sel of selectors) {
-    try {
-      const el = page.locator(sel).first();
-      if (await el.isVisible({ timeout })) return el;
-    } catch {}
-  }
-  return null;
+  await page.screenshot({ path: path.join(__dirname, `acct-${name}.png`), fullPage: false });
+  console.log('  Screenshot: scripts/acct-' + name + '.png');
 }
 
 (async () => {
-  console.log('=== Bond: Play Console Account → Organization ===\n');
+  console.log('=== Bond: Play Console → Organization Account ===\n');
 
   let browser;
   try {
@@ -48,172 +39,182 @@ async function findVisible(page, selectors, timeout = 6000) {
   const context = browser.contexts()[0] || await browser.newContext();
   const page    = context.pages()[0]    || await context.newPage();
 
-  // ── Step 1: Open Play Console and select account ──────────────────────────
-  console.log('\n[1/4] Opening Play Console...');
-  await page.goto('https://play.google.com/console', { waitUntil: 'domcontentloaded', timeout: 60000 });
+  // ── Navigate directly to the developer dashboard ──────────────────────────
+  console.log('\n[1/3] Opening developer dashboard...');
+  await page.goto(
+    `https://play.google.com/console/u/0/developers/${DEV_ID}/app-list`,
+    { waitUntil: 'domcontentloaded', timeout: 60000 }
+  );
   await wait(6000);
-  await shot(page, '1-landing');
+  console.log('  URL:', page.url().slice(0, 90));
+  await shot(page, '1-dashboard');
 
-  // Click "3 lakes logistics" if on account selection screen
-  const bodyText = await page.evaluate(() => document.body.innerText);
-  if (bodyText.toLowerCase().includes('choose developer') || bodyText.toLowerCase().includes('3 lakes')) {
-    console.log('  Account selection screen detected — selecting "3 lakes logistics"...');
-    await page.evaluate(() => {
-      const all = [...document.querySelectorAll('*')];
-      const el = all.find(e => e.children.length === 0 &&
-        e.innerText?.toLowerCase().includes('3 lakes logistics'));
-      if (el) { el.click(); return; }
-      // Try parent elements
-      const el2 = all.find(e => e.innerText?.toLowerCase() === '3 lakes logistics');
-      if (el2) el2.click();
-    });
+  // ── Find Account details via sidebar ──────────────────────────────────────
+  console.log('\n[2/3] Finding Account details in navigation...');
+
+  // Print all links/nav items visible to debug
+  const navItems = await page.evaluate(() =>
+    [...document.querySelectorAll('a, [role="menuitem"], nav *')]
+      .map(e => e.innerText?.trim())
+      .filter(t => t && t.length > 1 && t.length < 60)
+      .filter((v, i, a) => a.indexOf(v) === i)
+      .slice(0, 50)
+  );
+  console.log('  Nav items found:', navItems.join(' | '));
+
+  // Try clicking Account details in sidebar
+  let clickedSettings = false;
+  const settingsSelectors = [
+    'a:has-text("Account details")',
+    'a[href*="account-details"]',
+    '[aria-label*="Account details"]',
+    'a:has-text("Settings")',
+    // Setup section
+    'a:has-text("Setup")',
+  ];
+  for (const sel of settingsSelectors) {
+    try {
+      const el = page.locator(sel).first();
+      if (await el.isVisible({ timeout: 3000 })) {
+        await el.click();
+        await wait(3000);
+        const t = await page.evaluate(() => document.body.innerText);
+        if (t.toLowerCase().includes('account type') ||
+            t.toLowerCase().includes('developer name') ||
+            t.toLowerCase().includes('organization')) {
+          console.log('  Landed on account details via:', sel);
+          clickedSettings = true;
+          break;
+        }
+        // If it opened a section, look for Account details sub-link
+        const subLink = page.locator('a:has-text("Account details")').first();
+        if (await subLink.isVisible({ timeout: 2000 }).catch(() => false)) {
+          await subLink.click();
+          await wait(3000);
+          clickedSettings = true;
+          break;
+        }
+      }
+    } catch {}
+  }
+
+  if (!clickedSettings) {
+    // Navigate directly — now that we're inside the dev console, try the URL
+    console.log('  Trying direct URL navigation from within the console...');
+    await page.evaluate((devId) => {
+      window.location.href = `/console/u/0/developers/${devId}/account-details`;
+    }, DEV_ID);
     await wait(6000);
-    console.log('  URL after click:', page.url().slice(0, 90));
-    await shot(page, '1b-after-account-select');
+    console.log('  URL after JS nav:', page.url().slice(0, 90));
   }
 
-  // Extract developer ID
-  let devId = page.url().match(/developers\/(\d+)/)?.[1];
-  if (!devId) {
-    // Wait a bit more for redirect
-    await wait(5000);
-    devId = page.url().match(/developers\/(\d+)/)?.[1];
-  }
-  console.log('  Developer ID:', devId || '(not found)');
-
-  // ── Step 2: Go to Account Details ────────────────────────────────────────
-  console.log('\n[2/4] Opening account details...');
-  const settingsUrls = [
-    devId && `https://play.google.com/console/u/0/developers/${devId}/account-details`,
-    devId && `https://play.google.com/console/u/0/developers/${devId}/setup/account-details`,
-    'https://play.google.com/console/u/0/developers/account-details',
-    'https://play.google.com/console/u/0/developers/setup/account-details',
-  ].filter(Boolean);
-
-  let landed = false;
-  for (const url of settingsUrls) {
-    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 });
-    await wait(4000);
-    const t = await page.evaluate(() => document.body.innerText);
-    if (t.includes('account type') || t.toLowerCase().includes('developer name') ||
-        t.toLowerCase().includes('organization') || t.toLowerCase().includes('account details')) {
-      console.log('  Account details page loaded:', url.slice(0, 80));
-      landed = true;
-      break;
-    }
-  }
-  if (!landed) {
-    // Try finding Settings in nav
-    const settingsLink = await findVisible(page, [
-      'a:has-text("Account details")',
-      'a:has-text("Settings")',
-      'nav a:has-text("Setup")',
-      '[aria-label*="account" i]',
-    ], 5000);
-    if (settingsLink) {
-      await settingsLink.click();
-      await wait(3000);
-    }
-  }
   await shot(page, '2-account-details');
-  const pageText2 = await page.evaluate(() => document.body.innerText);
-  console.log('  Page text preview:', pageText2.slice(0, 300).replace(/\n/g, ' '));
+  const pageText = await page.evaluate(() => document.body.innerText);
+  console.log('  Page text:', pageText.slice(0, 500).replace(/\n+/g, ' '));
 
-  // ── Step 3: Change account type to Organization ───────────────────────────
-  console.log('\n[3/4] Changing account type to Organization...');
+  // ── Make the changes ──────────────────────────────────────────────────────
+  console.log('\n[3/3] Updating account type and name...');
 
-  // Look for "Organization" radio/option
-  const orgOption = await findVisible(page, [
+  // Log all inputs, labels, radio buttons
+  const inputs = await page.evaluate(() =>
+    [...document.querySelectorAll('input, select, mat-radio-button, [role="radio"]')]
+      .map(e => ({
+        tag: e.tagName,
+        type: e.type || '',
+        name: e.name || '',
+        value: e.value || '',
+        label: e.getAttribute('aria-label') || '',
+        text: e.innerText?.trim().slice(0, 40) || '',
+        id: e.id || '',
+      }))
+  );
+  console.log('  Inputs on page:');
+  inputs.forEach(i => console.log(`    ${i.tag} type=${i.type} name=${i.name} value=${i.value} label=${i.label} text=${i.text}`));
+
+  // Try to select Organization
+  let orgSelected = false;
+  for (const sel of [
     'input[value="organization"]',
     'input[value="ORGANIZATION"]',
-    'label:has-text("Organization")',
-    '[data-value="organization"]',
     'mat-radio-button:has-text("Organization")',
-    'input[type="radio"] + * :has-text("Organization")',
-  ], 5000);
-
-  if (orgOption) {
-    await orgOption.click();
-    await wait(2000);
-    console.log('  Selected Organization');
-    await shot(page, '3-org-selected');
-  } else {
-    console.log('  Organization option not found — printing page buttons:');
-    const els = await page.evaluate(() =>
-      [...document.querySelectorAll('input,label,button,select,mat-radio-button')]
-        .map(e => `${e.tagName}|${e.type||''}|${(e.innerText||e.value||'').trim().slice(0,40)}`)
-        .filter(s => s.length > 5).slice(0, 30)
-    );
-    console.log( els.join('\n'));
-    await shot(page, '3-no-org-option');
+    '[role="radio"]:has-text("Organization")',
+    'label:has-text("Organization") input',
+  ]) {
+    try {
+      const el = page.locator(sel).first();
+      if (await el.isVisible({ timeout: 2000 })) {
+        await el.click();
+        await wait(1500);
+        console.log('  Selected Organization via:', sel);
+        orgSelected = true;
+        break;
+      }
+    } catch {}
   }
+  if (!orgSelected) console.log('  Organization radio not found on this page');
 
-  // ── Step 4: Fill developer/org name and DUNS ─────────────────────────────
-  console.log('\n[4/4] Updating name and DUNS...');
-
-  // Developer / Org name field
-  const nameField = await findVisible(page, [
+  // Fill name
+  for (const sel of [
     'input[aria-label*="name" i]',
     'input[placeholder*="name" i]',
     'input[name*="name"]',
-    'input[id*="name"]',
-    'mat-form-field:has-text("Developer name") input',
-    'mat-form-field:has-text("Organization name") input',
-  ], 5000);
-
-  if (nameField) {
-    await nameField.click({ clickCount: 3 });
-    await nameField.fill(ORG_NAME);
-    console.log('  Set name to:', ORG_NAME);
-  } else {
-    console.log('  Name field not found');
+    'input[formcontrolname*="name"]',
+    'mat-form-field:has-text("name") input',
+  ]) {
+    try {
+      const el = page.locator(sel).first();
+      if (await el.isVisible({ timeout: 2000 })) {
+        await el.click({ clickCount: 3 });
+        await el.fill(ORG_NAME);
+        console.log('  Filled name via:', sel);
+        break;
+      }
+    } catch {}
   }
 
-  // DUNS field
-  const dunsField = await findVisible(page, [
+  // Fill DUNS
+  for (const sel of [
     'input[aria-label*="DUNS" i]',
     'input[placeholder*="DUNS" i]',
     'input[name*="duns"]',
-    'input[id*="duns"]',
-    'mat-form-field:has-text("DUNS") input',
-  ], 5000);
-
-  if (dunsField) {
-    await dunsField.click({ clickCount: 3 });
-    await dunsField.fill(DUNS);
-    console.log('  Set DUNS to:', DUNS);
-  } else {
-    console.log('  DUNS field not found (may appear after selecting Organization)');
+    'input[formcontrolname*="duns"]',
+  ]) {
+    try {
+      const el = page.locator(sel).first();
+      if (await el.isVisible({ timeout: 2000 })) {
+        await el.click({ clickCount: 3 });
+        await el.fill(DUNS);
+        console.log('  Filled DUNS:', DUNS);
+        break;
+      }
+    } catch {}
   }
 
-  await shot(page, '4-filled');
+  await shot(page, '3-before-save');
 
   // Save
-  const saveBtn = await findVisible(page, [
+  for (const sel of [
     'button:has-text("Save")',
     'button:has-text("Submit")',
-    'button[type="submit"]',
-    'button:has-text("Apply")',
-  ], 5000);
-
-  if (saveBtn) {
-    await saveBtn.click();
-    await wait(5000);
-    await shot(page, '5-saved');
-    const saved = await page.evaluate(() => document.body.innerText);
-    if (saved.toLowerCase().includes('saved') || saved.toLowerCase().includes('success')) {
-      console.log('\nAccount updated to Organization successfully!');
-    } else {
-      console.log('\nSave clicked — check screenshot to confirm');
-    }
-  } else {
-    console.log('  Save button not found — check screenshot');
-    await shot(page, '5-no-save');
+    'button[type="submit"]:not([disabled])',
+  ]) {
+    try {
+      const el = page.locator(sel).first();
+      if (await el.isVisible({ timeout: 3000 })) {
+        await el.click();
+        await wait(4000);
+        console.log('  Clicked save');
+        break;
+      }
+    } catch {}
   }
 
+  await shot(page, '4-final');
+  const finalText = await page.evaluate(() => document.body.innerText);
+  console.log('\n  Final page text:', finalText.slice(0, 400).replace(/\n+/g, ' '));
+
   await browser.close();
-  console.log('\nDone. After account is set to Organization:');
-  console.log('  Run: node scripts/bond-play-console-setup.js');
-  console.log('  (to create the app listing and grant API access)');
+  console.log('\nDone. If account type changed successfully, run:');
+  console.log('  node scripts/bond-play-console-setup.js');
 
 })().catch(e => { console.error('Bond error:', e.message); process.exit(1); });
