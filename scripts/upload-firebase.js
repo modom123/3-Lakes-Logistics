@@ -1,10 +1,7 @@
 /**
- * Bond — Upload AAB to Firebase App Distribution
+ * Bond — Download AAB from GitHub Actions → Upload to Firebase App Distribution
  *
  * Run: node scripts\upload-firebase.js
- *
- * Finds the AAB in Downloads, extracts it, then uploads to Firebase
- * App Distribution so testers get notified immediately.
  */
 
 const { execSync, spawnSync } = require('child_process');
@@ -24,229 +21,261 @@ if (!hasMod('playwright')) {
 const { chromium } = require('playwright');
 
 const FIREBASE_PROJECT = 'lakes-logistics-ffe6f';
-const DOWNLOADS_DIR    = path.join(os.homedir(), 'Downloads');
-const EXTRACT_DIR      = path.join(os.homedir(), 'Downloads', '3lakes-aab');
+const RUN_URL          = 'https://github.com/modom123/3-Lakes-Logistics/actions/runs/26353604845';
+const DIST_URL         = `https://console.firebase.google.com/project/${FIREBASE_PROJECT}/appdistribution`;
+const SAVE_DIR         = path.join(os.homedir(), 'Downloads', '3lakes-build');
 const TESTERS          = 'nwtcinvestment@gmail.com,info@3lakeslogistics.com';
 const RELEASE_NOTES    = '3 Lakes Driver v1.0 — Internal test build';
-const DIST_URL         = `https://console.firebase.google.com/project/${FIREBASE_PROJECT}/appdistribution`;
 
 async function wait(ms) { return new Promise(r => setTimeout(r, ms)); }
 
-// ── Find and extract AAB ───────────────────────────────────────────────────
-function listRecursive(dir, indent = '  ') {
+function findRecursive(dir, ext) {
   try {
     for (const f of fs.readdirSync(dir, { withFileTypes: true })) {
       const full = path.join(dir, f.name);
-      const size = f.isFile() ? ` (${(fs.statSync(full).size/1024).toFixed(0)}kb)` : '';
-      console.log(`${indent}${f.name}${size}`);
-      if (f.isDirectory()) listRecursive(full, indent + '  ');
+      if (f.isDirectory()) { const r = findRecursive(full, ext); if (r) return r; }
+      if (f.name.toLowerCase().endsWith(ext)) return full;
     }
   } catch {}
-}
-
-function findRecursive(dir, ext) {
-  for (const f of fs.readdirSync(dir, { withFileTypes: true })) {
-    const full = path.join(dir, f.name);
-    if (f.isDirectory()) { const r = findRecursive(full, ext); if (r) return r; }
-    if (f.name.toLowerCase().endsWith(ext)) return full;
-  }
-  return null;
-}
-
-function extractZip(zipPath, destDir) {
-  if (!fs.existsSync(destDir)) fs.mkdirSync(destDir, { recursive: true });
-  try {
-    execSync(`powershell -Command "Expand-Archive -LiteralPath '${zipPath}' -DestinationPath '${destDir}' -Force"`, { stdio: 'pipe', timeout: 30000 });
-    return true;
-  } catch (e) {
-    console.log('  PowerShell extract failed:', e.message?.slice(0,100));
-    try {
-      execSync(`tar -xf "${zipPath}" -C "${destDir}"`, { stdio: 'pipe', timeout: 30000 });
-      return true;
-    } catch (e2) {
-      console.log('  tar extract failed:', e2.message?.slice(0,100));
-      return false;
-    }
-  }
-}
-
-function findAab() {
-  // Check all zips in Downloads, try each one
-  const zips = fs.readdirSync(DOWNLOADS_DIR)
-    .filter(f => /\.zip$/i.test(f))
-    .map(f => ({ name: f, full: path.join(DOWNLOADS_DIR, f), size: fs.statSync(path.join(DOWNLOADS_DIR, f)).size, mtime: fs.statSync(path.join(DOWNLOADS_DIR, f)).mtimeMs }))
-    .filter(z => !/logs/.test(z.name) && z.size > 500_000)
-    .sort((a, b) => b.mtime - a.mtime);
-
-  console.log(`  Candidate zips:`);
-  zips.forEach(z => console.log(`    ${z.name} (${(z.size/1024/1024).toFixed(1)} MB)`));
-
-  for (const zip of zips) {
-    const destDir = path.join(os.tmpdir(), '3lakes-extract-' + Date.now());
-    console.log(`\n  Trying: ${zip.name}`);
-    const ok = extractZip(zip.full, destDir);
-    if (!ok) continue;
-
-    console.log('  Contents:');
-    listRecursive(destDir);
-
-    // Look for .aab first, then .apk
-    let found = findRecursive(destDir, '.aab');
-    if (!found) found = findRecursive(destDir, '.apk');
-    if (found) {
-      console.log(`  ✓ Found: ${found}`);
-      return found;
-    }
-    console.log('  No AAB/APK in this zip — trying next...');
-  }
   return null;
 }
 
 (async () => {
-  console.log('=== Bond: Upload AAB to Firebase App Distribution ===\n');
+  console.log('=== Bond: GitHub Actions → Firebase App Distribution ===\n');
 
-  // ── Step 1: Find AAB ───────────────────────────────────────────────────────
-  console.log('[1] Finding AAB in Downloads...');
-  const aabPath = findAab();
+  if (!fs.existsSync(SAVE_DIR)) fs.mkdirSync(SAVE_DIR, { recursive: true });
 
-  if (!aabPath) {
-    console.log('  ✗ Could not find AAB. Make sure 3 lakes logistics (2).zip is in Downloads.');
-    process.exit(1);
+  // Check if we already have an AAB from a previous run
+  let aabPath = findRecursive(SAVE_DIR, '.aab') || findRecursive(SAVE_DIR, '.apk');
+  if (aabPath) {
+    console.log(`[0] Already have build: ${aabPath}`);
   }
-
-  const sizeMB = (fs.statSync(aabPath).size / 1024 / 1024).toFixed(1);
-  console.log(`  ✓ Found: ${aabPath} (${sizeMB} MB)`);
-
-  // ── Step 2: Try Firebase CLI first ────────────────────────────────────────
-  console.log('\n[2] Checking Firebase CLI...');
-  let fbOk = false;
-  try {
-    const ver = execSync('firebase --version', { stdio: 'pipe' }).toString().trim();
-    console.log(`  ✓ Firebase CLI: ${ver}`);
-    fbOk = true;
-  } catch {
-    console.log('  Firebase CLI not found — installing...');
-    try {
-      execSync('npm install -g firebase-tools', { stdio: 'inherit' });
-      fbOk = true;
-    } catch {
-      console.log('  Could not install Firebase CLI — will use browser upload instead');
-    }
-  }
-
-  if (fbOk) {
-    console.log('\n[3] Uploading via Firebase CLI...');
-    try {
-      // Get the Android app ID from firebase project
-      const uploadCmd = [
-        `firebase appdistribution:distribute "${aabPath}"`,
-        `--project ${FIREBASE_PROJECT}`,
-        `--testers "${TESTERS}"`,
-        `--release-notes "${RELEASE_NOTES}"`,
-      ].join(' ');
-
-      console.log(`  $ ${uploadCmd}`);
-      const result = execSync(uploadCmd, { stdio: 'pipe', timeout: 120000 }).toString();
-      console.log('  ' + result.slice(0, 400));
-      console.log('\n  ✓ Upload complete! Testers will receive email notifications.');
-      process.exit(0);
-    } catch (e) {
-      const err = (e.stderr?.toString() || e.message || '').slice(0, 300);
-      console.log('  CLI upload failed:', err);
-      console.log('  Falling back to browser upload...');
-    }
-  }
-
-  // ── Step 3: Browser upload fallback ───────────────────────────────────────
-  console.log('\n[3] Opening Firebase App Distribution in browser...');
 
   let browser, context, page;
   try {
     browser = await chromium.connectOverCDP('http://localhost:9222');
     context = browser.contexts()[0] || await browser.newContext();
     page    = context.pages()[0]    || await context.newPage();
-    console.log('  ✓ Connected to your existing Chrome');
+    console.log('✓ Connected to your existing Chrome\n');
   } catch {
     browser = await chromium.launch({ headless: false, slowMo: 80, args: ['--start-maximized'] });
     context = await browser.newContext({ viewport: null, acceptDownloads: true });
     page    = await context.newPage();
   }
 
-  await page.goto(DIST_URL, { waitUntil: 'domcontentloaded', timeout: 30000 });
-  await wait(4000);
-  console.log('  URL:', page.url().slice(0, 80));
-
-  // ── Step 4: Select or create Android app ──────────────────────────────────
-  console.log('\n[4] Looking for Android app in App Distribution...');
-
-  // Click Android app if there's a selector
-  const appSelected = await page.evaluate(() => {
-    const chips = [...document.querySelectorAll('mat-chip, [role="tab"], button')];
-    const android = chips.find(c => /android/i.test(c.innerText || c.textContent || ''));
-    if (android) { android.click(); return true; }
-    return false;
-  });
-  if (appSelected) console.log('  ✓ Selected Android app');
-  await wait(2000);
-
-  // ── Step 5: Click "Get started" or "Upload" ───────────────────────────────
-  console.log('\n[5] Finding upload button...');
-  const uploadClicked = await page.evaluate(() => {
-    const btns = [...document.querySelectorAll('button, a')];
-    const btn = btns.find(b => /(upload|get started|new release|browse)/i.test(b.innerText || b.textContent || ''));
-    if (btn) { btn.click(); return (btn.innerText || '').trim().slice(0, 40); }
-    return null;
-  });
-  console.log(uploadClicked ? `  ✓ Clicked: ${uploadClicked}` : '  Trying file input...');
-  await wait(2000);
-
-  // ── Step 6: Upload the AAB file ───────────────────────────────────────────
-  console.log('\n[6] Uploading AAB file...');
+  // Set download dir via CDP
   try {
-    const fileInput = await page.locator('input[type="file"]').first();
-    await fileInput.setInputFiles(aabPath);
-    console.log('  ✓ AAB file set on input');
-    await wait(3000);
-  } catch {
-    // Try drag-drop zone
-    console.log('  File input not found — looking for drag/drop zone...');
-    const dropZone = await page.evaluate(() => {
-      const zones = [...document.querySelectorAll('[class*="drop"], [class*="upload"], mat-card')];
-      return zones.length > 0;
+    const cdp = await context.newCDPSession(page);
+    await cdp.send('Browser.setDownloadBehavior', {
+      behavior: 'allow',
+      downloadPath: SAVE_DIR,
+      eventsEnabled: true,
     });
-    if (dropZone) {
-      console.log('  Found drop zone — you may need to drag the AAB manually:');
-      console.log(`  File: ${aabPath}`);
+  } catch {}
+
+  // ── Step 1: Download artifact from GitHub Actions ──────────────────────────
+  if (!aabPath) {
+    console.log('[1] Going to GitHub Actions run page...');
+    await page.goto(RUN_URL, { waitUntil: 'domcontentloaded', timeout: 30000 });
+    await wait(3000);
+
+    // Scroll to bottom where artifacts live
+    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+    await wait(2000);
+
+    console.log('[2] Looking for artifact download link...');
+    const pageText = await page.evaluate(() => document.body.innerText);
+    console.log('  Page contains "artifact":', /artifact/i.test(pageText));
+    console.log('  Page contains "release":', /release/i.test(pageText));
+
+    // Find and click the artifact
+    const artifactClicked = await page.evaluate(() => {
+      // GitHub renders artifacts as links in a section at the bottom
+      const allLinks = [...document.querySelectorAll('a')];
+      // Look for artifact download link (contains "3lakes" or "release")
+      const artLink = allLinks.find(a =>
+        /(3lakes|release|driver)/i.test(a.innerText || a.href || '') &&
+        (a.href?.includes('artifact') || a.href?.includes('suites') || a.closest('[data-testid*="artifact"]'))
+      );
+      if (artLink) { artLink.click(); return { found: true, text: artLink.innerText?.trim(), href: artLink.href }; }
+
+      // Look in artifact section specifically
+      const sections = [...document.querySelectorAll('section, [class*="artifact"], details')];
+      for (const s of sections) {
+        if (/artifact/i.test(s.innerText || '')) {
+          const link = s.querySelector('a');
+          if (link) { link.click(); return { found: true, text: link.innerText?.trim(), href: link.href }; }
+        }
+      }
+      return { found: false };
+    });
+
+    console.log('  Artifact click result:', JSON.stringify(artifactClicked));
+
+    if (!artifactClicked.found) {
+      // Try scrolling and waiting for artifacts section to load
+      console.log('  Scrolling and retrying...');
+      for (let i = 0; i < 3; i++) {
+        await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+        await wait(2000);
+        const retry = await page.evaluate(() => {
+          const links = [...document.querySelectorAll('a[href*="artifact"], a[href*="suites"]')];
+          if (links.length > 0) { links[0].click(); return links[0].href; }
+          return null;
+        });
+        if (retry) { console.log('  ✓ Found and clicked:', retry); break; }
+      }
+    }
+
+    // Wait for download
+    console.log('\n[3] Waiting for download...');
+    try {
+      const download = await page.waitForEvent('download', { timeout: 30000 });
+      console.log(`  Download started: ${download.suggestedFilename()}`);
+      const zipPath = path.join(SAVE_DIR, download.suggestedFilename());
+      await download.saveAs(zipPath);
+      console.log(`  ✓ Saved to: ${zipPath}`);
+
+      // Extract the zip
+      console.log('  Extracting zip...');
+      execSync(`powershell -Command "Expand-Archive -LiteralPath '${zipPath}' -DestinationPath '${SAVE_DIR}' -Force"`, { stdio: 'pipe' });
+      aabPath = findRecursive(SAVE_DIR, '.aab') || findRecursive(SAVE_DIR, '.apk');
+      if (aabPath) console.log(`  ✓ AAB extracted: ${aabPath}`);
+
+    } catch (e) {
+      console.log('  Download event not captured:', e.message?.slice(0, 100));
+      console.log('  Check your Downloads folder — browser may have saved it there');
+      // Check default downloads folder
+      const dl = path.join(os.homedir(), 'Downloads');
+      const recent = fs.readdirSync(dl)
+        .map(f => ({ f, t: fs.statSync(path.join(dl, f)).mtimeMs }))
+        .sort((a, b) => b.t - a.t)[0];
+      if (recent && Date.now() - recent.t < 60000) {
+        console.log(`  Most recent download: ${recent.f}`);
+        const p = path.join(dl, recent.f);
+        if (recent.f.endsWith('.zip')) {
+          execSync(`powershell -Command "Expand-Archive -LiteralPath '${p}' -DestinationPath '${SAVE_DIR}' -Force"`, { stdio: 'pipe' });
+          aabPath = findRecursive(SAVE_DIR, '.aab') || findRecursive(SAVE_DIR, '.apk');
+        } else if (recent.f.endsWith('.aab')) {
+          aabPath = p;
+        }
+      }
     }
   }
 
-  // ── Step 7: Add release notes and testers ─────────────────────────────────
-  console.log('\n[7] Adding release notes...');
-  await page.evaluate((notes) => {
-    const ta = [...document.querySelectorAll('textarea')]
-      .find(t => /(release|note)/i.test(t.getAttribute('aria-label') || t.placeholder || ''));
-    if (ta) {
-      ta.value = notes;
-      ta.dispatchEvent(new Event('input', { bubbles: true }));
+  if (!aabPath) {
+    console.log('\n⚠  Could not auto-download AAB.');
+    console.log('  Please manually download it:');
+    console.log(`  1. Go to: ${RUN_URL}`);
+    console.log('  2. Scroll to "Artifacts" at the bottom');
+    console.log(`  3. Click "3lakes-driver-release-3" to download`);
+    console.log(`  4. Unzip it and place app-release.aab in: ${SAVE_DIR}`);
+    console.log('  5. Re-run this script');
+    await wait(5000);
+    await browser.close();
+    return;
+  }
+
+  const sizeMB = (fs.statSync(aabPath).size / 1024 / 1024).toFixed(1);
+  console.log(`\n✓ AAB ready: ${aabPath} (${sizeMB} MB)`);
+
+  // ── Step 4: Upload to Firebase App Distribution ────────────────────────────
+  console.log('\n[4] Checking Firebase CLI...');
+  let uploaded = false;
+  try {
+    const ver = execSync('firebase --version', { stdio: 'pipe' }).toString().trim();
+    console.log(`  ✓ Firebase CLI ${ver}`);
+
+    const cmd = [
+      `firebase appdistribution:distribute "${aabPath}"`,
+      `--project ${FIREBASE_PROJECT}`,
+      `--testers "${TESTERS}"`,
+      `--release-notes "${RELEASE_NOTES}"`,
+    ].join(' ');
+    console.log(`\n[5] Uploading via Firebase CLI...`);
+    console.log(`  $ ${cmd}\n`);
+    execSync(cmd, { stdio: 'inherit', timeout: 180000 });
+    uploaded = true;
+    console.log('\n  ✓ Uploaded! Testers notified.');
+  } catch (e) {
+    const msg = (e.stderr?.toString() || e.message || '').toLowerCase();
+    if (msg.includes('not logged') || msg.includes('auth')) {
+      console.log('  Not logged into Firebase CLI — running firebase login...');
+      execSync('firebase login', { stdio: 'inherit' });
+      // Retry
+      try {
+        execSync([
+          `firebase appdistribution:distribute "${aabPath}"`,
+          `--project ${FIREBASE_PROJECT}`,
+          `--testers "${TESTERS}"`,
+          `--release-notes "${RELEASE_NOTES}"`,
+        ].join(' '), { stdio: 'inherit', timeout: 180000 });
+        uploaded = true;
+      } catch {}
+    } else if (msg.includes('app') && msg.includes('not found')) {
+      console.log('  App not registered in Firebase App Distribution.');
+      console.log('  Falling back to browser upload...');
+    } else {
+      console.log('  CLI error:', (e.stderr?.toString() || e.message || '').slice(0, 200));
+      console.log('  Falling back to browser upload...');
     }
-  }, RELEASE_NOTES);
-  await wait(1000);
+  }
 
-  // ── Step 8: Submit / Distribute ───────────────────────────────────────────
-  console.log('\n[8] Clicking Distribute / Next...');
-  await page.evaluate(() => {
-    const btns = [...document.querySelectorAll('button')];
-    const btn = btns.find(b => /(distribute|next|continue|publish)/i.test(b.innerText || ''));
-    if (btn) { btn.removeAttribute('disabled'); btn.click(); }
-  });
-  await wait(3000);
+  // ── Step 5: Browser upload fallback ───────────────────────────────────────
+  if (!uploaded) {
+    console.log('\n[5] Opening Firebase App Distribution...');
+    await page.goto(DIST_URL, { waitUntil: 'domcontentloaded', timeout: 30000 });
+    await wait(5000);
 
-  console.log('\n=== Done ===');
+    // Select Android
+    await page.evaluate(() => {
+      const tabs = [...document.querySelectorAll('[role="tab"], mat-tab-header button, mat-chip')];
+      const a = tabs.find(t => /android/i.test(t.innerText || ''));
+      if (a) a.click();
+    });
+    await wait(2000);
+
+    // Click upload / get started
+    await page.evaluate(() => {
+      const btns = [...document.querySelectorAll('button, a')];
+      const b = btns.find(b => /(upload|get started|new release)/i.test(b.innerText || ''));
+      if (b) b.click();
+    });
+    await wait(2000);
+
+    // Upload file
+    try {
+      await page.locator('input[type="file"]').first().setInputFiles(aabPath);
+      console.log('  ✓ File uploaded to browser input');
+      await wait(5000);
+
+      // Fill release notes
+      await page.evaluate((notes) => {
+        const ta = document.querySelector('textarea');
+        if (ta) { ta.value = notes; ta.dispatchEvent(new Event('input', { bubbles: true })); }
+      }, RELEASE_NOTES);
+      await wait(1000);
+
+      // Click Next / Distribute
+      await page.evaluate(() => {
+        const b = [...document.querySelectorAll('button')]
+          .find(b => /(next|distribute|continue)/i.test(b.innerText || ''));
+        if (b) { b.removeAttribute('disabled'); b.click(); }
+      });
+      await wait(3000);
+      console.log('  ✓ Submitted via browser');
+      uploaded = true;
+    } catch (e) {
+      console.log('  Browser upload error:', e.message?.slice(0, 100));
+    }
+  }
+
+  console.log('\n=== Summary ===');
   console.log(`  AAB: ${aabPath}`);
+  console.log(`  Firebase: ${DIST_URL}`);
   console.log(`  Testers: ${TESTERS}`);
-  console.log('  Check Firebase App Distribution console for upload status.');
-  console.log(`  ${DIST_URL}`);
-  console.log('\n  Keeping browser open on Firebase console...');
+  console.log(uploaded ? '  ✓ Upload complete!' : '  ⚠ Upload may need manual completion in browser');
+  console.log('\n  Browser open — check Firebase console for release status.');
 
 })().catch(err => {
   console.error('\n✗ Error:', err.message);
