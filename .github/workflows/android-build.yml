@@ -140,12 +140,14 @@ jobs:
         run: gem install fastlane --no-document
 
       - name: Decode Google Play service account key
+        if: ${{ secrets.GOOGLE_PLAY_KEY_BASE64 != '' }}
         env:
           GOOGLE_PLAY_KEY_BASE64: ${{ secrets.GOOGLE_PLAY_KEY_BASE64 }}
         run: |
           echo "$GOOGLE_PLAY_KEY_BASE64" | base64 --decode > fastlane/google-play-key.json
 
       - name: Upload AAB to Google Play (internal track)
+        if: ${{ secrets.GOOGLE_PLAY_KEY_BASE64 != '' }}
         env:
           GOOGLE_PLAY_JSON_KEY_PATH: fastlane/google-play-key.json
         run: |
