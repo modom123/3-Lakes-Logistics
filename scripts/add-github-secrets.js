@@ -31,17 +31,57 @@ async function addSecret(page, name, value) {
 
   await goto(page, `${SECRETS_URL}/new`);
 
-  // Fill secret name
-  const nameField = page.locator('input#secret-name, input[name="secret-name"], input[placeholder*="name" i]').first();
-  await nameField.waitFor({ state: 'visible', timeout: 15000 });
+  // Screenshot to debug what GitHub's form looks like
+  await page.screenshot({ path: `scripts/debug-secret-form.png` });
+
+  // Try every known GitHub secrets form selector (UI changes over time)
+  const nameSelectors = [
+    'input#secret-name',
+    'input[name="secret-name"]',
+    'input[name="secret[name]"]',
+    'input[placeholder*="name" i]',
+    'input[aria-label*="name" i]',
+    'form input[type="text"]',
+    'input[type="text"]',
+  ];
+
+  let nameField = null;
+  for (const sel of nameSelectors) {
+    const el = page.locator(sel).first();
+    try {
+      await el.waitFor({ state: 'visible', timeout: 2000 });
+      nameField = el;
+      console.log(`    Found name field with: ${sel}`);
+      break;
+    } catch {}
+  }
+  if (!nameField) throw new Error('Cannot find secret name field. Check scripts/debug-secret-form.png');
   await nameField.fill(name);
 
-  // Fill secret value
-  const valueField = page.locator('textarea#secret-value, textarea[name="secret-value"], textarea[placeholder*="value" i]').first();
-  await valueField.waitFor({ state: 'visible', timeout: 15000 });
+  const valueSelectors = [
+    'textarea#secret-value',
+    'textarea[name="secret-value"]',
+    'textarea[name="secret[value]"]',
+    'textarea[placeholder*="value" i]',
+    'textarea[aria-label*="value" i]',
+    'textarea[aria-label*="secret" i]',
+    'textarea',
+  ];
+
+  let valueField = null;
+  for (const sel of valueSelectors) {
+    const el = page.locator(sel).first();
+    try {
+      await el.waitFor({ state: 'visible', timeout: 2000 });
+      valueField = el;
+      console.log(`    Found value field with: ${sel}`);
+      break;
+    } catch {}
+  }
+  if (!valueField) throw new Error('Cannot find secret value field. Check scripts/debug-secret-form.png');
   await valueField.fill(value);
 
-  // Click Add secret / Save
+  // Click submit
   const addBtn = page.locator('button:has-text("Add secret"), button:has-text("Save"), button[type="submit"]').first();
   await addBtn.waitFor({ state: 'visible', timeout: 10000 });
   await addBtn.click();
