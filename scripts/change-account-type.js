@@ -24,7 +24,7 @@ const DEV_ID         = '6880853885521839099';
 const DUNS           = '145025174';
 const ORG_NAME       = '3 Lakes Logistics';
 const ORG_PHONE      = '+16614669932';
-const ORG_EMAIL      = 'nwtcinvestment@gmail.com';
+const ORG_EMAIL      = 'info@3lakeslogistics.com';
 const ORG_CONTACT    = 'Mark Odom';       // contact name for verification step
 const ACCOUNT_URL = `https://play.google.com/console/u/0/developers/${DEV_ID}/account/developer-details?tab=aboutYou`;
 
@@ -41,8 +41,9 @@ async function getEmailCode(context) {
   console.log('  → Opening Gmail to fetch verification code...');
   const gmail = await context.newPage();
   try {
+    // Open Gmail for info@3lakeslogistics.com (may need to switch accounts)
     await gmail.goto(
-      'https://mail.google.com/mail/u/0/#search/from:google+subject:verification+newer_than:5m',
+      'https://mail.google.com/mail/u/0/#search/from:google+subject:verification+newer_than:10m',
       { waitUntil: 'domcontentloaded', timeout: 30000 }
     );
     await wait(5000);
