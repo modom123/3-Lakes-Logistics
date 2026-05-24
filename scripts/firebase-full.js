@@ -61,11 +61,20 @@ function watchForNewFile(dir, timeoutMs = 60000) {
   // Use already-extracted file if available
   let buildFile = findFile(SAVE_DIR, '.aab', '.apk');
 
-  // Connect to user's existing Chrome (already logged into GitHub + Firebase)
-  const browser = await chromium.connectOverCDP('http://localhost:9222');
-  const context = browser.contexts()[0] || await browser.newContext();
-  const page    = context.pages()[0]    || await context.newPage();
-  console.log('✓ Connected to Chrome (using your existing GitHub session)\n');
+  // Connect to existing Chrome or launch new one
+  let browser, context, page;
+  try {
+    browser = await chromium.connectOverCDP('http://localhost:9222');
+    context = browser.contexts()[0] || await browser.newContext();
+    page    = context.pages()[0]    || await context.newPage();
+    console.log('✓ Connected to your existing Chrome\n');
+  } catch {
+    console.log('  Chrome CDP not available — launching new browser.');
+    console.log('  You will need to sign into GitHub when it opens.\n');
+    browser = await chromium.launch({ headless: false, slowMo: 60, args: ['--start-maximized'] });
+    context = await browser.newContext({ viewport: null, acceptDownloads: true });
+    page    = await context.newPage();
+  }
 
   // ── Step 1: Download artifact ──────────────────────────────────────────────
   if (!buildFile) {
