@@ -326,6 +326,28 @@ async function dumpInputs(page) {
       await wait(1000);
     }
 
+    // Detect Google Play server error — close and retry
+    if (dialogInfo.fullText.includes('unexpected error') || dialogInfo.fullText.includes('49D0F333')) {
+      console.log('\n  ⚠ Google Play server error detected. Closing and retrying in 10s...');
+      await page.evaluate(() => {
+        const dlg = document.querySelector('mat-dialog-container, [role="dialog"]');
+        const closeBtn = dlg && [...dlg.querySelectorAll('button')]
+          .find(b => /close/i.test(b.innerText || b.getAttribute('aria-label') || ''));
+        if (closeBtn) closeBtn.click();
+      });
+      await wait(10000);
+      // Restart from the Change account type button
+      console.log('  Restarting account type change flow...');
+      await page.evaluate(() => {
+        const btn = [...document.querySelectorAll('button')]
+          .find(b => b.innerText?.trim() === 'Change account type');
+        if (btn) { btn.removeAttribute('disabled'); btn.disabled = false; btn.click(); }
+      });
+      await wait(4000);
+      lastDialogText = '';
+      continue;
+    }
+
     // If "Verify email address" is disabled, a code was already sent — wait for user
     const verifyEmailDisabled = dialogInfo.buttons.some(
       b => /verify email/i.test(b.text) && b.disabled
