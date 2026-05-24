@@ -1,0 +1,18 @@
+name: Deploy Backend to Render
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'backend/**'
+      - 'Dockerfile'
+      - 'render.yaml'
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Render auto-deploys on push
+        run: |
+          echo "Backend changes detected — Render will auto-deploy from render.yaml."
+          echo "Monitor deployment at: https://dashboard.render.com"
