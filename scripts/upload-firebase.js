@@ -28,7 +28,7 @@ const RUN_URL          = 'https://github.com/modom123/3-Lakes-Logistics/actions/
 const DIST_URL         = `https://console.firebase.google.com/project/${FIREBASE_PROJECT}/appdistribution`;
 const SAVE_DIR         = path.join(os.homedir(), 'Downloads', '3lakes-build');
 const DOWNLOADS_DIR    = path.join(os.homedir(), 'Downloads');
-const TESTERS          = 'nwtcinvestment@gmail.com,info@3lakeslogistics.com';
+const TESTERS          = 'nwtcinvestment@gmail.com,info@3lakeslogistics.com,raycece@yahoo.com,goldiethemac@yahoo.com,Savior45@yahoo.com,talormoe14@yahoo.com';
 const RELEASE_NOTES    = '3 Lakes Driver v1.0 — Internal test build';
 
 async function wait(ms) { return new Promise(r => setTimeout(r, ms)); }
