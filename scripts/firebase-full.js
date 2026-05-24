@@ -61,6 +61,19 @@ function watchForNewFile(dir, timeoutMs = 120000) {
   console.log('=== Bond: New AAB → Firebase App Distribution ===\n');
 
   if (!fs.existsSync(SAVE_DIR)) fs.mkdirSync(SAVE_DIR, { recursive: true });
+
+  // Check for the known artifact zip first
+  const knownZip = path.join(DOWNLOADS_DIR, '3lakes-driver-release-3.zip');
+  if (fs.existsSync(knownZip) && !findFile(SAVE_DIR, '.aab', '.apk')) {
+    console.log(`[0] Found artifact zip: ${knownZip}`);
+    console.log('    Extracting...');
+    execSync(
+      `powershell -Command "Expand-Archive -LiteralPath '${knownZip}' -DestinationPath '${SAVE_DIR}' -Force"`,
+      { stdio: 'pipe', timeout: 30000 }
+    );
+    console.log('    ✓ Extracted');
+  }
+
   let buildFile = findFile(SAVE_DIR, '.aab', '.apk');
 
   // ── Step 1: User downloads artifact from their Chrome ─────────────────────
