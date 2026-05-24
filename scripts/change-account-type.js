@@ -139,83 +139,85 @@ async function dumpInputs(page) {
 
   await wait(4000);
 
-  // ── Dialog: "What do you want to update?" → click Next ───────────────────
-  console.log('\n[4] Handling dialog...');
-  const dialogText = await page.evaluate(() => {
-    const d = document.querySelector('mat-dialog-container, [role="dialog"]');
-    return d ? d.innerText?.slice(0, 300) : null;
-  });
-  if (dialogText) {
-    console.log('  Dialog:', dialogText.replace(/\n+/g, ' | '));
+  // ── Helper: JS-click a button by its text, removing disabled first ─────────
+  async function jsClickButton(page, text) {
+    return page.evaluate((t) => {
+      const btns = [...document.querySelectorAll('button, [role="button"]')];
+      const btn = btns.find(b => (b.innerText || b.textContent || '').trim() === t
+                               || (b.getAttribute('aria-label') || '') === t);
+      if (!btn) return 'not found';
+      btn.removeAttribute('disabled');
+      btn.disabled = false;
+      btn.click();
+      return `clicked "${(btn.innerText||'').trim().slice(0,40)}"`;
+    }, text);
   }
 
-  // Click Next in dialog to proceed to DUNS step
-  const nextBtn = page.getByRole('button', { name: 'Next', exact: true });
-  if (await nextBtn.first().isVisible({ timeout: 4000 }).catch(() => false)) {
-    await nextBtn.first().click();
-    console.log('  ✓ Clicked Next');
-    await wait(4000);
-  } else {
-    console.log('  No Next button visible yet.');
+  // ── Dialog step 1: "What you'll need" → Next ─────────────────────────────
+  console.log('\n[4] Handling dialogs...');
+
+  async function dialogStep(label) {
+    const txt = await page.evaluate(() => {
+      const d = document.querySelector('mat-dialog-container, [role="dialog"], .cdk-overlay-pane');
+      return d ? d.innerText?.slice(0, 400) : null;
+    });
+    if (txt) console.log(`  Dialog (${label}):`, txt.replace(/\n+/g, ' | ').slice(0, 250));
+    return txt;
   }
 
-  // Dump what's on screen now
-  const afterNext = await page.evaluate(() => {
-    const d = document.querySelector('mat-dialog-container, [role="dialog"]');
-    return d ? d.innerText?.slice(0, 500) : document.body.innerText?.slice(0, 500);
-  });
-  console.log('  After Next:', afterNext?.replace(/\n+/g, ' | ').slice(0, 300));
+  await dialogStep('step 1');
+  let r = await jsClickButton(page, 'Next');
+  console.log('  Next click:', r);
+  await wait(3000);
 
-  // Dump all inputs
+  // ── Dialog step 2: "Link a payments profile" → Next ──────────────────────
+  await dialogStep('step 2');
+  r = await jsClickButton(page, 'Next');
+  console.log('  Next click:', r);
+  await wait(3000);
+
+  // ── Dialog step 3: may have DUNS field ────────────────────────────────────
+  await dialogStep('step 3');
+
+  // Dump all visible inputs
   const allInputEls = await page.locator('input:visible, textarea:visible').all();
   console.log(`\n  Visible inputs: ${allInputEls.length}`);
   for (let i = 0; i < allInputEls.length; i++) {
     const inp = allInputEls[i];
-    const ph  = await inp.getAttribute('placeholder').catch(() => '');
     const lbl = await inp.getAttribute('aria-label').catch(() => '');
+    const ph  = await inp.getAttribute('placeholder').catch(() => '');
     const val = await inp.inputValue().catch(() => '');
     console.log(`    Input[${i}]: aria="${lbl}" placeholder="${ph}" value="${val}"`);
   }
 
-  // ── Fill DUNS in any visible input that mentions DUNS ────────────────────
+  // ── Fill DUNS if visible ──────────────────────────────────────────────────
   console.log('\n[5] Filling DUNS...');
   let dunsFilled = false;
-  for (let i = 0; i < allInputEls.length; i++) {
-    const inp = allInputEls[i];
-    const lbl = (await inp.getAttribute('aria-label').catch(() => '') || '').toLowerCase();
-    const ph  = (await inp.getAttribute('placeholder').catch(() => '') || '').toLowerCase();
-    if (lbl.includes('duns') || ph.includes('duns') || lbl.includes('d-u-n-s')) {
+  for (const inp of allInputEls) {
+    const lbl = ((await inp.getAttribute('aria-label').catch(() => '')) || '').toLowerCase();
+    const ph  = ((await inp.getAttribute('placeholder').catch(() => '')) || '').toLowerCase();
+    if (lbl.includes('duns') || ph.includes('duns') || lbl.includes('d-u-n-s') || ph.includes('d-u-n-s')) {
       await inp.click(); await inp.fill(DUNS);
       console.log(`  ✓ Filled DUNS: ${DUNS}`);
       dunsFilled = true;
     }
   }
   if (!dunsFilled) {
-    console.log('  DUNS field not found on this step — may appear after another Next click.');
-    console.log('  Check the browser and fill DUNS manually if visible.');
-    await pause('  Press Enter when ready to continue... ');
+    console.log('  DUNS field not found — fill manually in the browser if visible.');
+    await pause('  Press Enter when done... ');
   }
 
   await wait(1000);
 
-  // ── Click Next / Submit / Save to confirm ─────────────────────────────────
+  // ── Final Next/Submit ─────────────────────────────────────────────────────
   console.log('\n[6] Clicking Next/Submit...');
-  const nextBtn2 = page.getByRole('button', { name: 'Next', exact: true });
-  const submitBtn = page.getByRole('button', { name: /submit|save|confirm|change account/i });
-  let submitted = false;
-  if (await nextBtn2.first().isVisible({ timeout: 3000 }).catch(() => false)) {
-    await nextBtn2.first().click();
-    console.log('  ✓ Clicked Next');
-    submitted = true;
-  } else if (await submitBtn.first().isVisible({ timeout: 3000 }).catch(() => false)) {
-    await submitBtn.first().click();
-    console.log('  ✓ Clicked Submit/Save');
-    submitted = true;
+  for (const label of ['Next', 'Submit', 'Save', 'Confirm', 'Change account type']) {
+    const res = await jsClickButton(page, label);
+    if (res !== 'not found') { console.log('  ✓', res); break; }
   }
-  if (!submitted) {
-    console.log('  No Next/Submit found — click it manually in the browser.');
-    await pause('  Press Enter after submitting... ');
-  }
+  await wait(1000);
+  r = await jsClickButton(page, 'Next');
+  if (r !== 'not found') { console.log('  ✓ Second Next:', r); }
 
   await wait(6000);
   await shot(page, '4-final');
