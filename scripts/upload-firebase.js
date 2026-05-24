@@ -76,8 +76,12 @@ function watchForNewZip(watchDir, timeoutMs = 120000) {
 
   if (!fs.existsSync(SAVE_DIR)) fs.mkdirSync(SAVE_DIR, { recursive: true });
 
-  // Check if AAB already downloaded
-  let aabPath = findRecursive(SAVE_DIR, '.aab') || findRecursive(SAVE_DIR, '.apk');
+  // Check Android Studio project release folder first
+  const studioRelease = 'C:\\Users\\12068\\AndroidStudioProjects\\3lakesDriver\\app\\release';
+  let aabPath = findRecursive(studioRelease, '.aab')
+             || findRecursive(studioRelease, '.apk')
+             || findRecursive(SAVE_DIR, '.aab')
+             || findRecursive(SAVE_DIR, '.apk');
 
   let browser, context, page;
   try {
