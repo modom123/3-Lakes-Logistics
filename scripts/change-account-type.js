@@ -23,6 +23,7 @@ const { chromium } = require('playwright');
 const DEV_ID      = '6880853885521839099';
 const DUNS        = '145025174';
 const ORG_NAME    = '3 Lakes Logistics';
+const ORG_PHONE   = '2317209145';   // 3 Lakes Logistics business phone
 const ACCOUNT_URL = `https://play.google.com/console/u/0/developers/${DEV_ID}/account/developer-details?tab=aboutYou`;
 
 function pause(prompt) {
@@ -176,48 +177,78 @@ async function dumpInputs(page) {
   console.log('  Next click:', r);
   await wait(3000);
 
-  // ── Dialog step 3: may have DUNS field ────────────────────────────────────
-  await dialogStep('step 3');
+  // ── Multi-step dialog loop — fill fields and keep clicking Next ──────────
+  console.log('\n[5] Working through dialog steps...');
 
-  // Dump all visible inputs
-  const allInputEls = await page.locator('input:visible, textarea:visible').all();
-  console.log(`\n  Visible inputs: ${allInputEls.length}`);
-  for (let i = 0; i < allInputEls.length; i++) {
-    const inp = allInputEls[i];
-    const lbl = await inp.getAttribute('aria-label').catch(() => '');
-    const ph  = await inp.getAttribute('placeholder').catch(() => '');
-    const val = await inp.inputValue().catch(() => '');
-    console.log(`    Input[${i}]: aria="${lbl}" placeholder="${ph}" value="${val}"`);
-  }
+  for (let step = 3; step <= 10; step++) {
+    const dlg = await dialogStep(`step ${step}`);
+    await wait(1500);
 
-  // ── Fill DUNS if visible ──────────────────────────────────────────────────
-  console.log('\n[5] Filling DUNS...');
-  let dunsFilled = false;
-  for (const inp of allInputEls) {
-    const lbl = ((await inp.getAttribute('aria-label').catch(() => '')) || '').toLowerCase();
-    const ph  = ((await inp.getAttribute('placeholder').catch(() => '')) || '').toLowerCase();
-    if (lbl.includes('duns') || ph.includes('duns') || lbl.includes('d-u-n-s') || ph.includes('d-u-n-s')) {
-      await inp.click(); await inp.fill(DUNS);
-      console.log(`  ✓ Filled DUNS: ${DUNS}`);
-      dunsFilled = true;
+    // Dump all visible inputs in this step
+    const inputs = await page.locator('input:visible, textarea:visible').all();
+    console.log(`  Inputs on step ${step}: ${inputs.length}`);
+    for (let i = 0; i < inputs.length; i++) {
+      const lbl = (await inputs[i].getAttribute('aria-label').catch(() => '') || '');
+      const val = (await inputs[i].inputValue().catch(() => '') || '');
+      console.log(`    [${i}] aria="${lbl}" value="${val}"`);
+    }
+
+    // Fill known fields by aria-label
+    for (const inp of inputs) {
+      const lbl = ((await inp.getAttribute('aria-label').catch(() => '')) || '').toLowerCase();
+      const val = (await inp.inputValue().catch(() => '') || '');
+
+      if ((lbl.includes('duns') || lbl.includes('d-u-n-s')) && !val) {
+        await inp.click(); await inp.fill(DUNS);
+        console.log(`  ✓ Filled DUNS: ${DUNS}`);
+
+      } else if (lbl.includes('phone') && !val) {
+        await inp.click(); await inp.fill(ORG_PHONE);
+        console.log(`  ✓ Filled phone: ${ORG_PHONE}`);
+
+      } else if ((lbl.includes('organization') && lbl.includes('name')) && !val) {
+        await inp.click(); await inp.fill(ORG_NAME);
+        console.log(`  ✓ Filled org name: ${ORG_NAME}`);
+      }
+    }
+
+    // Also fill any select/dropdown for "organization type"
+    await page.evaluate(() => {
+      const selects = [...document.querySelectorAll('mat-select, select')];
+      for (const s of selects) {
+        // log them so we can see
+        console.log('SELECT:', s.getAttribute('aria-label'), s.value);
+      }
+    }).catch(() => {});
+
+    await wait(1000);
+
+    // Click Next (JS, bypassing disabled)
+    const nextRes = await jsClickButton(page, 'Next');
+    console.log(`  Next → ${nextRes}`);
+
+    if (nextRes === 'not found') {
+      // Try Submit/Save/Confirm
+      for (const lbl of ['Submit', 'Save', 'Confirm', 'Change account type', 'Done']) {
+        const res = await jsClickButton(page, lbl);
+        if (res !== 'not found') { console.log(`  ✓ Final: ${res}`); break; }
+      }
+      console.log('  No more Next/Submit buttons — may be done or need manual step.');
+      await pause('  Press Enter to finish... ');
+      break;
+    }
+
+    await wait(3000);
+
+    // Check if dialog is gone (success)
+    const stillOpen = await page.evaluate(() =>
+      !!document.querySelector('mat-dialog-container, [role="dialog"]')
+    );
+    if (!stillOpen) {
+      console.log(`  ✓ Dialog closed after step ${step} — account type change submitted!`);
+      break;
     }
   }
-  if (!dunsFilled) {
-    console.log('  DUNS field not found — fill manually in the browser if visible.');
-    await pause('  Press Enter when done... ');
-  }
-
-  await wait(1000);
-
-  // ── Final Next/Submit ─────────────────────────────────────────────────────
-  console.log('\n[6] Clicking Next/Submit...');
-  for (const label of ['Next', 'Submit', 'Save', 'Confirm', 'Change account type']) {
-    const res = await jsClickButton(page, label);
-    if (res !== 'not found') { console.log('  ✓', res); break; }
-  }
-  await wait(1000);
-  r = await jsClickButton(page, 'Next');
-  if (r !== 'not found') { console.log('  ✓ Second Next:', r); }
 
   await wait(6000);
   await shot(page, '4-final');
