@@ -23,7 +23,7 @@ const { chromium } = require('playwright');
 const DEV_ID      = '6880853885521839099';
 const DUNS        = '145025174';
 const ORG_NAME    = '3 Lakes Logistics';
-const ORG_PHONE   = '6614669932';   // 3 Lakes Logistics business phone
+const ORG_PHONE   = '+16614669932';   // 3 Lakes Logistics business phone (E.164 format)
 const ACCOUNT_URL = `https://play.google.com/console/u/0/developers/${DEV_ID}/account/developer-details?tab=aboutYou`;
 
 function pause(prompt) {
@@ -238,6 +238,52 @@ async function dumpInputs(page) {
     dialogInfo.buttons.forEach((b, i) =>
       console.log(`    [${i}] "${b.text}" aria="${b.aria}" disabled=${b.disabled}`)
     );
+
+    // Select Organization type dropdown if unset
+    if (dialogInfo.fullText.includes('Select your organization type') ||
+        dialogInfo.fullText.includes('Select an organization type')) {
+      console.log('  → Opening Organization type dropdown...');
+      await page.evaluate(() => {
+        const dlg = document.querySelector('mat-dialog-container, [role="dialog"]');
+        const box = dlg && [...dlg.querySelectorAll('[role="listbox"], mat-select')]
+          .find(el => (el.getAttribute('aria-label') || '').toLowerCase().includes('organization type'));
+        if (box) box.click();
+      });
+      await wait(1500);
+      // Pick first available option (e.g. "Business", "Company", "Corporation")
+      const picked = await page.evaluate(() => {
+        const opts = [...document.querySelectorAll('mat-option, [role="option"]')];
+        // Prefer "Business" or first option
+        const target = opts.find(o => /business|company|corporation|llc/i.test(o.textContent || ''))
+                    || opts[0];
+        if (target) { target.click(); return target.textContent?.trim(); }
+        return null;
+      });
+      console.log(`  ✓ Organization type selected: "${picked}"`);
+      await wait(1000);
+    }
+
+    // Select Organization size dropdown if unset
+    if (dialogInfo.fullText.includes('Select number of employees')) {
+      console.log('  → Opening Organization size dropdown...');
+      await page.evaluate(() => {
+        const dlg = document.querySelector('mat-dialog-container, [role="dialog"]');
+        const box = dlg && [...dlg.querySelectorAll('[role="listbox"], mat-select')]
+          .find(el => (el.getAttribute('aria-label') || '').toLowerCase().includes('organization size'));
+        if (box) box.click();
+      });
+      await wait(1500);
+      // Pick "1-10" or first option
+      const picked = await page.evaluate(() => {
+        const opts = [...document.querySelectorAll('mat-option, [role="option"]')];
+        const target = opts.find(o => /1.?10|small|fewer than/i.test(o.textContent || ''))
+                    || opts[0];
+        if (target) { target.click(); return target.textContent?.trim(); }
+        return null;
+      });
+      console.log(`  ✓ Organization size selected: "${picked}"`);
+      await wait(1000);
+    }
 
     // Stop after 2 identical steps with no change
     if (step > 4 && dialogInfo.fullText === lastDialogText) {
