@@ -48,12 +48,6 @@ async function addSecret(page, name, value) {
 (async () => {
   console.log('=== Bond GitHub Secrets Setup ===');
 
-  if (!keystoreB64) {
-    console.error('ERROR: Could not read keystore base64 from KEYSTORE_CREDENTIALS.txt');
-    console.error('Make sure KEYSTORE_CREDENTIALS.txt exists in the repo root.');
-    process.exit(1);
-  }
-
   let browser;
   try {
     browser = await chromium.connectOverCDP('http://localhost:9222');
