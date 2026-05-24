@@ -76,6 +76,33 @@ async function jsClick(page, selector) {
   await wait(6000);
   await shot(page, '1-landing');
 
+  // If on account-selection screen, click "3 lakes logistics"
+  const bodyText = await page.evaluate(() => document.body.innerText);
+  if (bodyText.includes('Choose developer account') || bodyText.includes('3 lakes logistics')) {
+    console.log('  Account selection screen — clicking "3 lakes logistics"...');
+    const accountBtn = await findVisible(page, [
+      'text=3 lakes logistics',
+      'text=3 Lakes Logistics',
+      '[role="button"]:has-text("3 lakes")',
+      'li:has-text("3 lakes")',
+      'div:has-text("3 lakes logistics")',
+    ], 5000);
+    if (accountBtn) {
+      await accountBtn.click();
+      await wait(6000);
+      console.log('  Clicked developer account, URL:', page.url().slice(0, 90));
+    } else {
+      // Try clicking by evaluating JS
+      await page.evaluate(() => {
+        const els = [...document.querySelectorAll('*')];
+        const el = els.find(e => e.innerText?.trim().toLowerCase() === '3 lakes logistics');
+        if (el) el.click();
+      });
+      await wait(6000);
+      console.log('  JS-clicked developer account, URL:', page.url().slice(0, 90));
+    }
+  }
+
   // Wait for URL to include the developer ID
   let devId = null;
   for (let i = 0; i < 10; i++) {
