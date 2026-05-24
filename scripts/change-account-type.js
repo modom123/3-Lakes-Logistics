@@ -25,7 +25,7 @@ const DUNS           = '145025174';
 const ORG_NAME       = '3 Lakes Logistics';
 const ORG_PHONE      = '+16614669932';
 const ORG_EMAIL      = 'nwtcinvestment@gmail.com';
-const ORG_CONTACT    = 'James Bond';      // contact name for verification step
+const ORG_CONTACT    = 'Mark Odom';       // contact name for verification step
 const ACCOUNT_URL = `https://play.google.com/console/u/0/developers/${DEV_ID}/account/developer-details?tab=aboutYou`;
 
 function pause(prompt) {
