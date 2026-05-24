@@ -179,35 +179,46 @@ async function dumpInputs(page) {
 
   // ── Multi-step dialog loop — fill fields INSIDE the dialog only ──────────
   console.log('\n[5] Working through dialog steps...');
+  let lastDialogText = '';
 
   for (let step = 3; step <= 10; step++) {
     await wait(2000);
 
-    // Get full dialog text and all inputs INSIDE the dialog
+    // Get FULL dialog content — scroll to bottom first to reveal all fields
+    await page.evaluate(() => {
+      const dlg = document.querySelector('mat-dialog-container, [role="dialog"]');
+      if (dlg) { dlg.scrollTop = dlg.scrollHeight; }
+      const content = dlg?.querySelector('mat-dialog-content, .mat-dialog-content, .dialog-content');
+      if (content) { content.scrollTop = content.scrollHeight; }
+    });
+    await wait(500);
+
     const dialogInfo = await page.evaluate(() => {
       const dlg = document.querySelector('mat-dialog-container, [role="dialog"], .cdk-overlay-pane mat-card');
       if (!dlg) return null;
 
-      const inputs = [...dlg.querySelectorAll('input, textarea, mat-select, select')].map(el => ({
+      // Get ALL form elements — inputs, mat-select, radio, checkbox
+      const formEls = [...dlg.querySelectorAll('input, textarea, mat-select, select, [role="combobox"], [role="listbox"], [role="radio"], mat-radio-button')].map(el => ({
         tag:         el.tagName,
+        role:        el.getAttribute('role') || '',
         ariaLabel:   el.getAttribute('aria-label') || '',
         placeholder: el.placeholder || '',
         id:          el.id || '',
         type:        el.type || '',
-        value:       el.value || '',
+        value:       el.value || el.getAttribute('ng-reflect-value') || el.textContent?.trim().slice(0, 40) || '',
         visible:     el.offsetParent !== null,
-        disabled:    el.disabled,
+        disabled:    el.disabled || el.getAttribute('aria-disabled') === 'true',
       }));
 
       const buttons = [...dlg.querySelectorAll('button, [role="button"]')].map(el => ({
-        text:     (el.innerText || '').trim(),
+        text:     (el.innerText || '').trim().slice(0, 40),
         disabled: el.disabled,
         aria:     el.getAttribute('aria-label') || '',
       }));
 
       return {
-        text:    dlg.innerText?.slice(0, 600),
-        inputs,
+        fullText: dlg.innerText,   // NO truncation
+        formEls,
         buttons,
       };
     });
@@ -218,15 +229,23 @@ async function dumpInputs(page) {
     }
 
     console.log(`\n  --- Dialog step ${step} ---`);
-    console.log('  Text:', dialogInfo.text?.replace(/\n+/g, ' | ').slice(0, 300));
-    console.log(`  Inputs (${dialogInfo.inputs.length}):`);
-    dialogInfo.inputs.forEach((inp, i) =>
-      console.log(`    [${i}] <${inp.tag}> aria="${inp.ariaLabel}" placeholder="${inp.placeholder}" value="${inp.value}" visible=${inp.visible} disabled=${inp.disabled}`)
+    console.log('  FULL TEXT:\n  ' + (dialogInfo.fullText || '').replace(/\n+/g, '\n  '));
+    console.log(`  Form elements (${dialogInfo.formEls.length}):`);
+    dialogInfo.formEls.forEach((el, i) =>
+      console.log(`    [${i}] <${el.tag}> role="${el.role}" aria="${el.ariaLabel}" placeholder="${el.placeholder}" value="${el.value}" visible=${el.visible} disabled=${el.disabled}`)
     );
     console.log(`  Buttons:`);
     dialogInfo.buttons.forEach((b, i) =>
       console.log(`    [${i}] "${b.text}" aria="${b.aria}" disabled=${b.disabled}`)
     );
+
+    // Stop after 2 identical steps with no change
+    if (step > 4 && dialogInfo.fullText === lastDialogText) {
+      console.log('  ⚠ Dialog unchanged for 2 steps — pausing for manual action.');
+      await pause('  Fill any remaining fields in the browser, then press Enter... ');
+      break;
+    }
+    lastDialogText = dialogInfo.fullText;
 
     // Fill fields inside the dialog
     const filled = await page.evaluate(({ DUNS, ORG_PHONE, ORG_NAME }) => {
