@@ -208,9 +208,10 @@ async def quick_intake(
         raise HTTPException(404, "Lead not found")
     lead = row.data
 
-    # Build patch — only update fields that were actually sent
-    allowed = {"email", "contact_name", "dot_number", "mc_number",
-               "equipment_type", "fleet_size", "state", "notes", "status"}
+    # Build patch — update every non-blank field sent (includes pre-filled ones)
+    allowed = {"email", "contact_name", "business_name", "phone",
+               "dot_number", "mc_number", "equipment_type", "fleet_size",
+               "state", "notes", "status", "preferred_lanes"}
     patch = {k: v for k, v in data.items() if k in allowed and v not in (None, "")}
 
     if not patch.get("status"):
