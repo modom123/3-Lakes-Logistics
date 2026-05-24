@@ -287,11 +287,25 @@ async function dumpInputs(page) {
       await wait(1000);
     }
 
+    // If "Verify email address" is disabled, a code was already sent — wait for user
+    const verifyEmailDisabled = dialogInfo.buttons.some(
+      b => /verify email/i.test(b.text) && b.disabled
+    );
+    if (verifyEmailDisabled && dialogInfo.fullText.includes('fix errors')) {
+      console.log('\n  ✉  Verification code was sent to nwtcinvestment@gmail.com');
+      console.log('  1. Open Gmail and find the Google Play verification email');
+      console.log('  2. Enter the code in the browser dialog that is open');
+      console.log('  3. Then come back here and press Enter');
+      await pause('  Press Enter after entering the email verification code... ');
+      lastDialogText = '';  // reset so loop continues
+      continue;
+    }
+
     // Stop after 2 identical steps with no change
     if (step > 4 && dialogInfo.fullText === lastDialogText) {
-      console.log('  ⚠ Dialog unchanged for 2 steps — pausing for manual action.');
-      await pause('  Fill any remaining fields in the browser, then press Enter... ');
-      break;
+      console.log('  ⚠ Dialog unchanged — pausing for manual action.');
+      await pause('  Fix any remaining fields in the browser, then press Enter... ');
+      lastDialogText = '';
     }
     lastDialogText = dialogInfo.fullText;
 
