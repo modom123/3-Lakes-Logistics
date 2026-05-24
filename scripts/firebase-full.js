@@ -164,7 +164,7 @@ function watchForNewFile(dir, timeoutMs = 120000) {
   // ── Step 3: Open Firebase console to confirm ──────────────────────────────
   console.log('\n[3] Opening Firebase App Distribution...');
   await page.goto(
-    `https://console.firebase.google.com/project/${PROJECT_ID}/appdistribution`,
+    `https://console.firebase.google.com/u/1/project/${PROJECT_ID}/appdistribution`,
     { waitUntil: 'domcontentloaded', timeout: 30000 }
   );
   await wait(3000);
