@@ -20,10 +20,12 @@ if (!hasMod('playwright')) {
 
 const { chromium } = require('playwright');
 
-const DEV_ID      = '6880853885521839099';
-const DUNS        = '145025174';
-const ORG_NAME    = '3 Lakes Logistics';
-const ORG_PHONE   = '+16614669932';   // 3 Lakes Logistics business phone (E.164 format)
+const DEV_ID         = '6880853885521839099';
+const DUNS           = '145025174';
+const ORG_NAME       = '3 Lakes Logistics';
+const ORG_PHONE      = '+16614669932';
+const ORG_EMAIL      = 'nwtcinvestment@gmail.com';
+const ORG_CONTACT    = 'James Bond';      // contact name for verification step
 const ACCOUNT_URL = `https://play.google.com/console/u/0/developers/${DEV_ID}/account/developer-details?tab=aboutYou`;
 
 function pause(prompt) {
@@ -293,35 +295,56 @@ async function dumpInputs(page) {
     }
     lastDialogText = dialogInfo.fullText;
 
+    // Select Preferred language dropdown if unset
+    if (dialogInfo.fullText.includes('Select preferred language') || dialogInfo.fullText.includes('Preferred language')) {
+      console.log('  → Opening Preferred language dropdown...');
+      await page.evaluate(() => {
+        const dlg = document.querySelector('mat-dialog-container, [role="dialog"]');
+        const box = dlg && [...dlg.querySelectorAll('[role="listbox"], mat-select')]
+          .find(el => (el.getAttribute('aria-label') || '').toLowerCase().includes('language'));
+        if (box) box.click();
+      });
+      await wait(1500);
+      const picked = await page.evaluate(() => {
+        const opts = [...document.querySelectorAll('mat-option, [role="option"]')];
+        const target = opts.find(o => /english/i.test(o.textContent || '')) || opts[0];
+        if (target) { target.click(); return target.textContent?.trim(); }
+        return null;
+      });
+      console.log(`  ✓ Language selected: "${picked}"`);
+      await wait(1000);
+    }
+
     // Fill fields inside the dialog
-    const filled = await page.evaluate(({ DUNS, ORG_PHONE, ORG_NAME }) => {
+    const filled = await page.evaluate(({ DUNS, ORG_PHONE, ORG_NAME, ORG_EMAIL, ORG_CONTACT }) => {
       const dlg = document.querySelector('mat-dialog-container, [role="dialog"], .cdk-overlay-pane mat-card');
       if (!dlg) return [];
       const log = [];
       const inputs = [...dlg.querySelectorAll('input, textarea')];
       for (const inp of inputs) {
         const lbl = (inp.getAttribute('aria-label') || inp.placeholder || inp.id || '').toLowerCase();
+        const fire = (val) => {
+          inp.value = val;
+          inp.dispatchEvent(new Event('input', { bubbles: true }));
+          inp.dispatchEvent(new Event('change', { bubbles: true }));
+          inp.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true }));
+        };
         if (!inp.value) {
           if (lbl.includes('duns') || lbl.includes('d-u-n-s')) {
-            inp.value = DUNS;
-            inp.dispatchEvent(new Event('input', { bubbles: true }));
-            inp.dispatchEvent(new Event('change', { bubbles: true }));
-            log.push(`DUNS → ${DUNS}`);
+            fire(DUNS); log.push(`DUNS → ${DUNS}`);
+          } else if (lbl.includes('contact name') || lbl === 'contact name') {
+            fire(ORG_CONTACT); log.push(`contact → ${ORG_CONTACT}`);
+          } else if (lbl.includes('email')) {
+            fire(ORG_EMAIL); log.push(`email → ${ORG_EMAIL}`);
           } else if (lbl.includes('phone')) {
-            inp.value = ORG_PHONE;
-            inp.dispatchEvent(new Event('input', { bubbles: true }));
-            inp.dispatchEvent(new Event('change', { bubbles: true }));
-            log.push(`phone → ${ORG_PHONE}`);
+            fire(ORG_PHONE); log.push(`phone → ${ORG_PHONE}`);
           } else if (lbl.includes('org') || lbl.includes('company') || lbl.includes('business name')) {
-            inp.value = ORG_NAME;
-            inp.dispatchEvent(new Event('input', { bubbles: true }));
-            inp.dispatchEvent(new Event('change', { bubbles: true }));
-            log.push(`org → ${ORG_NAME}`);
+            fire(ORG_NAME); log.push(`org → ${ORG_NAME}`);
           }
         }
       }
       return log;
-    }, { DUNS, ORG_PHONE, ORG_NAME });
+    }, { DUNS, ORG_PHONE, ORG_NAME, ORG_EMAIL, ORG_CONTACT });
 
     if (filled.length) console.log('  Filled:', filled.join(', '));
 
