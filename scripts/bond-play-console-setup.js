@@ -1,7 +1,7 @@
 /**
  * Bond — Google Play Console Setup
- * Creates the app listing, links API access, grants service account permissions,
- * and uploads screenshots — all automatically via the existing Chrome session.
+ * Creates the app listing, links API access, grants service account
+ * permissions, and uploads screenshots.
  *
  * Run: node scripts/bond-play-console-setup.js
  */
@@ -22,17 +22,37 @@ if (!hasMod('playwright')) {
 
 const { chromium } = require('playwright');
 
-const APP_NAME      = '3 Lakes Driver';
-const PACKAGE_NAME  = 'com.threelakes.driver';
-const SA_EMAIL      = 'james-bond@lakes-mobile-app.iam.gserviceaccount.com';
-const PLAY_CONSOLE  = 'https://play.google.com/console/u/0/developers';
+const APP_NAME     = '3 Lakes Driver';
+const PACKAGE_NAME = 'com.threelakes.driver';
+const SA_EMAIL     = 'james-bond@lakes-mobile-app.iam.gserviceaccount.com';
 
 async function wait(ms) { return new Promise(r => setTimeout(r, ms)); }
 
 async function shot(page, name) {
   const p = path.join(__dirname, `play-${name}.png`);
   await page.screenshot({ path: p, fullPage: false });
-  console.log(`  Screenshot: scripts/play-${name}.png`);
+  console.log(`  Screenshot saved: scripts/play-${name}.png`);
+  return p;
+}
+
+// Try multiple selectors, return first visible one
+async function findVisible(page, selectors, timeout = 5000) {
+  for (const sel of selectors) {
+    const el = page.locator(sel).first();
+    if (await el.isVisible({ timeout }).catch(() => false)) return el;
+  }
+  return null;
+}
+
+// Click using JS if normal click fails
+async function jsClick(page, selector) {
+  return page.evaluate(sel => {
+    const el = document.querySelector(sel) ||
+      [...document.querySelectorAll('button,a,[role="button"]')]
+        .find(e => e.textContent.includes(sel.replace(/.*text="?|"?.*/g,'')));
+    if (el) { el.click(); return true; }
+    return false;
+  }, selector);
 }
 
 (async () => {
@@ -43,217 +63,307 @@ async function shot(page, name) {
     browser = await chromium.connectOverCDP('http://localhost:9222');
     console.log('Connected to Chrome');
   } catch {
-    browser = await chromium.launch({ headless: false, slowMo: 300 });
+    browser = await chromium.launch({ headless: false, slowMo: 200 });
     console.log('Opened new Chrome window');
   }
 
   const context = browser.contexts()[0] || await browser.newContext();
   const page    = context.pages()[0]    || await context.newPage();
 
-  // ── Step 1: Open Play Console ─────────────────────────────────────────────
-  console.log('\n[1/5] Opening Google Play Console...');
-  await page.goto(PLAY_CONSOLE, { waitUntil: 'domcontentloaded', timeout: 60000 });
+  // ── Step 1: Get developer ID from Play Console ────────────────────────────
+  console.log('\n[1/6] Opening Play Console...');
+  await page.goto('https://play.google.com/console', { waitUntil: 'domcontentloaded', timeout: 60000 });
+  await wait(6000);
+  await shot(page, '1-landing');
+
+  // Wait for URL to include the developer ID
+  let devId = null;
+  for (let i = 0; i < 10; i++) {
+    const m = page.url().match(/developers\/(\d+)/);
+    if (m) { devId = m[1]; break; }
+    await wait(2000);
+  }
+  console.log('  Developer ID:', devId || '(not found in URL)');
+  console.log('  Current URL:', page.url().slice(0, 90));
+
+  if (!devId) {
+    // Try to extract from page source
+    const src = await page.content();
+    const m = src.match(/"developerId":"(\d+)"|\/developers\/(\d+)/);
+    devId = m?.[1] || m?.[2];
+    console.log('  Developer ID from source:', devId || 'still not found');
+  }
+
+  // ── Step 2: Create app ────────────────────────────────────────────────────
+  console.log('\n[2/6] Creating app listing...');
+
+  // Navigate to app list
+  const appListUrl = devId
+    ? `https://play.google.com/console/u/0/developers/${devId}/app-list`
+    : 'https://play.google.com/console/u/0/developers/app-list';
+  await page.goto(appListUrl, { waitUntil: 'domcontentloaded', timeout: 60000 });
   await wait(5000);
-  await shot(page, '1-console-home');
-  console.log('  Current URL:', page.url().slice(0, 80));
+  await shot(page, '2-app-list');
 
-  // ── Step 2: Create new app ────────────────────────────────────────────────
-  console.log('\n[2/5] Creating app listing...');
-
-  // Check if app already exists by searching for our package name in the page
-  const pageText = await page.textContent('body').catch(() => '');
-  if (pageText.includes(PACKAGE_NAME) || pageText.includes(APP_NAME)) {
-    console.log('  App may already exist — skipping create step');
+  // Look for our app
+  const bodyText = await page.evaluate(() => document.body.innerText);
+  if (bodyText.includes(PACKAGE_NAME) || bodyText.includes(APP_NAME)) {
+    console.log('  App already exists in Play Console');
   } else {
-    // Click "Create app" button
-    const createBtn = page.locator([
+    console.log('  App not found — creating...');
+
+    // Find Create app button — try many selectors
+    const createBtn = await findVisible(page, [
       'button:has-text("Create app")',
+      '[data-testid="create-app-button"]',
       'a:has-text("Create app")',
+      'button:has-text("Create")',
       '[aria-label="Create app"]',
-    ].join(', ')).first();
+      '.create-app-button',
+    ], 8000);
 
-    if (await createBtn.isVisible({ timeout: 8000 }).catch(() => false)) {
+    if (createBtn) {
       await createBtn.click();
-      await wait(3000);
-      await shot(page, '2-create-app-form');
-
-      // Fill app name
-      const nameField = page.locator('input[placeholder*="name"], input[aria-label*="App name"], input[name*="name"]').first();
-      if (await nameField.isVisible({ timeout: 5000 }).catch(() => false)) {
-        await nameField.click();
-        await nameField.fill(APP_NAME);
-        console.log('  Filled app name:', APP_NAME);
+      await wait(4000);
+      await shot(page, '2b-create-form');
+    } else {
+      // Try direct URL navigation to create form
+      const createUrl = devId
+        ? `https://play.google.com/console/u/0/developers/${devId}/create-app`
+        : null;
+      if (createUrl) {
+        console.log('  Trying direct create URL...');
+        await page.goto(createUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
+        await wait(4000);
+        await shot(page, '2b-create-direct');
+      } else {
+        console.log('  No create button found and no dev ID for direct URL');
+        await shot(page, '2b-create-missing');
       }
+    }
 
-      // Select default language (English US should be default)
+    // Fill the form
+    const nameInput = await findVisible(page, [
+      'input[placeholder*="app name" i]',
+      'input[aria-label*="App name" i]',
+      'input[name="appTitle"]',
+      'input[id*="name"]',
+      'mat-form-field input',
+    ], 6000);
+
+    if (nameInput) {
+      await nameInput.click();
+      await nameInput.selectAll?.();
+      await nameInput.fill(APP_NAME);
+      console.log('  Filled app name');
       await wait(1000);
-
-      // Select "App" type (not Game)
-      const appRadio = page.locator('input[value="app"], label:has-text("App")').first();
-      if (await appRadio.isVisible({ timeout: 3000 }).catch(() => false)) {
-        await appRadio.click();
-      }
-
-      // Select "Free"
-      const freeRadio = page.locator('input[value="free"], label:has-text("Free")').first();
-      if (await freeRadio.isVisible({ timeout: 3000 }).catch(() => false)) {
-        await freeRadio.click();
-      }
 
       // Check all declaration checkboxes
-      const checkboxes = page.locator('input[type="checkbox"]');
-      const count = await checkboxes.count();
-      for (let i = 0; i < count; i++) {
-        const cb = checkboxes.nth(i);
+      const checkboxes = await page.locator('input[type="checkbox"]').all();
+      for (const cb of checkboxes) {
         if (!(await cb.isChecked().catch(() => true))) {
           await cb.click().catch(() => {});
+          await wait(300);
         }
       }
-      await wait(1000);
-      await shot(page, '2b-filled-form');
 
-      // Click Create app / Submit
-      const submitBtn = page.locator([
+      // Submit
+      const submitBtn = await findVisible(page, [
         'button:has-text("Create app")',
-        'button[type="submit"]',
+        'button[type="submit"]:not([disabled])',
         'button:has-text("Save")',
-      ].join(', ')).last();
-      if (await submitBtn.isVisible({ timeout: 5000 }).catch(() => false)) {
+      ], 5000);
+      if (submitBtn) {
         await submitBtn.click();
-        console.log('  Submitted create app form');
         await wait(8000);
-        await shot(page, '3-after-create');
+        await shot(page, '2c-after-create');
+        console.log('  App creation submitted');
+        // Update devId from new URL
+        const m = page.url().match(/developers\/(\d+)/);
+        if (m && !devId) devId = m[1];
       }
     } else {
-      console.log('  Create app button not visible — check screenshot');
-      await shot(page, '2-no-create-button');
+      console.log('  Could not find app name input — check screenshot');
     }
   }
 
-  // ── Step 3: Go to API access and link service account ─────────────────────
-  console.log('\n[3/5] Setting up API access...');
-  await page.goto('https://play.google.com/console/u/0/developers/setup/api-access',
-    { waitUntil: 'domcontentloaded', timeout: 60000 });
+  // ── Step 3: API Access — link project and grant service account ───────────
+  console.log('\n[3/6] Setting up API access...');
+  const apiUrl = devId
+    ? `https://play.google.com/console/u/0/developers/${devId}/setup/api-access`
+    : 'https://play.google.com/console/u/0/developers/setup/api-access';
+  await page.goto(apiUrl, { waitUntil: 'domcontentloaded', timeout: 60000 });
   await wait(5000);
-  await shot(page, '4-api-access');
+  await shot(page, '3-api-access');
 
-  // Link Google Cloud project if needed
-  const linkBtn = page.locator([
+  // Link GCP project
+  const linkBtn = await findVisible(page, [
+    'button:has-text("Link existing project")',
     'button:has-text("Link")',
     'button:has-text("Create new project")',
-    'button:has-text("Link existing project")',
-  ].join(', ')).first();
-  if (await linkBtn.isVisible({ timeout: 5000 }).catch(() => false)) {
+    '[data-testid*="link"]',
+  ], 5000);
+  if (linkBtn) {
     await linkBtn.click();
     await wait(3000);
-    console.log('  Clicked link project button');
-    // Try to find lakes-mobile-app in the dropdown
-    const projectOption = page.locator('text=lakes-mobile-app').first();
-    if (await projectOption.isVisible({ timeout: 5000 }).catch(() => false)) {
-      await projectOption.click();
+    await shot(page, '3b-link-project');
+    // Find lakes-mobile-app in project list
+    const projectOpt = await findVisible(page, [
+      'text=lakes-mobile-app',
+      '[data-value*="lakes-mobile"]',
+      'option:has-text("lakes-mobile")',
+      'li:has-text("lakes-mobile")',
+    ], 5000);
+    if (projectOpt) {
+      await projectOpt.click();
       await wait(1000);
-      const confirmBtn = page.locator('button:has-text("Link project"), button:has-text("Confirm")').first();
-      if (await confirmBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
+      const confirmBtn = await findVisible(page, [
+        'button:has-text("Link project")',
+        'button:has-text("Link")',
+        'button:has-text("Confirm")',
+        'button:has-text("Save")',
+      ], 3000);
+      if (confirmBtn) {
         await confirmBtn.click();
-        await wait(3000);
+        await wait(4000);
         console.log('  Linked lakes-mobile-app project');
       }
     } else {
-      console.log('  Could not find lakes-mobile-app in project list — check screenshot');
-      await shot(page, '4b-project-list');
+      console.log('  Could not find lakes-mobile-app in project list');
+      await shot(page, '3c-project-list');
     }
   } else {
-    console.log('  API project may already be linked');
+    console.log('  Link project button not visible — may already be linked');
   }
 
+  await wait(3000);
+  await shot(page, '3d-after-link');
+
   // Grant service account access
-  console.log('  Looking for service account grant button...');
-  const grantBtn = page.locator([
-    `button:has-text("Grant access")`,
+  const grantBtn = await findVisible(page, [
     `a:has-text("Grant access")`,
-    `text=${SA_EMAIL}`,
-  ].join(', ')).first();
-  if (await grantBtn.isVisible({ timeout: 8000 }).catch(() => false)) {
+    `button:has-text("Grant access")`,
+    `[aria-label*="grant" i]`,
+    // Sometimes shown as a row button next to the SA email
+    `tr:has-text("${SA_EMAIL.split('@')[0]}") button`,
+    `tr:has-text("james-bond") a`,
+  ], 8000);
+  if (grantBtn) {
     await grantBtn.click();
     await wait(3000);
-    await shot(page, '5-grant-access');
-    // Select permissions — Release manager or similar
-    const releaseManagerOption = page.locator([
-      'text=Release manager',
-      'text=Release Manager',
-      'input[value*="release"]',
-    ].join(', ')).first();
-    if (await releaseManagerOption.isVisible({ timeout: 3000 }).catch(() => false)) {
-      await releaseManagerOption.click();
-      await wait(500);
+    await shot(page, '3e-grant-form');
+    // Select all permissions or "Release manager"
+    const permOpts = await page.locator([
+      'input[type="checkbox"]',
+      'label:has-text("Release manager")',
+      'label:has-text("Admin")',
+    ].join(', ')).all();
+    for (const opt of permOpts.slice(0, 3)) {
+      await opt.click().catch(() => {});
+      await wait(200);
     }
-    const inviteBtn = page.locator('button:has-text("Invite"), button:has-text("Save"), button:has-text("Apply")').first();
-    if (await inviteBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
-      await inviteBtn.click();
+    const applyBtn = await findVisible(page, [
+      'button:has-text("Invite user")',
+      'button:has-text("Apply")',
+      'button:has-text("Save")',
+    ], 3000);
+    if (applyBtn) {
+      await applyBtn.click();
       await wait(3000);
       console.log('  Granted service account access');
     }
   } else {
-    console.log('  Grant access button not found — check screenshot');
-    await shot(page, '5-no-grant-button');
+    console.log('  Grant access button not found — service account may already have access');
+    await shot(page, '3f-no-grant');
   }
 
-  // ── Step 4: Upload screenshots ────────────────────────────────────────────
-  console.log('\n[4/5] Uploading screenshots to store listing...');
-  // Navigate to main store listing
-  const currentUrl = page.url();
-  // Extract developer ID from URL
-  const devId = currentUrl.match(/developers\/(\d+)/)?.[1];
-  if (devId) {
-    await page.goto(
-      `https://play.google.com/console/u/0/developers/${devId}/app-list`,
-      { waitUntil: 'domcontentloaded', timeout: 60000 });
-    await wait(3000);
-    await shot(page, '6-app-list');
-  }
+  // ── Step 4: Upload screenshots via store listing ───────────────────────────
+  console.log('\n[4/6] Navigating to store listing...');
+  // Find the app and navigate to store listing
+  const appListUrl2 = devId
+    ? `https://play.google.com/console/u/0/developers/${devId}/app-list`
+    : 'https://play.google.com/console/u/0/developers/app-list';
+  await page.goto(appListUrl2, { waitUntil: 'domcontentloaded', timeout: 60000 });
+  await wait(4000);
+  await shot(page, '4-app-list');
 
-  const screenshotsDir = path.join(repoRoot,
-    'fastlane/metadata/android/en-US/images/phoneScreenshots');
-  const screenshots = fs.readdirSync(screenshotsDir)
-    .filter(f => f.endsWith('.png'))
-    .map(f => path.join(screenshotsDir, f));
-  console.log(`  Found ${screenshots.length} screenshots to upload`);
+  // Click on our app
+  const appRow = await findVisible(page, [
+    `text="${APP_NAME}"`,
+    `text=${APP_NAME}`,
+    `a:has-text("${APP_NAME}")`,
+    `[title="${APP_NAME}"]`,
+  ], 5000);
+  if (appRow) {
+    await appRow.click();
+    await wait(4000);
+    await shot(page, '4b-app-home');
 
-  // Try to navigate to the app's store listing
-  const appLink = page.locator(`text=${APP_NAME}, text=${PACKAGE_NAME}`).first();
-  if (await appLink.isVisible({ timeout: 5000 }).catch(() => false)) {
-    await appLink.click();
-    await wait(3000);
-    // Go to store listing
-    const storeListingLink = page.locator('text=Store listing, text=Main store listing').first();
-    if (await storeListingLink.isVisible({ timeout: 5000 }).catch(() => false)) {
-      await storeListingLink.click();
-      await wait(3000);
-      await shot(page, '7-store-listing');
+    // Navigate to Main store listing
+    const storeLink = await findVisible(page, [
+      'a:has-text("Main store listing")',
+      'a:has-text("Store listing")',
+      'nav a:has-text("Store")',
+      'text=Main store listing',
+    ], 5000);
+    if (storeLink) {
+      await storeLink.click();
+      await wait(4000);
+      await shot(page, '4c-store-listing');
 
-      // Upload phone screenshots
-      const uploadInput = page.locator('input[type="file"]').first();
-      if (await uploadInput.isVisible({ timeout: 5000 }).catch(() => false)) {
-        await uploadInput.setInputFiles(screenshots);
-        await wait(5000);
+      // Upload screenshots
+      const screenshotsDir = path.join(repoRoot, 'fastlane/metadata/android/en-US/images/phoneScreenshots');
+      const screenshots = fs.readdirSync(screenshotsDir)
+        .filter(f => f.endsWith('.png'))
+        .map(f => path.join(screenshotsDir, f));
+      console.log(`  Uploading ${screenshots.length} screenshots...`);
+
+      // Find file upload for phone screenshots
+      const fileInputs = await page.locator('input[type="file"]').all();
+      if (fileInputs.length > 0) {
+        await fileInputs[0].setInputFiles(screenshots);
+        await wait(8000);
+        await shot(page, '4d-screenshots-uploaded');
         console.log('  Screenshots uploaded');
-        await shot(page, '8-screenshots-uploaded');
+
+        // Save
+        const saveBtn = await findVisible(page, [
+          'button:has-text("Save")',
+          'button:has-text("Apply")',
+        ], 3000);
+        if (saveBtn) { await saveBtn.click(); await wait(3000); }
+      } else {
+        console.log('  No file upload input found on store listing page');
+        await shot(page, '4d-no-upload-input');
       }
+    } else {
+      console.log('  Store listing link not found');
+      await shot(page, '4c-no-store-link');
     }
   } else {
-    console.log('  Could not find app in app list — screenshots will be uploaded in next run');
+    console.log('  App row not found in app list');
+    await shot(page, '4b-no-app-row');
   }
 
-  // ── Step 5: Final summary ─────────────────────────────────────────────────
-  console.log('\n[5/5] Done.');
-  await shot(page, '9-final');
+  // ── Step 5: Print page text to help debug ─────────────────────────────────
+  console.log('\n[5/6] Current page state:');
+  const finalUrl = page.url();
+  console.log('  URL:', finalUrl.slice(0, 100));
+  const finalText = await page.evaluate(() =>
+    [...document.querySelectorAll('button,a,h1,h2,h3')]
+      .map(e => e.textContent.trim())
+      .filter(t => t.length > 2 && t.length < 60)
+      .slice(0, 30)
+      .join(' | ')
+  );
+  console.log('  Buttons/links on page:', finalText.slice(0, 300));
+
+  await shot(page, '6-final');
   await browser.close();
 
-  console.log('\nDONE. Next steps that happen automatically:');
-  console.log('  1. Go to github.com/modom123/3-lakes-logistics/actions');
-  console.log('  2. Run "Build Android AAB (Google Play)" workflow');
-  console.log('  3. The AAB will be uploaded to Play internal track');
-  console.log('\nCheck screenshots in scripts/play-*.png to see what happened.');
+  console.log('\nDone. Check screenshots in scripts/play-*.png');
+  console.log('Once app is created and service account has access, trigger the build:');
+  console.log('  github.com/modom123/3-lakes-logistics/actions');
 
 })().catch(err => {
   console.error('\nBond error:', err.message);
