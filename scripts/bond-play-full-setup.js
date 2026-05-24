@@ -1,7 +1,7 @@
 /**
- * Bond — Get Google Play service account key via in-browser API calls
- * Uses the user's existing Google session in Chrome to call Google Cloud
- * IAM API directly — no UI clicking, no fragile selectors.
+ * Bond — Get Google Play service account key
+ * Connects to Chrome, captures the OAuth Bearer token Cloud Console uses
+ * for its own API calls, then drives GCP APIs from Node.js with that token.
  *
  * Run: node scripts/bond-play-full-setup.js
  */
@@ -29,7 +29,7 @@ const OWNER        = 'modom123';
 const REPO         = '3-lakes-logistics';
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN || 'NEEDS_TOKEN';
 
-// ── GitHub API ────────────────────────────────────────────────────────────────
+// ── GitHub API (Node HTTPS) ───────────────────────────────────────────────────
 function ghApi(method, p, body) {
   return new Promise((resolve, reject) => {
     const data = body ? JSON.stringify(body) : null;
@@ -57,31 +57,41 @@ async function addGithubSecret(name, value) {
   return res.status === 201 || res.status === 204;
 }
 
-// ── In-browser Google API calls (uses existing session cookies) ───────────────
-async function googleApi(page, method, url, body) {
-  return page.evaluate(async ({ method, url, body }) => {
-    const res = await fetch(url, {
+// ── Google Cloud API (Node HTTPS + captured Bearer token) ─────────────────────
+function gcpApi(method, apiUrl, token, body) {
+  return new Promise((resolve, reject) => {
+    const u    = new URL(apiUrl);
+    const data = body ? JSON.stringify(body) : null;
+    const req  = https.request({
+      hostname: u.hostname,
+      path: u.pathname + u.search,
       method,
-      credentials: 'include',
-      headers: { 'Content-Type': 'application/json' },
-      body: body ? JSON.stringify(body) : undefined,
+      headers: {
+        'Authorization':  `Bearer ${token}`,
+        'Content-Type':   'application/json',
+        'User-Agent':     'Bond-3Lakes',
+        ...(data ? { 'Content-Length': Buffer.byteLength(data) } : {}),
+      },
+    }, res => {
+      let b = '';
+      res.on('data', c => b += c);
+      res.on('end', () => {
+        try { resolve({ status: res.statusCode, data: JSON.parse(b) }); }
+        catch { resolve({ status: res.statusCode, data: b }); }
+      });
     });
-    const text = await res.text();
-    try { return { status: res.status, data: JSON.parse(text) }; }
-    catch { return { status: res.status, data: text }; }
-  }, { method, url, body });
+    req.on('error', reject);
+    if (data) req.write(data);
+    req.end();
+  });
 }
 
-async function enableApi(page, projectId, apiName) {
-  const r = await googleApi(page, 'POST',
-    `https://serviceusage.googleapis.com/v1/projects/${projectId}/services/${apiName}:enable`, {});
-  return r.status === 200 || r.status === 201;
-}
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
 (async () => {
-  console.log('=== Bond: Google Play Service Account (API mode) ===\n');
+  console.log('=== Bond: Google Play Service Account ===\n');
 
-  // Connect to Chrome
+  // ── Connect to Chrome ─────────────────────────────────────────────────────
   let browser;
   try {
     browser = await chromium.connectOverCDP('http://localhost:9222');
@@ -94,146 +104,168 @@ async function enableApi(page, projectId, apiName) {
   const context = browser.contexts()[0] || await browser.newContext();
   const page    = context.pages()[0]    || await context.newPage();
 
-  // ── Step 1: Go to Google Cloud Console to establish session ──────────────
-  console.log('\n[1/5] Opening Google Cloud Console...');
-  await page.goto('https://console.cloud.google.com', { waitUntil: 'domcontentloaded', timeout: 60000 });
-  await page.waitForTimeout(10000); // wait for session/redirect to settle
-  const currentUrl = page.url();
-  console.log('  Page loaded:', currentUrl.slice(0, 80));
+  // ── Step 1: Capture Bearer token from Cloud Console's own requests ────────
+  console.log('\n[1/5] Capturing Google auth token from Cloud Console...');
 
-  // ── Step 2: Get or create a GCP project ──────────────────────────────────
-  console.log('[2/5] Getting Google Cloud projects...');
-  const projRes = await googleApi(page, 'GET',
-    'https://cloudresourcemanager.googleapis.com/v1/projects?filter=lifecycleState%3AACTIVE');
-  console.log('  API status:', projRes.status);
+  let authToken = null;
+  let tokenResolve;
+  const tokenReady = new Promise(r => { tokenResolve = r; });
 
-  let projectId;
+  // Observe every outbound request — capture the first googleapis.com Bearer token
+  page.on('request', req => {
+    if (authToken) return;
+    const auth = req.headers()['authorization'] || req.headers()['Authorization'] || '';
+    if (auth.startsWith('Bearer ') && req.url().includes('googleapis.com')) {
+      authToken = auth.slice(7);
+      console.log('  Token captured from:', req.url().replace(/\?.*/, '').slice(0, 70));
+      tokenResolve();
+    }
+  });
 
-  if (projRes.status !== 200) {
-    console.error('  Google Cloud API error:', JSON.stringify(projRes.data).slice(0, 400));
-    console.error('\n  Chrome must be logged into nwtcinvestment@gmail.com.');
-    console.error('  Open Chrome, go to console.cloud.google.com, log in, then re-run this script.');
+  // Navigate to the Cloud Console dashboard — this triggers googleapis.com API calls
+  await page.goto('https://console.cloud.google.com/home/dashboard',
+    { waitUntil: 'domcontentloaded', timeout: 60000 });
+
+  // Wait up to 30s for a token to appear
+  await Promise.race([tokenReady, sleep(30000)]);
+
+  if (!authToken) {
+    // Maybe the page was cached and made no new requests — reload to force fresh calls
+    console.log('  No token yet — reloading...');
+    await page.reload({ waitUntil: 'domcontentloaded', timeout: 60000 });
+    await Promise.race([tokenReady, sleep(20000)]);
+  }
+
+  if (!authToken) {
+    console.error('\n  Could not capture auth token.');
+    console.error('  Chrome must be logged into nwtcinvestment@gmail.com.');
+    console.error('  Open Chrome, go to console.cloud.google.com, sign in, then re-run this script.');
     await browser.close(); process.exit(1);
   }
 
-  if (projRes.data.projects && projRes.data.projects.length > 0) {
+  console.log('  Auth token ready');
+  await browser.close(); // browser not needed beyond this point
+
+  // ── Step 2: Get or create GCP project ────────────────────────────────────
+  console.log('\n[2/5] Getting Google Cloud projects...');
+  const projRes = await gcpApi('GET',
+    'https://cloudresourcemanager.googleapis.com/v1/projects?filter=lifecycleState%3AACTIVE',
+    authToken);
+  console.log('  Status:', projRes.status);
+
+  let projectId;
+  if (projRes.status === 200 && projRes.data.projects && projRes.data.projects.length > 0) {
     const project = projRes.data.projects[0];
     projectId = project.projectId;
     console.log(`  Using project: ${project.name} (${projectId})`);
-  } else {
-    // No projects — create one automatically
-    console.log('  No projects found — creating Google Cloud project...');
+  } else if (projRes.status === 200) {
+    console.log('  No projects found — creating one...');
     const pid = 'threelakes-' + Date.now().toString().slice(-8);
-    const createRes = await googleApi(page, 'POST',
+    const cr  = await gcpApi('POST',
       'https://cloudresourcemanager.googleapis.com/v1/projects',
-      { projectId: pid, name: '3 Lakes Logistics' });
-    console.log('  Create status:', createRes.status);
-    if (createRes.status !== 200 && createRes.status !== 201) {
-      console.error('  Failed to create project:', JSON.stringify(createRes.data).slice(0, 400));
-      await browser.close(); process.exit(1);
+      authToken, { projectId: pid, name: '3 Lakes Logistics' });
+    console.log('  Create status:', cr.status);
+    if (cr.status !== 200 && cr.status !== 201) {
+      console.error('  Failed to create project:', JSON.stringify(cr.data).slice(0, 400));
+      process.exit(1);
     }
-    console.log('  Project created — waiting 30s for it to be ready...');
-    await page.waitForTimeout(30000);
-    // Verify it's active now
-    const projRes2 = await googleApi(page, 'GET',
-      'https://cloudresourcemanager.googleapis.com/v1/projects?filter=lifecycleState%3AACTIVE');
-    if (projRes2.data.projects && projRes2.data.projects.length > 0) {
-      projectId = projRes2.data.projects[0].projectId;
-    } else {
-      // Use the ID we tried to create
-      projectId = pid;
-    }
-    console.log('  Project ID:', projectId);
+    console.log('  Waiting 30s for project to be ready...');
+    await sleep(30000);
+    const pr2 = await gcpApi('GET',
+      'https://cloudresourcemanager.googleapis.com/v1/projects?filter=lifecycleState%3AACTIVE',
+      authToken);
+    projectId = (pr2.data.projects && pr2.data.projects.length > 0)
+      ? pr2.data.projects[0].projectId : pid;
+    console.log('  Project:', projectId);
+  } else {
+    console.error('  GCP error:', JSON.stringify(projRes.data).slice(0, 400));
+    process.exit(1);
   }
 
   // ── Step 3: Enable required APIs ─────────────────────────────────────────
-  console.log('[3/5] Enabling IAM API...');
-  await enableApi(page, projectId, 'iam.googleapis.com');
-  await enableApi(page, projectId, 'cloudresourcemanager.googleapis.com');
-  await page.waitForTimeout(8000);
+  console.log('\n[3/5] Enabling IAM API...');
+  const enableRes = await gcpApi('POST',
+    `https://serviceusage.googleapis.com/v1/projects/${projectId}/services/iam.googleapis.com:enable`,
+    authToken, {});
+  console.log('  Enable IAM status:', enableRes.status);
+  await sleep(8000);
 
   // ── Step 4: List or create service account ────────────────────────────────
   console.log('[4/5] Getting service accounts...');
-  const saRes = await googleApi(page, 'GET',
-    `https://iam.googleapis.com/v1/projects/${projectId}/serviceAccounts`);
-  console.log('  SA list status:', saRes.status);
+  const saRes = await gcpApi('GET',
+    `https://iam.googleapis.com/v1/projects/${projectId}/serviceAccounts`, authToken);
+  console.log('  Status:', saRes.status);
 
   let saEmail;
-  if (saRes.data.accounts && saRes.data.accounts.length > 0) {
+  if (saRes.status === 200 && saRes.data.accounts && saRes.data.accounts.length > 0) {
     saEmail = saRes.data.accounts[0].email;
-    console.log('  Using service account:', saEmail);
+    console.log('  Using:', saEmail);
   } else {
-    console.log('  No service accounts — creating one...');
-    const createRes = await googleApi(page, 'POST',
+    console.log('  None found — creating service account...');
+    const cr = await gcpApi('POST',
       `https://iam.googleapis.com/v1/projects/${projectId}/serviceAccounts`,
+      authToken,
       { accountId: 'threelakes-play', serviceAccount: { displayName: '3 Lakes Play Store' } });
-    console.log('  Create SA status:', createRes.status);
-    if (!createRes.data.email) {
-      console.error('  Failed to create service account:', JSON.stringify(createRes.data).slice(0, 400));
-      await browser.close(); process.exit(1);
+    console.log('  Create SA status:', cr.status);
+    if (!cr.data.email) {
+      console.error('  Failed to create service account:', JSON.stringify(cr.data).slice(0, 400));
+      process.exit(1);
     }
-    saEmail = createRes.data.email;
+    saEmail = cr.data.email;
     console.log('  Created:', saEmail);
   }
 
   // ── Step 5: Create JSON key ───────────────────────────────────────────────
   console.log('[5/5] Creating service account JSON key...');
-  let keyRes = await googleApi(page, 'POST',
+  let keyRes = await gcpApi('POST',
     `https://iam.googleapis.com/v1/projects/${projectId}/serviceAccounts/${saEmail}/keys`,
+    authToken,
     { privateKeyType: 'TYPE_GOOGLE_CREDENTIALS_FILE', keyAlgorithm: 'KEY_ALG_RSA_2048' });
   console.log('  Key create status:', keyRes.status);
 
   if (!keyRes.data.privateKeyData) {
-    // Try enabling the API and retry
-    console.log('  Enabling IAM API and retrying...');
-    await enableApi(page, projectId, 'iam.googleapis.com');
-    await page.waitForTimeout(10000);
-    keyRes = await googleApi(page, 'POST',
+    console.log('  Retrying after enabling IAM API...');
+    await gcpApi('POST',
+      `https://serviceusage.googleapis.com/v1/projects/${projectId}/services/iam.googleapis.com:enable`,
+      authToken, {});
+    await sleep(10000);
+    keyRes = await gcpApi('POST',
       `https://iam.googleapis.com/v1/projects/${projectId}/serviceAccounts/${saEmail}/keys`,
+      authToken,
       { privateKeyType: 'TYPE_GOOGLE_CREDENTIALS_FILE', keyAlgorithm: 'KEY_ALG_RSA_2048' });
-    console.log('  Retry key status:', keyRes.status);
+    console.log('  Retry status:', keyRes.status);
     if (!keyRes.data.privateKeyData) {
       console.error('  Key creation failed:', JSON.stringify(keyRes.data).slice(0, 400));
-      await browser.close(); process.exit(1);
+      process.exit(1);
     }
   }
 
-  // Decode the key JSON
   const keyJson = Buffer.from(keyRes.data.privateKeyData, 'base64').toString('utf8');
   const b64     = Buffer.from(keyJson).toString('base64');
-  console.log('  Key created successfully');
-
   fs.writeFileSync(path.join(repoRoot, 'google-play-key.json'), keyJson);
-  console.log('  Saved to google-play-key.json (gitignored)');
-
-  await browser.close();
+  console.log('  Key saved to google-play-key.json');
 
   // ── Upload to GitHub ──────────────────────────────────────────────────────
   if (GITHUB_TOKEN === 'NEEDS_TOKEN') {
-    console.log('\nNo GITHUB_TOKEN set — key saved to google-play-key.json only.');
-    console.log('Re-run with: $env:GITHUB_TOKEN = "YOUR_TOKEN" ; node scripts/bond-play-full-setup.js');
+    console.log('\nNo GITHUB_TOKEN — key is in google-play-key.json only.');
+    console.log('Set token and re-run: $env:GITHUB_TOKEN = "YOUR_TOKEN"');
     process.exit(0);
   }
 
   console.log('\nAdding GOOGLE_PLAY_KEY_BASE64 to GitHub secrets...');
   const ok = await addGithubSecret('GOOGLE_PLAY_KEY_BASE64', b64);
-  if (ok) {
-    console.log('  Secret added');
-  } else {
-    console.error('  Failed to add secret — check GITHUB_TOKEN');
-    process.exit(1);
-  }
+  console.log(ok ? '  Secret added' : '  FAILED — check GITHUB_TOKEN');
+  if (!ok) process.exit(1);
 
   // ── Trigger build ─────────────────────────────────────────────────────────
   console.log('\nTriggering Android build...');
-  const trigRes = await ghApi('POST', `/repos/${OWNER}/${REPO}/actions/workflows/android-build.yml/dispatches`, {
-    ref: 'main', inputs: { version_code: '1', version_name: '1.0.0' }
-  });
+  const trigRes = await ghApi('POST',
+    `/repos/${OWNER}/${REPO}/actions/workflows/android-build.yml/dispatches`,
+    { ref: 'main', inputs: { version_code: '1', version_name: '1.0.0' } });
   console.log('  Trigger status:', trigRes.status, trigRes.status === 204 ? '(success)' : '');
 
-  console.log('\nDONE — Bond has completed the full Google Play setup.');
-  console.log('Watch the build: https://github.com/modom123/3-lakes-logistics/actions');
-  console.log('The app will be compiled, signed, and uploaded to Google Play automatically.');
+  console.log('\nDONE — service account created, secret added, build triggered.');
+  console.log('Watch: https://github.com/modom123/3-lakes-logistics/actions');
 
 })().catch(err => {
   console.error('\nBond error:', err.message);
