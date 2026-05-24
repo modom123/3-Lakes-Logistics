@@ -1,19 +1,17 @@
 /**
  * Bond — Change Play Console account: Individual → Organization
+ * v3 — dumps all buttons first to find exact selector, then handles Angular dialog
  *
- * Run: node scripts/change-account-type.js
- *
- * This opens a visible browser window. Log in if prompted, then press Enter.
+ * Run: node scripts\change-account-type.js
  */
 
 const { execSync, spawnSync } = require('child_process');
 const path = require('path');
 const readline = require('readline');
 
-// Auto-install playwright if missing
 function hasMod(m) { try { require.resolve(m); return true; } catch { return false; } }
 if (!hasMod('playwright')) {
-  console.log('Installing playwright (one-time setup)...');
+  console.log('Installing playwright...');
   execSync('npm install playwright', { cwd: path.join(__dirname, '..'), stdio: 'inherit' });
   execSync('npx playwright install chromium', { cwd: path.join(__dirname, '..'), stdio: 'inherit' });
   const r = spawnSync(process.execPath, [__filename], { stdio: 'inherit', env: process.env });
@@ -39,171 +37,197 @@ async function wait(ms) { return new Promise(r => setTimeout(r, ms)); }
 async function shot(page, label) {
   const p = path.join(__dirname, `acct-${label}.png`);
   await page.screenshot({ path: p, fullPage: false });
-  console.log(`  Screenshot saved → scripts/acct-${label}.png`);
+  console.log(`  Screenshot → scripts/acct-${label}.png`);
 }
 
-async function tryClick(page, selectors, description) {
-  for (const sel of selectors) {
-    try {
-      const el = page.locator(sel).first();
-      if (await el.isVisible({ timeout: 2000 })) {
-        await el.click();
-        console.log(`  ✓ Clicked ${description}`);
-        return true;
-      }
-    } catch {}
-  }
-  // JS fallback — search by text
-  const found = await page.evaluate((desc) => {
-    const all = [...document.querySelectorAll('button, a, [role="button"], [role="link"], span')];
-    const el = all.find(e => e.innerText?.trim().toLowerCase().includes(desc.toLowerCase()));
-    if (el) { el.click(); return el.innerText.trim(); }
-    return null;
-  }, description);
-  if (found) {
-    console.log(`  ✓ JS-clicked "${found}"`);
-    return true;
-  }
-  return false;
+async function dumpButtons(page) {
+  return page.evaluate(() => {
+    const els = [...document.querySelectorAll('button, a, [role="button"], [role="link"], mat-list-item, .mat-list-item')];
+    return els
+      .map(e => ({
+        tag:  e.tagName,
+        text: (e.innerText || e.textContent || '').trim().slice(0, 80),
+        aria: e.getAttribute('aria-label') || '',
+        id:   e.id || '',
+        cls:  e.className?.toString().slice(0, 60) || '',
+      }))
+      .filter(e => e.text.length > 1 || e.aria.length > 1)
+      .slice(0, 60);
+  });
 }
 
-async function tryFill(page, selectors, value, label) {
-  for (const sel of selectors) {
-    try {
-      const el = page.locator(sel).first();
-      if (await el.isVisible({ timeout: 2000 })) {
-        await el.click();
-        await el.fill(value);
-        console.log(`  ✓ Filled ${label}: ${value}`);
-        return true;
-      }
-    } catch {}
-  }
-  console.log(`  ⚠ ${label} field not found`);
-  return false;
+async function dumpInputs(page) {
+  return page.evaluate(() => {
+    const els = [...document.querySelectorAll('input, textarea, mat-select, [role="combobox"]')];
+    return els.map(e => ({
+      tag:         e.tagName,
+      type:        e.type || '',
+      placeholder: e.placeholder || '',
+      ariaLabel:   e.getAttribute('aria-label') || '',
+      id:          e.id || '',
+      name:        e.name || '',
+      value:       e.value?.slice(0, 40) || '',
+      visible:     e.offsetParent !== null,
+    }));
+  });
 }
 
 (async () => {
-  console.log('=== Bond: Change Account Type → Organization ===\n');
+  console.log('=== Bond: Change Account Type → Organization (v3) ===\n');
 
-  // Try to take over existing Chrome first, otherwise launch a new window
   let browser, context, page;
   try {
     browser = await chromium.connectOverCDP('http://localhost:9222');
     context = browser.contexts()[0] || await browser.newContext();
     page    = context.pages()[0]    || await context.newPage();
-    console.log('✓ Took over your existing Chrome browser');
+    console.log('✓ Connected to your existing Chrome');
   } catch {
-    console.log('No Chrome on port 9222 — opening a new browser window...');
-    browser  = await chromium.launch({ headless: false, slowMo: 150, args: ['--start-maximized'] });
-    context  = await browser.newContext({ viewport: null });
-    page     = await context.newPage();
+    console.log('Opening new browser window...');
+    browser = await chromium.launch({ headless: false, slowMo: 100, args: ['--start-maximized'] });
+    context = await browser.newContext({ viewport: null });
+    page    = await context.newPage();
   }
 
-  // ── Step 1: Open Play Console ─────────────────────────────────────────────
-  console.log('[1/4] Opening Play Console...');
-  await page.goto('https://play.google.com/console', {
-    waitUntil: 'domcontentloaded',
-    timeout: 60000,
-  });
-  await wait(4000);
-
-  // Check if we need to log in
-  const url1 = page.url();
-  const text1 = await page.evaluate(() => document.body.innerText).catch(() => '');
-  console.log('  URL:', url1.slice(0, 80));
-
-  if (url1.includes('accounts.google.com') || text1.includes('Sign in')) {
-    console.log('\n  ⚠  Google sign-in required.');
-    console.log('  Log in as nwtcinvestment@gmail.com in the browser window.');
-    await pause('  Press Enter once you are logged into Play Console... ');
-    await wait(3000);
-  }
-
-  // ── Step 2: Navigate directly to account details ──────────────────────────
-  console.log('\n[2/4] Going to Account Details...');
+  // ── Go to exact account URL ───────────────────────────────────────────────
+  console.log('\n[1] Navigating to account details...');
   await page.goto(ACCOUNT_URL, { waitUntil: 'domcontentloaded', timeout: 60000 });
-  await wait(5000);
-  await shot(page, '1-account-page');
+  await wait(6000);
+  await shot(page, '1-account');
+  console.log('  URL:', page.url().slice(0, 100));
 
-  const text2 = await page.evaluate(() => document.body.innerText).catch(() => '');
-  console.log('  URL:', page.url().slice(0, 90));
-  console.log('  Page preview:', text2.slice(0, 300).replace(/\n+/g, ' | '));
+  // Dump all buttons so we can see exact text
+  const buttons = await dumpButtons(page);
+  console.log('\n  All clickable elements on page:');
+  buttons.forEach((b, i) => {
+    if (b.text || b.aria)
+      console.log(`    [${i}] <${b.tag}> "${b.text}" aria="${b.aria}" id="${b.id}"`);
+  });
 
-  // ── Step 3: Click "Change account type" ───────────────────────────────────
-  console.log('\n[3/4] Clicking "Change account type"...');
+  // ── Find and click Change account type ───────────────────────────────────
+  console.log('\n[2] Clicking "Change account type"...');
 
-  const clicked = await tryClick(page, [
-    'button:has-text("Change account type")',
-    'a:has-text("Change account type")',
-    '[role="button"]:has-text("Change account type")',
-    'span:has-text("Change account type")',
-  ], 'Change account type');
+  // Try by text content (Angular renders text in child spans)
+  let clicked = await page.evaluate(() => {
+    const all = [...document.querySelectorAll('button, a, [role="button"], span, div')];
+    const target = all.find(el => {
+      const t = (el.innerText || el.textContent || '').trim();
+      return t === 'Change account type' || t.toLowerCase().includes('change account type');
+    });
+    if (target) {
+      // Walk up to clickable parent if needed
+      let el = target;
+      for (let i = 0; i < 5; i++) {
+        if (el.tagName === 'BUTTON' || el.getAttribute('role') === 'button') {
+          el.click();
+          return `clicked <${el.tagName}> "${(el.innerText||'').trim().slice(0,40)}"`;
+        }
+        el = el.parentElement;
+        if (!el) break;
+      }
+      target.click();
+      return `clicked target "${target.innerText?.trim().slice(0,40)}"`;
+    }
+    return null;
+  });
 
-  if (!clicked) {
-    console.log('\n  Button not found automatically.');
-    console.log('  In the browser window, click "Change account type" manually.');
-    await pause('  Press Enter after you have clicked it... ');
+  if (clicked) {
+    console.log('  ✓', clicked);
+  } else {
+    console.log('  Button not found automatically.');
+    console.log('  In the browser window, click "Change account type" then come back here.');
+    await pause('  Press Enter after clicking it... ');
   }
 
   await wait(5000);
   await shot(page, '2-after-click');
 
-  const text3 = await page.evaluate(() => document.body.innerText).catch(() => '');
-  console.log('  Page after click:', text3.slice(0, 300).replace(/\n+/g, ' | '));
+  // Dump inputs visible after click
+  const inputs = await dumpInputs(page);
+  console.log('\n  All input fields now visible:');
+  inputs.forEach((inp, i) => {
+    console.log(`    [${i}] <${inp.tag}> type="${inp.type}" placeholder="${inp.placeholder}" aria="${inp.ariaLabel}" id="${inp.id}" name="${inp.name}" visible=${inp.visible}`);
+  });
 
-  // ── Step 4: Fill form ─────────────────────────────────────────────────────
-  console.log('\n[4/4] Filling organization details...');
+  // Also dump dialog content if a mat-dialog opened
+  const dialogText = await page.evaluate(() => {
+    const d = document.querySelector('mat-dialog-container, [role="dialog"], .cdk-overlay-container');
+    return d ? d.innerText?.slice(0, 500) : null;
+  });
+  if (dialogText) {
+    console.log('\n  Dialog content:', dialogText.replace(/\n+/g, ' | '));
+  }
 
-  // DUNS
-  await tryFill(page, [
-    'input[placeholder*="DUNS" i]',
-    'input[aria-label*="DUNS" i]',
-    'input[id*="duns" i]',
-    'input[name*="duns" i]',
-    'mat-form-field:has-text("DUNS") input',
-    'mat-form-field:has-text("D-U-N-S") input',
-  ], DUNS, 'DUNS');
+  // Dump updated buttons
+  const buttons2 = await dumpButtons(page);
+  console.log('\n  Clickable elements after click:');
+  buttons2.forEach((b, i) => {
+    if (b.text || b.aria)
+      console.log(`    [${i}] <${b.tag}> "${b.text}" aria="${b.aria}"`);
+  });
 
-  // Org name (may be pre-filled)
-  await tryFill(page, [
-    'input[placeholder*="organization" i]',
-    'input[aria-label*="organization" i]',
-    'mat-form-field:has-text("organization") input',
-  ], ORG_NAME, 'Org name');
+  // ── Try to fill DUNS using any visible input ──────────────────────────────
+  console.log('\n[3] Attempting to fill DUNS and org name...');
+
+  const visibleInputs = inputs.filter(i => i.visible);
+  console.log(`  ${visibleInputs.length} visible input(s) found`);
+
+  // Fill by index for any visible inputs
+  const allInputEls = await page.locator('input:visible, textarea:visible').all();
+  for (let i = 0; i < allInputEls.length; i++) {
+    const inp = allInputEls[i];
+    const ph  = await inp.getAttribute('placeholder').catch(() => '');
+    const lbl = await inp.getAttribute('aria-label').catch(() => '');
+    const id  = await inp.getAttribute('id').catch(() => '');
+    console.log(`  Input[${i}]: placeholder="${ph}" aria="${lbl}" id="${id}"`);
+
+    const key = `${ph} ${lbl} ${id}`.toLowerCase();
+    if (key.includes('duns') || key.includes('d-u-n-s')) {
+      await inp.click(); await inp.fill(DUNS);
+      console.log(`    → Filled DUNS: ${DUNS}`);
+    } else if (key.includes('org') || key.includes('company') || key.includes('business') || key.includes('name')) {
+      const cur = await inp.inputValue().catch(() => '');
+      if (!cur) { await inp.click(); await inp.fill(ORG_NAME); console.log(`    → Filled org: ${ORG_NAME}`); }
+      else { console.log(`    → Already has value: "${cur}"`); }
+    }
+  }
+
+  if (allInputEls.length === 0) {
+    console.log('  No visible inputs found. May need to click something in the browser first.');
+    await pause('  Fill in any fields in the browser, then press Enter... ');
+  }
 
   await wait(1000);
-  await shot(page, '3-form-filled');
+  await shot(page, '3-filled');
 
-  // Submit
-  const submitted = await tryClick(page, [
-    'button:has-text("Change account type")',
-    'button:has-text("Submit")',
-    'button:has-text("Confirm")',
-    'button:has-text("Save")',
-    'button:has-text("Continue")',
-    'button[type="submit"]:not([disabled])',
-  ], 'Submit');
+  // ── Submit ────────────────────────────────────────────────────────────────
+  console.log('\n[4] Submitting...');
 
-  if (!submitted) {
-    console.log('\n  Submit button not found automatically.');
-    console.log('  Click the Submit / Confirm / Save button in the browser window.');
+  const submitted = await page.evaluate(() => {
+    const all = [...document.querySelectorAll('button, [role="button"]')];
+    const btn = all.find(el => {
+      const t = (el.innerText || el.textContent || '').trim().toLowerCase();
+      return t.includes('submit') || t.includes('confirm') || t.includes('save') ||
+             t.includes('change account') || t === 'ok' || t === 'continue';
+    });
+    if (btn && !btn.disabled) { btn.click(); return btn.innerText?.trim(); }
+    return null;
+  });
+
+  if (submitted) {
+    console.log('  ✓ Submitted:', submitted);
+  } else {
+    console.log('  Submit button not found. Click Save/Submit/Confirm in the browser.');
     await pause('  Press Enter after submitting... ');
   }
 
   await wait(6000);
   await shot(page, '4-final');
+  const finalURL = page.url();
+  console.log('\n  Final URL:', finalURL.slice(0, 100));
 
-  const finalText = await page.evaluate(() => document.body.innerText).catch(() => '');
-  console.log('\n  Final URL:', page.url().slice(0, 100));
-  console.log('  Final page:', finalText.slice(0, 300).replace(/\n+/g, ' | '));
-
-  console.log('\n=== Done ===');
-  console.log('Screenshots saved in scripts/acct-*.png');
-  console.log('\nKeeping browser open — press Ctrl+C to close when finished.');
-
-  // Keep browser open so user can review
-  await pause('Press Enter to close the browser... ');
+  console.log('\n=== Done — keeping browser open ===');
+  console.log('Check scripts/acct-*.png for screenshots of each step.');
+  await pause('Press Enter to close browser... ');
   await browser.close();
 
 })().catch(err => {
