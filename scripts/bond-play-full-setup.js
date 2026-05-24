@@ -13,17 +13,22 @@
  * Chrome must be open with remote debugging and logged into Google as nwtcinvestment@gmail.com
  */
 
-// Auto-install dependencies before anything else
-const { execSync } = require('child_process');
+// Auto-install: if deps missing, install and re-launch this script
+const { execSync, spawnSync } = require('child_process');
 const path = require('path');
 const repoRoot = path.join(__dirname, '..');
-try { require('libsodium-wrappers'); } catch {
-  console.log('Installing dependencies...');
+
+function hasMod(m) { try { require.resolve(m); return true; } catch { return false; } }
+
+if (!hasMod('libsodium-wrappers') || !hasMod('playwright')) {
+  console.log('Installing dependencies (one-time)...');
   execSync('npm install', { cwd: repoRoot, stdio: 'inherit' });
-  console.log('Done. Continuing...\n');
-}
-try { require('playwright'); } catch {
   execSync('npx playwright install chromium', { cwd: repoRoot, stdio: 'inherit' });
+  console.log('Done. Restarting Bond...\n');
+  const result = spawnSync(process.execPath, [__filename, ...process.argv.slice(2)], {
+    cwd: repoRoot, stdio: 'inherit', env: process.env
+  });
+  process.exit(result.status ?? 0);
 }
 
 const { chromium } = require('playwright');
