@@ -46,119 +46,119 @@ async function shot(page, name) {
   await wait(5000);
   await shot(page, '1-account');
 
-  // ── Click "About you" row (has arrow_right_alt, leads to edit form) ───────
-  console.log('[2/4] Clicking "About you" row...');
+  // Log ALL links and their hrefs
+  const links = await page.evaluate(() =>
+    [...document.querySelectorAll('a')].map(a => `${a.innerText?.trim().slice(0,30)} → ${a.href}`)
+  );
+  console.log('  All links:\n  ' + links.join('\n  '));
 
-  // Use JS to find and click the "About you" element (it's a clickable row/card)
-  const clicked = await page.evaluate(() => {
-    const all = [...document.querySelectorAll('a, button, [role="button"], [tabindex="0"], [class*="row"], [class*="card"], [class*="item"], [class*="link"]')];
-    // Find element whose text contains "About you" but is small (not the whole page)
-    const el = all.find(e => {
-      const t = e.innerText?.trim();
-      return t && t.includes('About you') && t.length < 300;
-    });
-    if (el) { el.click(); return el.tagName + ' / ' + el.className.slice(0, 60); }
+  // Log all elements with routerLink attribute
+  const routerLinks = await page.evaluate(() =>
+    [...document.querySelectorAll('[routerlink], [ng-reflect-router-link], [_nghost]')]
+      .filter(e => e.innerText?.trim().includes('About you') && e.innerText?.length < 300)
+      .map(e => `${e.tagName}.${e.className.slice(0,40)} | text="${e.innerText?.trim().slice(0,60)}" | routerlink="${e.getAttribute('routerlink')||''}"`)
+  );
+  console.log('  Angular router links near "About you":\n  ' + routerLinks.join('\n  '));
 
-    // Fallback: find ANY element with exactly "About you" text
-    const all2 = [...document.querySelectorAll('*')];
-    const el2 = all2.find(e => e.childElementCount < 4 && e.innerText?.trim().startsWith('About you'));
-    if (el2) { el2.click(); return 'fallback: ' + el2.tagName + ' / ' + el2.className.slice(0, 60); }
-    return 'not found';
+  // ── Use real mouse click on the "About you" arrow ─────────────────────────
+  console.log('\n[2/4] Clicking "About you" with real mouse...');
+
+  // Find the bounding box of the "About you" section
+  const box = await page.evaluate(() => {
+    const all = [...document.querySelectorAll('*')];
+    const el = all.find(e =>
+      e.innerText?.trim().startsWith('About you') &&
+      e.innerText?.length < 400 &&
+      e.children.length > 0
+    );
+    if (!el) return null;
+    const r = el.getBoundingClientRect();
+    return { x: r.left + r.width / 2, y: r.top + r.height / 2, w: r.width, h: r.height, tag: el.tagName, cls: el.className.slice(0,50) };
   });
-  console.log('  Clicked:', clicked);
-  await wait(4000);
-  console.log('  URL:', page.url().slice(0, 90));
-  await shot(page, '2-about-you');
+  console.log('  "About you" element:', JSON.stringify(box));
 
+  if (box && box.x > 0 && box.y > 0) {
+    // Click at the right edge where the arrow is
+    await page.mouse.click(box.x + box.w / 3, box.y);
+    await wait(4000);
+    console.log('  URL after mouse click:', page.url().slice(0, 90));
+    await shot(page, '2-after-click');
+  }
+
+  // If still on same page, try each arrow_right_alt button by position
+  if (page.url().includes('/account') && !page.url().includes('/account/')) {
+    console.log('  Still on /account — trying arrow buttons one by one...');
+    const arrows = await page.evaluate(() => {
+      return [...document.querySelectorAll('button, a, [role="button"]')]
+        .filter(e => e.innerText?.trim() === 'arrow_right_alt')
+        .map(e => {
+          const r = e.getBoundingClientRect();
+          return { x: r.left + r.width/2, y: r.top + r.height/2, visible: r.width > 0 && r.height > 0 };
+        });
+    });
+    console.log('  Arrow buttons found:', JSON.stringify(arrows));
+    for (const arrow of arrows.filter(a => a.visible)) {
+      await page.mouse.click(arrow.x, arrow.y);
+      await wait(3000);
+      const newUrl = page.url();
+      console.log('  URL after clicking arrow at y=' + Math.round(arrow.y) + ':', newUrl.slice(0, 90));
+      if (!newUrl.endsWith('/account')) {
+        console.log('  Navigated to new page!');
+        break;
+      }
+    }
+    await shot(page, '2b-after-arrows');
+  }
+
+  // ── Log what's now on the page ────────────────────────────────────────────
+  console.log('\n[3/4] Current page state...');
   const pageText = await page.evaluate(() => document.body.innerText);
-  console.log('  Page text:', pageText.slice(0, 500).replace(/\n+/g, ' '));
+  console.log('  URL:', page.url().slice(0, 90));
+  console.log('  Page text:', pageText.slice(0, 600).replace(/\n+/g, ' '));
 
-  // ── If we're on an edit page, handle it ───────────────────────────────────
-  console.log('[3/4] Looking for account type and name fields...');
-
-  // Log all inputs
   const inputs = await page.evaluate(() =>
-    [...document.querySelectorAll('input, mat-radio-button, [role="radio"], select, textarea')]
-      .map(e => `${e.tagName} type=${e.type||''} value="${e.value||''}" label="${e.getAttribute('aria-label')||''}" placeholder="${e.getAttribute('placeholder')||''}" text="${e.innerText?.trim().slice(0,40)||''}"`)
+    [...document.querySelectorAll('input, mat-radio-button, [role="radio"], select')]
+      .map(e => `${e.tagName} type=${e.type||''} value="${e.value||''}" label="${e.getAttribute('aria-label')||''}" text="${e.innerText?.trim().slice(0,40)||''}"`)
   );
   console.log('  Inputs:\n  ' + inputs.join('\n  '));
 
-  // Log all buttons
-  const btns = await page.evaluate(() =>
-    [...document.querySelectorAll('button, [role="button"]')]
-      .map(e => e.innerText?.trim() || e.getAttribute('aria-label') || '')
-      .filter(t => t && t.length < 60)
-  );
-  console.log('  Buttons:', btns.join(' | '));
-
-  // Try to select Organization
+  // ── Try to make changes if on edit page ───────────────────────────────────
+  console.log('\n[4/4] Attempting changes...');
   let orgSelected = false;
-  for (const sel of [
-    'input[value="organization" i]',
-    'input[value="ORGANIZATION"]',
-    'mat-radio-button:has-text("Organization")',
-    '[role="radio"]:has-text("Organization")',
-    'label:has-text("Organization")',
-    'text=Organization',
-  ]) {
+  for (const sel of ['input[value="organization" i]','mat-radio-button:has-text("Organization")','[role="radio"]:has-text("Organization")','label:has-text("Organization")']) {
     try {
       const el = page.locator(sel).first();
       if (await el.isVisible({ timeout: 2000 })) {
-        await el.click();
-        await wait(1500);
+        await el.click(); await wait(1000);
         console.log('  Selected Organization via:', sel);
-        orgSelected = true;
-        break;
+        orgSelected = true; break;
       }
     } catch {}
   }
 
-  // Fill developer/org name
   const allInputs = await page.locator('input[type="text"], input:not([type])').all();
   for (const inp of allInputs) {
     const label = await inp.getAttribute('aria-label').catch(() => '') || '';
-    const placeholder = await inp.getAttribute('placeholder').catch(() => '') || '';
+    const ph = await inp.getAttribute('placeholder').catch(() => '') || '';
     const val = await inp.inputValue().catch(() => '');
-    if (label.toLowerCase().includes('search') || placeholder.toLowerCase().includes('search')) continue;
-    if (label || placeholder || val) {
-      console.log(`  Filling: label="${label}" placeholder="${placeholder}" current="${val}"`);
-      await inp.click({ clickCount: 3 });
-      await inp.fill(ORG_NAME);
-      break;
+    if (label.toLowerCase().includes('search') || ph.toLowerCase().includes('search')) continue;
+    if (label || ph || val) {
+      console.log(`  Filling name field: label="${label}" ph="${ph}" val="${val}"`);
+      await inp.click({ clickCount: 3 }); await inp.fill(ORG_NAME); break;
     }
   }
 
-  // Fill DUNS if present
-  for (const sel of ['input[aria-label*="DUNS" i]','input[placeholder*="DUNS" i]','input[formcontrolname*="duns" i]']) {
-    try {
-      const el = page.locator(sel).first();
-      if (await el.isVisible({ timeout: 2000 })) {
-        await el.click({ clickCount: 3 }); await el.fill(DUNS);
-        console.log('  Filled DUNS:', DUNS); break;
-      }
-    } catch {}
-  }
-
-  await shot(page, '3-filled');
-
-  // ── Save ──────────────────────────────────────────────────────────────────
-  console.log('[4/4] Saving...');
-  let saved = false;
-  for (const sel of ['button:has-text("Save")','button:has-text("Submit")','button:has-text("Continue")','button[type="submit"]:not([disabled])']) {
+  for (const sel of ['button:has-text("Save")','button:has-text("Submit")','button:has-text("Continue")']) {
     try {
       const el = page.locator(sel).first();
       if (await el.isVisible({ timeout: 3000 })) {
         await el.click(); await wait(5000);
-        console.log('  Clicked:', sel); saved = true; break;
+        console.log('  Saved via:', sel); break;
       }
     } catch {}
   }
-  if (!saved) console.log('  No save button found');
 
   await shot(page, '4-done');
-  const result = await page.evaluate(() => document.body.innerText);
-  console.log('  Final page:', result.slice(0, 300).replace(/\n+/g, ' '));
-
   await browser.close();
   console.log('\nDone.');
 })().catch(e => { console.error('Bond error:', e.message); process.exit(1); });
