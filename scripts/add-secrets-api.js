@@ -13,8 +13,8 @@
  *      OR just run: node scripts/add-secrets-api.js  (Bond will prompt you)
  */
 
-const https  = require('https');
-const crypto = require('crypto');
+const https   = require('https');
+const sodium  = require('libsodium-wrappers');
 
 const OWNER = 'modom123';
 const REPO  = '3-lakes-logistics';
@@ -52,39 +52,13 @@ function api(method, path, token, body) {
   });
 }
 
-// ── Encrypt secret using GitHub's required algorithm ─────────────────────────
-// GitHub requires libsodium sealed-box. We implement it using Node crypto +
-// a minimal X25519/XSalsa20-Poly1305 sealed box via the tweetsodium approach.
-// Since tweetsodium may not be installed, we use a pure-JS fallback that
-// calls the GitHub API with the raw value encoded — works for PAT-based upload.
-function encryptSecret(publicKeyB64, secretValue) {
-  // Pure-JS sealed box implementation using Node's built-in crypto
-  // GitHub accepts this format when using a fine-grained PAT with repo scope
-  const pubKey    = Buffer.from(publicKeyB64, 'base64');
-  const msgBytes  = Buffer.from(secretValue, 'utf8');
-
-  // Generate ephemeral X25519 keypair
-  const ephemeral = crypto.generateKeyPairSync('x25519', {
-    publicKeyEncoding:  { type: 'spki', format: 'der' },
-    privateKeyEncoding: { type: 'pkcs8', format: 'der' },
-  });
-
-  // Use ECDH to derive shared secret
-  const privKeyObj = crypto.createPrivateKey({ key: ephemeral.privateKey, format: 'der', type: 'pkcs8' });
-  const pubKeyObj  = crypto.createPublicKey({ key: pubKey.length === 32
-    ? Buffer.concat([Buffer.from('302a300506032b656e032100', 'hex'), pubKey])
-    : pubKey, format: 'der', type: 'spki' });
-
-  const shared = crypto.diffieHellman({ privateKey: privKeyObj, publicKey: pubKeyObj });
-
-  // Derive keys using HSalsa20 (approximated with SHA-512)
-  const nonce    = Buffer.alloc(24, 0);
-  const keyMat   = crypto.createHash('sha512').update(shared).digest().slice(0, 32);
-  const cipher   = crypto.createCipheriv('chacha20-poly1305', keyMat, nonce.slice(0, 12), { authTagLength: 16 });
-  const encrypted = Buffer.concat([cipher.update(msgBytes), cipher.final(), cipher.getAuthTag()]);
-
-  const ephPub = ephemeral.publicKey.slice(-32); // raw 32-byte public key
-  return Buffer.concat([ephPub, encrypted]).toString('base64');
+// ── Encrypt secret using libsodium sealed box (GitHub's required format) ─────
+async function encryptSecret(publicKeyB64, secretValue) {
+  await sodium.ready;
+  const binKey  = sodium.from_base64(publicKeyB64, sodium.base64_variants.ORIGINAL);
+  const binMsg  = sodium.from_string(secretValue);
+  const sealed  = sodium.crypto_box_seal(binMsg, binKey);
+  return sodium.to_base64(sealed, sodium.base64_variants.ORIGINAL);
 }
 
 // ── Prompt for token ──────────────────────────────────────────────────────────
@@ -124,7 +98,7 @@ function promptToken() {
   for (const secret of SECRETS) {
     process.stdout.write(`  ${secret.name} ... `);
     try {
-      const encrypted = encryptSecret(publicKey, secret.value);
+      const encrypted = await encryptSecret(publicKey, secret.value);
       const res = await api('PUT', `/repos/${OWNER}/${REPO}/actions/secrets/${secret.name}`, token, {
         encrypted_value: encrypted,
         key_id,
