@@ -1,12 +1,15 @@
 /**
- * Bond — Firebase App Distribution upload
+ * Bond — Download new AAB from GitHub Actions → Upload to Firebase App Distribution
  *
  * Run: node scripts\firebase-full.js
+ *
+ * You click the artifact download once — Bond extracts and uploads automatically.
  */
 
 const { execSync, spawnSync } = require('child_process');
-const path = require('path');
-const fs   = require('fs');
+const path     = require('path');
+const fs       = require('fs');
+const os       = require('os');
 const readline = require('readline');
 
 function hasMod(m) { try { require.resolve(m); return true; } catch { return false; } }
@@ -19,20 +22,13 @@ if (!hasMod('playwright')) {
 
 const { chromium } = require('playwright');
 
-const APK_PATH   = 'C:\\Users\\12068\\AndroidStudioProjects\\3lakesDriver\\app\\release\\app-release.apk';
-const PROJECT_ID = 'lakes-logistics-ffe6f';
-const APP_ID     = '1:165820753433:android:9c541cc0a1e9e9a8c6ec88';
-const TESTERS    = [
-  'nwtcinvestment@gmail.com',
-  'info@3lakeslogistics.com',
-  'raycece@yahoo.com',
-  'goldiethemac@yahoo.com',
-  'Savior45@yahoo.com',
-  'talormoe14@yahoo.com',
-  'new56money@gmail.com',
-].join(',');
-const RELEASE_NOTES = '3 Lakes Driver v1.0 — Internal test build';
-const DIST_URL   = 'https://console.firebase.google.com/u/0/project/lakes-logistics-ffe6f/appdistribution';
+const PROJECT_ID    = 'lakes-logistics-ffe6f';
+const APP_ID        = '1:165820753433:android:9c541cc0a1e9e9a8c6ec88';
+const TESTERS       = 'nwtcinvestment@gmail.com,info@3lakeslogistics.com,raycece@yahoo.com,goldiethemac@yahoo.com,Savior45@yahoo.com,talormoe14@yahoo.com,new56money@gmail.com';
+const RELEASE_NOTES = '3 Lakes Driver v1.0 — New build from GitHub Actions';
+const RUN_URL       = 'https://github.com/modom123/3-Lakes-Logistics/actions/runs/26353604845';
+const DOWNLOADS_DIR = path.join(os.homedir(), 'Downloads');
+const SAVE_DIR      = path.join(os.homedir(), 'Downloads', '3lakes-new');
 
 async function wait(ms) { return new Promise(r => setTimeout(r, ms)); }
 function pause(msg) {
@@ -42,33 +38,115 @@ function pause(msg) {
   });
 }
 
-(async () => {
-  console.log('=== Bond: Firebase App Distribution ===\n');
+function findRecursive(dir, ext) {
+  try {
+    for (const f of fs.readdirSync(dir, { withFileTypes: true })) {
+      const full = path.join(dir, f.name);
+      if (f.isDirectory()) { const r = findRecursive(full, ext); if (r) return r; }
+      if (f.name.toLowerCase().endsWith(ext)) return full;
+    }
+  } catch {}
+  return null;
+}
 
-  if (!fs.existsSync(APK_PATH)) {
-    console.log(`✗ APK not found: ${APK_PATH}`); process.exit(1);
-  }
-  const sizeMB = (fs.statSync(APK_PATH).size / 1024 / 1024).toFixed(1);
-  console.log(`✓ APK: ${APK_PATH} (${sizeMB} MB)`);
-  console.log(`✓ Project: ${PROJECT_ID}`);
-  console.log(`✓ Testers: ${TESTERS.split(',').length} people\n`);
+// Watch Downloads for a NEW zip that didn't exist before
+function watchForNewFile(dir, timeoutMs = 120000) {
+  const before = new Set(fs.readdirSync(dir));
+  const start  = Date.now();
+  return new Promise((resolve, reject) => {
+    const iv = setInterval(() => {
+      const current = fs.readdirSync(dir);
+      const newFiles = current.filter(f => !before.has(f) && /\.(zip|aab|apk)$/i.test(f));
+      if (newFiles.length > 0) { clearInterval(iv); resolve(path.join(dir, newFiles[0])); }
+      if (Date.now() - start > timeoutMs) { clearInterval(iv); reject(new Error('Timeout')); }
+    }, 500);
+  });
+}
+
+(async () => {
+  console.log('=== Bond: New AAB → Firebase App Distribution ===\n');
+
+  if (!fs.existsSync(SAVE_DIR)) fs.mkdirSync(SAVE_DIR, { recursive: true });
+
+  // Check if already extracted from a previous run
+  let buildFile = findRecursive(SAVE_DIR, '.aab') || findRecursive(SAVE_DIR, '.apk');
 
   let browser, context, page;
   try {
     browser = await chromium.connectOverCDP('http://localhost:9222');
     context = browser.contexts()[0] || await browser.newContext();
     page    = context.pages()[0]    || await context.newPage();
-    console.log('✓ Connected to your existing Chrome');
+    console.log('✓ Connected to your existing Chrome\n');
   } catch {
     browser = await chromium.launch({ headless: false, slowMo: 60, args: ['--start-maximized'] });
     context = await browser.newContext({ viewport: null });
     page    = await context.newPage();
   }
 
-  // ── Step 1: Upload via Firebase CLI ───────────────────────────────────────
-  console.log('\n[1] Uploading APK via Firebase CLI...');
+  // ── Step 1: Download AAB from GitHub Actions ───────────────────────────────
+  if (!buildFile) {
+    console.log('[1] Opening GitHub Actions run page...');
+    await page.goto(RUN_URL, { waitUntil: 'domcontentloaded', timeout: 30000 });
+    await wait(3000);
+    // Scroll to artifacts at bottom
+    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+    await wait(2000);
+
+    console.log('\n╔══════════════════════════════════════════════════════════╗');
+    console.log('║  ACTION REQUIRED — do this ONE step in Chrome:           ║');
+    console.log('║                                                           ║');
+    console.log('║  Scroll to ARTIFACTS at the bottom of the page           ║');
+    console.log('║  Click  "3lakes-driver-release-3"                        ║');
+    console.log('║                                                           ║');
+    console.log('║  Bond will detect the download and continue.             ║');
+    console.log('╚══════════════════════════════════════════════════════════╝\n');
+    console.log('  Watching Downloads folder...\n');
+
+    let zipPath;
+    try {
+      zipPath = await watchForNewFile(DOWNLOADS_DIR, 120000);
+      console.log(`  ✓ Download detected: ${path.basename(zipPath)}`);
+    } catch {
+      console.log('  No download detected in 2 minutes.');
+      await pause('  Press Enter after downloading the artifact... ');
+      // Grab most recent zip
+      const files = fs.readdirSync(DOWNLOADS_DIR)
+        .filter(f => /\.zip$/i.test(f))
+        .map(f => ({ f, t: fs.statSync(path.join(DOWNLOADS_DIR, f)).mtimeMs }))
+        .sort((a, b) => b.t - a.t);
+      if (files.length) zipPath = path.join(DOWNLOADS_DIR, files[0].f);
+    }
+
+    if (zipPath) {
+      console.log('  Extracting...');
+      try {
+        execSync(
+          `powershell -Command "Expand-Archive -LiteralPath '${zipPath}' -DestinationPath '${SAVE_DIR}' -Force"`,
+          { stdio: 'pipe', timeout: 30000 }
+        );
+        buildFile = findRecursive(SAVE_DIR, '.aab') || findRecursive(SAVE_DIR, '.apk');
+        if (buildFile) console.log(`  ✓ Extracted: ${buildFile}`);
+      } catch (e) {
+        console.log('  Extract error:', e.message?.slice(0, 80));
+      }
+    }
+  } else {
+    console.log(`[1] Using cached build: ${buildFile}`);
+  }
+
+  if (!buildFile) {
+    console.log('\n✗ Could not get the build file. Please try again.');
+    await browser.close();
+    return;
+  }
+
+  const sizeMB = (fs.statSync(buildFile).size / 1024 / 1024).toFixed(1);
+  console.log(`\n✓ Build file: ${buildFile} (${sizeMB} MB)`);
+
+  // ── Step 2: Upload to Firebase App Distribution ────────────────────────────
+  console.log('\n[2] Uploading to Firebase App Distribution...');
   const uploadCmd = [
-    `firebase appdistribution:distribute "${APK_PATH}"`,
+    `firebase appdistribution:distribute "${buildFile}"`,
     `--app "${APP_ID}"`,
     `--project ${PROJECT_ID}`,
     `--testers "${TESTERS}"`,
@@ -80,96 +158,19 @@ function pause(msg) {
     execSync(uploadCmd, { stdio: 'inherit', timeout: 180000 });
     console.log('\n  ✓ Upload complete — all testers notified!');
   } catch (e) {
-    console.log('  CLI error:', (e.stderr?.toString() || e.message || '').slice(0, 200));
-    console.log('\n  Trying browser upload as fallback...');
+    console.log('  Error:', (e.stderr?.toString() || e.message || '').slice(0, 200));
   }
 
-  // ── Step 2: Open App Distribution console ─────────────────────────────────
-  console.log('\n[2] Opening Firebase App Distribution...');
-  await page.goto(DIST_URL, { waitUntil: 'domcontentloaded', timeout: 30000 });
-  await wait(5000);
-  console.log('  URL:', page.url().slice(0, 90));
-
-  // Select Android tab if needed
-  await page.evaluate(() => {
-    const tabs = [...document.querySelectorAll('[role="tab"], mat-tab-header button')];
-    const android = tabs.find(t => /android/i.test(t.innerText || ''));
-    if (android) android.click();
-  });
-  await wait(2000);
-
-  // Check what's on screen
-  const pageSnippet = await page.evaluate(() =>
-    document.body.innerText.replace(/\s+/g, ' ').slice(0, 400)
+  // ── Step 3: Open Firebase console to confirm ──────────────────────────────
+  console.log('\n[3] Opening Firebase App Distribution...');
+  await page.goto(
+    `https://console.firebase.google.com/project/${PROJECT_ID}/appdistribution`,
+    { waitUntil: 'domcontentloaded', timeout: 30000 }
   );
-  console.log('\n  Page content:', pageSnippet.slice(0, 200));
-
-  // ── Step 3: If no releases visible, try browser file upload ───────────────
-  if (/get started|no releases|no builds/i.test(pageSnippet)) {
-    console.log('\n[3] No releases found — uploading via browser...');
-
-    // Click Get started / Upload
-    await page.evaluate(() => {
-      const btn = [...document.querySelectorAll('button, a')]
-        .find(b => /(get started|upload|new release)/i.test(b.innerText || ''));
-      if (btn) btn.click();
-    });
-    await wait(3000);
-
-    // Upload APK via file input
-    try {
-      const fileInput = page.locator('input[type="file"]').first();
-      await fileInput.setInputFiles(APK_PATH);
-      console.log('  ✓ APK file set');
-      await wait(8000);
-
-      // Add release notes
-      await page.evaluate((notes) => {
-        const ta = document.querySelector('textarea');
-        if (ta) { ta.value = notes; ta.dispatchEvent(new Event('input', { bubbles: true })); }
-      }, RELEASE_NOTES);
-      await wait(1000);
-
-      // Click Next
-      await page.evaluate(() => {
-        const btn = [...document.querySelectorAll('button')]
-          .find(b => /(next|continue)/i.test(b.innerText || ''));
-        if (btn) { btn.removeAttribute('disabled'); btn.click(); }
-      });
-      await wait(3000);
-
-      // Add testers
-      await page.evaluate((testers) => {
-        const inp = [...document.querySelectorAll('input')]
-          .find(i => /(tester|email|group)/i.test(i.getAttribute('aria-label') || i.placeholder || ''));
-        if (inp) {
-          inp.value = testers;
-          inp.dispatchEvent(new Event('input', { bubbles: true }));
-        }
-      }, TESTERS);
-      await wait(1000);
-
-      // Distribute
-      await page.evaluate(() => {
-        const btn = [...document.querySelectorAll('button')]
-          .find(b => /(distribute|publish|send)/i.test(b.innerText || ''));
-        if (btn) { btn.removeAttribute('disabled'); btn.click(); }
-      });
-      await wait(4000);
-      console.log('  ✓ Distributed via browser');
-    } catch (e) {
-      console.log('  Browser upload error:', e.message?.slice(0, 100));
-      console.log(`\n  Manual fallback:`);
-      console.log(`  APK is at: ${APK_PATH}`);
-      console.log(`  Drag it into the Firebase App Distribution page in Chrome`);
-    }
-  } else {
-    console.log('\n  ✓ Releases found in App Distribution!');
-  }
-
+  await wait(3000);
+  console.log('  ✓ Firebase console open in Chrome');
   console.log('\n=== Done ===');
-  console.log(`  Firebase Console: ${DIST_URL}`);
-  console.log('  Browser is open — you should see releases now.');
+  console.log(`  Testers: ${TESTERS.split(',').length} people notified`);
 
 })().catch(err => {
   console.error('\n✗ Error:', err.message);
