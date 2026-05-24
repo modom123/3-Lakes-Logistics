@@ -37,6 +37,45 @@ function pause(prompt) {
 
 async function wait(ms) { return new Promise(r => setTimeout(r, ms)); }
 
+async function getEmailCode(context) {
+  console.log('  → Opening Gmail to fetch verification code...');
+  const gmail = await context.newPage();
+  try {
+    await gmail.goto(
+      'https://mail.google.com/mail/u/0/#search/from:google+subject:verification+newer_than:5m',
+      { waitUntil: 'domcontentloaded', timeout: 30000 }
+    );
+    await wait(5000);
+
+    // Click the first matching email row
+    const firstRow = gmail.locator('tr.zA').first();
+    if (await firstRow.isVisible({ timeout: 8000 }).catch(() => false)) {
+      await firstRow.click();
+      await wait(3000);
+    }
+
+    // Extract code from email body — look for 6-8 digit number
+    const code = await gmail.evaluate(() => {
+      const body = document.body.innerText || '';
+      // Match standalone 6-8 digit verification codes
+      const m = body.match(/\b(\d{6,8})\b/);
+      return m ? m[1] : null;
+    });
+
+    await gmail.close();
+    if (code) {
+      console.log(`  ✓ Found verification code: ${code}`);
+      return code;
+    }
+    console.log('  ⚠ No code found in Gmail — will prompt manually');
+    return null;
+  } catch (e) {
+    console.log('  ⚠ Gmail fetch failed:', e.message.slice(0, 60));
+    await gmail.close().catch(() => {});
+    return null;
+  }
+}
+
 async function shot(page, label) {
   try {
     const p = path.join(__dirname, `acct-${label}.png`);
@@ -293,11 +332,47 @@ async function dumpInputs(page) {
     );
     if (verifyEmailDisabled && dialogInfo.fullText.includes('fix errors')) {
       console.log('\n  ✉  Verification code was sent to nwtcinvestment@gmail.com');
-      console.log('  1. Open Gmail and find the Google Play verification email');
-      console.log('  2. Enter the code in the browser dialog that is open');
-      console.log('  3. Then come back here and press Enter');
-      await pause('  Press Enter after entering the email verification code... ');
-      lastDialogText = '';  // reset so loop continues
+      // Try to fetch the code from Gmail automatically
+      const code = await getEmailCode(context);
+      if (code) {
+        // Find the code input field in the dialog and fill it
+        const entered = await page.evaluate((c) => {
+          const dlg = document.querySelector('mat-dialog-container, [role="dialog"]');
+          if (!dlg) return false;
+          // Look for a code/OTP input — short numeric input
+          const inputs = [...dlg.querySelectorAll('input')];
+          const codeInput = inputs.find(i => {
+            const lbl = (i.getAttribute('aria-label') || i.placeholder || '').toLowerCase();
+            return lbl.includes('code') || lbl.includes('otp') || lbl.includes('verif') || i.maxLength <= 8;
+          }) || inputs.find(i => !i.value && i.type !== 'hidden');
+          if (codeInput) {
+            codeInput.value = c;
+            codeInput.dispatchEvent(new Event('input', { bubbles: true }));
+            codeInput.dispatchEvent(new Event('change', { bubbles: true }));
+            return true;
+          }
+          return false;
+        }, code);
+        if (entered) {
+          console.log(`  ✓ Entered code ${code} into dialog`);
+          await wait(1000);
+          // Click Verify / Submit / Next
+          await page.evaluate(() => {
+            const dlg = document.querySelector('mat-dialog-container, [role="dialog"]');
+            const btn = dlg && [...dlg.querySelectorAll('button')]
+              .find(b => /verify|submit|confirm|next/i.test(b.innerText || ''));
+            if (btn) { btn.removeAttribute('disabled'); btn.click(); }
+          });
+          await wait(2000);
+        } else {
+          console.log(`  Code found (${code}) but no input field — enter it manually in the browser.`);
+          await pause('  Press Enter after entering the code... ');
+        }
+      } else {
+        console.log('  Could not auto-fetch code. Enter it manually in the browser.');
+        await pause('  Press Enter after entering the email verification code... ');
+      }
+      lastDialogText = '';
       continue;
     }
 
