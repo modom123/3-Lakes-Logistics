@@ -13,6 +13,7 @@ from fastapi import APIRouter, HTTPException, Depends, status
 
 from ..supabase_client import get_supabase
 from ..logging_service import get_logger
+from ..firebase_client import get_firebase_app
 from .routes_driver_auth import require_driver_token
 from .deps import require_bearer
 
@@ -84,24 +85,27 @@ async def register_fcm_token(req: FCMTokenRequest, session: DriverSession):
 # ────────────────────────────────────────────────────────────────────────────
 
 async def send_fcm_message(fcm_token: str, title: str, body: str, data: dict | None = None):
-    """Send FCM message to device.
-
-    In production: use Firebase Admin SDK (python-firebase-admin)
-    For now: placeholder that would call Firebase REST API
-    """
+    """Send FCM push notification via Firebase Admin SDK."""
     if not fcm_token:
         return
 
-    # This is a placeholder — production would use:
-    # from firebase_admin import messaging
-    # message = messaging.Message(
-    #     token=fcm_token,
-    #     notification=messaging.Notification(title=title, body=body),
-    #     data=data or {}
-    # )
-    # response = messaging.send(message)
+    app = get_firebase_app()
+    if app is None:
+        log.warning("Firebase not configured — skipping FCM push (add serviceAccountKey.json)")
+        return
 
-    log.info(f"FCM → {fcm_token[:20]}... : {title}")
+    try:
+        from firebase_admin import messaging
+        message = messaging.Message(
+            token=fcm_token,
+            notification=messaging.Notification(title=title, body=body),
+            data={k: str(v) for k, v in (data or {}).items()},
+            android=messaging.AndroidConfig(priority="high"),
+        )
+        response = messaging.send(message)
+        log.info("FCM sent to %s... → %s", fcm_token[:20], response)
+    except Exception as e:
+        log.error("FCM send failed: %s", e)
 
 
 @router.post("/send", dependencies=[Depends(require_bearer)])
