@@ -41,37 +41,44 @@ async function getEmailCode(context) {
   console.log('  → Opening Gmail to fetch verification code...');
   const gmail = await context.newPage();
   try {
-    // Open Gmail for info@3lakeslogistics.com (may need to switch accounts)
-    await gmail.goto(
-      'https://mail.google.com/mail/u/0/#search/from:google+subject:verification+newer_than:10m',
-      { waitUntil: 'domcontentloaded', timeout: 30000 }
-    );
-    await wait(5000);
+    const searches = [
+      'https://mail.google.com/mail/u/0/#search/google+play+verification',
+      'https://mail.google.com/mail/u/0/#search/verification+code',
+      'https://mail.google.com/mail/u/0/#search/from:google+newer_than:30m',
+      'https://mail.google.com/mail/u/0/#inbox',
+    ];
 
-    // Click the first matching email row
-    const firstRow = gmail.locator('tr.zA').first();
-    if (await firstRow.isVisible({ timeout: 8000 }).catch(() => false)) {
-      await firstRow.click();
-      await wait(3000);
+    let code = null;
+    for (const url of searches) {
+      await gmail.goto(url, { waitUntil: 'domcontentloaded', timeout: 20000 });
+      await wait(4000);
+
+      // Try clicking the first 5 email rows
+      const rows = await gmail.locator('tr.zA').all();
+      console.log(`    ${url.split('#')[1]} — found ${rows.length} rows`);
+      for (const row of rows.slice(0, 5)) {
+        await row.click().catch(() => {});
+        await wait(2000);
+        code = await gmail.evaluate(() => {
+          const text = document.body.innerText || '';
+          const m = text.match(/(?:code|verification|verify)[^\d]{0,30}(\d{6,8})/i)
+                 || text.match(/(\d{6,8})(?:[^\d]{0,30}(?:code|verification|verify))/i)
+                 || text.match(/\b(\d{6,8})\b/);
+          return m ? m[1] : null;
+        });
+        if (code) break;
+        await gmail.goBack().catch(() => {});
+        await wait(1000);
+      }
+      if (code) break;
     }
-
-    // Extract code from email body — look for 6-8 digit number
-    const code = await gmail.evaluate(() => {
-      const body = document.body.innerText || '';
-      // Match standalone 6-8 digit verification codes
-      const m = body.match(/\b(\d{6,8})\b/);
-      return m ? m[1] : null;
-    });
 
     await gmail.close();
-    if (code) {
-      console.log(`  ✓ Found verification code: ${code}`);
-      return code;
-    }
-    console.log('  ⚠ No code found in Gmail — will prompt manually');
+    if (code) { console.log(`  ✓ Code: ${code}`); return code; }
+    console.log('  ⚠ No code found in Gmail');
     return null;
   } catch (e) {
-    console.log('  ⚠ Gmail fetch failed:', e.message.slice(0, 60));
+    console.log('  ⚠ Gmail error:', e.message.slice(0, 80));
     await gmail.close().catch(() => {});
     return null;
   }
@@ -444,7 +451,7 @@ async function dumpInputs(page) {
           inp.dispatchEvent(new Event('change', { bubbles: true }));
           inp.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true }));
         };
-        if (!inp.value) {
+        if (!inp.value || lbl.includes('email')) {  // always overwrite email
           if (lbl.includes('duns') || lbl.includes('d-u-n-s')) {
             fire(DUNS); log.push(`DUNS → ${DUNS}`);
           } else if (lbl.includes('contact name') || lbl === 'contact name') {
