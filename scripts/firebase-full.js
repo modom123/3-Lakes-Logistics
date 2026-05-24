@@ -23,7 +23,8 @@ const APP_ID        = '1:165820753433:android:9c541cc0a1e9e9a8c6ec88';
 const TESTERS       = 'nwtcinvestment@gmail.com,info@3lakeslogistics.com,raycece@yahoo.com,goldiethemac@yahoo.com,Savior45@yahoo.com,talormoe14@yahoo.com,new56money@gmail.com';
 const RELEASE_NOTES = '3 Lakes Driver v1.0 — New build from GitHub Actions';
 const ARTIFACT_URL  = 'https://github.com/modom123/3-Lakes-Logistics/actions/runs/26353604845';
-const SAVE_DIR      = path.join(os.homedir(), 'Downloads', '3lakes-new');
+const DEBUG_ZIP     = '3lakes-driver-debug-3.zip';
+const SAVE_DIR      = path.join(os.homedir(), 'Downloads', '3lakes-debug');
 const DOWNLOADS_DIR = path.join(os.homedir(), 'Downloads');
 
 async function wait(ms) { return new Promise(r => setTimeout(r, ms)); }
@@ -62,10 +63,10 @@ function watchForNewFile(dir, timeoutMs = 120000) {
 
   if (!fs.existsSync(SAVE_DIR)) fs.mkdirSync(SAVE_DIR, { recursive: true });
 
-  // Check for the known artifact zip first
-  const knownZip = path.join(DOWNLOADS_DIR, '3lakes-driver-release-3.zip');
-  if (fs.existsSync(knownZip) && !findFile(SAVE_DIR, '.aab', '.apk')) {
-    console.log(`[0] Found artifact zip: ${knownZip}`);
+  // Check for the known debug APK zip first
+  const knownZip = path.join(DOWNLOADS_DIR, DEBUG_ZIP);
+  if (fs.existsSync(knownZip) && !findFile(SAVE_DIR, '.apk')) {
+    console.log(`[0] Found debug artifact zip: ${knownZip}`);
     console.log('    Extracting...');
     execSync(
       `powershell -Command "Expand-Archive -LiteralPath '${knownZip}' -DestinationPath '${SAVE_DIR}' -Force"`,
@@ -74,7 +75,8 @@ function watchForNewFile(dir, timeoutMs = 120000) {
     console.log('    ✓ Extracted');
   }
 
-  let buildFile = findFile(SAVE_DIR, '.aab', '.apk');
+  // Only look for APK — AAB requires Google Play link and won't work with Firebase App Distribution
+  let buildFile = findFile(SAVE_DIR, '.apk');
 
   // ── Step 1: User downloads artifact from their Chrome ─────────────────────
   if (!buildFile) {
@@ -86,7 +88,8 @@ function watchForNewFile(dir, timeoutMs = 120000) {
     console.log('│                                                          │');
     console.log('│  2. Scroll to bottom → ARTIFACTS section                │');
     console.log('│                                                          │');
-    console.log('│  3. Click "3lakes-driver-release-3" to download         │');
+    console.log('│  3. Click "3lakes-driver-debug-3" to download           │');
+    console.log('│     (NOT the release-3 zip — that one is an AAB)        │');
     console.log('│                                                          │');
     console.log('└─────────────────────────────────────────────────────────┘');
     console.log('\n  Bond is watching your Downloads folder...\n');
@@ -111,7 +114,7 @@ function watchForNewFile(dir, timeoutMs = 120000) {
         `powershell -Command "Expand-Archive -LiteralPath '${zipPath}' -DestinationPath '${SAVE_DIR}' -Force"`,
         { stdio: 'pipe', timeout: 30000 }
       );
-      buildFile = findFile(SAVE_DIR, '.aab', '.apk');
+      buildFile = findFile(SAVE_DIR, '.apk');
       if (buildFile) console.log(`  ✓ Extracted: ${path.basename(buildFile)}`);
     }
   } else {
