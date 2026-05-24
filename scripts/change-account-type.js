@@ -23,7 +23,7 @@ const { chromium } = require('playwright');
 const DEV_ID      = '6880853885521839099';
 const DUNS        = '145025174';
 const ORG_NAME    = '3 Lakes Logistics';
-const ORG_PHONE   = '2317209145';   // 3 Lakes Logistics business phone
+const ORG_PHONE   = '6614669932';   // 3 Lakes Logistics business phone
 const ACCOUNT_URL = `https://play.google.com/console/u/0/developers/${DEV_ID}/account/developer-details?tab=aboutYou`;
 
 function pause(prompt) {
