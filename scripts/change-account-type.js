@@ -35,9 +35,13 @@ function pause(prompt) {
 async function wait(ms) { return new Promise(r => setTimeout(r, ms)); }
 
 async function shot(page, label) {
-  const p = path.join(__dirname, `acct-${label}.png`);
-  await page.screenshot({ path: p, fullPage: false });
-  console.log(`  Screenshot → scripts/acct-${label}.png`);
+  try {
+    const p = path.join(__dirname, `acct-${label}.png`);
+    await page.screenshot({ path: p, fullPage: false, timeout: 8000 });
+    console.log(`  Screenshot → scripts/acct-${label}.png`);
+  } catch (e) {
+    console.log(`  Screenshot skipped (${e.message.slice(0, 60)})`);
+  }
 }
 
 async function dumpButtons(page) {
