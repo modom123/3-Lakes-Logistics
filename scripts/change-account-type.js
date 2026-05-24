@@ -107,120 +107,107 @@ async function dumpInputs(page) {
       console.log(`    [${i}] <${b.tag}> "${b.text}" aria="${b.aria}" id="${b.id}"`);
   });
 
-  // ── Find and click Change account type ───────────────────────────────────
+  // ── Click "Change account type" — use exact button match ─────────────────
   console.log('\n[2] Clicking "Change account type"...');
 
-  // Try by text content (Angular renders text in child spans)
-  let clicked = await page.evaluate(() => {
-    const all = [...document.querySelectorAll('button, a, [role="button"], span, div')];
-    const target = all.find(el => {
-      const t = (el.innerText || el.textContent || '').trim();
-      return t === 'Change account type' || t.toLowerCase().includes('change account type');
-    });
-    if (target) {
-      // Walk up to clickable parent if needed
-      let el = target;
-      for (let i = 0; i < 5; i++) {
-        if (el.tagName === 'BUTTON' || el.getAttribute('role') === 'button') {
-          el.click();
-          return `clicked <${el.tagName}> "${(el.innerText||'').trim().slice(0,40)}"`;
-        }
-        el = el.parentElement;
-        if (!el) break;
-      }
-      target.click();
-      return `clicked target "${target.innerText?.trim().slice(0,40)}"`;
-    }
-    return null;
-  });
-
-  if (clicked) {
-    console.log('  ✓', clicked);
+  // Use Playwright's getByRole for exact button text match (avoids matching parents)
+  const changeBtn = page.getByRole('button', { name: 'Change account type', exact: true });
+  if (await changeBtn.isVisible({ timeout: 5000 }).catch(() => false)) {
+    await changeBtn.click();
+    console.log('  ✓ Clicked "Change account type" button');
   } else {
-    console.log('  Button not found automatically.');
-    console.log('  In the browser window, click "Change account type" then come back here.');
-    await pause('  Press Enter after clicking it... ');
+    // JS fallback: find BUTTON whose own direct text is exactly "Change account type"
+    const clicked = await page.evaluate(() => {
+      const btns = [...document.querySelectorAll('button')];
+      const btn = btns.find(b => b.innerText?.trim() === 'Change account type');
+      if (btn) { btn.click(); return true; }
+      return false;
+    });
+    if (clicked) {
+      console.log('  ✓ JS-clicked "Change account type"');
+    } else {
+      console.log('  Button not found — click it manually in the browser.');
+      await pause('  Press Enter after clicking "Change account type"... ');
+    }
   }
 
-  await wait(5000);
-  await shot(page, '2-after-click');
+  await wait(4000);
 
-  // Dump inputs visible after click
-  const inputs = await dumpInputs(page);
-  console.log('\n  All input fields now visible:');
-  inputs.forEach((inp, i) => {
-    console.log(`    [${i}] <${inp.tag}> type="${inp.type}" placeholder="${inp.placeholder}" aria="${inp.ariaLabel}" id="${inp.id}" name="${inp.name}" visible=${inp.visible}`);
-  });
-
-  // Also dump dialog content if a mat-dialog opened
+  // ── Dialog: "What do you want to update?" → click Next ───────────────────
+  console.log('\n[3] Handling dialog...');
   const dialogText = await page.evaluate(() => {
-    const d = document.querySelector('mat-dialog-container, [role="dialog"], .cdk-overlay-container');
-    return d ? d.innerText?.slice(0, 500) : null;
+    const d = document.querySelector('mat-dialog-container, [role="dialog"]');
+    return d ? d.innerText?.slice(0, 300) : null;
   });
   if (dialogText) {
-    console.log('\n  Dialog content:', dialogText.replace(/\n+/g, ' | '));
+    console.log('  Dialog:', dialogText.replace(/\n+/g, ' | '));
   }
 
-  // Dump updated buttons
-  const buttons2 = await dumpButtons(page);
-  console.log('\n  Clickable elements after click:');
-  buttons2.forEach((b, i) => {
-    if (b.text || b.aria)
-      console.log(`    [${i}] <${b.tag}> "${b.text}" aria="${b.aria}"`);
+  // Click Next in dialog to proceed to DUNS step
+  const nextBtn = page.getByRole('button', { name: 'Next', exact: true });
+  if (await nextBtn.first().isVisible({ timeout: 4000 }).catch(() => false)) {
+    await nextBtn.first().click();
+    console.log('  ✓ Clicked Next');
+    await wait(4000);
+  } else {
+    console.log('  No Next button visible yet.');
+  }
+
+  // Dump what's on screen now
+  const afterNext = await page.evaluate(() => {
+    const d = document.querySelector('mat-dialog-container, [role="dialog"]');
+    return d ? d.innerText?.slice(0, 500) : document.body.innerText?.slice(0, 500);
   });
+  console.log('  After Next:', afterNext?.replace(/\n+/g, ' | ').slice(0, 300));
 
-  // ── Try to fill DUNS using any visible input ──────────────────────────────
-  console.log('\n[3] Attempting to fill DUNS and org name...');
-
-  const visibleInputs = inputs.filter(i => i.visible);
-  console.log(`  ${visibleInputs.length} visible input(s) found`);
-
-  // Fill by index for any visible inputs
+  // Dump all inputs
   const allInputEls = await page.locator('input:visible, textarea:visible').all();
+  console.log(`\n  Visible inputs: ${allInputEls.length}`);
   for (let i = 0; i < allInputEls.length; i++) {
     const inp = allInputEls[i];
     const ph  = await inp.getAttribute('placeholder').catch(() => '');
     const lbl = await inp.getAttribute('aria-label').catch(() => '');
-    const id  = await inp.getAttribute('id').catch(() => '');
-    console.log(`  Input[${i}]: placeholder="${ph}" aria="${lbl}" id="${id}"`);
-
-    const key = `${ph} ${lbl} ${id}`.toLowerCase();
-    if (key.includes('duns') || key.includes('d-u-n-s')) {
-      await inp.click(); await inp.fill(DUNS);
-      console.log(`    → Filled DUNS: ${DUNS}`);
-    } else if (key.includes('org') || key.includes('company') || key.includes('business') || key.includes('name')) {
-      const cur = await inp.inputValue().catch(() => '');
-      if (!cur) { await inp.click(); await inp.fill(ORG_NAME); console.log(`    → Filled org: ${ORG_NAME}`); }
-      else { console.log(`    → Already has value: "${cur}"`); }
-    }
+    const val = await inp.inputValue().catch(() => '');
+    console.log(`    Input[${i}]: aria="${lbl}" placeholder="${ph}" value="${val}"`);
   }
 
-  if (allInputEls.length === 0) {
-    console.log('  No visible inputs found. May need to click something in the browser first.');
-    await pause('  Fill in any fields in the browser, then press Enter... ');
+  // ── Fill DUNS in any visible input that mentions DUNS ────────────────────
+  console.log('\n[4] Filling DUNS...');
+  let dunsFilled = false;
+  for (let i = 0; i < allInputEls.length; i++) {
+    const inp = allInputEls[i];
+    const lbl = (await inp.getAttribute('aria-label').catch(() => '') || '').toLowerCase();
+    const ph  = (await inp.getAttribute('placeholder').catch(() => '') || '').toLowerCase();
+    if (lbl.includes('duns') || ph.includes('duns') || lbl.includes('d-u-n-s')) {
+      await inp.click(); await inp.fill(DUNS);
+      console.log(`  ✓ Filled DUNS: ${DUNS}`);
+      dunsFilled = true;
+    }
+  }
+  if (!dunsFilled) {
+    console.log('  DUNS field not found on this step — may appear after another Next click.');
+    console.log('  Check the browser and fill DUNS manually if visible.');
+    await pause('  Press Enter when ready to continue... ');
   }
 
   await wait(1000);
-  await shot(page, '3-filled');
 
-  // ── Submit ────────────────────────────────────────────────────────────────
-  console.log('\n[4] Submitting...');
-
-  const submitted = await page.evaluate(() => {
-    const all = [...document.querySelectorAll('button, [role="button"]')];
-    const btn = all.find(el => {
-      const t = (el.innerText || el.textContent || '').trim().toLowerCase();
-      return t.includes('submit') || t.includes('confirm') || t.includes('save') ||
-             t.includes('change account') || t === 'ok' || t === 'continue';
-    });
-    if (btn && !btn.disabled) { btn.click(); return btn.innerText?.trim(); }
-    return null;
-  });
-
-  if (submitted) {
-    console.log('  ✓ Submitted:', submitted);
-  } else {
-    console.log('  Submit button not found. Click Save/Submit/Confirm in the browser.');
+  // ── Click Next / Submit / Save to confirm ─────────────────────────────────
+  console.log('\n[5] Clicking Next/Submit...');
+  const nextBtn2 = page.getByRole('button', { name: 'Next', exact: true });
+  const submitBtn = page.getByRole('button', { name: /submit|save|confirm|change account/i });
+  let submitted = false;
+  if (await nextBtn2.first().isVisible({ timeout: 3000 }).catch(() => false)) {
+    await nextBtn2.first().click();
+    console.log('  ✓ Clicked Next');
+    submitted = true;
+  } else if (await submitBtn.first().isVisible({ timeout: 3000 }).catch(() => false)) {
+    await submitBtn.first().click();
+    console.log('  ✓ Clicked Submit/Save');
+    submitted = true;
+  }
+  if (!submitted) {
+    console.log('  No Next/Submit found — click it manually in the browser.');
     await pause('  Press Enter after submitting... ');
   }
 
