@@ -1,5 +1,5 @@
 /**
- * Bond — Set Play Console account to Organization via Identity tab
+ * Bond — Change Play Console account to Organization
  * Run: node scripts/bond-play-account-setup.js
  */
 const { execSync, spawnSync } = require('child_process');
@@ -24,7 +24,7 @@ async function shot(page, name) {
 }
 
 (async () => {
-  console.log('=== Bond: Play Console Identity → Organization ===\n');
+  console.log('=== Bond: Play Console → Organization ===\n');
 
   let browser;
   try {
@@ -36,146 +36,140 @@ async function shot(page, name) {
   const context = browser.contexts()[0] || await browser.newContext();
   const page    = context.pages()[0]    || await context.newPage();
 
-  // ── Go to Android Developer Verification page ─────────────────────────────
-  console.log('[1/4] Opening Developer Verification page...');
+  // ── Go to /account page and map ALL arrow links with full URLs ────────────
+  console.log('[1/5] Mapping all links on /account page...');
   await page.goto(
-    `https://play.google.com/console/u/0/developers/${DEV_ID}/android-developer-verification`,
+    `https://play.google.com/console/u/0/developers/${DEV_ID}/account`,
     { waitUntil: 'domcontentloaded', timeout: 60000 }
   );
   await wait(5000);
-  await shot(page, '1-loaded');
+  await shot(page, '1-account');
 
-  // ── Click the "Identity" tab ───────────────────────────────────────────────
-  console.log('[2/4] Clicking Identity tab...');
+  // Print ALL <a> href links (full, not truncated)
+  const allLinks = await page.evaluate(() =>
+    [...document.querySelectorAll('a[href]')]
+      .map(a => ({ text: a.innerText?.trim().slice(0,40), href: a.href }))
+      .filter(l => l.href.includes('play.google.com') || l.href.startsWith('/'))
+  );
+  console.log('  All Play Console links:');
+  allLinks.forEach(l => console.log(`    "${l.text}" → ${l.href}`));
 
-  // Try multiple selectors for the Identity tab
-  let tabClicked = false;
-  for (const sel of [
-    'text=Identity',
-    '[role="tab"]:has-text("Identity")',
-    'mat-tab-header :has-text("Identity")',
-    'a:has-text("Identity")',
-    'button:has-text("Identity")',
-    'li:has-text("Identity")',
-    '.mat-tab-label:has-text("Identity")',
-  ]) {
-    try {
-      const el = page.locator(sel).first();
-      if (await el.isVisible({ timeout: 3000 })) {
-        await el.click();
-        await wait(4000);
-        console.log('  Clicked Identity tab via:', sel);
-        tabClicked = true;
-        break;
-      }
-    } catch {}
+  // Map arrow_right_alt buttons to their Y position and nearby text
+  const arrowMap = await page.evaluate(() =>
+    [...document.querySelectorAll('button, a, [role="button"]')]
+      .filter(e => e.innerText?.trim() === 'arrow_right_alt')
+      .map(e => {
+        const r = e.getBoundingClientRect();
+        // Find the closest text above/beside this arrow
+        const row = e.closest('[class*="row"], [class*="card"], [class*="item"], tr, li') || e.parentElement?.parentElement;
+        return {
+          x: Math.round(r.left + r.width/2),
+          y: Math.round(r.top + r.height/2),
+          rowText: row?.innerText?.trim().replace(/\n/g,' ').slice(0,60) || '',
+          tag: e.tagName,
+          href: e.href || ''
+        };
+      })
+      .filter(a => a.x > 0 && a.y > 0)
+  );
+  console.log('\n  Arrow buttons with context:');
+  arrowMap.forEach((a,i) => console.log(`    [${i}] y=${a.y} href="${a.href}" rowText="${a.rowText}"`));
+
+  // ── Click the arrow next to "Account type" ────────────────────────────────
+  console.log('\n[2/5] Finding Account type arrow and clicking it...');
+
+  // Find the arrow whose row text contains "Account type" or "Personal"
+  const acctTypeArrow = arrowMap.find(a =>
+    a.rowText.toLowerCase().includes('account type') ||
+    a.rowText.toLowerCase().includes('personal') ||
+    a.rowText.toLowerCase().includes('about you')
+  ) || arrowMap[0]; // fallback to first arrow
+
+  console.log('  Target arrow:', JSON.stringify(acctTypeArrow));
+
+  if (acctTypeArrow) {
+    if (acctTypeArrow.href) {
+      // Navigate directly if we have an href
+      console.log('  Navigating to:', acctTypeArrow.href);
+      await page.goto(acctTypeArrow.href, { waitUntil: 'domcontentloaded', timeout: 30000 });
+    } else {
+      // Use mouse click
+      await page.mouse.click(acctTypeArrow.x, acctTypeArrow.y);
+    }
+    await wait(5000);
+    console.log('  URL (full):', page.url());
+    await shot(page, '2-edit-page');
   }
 
-  if (!tabClicked) {
-    // Try clicking by coordinates — Identity tab is to the right of Package names
-    const tabInfo = await page.evaluate(() => {
-      const all = [...document.querySelectorAll('*')];
-      const el = all.find(e =>
-        e.innerText?.trim() === 'Identity' &&
-        e.innerText?.length < 20
-      );
-      if (!el) return null;
-      const r = el.getBoundingClientRect();
-      return { x: r.left + r.width/2, y: r.top + r.height/2, tag: el.tagName, cls: el.className.slice(0,50) };
-    });
-    console.log('  Identity element:', JSON.stringify(tabInfo));
-    if (tabInfo) {
-      await page.mouse.click(tabInfo.x, tabInfo.y);
-      await wait(4000);
-      tabClicked = true;
+  // ── Try each sub-URL pattern for the account edit page ───────────────────
+  const currentUrl = page.url();
+  if (currentUrl.includes('/account') && !currentUrl.includes('/account/')) {
+    console.log('\n  Still on /account — trying sub-page URLs directly...');
+    const subUrls = [
+      `/console/u/0/developers/${DEV_ID}/account/developer-info`,
+      `/console/u/0/developers/${DEV_ID}/account/developer-name`,
+      `/console/u/0/developers/${DEV_ID}/account/about-you`,
+      `/console/u/0/developers/${DEV_ID}/account/account-type`,
+      `/console/u/0/developers/${DEV_ID}/setup/account-details`,
+    ];
+    for (const sub of subUrls) {
+      await page.goto('https://play.google.com' + sub, { waitUntil: 'domcontentloaded', timeout: 15000 });
+      await wait(3000);
+      const url = page.url();
+      const text = await page.evaluate(() => document.body.innerText);
+      const hasForm = text.toLowerCase().includes('organization') || text.toLowerCase().includes('account type');
+      console.log(`  ${sub} → ${url.includes(sub.split('/').pop()) ? 'OK' : 'redirected'} hasForm=${hasForm}`);
+      if (hasForm) {
+        console.log('  Found form at:', url);
+        await shot(page, '2b-found-form');
+        break;
+      }
     }
   }
 
-  await shot(page, '2-identity-tab');
-  console.log('  URL:', page.url().slice(0, 90));
-
-  // Print full page text of the Identity tab
-  const text = await page.evaluate(() => document.body.innerText);
-  console.log('\n  === IDENTITY TAB TEXT ===');
-  console.log(text.slice(0, 2000).replace(/\n{3,}/g, '\n'));
-  console.log('  =========================\n');
-
-  // Print all buttons and inputs
-  const btns = await page.evaluate(() =>
-    [...document.querySelectorAll('button, [role="button"], a')]
-      .map(e => e.innerText?.trim() || e.getAttribute('aria-label') || '')
-      .filter(t => t && t.length > 1 && t.length < 80)
-      .filter((v,i,a) => a.indexOf(v) === i)
-  );
-  console.log('  Buttons:', btns.join(' | '));
+  // ── Log current page state ────────────────────────────────────────────────
+  console.log('\n[3/5] Current page:');
+  console.log('  URL (full):', page.url());
+  const pageText = await page.evaluate(() => document.body.innerText);
+  console.log('  Text:', pageText.slice(0, 1000).replace(/\n{3,}/g, '\n'));
 
   const inputs = await page.evaluate(() =>
-    [...document.querySelectorAll('input, mat-radio-button, [role="radio"], select, textarea')]
-      .map(e => `${e.tagName}[${e.type||''}] value="${e.value||''}" label="${e.getAttribute('aria-label')||''}" text="${e.innerText?.trim().slice(0,50)||''}"`)
+    [...document.querySelectorAll('input, mat-radio-button, [role="radio"], select')]
+      .map(e => `${e.tagName}[${e.type||''}] value="${e.value||''}" text="${e.innerText?.trim().slice(0,40)||''}" label="${e.getAttribute('aria-label')||''}"`)
   );
   console.log('  Inputs:\n  ' + inputs.join('\n  '));
 
-  // ── Try to start org verification or fill form ────────────────────────────
-  console.log('\n[3/4] Interacting with Identity tab...');
+  const btns2 = await page.evaluate(() =>
+    [...document.querySelectorAll('button')]
+      .map(e => e.innerText?.trim()).filter(t => t && t.length < 60)
+  );
+  console.log('  Buttons:', btns2.join(' | '));
 
-  // Click any "Get started", "Organization", "Change", "Edit" buttons
-  for (const sel of [
-    'button:has-text("Get started")',
-    'button:has-text("Change account type")',
-    'button:has-text("Organization")',
-    'button:has-text("Edit")',
-    'button:has-text("Start")',
-    'button:has-text("Verify")',
-    'button:has-text("Begin")',
-    'mat-radio-button:has-text("Organization")',
-    '[role="radio"]:has-text("Organization")',
-    'label:has-text("Organization")',
-  ]) {
+  // ── Fill form if found ────────────────────────────────────────────────────
+  console.log('\n[4/5] Filling form...');
+  for (const sel of ['mat-radio-button:has-text("Organization")','[role="radio"]:has-text("Organization")','input[value="organization" i]','label:has-text("Organization")']) {
     try {
       const el = page.locator(sel).first();
-      if (await el.isVisible({ timeout: 2000 })) {
-        await el.click();
-        await wait(3000);
-        console.log('  Clicked:', sel);
-        break;
-      }
+      if (await el.isVisible({ timeout: 2000 })) { await el.click(); await wait(1000); console.log('  Selected Org via:', sel); break; }
     } catch {}
   }
 
-  await shot(page, '3-after-interaction');
-
-  // Print what's there now
-  const text2 = await page.evaluate(() => document.body.innerText);
-  console.log('  Page text after:', text2.slice(0, 1000).replace(/\n{3,}/g, '\n'));
-
-  const inputs2 = await page.locator('input[type="text"], input:not([type]), textarea').all();
-  for (const inp of inputs2) {
-    const label = (await inp.getAttribute('aria-label').catch(() => '') || '').toLowerCase();
-    const ph    = (await inp.getAttribute('placeholder').catch(() => '') || '').toLowerCase();
-    const val   = await inp.inputValue().catch(() => '');
+  const textInputs = await page.locator('input[type="text"], input:not([type])').all();
+  for (const inp of textInputs) {
+    const label = (await inp.getAttribute('aria-label').catch(() => '')||'').toLowerCase();
+    const ph = (await inp.getAttribute('placeholder').catch(() => '')||'').toLowerCase();
+    const val = await inp.inputValue().catch(() => '');
     if (label.includes('search') || ph.includes('search')) continue;
     console.log(`  Field label="${label}" ph="${ph}" val="${val}"`);
-    if (label.includes('duns') || ph.includes('duns')) {
-      await inp.click({ clickCount: 3 }); await inp.fill(DUNS);
-      console.log('  → Filled DUNS');
-    } else if (label.includes('name') || ph.includes('name') || label.includes('org') || ph.includes('org')) {
-      await inp.click({ clickCount: 3 }); await inp.fill(ORG_NAME);
-      console.log('  → Filled org name:', ORG_NAME);
-    }
+    if (label.includes('duns') || ph.includes('duns')) { await inp.click({clickCount:3}); await inp.fill(DUNS); console.log('  → DUNS'); }
+    else if (label || ph || val) { await inp.click({clickCount:3}); await inp.fill(ORG_NAME); console.log('  → name'); }
   }
 
-  // Save/submit
-  for (const sel of ['button:has-text("Save")','button:has-text("Submit")','button:has-text("Continue")','button:has-text("Next")','button[type="submit"]:not([disabled])']) {
-    try {
-      const el = page.locator(sel).first();
-      if (await el.isVisible({ timeout: 2000 })) {
-        await el.click(); await wait(5000);
-        console.log('  Submitted via:', sel); break;
-      }
-    } catch {}
+  for (const sel of ['button:has-text("Save")','button:has-text("Submit")','button:has-text("Continue")','button:has-text("Next")']) {
+    try { const el = page.locator(sel).first(); if (await el.isVisible({timeout:2000})) { await el.click(); await wait(5000); console.log('  Saved via:', sel); break; } } catch {}
   }
 
-  await shot(page, '4-done');
+  await shot(page, '5-done');
   await browser.close();
-  console.log('\nDone — paste full output.');
+  console.log('\nDone.');
 })().catch(e => { console.error('Bond error:', e.message); process.exit(1); });
