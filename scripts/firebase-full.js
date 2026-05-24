@@ -76,9 +76,31 @@ function watchForNewFile(dir, timeoutMs = 60000) {
     page    = await context.newPage();
   }
 
+  // ── Step 0: Ensure signed into GitHub ────────────────────────────────────
+  console.log('[0] Checking GitHub login...');
+  await page.goto('https://github.com', { waitUntil: 'domcontentloaded', timeout: 30000 });
+  await wait(2000);
+  const isLoggedIn = await page.evaluate(() =>
+    !document.querySelector('a[href="/login"]') && !!document.querySelector('meta[name="user-login"]')
+  );
+  if (!isLoggedIn) {
+    console.log('\n╔══════════════════════════════════════════════════════════╗');
+    console.log('║  Sign into GitHub in the browser window that opened.     ║');
+    console.log('║  After signing in, come back here and press Enter.       ║');
+    console.log('╚══════════════════════════════════════════════════════════╝\n');
+    await page.goto('https://github.com/login', { waitUntil: 'domcontentloaded', timeout: 15000 });
+    await new Promise(resolve => {
+      const rl = require('readline').createInterface({ input: process.stdin, output: process.stdout });
+      rl.question('  Press Enter after signing into GitHub... ', () => { rl.close(); resolve(); });
+    });
+  } else {
+    const user = await page.evaluate(() => document.querySelector('meta[name="user-login"]')?.content || 'unknown');
+    console.log(`  ✓ Signed in as: ${user}`);
+  }
+
   // ── Step 1: Download artifact ──────────────────────────────────────────────
   if (!buildFile) {
-    console.log('[1] Navigating to GitHub Actions run...');
+    console.log('\n[1] Navigating to GitHub Actions run...');
     await page.goto(RUN_URL, { waitUntil: 'domcontentloaded', timeout: 30000 });
     await wait(3000);
     await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
