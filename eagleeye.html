@@ -5023,10 +5023,11 @@ async function loadLeadsPipeline(){
     const scoreColor=s=>s>=8?'var(--green)':s>=5?'var(--gold)':'var(--muted)';
     const stgBadge=s=>{const sl=s.toLowerCase();return sl==='converted'?'badge-green':sl==='qualified'?'badge-blue':sl==='contacted'?'badge-navy':'badge-ghost';};
     tbl.innerHTML='<div style="font-size:11px;color:var(--muted);margin-bottom:8px;padding:0 2px">'+items.length+' leads total</div>'+
-      '<div class="tbl-wrap"><table><thead><tr><th>Score</th><th>Company</th><th>Location</th><th>DOT/MC</th><th>Phone</th><th>Equipment</th><th>Status</th><th>Action</th></tr></thead><tbody>'+
+      '<div class="tbl-wrap"><table><thead><tr><th>Score</th><th>Company</th><th>Location</th><th>DOT/MC</th><th>Phone</th><th>Equipment</th><th>Status</th><th>Actions</th></tr></thead><tbody>'+
       items.map(l=>{
         const phone=ph(l);
         const equip=l.equipment_type||(l.equipment_types||[])[0]||'';
+        const ldStr=JSON.stringify(l).replace(/'/g,"\\'").replace(/"/g,'&quot;');
         return '<tr>'+
           '<td><strong style="color:'+scoreColor(l.score||0)+'">'+(l.score||'—')+'</strong></td>'+
           '<td style="max-width:180px">'+esc(name(l))+(l.fleet_size?'<br><span style="font-size:10px;color:var(--muted)">'+l.fleet_size+' trucks</span>':'')+'</td>'+
@@ -5035,7 +5036,10 @@ async function loadLeadsPipeline(){
           '<td class="t-mono" style="font-size:11px">'+esc(phone)+'</td>'+
           '<td style="font-size:11px">'+esc(equip)+'</td>'+
           '<td><span class="badge '+stgBadge(stg(l))+'">'+esc(stg(l))+'</span></td>'+
-          '<td><button class="btn-navy-sm" onclick="vanceDialLead(\''+esc(l.id)+'\',\''+esc(name(l)).replace(/'/g,"\\'")+'\',\''+esc(phone)+'\')" '+(phone==='—'?'disabled title="No phone number"':'')+'>📞 Call</button></td>'+
+          '<td style="display:flex;gap:5px;flex-wrap:wrap">'+
+            '<button class="btn-navy-sm" onclick="openQuickIntake('+JSON.stringify(l.id)+','+JSON.stringify(name(l))+','+JSON.stringify(phone)+','+JSON.stringify(l.email||'')+','+JSON.stringify(l.contact_name||'')+','+JSON.stringify(l.dot_number||'')+','+JSON.stringify(l.mc_number||'')+','+JSON.stringify(equip)+','+JSON.stringify(String(l.fleet_size||''))+','+JSON.stringify(l.state||'')+')" style="background:#0d6e3a;border-color:#0d6e3a">✅ Intake</button>'+
+            '<button class="btn-navy-sm" onclick="vanceDialLead(\''+esc(l.id)+'\',\''+esc(name(l)).replace(/'/g,"\\'")+'\',\''+esc(phone)+'\')" '+(phone==='—'?'disabled title="No phone number"':'')+'>📞 Call</button>'+
+          '</td>'+
         '</tr>';
       }).join('')+'</tbody></table></div>';
   }catch(e){
@@ -10588,6 +10592,199 @@ async function tsMissionRetest() {
     }
   };
 })();
+</script>
+
+<!-- ── Quick Intake Modal ──────────────────────────────────────────────── -->
+<div id="qi-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9000;align-items:center;justify-content:center;padding:16px">
+<div style="background:#fff;border-radius:14px;width:100%;max-width:540px;box-shadow:0 20px 60px rgba(0,0,0,.25);overflow:hidden;display:flex;flex-direction:column;max-height:calc(100vh - 40px)">
+
+  <!-- Modal header -->
+  <div style="background:#001f3f;padding:18px 24px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
+    <div>
+      <div style="font-size:16px;font-weight:800;color:#fff" id="qi-title">Carrier Quick Intake</div>
+      <div style="font-size:11px;color:rgba(255,255,255,.5);margin-top:2px">Fill in what you captured on the call — email triggers onboarding invite</div>
+    </div>
+    <button onclick="closeQuickIntake()" style="background:rgba(255,255,255,.1);border:none;color:#fff;width:32px;height:32px;border-radius:50%;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1">&times;</button>
+  </div>
+
+  <!-- Form body -->
+  <div style="padding:20px 24px;overflow-y:auto;flex:1">
+
+    <!-- Read-only context strip -->
+    <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px 14px;margin-bottom:18px;display:flex;gap:16px;flex-wrap:wrap">
+      <div><div style="font-size:9px;text-transform:uppercase;letter-spacing:.7px;color:#94a3b8;margin-bottom:2px">Company</div><div style="font-size:13px;font-weight:700;color:#001f3f" id="qi-co">—</div></div>
+      <div><div style="font-size:9px;text-transform:uppercase;letter-spacing:.7px;color:#94a3b8;margin-bottom:2px">Phone</div><div style="font-size:13px;font-family:monospace;color:#334155" id="qi-ph">—</div></div>
+    </div>
+
+    <!-- Fields grid -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+
+      <div style="grid-column:1/-1">
+        <label style="font-size:11px;font-weight:700;color:#334155;display:block;margin-bottom:4px">
+          📧 Email Address <span style="color:#dc2626;font-size:10px">← triggers onboarding invite</span>
+        </label>
+        <input id="qi-email" type="email" placeholder="owner@example.com"
+          style="width:100%;padding:9px 12px;border:2px solid #e8a020;border-radius:7px;font-size:13px;box-sizing:border-box;outline:none">
+      </div>
+
+      <div>
+        <label style="font-size:11px;font-weight:700;color:#334155;display:block;margin-bottom:4px">Contact Name</label>
+        <input id="qi-contact" type="text" placeholder="Owner / Dispatcher name"
+          style="width:100%;padding:9px 12px;border:1px solid #cbd5e1;border-radius:7px;font-size:13px;box-sizing:border-box">
+      </div>
+
+      <div>
+        <label style="font-size:11px;font-weight:700;color:#334155;display:block;margin-bottom:4px">DOT Number</label>
+        <input id="qi-dot" type="text" placeholder="e.g. 1234567"
+          style="width:100%;padding:9px 12px;border:1px solid #cbd5e1;border-radius:7px;font-size:13px;font-family:monospace;box-sizing:border-box">
+      </div>
+
+      <div>
+        <label style="font-size:11px;font-weight:700;color:#334155;display:block;margin-bottom:4px">MC Number</label>
+        <input id="qi-mc" type="text" placeholder="e.g. MC-987654"
+          style="width:100%;padding:9px 12px;border:1px solid #cbd5e1;border-radius:7px;font-size:13px;font-family:monospace;box-sizing:border-box">
+      </div>
+
+      <div>
+        <label style="font-size:11px;font-weight:700;color:#334155;display:block;margin-bottom:4px">Equipment Type</label>
+        <select id="qi-equip"
+          style="width:100%;padding:9px 12px;border:1px solid #cbd5e1;border-radius:7px;font-size:13px;box-sizing:border-box;background:#fff">
+          <option value="">— Select —</option>
+          <option>Dry Van</option>
+          <option>Reefer</option>
+          <option>Flatbed</option>
+          <option>Step Deck</option>
+          <option>Lowboy</option>
+          <option>Power Only</option>
+          <option>Tanker</option>
+          <option>Box Truck</option>
+          <option>Sprinter / Cargo Van</option>
+          <option>Hotshot</option>
+          <option>Other</option>
+        </select>
+      </div>
+
+      <div>
+        <label style="font-size:11px;font-weight:700;color:#334155;display:block;margin-bottom:4px">Fleet Size</label>
+        <input id="qi-fleet" type="number" min="1" max="9999" placeholder="# of trucks"
+          style="width:100%;padding:9px 12px;border:1px solid #cbd5e1;border-radius:7px;font-size:13px;box-sizing:border-box">
+      </div>
+
+      <div>
+        <label style="font-size:11px;font-weight:700;color:#334155;display:block;margin-bottom:4px">Home State</label>
+        <input id="qi-state" type="text" placeholder="e.g. Michigan"
+          style="width:100%;padding:9px 12px;border:1px solid #cbd5e1;border-radius:7px;font-size:13px;box-sizing:border-box">
+      </div>
+
+      <div style="grid-column:1/-1">
+        <label style="font-size:11px;font-weight:700;color:#334155;display:block;margin-bottom:4px">Call Notes</label>
+        <textarea id="qi-notes" rows="3" placeholder="What lanes are they running? Objections? Interest level? Follow-up date?"
+          style="width:100%;padding:9px 12px;border:1px solid #cbd5e1;border-radius:7px;font-size:13px;box-sizing:border-box;resize:vertical;font-family:inherit"></textarea>
+      </div>
+
+    </div><!-- /grid -->
+
+    <div id="qi-status" style="margin-top:12px;font-size:12px;display:none;padding:10px 14px;border-radius:7px"></div>
+  </div>
+
+  <!-- Footer -->
+  <div style="padding:14px 24px;border-top:1px solid #e2e8f0;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-shrink:0;background:#f8fafc">
+    <div style="font-size:11px;color:#94a3b8">Fields left blank are not changed on the lead</div>
+    <div style="display:flex;gap:8px">
+      <button onclick="closeQuickIntake()" style="padding:9px 18px;border:1px solid #cbd5e1;border-radius:7px;font-size:13px;font-weight:600;background:#fff;cursor:pointer;color:#334155">Cancel</button>
+      <button id="qi-save-btn" onclick="submitQuickIntake()" style="padding:9px 22px;border:none;border-radius:7px;font-size:13px;font-weight:700;background:#001f3f;color:#fff;cursor:pointer">
+        Save &amp; Send Invite
+      </button>
+    </div>
+  </div>
+
+</div><!-- /modal card -->
+</div><!-- /overlay -->
+
+<script>
+let _qiLeadId = null;
+
+function openQuickIntake(id, company, phone, email, contact, dot, mc, equip, fleet, state) {
+  _qiLeadId = id;
+  document.getElementById('qi-title').textContent = company || 'Carrier Quick Intake';
+  document.getElementById('qi-co').textContent  = company || '—';
+  document.getElementById('qi-ph').textContent  = phone   || '—';
+  document.getElementById('qi-email').value     = email   || '';
+  document.getElementById('qi-contact').value   = contact || '';
+  document.getElementById('qi-dot').value       = dot     || '';
+  document.getElementById('qi-mc').value        = mc      || '';
+  document.getElementById('qi-fleet').value     = fleet   || '';
+  document.getElementById('qi-state').value     = state   || '';
+  // Match equipment select
+  const sel = document.getElementById('qi-equip');
+  sel.value = '';
+  for (let i=0; i<sel.options.length; i++) {
+    if (sel.options[i].text.toLowerCase() === (equip||'').toLowerCase()) { sel.selectedIndex=i; break; }
+  }
+  document.getElementById('qi-notes').value = '';
+  document.getElementById('qi-status').style.display = 'none';
+  document.getElementById('qi-save-btn').disabled = false;
+  document.getElementById('qi-save-btn').textContent = 'Save & Send Invite';
+  document.getElementById('qi-overlay').style.display = 'flex';
+  setTimeout(()=>document.getElementById('qi-email').focus(), 80);
+}
+
+function closeQuickIntake() {
+  document.getElementById('qi-overlay').style.display = 'none';
+  _qiLeadId = null;
+}
+
+async function submitQuickIntake() {
+  if (!_qiLeadId) return;
+  const btn = document.getElementById('qi-save-btn');
+  const st  = document.getElementById('qi-status');
+  btn.disabled = true; btn.textContent = '⏳ Saving…';
+
+  const body = {};
+  const f = id => document.getElementById(id).value.trim();
+  if (f('qi-email'))   body.email          = f('qi-email');
+  if (f('qi-contact')) body.contact_name   = f('qi-contact');
+  if (f('qi-dot'))     body.dot_number     = f('qi-dot');
+  if (f('qi-mc'))      body.mc_number      = f('qi-mc');
+  if (f('qi-equip'))   body.equipment_type = f('qi-equip');
+  if (f('qi-fleet'))   body.fleet_size     = parseInt(f('qi-fleet')) || undefined;
+  if (f('qi-state'))   body.state          = f('qi-state');
+  if (f('qi-notes'))   body.notes          = f('qi-notes');
+
+  if (!Object.keys(body).length) {
+    st.style.display='block'; st.style.background='#fff3cd'; st.style.color='#856404';
+    st.textContent = 'Fill in at least one field before saving.';
+    btn.disabled=false; btn.textContent='Save & Send Invite';
+    return;
+  }
+
+  try {
+    const r = await apiFetch(`/api/leads/${_qiLeadId}/quick-intake`, 'POST', body);
+    const d = await r.json();
+    if (d.ok) {
+      st.style.display='block'; st.style.background='#d1fae5'; st.style.color='#065f46';
+      st.innerHTML = d.email_sent
+        ? `✅ Saved ${d.fields_saved.length} field(s) — onboarding invite sent to <strong>${d.email_to}</strong>`
+        : `✅ Saved ${d.fields_saved.length} field(s) — add email to trigger onboarding invite`;
+      btn.textContent = '✅ Done';
+      // Refresh pipeline after short delay
+      setTimeout(async () => { closeQuickIntake(); await loadLeadsPipeline(); }, 1800);
+    } else {
+      throw new Error(JSON.stringify(d));
+    }
+  } catch(e) {
+    st.style.display='block'; st.style.background='#fee2e2'; st.style.color='#991b1b';
+    st.textContent = 'Error: ' + e.message;
+    btn.disabled=false; btn.textContent='Save & Send Invite';
+  }
+}
+
+// Close on backdrop click
+document.getElementById('qi-overlay').addEventListener('click', function(e) {
+  if (e.target === this) closeQuickIntake();
+});
+// Close on Escape
+document.addEventListener('keydown', e => { if (e.key==='Escape') closeQuickIntake(); });
 </script>
 
 </body>
