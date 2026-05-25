@@ -28,7 +28,7 @@ def latest_positions(carrier_id: str | None = None, limit: int = 200) -> dict:
     q = (
         get_supabase()
         .table("truck_telemetry")
-        .select("carrier_id,truck_id,lat,lng,speed_mph,heading_deg,ts")
+        .select("carrier_id,truck_id,lat,lng,speed_mph,heading,ts")
         .order("ts", desc=True)
         .limit(limit)
     )

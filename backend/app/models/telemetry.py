@@ -12,10 +12,9 @@ class TelemetryPing(BaseModel):
     lat: float
     lng: float
     speed_mph: float | None = None
-    heading_deg: float | None = None
-    odometer_mi: float | None = None
-    fuel_level_pct: float | None = None
-    engine_hours: float | None = None
+    heading: float | None = None
+    odometer_miles: float | None = None
+    fuel_pct: float | None = None
     ts: datetime | None = None
 
 

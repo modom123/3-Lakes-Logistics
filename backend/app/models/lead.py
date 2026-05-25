@@ -7,8 +7,9 @@ from pydantic import BaseModel
 
 class Lead(BaseModel):
     id: str | None = None
-    source: str
+    source: str = "manual"
     source_ref: str | None = None
+    business_name: str | None = None
     company_name: str | None = None
     dot_number: str | None = None
     mc_number: str | None = None

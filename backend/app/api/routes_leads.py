@@ -42,6 +42,11 @@ def create_lead(lead: Lead) -> dict:
         data["business_name"] = data.pop("company_name")
     if "stage" in data and "status" not in data:
         data["status"] = data.pop("stage")
+    # Live table requires business_name NOT NULL
+    if not data.get("business_name"):
+        data["business_name"] = (
+            data.get("contact_name") or data.get("source_ref") or "Unknown"
+        )
     res = get_supabase().table("leads").insert(data).execute()
     return {"ok": True, "lead": (res.data or [None])[0]}
 

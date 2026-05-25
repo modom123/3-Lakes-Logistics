@@ -35,10 +35,9 @@ async def get_email_log(
         if status_filter:
             query = query.eq("status", status_filter)
 
-        # Order by received_at DESC, apply limit and offset
         result = (
             query
-            .order("received_at", desc=True)
+            .order("created_at", desc=True)
             .range(offset, offset + limit - 1)
             .execute()
         )
@@ -333,9 +332,17 @@ async def get_email_stats() -> dict:
         }
 
 
+_UUID_RE = re.compile(
+    r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+    re.IGNORECASE,
+)
+
+
 @router.post("/email/{email_id}/parse-rate-confirmation", dependencies=[Depends(require_bearer)])
 async def parse_rate_confirmation(email_id: str) -> dict:
     """Extract rate confirmation data from email and create/update load record."""
+    if not _UUID_RE.match(email_id):
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "invalid email_id format")
     try:
         sb = get_supabase()
 

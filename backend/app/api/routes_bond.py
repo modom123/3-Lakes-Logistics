@@ -28,11 +28,11 @@ from .deps import require_bearer
 
 
 def _require_bond_key(x_bond_key: str | None = Header(default=None)) -> None:
+    if not x_bond_key:
+        raise HTTPException(401, "X-Bond-Key header required")
     expected = os.getenv("BOND_API_KEY", "")
-    if not expected:
-        raise HTTPException(503, "BOND_API_KEY not configured on server")
-    if x_bond_key != expected:
-        raise HTTPException(401, "Invalid Bond API key")
+    if not expected or x_bond_key != expected:
+        raise HTTPException(403, "Invalid Bond API key")
 
 
 class DirectiveIn(BaseModel):
