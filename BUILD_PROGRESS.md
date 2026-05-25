@@ -133,17 +133,17 @@
 
 ---
 
-## PHASE 9: DATABASE SCHEMA & MIGRATIONS (8 steps) ⚠️
-- [ ] 82. Create driver_messages table (missing)
-- [ ] 83. Create driver_sessions table (missing)
-- [ ] 84. Create driver_payouts table (missing)
-- [ ] 85. Add missing fields to loads table (pickup_address, delivery_address, etc.)
-- [ ] 86. Add stripe_account_id to drivers table
-- [ ] 87. Add fcm_token to drivers table
-- [ ] 88. Add delivered_at timestamp to loads table
-- [ ] 89. Create indexes for performance (driver_id, created_at)
+## PHASE 9: DATABASE SCHEMA & MIGRATIONS (8 steps) ✅
+- [x] 82. Create driver_messages table (missing)
+- [x] 83. Create driver_sessions table (missing)
+- [x] 84. Create driver_payouts table (missing)
+- [x] 85. Add missing fields to loads table (pickup_address, delivery_address, broker_phone, special_instructions, weight, post_to_website, delivered_at, driver_id)
+- [x] 86. Add stripe_account_id, stripe_account_status to drivers table
+- [x] 87. Add fcm_token, phone_e164, app_version, last_location, last_location_at to drivers table
+- [x] 88. Add updated_at to driver_messages; updated_at triggers on messages + payouts
+- [x] 89. Create indexes for performance (driver_id, created_at, token, expires_at, status, phone_e164)
 
-**Completed: 0/8 ❌**
+**Completed: 8/8 ✅**
 
 ---
 
