@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sign Agreement — 3 Lakes Logistics</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: Arial, sans-serif; background: #f0f2f5; color: #333; min-height: 100vh; }
+
+    .header {
+      background: #1e288b;
+      padding: 14px 24px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .header-title { color: #fff; font-size: 17px; font-weight: 700; }
+    .header-sub   { color: rgba(255,255,255,.65); font-size: 12px; margin-top: 2px; }
+    .badge {
+      background: #ea580c;
+      color: #fff;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 20px;
+      letter-spacing: .5px;
+      margin-left: auto;
+    }
+
+    .layout {
+      display: flex;
+      min-height: calc(100vh - 56px);
+    }
+
+    /* ── Agreement iframe pane ── */
+    .doc-pane {
+      flex: 1;
+      background: #fff;
+      overflow: auto;
+    }
+    .doc-pane iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+      display: block;
+    }
+
+    /* ── Signature sidebar ── */
+    .sign-pane {
+      width: 340px;
+      min-width: 300px;
+      background: #fff;
+      border-left: 1px solid #e0e0e0;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .sign-inner {
+      padding: 24px 20px;
+      flex: 1;
+      overflow-y: auto;
+    }
+
+    .sign-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: #1e288b;
+      margin-bottom: 4px;
+    }
+    .sign-sub {
+      font-size: 12px;
+      color: #777;
+      line-height: 1.5;
+      margin-bottom: 20px;
+    }
+
+    .field-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: #555;
+      margin-bottom: 5px;
+      display: block;
+    }
+    .field-input {
+      width: 100%;
+      padding: 9px 12px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 14px;
+      color: #333;
+      margin-bottom: 16px;
+      font-family: inherit;
+      transition: border-color .15s;
+    }
+    .field-input:focus { outline: none; border-color: #1e288b; }
+    .field-input[readonly] { background: #f8f8f8; color: #666; }
+
+    .check-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      margin-bottom: 20px;
+      padding: 12px;
+      background: #fff7ed;
+      border: 1px solid #f59e0b;
+      border-radius: 6px;
+    }
+    .check-row input[type=checkbox] { margin-top: 2px; width: 16px; height: 16px; cursor: pointer; accent-color: #1e288b; flex-shrink: 0; }
+    .check-row label { font-size: 12px; color: #555; line-height: 1.5; cursor: pointer; }
+
+    .btn-sign {
+      width: 100%;
+      padding: 13px;
+      background: #1e288b;
+      color: #fff;
+      border: none;
+      border-radius: 7px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background .15s;
+    }
+    .btn-sign:hover:not(:disabled) { background: #162070; }
+    .btn-sign:disabled { opacity: .5; cursor: not-allowed; }
+
+    .sign-footer {
+      padding: 12px 20px;
+      border-top: 1px solid #eee;
+      font-size: 11px;
+      color: #aaa;
+      text-align: center;
+      line-height: 1.6;
+    }
+
+    /* ── State panels ── */
+    .state-panel {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 40px 24px;
+      flex: 1;
+    }
+    .state-icon { font-size: 52px; margin-bottom: 16px; }
+    .state-title { font-size: 20px; font-weight: 700; margin-bottom: 8px; }
+    .state-msg   { font-size: 14px; color: #666; line-height: 1.6; max-width: 340px; }
+
+    /* ── Loading overlay ── */
+    #loading-overlay {
+      position: fixed; inset: 0;
+      background: #fff;
+      display: flex; align-items: center; justify-content: center;
+      flex-direction: column; gap: 14px;
+      z-index: 999;
+    }
+    .spinner {
+      width: 36px; height: 36px;
+      border: 3px solid #e0e0e0;
+      border-top-color: #1e288b;
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    @media (max-width: 700px) {
+      .layout { flex-direction: column; }
+      .doc-pane { height: 55vh; }
+      .sign-pane { width: 100%; border-left: none; border-top: 1px solid #e0e0e0; }
+    }
+  </style>
+</head>
+<body>
+
+<div id="loading-overlay">
+  <div class="spinner"></div>
+  <div style="font-size:14px;color:#777">Loading agreement…</div>
+</div>
+
+<div id="app" style="display:none;min-height:100vh;display:flex;flex-direction:column">
+
+  <div class="header">
+    <div>
+      <div class="header-title">3 Lakes Logistics</div>
+      <div class="header-sub" id="hdr-label">Agreement for Signature</div>
+    </div>
+    <div class="badge" id="hdr-status">PENDING SIGNATURE</div>
+  </div>
+
+  <!-- Error / Already-signed / Expired states fill the whole body -->
+  <div id="state-error" class="state-panel" style="display:none;flex-direction:column">
+    <div class="state-icon">⚠️</div>
+    <div class="state-title">Link Not Found</div>
+    <div class="state-msg" id="state-error-msg">This signing link is invalid or has expired. Please contact <a href="mailto:info@3lakeslogistics.com">info@3lakeslogistics.com</a>.</div>
+  </div>
+
+  <div id="state-done" class="state-panel" style="display:none;flex-direction:column">
+    <div class="state-icon">✅</div>
+    <div class="state-title" style="color:#16a34a">Agreement Signed!</div>
+    <div class="state-msg">Your <strong id="done-label"></strong> has been signed and saved. You will receive a confirmation email shortly.<br><br>Thank you for partnering with 3 Lakes Logistics.</div>
+  </div>
+
+  <!-- Main signing layout -->
+  <div id="main-layout" class="layout" style="flex:1">
+    <div class="doc-pane">
+      <iframe id="agreement-frame" src="" title="Agreement document"></iframe>
+    </div>
+
+    <div class="sign-pane">
+      <div class="sign-inner">
+        <div class="sign-title">Sign This Agreement</div>
+        <div class="sign-sub">Read the full agreement on the left, then complete the form below to apply your electronic signature.</div>
+
+        <label class="field-label">Agreement</label>
+        <input class="field-input" id="f-agreement" type="text" readonly>
+
+        <label class="field-label">Carrier / Party Name</label>
+        <input class="field-input" id="f-carrier" type="text" readonly>
+
+        <label class="field-label">Your Full Legal Name *</label>
+        <input class="field-input" id="f-name" type="text" placeholder="Type your full legal name" autocomplete="name">
+
+        <div class="check-row">
+          <input type="checkbox" id="f-agree" onchange="updateBtn()">
+          <label for="f-agree">I have read and agree to the terms of this agreement. I understand this constitutes a legally binding electronic signature under the E-SIGN Act.</label>
+        </div>
+
+        <button class="btn-sign" id="btn-sign" disabled onclick="submitSign()">
+          ✍️ Sign Agreement
+        </button>
+
+        <div id="sign-error" style="display:none;margin-top:12px;padding:10px 12px;background:#fef2f2;border:1px solid #fca5a5;border-radius:6px;font-size:12px;color:#b91c1c"></div>
+      </div>
+
+      <div class="sign-footer">
+        This electronic signature is legally binding under the federal E-SIGN Act (15 U.S.C. § 7001). Your name, timestamp, and IP address are recorded as part of the signing audit trail.
+        <br><br>
+        <a href="mailto:info@3lakeslogistics.com" style="color:#1e288b">info@3lakeslogistics.com</a> &nbsp;|&nbsp; 661-466-9932
+      </div>
+    </div>
+  </div>
+
+</div><!-- #app -->
+
+<script>
+const API = 'https://three-lakes-logistics-api.onrender.com';
+let _token = '';
+let _reqData = null;
+
+function qs(id) { return document.getElementById(id); }
+
+function show(panelId) {
+  ['main-layout','state-error','state-done'].forEach(id => {
+    const el = qs(id);
+    if (el) el.style.display = id === panelId ? (id === 'main-layout' ? 'flex' : 'flex') : 'none';
+  });
+}
+
+async function init() {
+  const params = new URLSearchParams(window.location.search);
+  _token = params.get('token') || '';
+  if (!_token) {
+    qs('loading-overlay').style.display = 'none';
+    qs('app').style.display = 'flex';
+    qs('state-error-msg').textContent = 'No signing token found in this URL. Please use the link from your email.';
+    show('state-error');
+    return;
+  }
+
+  try {
+    const res = await fetch(`${API}/api/agreements/sign/${_token}`);
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      qs('loading-overlay').style.display = 'none';
+      qs('app').style.display = 'flex';
+      if (res.status === 409) {
+        qs('done-label').textContent = err.detail || 'Agreement';
+        show('state-done');
+        qs('hdr-status').textContent = 'ALREADY SIGNED';
+        qs('hdr-status').style.background = '#16a34a';
+      } else {
+        qs('state-error-msg').textContent = err.detail || 'This signing link is no longer valid.';
+        show('state-error');
+      }
+      return;
+    }
+
+    _reqData = await res.json();
+
+    qs('hdr-label').textContent  = _reqData.agreement_label;
+    qs('f-agreement').value      = _reqData.agreement_label;
+    qs('f-carrier').value        = _reqData.carrier_name;
+    qs('agreement-frame').src    = _reqData.agreement_path;
+    document.title               = `Sign: ${_reqData.agreement_label} — 3 Lakes Logistics`;
+
+    qs('f-name').addEventListener('input', updateBtn);
+
+    qs('loading-overlay').style.display = 'none';
+    qs('app').style.display = 'flex';
+    show('main-layout');
+  } catch (e) {
+    qs('loading-overlay').style.display = 'none';
+    qs('app').style.display = 'flex';
+    qs('state-error-msg').textContent = 'Could not load the agreement. Please check your internet connection and try again.';
+    show('state-error');
+  }
+}
+
+function updateBtn() {
+  const nameOk  = qs('f-name').value.trim().length > 2;
+  const checked = qs('f-agree').checked;
+  qs('btn-sign').disabled = !(nameOk && checked);
+}
+
+async function submitSign() {
+  const name = qs('f-name').value.trim();
+  if (!name) return;
+
+  const btn = qs('btn-sign');
+  btn.disabled = true;
+  btn.textContent = 'Signing…';
+  qs('sign-error').style.display = 'none';
+
+  try {
+    const res = await fetch(`${API}/api/agreements/sign/${_token}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ signatory_name: name }),
+    });
+
+    const data = await res.json().catch(() => ({}));
+
+    if (!res.ok) {
+      qs('sign-error').textContent = data.detail || 'Signing failed. Please try again.';
+      qs('sign-error').style.display = 'block';
+      btn.disabled = false;
+      btn.textContent = '✍️ Sign Agreement';
+      return;
+    }
+
+    qs('done-label').textContent = _reqData?.agreement_label || 'Agreement';
+    qs('hdr-status').textContent = 'SIGNED';
+    qs('hdr-status').style.background = '#16a34a';
+    qs('main-layout').style.display = 'none';
+    qs('state-done').style.display = 'flex';
+
+  } catch (e) {
+    qs('sign-error').textContent = 'Network error. Please try again.';
+    qs('sign-error').style.display = 'block';
+    btn.disabled = false;
+    btn.textContent = '✍️ Sign Agreement';
+  }
+}
+
+init();
+</script>
+</body>
+</html>

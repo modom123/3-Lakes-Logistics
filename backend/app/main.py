@@ -29,6 +29,7 @@ from .api import (
     carrier_brain_router,
     revenue_brain_router,
     mailboxes_router,
+    agreements_router,
     driver_auth_router,
     driver_router,
     email_router,
@@ -175,6 +176,7 @@ def create_app() -> FastAPI:
     app.include_router(adobe_webhooks_router,  prefix="/api",              tags=["adobe"])
     app.include_router(adobe_intake_router,    prefix="/api",              tags=["adobe"])
     app.include_router(mailboxes_router,       prefix="/api",              tags=["mailboxes"])
+    app.include_router(agreements_router,      prefix="/api/agreements",   tags=["agreements"])
     app.include_router(studio_router,          prefix="/api",              tags=["studio"])
     app.include_router(health_router,                                      tags=["health"])
 

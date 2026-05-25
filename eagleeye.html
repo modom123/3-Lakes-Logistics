@@ -743,6 +743,7 @@ td.td-name{font-weight:600;color:var(--navy);}
     <div class="sb-label">Contracts</div>
     <div class="sb-item" onclick="nav('clm')"><span class="sb-icon">📑</span> CLM Scanner <span class="sb-badge" id="clm-notif" style="display:none">●</span></div>
     <div class="sb-item" onclick="nav('vault')"><span class="sb-icon">🗄️</span> Document Vault</div>
+    <div class="sb-item" onclick="nav('agreements')"><span class="sb-icon">✍️</span> Agreements <span class="sb-badge" id="agreements-notif" style="display:none">●</span></div>
     <div class="sb-item" onclick="nav('ledger')"><span class="sb-icon">📒</span> Atomic Ledger</div>
   </div>
 
@@ -1805,6 +1806,95 @@ td.td-name{font-weight:600;color:var(--navy);}
       </div>
     </div>
 
+    <!-- ── AGREEMENTS PAGE ── -->
+    <div class="page" id="page-agreements">
+      <div class="page-hdr">
+        <div class="page-hdr-l">
+          <div class="chip">Legal</div>
+          <h2>Agreements</h2>
+        </div>
+        <div class="page-hdr-r">
+          <button class="btn-gold" onclick="openSendAgreementModal()">✍️ Send for Signature</button>
+          <button class="btn-out" onclick="loadAgreements()">↻ Refresh</button>
+        </div>
+      </div>
+
+      <!-- Template cards -->
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px;margin-bottom:24px">
+        <div style="background:var(--surface);border:1.5px solid var(--border);border-radius:10px;padding:18px;border-top:3px solid #6366f1">
+          <div style="font-size:22px;margin-bottom:6px">📝</div>
+          <div style="font-family:var(--ff-h);font-weight:800;font-size:14px;color:var(--navy);margin-bottom:4px">Carrier Dispatch Agreement</div>
+          <div class="t-sm t-muted" style="margin-bottom:12px">Dispatch services, fees, insurance, payments, cargo liability</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <a href="/carrier-agreement.html" target="_blank" class="btn-out" style="font-size:11px;padding:4px 10px;text-decoration:none">👁 View</a>
+            <button class="btn-gold" style="font-size:11px;padding:4px 10px" onclick="openSendAgreementModal('carrier_agreement')">✍️ Send</button>
+          </div>
+        </div>
+        <div style="background:var(--surface);border:1.5px solid var(--border);border-radius:10px;padding:18px;border-top:3px solid #ea580c">
+          <div style="font-size:22px;margin-bottom:6px">🤝</div>
+          <div style="font-family:var(--ff-h);font-weight:800;font-size:14px;color:var(--navy);margin-bottom:4px">Broker–Carrier Agreement</div>
+          <div class="t-sm t-muted" style="margin-bottom:12px">Load tenders, rates, cargo claims, Carmack Amendment liability</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <a href="/broker-agreement.html" target="_blank" class="btn-out" style="font-size:11px;padding:4px 10px;text-decoration:none">👁 View</a>
+            <button class="btn-gold" style="font-size:11px;padding:4px 10px" onclick="openSendAgreementModal('broker_agreement')">✍️ Send</button>
+          </div>
+        </div>
+        <div style="background:var(--surface);border:1.5px solid var(--border);border-radius:10px;padding:18px;border-top:3px solid #1e288b">
+          <div style="font-size:22px;margin-bottom:6px">📜</div>
+          <div style="font-family:var(--ff-h);font-weight:800;font-size:14px;color:var(--navy);margin-bottom:4px">Terms of Service</div>
+          <div class="t-sm t-muted" style="margin-bottom:12px">Platform license, GPS tracking, dispatch terms, arbitration clause</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <a href="/terms-of-service.html" target="_blank" class="btn-out" style="font-size:11px;padding:4px 10px;text-decoration:none">👁 View</a>
+            <button class="btn-gold" style="font-size:11px;padding:4px 10px" onclick="openSendAgreementModal('terms_of_service')">✍️ Send</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Metrics row -->
+      <div class="metrics-row" style="margin-bottom:18px">
+        <div class="mc"><div class="mc-label">Total Sent</div><div class="mc-val blue" id="agr-total">—</div></div>
+        <div class="mc"><div class="mc-label">Pending</div><div class="mc-val gold" id="agr-pending">—</div></div>
+        <div class="mc"><div class="mc-label">Signed</div><div class="mc-val green" id="agr-signed">—</div></div>
+        <div class="mc"><div class="mc-label">Expired</div><div class="mc-val" style="color:var(--red)" id="agr-expired">—</div></div>
+      </div>
+
+      <!-- Signature requests table -->
+      <div id="agr-table"><div class="loading"><div class="spin"></div>Loading…</div></div>
+    </div>
+
+    <!-- Send for Signature Modal -->
+    <div id="agr-send-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9000;align-items:center;justify-content:center">
+      <div style="background:var(--surface);border-radius:12px;padding:28px;width:420px;max-width:95vw;box-shadow:0 8px 40px rgba(0,0,0,.4)">
+        <div style="font-family:var(--ff-h);font-size:17px;font-weight:800;color:var(--navy);margin-bottom:4px">Send Agreement for Signature</div>
+        <div class="t-sm t-muted" style="margin-bottom:20px">Carrier receives an email with a secure signing link. Signed copy auto-saves to the Document Vault.</div>
+        <div style="margin-bottom:12px">
+          <div class="t-sm" style="font-weight:600;margin-bottom:4px">Agreement Type</div>
+          <select id="agr-send-type" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:13px;background:var(--surface)">
+            <option value="carrier_agreement">Carrier Dispatch Agreement</option>
+            <option value="broker_agreement">Broker–Carrier Agreement</option>
+            <option value="terms_of_service">Terms of Service</option>
+          </select>
+        </div>
+        <div style="margin-bottom:12px">
+          <div class="t-sm" style="font-weight:600;margin-bottom:4px">Carrier / Company Name *</div>
+          <input id="agr-send-name" type="text" placeholder="e.g. Blue Ridge Trucking LLC" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:13px;box-sizing:border-box;background:var(--surface)">
+        </div>
+        <div style="margin-bottom:12px">
+          <div class="t-sm" style="font-weight:600;margin-bottom:4px">Email Address *</div>
+          <input id="agr-send-email" type="email" placeholder="owner@carrier.com" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:13px;box-sizing:border-box;background:var(--surface)">
+        </div>
+        <div style="margin-bottom:18px">
+          <div class="t-sm" style="font-weight:600;margin-bottom:4px">USDOT Number (optional)</div>
+          <input id="agr-send-dot" type="text" placeholder="e.g. 3456789" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:13px;box-sizing:border-box;background:var(--surface)">
+        </div>
+        <div id="agr-send-result" style="display:none;padding:10px;border-radius:6px;font-size:13px;margin-bottom:14px"></div>
+        <div style="display:flex;gap:10px;justify-content:flex-end">
+          <button class="btn-out" onclick="closeAgrModal()">Cancel</button>
+          <button class="btn-gold" id="agr-send-btn" onclick="submitSendAgreement()">✍️ Send Link</button>
+        </div>
+      </div>
+    </div>
+
     <!-- ── ATOMIC LEDGER PAGE ── -->
     <div class="page" id="page-ledger">
       <div class="page-hdr">
@@ -2633,7 +2723,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 let allCarriers=[], allLoads=[], allInvoices=[], currentInvFilter='all', loadCounter=3849;
 
-const pageNames={dashboard:'Dashboard',dispatch:'Dispatch Board',carriers:'Carriers',loads:'Load Manager',invoices:'Invoices & Billing',compliance:'DOT Compliance',ifta:'IFTA / Permits',insurance:'Insurance',revenue:'Revenue Tracker',providers:'Compliance Providers',checklist:'Daily Checklist',notes:'Dispatcher Notes',reports:'Team Reports','exec-command':'Exec Command',agents:'AI Agents',founders:'Founders Program',crm:'Lead CRM',leads:'Lead Pipeline',execution:'Execution Engine',email:'Email Center',vault:'Document Vault',clm:'CLM Scanner',ledger:'Atomic Ledger'};
+const pageNames={dashboard:'Dashboard',dispatch:'Dispatch Board',carriers:'Carriers',loads:'Load Manager',invoices:'Invoices & Billing',compliance:'DOT Compliance',ifta:'IFTA / Permits',insurance:'Insurance',revenue:'Revenue Tracker',providers:'Compliance Providers',checklist:'Daily Checklist',notes:'Dispatcher Notes',reports:'Team Reports','exec-command':'Exec Command',agents:'AI Agents',founders:'Founders Program',crm:'Lead CRM',leads:'Lead Pipeline',execution:'Execution Engine',email:'Email Center',vault:'Document Vault',clm:'CLM Scanner',ledger:'Atomic Ledger',agreements:'Agreements'};
 
 // ── 3 Lakes Logistics Backend API (FastAPI) ──
 const API_BASE = (window.__3LL_API_BASE || 'https://three-lakes-logistics-api.onrender.com').replace(/\/$/,'');
@@ -2736,6 +2826,7 @@ function nav(id){
   if(id==='compliance'||id==='insurance')renderCarrierCompliance();
   if(id==='clm')loadCLMList();
   if(id==='vault')loadVault();
+  if(id==='agreements')loadAgreements();
   if(id==='ledger')loadLedger();
   if(id==='execution'){loadExecutionDomains();loadExecutionSteps();}
   if(id==='email'&&typeof mailInit==='function'){mailInit();}
@@ -5190,6 +5281,103 @@ async function runCLMScan(){
 // ══════════════════════════════════════════════════════
 // DOCUMENT VAULT — retrieve, review, send
 // ══════════════════════════════════════════════════════
+// ── Agreements ────────────────────────────────────────────────────────────────
+const AGR_LABELS={carrier_agreement:'Carrier Dispatch Agreement',broker_agreement:'Broker–Carrier Agreement',terms_of_service:'Terms of Service'};
+
+async function loadAgreements(){
+  const t=document.getElementById('agr-table');
+  if(!t)return;
+  t.innerHTML='<div class="loading"><div class="spin"></div>Loading…</div>';
+  try{
+    const res=await apiFetch('/api/agreements/requests');
+    const d=await res.json();
+    const rows=d.items||[];
+    // metrics
+    const set=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
+    set('agr-total',rows.length);
+    set('agr-pending',rows.filter(r=>r.status==='pending').length);
+    set('agr-signed',rows.filter(r=>r.status==='signed').length);
+    set('agr-expired',rows.filter(r=>r.status==='expired'||r.status==='cancelled').length);
+    // badge
+    const pend=rows.filter(r=>r.status==='pending').length;
+    const nb=document.getElementById('agreements-notif');
+    if(nb){nb.style.display=pend?'inline':'none';nb.textContent=pend;}
+    if(!rows.length){t.innerHTML='<div style="padding:40px;text-align:center;color:var(--muted)">No signature requests yet — use the Send for Signature button to get started.</div>';return;}
+    const statusBadge=s=>{
+      const map={pending:'orange',signed:'green',expired:'red',cancelled:'red'};
+      return `<span class="badge badge-${map[s]||'orange'}" style="font-size:10px;text-transform:capitalize">${s}</span>`;
+    };
+    t.innerHTML=`<div class="tbl-wrap"><table class="tbl"><thead><tr>
+      <th>Agreement</th><th>Carrier / Party</th><th>Email</th><th style="width:90px">DOT</th>
+      <th style="width:80px">Status</th><th style="width:110px">Sent</th><th style="width:110px">Signed</th><th style="width:120px">Actions</th>
+    </tr></thead><tbody>${rows.map(r=>{
+      const label=AGR_LABELS[r.agreement_type]||r.agreement_type;
+      const sent=r.created_at?new Date(r.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'2-digit'}):'—';
+      const signed=r.signed_at?new Date(r.signed_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'2-digit'}):'—';
+      const rid=esc(r.id),tok=esc(r.token);
+      const siteUrl='https://www.3lakeslogistics.com';
+      const signLink=`${siteUrl}/sign.html?token=${tok}`;
+      const actions=r.status==='pending'
+        ?`<button class="btn-xs btn-out" title="Copy signing link" onclick="navigator.clipboard.writeText('${signLink}').then(()=>notify('Link copied'))">🔗 Copy Link</button>
+           <button class="btn-xs" style="background:rgba(239,68,68,.15);color:#ef4444;border:1px solid rgba(239,68,68,.3)" onclick="cancelAgrRequest('${rid}')">✕</button>`
+        :r.status==='signed'
+          ?`<button class="btn-xs btn-out" onclick="nav('vault')">📁 Vault</button>`
+          :'<span class="t-sm t-muted">—</span>';
+      return `<tr>
+        <td><span style="font-weight:600;font-size:12px">${esc(label)}</span></td>
+        <td>${esc(r.carrier_name)}</td>
+        <td style="font-size:12px;color:var(--muted)">${esc(r.carrier_email)}</td>
+        <td style="font-size:12px">${esc(r.carrier_dot||'—')}</td>
+        <td>${statusBadge(r.status)}</td>
+        <td style="font-size:11px;color:var(--muted)">${sent}</td>
+        <td style="font-size:11px;color:var(--muted)">${signed}</td>
+        <td style="white-space:nowrap">${actions}</td>
+      </tr>`;
+    }).join('')}</tbody></table></div>`;
+  }catch(e){t.innerHTML=`<div style="padding:20px;color:var(--red)">Could not load agreements: ${esc(e.message)}</div>`;}
+}
+
+function openSendAgreementModal(type='carrier_agreement'){
+  const sel=document.getElementById('agr-send-type');
+  if(sel)sel.value=type;
+  ['agr-send-name','agr-send-email','agr-send-dot'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  const r=document.getElementById('agr-send-result');if(r){r.style.display='none';}
+  const btn=document.getElementById('agr-send-btn');if(btn){btn.disabled=false;btn.textContent='✍️ Send Link';}
+  document.getElementById('agr-send-modal').style.display='flex';
+}
+function closeAgrModal(){document.getElementById('agr-send-modal').style.display='none';}
+
+async function submitSendAgreement(){
+  const type=document.getElementById('agr-send-type')?.value;
+  const name=(document.getElementById('agr-send-name')?.value||'').trim();
+  const email=(document.getElementById('agr-send-email')?.value||'').trim();
+  const dot=(document.getElementById('agr-send-dot')?.value||'').trim();
+  const resEl=document.getElementById('agr-send-result');
+  const btn=document.getElementById('agr-send-btn');
+  if(!name||!email){
+    if(resEl){resEl.style.display='block';resEl.style.background='rgba(239,68,68,.1)';resEl.style.color='#ef4444';resEl.textContent='Carrier name and email are required.';}
+    return;
+  }
+  btn.disabled=true;btn.textContent='Sending…';
+  try{
+    const res=await apiFetch('/api/agreements/send',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({agreement_type:type,carrier_name:name,carrier_email:email,carrier_dot:dot||null})});
+    const d=await res.json();
+    if(!res.ok){throw new Error(d.detail||'Send failed');}
+    if(resEl){resEl.style.display='block';resEl.style.background='rgba(34,197,94,.1)';resEl.style.color='#16a34a';resEl.textContent=`✓ Signing link sent to ${email}`;}
+    setTimeout(()=>{closeAgrModal();loadAgreements();},1800);
+  }catch(e){
+    if(resEl){resEl.style.display='block';resEl.style.background='rgba(239,68,68,.1)';resEl.style.color='#ef4444';resEl.textContent=e.message;}
+    btn.disabled=false;btn.textContent='✍️ Send Link';
+  }
+}
+
+async function cancelAgrRequest(id){
+  if(!confirm('Cancel this signing request?'))return;
+  await apiFetch(`/api/agreements/requests/${id}`,{method:'DELETE'});
+  loadAgreements();
+}
+
+// ── Vault ─────────────────────────────────────────────────────────────────────
 let _vaultDocs=[];
 const DOC_LABELS={pod:'POD',rate_con:'Rate Con',bol:'BOL',invoice:'Invoice',compliance:'Compliance',agreement:'Agreement',folder:'Folder',other:'Other'};
 const DOC_ICONS ={pod:'🚚',rate_con:'📋',bol:'📄',invoice:'🧾',compliance:'✅',agreement:'📝',folder:'📁',other:'📎'};
