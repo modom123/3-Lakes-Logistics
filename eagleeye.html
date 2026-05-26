@@ -250,6 +250,17 @@ body{font-family:var(--ff-b);color:var(--text);background:var(--off);display:fle
 .btn-navy-sm:hover{background:var(--navy2);}
 .btn-sent-rc{background:#166534!important;color:#bbf7d0!important;}
 .btn-sent-rc:hover{background:#14532d!important;}
+/* AR aging buckets */
+.ar-bucket{padding:16px 14px;text-align:center;border-right:1px solid var(--border);}
+.ar-bucket:last-child{border-right:none;}
+.ar-label{font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;}
+.ar-val{font-size:20px;font-weight:800;color:var(--text);}
+.ar-count{font-size:11px;color:var(--muted);margin-top:3px;}
+.ar-warn1 .ar-val{color:#d97706;}
+.ar-warn2 .ar-val{color:#ea580c;}
+.ar-warn3 .ar-val{color:#dc2626;}
+.ar-crit{background:rgba(239,68,68,.04);}
+.ar-crit .ar-val{color:#b91c1c;}
 
 .btn-red-sm{
   display:inline-flex;align-items:center;gap:5px;
@@ -1235,19 +1246,32 @@ td.td-name{font-weight:600;color:var(--navy);}
     <!-- INVOICES -->
     <div class="page" id="page-invoices">
       <div class="page-hdr">
-        <div class="page-hdr-l"><div class="chip">Billing</div><h2>Invoices</h2></div>
+        <div class="page-hdr-l"><div class="chip">Billing</div><h2>Invoices & AR</h2></div>
         <div class="page-hdr-acts">
           <button class="btn-out" onclick="filterInvoices('all')" id="inv-filter-all">All</button>
           <button class="btn-out" onclick="filterInvoices('Unpaid')" id="inv-filter-unpaid">Unpaid</button>
+          <button class="btn-out" onclick="filterInvoices('Overdue')" id="inv-filter-overdue">Overdue</button>
           <button class="btn-out" onclick="filterInvoices('Paid')" id="inv-filter-paid">Paid</button>
           <button class="btn-navy" onclick="openModal('add-invoice-modal')">+ New Invoice</button>
         </div>
       </div>
-      <div class="g4">
-        <div class="mc" onclick="showDashSummary('inv-all')" style="cursor:pointer" title="Click for recent 10"><div class="mc-label">Total Invoiced (MTD)</div><div class="mc-val gold" id="inv-total-mtd">—</div></div>
-        <div class="mc" onclick="showDashSummary('inv-paid')" style="cursor:pointer" title="Click for recent 10"><div class="mc-label">Collected</div><div class="mc-val green" id="inv-collected">—</div></div>
-        <div class="mc" onclick="showDashSummary('unpaid')" style="cursor:pointer" title="Click for recent 10"><div class="mc-label">Outstanding AR</div><div class="mc-val orange" id="inv-outstanding">—</div></div>
-        <div class="mc" onclick="showDashSummary('inv-overdue')" style="cursor:pointer" title="Click for recent 10"><div class="mc-label">Overdue</div><div class="mc-val red" id="inv-overdue">—</div></div>
+      <!-- KPI Row -->
+      <div class="g4" style="margin-bottom:16px">
+        <div class="mc"><div class="mc-label">Total Invoiced (MTD)</div><div class="mc-val gold" id="inv-total-mtd">—</div></div>
+        <div class="mc"><div class="mc-label">Collected</div><div class="mc-val green" id="inv-collected">—</div></div>
+        <div class="mc"><div class="mc-label">Outstanding AR</div><div class="mc-val orange" id="inv-outstanding">—</div></div>
+        <div class="mc"><div class="mc-label">Overdue</div><div class="mc-val red" id="inv-overdue">—</div></div>
+      </div>
+      <!-- AR Aging Buckets -->
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-hd"><div class="card-title">AR Aging</div><button class="btn-out" style="font-size:11px;padding:4px 10px" onclick="loadArAging()">↻ Refresh</button></div>
+        <div id="ar-aging-row" style="display:grid;grid-template-columns:repeat(5,1fr);gap:0;border-top:1px solid var(--border)">
+          <div class="ar-bucket" id="ar-current"><div class="ar-label">Current</div><div class="ar-val" id="ar-val-current">—</div><div class="ar-count" id="ar-cnt-current">—</div></div>
+          <div class="ar-bucket ar-warn1" id="ar-1-30"><div class="ar-label">1–30 Days</div><div class="ar-val" id="ar-val-1-30">—</div><div class="ar-count" id="ar-cnt-1-30">—</div></div>
+          <div class="ar-bucket ar-warn2" id="ar-31-60"><div class="ar-label">31–60 Days</div><div class="ar-val" id="ar-val-31-60">—</div><div class="ar-count" id="ar-cnt-31-60">—</div></div>
+          <div class="ar-bucket ar-warn3" id="ar-61-90"><div class="ar-label">61–90 Days</div><div class="ar-val" id="ar-val-61-90">—</div><div class="ar-count" id="ar-cnt-61-90">—</div></div>
+          <div class="ar-bucket ar-crit" id="ar-91"><div class="ar-label">90+ Days</div><div class="ar-val" id="ar-val-91">—</div><div class="ar-count" id="ar-cnt-91">—</div></div>
+        </div>
       </div>
       <div id="invoices-list"><div class="loading"><div class="spin"></div>Loading invoices…</div></div>
     </div>
@@ -2944,15 +2968,26 @@ td.td-name{font-weight:600;color:var(--navy);}
     <div class="modal-body">
       <div class="form-row">
         <div class="fg"><label class="fl">Invoice Number</label><input class="fi" id="inv-number" placeholder="INV-0001"></div>
-        <div class="fg"><label class="fl">Carrier</label><select class="fsel" id="inv-carrier-select"><option value="">Select carrier (optional)…</option></select></div>
+        <div class="fg"><label class="fl">Bill To (Customer)</label>
+          <select class="fsel" id="inv-customer-select" onchange="onInvCustomerChange()"><option value="">Select customer…</option></select>
+        </div>
       </div>
       <div class="form-row">
         <div class="fg"><label class="fl">Load (optional)</label><select class="fsel" id="inv-load-select"><option value="">Select load (optional)…</option></select></div>
         <div class="fg"><label class="fl">Amount ($) <span>*</span></label><input class="fi" type="number" id="inv-amount" placeholder="250.00"></div>
       </div>
       <div class="form-row">
-        <div class="fg"><label class="fl">Due Date</label><input class="fi" type="date" id="inv-due"></div>
-        <div class="fg"><label class="fl">Status</label><select class="fsel" id="inv-status"><option>Unpaid</option><option>Paid</option><option>Overdue</option><option>Partial</option></select></div>
+        <div class="fg"><label class="fl">Payment Terms</label>
+          <select class="fsel" id="inv-terms">
+            <option value="quick_pay">Quick Pay</option>
+            <option value="net15">Net 15</option>
+            <option value="net30" selected>Net 30</option>
+            <option value="net45">Net 45</option>
+          </select>
+        </div>
+        <div class="fg"><label class="fl">Status</label>
+          <select class="fsel" id="inv-status"><option>Unpaid</option><option>Paid</option><option>Overdue</option><option>Partial</option></select>
+        </div>
       </div>
       <div class="form-row-1">
         <div class="fg"><label class="fl">Notes</label><textarea class="fta" id="inv-notes" placeholder="Description of services…" style="min-height:60px"></textarea></div>
@@ -3114,7 +3149,7 @@ function nav(id){
   }
   if(id==='carriers'){const n=document.getElementById('carrier-notif');if(n)n.style.display='none';}
   if(id==='customers')loadCustomers();
-  if(id==='invoices'){const n=document.getElementById('invoice-notif');if(n)n.style.display='none';renderInvoices();}
+  if(id==='invoices'){const n=document.getElementById('invoice-notif');if(n)n.style.display='none';renderInvoices();loadArAging();}
   if(id==='notes')loadNotes();
   if(id==='reports')loadTeamReports();
   if(id==='exec-command'){const n=document.getElementById('exec-esc-notif');if(n)n.style.display='none';ecRefreshDashboard();}
@@ -4186,12 +4221,18 @@ function renderInvoices(){
         '<div class="inv-amt '+(inv.status==='Paid'?'val-green':'val-gold')+'">$'+Number(inv.amount||0).toLocaleString()+'</div>'+
         '<div style="margin-top:6px"><span class="badge '+invStatusBadge(inv.status)+'">'+esc(inv.status||'Unpaid')+'</span></div>'+
       '</div></div>'+
-      '<div class="inv-meta"><div>📅 Due: '+dueStr+'</div><div>Created: '+createdStr+'</div><div>'+paidStr+'</div></div>'+
+      '<div class="inv-meta">'+
+        '<div>📅 Due: '+dueStr+'</div>'+
+        '<div>Created: '+createdStr+'</div>'+
+        (inv.customer_id?'<div>🏢 '+(allCustomers.find(c=>c.id===inv.customer_id)?.company_name||'—')+'</div>':'<div style="color:var(--muted)">No customer linked</div>')+
+        '<div>'+paidStr+'</div>'+
+        (inv.sent_at?'<div style="color:#16a34a;font-size:11px">📧 Sent '+new Date(inv.sent_at).toLocaleDateString()+'</div>':'')+
+      '</div>'+
       '<div class="inv-actions">'+
         (inv.status!=='Paid'?'<button class="btn-green-sm" onclick="markInvoicePaid(\''+inv.id+'\')">✅ Mark Paid</button>':'')+
         (inv.status==='Unpaid'?'<button class="btn-out" style="font-size:11px;padding:5px 10px;color:var(--orange)" onclick="markInvoiceOverdue(\''+inv.id+'\')">⚠️ Overdue</button>':'')+
         '<button class="btn-out" style="font-size:11px;padding:5px 10px" onclick="printInvoice(\''+inv.id+'\')">🖨️ Print</button>'+
-        '<button class="btn-navy-sm" onclick="sendInvoiceEmail(\''+inv.id+'\')" title="Email Invoice">📧 Send</button>'+
+        '<button class="btn-navy-sm'+(inv.sent_at?' btn-sent-rc':'')+'" onclick="previewInvoiceEmail(\''+inv.id+'\')" title="Preview &amp; Email Invoice">'+(inv.sent_at?'✅ Sent':'📧 Send')+'</button>'+
         '<button class="btn-red-sm" style="margin-left:auto" onclick="deleteInvoice(\''+inv.id+'\')">Delete</button>'+
       '</div></div>';
   }).join('');
@@ -4199,7 +4240,7 @@ function renderInvoices(){
 
 function filterInvoices(f){currentInvFilter=f;renderInvoices();}
 function updateInvFilters(){
-  ['all','Unpaid','Paid'].forEach(f=>{
+  ['all','Unpaid','Overdue','Paid'].forEach(f=>{
     const btn=document.getElementById('inv-filter-'+f.toLowerCase());
     if(btn)btn.className=currentInvFilter===f?'btn-navy':'btn-out';
   });
@@ -4222,11 +4263,13 @@ async function saveInvoice(){
   const amount=Number(document.getElementById('inv-amount').value);
   if(!amount){toast('Amount is required','error');return;}
   btn.disabled=true;btn.textContent='Saving…';
-  const carrierId=document.getElementById('inv-carrier-select').value||null;
+  const customerId=document.getElementById('inv-customer-select')?.value||null;
   const loadId=document.getElementById('inv-load-select').value||null;
+  const terms=document.getElementById('inv-terms')?.value||'net30';
   const invRes=await apiFetch('/api/dashboard/invoices','POST',{
     invoice_number:document.getElementById('inv-number').value.trim()||autoInvNum(),
-    carrier_id:carrierId,load_id:loadId,amount,
+    customer_id:customerId,load_id:loadId,amount,
+    payment_terms:terms,
     status:document.getElementById('inv-status').value,
     due_date:document.getElementById('inv-due').value||null,
     notes:document.getElementById('inv-notes').value.trim()
@@ -4235,7 +4278,80 @@ async function saveInvoice(){
   if(!invRes.ok){toast('Error creating invoice','error');return;}
   closeModal('add-invoice-modal');
   ['inv-number','inv-amount','inv-due','inv-notes'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  const custSel=document.getElementById('inv-customer-select');if(custSel)custSel.value='';
   await loadInvoices();renderInvoices();updateDashboard();toast('Invoice created!');
+  // Auto-send email if customer has email on file
+  const item=(await apiFetch('/api/dashboard/invoices?limit=1').then(r=>r.json()).catch(()=>({items:[]}))).items?.[0];
+  if(item?.id && customerId) {
+    const c=allCustomers.find(x=>x.id===customerId);
+    if(c?.email) previewInvoiceEmail(item.id);
+  }
+}
+
+// AR Aging
+async function loadArAging() {
+  try {
+    const res = await apiFetch('/api/invoices/aging');
+    if (!res.ok) return;
+    const data = await res.json();
+    const fmt = v => '$' + Number(v||0).toLocaleString(undefined,{maximumFractionDigits:0});
+    const setBucket = (key, uiKey) => {
+      const b = data.buckets[key];
+      const el = document.getElementById('ar-val-'+uiKey);
+      const ct = document.getElementById('ar-cnt-'+uiKey);
+      if (el) el.textContent = fmt(b?.total);
+      if (ct) ct.textContent = (b?.count||0) + ' invoice' + ((b?.count||0)!==1?'s':'');
+    };
+    setBucket('current','current');
+    setBucket('1_30','1-30');
+    setBucket('31_60','31-60');
+    setBucket('61_90','61-90');
+    setBucket('91_plus','91');
+  } catch(e) { console.warn('AR aging failed:', e); }
+}
+
+// Invoice email preview modal
+let _invPreviewId = null;
+async function previewInvoiceEmail(invoiceId) {
+  _invPreviewId = invoiceId;
+  const modal = document.getElementById('inv-preview-modal');
+  if (!modal) return;
+  document.getElementById('inv-preview-frame').srcdoc = '';
+  document.getElementById('inv-preview-info').textContent = 'Loading…';
+  document.getElementById('inv-preview-send-btn').disabled = true;
+  modal.style.display = 'flex';
+  try {
+    const res = await apiFetch('/api/invoices/'+invoiceId+'/preview');
+    const data = await res.json();
+    document.getElementById('inv-preview-frame').srcdoc = data.html || '';
+    if (data.already_sent) {
+      const d = new Date(data.sent_at).toLocaleDateString();
+      document.getElementById('inv-preview-info').innerHTML = `<span style="color:#16a34a">✅ Sent ${d} to <b>${data.sent_to}</b></span>`;
+    } else if (data.to_email) {
+      document.getElementById('inv-preview-info').innerHTML = `Will send to: <b>${data.to_email}</b>`;
+    } else {
+      document.getElementById('inv-preview-info').innerHTML = '<span style="color:#ef4444">⚠ No customer email on file</span>';
+    }
+    document.getElementById('inv-preview-send-btn').disabled = false;
+    document.getElementById('inv-preview-send-btn').textContent = data.already_sent ? '📧 Resend Invoice' : '📧 Send Invoice';
+  } catch(e) {
+    document.getElementById('inv-preview-info').textContent = 'Preview failed: '+e.message;
+  }
+}
+async function sendInvoiceEmail(invoiceId) {
+  const btn = document.getElementById('inv-preview-send-btn');
+  btn.disabled=true; btn.textContent='Sending…';
+  try {
+    const res = await apiFetch('/api/invoices/'+invoiceId+'/send','POST');
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail||'Send failed');
+    toast('✅ Invoice sent to '+(data.to||'—'));
+    closeModal('inv-preview-modal');
+    await loadInvoices(); renderInvoices();
+  } catch(e) {
+    toast('Failed: '+e.message,'error');
+    btn.disabled=false; btn.textContent='📧 Send Invoice';
+  }
 }
 
 function autoInvNum(){return 'INV-'+String(allInvoices.length+1).padStart(4,'0');}
@@ -4285,10 +4401,30 @@ function printInvoice(id){
 }
 
 function populateInvSelects(){
-  const csel=document.getElementById('inv-carrier-select');
-  if(csel)csel.innerHTML='<option value="">Select carrier (optional)…</option>'+allCarriers.map(c=>'<option value="'+c.id+'">'+esc(c.company_name)+'</option>').join('');
+  // Customer dropdown (Bill To)
+  const custSel=document.getElementById('inv-customer-select');
+  if(custSel)custSel.innerHTML='<option value="">Select customer…</option>'+
+    allCustomers.filter(c=>c.status==='active').map(c=>`<option value="${c.id}">${esc(c.company_name)}</option>`).join('');
   const lsel=document.getElementById('inv-load-select');
   if(lsel)lsel.innerHTML='<option value="">Select load (optional)…</option>'+allLoads.map(l=>'<option value="'+l.id+'">'+esc(l.load_number||('#'+l.id.slice(0,6)))+' — '+esc(l.driver_name||'')+'</option>').join('');
+}
+
+function onInvCustomerChange() {
+  const custId = document.getElementById('inv-customer-select')?.value;
+  if (!custId) return;
+  const c = allCustomers.find(x=>x.id===custId);
+  if (!c) return;
+  // Auto-set payment terms from customer record
+  const termsEl = document.getElementById('inv-terms');
+  if (termsEl && c.payment_terms) termsEl.value = c.payment_terms;
+  // Auto-calculate due date
+  const daysMap = {quick_pay:2, net15:15, net30:30, net45:45};
+  const days = daysMap[c.payment_terms] || 30;
+  const dueEl = document.getElementById('inv-due');
+  if (dueEl && !dueEl.value) {
+    const d = new Date(); d.setDate(d.getDate()+days);
+    dueEl.value = d.toISOString().split('T')[0];
+  }
 }
 
 function createInvoiceForCarrier(carrierId,carrierName){
@@ -11823,6 +11959,23 @@ async function deactivateDriver(driverId) {
     <div class="modal-footer">
       <button class="btn-out" onclick="closeModal('add-customer-modal')">Cancel</button>
       <button class="btn-navy" onclick="saveCustomer()" id="save-customer-btn">Save Customer</button>
+    </div>
+  </div>
+</div>
+
+<!-- INVOICE PREVIEW / SEND MODAL -->
+<div class="modal-overlay" id="inv-preview-modal" style="display:none" onclick="if(event.target===this)closeModal('inv-preview-modal')">
+  <div class="modal" style="max-width:720px;width:95vw">
+    <div class="modal-hd">
+      <div><div class="modal-title">Invoice Preview</div><div class="modal-sub" id="inv-preview-info">Loading…</div></div>
+      <button class="modal-close" onclick="closeModal('inv-preview-modal')">✕</button>
+    </div>
+    <div style="padding:0">
+      <iframe id="inv-preview-frame" style="width:100%;height:520px;border:none;border-bottom:1px solid var(--border)" srcdoc=""></iframe>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-out" onclick="closeModal('inv-preview-modal')">Close</button>
+      <button class="btn-navy" id="inv-preview-send-btn" onclick="sendInvoiceEmail(_invPreviewId)" disabled>📧 Send Invoice</button>
     </div>
   </div>
 </div>

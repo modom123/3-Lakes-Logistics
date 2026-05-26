@@ -38,17 +38,51 @@ def _load(load_id):
 def h91_delivery_confirmed(carrier_id, contract_id, payload):
     load_id = payload.get("load_id")
     sb = _db()
+    load: dict = {}
     if sb and load_id:
         try:
             sb.table("loads").update({
                 "status": "delivered",
                 "delivered_at": _NOW(),
             }).eq("id", load_id).execute()
+            r = sb.table("loads").select("*").eq("id", load_id).maybe_single().execute()
+            load = r.data or {}
         except Exception:  # noqa: BLE001
             pass
+    # Auto-create invoice if one doesn't already exist for this load
+    invoice_id = None
+    if sb and load_id:
+        try:
+            existing = sb.table("invoices").select("id").eq("load_id", load_id).execute()
+            if not existing.data:
+                import datetime as _dt
+                rate = float(load.get("rate_total") or load.get("rate") or 0)
+                fee  = float(load.get("dispatch_fee") or 0)
+                due  = (_dt.date.today() + _dt.timedelta(days=30)).isoformat()
+                last_inv = sb.table("invoices").select("invoice_number").order("created_at", desc=True).limit(1).execute()
+                last_num = 0
+                if last_inv.data:
+                    try: last_num = int((last_inv.data[0].get("invoice_number") or "INV-0000").replace("INV-",""))
+                    except ValueError: pass
+                inv_num = f"INV-{last_num + 1:04d}"
+                inv_res = sb.table("invoices").insert({
+                    "load_id":        load_id,
+                    "carrier_id":     str(carrier_id) if carrier_id else None,
+                    "customer_id":    load.get("customer_id"),
+                    "invoice_number": inv_num,
+                    "amount":         fee or rate,
+                    "dispatch_fee":   fee,
+                    "payment_terms":  "net30",
+                    "status":         "Unpaid",
+                    "due_date":       due,
+                    "notes":          f"Dispatch services — Load {load.get('load_number','—')}",
+                }).execute()
+                invoice_id = inv_res.data[0]["id"] if inv_res.data else None
+        except Exception as e:  # noqa: BLE001
+            log.warning("auto-invoice creation failed: %s", e)
     log_agent("orbit", "delivery_confirmed", carrier_id=str(carrier_id) if carrier_id else None,
               payload={"load_id": load_id}, result="delivered")
-    return {"confirmed": True, "load_id": load_id, "delivered_at": _NOW()}
+    return {"confirmed": True, "load_id": load_id, "delivered_at": _NOW(), "invoice_id": invoice_id}
 
 
 # ── Step 92: document_vault.upload_pod ───────────────────────────────────────
