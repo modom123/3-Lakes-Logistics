@@ -36,29 +36,47 @@ def _load(load_id: str | None) -> dict:
 
 # ── Step 31: dispatch.load_received ──────────────────────────────────────────
 
+def _find_or_create_customer(sb, company_name: str | None) -> str | None:
+    """Return customer_id for company_name, creating a record if needed."""
+    if not company_name or not sb:
+        return None
+    try:
+        existing = sb.table("customers").select("id").ilike("company_name", company_name).limit(1).execute()
+        if existing.data:
+            return existing.data[0]["id"]
+        r = sb.table("customers").insert({"company_name": company_name, "customer_type": "broker"}).execute()
+        return r.data[0]["id"] if r.data else None
+    except Exception:  # noqa: BLE001
+        return None
+
+
 def h31_dispatch_load_received(carrier_id, contract_id, payload):
     sb = _db()
+    # Auto-link customer from broker_name or shipper_name in payload
+    company = payload.get("broker_name") or payload.get("shipper_name")
+    customer_id = _find_or_create_customer(sb, company)
     load_data = {
-        "carrier_id": str(carrier_id) if carrier_id else None,
+        "carrier_id":  str(carrier_id) if carrier_id else None,
         "broker_name": payload.get("broker_name"),
         "load_number": payload.get("load_number"),
-        "origin_city": payload.get("origin_city"),
+        "origin_city":  payload.get("origin_city"),
         "origin_state": payload.get("origin_state"),
-        "dest_city": payload.get("dest_city"),
-        "dest_state": payload.get("dest_state"),
-        "pickup_at": payload.get("pickup_at"),
+        "dest_city":   payload.get("dest_city"),
+        "dest_state":  payload.get("dest_state"),
+        "pickup_at":   payload.get("pickup_at"),
         "delivery_at": payload.get("delivery_at"),
-        "miles": payload.get("miles"),
-        "rate_total": payload.get("rate_total"),
+        "miles":       payload.get("miles"),
+        "rate_total":  payload.get("rate_total"),
         "rate_per_mile": payload.get("rate_per_mile"),
-        "status": "booked",
-        "created_at": _NOW(),
+        "customer_id": customer_id,
+        "status":      "booked",
+        "created_at":  _NOW(),
     }
     if sb:
         try:
             r = sb.table("loads").insert(load_data).execute()
             load_id = r.data[0]["id"] if r.data else None
-            return {"received": True, "load_id": load_id, **load_data}
+            return {"received": True, "load_id": load_id, "customer_id": customer_id, **load_data}
         except Exception as e:  # noqa: BLE001
             return {"received": False, "error": str(e)}
     return {"received": True, "load_id": None, "note": "supabase_not_configured", **load_data}

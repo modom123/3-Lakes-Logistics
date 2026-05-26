@@ -748,6 +748,7 @@ td.td-name{font-weight:600;color:var(--navy);}
     <div class="sb-item" onclick="nav('carriers')"><span class="sb-icon">👥</span> Carriers <span class="sb-badge" id="carrier-notif" style="display:none">●</span></div>
     <div class="sb-item" onclick="nav('drivers')"><span class="sb-icon">🪪</span> Drivers <span class="sb-badge" id="drv-notif" style="display:none">●</span></div>
     <div class="sb-item" onclick="nav('loads')"><span class="sb-icon">📦</span> Load Manager</div>
+    <div class="sb-item" onclick="nav('customers')"><span class="sb-icon">🏢</span> Customers <span class="sb-badge" id="cust-notif" style="display:none">●</span></div>
     <div class="sb-item" onclick="nav('invoices')"><span class="sb-icon">🧾</span> Invoices <span class="sb-badge" id="invoice-notif" style="display:none">●</span></div>
   </div>
   <div class="sb-section">
@@ -1174,6 +1175,59 @@ td.td-name{font-weight:600;color:var(--navy);}
         <div class="tbl-wrap">
           <table><thead><tr><th>Load #</th><th>Date</th><th>Driver</th><th>Route</th><th>Miles</th><th>Gross Rate</th><th>RPM</th><th>Dispatch Fee</th><th>Status</th><th>Invoice</th></tr></thead>
           <tbody id="load-table"><tr><td colspan="10"><div class="loading"><div class="spin"></div>Loading…</div></td></tr></tbody></table>
+        </div>
+      </div>
+    </div>
+
+    <!-- CUSTOMERS / SHIPPER CRM -->
+    <div class="page" id="page-customers">
+      <div class="page-hdr">
+        <div class="page-hdr-l"><div class="chip">CRM</div><h2>Customers & Shippers</h2></div>
+        <button class="btn-navy" onclick="openModal('add-customer-modal')">+ Add Customer</button>
+      </div>
+      <!-- KPI row -->
+      <div class="g3" style="margin-bottom:16px">
+        <div class="mc"><div class="mc-label">Total Customers</div><div class="mc-val blue" id="cust-total">—</div></div>
+        <div class="mc"><div class="mc-label">Active This Month</div><div class="mc-val green" id="cust-active-mtd">—</div></div>
+        <div class="mc"><div class="mc-label">Total Revenue</div><div class="mc-val gold" id="cust-total-rev">—</div></div>
+      </div>
+      <!-- Search -->
+      <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap">
+        <input class="fi" id="cust-search" placeholder="Search by company name…" style="max-width:320px" oninput="filterCustomers()">
+        <select class="fsel" id="cust-type-filter" style="width:160px" onchange="filterCustomers()">
+          <option value="">All Types</option>
+          <option value="broker">Broker</option>
+          <option value="shipper">Shipper</option>
+          <option value="both">Both</option>
+        </select>
+      </div>
+      <!-- Table -->
+      <div class="card">
+        <div class="card-hd"><div class="card-title">Customer List</div><span class="card-chip">Supabase</span></div>
+        <div class="tbl-wrap">
+          <table class="tbl" id="cust-table">
+            <thead><tr>
+              <th>Company</th><th>Type</th><th>Contact</th><th>Email / Phone</th>
+              <th>Payment Terms</th><th>Loads</th><th>Revenue</th><th>Actions</th>
+            </tr></thead>
+            <tbody id="cust-tbody"><tr><td colspan="8"><div class="empty-state"><div class="ei">🏢</div><p>No customers yet. Click "+ Add Customer" to get started.</p></div></td></tr></tbody>
+          </table>
+        </div>
+      </div>
+      <!-- Detail panel (hidden until row is clicked) -->
+      <div id="cust-detail-panel" style="display:none;margin-top:16px">
+        <div class="card">
+          <div class="card-hd">
+            <div class="card-title" id="cust-detail-name">—</div>
+            <button class="btn-out" style="font-size:11px;padding:4px 10px" onclick="document.getElementById('cust-detail-panel').style.display='none'">✕ Close</button>
+          </div>
+          <div style="padding:16px;display:grid;grid-template-columns:1fr 1fr;gap:20px">
+            <div id="cust-detail-info"></div>
+            <div>
+              <div style="font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;margin-bottom:10px">Load History</div>
+              <div id="cust-detail-loads" style="max-height:280px;overflow-y:auto"></div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -2783,7 +2837,14 @@ td.td-name{font-weight:600;color:var(--navy);}
       </div>
       <div class="form-row">
         <div class="fg"><label class="fl">Pickup Date</label><input class="fi" type="date" id="load-pickup"></div>
-        <div class="fg"><label class="fl">Broker / Shipper Name</label><input class="fi" id="load-broker" placeholder="e.g. Echo Logistics"></div>
+        <div class="fg"><label class="fl">Customer / Broker</label>
+          <select class="fsel" id="load-customer-select" onchange="onLoadCustomerChange()">
+            <option value="">No customer linked</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="fg"><label class="fl">Broker / Shipper Name</label><input class="fi" id="load-broker" placeholder="e.g. Echo Logistics (or auto-filled above)"></div>
       </div>
       <div class="form-row">
         <div class="fg"><label class="fl">Broker Phone</label><input class="fi" id="load-broker-phone" type="tel" placeholder="(312) 555-0100"></div>
@@ -2956,7 +3017,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 let allCarriers=[], allLoads=[], allInvoices=[], currentInvFilter='all', loadCounter=3849;
 
-const pageNames={dashboard:'Dashboard',dispatch:'Dispatch Board','fleet-map':'Fleet Map',carriers:'Carriers',drivers:'Drivers',loads:'Load Manager',invoices:'Invoices & Billing',compliance:'DOT Compliance',ifta:'IFTA / Permits',insurance:'Insurance',revenue:'Revenue Tracker',providers:'Compliance Providers',checklist:'Daily Checklist',notes:'Dispatcher Notes',reports:'Team Reports','exec-command':'Exec Command',agents:'AI Agents',founders:'Founders Program',crm:'Lead CRM',leads:'Lead Pipeline',execution:'Execution Engine',email:'Email Center',vault:'Document Vault',clm:'CLM Scanner',ledger:'Atomic Ledger',agreements:'Agreements'};
+const pageNames={dashboard:'Dashboard',customers:'Customers & Shippers',dispatch:'Dispatch Board','fleet-map':'Fleet Map',carriers:'Carriers',drivers:'Drivers',loads:'Load Manager',invoices:'Invoices & Billing',compliance:'DOT Compliance',ifta:'IFTA / Permits',insurance:'Insurance',revenue:'Revenue Tracker',providers:'Compliance Providers',checklist:'Daily Checklist',notes:'Dispatcher Notes',reports:'Team Reports','exec-command':'Exec Command',agents:'AI Agents',founders:'Founders Program',crm:'Lead CRM',leads:'Lead Pipeline',execution:'Execution Engine',email:'Email Center',vault:'Document Vault',clm:'CLM Scanner',ledger:'Atomic Ledger',agreements:'Agreements'};
 
 // ── 3 Lakes Logistics Backend API (FastAPI) ──
 const API_BASE = (window.__3LL_API_BASE || 'https://three-lakes-logistics-api.onrender.com').replace(/\/$/,'');
@@ -3052,6 +3113,7 @@ function nav(id){
     if(content) content.scrollTop=0;
   }
   if(id==='carriers'){const n=document.getElementById('carrier-notif');if(n)n.style.display='none';}
+  if(id==='customers')loadCustomers();
   if(id==='invoices'){const n=document.getElementById('invoice-notif');if(n)n.style.display='none';renderInvoices();}
   if(id==='notes')loadNotes();
   if(id==='reports')loadTeamReports();
@@ -3069,7 +3131,7 @@ function nav(id){
 
 function openModal(id){
   document.getElementById(id).classList.add('open');
-  if(id==='add-load-modal')populateDriverSelect();
+  if(id==='add-load-modal'){populateDriverSelect();populateCustomerSelect();}
   if(id==='add-invoice-modal'){populateInvSelects();autoInvNumber();}
 }
 function closeModal(id){document.getElementById(id).classList.remove('open');}
@@ -3099,13 +3161,204 @@ async function testConnection(){
 }
 
 async function refreshAll(){
-  await Promise.all([loadCarriers(),loadLoads()]);
+  await Promise.all([loadCarriers(),loadLoads(),loadCustomers()]);
   await loadInvoices();
   updateDashboard();
   renderCarrierCompliance();
 }
 
 // ── CARRIERS ──
+// ── CUSTOMER / SHIPPER CRM ─────────────────────────────────────────────────
+let allCustomers = [];
+
+async function loadCustomers() {
+  try {
+    const res = await apiFetch('/api/customers?status=all&limit=500');
+    if (!res.ok) { allCustomers=[]; renderCustomersTable(); return; }
+    const json = await res.json();
+    allCustomers = json.items || [];
+  } catch(e) { allCustomers=[]; }
+  renderCustomersTable();
+  updateCustomerKPIs();
+  populateCustomerSelect();
+}
+
+function updateCustomerKPIs() {
+  const setText = (id,v) => { const el=document.getElementById(id); if(el) el.textContent=v; };
+  setText('cust-total', allCustomers.filter(c=>c.status==='active').length);
+  // Active this month = has a load with created_at >= start of month
+  const now = new Date(), mtdStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+  // We use total_loads > 0 as proxy for active (full month calc requires join)
+  setText('cust-active-mtd', allCustomers.filter(c=>c.total_loads>0).length);
+  const rev = allCustomers.reduce((s,c)=>s+(Number(c.total_revenue)||0), 0);
+  setText('cust-total-rev', '$'+rev.toLocaleString(undefined,{maximumFractionDigits:0}));
+}
+
+function filterCustomers() {
+  renderCustomersTable();
+}
+
+function renderCustomersTable() {
+  const tbody = document.getElementById('cust-tbody');
+  if (!tbody) return;
+  const search = (document.getElementById('cust-search')?.value||'').toLowerCase();
+  const typeF  = document.getElementById('cust-type-filter')?.value||'';
+  let list = allCustomers;
+  if (search) list = list.filter(c=>(c.company_name||'').toLowerCase().includes(search));
+  if (typeF)  list = list.filter(c=>c.customer_type===typeF);
+  if (list.length===0) {
+    tbody.innerHTML='<tr><td colspan="8"><div class="empty-state"><div class="ei">🏢</div><p>No customers found.</p></div></td></tr>';
+    return;
+  }
+  const typeBadge = t => ({broker:'badge-blue',shipper:'badge-green',both:'badge-gold'}[t]||'badge-gray');
+  const ratingColor = r => ({A:'#16a34a',B:'#2563eb',C:'#d97706',D:'#dc2626'}[r]||'var(--muted)');
+  tbody.innerHTML = list.map(c => {
+    const rev  = Number(c.total_revenue||0).toLocaleString(undefined,{maximumFractionDigits:0});
+    const rating = c.credit_rating ? `<span style="font-weight:700;color:${ratingColor(c.credit_rating)}">${c.credit_rating}</span>` : '—';
+    return `<tr style="cursor:pointer;border-bottom:1px solid var(--border)" onclick="openCustomerDetail('${c.id}')">
+      <td style="padding:9px 12px;font-weight:600">${esc(c.company_name)}</td>
+      <td style="padding:9px 12px"><span class="badge ${typeBadge(c.customer_type)}">${esc(c.customer_type||'—')}</span></td>
+      <td style="padding:9px 12px;color:var(--muted)">${esc(c.contact_name||'—')}</td>
+      <td style="padding:9px 12px;font-size:12px">${esc(c.email||'—')}<br><span style="color:var(--muted)">${esc(c.phone||'')}</span></td>
+      <td style="padding:9px 12px;font-size:12px">${esc((c.payment_terms||'net30').replace('_',' ').toUpperCase())}</td>
+      <td style="padding:9px 12px;text-align:center">${c.total_loads||0}</td>
+      <td style="padding:9px 12px;color:#16a34a;font-weight:600">$${rev}</td>
+      <td style="padding:9px 12px">
+        <div style="display:flex;gap:5px;flex-wrap:wrap">
+          ${rating}
+          <button class="btn-out" style="font-size:11px;padding:3px 8px" onclick="event.stopPropagation();editCustomer('${c.id}')">Edit</button>
+          <button class="btn-out" style="font-size:11px;padding:3px 8px;color:#ef4444" onclick="event.stopPropagation();deactivateCustomer('${c.id}')">✕</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+async function openCustomerDetail(customerId) {
+  const panel = document.getElementById('cust-detail-panel');
+  const nameEl = document.getElementById('cust-detail-name');
+  const infoEl = document.getElementById('cust-detail-info');
+  const loadsEl = document.getElementById('cust-detail-loads');
+  if (!panel) return;
+  panel.style.display = 'block';
+  panel.scrollIntoView({behavior:'smooth', block:'nearest'});
+  nameEl.textContent = 'Loading…';
+  infoEl.innerHTML = '<div style="color:var(--muted);font-size:12px">Loading…</div>';
+  loadsEl.innerHTML = '';
+  try {
+    const res = await apiFetch('/api/customers/'+customerId);
+    const data = await res.json();
+    const c = data.customer || {};
+    nameEl.textContent = c.company_name || '—';
+    const termLabel = {'quick_pay':'Quick Pay','net15':'Net 15','net30':'Net 30','net45':'Net 45'};
+    infoEl.innerHTML = `
+      <div style="display:grid;gap:10px">
+        <div><div style="font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;margin-bottom:2px">Contact</div>
+          <div style="font-weight:600">${esc(c.contact_name||'—')}</div>
+          <div style="font-size:12px;color:var(--muted)">${esc(c.email||'')} ${c.phone?'· '+esc(c.phone):''}</div>
+        </div>
+        <div><div style="font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;margin-bottom:2px">Location</div>
+          <div>${esc([c.city,c.state].filter(Boolean).join(', ')||'—')}</div>
+        </div>
+        <div><div style="font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;margin-bottom:2px">Payment Terms</div>
+          <div>${esc(termLabel[c.payment_terms]||c.payment_terms||'Net 30')}</div>
+        </div>
+        <div><div style="font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;margin-bottom:2px">Credit Rating</div>
+          <div style="font-weight:700;font-size:18px;color:${({'A':'#16a34a','B':'#2563eb','C':'#d97706','D':'#dc2626'}[c.credit_rating]||'var(--muted)')}">${c.credit_rating||'—'}</div>
+        </div>
+        ${c.mc_number?`<div><div style="font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;margin-bottom:2px">MC Number</div><div>${esc(c.mc_number)}</div></div>`:''}
+        ${c.notes?`<div><div style="font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;margin-bottom:2px">Notes</div><div style="font-size:12px">${esc(c.notes)}</div></div>`:''}
+        <div><div style="font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;margin-bottom:2px">Total Loads / Revenue</div>
+          <div>${c.total_loads||0} loads &nbsp;·&nbsp; <span style="color:#16a34a;font-weight:600">$${Number(c.total_revenue||0).toLocaleString(undefined,{maximumFractionDigits:0})}</span></div>
+        </div>
+      </div>`;
+    const loads = data.loads || [];
+    if (loads.length===0) {
+      loadsEl.innerHTML='<div style="color:var(--muted);font-size:12px;padding:8px 0">No loads on file for this customer.</div>';
+    } else {
+      loadsEl.innerHTML = loads.map(l=>`
+        <div style="padding:8px 0;border-bottom:1px solid var(--border);font-size:13px">
+          <div style="display:flex;justify-content:space-between">
+            <span style="font-weight:600">${esc(l.load_number||'—')}</span>
+            <span class="badge ${_statusBadgeClass(l.status)}">${esc(l.status||'—')}</span>
+          </div>
+          <div style="color:var(--muted);margin-top:2px">${esc(l.origin||'—')} → ${esc(l.destination||'—')}</div>
+          <div style="color:#16a34a;font-weight:600">$${Number(l.rate_total||l.rate||0).toLocaleString()}</div>
+        </div>`).join('');
+    }
+  } catch(e) {
+    infoEl.innerHTML='<div style="color:#ef4444">Failed to load detail: '+e.message+'</div>';
+  }
+}
+
+function _statusBadgeClass(s){
+  const n=(s||'').toLowerCase().replace(/_/g,' ');
+  if(['en route','in transit'].includes(n)) return 'badge-blue';
+  if(['delivered','completed'].includes(n)) return 'badge-green';
+  if(['booked','dispatched'].includes(n)) return 'badge-gold';
+  return 'badge-gray';
+}
+
+async function saveCustomer() {
+  const btn = document.getElementById('save-customer-btn');
+  const company = document.getElementById('cust-company')?.value.trim();
+  if (!company) { toast('Company name is required','error'); return; }
+  btn.disabled=true; btn.textContent='Saving…';
+  const body = {
+    company_name:  company,
+    contact_name:  document.getElementById('cust-contact')?.value.trim()||null,
+    email:         document.getElementById('cust-email')?.value.trim()||null,
+    phone:         document.getElementById('cust-phone')?.value.trim()||null,
+    customer_type: document.getElementById('cust-type')?.value||'broker',
+    payment_terms: document.getElementById('cust-terms')?.value||'net30',
+    mc_number:     document.getElementById('cust-mc')?.value.trim()||null,
+    credit_rating: document.getElementById('cust-rating')?.value||null,
+    city:          document.getElementById('cust-city')?.value.trim()||null,
+    state:         (document.getElementById('cust-state')?.value||'').toUpperCase()||null,
+    notes:         document.getElementById('cust-notes')?.value.trim()||null,
+  };
+  // strip nulls
+  Object.keys(body).forEach(k=>body[k]===null&&delete body[k]);
+  const res = await apiFetch('/api/customers', 'POST', body);
+  btn.disabled=false; btn.textContent='Save Customer';
+  if (!res.ok) {
+    const j = await res.json().catch(()=>({}));
+    toast(j.detail||'Error saving customer','error'); return;
+  }
+  closeModal('add-customer-modal');
+  ['cust-company','cust-contact','cust-email','cust-phone','cust-mc','cust-city','cust-state','cust-notes']
+    .forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  await loadCustomers();
+  toast('Customer saved!');
+}
+
+async function deactivateCustomer(customerId) {
+  if (!confirm('Remove this customer?')) return;
+  await apiFetch('/api/customers/'+customerId, 'DELETE');
+  await loadCustomers();
+  toast('Customer removed');
+}
+
+async function editCustomer(customerId) {
+  const c = allCustomers.find(x=>x.id===customerId);
+  if (!c) return;
+  const company = prompt('Company name:', c.company_name||'');
+  if (!company) return;
+  await apiFetch('/api/customers/'+customerId, 'PATCH', {company_name:company});
+  await loadCustomers();
+  toast('Customer updated');
+}
+
+function populateCustomerSelect() {
+  const sel = document.getElementById('load-customer-select');
+  if (!sel) return;
+  sel.innerHTML = '<option value="">No customer linked</option>' +
+    allCustomers.filter(c=>c.status==='active')
+      .map(c=>`<option value="${c.id}">${esc(c.company_name)}</option>`).join('');
+}
+
+// ── CARRIERS ──────────────────────────────────────────────────────────────────
+
 async function loadCarriers(){
   try{
     const res=await apiFetch('/api/carriers/?limit=15');
@@ -3774,6 +4027,21 @@ function calcFee(){
   }else{prev.textContent='Enter rate to calculate dispatch fee';}
 }
 
+function onLoadCustomerChange() {
+  const sel = document.getElementById('load-customer-select');
+  const custId = sel?.value;
+  if (!custId) return;
+  const c = allCustomers.find(x=>x.id===custId);
+  if (!c) return;
+  // Auto-fill broker name and contact fields
+  const brokerEl = document.getElementById('load-broker');
+  if (brokerEl && !brokerEl.value) brokerEl.value = c.company_name;
+  const emailEl = document.getElementById('load-broker-email');
+  if (emailEl && !emailEl.value) emailEl.value = c.email||'';
+  const phoneEl = document.getElementById('load-broker-phone');
+  if (phoneEl && !phoneEl.value) phoneEl.value = c.phone||'';
+}
+
 async function saveLoad(){
   const btn=document.getElementById('save-load-btn');
   const driver=document.getElementById('load-driver-select').value;
@@ -3814,6 +4082,7 @@ async function saveLoad(){
     post_to_website:postToWeb,
     equipment_type:document.getElementById('load-equip-type')?.value||null,
     weight_lbs:parseInt(document.getElementById('load-weight')?.value)||null,
+    customer_id:document.getElementById('load-customer-select')?.value||null,
   });
   btn.disabled=false;btn.textContent='Save Load';
   if(!insRes.ok){toast('Error saving load','error');return;}
@@ -3822,6 +4091,7 @@ async function saveLoad(){
    'load-broker-email','load-pickup-addr','load-delivery-addr','load-commodity','load-weight','load-special-inst']
     .forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   const eqSel=document.getElementById('load-equip-type');if(eqSel)eqSel.value='';
+  const custSel=document.getElementById('load-customer-select');if(custSel)custSel.value='';
   const pwCb=document.getElementById('load-post-website');if(pwCb)pwCb.checked=false;
   const prev=document.getElementById('fee-preview');if(prev)prev.textContent='Enter rate to calculate dispatch fee';
   await loadLoads();updateDashboard();toast('Load saved!');
@@ -11492,6 +11762,70 @@ async function deactivateDriver(driverId) {
   else showToast('Failed to deactivate');
 }
 </script>
+
+<!-- ADD CUSTOMER MODAL -->
+<div class="modal-overlay" id="add-customer-modal" onclick="if(event.target===this)closeModal('add-customer-modal')">
+  <div class="modal" style="max-width:560px">
+    <div class="modal-hd">
+      <div><div class="modal-title">Add Customer / Shipper</div><div class="modal-sub">Saved to Supabase · Loads link automatically by company name</div></div>
+      <button class="modal-close" onclick="closeModal('add-customer-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <div class="fg"><label class="fl">Company Name <span>*</span></label><input class="fi" id="cust-company" placeholder="e.g. Echo Logistics"></div>
+        <div class="fg"><label class="fl">Type</label>
+          <select class="fsel" id="cust-type">
+            <option value="broker">Broker</option>
+            <option value="shipper">Shipper</option>
+            <option value="both">Both</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="fg"><label class="fl">Contact Name</label><input class="fi" id="cust-contact" placeholder="Jane Smith"></div>
+        <div class="fg"><label class="fl">Email</label><input class="fi" id="cust-email" type="email" placeholder="jane@echobroker.com"></div>
+      </div>
+      <div class="form-row">
+        <div class="fg"><label class="fl">Phone</label><input class="fi" id="cust-phone" type="tel" placeholder="(312) 555-0100"></div>
+        <div class="fg"><label class="fl">Payment Terms</label>
+          <select class="fsel" id="cust-terms">
+            <option value="quick_pay">Quick Pay</option>
+            <option value="net15">Net 15</option>
+            <option value="net30" selected>Net 30</option>
+            <option value="net45">Net 45</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="fg"><label class="fl">MC Number</label><input class="fi" id="cust-mc" placeholder="MC-######"></div>
+        <div class="fg"><label class="fl">Credit Rating</label>
+          <select class="fsel" id="cust-rating">
+            <option value="">Unknown</option>
+            <option value="A">A — Excellent</option>
+            <option value="B">B — Good</option>
+            <option value="C">C — Fair</option>
+            <option value="D">D — Poor</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="fg" style="flex:1"><label class="fl">City, State</label>
+          <div style="display:flex;gap:8px">
+            <input class="fi" id="cust-city" placeholder="Chicago" style="flex:2">
+            <input class="fi" id="cust-state" placeholder="IL" maxlength="2" style="flex:1;text-transform:uppercase">
+          </div>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="fg" style="flex:1"><label class="fl">Notes</label><input class="fi" id="cust-notes" placeholder="e.g. Pays on time, prefers dry van"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-out" onclick="closeModal('add-customer-modal')">Cancel</button>
+      <button class="btn-navy" onclick="saveCustomer()" id="save-customer-btn">Save Customer</button>
+    </div>
+  </div>
+</div>
 
 <!-- RATE CONFIRMATION MODAL -->
 <div class="modal-overlay" id="rate-con-modal" style="display:none" onclick="if(event.target===this)closeModal('rate-con-modal')">

@@ -49,6 +49,7 @@ from .api import (
     leads_router,
     prospecting_router,
     rate_con_router,
+    customers_router,
     studio_router,
     telemetry_router,
     triggers_router,
@@ -179,6 +180,7 @@ def create_app() -> FastAPI:
     app.include_router(mailboxes_router,       prefix="/api",              tags=["mailboxes"])
     app.include_router(agreements_router,      prefix="/api/agreements",   tags=["agreements"])
     app.include_router(rate_con_router,        prefix="/api",              tags=["rate-con"])
+    app.include_router(customers_router,       prefix="/api",              tags=["customers"])
     app.include_router(studio_router,          prefix="/api",              tags=["studio"])
     app.include_router(health_router,                                      tags=["health"])
 

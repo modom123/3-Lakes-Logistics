@@ -1004,12 +1004,15 @@ function renderCurrentLoad(load) {
     if (deliveryAddr) document.getElementById('delivery-maps-link').href = 'https://maps.google.com/?q=' + encodeURIComponent(deliveryAddr);
   }
 
-  // Broker contact
-  if (load.broker_name || load.broker_phone) {
+  // Broker/shipper contact — use shipper_name if available, fallback broker_name
+  const brokerDisplay = load.shipper_name || load.broker_name;
+  if (brokerDisplay || load.broker_phone || load.broker_email) {
     document.getElementById('load-broker').style.display = 'block';
-    document.getElementById('broker-name').textContent       = load.broker_name  || 'Broker';
-    document.getElementById('broker-phone-text').textContent = load.broker_phone || '—';
-    if (load.broker_phone) document.getElementById('broker-call-btn').href = 'tel:' + load.broker_phone;
+    document.getElementById('broker-name').textContent       = brokerDisplay || 'Broker/Shipper';
+    document.getElementById('broker-phone-text').textContent = load.broker_phone || load.broker_email || '—';
+    const callBtn = document.getElementById('broker-call-btn');
+    if (load.broker_phone) { callBtn.href = 'tel:' + load.broker_phone; callBtn.style.display='inline-flex'; }
+    else if (load.broker_email) { callBtn.href = 'mailto:' + load.broker_email; callBtn.style.display='inline-flex'; }
   }
 
   // Special instructions

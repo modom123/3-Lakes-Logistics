@@ -2010,9 +2010,31 @@ function v(id){return document.getElementById(id).value.trim()!=='';}
 function shk(id){
   document.getElementById(id).animate([{transform:'translateX(0)'},{transform:'translateX(-7px)'},{transform:'translateX(7px)'},{transform:'translateX(-4px)'},{transform:'translateX(4px)'},{transform:'translateX(0)'}],{duration:370,easing:'ease'});
 }
-function submitCF(){
+async function submitCF(){
   if(!v('cfFN')||!v('cfEM')||!v('cfMSG')||!document.getElementById('cfTY').value){shk('cfBd');return;}
-  document.getElementById('cfBd').style.display='none';document.getElementById('cfOK').style.display='block';
+  document.getElementById('cfBd').style.display='none';
+  document.getElementById('cfOK').style.display='block';
+  // If inquiry is shipper-type, create a customer lead record in the CRM
+  const inquiryType = document.getElementById('cfTY').value;
+  const isShipper = inquiryType.toLowerCase().includes('shipper') || inquiryType.toLowerCase().includes('broker');
+  if (isShipper) {
+    const company = (v('cfFN') + ' ' + (v('cfLN')||'')).trim() + ' Logistics';
+    try {
+      const BACKEND = window.BACKEND_URL || 'https://3lakes-api.fly.dev';
+      await fetch(BACKEND + '/api/customers', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json','Authorization':'Bearer public-intake'},
+        body: JSON.stringify({
+          company_name:  company,
+          contact_name:  (v('cfFN')||'') + ' ' + (v('cfLN')||''),
+          email:         v('cfEM'),
+          customer_type: 'shipper',
+          notes:         document.getElementById('cfMSG')?.value || '',
+          status:        'active',
+        })
+      });
+    } catch(_) { /* non-blocking — lead captured in contact form */ }
+  }
 }
 function prvPDF(){
   window.open('/carrier-agreement.html','_blank');
