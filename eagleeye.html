@@ -4677,47 +4677,183 @@ const EJS_PUBLIC   = 'Qq26GfzWiCTWP9oOP';
 
 emailjs.init(EJS_PUBLIC);
 
-// Send Rate Confirmation email
-async function sendRateCon(loadId) {
+// Send Rate Confirmation — opens preview modal
+function sendRateCon(loadId) {
   const load = allLoads.find(l => l.id === loadId);
   if (!load) return;
-
-  // Find carrier email from allCarriers by matching driver name
-  const carrier = allCarriers.find(c => c.company_name === load.driver_name || c.company_name === load.carrier_name);
-  const toEmail = carrier?.email || '';
-
-  if (!toEmail) {
-    const manual = prompt('No email on file for ' + (load.driver_name||'this driver') + '.\nEnter their email address:');
-    if (!manual) return;
-    sendRateConEmail(load, manual);
-    return;
-  }
-  sendRateConEmail(load, toEmail);
+  openRateConModal(load);
 }
 
-async function sendRateConEmail(load, toEmail) {
-  toast('Sending rate confirmation…');
-  const params = {
-    to_email:     toEmail,
-    driver_name:  load.driver_name   || '—',
-    load_number:  load.load_number   || '—',
-    origin:       load.origin        || '—',
-    destination:  load.destination   || '—',
-    miles:        load.miles         || '—',
-    rate:         Number(load.rate   || 0).toLocaleString(),
-    dispatch_fee: Number(load.dispatch_fee || 0).toLocaleString(),
-    dispatch_pct: load.dispatch_pct  || '5',
-    pickup_date:  load.pickup_date   || '—',
-    commodity:    load.commodity     || 'General Freight',
-    broker:       load.notes         || '—',
-  };
-  try {
-    await emailjs.send(EJS_SERVICE, EJS_RATE_CON, params);
-    toast('✅ Rate confirmation sent to ' + toEmail);
-  } catch(e) {
-    console.error('EmailJS error:', e);
-    toast('Email failed: ' + (e.text || e.message || 'Unknown error'), 'error');
+function openRateConModal(load) {
+  const carrier = allCarriers.find(c =>
+    c.company_name === load.driver_name ||
+    c.company_name === load.carrier_name ||
+    c.id === load.carrier_id
+  );
+
+  // Pre-fill email field
+  const emailEl = document.getElementById('rc-to-email');
+  if (emailEl) emailEl.value = carrier?.email || '';
+
+  // Store load id for submit
+  const idEl = document.getElementById('rc-modal-load-id');
+  if (idEl) idEl.value = load.id;
+
+  // Reset send button
+  const btn = document.getElementById('rc-send-btn');
+  if (btn) { btn.disabled = false; btn.textContent = '📧 Send Email →'; }
+
+  // Populate document preview
+  const rateTotal = Number(load.rate_total || load.gross_rate || load.rate || 0);
+  const dispatchFee = Number(load.dispatch_fee || 0);
+  const netPay = rateTotal - dispatchFee;
+  const dispatchPct = load.dispatch_pct ? load.dispatch_pct + '%' : '';
+  const rpm = load.rate_per_mile || load.rpm ||
+    (rateTotal && load.miles ? (rateTotal / Number(load.miles)).toFixed(2) : null);
+
+  const origin = [load.origin_city || load.origin, load.origin_state].filter(Boolean).join(', ') || '—';
+  const dest   = [load.dest_city   || load.destination, load.dest_state].filter(Boolean).join(', ') || '—';
+  const broker = load.broker_name || load.shipper_name || '—';
+  const driver = load.driver_name || '—';
+  const equip  = load.equipment_type || carrier?.equipment_type || '—';
+  const loadNum = load.load_number || load.id.slice(0,8).toUpperCase();
+
+  function fmtDate(v) {
+    if (!v) return '—';
+    try { return new Date(v).toLocaleDateString('en-US', {month:'short',day:'numeric',year:'numeric'}); }
+    catch { return v; }
   }
+  function money(v) { return '$'+Number(v).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+
+  const pickup   = fmtDate(load.pickup_at || load.pickup_date);
+  const delivery = fmtDate(load.delivery_at || load.delivery_date);
+  const commodity = load.commodity || 'General Freight';
+  const weight    = load.weight ? load.weight + ' lbs' : '';
+  const special   = load.special_instructions || '';
+
+  const doc = document.getElementById('rc-document');
+  if (!doc) return;
+
+  doc.innerHTML = `
+    <div style="font-family:Arial,sans-serif;color:#0F1D35;border-radius:8px;overflow:hidden;border:1.5px solid #DDE4EF">
+      <!-- Header -->
+      <div style="background:#0B2545;padding:20px 24px;display:flex;justify-content:space-between;align-items:flex-start">
+        <div>
+          <div style="font-family:Georgia,serif;font-size:20px;font-weight:700;color:#E4A830">3 Lakes Logistics</div>
+          <div style="font-size:10px;color:rgba(255,255,255,.45);letter-spacing:1.5px;text-transform:uppercase;margin-top:2px">Rate Confirmation</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:10px;color:rgba(255,255,255,.4);letter-spacing:1px">LOAD #</div>
+          <div style="font-size:18px;font-weight:700;color:#fff;font-family:monospace">${esc(loadNum)}</div>
+          <div style="font-size:10px;color:rgba(255,255,255,.35);margin-top:2px">Issued: ${fmtDate(new Date().toISOString())}</div>
+        </div>
+      </div>
+
+      <div style="padding:18px 22px">
+        <!-- Broker / Carrier row -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0;border:1px solid #DDE4EF;border-radius:8px;overflow:hidden;margin-bottom:14px">
+          <div style="padding:12px 16px">
+            <div style="font-size:10px;font-weight:700;color:#5A6A82;letter-spacing:1.2px;text-transform:uppercase;margin-bottom:4px">Broker / Shipper</div>
+            <div style="font-size:14px;font-weight:600">${esc(broker)}</div>
+            ${load.broker_phone ? `<div style="font-size:12px;color:#5A6A82;margin-top:2px">${esc(load.broker_phone)}</div>` : ''}
+          </div>
+          <div style="padding:12px 16px;border-left:1px solid #DDE4EF">
+            <div style="font-size:10px;font-weight:700;color:#5A6A82;letter-spacing:1.2px;text-transform:uppercase;margin-bottom:4px">Carrier / Driver</div>
+            <div style="font-size:14px;font-weight:600">${esc(driver)}</div>
+            <div style="font-size:12px;color:#5A6A82;margin-top:2px">${esc(equip)}</div>
+          </div>
+        </div>
+
+        <!-- Route bar -->
+        <div style="background:#F8F9FC;border:1px solid #DDE4EF;border-radius:8px;padding:14px 18px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;gap:12px">
+          <div style="flex:1">
+            <div style="font-size:10px;font-weight:700;color:#5A6A82;letter-spacing:1px;text-transform:uppercase">Origin</div>
+            <div style="font-size:15px;font-weight:700;color:#0B2545;margin-top:2px">${esc(origin)}</div>
+            <div style="font-size:12px;color:#5A6A82;margin-top:2px">Pickup: ${esc(pickup)}</div>
+          </div>
+          <div style="font-size:20px;color:#C8902A;flex-shrink:0">&#8594;</div>
+          <div style="flex:1;text-align:right">
+            <div style="font-size:10px;font-weight:700;color:#5A6A82;letter-spacing:1px;text-transform:uppercase">Destination</div>
+            <div style="font-size:15px;font-weight:700;color:#0B2545;margin-top:2px">${esc(dest)}</div>
+            <div style="font-size:12px;color:#5A6A82;margin-top:2px">Delivery: ${esc(delivery)}</div>
+          </div>
+        </div>
+
+        <!-- Rate breakdown -->
+        <div style="background:#0B2545;border-radius:8px;padding:16px 20px;margin-bottom:14px">
+          <div style="display:flex;justify-content:space-between;padding:4px 0;color:rgba(255,255,255,.7);font-size:13px">
+            <span>Gross Rate</span><span style="font-family:monospace">${money(rateTotal)}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;padding:4px 0;color:rgba(255,255,255,.7);font-size:13px">
+            <span>Dispatch Fee${dispatchPct ? ' ('+dispatchPct+')' : ''}</span><span style="font-family:monospace">(${money(dispatchFee)})</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;padding:10px 0 4px;border-top:1px solid rgba(255,255,255,.15);margin-top:6px;color:#E4A830;font-weight:700;font-size:15px">
+            <span>Carrier Net Pay</span><span style="font-family:monospace">${money(netPay)}</span>
+          </div>
+        </div>
+
+        <!-- Meta chips -->
+        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:${special?'14px':'4px'}">
+          ${load.miles ? `<div style="background:#F8F9FC;border:1px solid #DDE4EF;border-radius:6px;padding:8px 12px"><div style="font-size:10px;color:#5A6A82;font-weight:700;letter-spacing:1px;text-transform:uppercase">Miles</div><div style="font-size:13px;font-weight:600;margin-top:2px">${esc(String(load.miles))}</div></div>` : ''}
+          ${rpm ? `<div style="background:#F8F9FC;border:1px solid #DDE4EF;border-radius:6px;padding:8px 12px"><div style="font-size:10px;color:#5A6A82;font-weight:700;letter-spacing:1px;text-transform:uppercase">RPM</div><div style="font-size:13px;font-weight:600;margin-top:2px">$${rpm}</div></div>` : ''}
+          <div style="background:#F8F9FC;border:1px solid #DDE4EF;border-radius:6px;padding:8px 12px"><div style="font-size:10px;color:#5A6A82;font-weight:700;letter-spacing:1px;text-transform:uppercase">Commodity</div><div style="font-size:13px;font-weight:600;margin-top:2px">${esc(commodity)}</div></div>
+          ${weight ? `<div style="background:#F8F9FC;border:1px solid #DDE4EF;border-radius:6px;padding:8px 12px"><div style="font-size:10px;color:#5A6A82;font-weight:700;letter-spacing:1px;text-transform:uppercase">Weight</div><div style="font-size:13px;font-weight:600;margin-top:2px">${esc(weight)}</div></div>` : ''}
+        </div>
+
+        ${special ? `<div style="background:#FFF8E6;border:1px solid #F5C842;border-radius:8px;padding:12px 16px;font-size:13px;color:#7A5200"><strong style="display:block;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:#C8902A;margin-bottom:4px">Special Instructions</strong>${esc(special)}</div>` : ''}
+      </div>
+
+      <div style="padding:12px 22px 14px;border-top:1px solid #DDE4EF;font-size:11px;color:#5A6A82;line-height:1.6">
+        By accepting this load, the carrier agrees to haul the described shipment under the terms of the
+        broker–carrier agreement on file. Rate is all-inclusive. Carrier must maintain required insurance
+        and provide BOL at pickup and signed POD at delivery.
+      </div>
+    </div>
+  `;
+
+  openModal('rate-con-modal');
+}
+
+async function submitRateConEmail() {
+  const loadId  = document.getElementById('rc-modal-load-id').value;
+  const toEmail = (document.getElementById('rc-to-email').value || '').trim();
+  if (!toEmail) { showToast('Enter a recipient email address', 'error'); return; }
+  if (!loadId)  { showToast('Load ID missing', 'error'); return; }
+
+  const btn = document.getElementById('rc-send-btn');
+  btn.disabled = true;
+  btn.textContent = 'Sending…';
+
+  const r = await apiFetch(
+    `/api/email/send-rate-con?load_id=${encodeURIComponent(loadId)}&to_email=${encodeURIComponent(toEmail)}`,
+    'POST'
+  );
+
+  btn.disabled = false;
+  btn.textContent = '📧 Send Email →';
+
+  if (r.ok) {
+    closeModal('rate-con-modal');
+    showToast('✅ Rate confirmation sent to ' + toEmail);
+  } else {
+    showToast('Email failed — check Postmark config', 'error');
+  }
+}
+
+function printRateCon() {
+  const docEl = document.getElementById('rc-document');
+  if (!docEl) return;
+  const w = window.open('', '_blank', 'width=820,height=1060');
+  w.document.write(`<!DOCTYPE html><html><head><title>Rate Confirmation</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: Arial, sans-serif; background: #fff; padding: 24px; }
+    @media print { body { padding: 0; } }
+  </style></head><body>${docEl.innerHTML}</body></html>`);
+  w.document.close();
+  w.focus();
+  setTimeout(() => { w.print(); }, 400);
 }
 
 // Send Welcome / Onboarding email
@@ -11209,6 +11345,36 @@ async function deactivateDriver(driverId) {
   <div class="modal" style="max-width:560px">
     <div class="modal-hd"><span class="modal-title">Load Details</span><button class="modal-close" onclick="closeModal('load-detail-modal')">✕</button></div>
     <div style="padding:20px" id="load-detail-body"></div>
+  </div>
+</div>
+
+<!-- RATE CONFIRMATION MODAL -->
+<div class="modal-overlay" id="rate-con-modal" onclick="if(event.target===this)closeModal('rate-con-modal')">
+  <div class="modal" style="max-width:700px">
+    <div class="modal-hd">
+      <div>
+        <div class="modal-title">Rate Confirmation</div>
+        <div class="modal-sub">PREVIEW · PRINT · EMAIL</div>
+      </div>
+      <button class="modal-close" onclick="closeModal('rate-con-modal')">✕</button>
+    </div>
+    <div class="modal-body" style="padding:16px 20px;max-height:70vh;overflow-y:auto">
+      <!-- Document preview populated by openRateConModal() -->
+      <div id="rc-document"></div>
+
+      <!-- Email recipient -->
+      <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border)">
+        <label style="font-size:11px;font-weight:700;color:var(--muted);letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:6px">Recipient Email Address</label>
+        <input class="fi" id="rc-to-email" type="email" placeholder="carrier@example.com" style="max-width:340px">
+        <input type="hidden" id="rc-modal-load-id">
+        <div style="font-size:11px;color:var(--muted);margin-top:5px">Sent via Postmark — arrives in the carrier's inbox, not EmailJS.</div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-out" onclick="printRateCon()" title="Open print dialog / Save as PDF">🖨 Print / PDF</button>
+      <button class="btn-out" onclick="closeModal('rate-con-modal')">Cancel</button>
+      <button class="btn-navy" id="rc-send-btn" onclick="submitRateConEmail()">📧 Send Email →</button>
+    </div>
   </div>
 </div>
 

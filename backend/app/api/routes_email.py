@@ -495,3 +495,223 @@ def _extract_rate_confirmation_fields(email: dict) -> dict:
         extracted["broker_name"] = broker_match.group(1).strip()
 
     return extracted
+
+
+@router.post("/email/send-rate-con", dependencies=[Depends(require_bearer)])
+async def send_rate_con_email(load_id: str, to_email: str) -> dict:
+    """Send a formatted rate confirmation to a carrier via Postmark.
+
+    Args:
+        load_id: UUID of the load record
+        to_email: Carrier/driver recipient email address
+    """
+    from ..settings import get_settings
+
+    s = get_settings()
+    if not s.postmark_server_token:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Postmark not configured")
+
+    try:
+        sb = get_supabase()
+
+        load_result = sb.table("loads").select("*").eq("id", load_id).execute()
+        if not load_result.data:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "load not found")
+
+        ld = load_result.data[0]
+
+        rate_total = float(ld.get("rate_total") or ld.get("gross_rate") or 0)
+        dispatch_fee = float(ld.get("dispatch_fee") or 0)
+        net_pay = rate_total - dispatch_fee
+        dispatch_pct = ld.get("dispatch_pct") or ""
+        rpm = ld.get("rate_per_mile") or ld.get("rpm") or (
+            round(rate_total / float(ld["miles"]), 2) if ld.get("miles") else None
+        )
+
+        origin_city = ld.get("origin_city") or ""
+        origin_state = ld.get("origin_state") or ""
+        dest_city = ld.get("dest_city") or ""
+        dest_state = ld.get("dest_state") or ""
+        origin = f"{origin_city}, {origin_state}".strip(", ") or "—"
+        destination = f"{dest_city}, {dest_state}".strip(", ") or "—"
+
+        def fmt_date(val: str | None) -> str:
+            if not val:
+                return "—"
+            try:
+                from datetime import datetime
+                return datetime.fromisoformat(val.replace("Z", "+00:00")).strftime("%b %d, %Y")
+            except Exception:
+                return val
+
+        pickup = fmt_date(ld.get("pickup_at") or ld.get("pickup_date"))
+        delivery = fmt_date(ld.get("delivery_at") or ld.get("delivery_date"))
+        load_number = ld.get("load_number") or ld["id"][:8].upper()
+        driver_name = ld.get("driver_name") or "—"
+        broker_name = ld.get("broker_name") or ld.get("shipper_name") or "—"
+        broker_phone = ld.get("broker_phone") or ""
+        commodity = ld.get("commodity") or "General Freight"
+        equipment = ld.get("equipment_type") or "—"
+        miles = ld.get("miles") or "—"
+        weight = ld.get("weight") or ""
+        special = ld.get("special_instructions") or ""
+
+        def money(v: float) -> str:
+            return f"${v:,.2f}"
+
+        fee_label = f"Dispatch Fee ({dispatch_pct}%)" if dispatch_pct else "Dispatch Fee"
+
+        html_body = f"""<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+  body {{ font-family: Arial, sans-serif; color: #0F1D35; margin: 0; background: #f8f9fc; }}
+  .wrap {{ max-width: 680px; margin: 24px auto; background: #fff; border-radius: 10px;
+           border: 1px solid #dde4ef; box-shadow: 0 4px 20px rgba(11,37,69,.1); overflow: hidden; }}
+  .hd {{ background: #0B2545; padding: 24px 28px; }}
+  .hd-co {{ font-family: Georgia, serif; font-size: 22px; font-weight: 700; color: #E4A830; }}
+  .hd-sub {{ font-size: 11px; color: rgba(255,255,255,.5); letter-spacing: 1.5px;
+             text-transform: uppercase; margin-top: 2px; }}
+  .hd-rc {{ float: right; text-align: right; }}
+  .hd-rc-label {{ font-size: 11px; color: rgba(255,255,255,.4); letter-spacing: 1px; }}
+  .hd-rc-num {{ font-size: 20px; font-weight: 700; color: #fff; font-family: monospace; }}
+  .body {{ padding: 24px 28px; }}
+  .row2 {{ display: flex; gap: 0; border: 1px solid #dde4ef; border-radius: 8px;
+           overflow: hidden; margin-bottom: 16px; }}
+  .cell {{ flex: 1; padding: 14px 16px; }}
+  .cell + .cell {{ border-left: 1px solid #dde4ef; }}
+  .cell-label {{ font-size: 10px; font-weight: 700; color: #5A6A82; letter-spacing: 1.5px;
+                 text-transform: uppercase; margin-bottom: 4px; }}
+  .cell-val {{ font-size: 14px; font-weight: 600; color: #0F1D35; }}
+  .cell-sub {{ font-size: 12px; color: #5A6A82; margin-top: 2px; }}
+  .route-bar {{ background: #F8F9FC; border: 1px solid #DDE4EF; border-radius: 8px;
+                padding: 14px 20px; margin-bottom: 16px; display: flex;
+                align-items: center; justify-content: space-between; gap: 12px; }}
+  .route-end {{ flex: 1; }}
+  .route-label {{ font-size: 10px; font-weight: 700; color: #5A6A82; letter-spacing: 1px; text-transform: uppercase; }}
+  .route-city {{ font-size: 16px; font-weight: 700; color: #0B2545; }}
+  .route-date {{ font-size: 12px; color: #5A6A82; margin-top: 3px; }}
+  .arrow {{ font-size: 22px; color: #C8902A; flex-shrink: 0; }}
+  .rate-box {{ background: #0B2545; border-radius: 8px; padding: 18px 20px; margin-bottom: 16px; }}
+  .rate-row {{ display: flex; justify-content: space-between; align-items: center;
+               padding: 5px 0; color: rgba(255,255,255,.7); font-size: 13px; }}
+  .rate-row.total {{ border-top: 1px solid rgba(255,255,255,.15); margin-top: 8px;
+                     padding-top: 12px; color: #E4A830; font-weight: 700; font-size: 16px; }}
+  .rate-row .amt {{ font-family: monospace; }}
+  .meta-grid {{ display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }}
+  .meta-chip {{ background: #F8F9FC; border: 1px solid #DDE4EF; border-radius: 6px;
+                padding: 8px 12px; }}
+  .meta-chip .ml {{ font-size: 10px; color: #5A6A82; font-weight: 700; letter-spacing: 1px;
+                    text-transform: uppercase; }}
+  .meta-chip .mv {{ font-size: 13px; font-weight: 600; color: #0F1D35; margin-top: 2px; }}
+  .special {{ background: #FFF8E6; border: 1px solid #F5C842; border-radius: 8px;
+              padding: 12px 16px; margin-bottom: 16px; font-size: 13px; color: #7A5200; }}
+  .special strong {{ display: block; font-size: 10px; letter-spacing: 1px; text-transform: uppercase;
+                     color: #C8902A; margin-bottom: 4px; }}
+  .terms {{ font-size: 11px; color: #5A6A82; border-top: 1px solid #DDE4EF;
+            padding-top: 14px; line-height: 1.6; }}
+  .ft {{ background: #0B2545; padding: 14px 28px; font-size: 11px;
+         color: rgba(255,255,255,.4); text-align: center; }}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="hd" style="overflow:hidden">
+    <div style="float:left">
+      <div class="hd-co">3 Lakes Logistics</div>
+      <div class="hd-sub">Rate Confirmation</div>
+    </div>
+    <div class="hd-rc">
+      <div class="hd-rc-label">Load #</div>
+      <div class="hd-rc-num">{load_number}</div>
+    </div>
+    <div style="clear:both"></div>
+  </div>
+  <div class="body">
+    <div class="row2">
+      <div class="cell">
+        <div class="cell-label">Broker / Shipper</div>
+        <div class="cell-val">{broker_name}</div>
+        {f'<div class="cell-sub">{broker_phone}</div>' if broker_phone else ''}
+      </div>
+      <div class="cell">
+        <div class="cell-label">Carrier / Driver</div>
+        <div class="cell-val">{driver_name}</div>
+        <div class="cell-sub">{equipment}</div>
+      </div>
+    </div>
+
+    <div class="route-bar">
+      <div class="route-end">
+        <div class="route-label">Origin</div>
+        <div class="route-city">{origin}</div>
+        <div class="route-date">Pickup: {pickup}</div>
+      </div>
+      <div class="arrow">&#8594;</div>
+      <div class="route-end" style="text-align:right">
+        <div class="route-label">Destination</div>
+        <div class="route-city">{destination}</div>
+        <div class="route-date">Delivery: {delivery}</div>
+      </div>
+    </div>
+
+    <div class="rate-box">
+      <div class="rate-row"><span>Gross Rate</span><span class="amt">{money(rate_total)}</span></div>
+      <div class="rate-row"><span>{fee_label}</span><span class="amt">({money(dispatch_fee)})</span></div>
+      <div class="rate-row total"><span>Carrier Net Pay</span><span class="amt">{money(net_pay)}</span></div>
+    </div>
+
+    <div class="meta-grid">
+      <div class="meta-chip"><div class="ml">Miles</div><div class="mv">{miles}</div></div>
+      {f'<div class="meta-chip"><div class="ml">RPM</div><div class="mv">${rpm:.2f}</div></div>' if rpm else ''}
+      <div class="meta-chip"><div class="ml">Commodity</div><div class="mv">{commodity}</div></div>
+      <div class="meta-chip"><div class="ml">Equipment</div><div class="mv">{equipment}</div></div>
+      {f'<div class="meta-chip"><div class="ml">Weight</div><div class="mv">{weight} lbs</div></div>' if weight else ''}
+    </div>
+
+    {f'<div class="special"><strong>Special Instructions</strong>{special}</div>' if special else ''}
+
+    <div class="terms">
+      By accepting this load, the carrier agrees to haul the described shipment under the terms of
+      the broker–carrier agreement on file. Rate is all-inclusive. Carrier must maintain required
+      insurance and provide BOL at pickup and signed POD at delivery. Lumpers and additional accessorials
+      not listed above are carrier responsibility unless pre-approved in writing.
+    </div>
+  </div>
+  <div class="ft">3 Lakes Logistics · Dispatch Services · info@3lakeslogistics.com</div>
+</div>
+</body>
+</html>"""
+
+        import httpx
+
+        async with httpx.AsyncClient() as client:
+            resp = await client.post(
+                "https://api.postmarkapp.com/email",
+                headers={
+                    "X-Postmark-Server-Token": s.postmark_server_token,
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "From": f"3 Lakes Logistics Dispatch <{s.postmark_from_email}>",
+                    "To": to_email,
+                    "Subject": f"Rate Confirmation — Load #{load_number} | {origin} → {destination}",
+                    "HtmlBody": html_body,
+                    "MessageStream": "outbound",
+                    "Tag": "rate-confirmation",
+                },
+            )
+
+        if resp.status_code != 200:
+            log.error(f"Postmark rate-con send failed: {resp.text}")
+            raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, "postmark send failed")
+
+        log.info(f"Rate confirmation sent for load {load_number} to {to_email}")
+        return {"ok": True, "message": f"Rate confirmation sent to {to_email}", "load_number": load_number}
+
+    except HTTPException:
+        raise
+    except Exception as e:  # noqa: BLE001
+        log.error(f"Failed to send rate con email: {e}")
+        raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, str(e))
