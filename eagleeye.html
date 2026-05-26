@@ -1326,6 +1326,18 @@ td.td-name{font-weight:600;color:var(--navy);}
         </div>
       </div>
 
+      <!-- ── WEEKLY P&L ── -->
+      <div class="card" style="margin-top:16px;border-top:3px solid var(--green)">
+        <div class="card-hd">
+          <div>
+            <div class="card-title">📈 Weekly P&amp;L Report</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:2px">8-week rolling view: gross revenue, dispatch fees, fuel costs, operating profit</div>
+          </div>
+          <button class="btn-out" style="font-size:12px" onclick="loadWeeklyPL()">Refresh</button>
+        </div>
+        <div id="weekly-pl-table"><div class="loading"><div class="spin"></div>Loading…</div></div>
+      </div>
+
       <!-- ── REVENUE BRAIN ── -->
       <div class="card" style="margin-top:16px;border-top:3px solid #b45309">
         <div class="card-hd">
@@ -5625,6 +5637,47 @@ async function loadCarrierBrain(){
   }
 }
 
+async function loadWeeklyPL(){
+  const el=document.getElementById('weekly-pl-table');
+  if(!el)return;
+  el.innerHTML='<div class="loading"><div class="spin"></div>Loading P&L…</div>';
+  try{
+    const r=await apiFetch('/api/dashboard/weekly-pl?weeks=8');
+    if(!r.ok){el.innerHTML='<p style="color:var(--muted);padding:12px">P&L endpoint unavailable (HTTP '+r.status+')</p>';return;}
+    const d=await r.json();
+    const weeks=d.weeks||[];
+    const totals=d.totals||{};
+    if(!weeks.length){el.innerHTML='<p style="color:var(--muted);padding:12px">No data yet</p>';return;}
+    const fmt=n=>n?'$'+Math.round(n).toLocaleString():'—';
+    el.innerHTML='<div class="tbl-wrap"><table style="font-size:12px"><thead><tr>'+
+      '<th>Week Ending</th><th>Loads</th><th>Gross Revenue</th><th>Dispatch Fees</th>'+
+      '<th>Fuel Cost</th><th>Op. Profit</th><th>AR Collected</th><th>AR Out.</th></tr></thead><tbody>'+
+      weeks.map(w=>{
+        const profit=w.operating_profit||0;
+        return '<tr>'+
+          '<td style="font-family:var(--ff-m);font-size:11px">'+w.week_ending+'</td>'+
+          '<td style="text-align:center">'+w.loads+'</td>'+
+          '<td style="color:var(--green);font-weight:600">'+fmt(w.gross_revenue)+'</td>'+
+          '<td style="color:var(--gold)">'+fmt(w.dispatch_fees)+'</td>'+
+          '<td style="color:#6b7280">'+fmt(w.fuel_cost)+'</td>'+
+          '<td style="color:'+(profit>0?'var(--green)':'var(--red)')+';font-weight:700">'+fmt(profit)+'</td>'+
+          '<td style="color:var(--blue)">'+fmt(w.ar_collected)+'</td>'+
+          '<td style="color:var(--orange)">'+fmt(w.ar_outstanding)+'</td>'+
+          '</tr>';
+      }).join('')+
+      '<tr style="background:var(--off);font-weight:700;border-top:2px solid var(--border)">'+
+        '<td>8-WEEK TOTAL</td><td></td>'+
+        '<td style="color:var(--green)">'+fmt(totals.gross_revenue)+'</td>'+
+        '<td style="color:var(--gold)">'+fmt(totals.dispatch_fees)+'</td>'+
+        '<td style="color:#6b7280">'+fmt(totals.fuel_cost)+'</td>'+
+        '<td style="color:'+(totals.operating_profit>0?'var(--green)':'var(--red)')+';font-weight:800">'+fmt(totals.operating_profit)+'</td>'+
+        '<td style="color:var(--blue)">'+fmt(totals.ar_collected)+'</td>'+
+        '<td></td>'+
+      '</tr>'+
+      '</tbody></table></div>';
+  }catch(e){el.innerHTML='<p style="color:var(--muted);padding:12px">Error: '+esc(e.message)+'</p>';}
+}
+
 async function loadRevenueBrain(){
   const tableEl=document.getElementById('rb-period-table');
   try{
@@ -6023,7 +6076,7 @@ function renderIFTA(){
     orig(id);
     if(id==='agents'){loadAgents();refreshAgentLog();loadVanceCalls();loadOrgBrain();}
     else if(id==='carriers')loadCarrierBrain();
-    else if(id==='revenue')loadRevenueBrain();
+    else if(id==='revenue'){loadRevenueBrain();loadWeeklyPL();}
     else if(id==='vault')loadVault();
     else if(id==='founders')loadFoundersInventory();
     else if(id==='leads')loadLeadsPipeline();
@@ -10371,6 +10424,16 @@ const TS_DOMAINS = [
           const d = await r.json();
           const items = Array.isArray(d) ? d : (d?.items || d?.inventory || []);
           return `${items.length} item(s) in inventory`;
+        }
+      },
+      {
+        name: 'Weekly P&L report',
+        run: async () => {
+          const r = await apiFetch('/api/dashboard/weekly-pl?weeks=4');
+          if (!r.ok) throw new Error(`HTTP ${r.status}`);
+          const d = await r.json();
+          if (!('weeks' in d) || !('totals' in d)) throw new Error('Missing weeks/totals keys');
+          return `${d.weeks.length} week(s) of P&L data`;
         }
       }
     ]
