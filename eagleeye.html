@@ -712,6 +712,7 @@ td.td-name{font-weight:600;color:var(--navy);}
     <div class="sb-item" onclick="nav('carriers')"><span class="sb-icon">👥</span> Carriers <span class="sb-badge" id="carrier-notif" style="display:none">●</span></div>
     <div class="sb-item" onclick="nav('drivers')"><span class="sb-icon">🪪</span> Drivers <span class="sb-badge" id="drv-notif" style="display:none">●</span></div>
     <div class="sb-item" onclick="nav('loads')"><span class="sb-icon">📦</span> Load Manager</div>
+    <div class="sb-item" onclick="nav('loadboard')"><span class="sb-icon">🎯</span> DAT Load Board <span class="sb-badge" id="dat-notif" style="display:none;background:#f59e0b;color:#000">●</span></div>
     <div class="sb-item" onclick="nav('invoices')"><span class="sb-icon">🧾</span> Invoices <span class="sb-badge" id="invoice-notif" style="display:none">●</span></div>
     <div class="sb-item" onclick="nav('settlements')"><span class="sb-icon">💵</span> Settlements <span class="sb-badge" id="settle-notif" style="display:none">●</span></div>
     <div class="sb-item" onclick="nav('shippers')"><span class="sb-icon">🏭</span> Shippers / Brokers <span class="sb-badge" id="shippers-notif" style="display:none">●</span></div>
@@ -1130,6 +1131,71 @@ td.td-name{font-weight:600;color:var(--navy);}
           <div class="mc"><div class="mc-label">Drafts</div><div class="mc-val gold" id="bol-drafts">—</div></div>
         </div>
         <div id="bols-table-wrap"><div class="loading"><div class="spin"></div>Loading…</div></div>
+      </div>
+    </div>
+
+    <!-- DAT LOAD BOARD -->
+    <div class="page" id="page-loadboard">
+      <div class="page-hdr">
+        <div class="page-hdr-l"><div class="chip">Live</div><h2>DAT Load Board</h2></div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <div id="dat-status-pill" style="font-size:12px;padding:4px 10px;border-radius:100px;background:#fef3c7;color:#92400e;font-weight:600">⚙️ Checking DAT…</div>
+          <button class="btn-navy" onclick="openPostTruckModal()">+ Post a Truck</button>
+        </div>
+      </div>
+
+      <!-- Stats -->
+      <div class="g3" style="margin-bottom:20px">
+        <div class="mc"><div class="mc-label">Active Postings</div><div class="mc-val blue" id="dat-active-count">—</div></div>
+        <div class="mc"><div class="mc-label">Posted to DAT Live</div><div class="mc-val green" id="dat-live-count">—</div></div>
+        <div class="mc"><div class="mc-label">Cancelled / Expired</div><div class="mc-val gold" id="dat-cancelled-count">—</div></div>
+      </div>
+
+      <!-- Active Truck Postings -->
+      <div class="card" style="margin-bottom:20px">
+        <div class="card-hd" style="display:flex;align-items:center;justify-content:space-between">
+          <div class="card-title">🚛 My Active Truck Postings</div>
+          <button class="btn-out" style="font-size:12px" onclick="loadDATPostings()">↺ Refresh</button>
+        </div>
+        <div id="dat-postings-table"><div class="loading"><div class="spin"></div>Loading…</div></div>
+      </div>
+
+      <!-- Search Loads on DAT -->
+      <div class="card">
+        <div class="card-hd">
+          <div class="card-title">🔍 Search Available Loads on DAT</div>
+          <span class="card-chip" id="dat-search-count">0 results</span>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr auto;gap:12px;margin-bottom:16px;align-items:end">
+          <div>
+            <label style="font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:4px">ORIGIN CITY</label>
+            <input class="fi" id="dat-search-origin" placeholder="e.g. Chicago, IL">
+          </div>
+          <div>
+            <label style="font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:4px">DESTINATION</label>
+            <input class="fi" id="dat-search-dest" placeholder="e.g. Atlanta, GA">
+          </div>
+          <div>
+            <label style="font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:4px">EQUIPMENT</label>
+            <select class="fsel" id="dat-search-equip">
+              <option value="">Any</option>
+              <option>Dry Van</option>
+              <option>Reefer</option>
+              <option>Flatbed</option>
+              <option>Step Deck</option>
+              <option>Cargo Van</option>
+              <option>Box Truck</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:4px">MIN RATE ($)</label>
+            <input class="fi" type="number" id="dat-search-rate" placeholder="0">
+          </div>
+          <button class="btn-navy" onclick="searchDATLoads()" id="dat-search-btn" style="height:38px">Search</button>
+        </div>
+        <div id="dat-search-results">
+          <div style="text-align:center;padding:20px;color:var(--muted);font-size:13px">Enter search criteria and click Search to find available loads on DAT.</div>
+        </div>
       </div>
     </div>
 
@@ -3060,7 +3126,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 let allCarriers=[], allLoads=[], allInvoices=[], allShippers=[], allSettlements=[], currentInvFilter='all', loadCounter=3849;
 
-const pageNames={dashboard:'Dashboard',dispatch:'Dispatch Board','fleet-map':'Fleet Map',carriers:'Carriers',drivers:'Drivers',loads:'Load Manager',invoices:'Invoices & Billing',settlements:'Driver Settlements',shippers:'Shippers / Brokers',factoring:'Invoice Factoring',compliance:'DOT Compliance',ifta:'IFTA / Permits',insurance:'Insurance',revenue:'Revenue Tracker',providers:'Compliance Providers',checklist:'Daily Checklist',notes:'Dispatcher Notes',reports:'Team Reports','exec-command':'Exec Command',agents:'AI Agents',founders:'Founders Program',crm:'Lead CRM',leads:'Lead Pipeline',execution:'Execution Engine',email:'Email Center',vault:'Document Vault',clm:'CLM Scanner',ledger:'Atomic Ledger',agreements:'Agreements'};
+const pageNames={dashboard:'Dashboard',dispatch:'Dispatch Board','fleet-map':'Fleet Map',carriers:'Carriers',drivers:'Drivers',loads:'Load Manager',loadboard:'DAT Load Board',invoices:'Invoices & Billing',settlements:'Driver Settlements',shippers:'Shippers / Brokers',factoring:'Invoice Factoring',compliance:'DOT Compliance',ifta:'IFTA / Permits',insurance:'Insurance',revenue:'Revenue Tracker',providers:'Compliance Providers',checklist:'Daily Checklist',notes:'Dispatcher Notes',reports:'Team Reports','exec-command':'Exec Command',agents:'AI Agents',founders:'Founders Program',crm:'Lead CRM',leads:'Lead Pipeline',execution:'Execution Engine',email:'Email Center',vault:'Document Vault',clm:'CLM Scanner',ledger:'Atomic Ledger',agreements:'Agreements'};
 
 // ── 3 Lakes Logistics Backend API (FastAPI) ──
 const API_BASE = (window.__3LL_API_BASE || 'https://three-lakes-logistics-api.onrender.com').replace(/\/$/,'');
@@ -3158,6 +3224,7 @@ function nav(id){
   if(id==='carriers'){const n=document.getElementById('carrier-notif');if(n)n.style.display='none';}
   if(id==='invoices'){const n=document.getElementById('invoice-notif');if(n)n.style.display='none';renderInvoices();}
   if(id==='loads')loadBOLs();
+  if(id==='loadboard'){loadDATPostings();checkDATStatus();}
   if(id==='notes')loadNotes();
   if(id==='reports')loadTeamReports();
   if(id==='exec-command'){const n=document.getElementById('exec-esc-notif');if(n)n.style.display='none';ecRefreshDashboard();}
@@ -3599,7 +3666,10 @@ function renderAvailableCarriers(available){
         <div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(c.company_name||c.name||'—')}</div>
         <div style="font-size:11px;color:var(--muted)">${esc(c.equipment_type||'Any')} · ${esc(c.home_base||c.base||'—')}</div>
       </div>
-      <button class="btn-navy-sm" style="white-space:nowrap" onclick="openAssignModalForCarrier('${c.id}','${esc(c.company_name||'')}')">Assign</button>
+      <div style="display:flex;gap:4px">
+        <button class="btn-navy-sm" style="white-space:nowrap" onclick="openAssignModalForCarrier('${c.id}','${esc(c.company_name||'')}')">Assign</button>
+        <button class="btn-out" style="font-size:10px;padding:3px 6px;white-space:nowrap" title="Post to DAT" onclick="nav('loadboard');openPostTruckModal('${c.id}')">📋 DAT</button>
+      </div>
     </div>
   `).join('');
 }
@@ -11787,6 +11857,305 @@ async function deleteShipper(id) {
 }
 
 // ══════════════════════════════════════════════════════
+// DAT LOAD BOARD
+// ══════════════════════════════════════════════════════
+
+let allDATPostings = [];
+let datConfigured = false;
+
+async function checkDATStatus() {
+  try {
+    const res = await apiFetch('/api/loads/dat/status');
+    if (res.ok) {
+      const d = await res.json();
+      datConfigured = d.configured;
+      const pill = document.getElementById('dat-status-pill');
+      if (pill) {
+        pill.style.background = d.configured ? '#d1fae5' : '#fef3c7';
+        pill.style.color = d.configured ? '#065f46' : '#92400e';
+        pill.textContent = d.configured ? '🟢 DAT Connected' : '⚠️ DAT Not Connected';
+      }
+      const warn = document.getElementById('dat-credentials-warn');
+      if (warn) warn.style.display = d.configured ? 'none' : 'block';
+    }
+  } catch(e) { /* silent */ }
+}
+
+async function loadDATPostings() {
+  try {
+    const res = await apiFetch('/api/loads/dat/posts?limit=200');
+    if (res.ok) allDATPostings = (await res.json()).items || [];
+    else allDATPostings = [];
+  } catch(e) { allDATPostings = []; }
+  renderDATPostings();
+}
+
+function renderDATPostings() {
+  const tbl = document.getElementById('dat-postings-table');
+  if (!tbl) return;
+  const active = allDATPostings.filter(p => p.status === 'active');
+  const live   = allDATPostings.filter(p => p.posted_to_dat);
+  const gone   = allDATPostings.filter(p => p.status !== 'active');
+  setText('dat-active-count', active.length);
+  setText('dat-live-count', live.length);
+  setText('dat-cancelled-count', gone.length);
+  const notif = document.getElementById('dat-notif');
+  if (notif) { notif.style.display = active.length ? 'inline' : 'none'; notif.textContent = active.length; }
+
+  if (!allDATPostings.length) {
+    tbl.innerHTML = '<div style="padding:20px;text-align:center;color:var(--muted)">No truck postings yet. Click "+ Post a Truck" to add your first posting.</div>';
+    return;
+  }
+  tbl.innerHTML = `<div class="tbl-wrap"><table>
+    <thead><tr><th>Carrier</th><th>Equipment</th><th>Available</th><th>Origin</th><th>Destination</th><th>Min Rate</th><th>DAT Live</th><th>Status</th><th></th></tr></thead>
+    <tbody>${allDATPostings.map(p => {
+      const stColor = p.status === 'active' ? '#22c55e' : '#6b7280';
+      const destStr = [p.dest_city, p.dest_state].filter(Boolean).join(', ') || 'Any';
+      const origStr = [p.origin_city, p.origin_state].filter(Boolean).join(', ') || p.origin_zip || '—';
+      return `<tr>
+        <td style="font-weight:600">${esc(p.carrier_name)}</td>
+        <td style="font-size:12px">${esc(p.equipment_type)}</td>
+        <td style="font-size:12px;color:var(--muted)">${p.available_date||'—'}</td>
+        <td style="font-size:12px">${esc(origStr)}</td>
+        <td style="font-size:12px;color:var(--muted)">${esc(destStr)}</td>
+        <td style="font-size:13px;font-weight:700;color:var(--gold)">${p.rate_min?'$'+Number(p.rate_min).toLocaleString():'Any'}</td>
+        <td style="text-align:center">${p.posted_to_dat?'<span style="color:#22c55e;font-weight:700">✓ Live</span>':'<span style="color:var(--muted);font-size:11px">Local</span>'}</td>
+        <td><span class="badge" style="background:${stColor}22;color:${stColor};border:1px solid ${stColor}44">${p.status}</span></td>
+        <td style="display:flex;gap:4px">
+          <button class="btn-out" style="font-size:11px;padding:3px 8px" onclick="editDATPost('${p.id}')">Edit</button>
+          ${p.status==='active'?`<button class="btn-out" style="font-size:11px;padding:3px 8px;color:#dc2626;border-color:#dc262644" onclick="cancelDATPost('${p.id}')">Cancel</button>`:''}
+        </td>
+      </tr>`;
+    }).join('')}</tbody></table></div>`;
+}
+
+function openPostTruckModal(carrierId) {
+  const sel = document.getElementById('dat-carrier-sel');
+  if (sel) {
+    sel.innerHTML = '<option value="">Select carrier…</option>' +
+      allCarriers.filter(c => c.status === 'active').map(c =>
+        `<option value="${c.id}" data-phone="${esc(c.phone||'')}" data-city="${esc((c.address||'').split(',').slice(-2,-1)[0]||'')}" data-equip="${esc((c.equipment_types||[c.trailer_type||''])[0]||'')}">${esc(c.company_name||'—')} — ${esc((c.equipment_types||[c.trailer_type||''])[0]||'Any')}</option>`
+      ).join('');
+  }
+  document.getElementById('dat-post-edit-id').value = '';
+  document.getElementById('dat-post-modal-title') && (document.getElementById('dat-post-modal-title').textContent = 'Post Truck to DAT');
+  document.getElementById('dat-avail-date').value = new Date().toISOString().split('T')[0];
+  ['dat-origin-zip','dat-origin-city','dat-dest-city','dat-contact-name','dat-contact-phone','dat-post-notes'].forEach(id => { const el=document.getElementById(id);if(el)el.value=''; });
+  document.getElementById('dat-rate-min').value = '';
+  document.getElementById('dat-miles-willing').value = '500';
+  if (carrierId) { sel.value = carrierId; datCarrierAutoFill(); }
+  checkDATStatus();
+  openModal('post-truck-modal');
+}
+
+function datCarrierAutoFill() {
+  const sel = document.getElementById('dat-carrier-sel');
+  const opt = sel?.selectedOptions[0];
+  if (!opt || !opt.value) return;
+  const carrier = allCarriers.find(c => c.id === opt.value);
+  if (!carrier) return;
+  // Auto-set equipment
+  const equip = (carrier.equipment_types||[])[0] || carrier.trailer_type || '';
+  const esel = document.getElementById('dat-equip-sel');
+  if (esel && equip) {
+    const match = [...esel.options].find(o => o.value.toLowerCase().includes(equip.toLowerCase().split(' ')[0]));
+    if (match) esel.value = match.value;
+  }
+  // Auto-set contact
+  const phone = carrier.phone || '';
+  if (phone) document.getElementById('dat-contact-phone').value = phone;
+  // Name
+  const name = carrier.company_name || '';
+  if (name) document.getElementById('dat-contact-name').value = name;
+  // Address → city
+  const addr = carrier.address || '';
+  if (addr) {
+    const parts = addr.split(',');
+    if (parts.length >= 2) {
+      document.getElementById('dat-origin-city').value = [parts[parts.length-3]||'', parts[parts.length-2]||''].filter(Boolean).map(s=>s.trim()).join(', ');
+    }
+  }
+}
+
+function editDATPost(postId) {
+  const p = allDATPostings.find(x => x.id === postId);
+  if (!p) return;
+  openPostTruckModal(p.carrier_id);
+  document.getElementById('dat-post-edit-id').value = p.id;
+  const sel = document.getElementById('dat-carrier-sel');
+  if (sel) sel.value = p.carrier_id || '';
+  document.getElementById('dat-avail-date').value = p.available_date || '';
+  document.getElementById('dat-origin-zip').value = p.origin_zip || '';
+  document.getElementById('dat-origin-city').value = [p.origin_city, p.origin_state].filter(Boolean).join(', ');
+  document.getElementById('dat-dest-city').value = [p.dest_city, p.dest_state].filter(Boolean).join(', ');
+  document.getElementById('dat-contact-name').value = p.contact_name || '';
+  document.getElementById('dat-contact-phone').value = p.contact_phone || '';
+  document.getElementById('dat-rate-min').value = p.rate_min || '';
+  document.getElementById('dat-miles-willing').value = p.miles_willing || 500;
+  document.getElementById('dat-post-notes').value = p.notes || '';
+  const esel = document.getElementById('dat-equip-sel');
+  if (esel && p.equipment_type) esel.value = p.equipment_type;
+}
+
+async function saveDATPost() {
+  const btn = document.getElementById('dat-post-save-btn');
+  const carrierId = document.getElementById('dat-carrier-sel')?.value;
+  const availDate = document.getElementById('dat-avail-date')?.value;
+  if (!carrierId) { toast('Select a carrier', 'error'); return; }
+  if (!availDate) { toast('Available date is required', 'error'); return; }
+  const carrier = allCarriers.find(c => c.id === carrierId);
+  const editId = document.getElementById('dat-post-edit-id')?.value;
+  const originCityState = document.getElementById('dat-origin-city')?.value.trim();
+  const destCityState = document.getElementById('dat-dest-city')?.value.trim();
+  const parseCS = (s) => { const p = s.split(',').map(x=>x.trim()); return {city:p[0]||'',state:p[1]||''}; };
+  const origCS = parseCS(originCityState);
+  const destCS = parseCS(destCityState);
+  const body = {
+    carrier_id: carrierId,
+    carrier_name: carrier?.company_name || '',
+    equipment_type: document.getElementById('dat-equip-sel')?.value || 'Dry Van 53\'',
+    available_date: availDate,
+    origin_zip: document.getElementById('dat-origin-zip')?.value.trim() || null,
+    origin_city: origCS.city || null,
+    origin_state: origCS.state || null,
+    dest_city: destCS.city || null,
+    dest_state: destCS.state || null,
+    contact_name: document.getElementById('dat-contact-name')?.value.trim() || null,
+    contact_phone: document.getElementById('dat-contact-phone')?.value.trim() || null,
+    rate_min: parseFloat(document.getElementById('dat-rate-min')?.value) || null,
+    miles_willing: parseInt(document.getElementById('dat-miles-willing')?.value) || 500,
+    notes: document.getElementById('dat-post-notes')?.value.trim() || null,
+  };
+  if (btn) { btn.disabled = true; btn.textContent = 'Posting…'; }
+  const r = editId
+    ? await apiFetch('/api/loads/dat/posts/' + editId, 'PATCH', body)
+    : await apiFetch('/api/loads/dat/posts', 'POST', body);
+  if (btn) { btn.disabled = false; btn.textContent = 'Post Truck'; }
+  if (r.ok) {
+    const d = await r.json();
+    closeModal('post-truck-modal');
+    toast(d.posted_to_dat ? '✅ Truck posted to DAT live!' : '✅ Posting saved locally');
+    fireTrigger('analytics', { event: 'dat_truck_posted', carrier_name: body.carrier_name, equipment: body.equipment_type, live: !!d.posted_to_dat });
+    await loadDATPostings();
+  } else toast('Error saving posting', 'error');
+}
+
+async function cancelDATPost(postId) {
+  const p = allDATPostings.find(x => x.id === postId);
+  if (!confirm(`Cancel posting for ${p?.carrier_name || 'this carrier'}?`)) return;
+  const r = await apiFetch('/api/loads/dat/posts/' + postId, 'DELETE');
+  if (r.ok) { toast('Posting cancelled'); await loadDATPostings(); }
+  else toast('Error cancelling', 'error');
+}
+
+async function searchDATLoads() {
+  const btn = document.getElementById('dat-search-btn');
+  const origin = document.getElementById('dat-search-origin')?.value.trim();
+  const dest = document.getElementById('dat-search-dest')?.value.trim();
+  const equip = document.getElementById('dat-search-equip')?.value;
+  const rate = document.getElementById('dat-search-rate')?.value;
+  const resEl = document.getElementById('dat-search-results');
+  const countEl = document.getElementById('dat-search-count');
+  if (btn) { btn.disabled = true; btn.textContent = 'Searching…'; }
+  if (resEl) resEl.innerHTML = '<div class="loading"><div class="spin"></div>Searching DAT…</div>';
+
+  let params = '';
+  if (origin) params += '&origin=' + encodeURIComponent(origin);
+  if (dest) params += '&destination=' + encodeURIComponent(dest);
+  if (equip) params += '&equipment=' + encodeURIComponent(equip);
+  if (rate) params += '&min_rate=' + encodeURIComponent(rate);
+
+  try {
+    const res = await apiFetch('/api/loads/dat/search?' + params.slice(1));
+    if (btn) { btn.disabled = false; btn.textContent = 'Search'; }
+    const d = res.ok ? await res.json() : {};
+
+    if (!d.configured) {
+      if (resEl) resEl.innerHTML = `<div style="background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.25);border-radius:8px;padding:16px;text-align:center">
+        <div style="font-weight:700;color:#f59e0b;margin-bottom:6px">⚠️ DAT API Not Connected</div>
+        <div style="font-size:13px;color:var(--muted)">Add <code>DAT_CLIENT_ID</code> and <code>DAT_CLIENT_SECRET</code> to your backend .env to search live loads.</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:8px">In the meantime, use DAT Power directly at <strong>dat.com</strong> and import loads manually with the "+ Log New Load" button.</div>
+      </div>`;
+      if (countEl) countEl.textContent = '0 results';
+      return;
+    }
+
+    const loads = d.loads || [];
+    if (countEl) countEl.textContent = loads.length + ' result' + (loads.length !== 1 ? 's' : '');
+
+    if (!loads.length) {
+      if (resEl) resEl.innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted)">No loads found matching your criteria.</div>';
+      return;
+    }
+    if (resEl) resEl.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px">
+      ${loads.map((l, i) => {
+        const rate = l.rate || l.allInRate || l.ratePerMile ? `$${(l.rate||l.allInRate||0).toLocaleString()}` : '—';
+        const rpm = l.ratePerMile ? `$${l.ratePerMile.toFixed(2)}/mi` : '';
+        const origin = l.origin?.city ? `${l.origin.city}, ${l.origin.state}` : (l.originCity||'—');
+        const dest = l.destination?.city ? `${l.destination.city}, ${l.destination.state}` : (l.destinationCity||'—');
+        const miles = l.miles || l.totalMiles || '';
+        const equip = l.equipment || l.equipmentType || '';
+        const pickup = l.pickupDate || l.availableDate || '';
+        return `<div style="background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:14px">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
+            <div>
+              <div style="font-weight:700;font-size:14px">${esc(origin)}</div>
+              <div style="font-size:12px;color:var(--muted)">→ ${esc(dest)}</div>
+            </div>
+            <div style="text-align:right">
+              <div style="font-weight:800;font-size:16px;color:var(--gold)">${rate}</div>
+              ${rpm?`<div style="font-size:11px;color:var(--muted)">${rpm}</div>`:''}
+            </div>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+            ${equip?`<span style="font-size:11px;background:var(--card);border:1px solid var(--border);border-radius:4px;padding:2px 6px">${esc(equip)}</span>`:''}
+            ${miles?`<span style="font-size:11px;color:var(--muted)">${miles} mi</span>`:''}
+            ${pickup?`<span style="font-size:11px;color:var(--muted)">${pickup}</span>`:''}
+          </div>
+          <button class="btn-navy" style="width:100%;font-size:12px;padding:6px" onclick="importDATLoad(${i})">+ Import to Load Manager</button>
+        </div>`;
+      }).join('')}
+    </div>`;
+    // Cache for import function
+    window._datSearchResults = loads;
+  } catch(e) {
+    if (btn) { btn.disabled = false; btn.textContent = 'Search'; }
+    if (resEl) resEl.innerHTML = '<div style="text-align:center;padding:20px;color:#dc2626">Search failed. Check backend connection.</div>';
+  }
+}
+
+async function importDATLoad(idx) {
+  const load = (window._datSearchResults || [])[idx];
+  if (!load) return;
+  const origin = load.origin?.city ? `${load.origin.city}, ${load.origin.state}` : (load.originCity || '');
+  const dest = load.destination?.city ? `${load.destination.city}, ${load.destination.state}` : (load.destinationCity || '');
+  const body = {
+    load_number: '#' + (++loadCounter),
+    origin: origin,
+    destination: dest,
+    origin_city: load.origin?.city || '',
+    origin_state: load.origin?.state || '',
+    dest_city: load.destination?.city || '',
+    dest_state: load.destination?.state || '',
+    miles: load.miles || load.totalMiles || null,
+    rate: load.rate || load.allInRate || null,
+    rate_total: load.rate || load.allInRate || null,
+    broker_name: load.company?.name || load.posterCompany || '',
+    broker_phone: load.company?.phone || '',
+    commodity: load.commodity || load.freight || 'General Freight',
+    pickup_date: load.pickupDate || load.availableDate || null,
+    status: 'Booked',
+    source: 'DAT Power',
+  };
+  const r = await apiFetch('/api/dashboard/loads', 'POST', body);
+  if (r.ok) {
+    toast('✅ Load imported to Load Manager!');
+    fireTrigger('load_booked', { load_number: body.load_number, rate: body.rate_total, origin: origin, destination: dest });
+    await loadLoads();
+  } else toast('Error importing load', 'error');
+}
+
+// ══════════════════════════════════════════════════════
 // BOL GENERATOR
 // ══════════════════════════════════════════════════════
 
@@ -12750,6 +13119,79 @@ async function settleFactoring(id) {
   <div class="modal" style="max-width:560px">
     <div class="modal-hd"><span class="modal-title">Load Details</span><button class="modal-close" onclick="closeModal('load-detail-modal')">✕</button></div>
     <div style="padding:20px" id="load-detail-body"></div>
+  </div>
+</div>
+
+<!-- POST TRUCK TO DAT MODAL -->
+<div class="modal-overlay" id="post-truck-modal" onclick="if(event.target===this)closeModal('post-truck-modal')">
+  <div class="modal" style="max-width:580px">
+    <div class="modal-hd"><span class="modal-title" id="post-truck-modal-title">Post Truck to DAT</span><button class="modal-close" onclick="closeModal('post-truck-modal')">✕</button></div>
+    <div style="padding:20px;display:flex;flex-direction:column;gap:14px">
+      <input type="hidden" id="dat-post-edit-id">
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div>
+          <label style="font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:6px">DRIVER / CARRIER *</label>
+          <select class="fsel" id="dat-carrier-sel" style="width:100%" onchange="datCarrierAutoFill()"><option value="">Select carrier…</option></select>
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:6px">EQUIPMENT TYPE *</label>
+          <select class="fsel" id="dat-equip-sel" style="width:100%">
+            <option>Dry Van 53'</option>
+            <option>Dry Van 48'</option>
+            <option>Reefer</option>
+            <option>Flatbed</option>
+            <option>Step Deck</option>
+            <option>Cargo Van</option>
+            <option>26 Foot Box Truck</option>
+            <option>16 Foot Box Truck</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:6px">AVAILABLE DATE *</label>
+          <input class="fi" type="date" id="dat-avail-date" style="width:100%">
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:6px">ORIGIN ZIP</label>
+          <input class="fi" id="dat-origin-zip" placeholder="e.g. 48201" style="width:100%">
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:6px">ORIGIN CITY, STATE</label>
+          <input class="fi" id="dat-origin-city" placeholder="e.g. Detroit, MI" style="width:100%">
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:6px">PREFERRED DESTINATION</label>
+          <input class="fi" id="dat-dest-city" placeholder="e.g. Atlanta, GA (optional)" style="width:100%">
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:6px">CONTACT NAME</label>
+          <input class="fi" id="dat-contact-name" placeholder="Driver or dispatcher name" style="width:100%">
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:6px">CONTACT PHONE</label>
+          <input class="fi" id="dat-contact-phone" placeholder="(555) 000-0000" style="width:100%">
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:6px">MIN RATE ($)</label>
+          <input class="fi" type="number" id="dat-rate-min" placeholder="0 (any)" style="width:100%">
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:6px">MAX DEADHEAD MILES</label>
+          <input class="fi" type="number" id="dat-miles-willing" value="500" style="width:100%">
+        </div>
+      </div>
+      <div>
+        <label style="font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:6px">NOTES</label>
+        <input class="fi" id="dat-post-notes" placeholder="e.g. No hazmat, team driver available" style="width:100%">
+      </div>
+      <div id="dat-credentials-warn" style="display:none;background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);border-radius:8px;padding:10px 14px;font-size:12px;color:#92400e">
+        ⚠️ <strong>DAT API not connected</strong> — This posting will be saved locally only. Add <code>DAT_CLIENT_ID</code> and <code>DAT_CLIENT_SECRET</code> to your .env to go live on DAT.
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;padding-top:4px;border-top:1px solid var(--border)">
+        <button class="btn-out" onclick="closeModal('post-truck-modal')">Cancel</button>
+        <button class="btn-navy" onclick="saveDATPost()" id="dat-post-save-btn">Post Truck</button>
+      </div>
+    </div>
   </div>
 </div>
 

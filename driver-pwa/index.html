@@ -393,6 +393,17 @@
           <div class="card-value" style="color:var(--green)" id="est-pay">—</div>
         </div>
       </div>
+
+      <!-- DAT Posting Status -->
+      <div id="dat-posting-banner" style="display:none;background:#1e293b;border-radius:10px;padding:12px 14px;margin-bottom:8px;border-left:3px solid #f59e0b">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div>
+            <div style="font-size:12px;font-weight:700;color:#f59e0b">📋 Posted on DAT Load Board</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:2px" id="dat-posting-detail">Waiting for a load…</div>
+          </div>
+          <span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:100px;background:#f59e0b22;color:#f59e0b;border:1px solid #f59e0b44">ACTIVE</span>
+        </div>
+      </div>
     </div>
 
     <!-- ── LOADS VIEW ── -->
@@ -860,6 +871,7 @@ function updateConnectionStatus() {
 document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('driver-name').textContent = localStorage.getItem('3ll_driver_name') || 'Driver';
   loadCurrentLoad();
+  loadDATPostingStatus();
   loadProfile();
   if (DEMO_MODE) {
     document.getElementById('miles-today').textContent = '2,015';
@@ -1503,6 +1515,36 @@ async function loadLoadHistory() {
     console.error('loadLoadHistory error:', err);
     el.innerHTML = '<div style="text-align:center;padding:12px;color:var(--muted);font-size:13px">Could not load history.</div>';
   }
+}
+
+// ── DAT POSTING STATUS ────────────────────────────────────────────────────────
+async function loadDATPostingStatus() {
+  const banner = document.getElementById('dat-posting-banner');
+  const detail = document.getElementById('dat-posting-detail');
+  if (!banner) return;
+  if (DEMO_MODE) {
+    banner.style.display = 'block';
+    if (detail) detail.textContent = 'Dry Van 53\' · Detroit, MI · Available today';
+    return;
+  }
+  try {
+    if (!supabaseClient) return;
+    const carrierName = localStorage.getItem('3ll_carrier_name') || '';
+    if (!carrierName) return;
+    const { data: posts } = await supabaseClient
+      .from('dat_truck_posts')
+      .select('*')
+      .eq('status', 'active')
+      .ilike('carrier_name', `%${carrierName}%`)
+      .order('created_at', { ascending: false })
+      .limit(1);
+    if (posts?.length) {
+      const p = posts[0];
+      banner.style.display = 'block';
+      const origin = [p.origin_city, p.origin_state].filter(Boolean).join(', ');
+      if (detail) detail.textContent = `${p.equipment_type}${origin ? ' · ' + origin : ''} · Available ${p.available_date || 'today'}`;
+    }
+  } catch (err) { /* silent */ }
 }
 
 // ── BOL VIEWER ────────────────────────────────────────────────────────────────
