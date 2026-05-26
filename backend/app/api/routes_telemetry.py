@@ -18,6 +18,10 @@ def ingest_ping(ping: TelemetryPing) -> dict:
     try:
         get_supabase().table("truck_telemetry").insert(ping.model_dump(exclude_none=True)).execute()
     except Exception as e:
+        # PGRST204 = PostgREST returned 204 No Content — insert succeeded but
+        # no representation was returned; supabase-py raises this incorrectly as error
+        if "PGRST204" in str(e):
+            return {"ok": True}
         log.error("truck_telemetry insert failed: %s", e)
         raise HTTPException(500, f"telemetry insert failed: {e}")
     return {"ok": True}

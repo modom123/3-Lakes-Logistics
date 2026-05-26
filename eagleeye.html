@@ -9735,9 +9735,9 @@ const TS_DOMAINS = [
         name: 'Carrier intake POST (test carrier)',
         run: async () => {
           const d = await apiFetch('/api/carriers/intake', 'POST', {
-            name: 'Eagle Eye Test Carrier', dot: '9000001', mc: '900001',
+            company_name: 'Eagle Eye Test Carrier', dot_number: '9000001', mc_number: '900001',
             email: 'test@eagleeye.internal', phone: '+13135550001',
-            truck_type: 'dry_van', truck_count: 1
+            trailer_type: 'dry_van', equipment_count: 1
           });
           if (!d || d.error) throw new Error(d?.error || 'No response');
           return `intake accepted — id ${d.carrier_id || d.id || '?'}`;
