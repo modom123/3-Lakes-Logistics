@@ -710,6 +710,7 @@ td.td-name{font-weight:600;color:var(--navy);}
     <div class="sb-item" onclick="nav('dispatch')"><span class="sb-icon">🚛</span> Dispatch Board</div>
     <div class="sb-item" onclick="nav('fleet-map')"><span class="sb-icon">🗺️</span> Fleet Map <span class="sb-badge" id="fmap-live-count" style="display:none;background:#16a34a;color:#fff">0</span></div>
     <div class="sb-item" onclick="nav('carriers')"><span class="sb-icon">👥</span> Carriers <span class="sb-badge" id="carrier-notif" style="display:none">●</span></div>
+    <div class="sb-item" onclick="nav('drivers')"><span class="sb-icon">🪪</span> Drivers <span class="sb-badge" id="drv-notif" style="display:none">●</span></div>
     <div class="sb-item" onclick="nav('loads')"><span class="sb-icon">📦</span> Load Manager</div>
     <div class="sb-item" onclick="nav('invoices')"><span class="sb-icon">🧾</span> Invoices <span class="sb-badge" id="invoice-notif" style="display:none">●</span></div>
   </div>
@@ -1000,6 +1001,64 @@ td.td-name{font-weight:600;color:var(--navy);}
           <span class="badge badge-navy" id="carrier-roster-badge">Loading…</span>
         </div>
         <div id="carriers-table-wrap" class="scroll-box"><div class="loading"><div class="spin"></div>Loading carriers from Supabase…</div></div>
+      </div>
+    </div>
+
+    <!-- DRIVERS -->
+    <div class="page" id="page-drivers">
+      <div class="page-hdr">
+        <div class="page-hdr-l"><div class="chip">Supabase</div><h2>Driver Management</h2></div>
+        <button class="btn-navy" onclick="openModal('add-driver-modal')">+ Add Driver</button>
+      </div>
+      <div class="g4">
+        <div class="mc"><div class="mc-label">Total Drivers</div><div class="mc-val gold" id="drv-count-total">—</div></div>
+        <div class="mc"><div class="mc-label">Active</div><div class="mc-val green" id="drv-count-active">—</div></div>
+        <div class="mc"><div class="mc-label">Inactive</div><div class="mc-val orange" id="drv-count-inactive">—</div></div>
+        <div class="mc"><div class="mc-label">No PIN Set</div><div class="mc-val red" id="drv-count-nopin">—</div></div>
+      </div>
+      <div class="card">
+        <div class="card-hd">
+          <div class="card-title">Driver Roster</div>
+          <input id="drv-search" class="form-input" style="max-width:220px;padding:7px 12px;font-size:13px" placeholder="Search name / phone…" oninput="renderDrivers()">
+        </div>
+        <div id="drivers-table-wrap" class="scroll-box"><div class="loading"><div class="spin"></div>Loading…</div></div>
+      </div>
+    </div>
+
+    <!-- ADD DRIVER MODAL -->
+    <div class="modal-overlay" id="add-driver-modal" onclick="if(event.target===this)closeModal('add-driver-modal')">
+      <div class="modal" style="max-width:480px">
+        <div class="modal-hd"><span class="modal-title">Add Driver</span><button class="modal-close" onclick="closeModal('add-driver-modal')">✕</button></div>
+        <div style="padding:20px;display:flex;flex-direction:column;gap:14px">
+          <div id="drv-modal-err" style="display:none;padding:10px 14px;background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.3);border-radius:8px;color:#ef4444;font-size:13px"></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div>
+              <label class="form-label" style="font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:6px">FIRST NAME</label>
+              <input id="drv-first" class="form-input" placeholder="Marcus" style="width:100%">
+            </div>
+            <div>
+              <label class="form-label" style="font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:6px">LAST NAME</label>
+              <input id="drv-last" class="form-input" placeholder="Sterling" style="width:100%">
+            </div>
+          </div>
+          <div>
+            <label class="form-label" style="font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:6px">PHONE (10-DIGIT US)</label>
+            <input id="drv-phone" class="form-input" placeholder="(313) 555-0101" type="tel" style="width:100%">
+          </div>
+          <div>
+            <label class="form-label" style="font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:6px">4-DIGIT PIN</label>
+            <input id="drv-pin" class="form-input" placeholder="••••" type="password" maxlength="4" inputmode="numeric" style="width:100%;letter-spacing:8px;text-align:center;font-size:20px">
+          </div>
+          <div>
+            <label class="form-label" style="font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:6px">CARRIER</label>
+            <select id="drv-carrier" class="form-input" style="width:100%"><option value="">Select carrier…</option></select>
+          </div>
+          <div>
+            <label class="form-label" style="font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:6px">DRIVER CODE (OPTIONAL)</label>
+            <input id="drv-code" class="form-input" placeholder="Auto-generated if blank" style="width:100%">
+          </div>
+          <button class="btn-navy" id="drv-submit-btn" onclick="submitCreateDriver()" style="width:100%;padding:13px;font-size:15px">Create Driver Account →</button>
+        </div>
       </div>
     </div>
 
@@ -2790,7 +2849,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 let allCarriers=[], allLoads=[], allInvoices=[], currentInvFilter='all', loadCounter=3849;
 
-const pageNames={dashboard:'Dashboard',dispatch:'Dispatch Board','fleet-map':'Fleet Map',carriers:'Carriers',loads:'Load Manager',invoices:'Invoices & Billing',compliance:'DOT Compliance',ifta:'IFTA / Permits',insurance:'Insurance',revenue:'Revenue Tracker',providers:'Compliance Providers',checklist:'Daily Checklist',notes:'Dispatcher Notes',reports:'Team Reports','exec-command':'Exec Command',agents:'AI Agents',founders:'Founders Program',crm:'Lead CRM',leads:'Lead Pipeline',execution:'Execution Engine',email:'Email Center',vault:'Document Vault',clm:'CLM Scanner',ledger:'Atomic Ledger',agreements:'Agreements'};
+const pageNames={dashboard:'Dashboard',dispatch:'Dispatch Board','fleet-map':'Fleet Map',carriers:'Carriers',drivers:'Drivers',loads:'Load Manager',invoices:'Invoices & Billing',compliance:'DOT Compliance',ifta:'IFTA / Permits',insurance:'Insurance',revenue:'Revenue Tracker',providers:'Compliance Providers',checklist:'Daily Checklist',notes:'Dispatcher Notes',reports:'Team Reports','exec-command':'Exec Command',agents:'AI Agents',founders:'Founders Program',crm:'Lead CRM',leads:'Lead Pipeline',execution:'Execution Engine',email:'Email Center',vault:'Document Vault',clm:'CLM Scanner',ledger:'Atomic Ledger',agreements:'Agreements'};
 
 // ── 3 Lakes Logistics Backend API (FastAPI) ──
 const API_BASE = (window.__3LL_API_BASE || 'https://three-lakes-logistics-api.onrender.com').replace(/\/$/,'');
@@ -2895,6 +2954,7 @@ function nav(id){
   if(id==='vault')loadVault();
   if(id==='agreements')loadAgreements();
   if(id==='fleet-map')initFleetMap();
+  if(id==='drivers')loadDrivers();
   if(id==='ledger')loadLedger();
   if(id==='execution'){loadExecutionDomains();loadExecutionSteps();}
   if(id==='email'&&typeof mailInit==='function'){mailInit();}
@@ -10875,8 +10935,111 @@ ${(fleet.year||fleet.make||fleet.model||fleet.trailer_type||fleet.vin) ? `
   <button class="btn-out" style="flex:1;font-size:12px;padding:8px" onclick="nav('dispatch')">🚛 Dispatch</button>
 </div>`;
 }
+
+
+// ── DRIVER MANAGEMENT ────────────────────────────────────────────────────────
+let _allDrivers = [];
+
+async function loadDrivers() {
+  const wrap = document.getElementById('drivers-table-wrap');
+  if (wrap) wrap.innerHTML = '<div class="loading"><div class="spin"></div>Loading drivers…</div>';
+  try {
+    const r = await apiFetch('/api/driver-auth/list');
+    if (!r.ok) throw new Error(await r.text());
+    const json = await r.json();
+    _allDrivers = json.items || [];
+    document.getElementById('drv-count-total').textContent    = _allDrivers.length;
+    document.getElementById('drv-count-active').textContent   = _allDrivers.filter(d => d.status === 'active').length;
+    document.getElementById('drv-count-inactive').textContent = _allDrivers.filter(d => d.status !== 'active').length;
+    document.getElementById('drv-count-nopin').textContent    = 0; // pin_hash not exposed in list
+    renderDrivers();
+    // Populate carrier select in modal
+    const sel = document.getElementById('drv-carrier');
+    if (sel && allCarriers.length) {
+      sel.innerHTML = '<option value="">Select carrier…</option>' +
+        allCarriers.map(c => `<option value="${esc(c.id)}">${esc(c.company_name||c.id)}</option>`).join('');
+    }
+  } catch(e) {
+    if (wrap) wrap.innerHTML = `<div style="padding:20px;color:var(--muted)">Failed to load drivers: ${e.message}</div>`;
+  }
+}
+
+function renderDrivers() {
+  const wrap = document.getElementById('drivers-table-wrap');
+  if (!wrap) return;
+  const q = (document.getElementById('drv-search')?.value || '').toLowerCase();
+  const list = q ? _allDrivers.filter(d =>
+    (d.first_name+' '+d.last_name).toLowerCase().includes(q) ||
+    (d.phone_e164||'').includes(q) ||
+    (d.driver_code||'').toLowerCase().includes(q)
+  ) : _allDrivers;
+  if (!list.length) { wrap.innerHTML = '<div style="padding:20px;color:var(--muted);text-align:center">No drivers found.</div>'; return; }
+  const carrier = id => (allCarriers.find(c=>c.id===id)||{}).company_name || id?.slice(0,8) || '—';
+  wrap.innerHTML = `<table style="width:100%;border-collapse:collapse;font-size:13px">
+    <thead><tr style="border-bottom:1px solid var(--border)">
+      <th style="text-align:left;padding:8px 10px;color:var(--muted);font-weight:600">Driver</th>
+      <th style="text-align:left;padding:8px 10px;color:var(--muted);font-weight:600">Code</th>
+      <th style="text-align:left;padding:8px 10px;color:var(--muted);font-weight:600">Phone</th>
+      <th style="text-align:left;padding:8px 10px;color:var(--muted);font-weight:600">Carrier</th>
+      <th style="text-align:left;padding:8px 10px;color:var(--muted);font-weight:600">Status</th>
+      <th style="text-align:left;padding:8px 10px;color:var(--muted);font-weight:600"></th>
+    </tr></thead>
+    <tbody>${list.map(d=>`
+    <tr style="border-bottom:1px solid var(--border)">
+      <td style="padding:8px 10px;font-weight:600">${esc(d.first_name||'')} ${esc(d.last_name||'')}</td>
+      <td style="padding:8px 10px;font-family:monospace;color:var(--muted)">${esc(d.driver_code||'—')}</td>
+      <td style="padding:8px 10px">${esc(d.phone_e164||'—')}</td>
+      <td style="padding:8px 10px;color:var(--muted)">${esc(carrier(d.carrier_id))}</td>
+      <td style="padding:8px 10px"><span class="badge badge-${d.status==='active'?'green':'orange'}">${esc(d.status)}</span></td>
+      <td style="padding:8px 10px"><button class="btn-out" style="padding:4px 10px;font-size:11px" onclick="deactivateDriver('${d.id}')">Deactivate</button></td>
+    </tr>`).join('')}</tbody></table>`;
+}
+
+async function submitCreateDriver() {
+  const btn = document.getElementById('drv-submit-btn');
+  const errEl = document.getElementById('drv-modal-err');
+  const first = document.getElementById('drv-first')?.value.trim();
+  const last  = document.getElementById('drv-last')?.value.trim();
+  const phone = document.getElementById('drv-phone')?.value.trim();
+  const pin   = document.getElementById('drv-pin')?.value.trim();
+  const cid   = document.getElementById('drv-carrier')?.value;
+  const code  = document.getElementById('drv-code')?.value.trim();
+
+  errEl.style.display = 'none';
+  if (!first||!last)    { errEl.textContent='First and last name required'; errEl.style.display='block'; return; }
+  if (!phone)           { errEl.textContent='Phone number required'; errEl.style.display='block'; return; }
+  if (!pin||pin.length!==4||!/^\d{4}$/.test(pin)) { errEl.textContent='PIN must be exactly 4 digits'; errEl.style.display='block'; return; }
+  if (!cid)             { errEl.textContent='Select a carrier'; errEl.style.display='block'; return; }
+
+  btn.disabled = true; btn.textContent = 'Creating…';
+  try {
+    const r = await apiFetch('/api/driver-auth/create', 'POST', {
+      carrier_id: cid, first_name: first, last_name: last,
+      phone, pin, driver_code: code || undefined
+    });
+    const json = await r.json();
+    if (!r.ok) throw new Error(json.detail || r.statusText);
+    closeModal('add-driver-modal');
+    showToast(`✅ Driver ${first} ${last} created — Code: ${json.driver_code}`);
+    loadDrivers();
+    // Reset form
+    ['drv-first','drv-last','drv-phone','drv-pin','drv-code'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+    document.getElementById('drv-carrier').value = '';
+  } catch(e) {
+    errEl.textContent = e.message || 'Failed to create driver';
+    errEl.style.display = 'block';
+  } finally {
+    btn.disabled = false; btn.textContent = 'Create Driver Account →';
+  }
+}
+
+async function deactivateDriver(driverId) {
+  if (!confirm('Deactivate this driver? They will no longer be able to log in.')) return;
+  const r = await apiFetch('/api/driver-auth/'+driverId, 'DELETE');
+  if (r.ok) { showToast('Driver deactivated'); loadDrivers(); }
+  else showToast('Failed to deactivate');
+}
 </script>
 
 </body>
-</html>
 </html>

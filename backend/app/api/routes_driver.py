@@ -73,9 +73,7 @@ async def update_driver_location(req: LocationUpdate, session: DriverSession):
             "lat": req.lat,
             "lng": req.lng,
             "speed_mph": req.speed_mph,
-            "heading_deg": req.heading or 0,
-            "fuel_level_pct": None,
-            "engine_hours": None,
+            "heading": int(req.heading or 0),
             "ts": req.ts
         }).execute()
 
@@ -168,7 +166,9 @@ async def upload_driver_document(
             "storage_path": storage_path,
             "file_size_kb": len(file_content) // 1024,
             "mime_type": file.content_type or "application/octet-stream",
-            "scan_status": "pending"
+            "scan_status": "pending",
+            "uploaded_by": driver_id,
+            "bucket": "driver-documents"
         }).execute()
 
         return DocumentUploadResponse(

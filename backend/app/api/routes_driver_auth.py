@@ -17,6 +17,7 @@ from pydantic import BaseModel, Field
 
 from ..supabase_client import get_supabase
 from ..logging_service import get_logger
+from .deps import require_bearer
 
 log = get_logger(__name__)
 
@@ -280,3 +281,89 @@ async def set_driver_pin(pin: str, session: DriverSession):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="failed to update PIN"
         )
+
+
+# ────────────────────────────────────────────────────────────────────────────
+# ADMIN — create / manage drivers (Eagle Eye dispatcher UI)
+# ────────────────────────────────────────────────────────────────────────────
+
+class CreateDriverRequest(BaseModel):
+    carrier_id: str
+    first_name: str
+    last_name: str
+    phone: str = Field(..., description="10-digit US number or E.164")
+    pin: str    = Field(..., description="4-digit PIN")
+    driver_code: str | None = None
+    cdl_number:  str | None = None
+    truck_id:    str | None = None
+
+
+@router.post("/create", dependencies=[Depends(require_bearer)])
+async def create_driver(req: CreateDriverRequest):
+    """Admin: create a new driver account (called from Eagle Eye)."""
+    if not req.pin or len(req.pin) != 4 or not req.pin.isdigit():
+        raise HTTPException(status_code=400, detail="PIN must be 4 digits")
+
+    try:
+        phone_e164 = normalize_phone(req.phone)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    pin_hash = hash_pin(req.pin)
+    driver_code = req.driver_code or f"DRV-{phone_e164[-4:]}"
+
+    try:
+        existing = get_supabase().table("drivers").select("id").eq("phone_e164", phone_e164).execute()
+        if existing.data:
+            raise HTTPException(status_code=409, detail="Driver with this phone already exists")
+
+        result = get_supabase().table("drivers").insert({
+            "carrier_id":  req.carrier_id,
+            "driver_code": driver_code,
+            "first_name":  req.first_name,
+            "last_name":   req.last_name,
+            "phone":       phone_e164,
+            "phone_e164":  phone_e164,
+            "pin_hash":    pin_hash,
+            "status":      "active",
+        }).execute()
+
+        driver = result.data[0]
+        return {
+            "ok": True,
+            "driver_id":   driver["id"],
+            "driver_code": driver["driver_code"],
+            "phone":       phone_e164,
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        log.error("Create driver failed: %s", e)
+        raise HTTPException(status_code=500, detail="failed to create driver")
+
+
+@router.get("/list", dependencies=[Depends(require_bearer)])
+async def list_drivers(carrier_id: str | None = None, limit: int = 200):
+    """Admin: list all drivers (optionally filtered by carrier)."""
+    try:
+        q = get_supabase().table("drivers").select(
+            "id, carrier_id, driver_code, first_name, last_name, phone_e164, status, created_at"
+        ).order("created_at", desc=True).limit(limit)
+        if carrier_id:
+            q = q.eq("carrier_id", carrier_id)
+        result = q.execute()
+        return {"count": len(result.data or []), "items": result.data or []}
+    except Exception as e:
+        log.error("List drivers failed: %s", e)
+        raise HTTPException(status_code=500, detail="failed to list drivers")
+
+
+@router.delete("/{driver_id}", dependencies=[Depends(require_bearer)])
+async def delete_driver(driver_id: str):
+    """Admin: deactivate a driver (sets status=inactive)."""
+    try:
+        get_supabase().table("drivers").update({"status": "inactive"}).eq("id", driver_id).execute()
+        return {"ok": True}
+    except Exception as e:
+        log.error("Delete driver failed: %s", e)
+        raise HTTPException(status_code=500, detail="failed to deactivate driver")
