@@ -907,27 +907,40 @@ td.td-name{font-weight:600;color:var(--navy);}
         <div class="page-hdr-l"><div class="chip">Live</div><h2>Dispatch Board</h2></div>
         <div class="page-hdr-acts">
           <select id="dispatch-filter-status" onchange="renderDispatchBoard()" style="padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px">
-            <option value="">All Statuses</option>
-            <option value="En Route">En Route</option>
+            <option value="">Active Only</option>
+            <option value="all">All Statuses</option>
             <option value="Booked">Booked</option>
+            <option value="En Route">En Route</option>
             <option value="Check Due">Check Due</option>
             <option value="POD Needed">POD Needed</option>
             <option value="Delivered">Delivered</option>
+            <option value="Completed">Completed</option>
           </select>
           <button class="btn-navy" onclick="openModal('add-load-modal')">+ New Load</button>
         </div>
       </div>
       <div class="g4">
-        <div class="mc" onclick="showDashSummary('dispatch-on')" style="cursor:pointer" title="Click for recent 10"><div class="mc-label">On Load</div><div class="mc-val green" id="dispatch-on-load">—</div></div>
-        <div class="mc" onclick="showDashSummary('dispatch-avail')" style="cursor:pointer" title="Click for recent 10"><div class="mc-label">Available</div><div class="mc-val blue" id="dispatch-available">—</div></div>
-        <div class="mc" onclick="showDashSummary('dispatch-checkcall')" style="cursor:pointer" title="Click for recent 10"><div class="mc-label">Check-Calls Due</div><div class="mc-val orange">1</div></div>
-        <div class="mc" onclick="showDashSummary('dispatch-pods')" style="cursor:pointer" title="Click for recent 10"><div class="mc-label">PODs Needed</div><div class="mc-val red" id="dispatch-pods">—</div></div>
+        <div class="mc"><div class="mc-label">On Load</div><div class="mc-val green" id="dispatch-on-load">—</div></div>
+        <div class="mc"><div class="mc-label">Available</div><div class="mc-val blue" id="dispatch-available">—</div></div>
+        <div class="mc"><div class="mc-label">Check-Calls Due</div><div class="mc-val orange" id="dispatch-check-calls">—</div></div>
+        <div class="mc"><div class="mc-label">PODs Needed</div><div class="mc-val red" id="dispatch-pods">—</div></div>
       </div>
-      <div class="card">
-        <div class="card-hd"><div class="card-title">Active Loads</div><span class="card-chip">Board</span></div>
-        <div class="tbl-wrap">
-          <table><thead><tr><th>Load #</th><th>Driver</th><th>Route</th><th>Miles</th><th>Rate</th><th>RPM</th><th>Fee</th><th>Status</th><th>Action</th></tr></thead>
-          <tbody id="dispatch-table"><tr><td colspan="9"><div class="loading"><div class="spin"></div>Loading…</div></td></tr></tbody></table>
+      <div style="display:grid;grid-template-columns:1fr 270px;gap:16px;align-items:start">
+        <div class="card">
+          <div class="card-hd">
+            <div class="card-title">Active Loads</div>
+            <input id="dispatch-search" class="form-input" style="width:180px;font-size:12px" placeholder="Search load # or driver…" oninput="renderDispatchBoard()">
+          </div>
+          <div class="tbl-wrap">
+            <table><thead><tr><th>Load #</th><th>Pickup</th><th>Route</th><th>Driver</th><th>Rate</th><th>RPM</th><th>Status</th><th>Actions</th></tr></thead>
+            <tbody id="dispatch-table"><tr><td colspan="8"><div class="loading"><div class="spin"></div>Loading…</div></td></tr></tbody></table>
+          </div>
+        </div>
+        <div class="card" style="position:sticky;top:16px">
+          <div class="card-hd"><div class="card-title">Available Carriers</div><span class="card-chip" id="avail-count">0</span></div>
+          <div id="avail-drivers-list" style="max-height:500px;overflow-y:auto">
+            <div style="padding:16px;text-align:center;color:var(--muted);font-size:12px"><div class="spin" style="margin:0 auto 8px"></div>Loading…</div>
+          </div>
         </div>
       </div>
     </div>
@@ -3310,43 +3323,175 @@ function renderDispatchBoard(){
   const tbody=document.getElementById('dispatch-table');
   if(!tbody)return;
   const filterVal=(document.getElementById('dispatch-filter-status')?.value||'');
-  const active=filterVal
-    ? allLoads.filter(l=>l.status===filterVal)
-    : allLoads.filter(l=>l.status==='En Route'||l.status==='Booked'||l.status==='Check Due');
-  setText('dispatch-on-load',allLoads.filter(l=>l.status==='En Route').length);
-  setText('dispatch-available',allCarriers.filter(c=>!allLoads.some(l=>l.driver_name===c.company_name&&(l.status==='En Route'||l.status==='Booked'))).length);
+  const q=(document.getElementById('dispatch-search')?.value||'').toLowerCase();
+  const activeStatuses=['En Route','Booked','Check Due','POD Needed'];
+
+  let loads = filterVal==='all' ? allLoads
+    : filterVal ? allLoads.filter(l=>l.status===filterVal)
+    : allLoads.filter(l=>activeStatuses.includes(l.status));
+
+  if(q) loads=loads.filter(l=>
+    (l.load_number||'').toLowerCase().includes(q)||
+    (l.driver_name||'').toLowerCase().includes(q)||
+    (l.origin||'').toLowerCase().includes(q)||
+    (l.destination||'').toLowerCase().includes(q)
+  );
+
+  // KPI counts
+  const onLoad=allLoads.filter(l=>l.status==='En Route').length;
+  const activeNames=new Set(allLoads.filter(l=>activeStatuses.includes(l.status)).map(l=>l.driver_name).filter(Boolean));
+  const availCarriers=allCarriers.filter(c=>c.status==='active'&&!activeNames.has(c.company_name));
+  const now=Date.now();
+  const checkDue=allLoads.filter(l=>{
+    if(l.status!=='En Route')return false;
+    const last=l.updated_at||l.created_at;
+    return last&&(now-new Date(last).getTime())>4*60*60*1000;
+  }).length;
+
+  setText('dispatch-on-load',onLoad);
+  setText('dispatch-available',availCarriers.length);
+  setText('dispatch-check-calls',checkDue||0);
   setText('dispatch-pods',allLoads.filter(l=>l.status==='POD Needed').length);
-  if(active.length===0){tbody.innerHTML='<tr><td colspan="9"><div class="empty-state"><div class="ei">🚛</div><p>No loads match this filter.</p></div></td></tr>';return;}
-  tbody.innerHTML=active.map(l=>
-    '<tr>'+
-    '<td class="td-name t-mono" style="font-size:12px">'+esc(l.load_number||('#'+l.id.slice(0,6)))+'</td>'+
-    '<td>'+esc(l.driver_name||'—')+'</td>'+
-    '<td>'+esc(l.origin||'—')+' → '+esc(l.destination||'—')+'</td>'+
-    '<td class="t-muted">'+esc(String(l.miles||'—'))+'</td>'+
-    '<td class="val-gold" style="font-weight:600">$'+Number(l.rate||0).toLocaleString()+'</td>'+
-    '<td class="val-green">'+(l.rpm?'$'+Number(l.rpm).toFixed(2):'—')+'</td>'+
-    '<td class="val-gold">'+(l.dispatch_fee?'$'+Number(l.dispatch_fee).toLocaleString():'—')+'</td>'+
-    '<td><span class="badge '+statusBadge(l.status)+'">'+esc(l.status||'Booked')+'</span></td>'+
-    '<td style="display:flex;gap:5px"><button class="btn-out" style="font-size:11px;padding:5px 10px" onclick="updateLoadStatus(\''+l.id+'\')">Update ▾</button>'+
-    '<button class="btn-navy-sm" onclick="sendRateCon(\''+l.id+'\')" title="Send Rate Confirmation">📧 Rate Con</button></td>'+
-    '</tr>'
-  ).join('');
+
+  renderAvailableCarriers(availCarriers);
+
+  if(loads.length===0){
+    tbody.innerHTML='<tr><td colspan="8"><div class="empty-state"><div class="ei">🚛</div><p>No loads match this filter.</p></div></td></tr>';
+    return;
+  }
+
+  tbody.innerHTML=loads.map(l=>{
+    const pickup=l.pickup_at||l.pickup_date?new Date(l.pickup_at||l.pickup_date).toLocaleDateString('en-US',{month:'short',day:'numeric'}):'—';
+    const route=esc((l.origin_city||l.origin||'?')+', '+(l.origin_state||'')+' → '+(l.dest_city||l.destination||'?')+', '+(l.dest_state||''));
+    const driver=l.driver_name||'<span style="color:var(--danger);font-style:italic">Unassigned</span>';
+    const rate='$'+Number(l.rate_total||l.rate||0).toLocaleString();
+    const rpm=l.rpm||l.rate_per_mile?(l.rate_per_mile||l.rpm?'$'+Number(l.rate_per_mile||l.rpm).toFixed(2):'—'):'—';
+    const isCheckDue=l.status==='En Route'&&(now-new Date(l.updated_at||l.created_at).getTime())>4*60*60*1000;
+    return '<tr'+(isCheckDue?' style="background:rgba(245,158,11,.06)"':'')+'>'+
+      '<td class="t-mono" style="font-size:12px;font-weight:600">'+esc(l.load_number||('#'+l.id.slice(0,6)))+(isCheckDue?'<span title="Check-call overdue" style="margin-left:4px">⚠️</span>':'')+'</td>'+
+      '<td style="font-size:12px;color:var(--muted)">'+pickup+'</td>'+
+      '<td style="font-size:12px">'+route+'</td>'+
+      '<td>'+driver+'</td>'+
+      '<td class="val-gold" style="font-weight:600">'+rate+'</td>'+
+      '<td class="val-green" style="font-size:12px">'+rpm+'</td>'+
+      '<td><span class="badge '+statusBadge(l.status)+'">'+esc(l.status||'Booked')+'</span></td>'+
+      '<td><div style="display:flex;gap:4px;flex-wrap:wrap">'+
+        '<button class="btn-out" style="font-size:11px;padding:4px 8px" onclick="cycleLoadStatus(\''+l.id+'\')">▶ Next</button>'+
+        '<button class="btn-navy-sm" onclick="openAssignModal(\''+l.id+'\')" title="Assign Carrier">🚛</button>'+
+        '<button class="btn-navy-sm" onclick="sendRateCon(\''+l.id+'\')" title="Send Rate Con">📧</button>'+
+        '<button class="btn-out" style="font-size:11px;padding:4px 8px" onclick="openLoadDetail(\''+l.id+'\')">⋯</button>'+
+      '</div></td>'+
+    '</tr>';
+  }).join('');
 }
 
-async function updateLoadStatus(id){
-  const statuses=['Booked','En Route','Check Due','Delivered','POD Needed','Completed'];
+function renderAvailableCarriers(available){
+  const wrap=document.getElementById('avail-drivers-list');
+  const countEl=document.getElementById('avail-count');
+  if(!wrap)return;
+  if(countEl)countEl.textContent=available.length;
+  if(available.length===0){
+    wrap.innerHTML='<div style="padding:16px;text-align:center;color:var(--muted);font-size:12px">All carriers on load</div>';
+    return;
+  }
+  wrap.innerHTML=available.map(c=>`
+    <div style="padding:10px 12px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;gap:8px">
+      <div style="min-width:0">
+        <div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(c.company_name||c.name||'—')}</div>
+        <div style="font-size:11px;color:var(--muted)">${esc(c.equipment_type||'Any')} · ${esc(c.home_base||c.base||'—')}</div>
+      </div>
+      <button class="btn-navy-sm" style="white-space:nowrap" onclick="openAssignModalForCarrier('${c.id}','${esc(c.company_name||'')}')">Assign</button>
+    </div>
+  `).join('');
+}
+
+let _assignLoadId=null;
+function openAssignModal(loadId){
+  _assignLoadId=loadId;
+  const load=allLoads.find(l=>l.id===loadId);
+  const info=document.getElementById('assign-load-info');
+  if(info)info.textContent=(load?.load_number||('#'+loadId.slice(0,6)))+' — '+(load?.origin_city||load?.origin||'')+(load?.origin_state?' '+load.origin_state:'')+' → '+(load?.dest_city||load?.destination||'')+(load?.dest_state?' '+load.dest_state:'');
+  const sel=document.getElementById('assign-driver-sel');
+  if(!sel)return;
+  const activeNames=new Set(allLoads.filter(l=>['En Route','Booked','Check Due'].includes(l.status)&&l.id!==loadId).map(l=>l.driver_name).filter(Boolean));
+  sel.innerHTML='<option value="">Select carrier…</option>'+
+    allCarriers.filter(c=>c.status==='active').map(c=>`<option value="${c.id}" data-name="${esc(c.company_name||'')}">${esc(c.company_name||'—')} — ${esc(c.equipment_type||'Any')}${activeNames.has(c.company_name)?' (on load)':''}</option>`).join('');
+  if(load?.driver_name){
+    const match=allCarriers.find(c=>c.company_name===load.driver_name);
+    if(match)sel.value=match.id;
+  }
+  openModal('assign-driver-modal');
+}
+function openAssignModalForCarrier(carrierId,carrierName){
+  const unassigned=allLoads.find(l=>l.status==='Booked'&&!l.driver_name);
+  if(!unassigned){showToast('No unassigned Booked loads — open a specific load first');return;}
+  openAssignModal(unassigned.id);
+  setTimeout(()=>{const sel=document.getElementById('assign-driver-sel');if(sel)sel.value=carrierId;},100);
+}
+async function submitAssignDriver(){
+  const sel=document.getElementById('assign-driver-sel');
+  const carrierId=sel?.value;
+  const carrierName=sel?.options[sel.selectedIndex]?.dataset.name||'';
+  if(!carrierId||!_assignLoadId){showToast('Select a carrier first','error');return;}
+  const btn=document.getElementById('assign-submit-btn');
+  if(btn){btn.disabled=true;btn.textContent='Assigning…';}
+  const r=await apiFetch('/api/dashboard/loads/'+_assignLoadId,'PATCH',{driver_name:carrierName});
+  if(r.ok){
+    closeModal('assign-driver-modal');
+    showToast('✅ '+carrierName+' assigned to load');
+    await loadLoads();
+  } else {
+    showToast('Failed to assign carrier','error');
+  }
+  if(btn){btn.disabled=false;btn.textContent='Assign →';}
+}
+
+async function openLoadDetail(loadId){
+  const load=allLoads.find(l=>l.id===loadId);
+  if(!load)return;
+  const fmt=v=>v||'—';
+  const rate=Number(load.rate_total||load.rate||0).toLocaleString('en-US',{style:'currency',currency:'USD'});
+  const fee=load.dispatch_fee?Number(load.dispatch_fee).toLocaleString('en-US',{style:'currency',currency:'USD'}):'—';
+  document.getElementById('load-detail-body').innerHTML=`
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+      <div><div style="font-size:11px;color:var(--muted);font-weight:700;margin-bottom:4px">LOAD #</div><div style="font-size:15px;font-weight:700;font-family:monospace">${fmt(load.load_number)}</div></div>
+      <div><div style="font-size:11px;color:var(--muted);font-weight:700;margin-bottom:4px">STATUS</div><span class="badge ${statusBadge(load.status)}">${fmt(load.status)}</span></div>
+      <div><div style="font-size:11px;color:var(--muted);font-weight:700;margin-bottom:4px">ORIGIN</div><div>${fmt(load.origin_city||load.origin)}${load.origin_state?', '+load.origin_state:''}</div></div>
+      <div><div style="font-size:11px;color:var(--muted);font-weight:700;margin-bottom:4px">DESTINATION</div><div>${fmt(load.dest_city||load.destination)}${load.dest_state?', '+load.dest_state:''}</div></div>
+      <div><div style="font-size:11px;color:var(--muted);font-weight:700;margin-bottom:4px">PICKUP</div><div>${load.pickup_at?new Date(load.pickup_at).toLocaleString():'—'}</div></div>
+      <div><div style="font-size:11px;color:var(--muted);font-weight:700;margin-bottom:4px">DELIVERY</div><div>${load.delivery_at?new Date(load.delivery_at).toLocaleString():'—'}</div></div>
+      <div><div style="font-size:11px;color:var(--muted);font-weight:700;margin-bottom:4px">DRIVER / CARRIER</div><div>${fmt(load.driver_name)}</div></div>
+      <div><div style="font-size:11px;color:var(--muted);font-weight:700;margin-bottom:4px">MILES</div><div>${fmt(load.miles)}</div></div>
+      <div><div style="font-size:11px;color:var(--muted);font-weight:700;margin-bottom:4px">GROSS RATE</div><div style="font-weight:700;color:#f59e0b">${rate}</div></div>
+      <div><div style="font-size:11px;color:var(--muted);font-weight:700;margin-bottom:4px">DISPATCH FEE</div><div>${fee}</div></div>
+      <div><div style="font-size:11px;color:var(--muted);font-weight:700;margin-bottom:4px">BROKER</div><div>${fmt(load.broker_name||load.shipper_name)}</div></div>
+      <div><div style="font-size:11px;color:var(--muted);font-weight:700;margin-bottom:4px">BROKER PHONE</div><div>${load.broker_phone?'<a href="tel:'+load.broker_phone+'" style="color:var(--accent)">'+load.broker_phone+'</a>':'—'}</div></div>
+      ${load.commodity?'<div style="grid-column:1/-1"><div style="font-size:11px;color:var(--muted);font-weight:700;margin-bottom:4px">COMMODITY</div><div>'+fmt(load.commodity)+'</div></div>':''}
+      ${load.special_instructions?'<div style="grid-column:1/-1"><div style="font-size:11px;color:var(--muted);font-weight:700;margin-bottom:4px">SPECIAL INSTRUCTIONS</div><div style="font-size:13px;color:var(--muted)">'+esc(load.special_instructions)+'</div></div>':''}
+    </div>
+    <div style="display:flex;gap:8px;margin-top:16px;padding-top:16px;border-top:1px solid var(--border)">
+      <button class="btn-navy" onclick="cycleLoadStatus('${load.id}');closeModal('load-detail-modal')">▶ Next Status</button>
+      <button class="btn-out" onclick="closeModal('load-detail-modal');openAssignModal('${load.id}')">🚛 Assign Driver</button>
+      <button class="btn-out" onclick="sendRateCon('${load.id}')">📧 Rate Con</button>
+    </div>
+  `;
+  openModal('load-detail-modal');
+}
+
+async function cycleLoadStatus(id){
+  const statuses=['Booked','En Route','Check Due','POD Needed','Delivered','Completed'];
   const load=allLoads.find(l=>l.id===id);
   const current=load?.status||'Booked';
   const next=statuses[(statuses.indexOf(current)+1)%statuses.length];
-  if(!confirm('Change status to: '+next+'?'))return;
-  const upRes=await apiFetch('/api/dashboard/loads/'+id,'PATCH',{status:next});
-  if(!upRes.ok){toast('Error updating load status','error');return;}
-  await loadLoads();toast('Status → '+next);
-  // Fire the matching execution-engine trigger
-  const triggerBody={load_id:id,load_number:load?.load_number||'',rate:load?.rate||null};
-  if(next==='En Route')   fireTrigger('pickup',    triggerBody);
-  if(next==='Delivered'||next==='Completed') fireTrigger('delivered', triggerBody);
+  const r=await apiFetch('/api/dashboard/loads/'+id,'PATCH',{status:next});
+  if(!r.ok){showToast('Error updating status','error');return;}
+  await loadLoads();showToast('Status → '+next);
+  const body={load_id:id,load_number:load?.load_number||'',rate:load?.rate||null};
+  if(next==='En Route')fireTrigger('pickup',body);
+  if(next==='Delivered'||next==='Completed')fireTrigger('delivered',body);
 }
+
+async function updateLoadStatus(id){ return cycleLoadStatus(id); }
 
 function updateLoadMetrics(){
   const now=new Date();
@@ -11040,6 +11185,32 @@ async function deactivateDriver(driverId) {
   else showToast('Failed to deactivate');
 }
 </script>
+
+<!-- ASSIGN DRIVER MODAL -->
+<div class="modal-overlay" id="assign-driver-modal" onclick="if(event.target===this)closeModal('assign-driver-modal')">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-hd"><span class="modal-title">Assign Carrier to Load</span><button class="modal-close" onclick="closeModal('assign-driver-modal')">✕</button></div>
+    <div style="padding:20px;display:flex;flex-direction:column;gap:14px">
+      <div style="padding:10px 14px;background:rgba(99,102,241,.08);border:1px solid rgba(99,102,241,.2);border-radius:8px;font-size:13px;font-family:monospace" id="assign-load-info">—</div>
+      <div>
+        <label style="font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:6px">SELECT CARRIER / DRIVER</label>
+        <select id="assign-driver-sel" class="form-input" style="width:100%"><option value="">Loading carriers…</option></select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-out" onclick="closeModal('assign-driver-modal')">Cancel</button>
+      <button class="btn-navy" id="assign-submit-btn" onclick="submitAssignDriver()">Assign →</button>
+    </div>
+  </div>
+</div>
+
+<!-- LOAD DETAIL MODAL -->
+<div class="modal-overlay" id="load-detail-modal" onclick="if(event.target===this)closeModal('load-detail-modal')">
+  <div class="modal" style="max-width:560px">
+    <div class="modal-hd"><span class="modal-title">Load Details</span><button class="modal-close" onclick="closeModal('load-detail-modal')">✕</button></div>
+    <div style="padding:20px" id="load-detail-body"></div>
+  </div>
+</div>
 
 </body>
 </html>
