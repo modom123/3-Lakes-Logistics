@@ -1243,7 +1243,13 @@ td.td-name{font-weight:600;color:var(--navy);}
 
     <!-- IFTA — rendered dynamically by renderIFTA() -->
     <div class="page" id="page-ifta">
-      <div class="page-hdr"><div class="page-hdr-l"><div class="chip">Quarterly</div><h2>IFTA / Permits / Tax</h2></div><button class="btn-navy" onclick="openModal('log-fuel-modal')">+ Log Fuel</button></div>
+      <div class="page-hdr">
+        <div class="page-hdr-l"><div class="chip">Quarterly</div><h2>IFTA / Permits / Tax</h2></div>
+        <div class="page-hdr-acts">
+          <button class="btn-out" onclick="populateIFTAQuarters();openModal('file-ifta-modal')">📋 File Quarter</button>
+          <button class="btn-navy" onclick="openModal('log-fuel-modal')">+ Log Fuel</button>
+        </div>
+      </div>
       <div id="ifta-metrics" class="g3"></div>
       <div class="g2">
         <div class="card">
@@ -3005,6 +3011,35 @@ td.td-name{font-weight:600;color:var(--navy);}
   </div>
 </div>
 
+<!-- FILE IFTA QUARTER MODAL -->
+<div class="modal-overlay" id="file-ifta-modal">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-hdr"><h3>File IFTA Quarter</h3>
+      <button class="modal-close" onclick="closeModal('file-ifta-modal')">✕</button>
+    </div>
+    <div class="fg"><label class="fl">Quarter <span>*</span></label>
+      <select id="ifta-quarter-sel" class="form-input">
+        <option value="">Select quarter…</option>
+      </select>
+    </div>
+    <div class="fg"><label class="fl">Due Date <span>*</span></label>
+      <input id="ifta-due-date" type="date" class="form-input"></div>
+    <div class="fg"><label class="fl">Filed Date (leave blank if not yet filed)</label>
+      <input id="ifta-filed-date" type="date" class="form-input"></div>
+    <div class="fg"><label class="fl">Status</label>
+      <select id="ifta-status-sel" class="form-input">
+        <option value="pending">Pending</option>
+        <option value="filed">Filed</option>
+        <option value="overdue">Overdue</option>
+      </select>
+    </div>
+    <div class="modal-ftr">
+      <button class="btn-out" onclick="closeModal('file-ifta-modal')">Cancel</button>
+      <button class="btn-navy" onclick="saveIFTAFiling()" id="save-ifta-btn">Save Filing</button>
+    </div>
+  </div>
+</div>
+
 <script>
 const { createClient } = supabase;
 const sb = createClient('https://zngipootstubwvgdmckt.supabase.co','eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpuZ2lwb290c3R1Ynd2Z2RtY2t0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMxMjk3ODUsImV4cCI6MjA4ODcwNTc4NX0.6MXR8q-CKVuiiJaJKuckxABAUQ-siuyP0-KoaLkt33g');
@@ -4153,6 +4188,51 @@ async function saveShipper(){
 }
 
 // ── IFTA / FUEL ──────────────────────────────────────────────────────────────
+function populateIFTAQuarters(){
+  const sel=document.getElementById('ifta-quarter-sel');
+  if(!sel)return;
+  const now=new Date();
+  const year=now.getFullYear();
+  const opts=[];
+  // Generate Q1-Q4 for current and prior year
+  for(const y of [year,year-1]){
+    for(const q of [4,3,2,1]){
+      const key=y+'-Q'+q;
+      opts.push(`<option value="${key}">${key}</option>`);
+    }
+  }
+  sel.innerHTML='<option value="">Select quarter…</option>'+opts.join('');
+  // Default due date: IFTA quarters due the month after quarter ends + 30d
+  const qEnds={1:'04-30',2:'07-31',3:'10-31',4:'01-31'};
+  const curQ=Math.ceil((now.getMonth()+1)/3);
+  const dueMo=qEnds[curQ];
+  const dueYear=curQ===4?year+1:year;
+  const due=document.getElementById('ifta-due-date');
+  if(due&&!due.value)due.value=`${dueYear}-${dueMo}`;
+}
+
+async function saveIFTAFiling(){
+  const quarter=document.getElementById('ifta-quarter-sel')?.value;
+  const due=document.getElementById('ifta-due-date')?.value;
+  const filed=document.getElementById('ifta-filed-date')?.value||null;
+  const status=document.getElementById('ifta-status-sel')?.value||'pending';
+  if(!quarter||!due){toast('Quarter and due date are required','error');return;}
+  const btn=document.getElementById('save-ifta-btn');
+  btn.disabled=true;btn.textContent='Saving…';
+  // carrier_id is required by the schema - use a placeholder until carrier selection is added
+  const r=await apiFetch('/api/ifta/filings','POST',{
+    carrier_id:'00000000-0000-0000-0000-000000000001',
+    quarter,due_date:due,
+    filed_date:filed||undefined,
+    status
+  });
+  btn.disabled=false;btn.textContent='Save Filing';
+  if(!r.ok){const d=await r.json().catch(()=>{});toast('Error: '+(d?.detail||r.status),'error');return;}
+  closeModal('file-ifta-modal');
+  await loadIFTA();
+  toast('IFTA filing recorded!');
+}
+
 function calcFuelAmount(){
   const gal=parseFloat(document.getElementById('fuel-gallons')?.value)||0;
   const ppg=parseFloat(document.getElementById('fuel-ppg')?.value)||0;
