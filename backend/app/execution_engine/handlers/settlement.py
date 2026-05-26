@@ -739,6 +739,61 @@ def h120_settlement_complete(carrier_id, contract_id, payload):
             sb.table("loads").update({"status": "closed"}).eq("id", load_id).execute()
         except Exception:  # noqa: BLE001
             pass
+
+    # Auto-generate weekly settlement record for the driver if one doesn't exist yet
+    driver_id = payload.get("driver_id")
+    if sb and driver_id:
+        try:
+            import datetime as _dt
+            today = _dt.date.today()
+            monday = today - _dt.timedelta(days=today.weekday())
+            sunday = monday + _dt.timedelta(days=6)
+
+            existing = sb.table("driver_settlements").select("id").eq(
+                "driver_id", driver_id
+            ).eq("week_start", monday.isoformat()).execute()
+
+            if not existing.data:
+                driver_r = sb.table("drivers").select("first_name, last_name, carrier_id, email").eq(
+                    "id", driver_id
+                ).maybe_single().execute()
+                drv = driver_r.data or {}
+                driver_name = f"{drv.get('first_name','')} {drv.get('last_name','')}".strip() or "Driver"
+
+                week_loads = sb.table("loads").select(
+                    "id, rate_total, dispatch_fee, miles"
+                ).eq("driver_id", driver_id).eq("status", "closed").gte(
+                    "delivered_at", monday.isoformat()
+                ).lte("delivered_at", sunday.isoformat() + "T23:59:59").execute().data or []
+
+                load_ids = [l["id"] for l in week_loads]
+                gross = sum(float(l.get("rate_total") or 0) for l in week_loads)
+                total_miles = sum(int(l.get("miles") or 0) for l in week_loads)
+                dispatch_fee = round(gross * 0.08, 2)
+                insurance = round(len(week_loads) * 45.0, 2)
+                net_pay = round(gross - dispatch_fee - insurance, 2)
+
+                sb.table("driver_settlements").insert({
+                    "driver_id": driver_id,
+                    "carrier_id": drv.get("carrier_id"),
+                    "driver_name": driver_name,
+                    "week_start": monday.isoformat(),
+                    "week_end": sunday.isoformat(),
+                    "load_count": len(week_loads),
+                    "total_miles": total_miles,
+                    "gross_pay": gross,
+                    "dispatch_fee": dispatch_fee,
+                    "fuel_advance": 0,
+                    "insurance_deduction": insurance,
+                    "other_deductions": 0,
+                    "net_pay": net_pay,
+                    "status": "draft",
+                    "load_ids": load_ids,
+                    "sent_to": drv.get("email"),
+                }).execute()
+                log.info("weekly settlement auto-created for driver %s week %s", driver_id, monday)
+        except Exception as exc:  # noqa: BLE001
+            log.warning("auto weekly settlement failed: %s", exc)
     if sb and contract_id:
         try:
             sb.table("contracts").update({

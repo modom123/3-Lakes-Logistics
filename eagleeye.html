@@ -761,6 +761,7 @@ td.td-name{font-weight:600;color:var(--navy);}
     <div class="sb-item" onclick="nav('loads')"><span class="sb-icon">📦</span> Load Manager</div>
     <div class="sb-item" onclick="nav('customers')"><span class="sb-icon">🏢</span> Customers <span class="sb-badge" id="cust-notif" style="display:none">●</span></div>
     <div class="sb-item" onclick="nav('invoices')"><span class="sb-icon">🧾</span> Invoices <span class="sb-badge" id="invoice-notif" style="display:none">●</span></div>
+    <div class="sb-item" onclick="nav('settlements')"><span class="sb-icon">💵</span> Settlements <span class="sb-badge" id="settle-notif" style="display:none">●</span></div>
   </div>
   <div class="sb-section">
     <div class="sb-label">Compliance</div>
@@ -1274,6 +1275,110 @@ td.td-name{font-weight:600;color:var(--navy);}
         </div>
       </div>
       <div id="invoices-list"><div class="loading"><div class="spin"></div>Loading invoices…</div></div>
+    </div>
+
+    <!-- DRIVER SETTLEMENTS -->
+    <div class="page" id="page-settlements">
+      <div class="page-hdr">
+        <div class="page-hdr-l"><div class="chip">Pay</div><h2>Driver Settlements</h2></div>
+        <div class="page-hdr-acts">
+          <button class="btn-out" onclick="filterSettlements('all')"  id="sett-filter-all">All</button>
+          <button class="btn-out" onclick="filterSettlements('draft')" id="sett-filter-draft">Draft</button>
+          <button class="btn-out" onclick="filterSettlements('sent')"  id="sett-filter-sent">Sent</button>
+          <button class="btn-out" onclick="filterSettlements('acknowledged')" id="sett-filter-acknowledged">Acknowledged</button>
+          <button class="btn-navy" onclick="openModal('gen-settlement-modal');populateSettleDriverDropdown()">+ Generate Statement</button>
+        </div>
+      </div>
+      <!-- KPI Row -->
+      <div class="g4" style="margin-bottom:16px">
+        <div class="mc"><div class="mc-label">Net Paid (MTD)</div><div class="mc-val gold" id="sett-mtd-net">—</div></div>
+        <div class="mc"><div class="mc-label">Statements Sent</div><div class="mc-val green" id="sett-sent-count">—</div></div>
+        <div class="mc"><div class="mc-label">Pending Draft</div><div class="mc-val orange" id="sett-draft-count">—</div></div>
+        <div class="mc"><div class="mc-label">Avg Net/Week</div><div class="mc-val" id="sett-avg-net">—</div></div>
+      </div>
+      <!-- Driver Filter -->
+      <div style="margin-bottom:16px;display:flex;gap:10px;align-items:center">
+        <select class="fi" id="sett-driver-filter" style="max-width:260px" onchange="loadSettlements()">
+          <option value="">All Drivers</option>
+        </select>
+        <select class="fi" id="sett-week-filter" style="max-width:200px" onchange="loadSettlements()">
+          <option value="">All Weeks</option>
+        </select>
+      </div>
+      <!-- Table -->
+      <div class="card" style="padding:0;overflow:hidden">
+        <table class="tbl" id="settlements-table">
+          <thead><tr>
+            <th>Driver</th><th>Pay Week</th><th>Loads</th><th>Miles</th>
+            <th style="text-align:right">Gross</th><th style="text-align:right">Dispatch Fee</th>
+            <th style="text-align:right">Net Pay</th><th>Status</th><th>Actions</th>
+          </tr></thead>
+          <tbody id="settlements-tbody">
+            <tr><td colspan="9" style="text-align:center;padding:24px;color:var(--muted)"><div class="spin"></div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Settlement Preview Modal -->
+    <div class="modal-overlay" id="sett-preview-modal" style="display:none" onclick="if(event.target===this){this.style.display='none'}">
+      <div class="modal" style="max-width:820px;height:90vh;display:flex;flex-direction:column;padding:0;overflow:hidden">
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:16px 20px;border-bottom:1px solid var(--border)">
+          <div style="font-weight:700;font-size:16px">Settlement Preview</div>
+          <div style="display:flex;gap:8px">
+            <button class="btn-navy" id="sett-send-btn" onclick="sendSettlementEmail()">📧 Send to Driver</button>
+            <button class="btn-out" onclick="document.getElementById('sett-preview-modal').style.display='none'">✕ Close</button>
+          </div>
+        </div>
+        <iframe id="sett-preview-iframe" style="flex:1;border:none;width:100%" src="about:blank"></iframe>
+      </div>
+    </div>
+
+    <!-- Generate Settlement Modal -->
+    <div class="modal-overlay" id="gen-settlement-modal" onclick="if(event.target===this)closeModal('gen-settlement-modal')">
+      <div class="modal" style="max-width:460px">
+        <div class="modal-hd"><span>Generate Weekly Statement</span><button class="modal-x" onclick="closeModal('gen-settlement-modal')">✕</button></div>
+        <div class="fg"><label class="fl">Driver *</label>
+          <select class="fi" id="gen-sett-driver-id">
+            <option value="">Select driver…</option>
+          </select>
+        </div>
+        <div class="fg"><label class="fl">Week Starting (Monday) *</label>
+          <input class="fi" type="date" id="gen-sett-week-start" />
+        </div>
+        <div class="g2">
+          <div class="fg"><label class="fl">Dispatch Fee %</label>
+            <input class="fi" type="number" id="gen-sett-fee-pct" value="8" min="0" max="100" step="0.5" />
+          </div>
+          <div class="fg"><label class="fl">Insurance / Load ($)</label>
+            <input class="fi" type="number" id="gen-sett-insurance" value="45" min="0" step="1" />
+          </div>
+        </div>
+        <div class="g2">
+          <div class="fg"><label class="fl">Fuel Advance ($)</label>
+            <input class="fi" type="number" id="gen-sett-fuel-adv" value="0" min="0" step="1" />
+          </div>
+          <div class="fg"><label class="fl">Other Deductions ($)</label>
+            <input class="fi" type="number" id="gen-sett-other-ded" value="0" min="0" step="1" />
+          </div>
+        </div>
+        <div class="fg"><label class="fl">Notes</label>
+          <textarea class="fi" id="gen-sett-notes" rows="2" placeholder="Optional notes for this statement"></textarea>
+        </div>
+        <!-- Preview box -->
+        <div id="gen-sett-preview-box" style="display:none;background:var(--off);border:1px solid var(--border);border-radius:8px;padding:14px;margin-bottom:12px;font-size:13px">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <div><span style="color:var(--muted)">Loads:</span> <strong id="gsp-loads">—</strong></div>
+            <div><span style="color:var(--muted)">Miles:</span> <strong id="gsp-miles">—</strong></div>
+            <div><span style="color:var(--muted)">Gross:</span> <strong id="gsp-gross">—</strong></div>
+            <div><span style="color:var(--muted)">Net Pay:</span> <strong id="gsp-net" style="color:var(--green)">—</strong></div>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:4px">
+          <button class="btn-out" onclick="previewSettlementCalc()">Preview</button>
+          <button class="btn-navy" onclick="saveGenerateSettlement()">Generate & Save</button>
+        </div>
+      </div>
     </div>
 
     <!-- COMPLIANCE -->
@@ -3052,7 +3157,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 let allCarriers=[], allLoads=[], allInvoices=[], currentInvFilter='all', loadCounter=3849;
 
-const pageNames={dashboard:'Dashboard',customers:'Customers & Shippers',dispatch:'Dispatch Board','fleet-map':'Fleet Map',carriers:'Carriers',drivers:'Drivers',loads:'Load Manager',invoices:'Invoices & Billing',compliance:'DOT Compliance',ifta:'IFTA / Permits',insurance:'Insurance',revenue:'Revenue Tracker',providers:'Compliance Providers',checklist:'Daily Checklist',notes:'Dispatcher Notes',reports:'Team Reports','exec-command':'Exec Command',agents:'AI Agents',founders:'Founders Program',crm:'Lead CRM',leads:'Lead Pipeline',execution:'Execution Engine',email:'Email Center',vault:'Document Vault',clm:'CLM Scanner',ledger:'Atomic Ledger',agreements:'Agreements'};
+const pageNames={dashboard:'Dashboard',customers:'Customers & Shippers',dispatch:'Dispatch Board','fleet-map':'Fleet Map',carriers:'Carriers',drivers:'Drivers',loads:'Load Manager',invoices:'Invoices & Billing',settlements:'Driver Settlements',compliance:'DOT Compliance',ifta:'IFTA / Permits',insurance:'Insurance',revenue:'Revenue Tracker',providers:'Compliance Providers',checklist:'Daily Checklist',notes:'Dispatcher Notes',reports:'Team Reports','exec-command':'Exec Command',agents:'AI Agents',founders:'Founders Program',crm:'Lead CRM',leads:'Lead Pipeline',execution:'Execution Engine',email:'Email Center',vault:'Document Vault',clm:'CLM Scanner',ledger:'Atomic Ledger',agreements:'Agreements'};
 
 // ── 3 Lakes Logistics Backend API (FastAPI) ──
 const API_BASE = (window.__3LL_API_BASE || 'https://three-lakes-logistics-api.onrender.com').replace(/\/$/,'');
@@ -3150,6 +3255,7 @@ function nav(id){
   if(id==='carriers'){const n=document.getElementById('carrier-notif');if(n)n.style.display='none';}
   if(id==='customers')loadCustomers();
   if(id==='invoices'){const n=document.getElementById('invoice-notif');if(n)n.style.display='none';renderInvoices();loadArAging();}
+  if(id==='settlements'){loadSettlements();}
   if(id==='notes')loadNotes();
   if(id==='reports')loadTeamReports();
   if(id==='exec-command'){const n=document.getElementById('exec-esc-notif');if(n)n.style.display='none';ecRefreshDashboard();}
@@ -3197,7 +3303,7 @@ async function testConnection(){
 
 async function refreshAll(){
   await Promise.all([loadCarriers(),loadLoads(),loadCustomers()]);
-  await loadInvoices();
+  await Promise.all([loadInvoices(),loadSettlements()]);
   updateDashboard();
   renderCarrierCompliance();
 }
@@ -4443,6 +4549,238 @@ function createInvoiceForLoad(loadId,driverName,fee){
     const due=document.getElementById('inv-due');if(due){const d=new Date();d.setDate(d.getDate()+30);due.value=d.toISOString().split('T')[0];}
   },50);
 }
+
+// ── DRIVER SETTLEMENTS ──────────────────────────────────────────────────────
+
+let allSettlements = [], currentSettleFilter = 'all', currentSettleId = null;
+
+async function loadSettlements() {
+  const driverFilter = document.getElementById('sett-driver-filter')?.value || '';
+  const weekFilter   = document.getElementById('sett-week-filter')?.value   || '';
+  try {
+    let url = '/api/settlements?limit=100';
+    if (driverFilter) url += '&driver_id=' + encodeURIComponent(driverFilter);
+    const r = await apiFetch(url);
+    if (!r.ok) return;
+    allSettlements = r.settlements || [];
+    populateSettleDriverDropdown();
+    populateSettleWeekDropdown();
+    renderSettlements();
+    updateSettlementKPIs();
+  } catch(e) { console.error('loadSettlements:', e); }
+}
+
+function populateSettleDriverDropdown() {
+  const sel = document.getElementById('sett-driver-filter');
+  if (!sel) return;
+  const cur = sel.value;
+  const seen = new Set();
+  const opts = ['<option value="">All Drivers</option>'];
+  allSettlements.forEach(s => {
+    if (s.driver_id && !seen.has(s.driver_id)) {
+      seen.add(s.driver_id);
+      opts.push(`<option value="${s.driver_id}"${s.driver_id===cur?' selected':''}>${esc(s.driver_name||s.driver_id)}</option>`);
+    }
+  });
+  sel.innerHTML = opts.join('');
+  // Also populate gen modal driver dropdown from allDrivers
+  const genSel = document.getElementById('gen-sett-driver-id');
+  if (genSel) {
+    const gOpts = ['<option value="">Select driver…</option>'];
+    (typeof _allDrivers !== 'undefined' ? _allDrivers : []).forEach(d => {
+      const name = `${d.first_name||''} ${d.last_name||''}`.trim() || d.driver_code || d.id;
+      gOpts.push(`<option value="${d.id}">${esc(name)}</option>`);
+    });
+    genSel.innerHTML = gOpts.join('');
+  }
+}
+
+function populateSettleWeekDropdown() {
+  const sel = document.getElementById('sett-week-filter');
+  if (!sel) return;
+  const cur = sel.value;
+  const seen = new Set();
+  const opts = ['<option value="">All Weeks</option>'];
+  allSettlements.forEach(s => {
+    if (s.week_start && !seen.has(s.week_start)) {
+      seen.add(s.week_start);
+      const label = `Week of ${new Date(s.week_start+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}`;
+      opts.push(`<option value="${s.week_start}"${s.week_start===cur?' selected':''}>${label}</option>`);
+    }
+  });
+  sel.innerHTML = opts.join('');
+}
+
+function filterSettlements(f) {
+  currentSettleFilter = f;
+  ['all','draft','sent','acknowledged'].forEach(x => {
+    const btn = document.getElementById('sett-filter-'+x);
+    if (btn) btn.classList.toggle('btn-navy', x===f);
+    if (btn) btn.classList.toggle('btn-out',  x!==f);
+  });
+  renderSettlements();
+}
+
+function renderSettlements() {
+  const weekFilter = document.getElementById('sett-week-filter')?.value || '';
+  let data = allSettlements;
+  if (currentSettleFilter !== 'all') data = data.filter(s => s.status === currentSettleFilter);
+  if (weekFilter) data = data.filter(s => s.week_start === weekFilter);
+
+  const tbody = document.getElementById('settlements-tbody');
+  if (!tbody) return;
+  if (!data.length) {
+    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:24px;color:var(--muted)">No settlement statements found.</td></tr>';
+    return;
+  }
+
+  const statusBadgeSettle = s => {
+    if (s==='draft') return '<span class="badge" style="background:#f3f4f6;color:#374151">Draft</span>';
+    if (s==='sent') return '<span class="badge badge-blue">Sent</span>';
+    if (s==='acknowledged') return '<span class="badge badge-green">Acknowledged</span>';
+    return `<span class="badge">${s}</span>`;
+  };
+
+  tbody.innerHTML = data.map(s => {
+    const gross   = parseFloat(s.gross_pay||0).toLocaleString('en-US',{style:'currency',currency:'USD',minimumFractionDigits:2});
+    const fee     = parseFloat(s.dispatch_fee||0).toLocaleString('en-US',{style:'currency',currency:'USD',minimumFractionDigits:2});
+    const net     = parseFloat(s.net_pay||0).toLocaleString('en-US',{style:'currency',currency:'USD',minimumFractionDigits:2});
+    const weekLbl = s.week_start ? new Date(s.week_start+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'})
+                                 + ' – ' + new Date(s.week_end+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'})
+                                 : '—';
+    const sentIcon = s.sent_at ? ' <span title="Sent '+new Date(s.sent_at).toLocaleDateString()+'">✅</span>' : '';
+    return `<tr>
+      <td style="font-weight:600">${esc(s.driver_name||'—')}</td>
+      <td>${weekLbl}</td>
+      <td style="text-align:center">${s.load_count||0}</td>
+      <td style="text-align:center">${(s.total_miles||0).toLocaleString()}</td>
+      <td style="text-align:right">${gross}</td>
+      <td style="text-align:right;color:var(--muted)">${fee}</td>
+      <td style="text-align:right;font-weight:700;color:var(--green)">${net}</td>
+      <td>${statusBadgeSettle(s.status)}${sentIcon}</td>
+      <td>
+        <button class="btn-navy-sm" onclick="previewSettlementEmail('${s.id}')">👁 Preview</button>
+        ${s.status==='draft'?`<button class="btn-navy-sm" style="background:var(--green)" onclick="sendSettlementEmail('${s.id}')">📧 Send</button>`:''}
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function updateSettlementKPIs() {
+  const now = new Date();
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const mtd = allSettlements.filter(s => s.sent_at && new Date(s.sent_at) >= monthStart);
+  const mtdNet = mtd.reduce((a,s) => a + parseFloat(s.net_pay||0), 0);
+  const sentCount = allSettlements.filter(s => s.status==='sent'||s.status==='acknowledged').length;
+  const draftCount = allSettlements.filter(s => s.status==='draft').length;
+  const allNets = allSettlements.filter(s => s.net_pay).map(s => parseFloat(s.net_pay));
+  const avgNet = allNets.length ? allNets.reduce((a,b)=>a+b,0)/allNets.length : 0;
+
+  const f = v => '$'+v.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+  const setEl = (id,v) => { const el=document.getElementById(id); if(el)el.textContent=v; };
+  setEl('sett-mtd-net',   f(mtdNet));
+  setEl('sett-sent-count', sentCount);
+  setEl('sett-draft-count', draftCount);
+  setEl('sett-avg-net',   f(avgNet));
+  if (draftCount > 0) {
+    const nb = document.getElementById('settle-notif');
+    if (nb) { nb.style.display='inline'; nb.textContent = draftCount; }
+  }
+}
+
+async function previewSettlementEmail(id) {
+  currentSettleId = id;
+  const modal = document.getElementById('sett-preview-modal');
+  const iframe = document.getElementById('sett-preview-iframe');
+  const sendBtn = document.getElementById('sett-send-btn');
+  if (!modal || !iframe) return;
+  iframe.src = '/api/settlements/' + id + '/preview';
+  const sett = allSettlements.find(s => s.id === id);
+  if (sendBtn) {
+    sendBtn.style.display = sett && (sett.status==='sent'||sett.status==='acknowledged') ? 'none' : '';
+  }
+  modal.style.display = 'flex';
+}
+
+async function sendSettlementEmail(id) {
+  id = id || currentSettleId;
+  if (!id) return;
+  const btn = document.getElementById('sett-send-btn');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Sending…'; }
+  try {
+    const r = await apiFetch('/api/settlements/' + id + '/send', 'POST');
+    if (r.ok) {
+      toast('✅ Settlement sent to ' + (r.sent_to||'driver'));
+      document.getElementById('sett-preview-modal').style.display = 'none';
+      await loadSettlements();
+    } else {
+      toast('Send failed: ' + (r.detail||'error'), 'error');
+      if (btn) { btn.disabled=false; btn.textContent='📧 Send to Driver'; }
+    }
+  } catch(e) {
+    toast('Error: '+e.message,'error');
+    if (btn) { btn.disabled=false; btn.textContent='📧 Send to Driver'; }
+  }
+}
+
+async function previewSettlementCalc() {
+  const driverId  = document.getElementById('gen-sett-driver-id')?.value;
+  const weekStart = document.getElementById('gen-sett-week-start')?.value;
+  if (!driverId || !weekStart) { toast('Select driver and week first','error'); return; }
+  const feePct    = parseFloat(document.getElementById('gen-sett-fee-pct')?.value||8) / 100;
+  const insurance = parseFloat(document.getElementById('gen-sett-insurance')?.value||45);
+  try {
+    const r = await apiFetch(`/api/settlements/weekly-preview?driver_id=${driverId}&week_start=${weekStart}&dispatch_fee_pct=${feePct}&insurance_per_load=${insurance}`);
+    if (!r.ok) { toast(r.detail||'preview failed','error'); return; }
+    const box = document.getElementById('gen-sett-preview-box');
+    if (box) box.style.display = 'block';
+    const f = v => '$'+parseFloat(v||0).toLocaleString('en-US',{minimumFractionDigits:2});
+    document.getElementById('gsp-loads').textContent = r.load_count || '0';
+    document.getElementById('gsp-miles').textContent = (r.total_miles||0).toLocaleString();
+    document.getElementById('gsp-gross').textContent = f(r.gross_pay);
+    document.getElementById('gsp-net').textContent   = f(r.net_pay);
+  } catch(e) { toast('Error: '+e.message,'error'); }
+}
+
+async function saveGenerateSettlement() {
+  const driverId  = document.getElementById('gen-sett-driver-id')?.value;
+  const weekStart = document.getElementById('gen-sett-week-start')?.value;
+  if (!driverId) { toast('Select a driver','error'); return; }
+  if (!weekStart) { toast('Select a week start date','error'); return; }
+  const body = {
+    driver_id:         driverId,
+    week_start:        weekStart,
+    dispatch_fee_pct:  parseFloat(document.getElementById('gen-sett-fee-pct')?.value||8) / 100,
+    insurance_per_load:parseFloat(document.getElementById('gen-sett-insurance')?.value||45),
+    fuel_advance:      parseFloat(document.getElementById('gen-sett-fuel-adv')?.value||0),
+    other_deductions:  parseFloat(document.getElementById('gen-sett-other-ded')?.value||0),
+    notes:             document.getElementById('gen-sett-notes')?.value || null,
+  };
+  try {
+    const r = await apiFetch('/api/settlements/generate', 'POST', body);
+    if (r.ok) {
+      toast('✅ Statement generated for ' + (r.driver_name||'driver'));
+      closeModal('gen-settlement-modal');
+      document.getElementById('gen-sett-preview-box').style.display='none';
+      await loadSettlements();
+      if (r.settlement_id) previewSettlementEmail(r.settlement_id);
+    } else {
+      toast(r.detail||'generate failed','error');
+    }
+  } catch(e) { toast('Error: '+e.message,'error'); }
+}
+
+// Set default week-start to last Monday when modal opens
+document.addEventListener('DOMContentLoaded', () => {
+  const ws = document.getElementById('gen-sett-week-start');
+  if (ws) {
+    const now = new Date();
+    const day = now.getDay();
+    const lastMon = new Date(now);
+    lastMon.setDate(now.getDate() - (day === 0 ? 6 : day - 1));
+    ws.value = lastMon.toISOString().split('T')[0];
+  }
+});
 
 // ── DASHBOARD ──
 function updateDashboard(){

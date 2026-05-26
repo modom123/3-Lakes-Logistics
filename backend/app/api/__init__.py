@@ -32,6 +32,7 @@ from .routes_agreements    import router as agreements_router
 from .routes_rate_con      import router as rate_con_router
 from .routes_customers     import router as customers_router
 from .routes_invoices      import router as invoices_ar_router
+from .routes_settlements   import router as settlements_router
 
 from ..clm             import clm_router
 from ..email_ingest    import router as email_ingest_router
@@ -82,5 +83,6 @@ __all__ = [
     "rate_con_router",
     "customers_router",
     "invoices_ar_router",
+    "settlements_router",
     "studio_router",
 ]

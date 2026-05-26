@@ -1605,39 +1605,96 @@ async function loadPayData() {
     document.getElementById('pay-ytd-gross').textContent  = ytdGross  ? '$' + ytdGross.toLocaleString() : '—';
     document.getElementById('pay-ytd-miles').textContent  = ytdMi     ? ytdMi.toLocaleString()          : '—';
 
-    // Settlement history by week
-    const byWeek = {};
-    loads.forEach(l => {
-      if (!l.pickup_at) return;
-      const d = new Date(l.pickup_at);
-      const wk = new Date(d); wk.setDate(d.getDate() - d.getDay()); wk.setHours(0,0,0,0);
-      const key = wk.toISOString().slice(0,10);
-      const rate = l.gross_rate || l.rate_total || 0;
-      if (!byWeek[key]) byWeek[key] = { gross:0, loads:0, miles:0, label: wk.toLocaleDateString('en-US',{month:'short',day:'numeric'}) };
-      byWeek[key].gross += Number(rate);
-      byWeek[key].loads += 1;
-      byWeek[key].miles += Number(l.miles)||0;
-    });
-    const weeks = Object.entries(byWeek).sort((a,b) => b[0].localeCompare(a[0])).slice(0,8);
+    // Settlement history — prefer official driver_settlements records, fall back to loads-based computation
     const settEl = document.getElementById('settlement-list');
-    if (!weeks.length) {
-      settEl.innerHTML = '<div style="text-align:center;padding:12px;color:var(--muted);font-size:13px">No settlements yet.</div>';
-    } else {
-      settEl.innerHTML = weeks.map(([,w]) => `
-        <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:12px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center">
-          <div>
-            <div style="font-size:13px;font-weight:600;color:var(--text)">Week of ${w.label}</div>
-            <div style="font-size:11px;color:var(--muted);margin-top:2px">${w.loads} load${w.loads!==1?'s':''} · ${w.miles.toLocaleString()} mi</div>
-          </div>
-          <div style="text-align:right">
-            <div style="font-size:16px;font-weight:700;color:var(--green)">$${w.gross.toLocaleString()}</div>
-            <div style="font-size:11px;color:var(--muted)">gross</div>
-          </div>
-        </div>`).join('');
+    const driverId = localStorage.getItem('3ll_driver_id') || '';
+    let settlementsLoaded = false;
+
+    if (supabaseClient && driverId) {
+      try {
+        const { data: settlements, error: settErr } = await supabaseClient
+          .from('driver_settlements')
+          .select('id,week_start,week_end,load_count,total_miles,gross_pay,net_pay,status,sent_at')
+          .eq('driver_id', driverId)
+          .order('week_start', { ascending: false })
+          .limit(8);
+
+        if (!settErr && settlements && settlements.length > 0) {
+          settlementsLoaded = true;
+          settEl.innerHTML = settlements.map(s => {
+            const label = new Date(s.week_start + 'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'});
+            const net   = parseFloat(s.net_pay || 0);
+            const gross = parseFloat(s.gross_pay || 0);
+            const statusPill = s.status === 'acknowledged'
+              ? '<span style="font-size:10px;color:var(--green);margin-left:4px">✓ Acknowledged</span>'
+              : s.status === 'sent'
+              ? '<span style="font-size:10px;color:var(--accent);margin-left:4px">📧 Sent</span>'
+              : '<span style="font-size:10px;color:var(--muted);margin-left:4px">Draft</span>';
+            return `
+              <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:12px;margin-bottom:8px">
+                <div style="display:flex;justify-content:space-between;align-items:flex-start">
+                  <div>
+                    <div style="font-size:13px;font-weight:600;color:var(--text)">Week of ${label}${statusPill}</div>
+                    <div style="font-size:11px;color:var(--muted);margin-top:2px">${s.load_count||0} load${s.load_count!==1?'s':''} · ${(s.total_miles||0).toLocaleString()} mi</div>
+                  </div>
+                  <div style="text-align:right">
+                    <div style="font-size:16px;font-weight:700;color:var(--green)">$${net.toLocaleString('en-US',{minimumFractionDigits:2})}</div>
+                    <div style="font-size:10px;color:var(--muted)">net · $${gross.toLocaleString('en-US',{minimumFractionDigits:2})} gross</div>
+                  </div>
+                </div>
+                ${s.status==='sent'?`<button onclick="acknowledgeSettlement('${s.id}')" style="margin-top:8px;width:100%;padding:7px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer">✓ Acknowledge Receipt</button>`:''}
+              </div>`;
+          }).join('');
+        }
+      } catch(se) { console.warn('settlement history from DB failed:', se); }
+    }
+
+    if (!settlementsLoaded) {
+      // Fall back to loads-based computation
+      const byWeek = {};
+      loads.forEach(l => {
+        if (!l.pickup_at) return;
+        const d = new Date(l.pickup_at);
+        const wk = new Date(d); wk.setDate(d.getDate() - d.getDay()); wk.setHours(0,0,0,0);
+        const key = wk.toISOString().slice(0,10);
+        const rate = l.gross_rate || l.rate_total || 0;
+        if (!byWeek[key]) byWeek[key] = { gross:0, loads:0, miles:0, label: wk.toLocaleDateString('en-US',{month:'short',day:'numeric'}) };
+        byWeek[key].gross += Number(rate);
+        byWeek[key].loads += 1;
+        byWeek[key].miles += Number(l.miles)||0;
+      });
+      const weeks = Object.entries(byWeek).sort((a,b) => b[0].localeCompare(a[0])).slice(0,8);
+      if (!weeks.length) {
+        settEl.innerHTML = '<div style="text-align:center;padding:12px;color:var(--muted);font-size:13px">No settlements yet.</div>';
+      } else {
+        settEl.innerHTML = weeks.map(([,w]) => `
+          <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:12px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center">
+            <div>
+              <div style="font-size:13px;font-weight:600;color:var(--text)">Week of ${w.label}</div>
+              <div style="font-size:11px;color:var(--muted);margin-top:2px">${w.loads} load${w.loads!==1?'s':''} · ${w.miles.toLocaleString()} mi</div>
+            </div>
+            <div style="text-align:right">
+              <div style="font-size:16px;font-weight:700;color:var(--green)">$${w.gross.toLocaleString()}</div>
+              <div style="font-size:11px;color:var(--muted)">gross</div>
+            </div>
+          </div>`).join('');
+      }
     }
   } catch (err) {
     console.error('loadPayData exception:', err);
   }
+}
+
+async function acknowledgeSettlement(settlementId) {
+  if (!settlementId) return;
+  try {
+    const resp = await fetch(`/api/settlements/${settlementId}/acknowledge`, { method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' } });
+    if (resp.ok) {
+      showToast('✅ Settlement acknowledged');
+      loadPayData();
+    }
+  } catch(e) { console.error('acknowledge error:', e); }
 }
 
 // ── EQUIPMENT ────────────────────────────────────────────────────────────────
