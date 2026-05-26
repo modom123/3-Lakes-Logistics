@@ -1123,7 +1123,7 @@ td.td-name{font-weight:600;color:var(--navy);}
         <div class="page-hdr-l"><div class="chip">Weekly</div><h2>Driver Settlements</h2></div>
         <div class="page-hdr-acts">
           <button class="btn-out" onclick="loadSettlements()" id="set-refresh-btn">Refresh</button>
-          <button class="btn-navy" onclick="openModal('add-settlement-modal')">+ New Settlement</button>
+          <button class="btn-navy" onclick="populateSettlementCarrier();openModal('add-settlement-modal')">+ New Settlement</button>
         </div>
       </div>
       <div class="g4">
@@ -10428,6 +10428,84 @@ const TS_DOMAINS = [
           });
           if (!r.ok) throw new Error(`Email log unreachable: ${r.status}`);
           return `status ${r.status} — email log accessible ✓`;
+        }
+      }
+    ]
+  },
+  {
+    id: 'settlements', label: 'Settlements', icon: '💵',
+    tests: [
+      {
+        name: 'List settlements',
+        run: async () => {
+          const r = await apiFetch('/api/settlements');
+          if (!r.ok) throw new Error(`HTTP ${r.status}`);
+          const d = await r.json();
+          if (!('count' in d) || !('items' in d)) throw new Error('Missing count/items keys');
+          return `${d.count} settlement(s)`;
+        }
+      },
+      {
+        name: 'Create settlement (test record)',
+        run: async () => {
+          const r = await apiFetch('/api/settlements', 'POST', {
+            carrier_name: 'Eagle Eye Test Carrier', load_number: 'EE-TEST-001',
+            gross_pay: 2500, dispatch_pct: 8, miles: 400, status: 'pending'
+          });
+          if (!r.ok) throw new Error(`HTTP ${r.status}`);
+          const d = await r.json();
+          if (!d.ok) throw new Error('ok !== true');
+          const net = d.item?.net_pay;
+          return `settlement created — net_pay=$${net ?? '?'}`;
+        }
+      },
+      {
+        name: 'Weekly summary endpoint',
+        run: async () => {
+          const r = await apiFetch('/api/settlements/summary/weekly');
+          if (!r.ok) throw new Error(`HTTP ${r.status}`);
+          const d = await r.json();
+          if (!('week_ending' in d) || !('carriers' in d)) throw new Error('Bad shape');
+          return `week ${d.week_ending} — ${d.carriers.length} carrier(s)`;
+        }
+      }
+    ]
+  },
+  {
+    id: 'shippers', label: 'Shippers CRM', icon: '🏭',
+    tests: [
+      {
+        name: 'List shippers',
+        run: async () => {
+          const r = await apiFetch('/api/shippers');
+          if (!r.ok) throw new Error(`HTTP ${r.status}`);
+          const d = await r.json();
+          if (!('count' in d) || !('items' in d)) throw new Error('Missing count/items keys');
+          return `${d.count} shipper(s)`;
+        }
+      },
+      {
+        name: 'Create shipper (test broker)',
+        run: async () => {
+          const r = await apiFetch('/api/shippers', 'POST', {
+            company_name: 'Eagle Eye Test Broker', shipper_type: 'broker',
+            contact_name: 'Test Contact', email: 'broker@eagleeye.internal',
+            phone: '+13135550099', payment_terms: 'net30', status: 'active'
+          });
+          if (!r.ok) throw new Error(`HTTP ${r.status}`);
+          const d = await r.json();
+          if (!d.ok) throw new Error('ok !== true');
+          return `shipper created — id ${d.item?.id ?? '?'}`;
+        }
+      },
+      {
+        name: 'Top shippers endpoint',
+        run: async () => {
+          const r = await apiFetch('/api/shippers/search/top?limit=5');
+          if (!r.ok) throw new Error(`HTTP ${r.status}`);
+          const d = await r.json();
+          if (!('count' in d)) throw new Error('Missing count key');
+          return `${d.count} top shipper(s)`;
         }
       }
     ]
