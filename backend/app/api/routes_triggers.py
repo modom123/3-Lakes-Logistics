@@ -39,13 +39,17 @@ class OnboardingTrigger(BaseModel):
     carrier_id: str
 
 class LoadTrigger(BaseModel):
-    carrier_id: str | None = None
-    load_id: str
-    load_number: str | None = None
-    driver_name: str | None = None
-    origin: str | None = None
-    destination: str | None = None
-    rate: float | None = None
+    carrier_id:   str | None = None
+    load_id:      str
+    load_number:  str | None = None
+    driver_name:  str | None = None
+    origin:       str | None = None
+    destination:  str | None = None
+    origin_city:  str | None = None
+    origin_state: str | None = None
+    dest_city:    str | None = None
+    dest_state:   str | None = None
+    rate:         float | None = None
 
 class ComplianceTrigger(BaseModel):
     carrier_id: str | None = None   # None = sweep all carriers
@@ -65,9 +69,16 @@ def trigger_onboarding(req: OnboardingTrigger, bg: BackgroundTasks) -> dict:
 @router.post("/load_booked")
 def trigger_load_booked(req: LoadTrigger, bg: BackgroundTasks) -> dict:
     """Fire when a load is created or status changes to Booked."""
-    bg.add_task(fire_dispatch, req.carrier_id, req.load_id,
-                {"load_number": req.load_number, "origin": req.origin,
-                 "destination": req.destination, "rate_total": req.rate})
+    bg.add_task(fire_dispatch, req.carrier_id, req.load_id, {
+        "load_number":  req.load_number,
+        "origin":       req.origin,
+        "destination":  req.destination,
+        "origin_city":  req.origin_city,
+        "origin_state": req.origin_state,
+        "dest_city":    req.dest_city,
+        "dest_state":   req.dest_state,
+        "rate_total":   req.rate,
+    })
     log_agent("atlas", "trigger.dispatch", carrier_id=req.carrier_id,
               payload={"load_id": req.load_id}, result="queued")
     return {"ok": True, "domain": "dispatch", "load_id": req.load_id}
@@ -100,6 +111,16 @@ def trigger_compliance(req: ComplianceTrigger, bg: BackgroundTasks) -> dict:
     log_agent("atlas", "trigger.compliance", carrier_id=req.carrier_id,
               result="queued")
     return {"ok": True, "domain": "compliance"}
+
+
+@router.post("/rate_con_send")
+def trigger_rate_con_send(req: LoadTrigger, bg: BackgroundTasks) -> dict:
+    """Fire to send a rate confirmation to the carrier — called from Eagle Eye or auto after load_booked."""
+    from ..api.routes_rate_con import send_rate_con  # local import avoids circular
+    bg.add_task(send_rate_con, req.load_id)
+    log_agent("nova", "trigger.rate_con_send", carrier_id=req.carrier_id,
+              payload={"load_id": req.load_id}, result="queued")
+    return {"ok": True, "event": "rate_con_send", "load_id": req.load_id}
 
 
 @router.post("/analytics")

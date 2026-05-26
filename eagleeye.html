@@ -248,6 +248,8 @@ body{font-family:var(--ff-b);color:var(--text);background:var(--off);display:fle
   border:none;cursor:pointer;transition:all .2s;
 }
 .btn-navy-sm:hover{background:var(--navy2);}
+.btn-sent-rc{background:#166534!important;color:#bbf7d0!important;}
+.btn-sent-rc:hover{background:#14532d!important;}
 
 .btn-red-sm{
   display:inline-flex;align-items:center;gap:5px;
@@ -3520,7 +3522,7 @@ function renderKanbanBoard(){
         <div class="kb-card-actions">
           <button class="btn-out" onclick="cycleLoadStatus('${l.id}')" title="Next status">▶</button>
           <button class="btn-navy-sm" onclick="openAssignModal('${l.id}')" title="Assign carrier">🚛</button>
-          <button class="btn-navy-sm" onclick="sendRateCon('${l.id}')" title="Send rate con">📧</button>
+          <button class="btn-navy-sm ${l.rate_con_sent_at?'btn-sent-rc':''}" onclick="previewRateCon('${l.id}')" title="${l.rate_con_sent_at?'Rate con sent ✓ — resend?':'Send rate confirmation'}">${l.rate_con_sent_at?'✅':'📧'}</button>
           <button class="btn-out" style="font-size:10px;padding:3px 7px" onclick="openLoadDetail('${l.id}')">⋯</button>
         </div>
       </div>`;
@@ -3621,7 +3623,7 @@ function renderDispatchTable(){
       '<td><div style="display:flex;gap:4px;flex-wrap:wrap">'+
         '<button class="btn-out" style="font-size:11px;padding:4px 8px" onclick="cycleLoadStatus(\''+l.id+'\')">▶ Next</button>'+
         '<button class="btn-navy-sm" onclick="openAssignModal(\''+l.id+'\')" title="Assign Carrier">🚛</button>'+
-        '<button class="btn-navy-sm" onclick="sendRateCon(\''+l.id+'\')" title="Send Rate Con">📧</button>'+
+        '<button class="btn-navy-sm'+(l.rate_con_sent_at?' btn-sent-rc':'')+'" onclick="previewRateCon(\''+l.id+'\')" title="'+(l.rate_con_sent_at?'Rate con sent ✓ — resend?':'Send rate confirmation')+'">'+( l.rate_con_sent_at?'✅':'📧')+'</button>'+
         '<button class="btn-out" style="font-size:11px;padding:4px 8px" onclick="openLoadDetail(\''+l.id+'\')">⋯</button>'+
       '</div></td>'+
     '</tr>';
@@ -4963,46 +4965,54 @@ const EJS_PUBLIC   = 'Qq26GfzWiCTWP9oOP';
 
 emailjs.init(EJS_PUBLIC);
 
-// Send Rate Confirmation email
-async function sendRateCon(loadId) {
-  const load = allLoads.find(l => l.id === loadId);
-  if (!load) return;
+// Rate Confirmation — preview modal then send via backend (Postmark)
+let _rcLoadId = null;
 
-  // Find carrier email from allCarriers by matching driver name
-  const carrier = allCarriers.find(c => c.company_name === load.driver_name || c.company_name === load.carrier_name);
-  const toEmail = carrier?.email || '';
-
-  if (!toEmail) {
-    const manual = prompt('No email on file for ' + (load.driver_name||'this driver') + '.\nEnter their email address:');
-    if (!manual) return;
-    sendRateConEmail(load, manual);
-    return;
+async function previewRateCon(loadId) {
+  _rcLoadId = loadId;
+  const modal = document.getElementById('rate-con-modal');
+  const frame = document.getElementById('rate-con-frame');
+  const info  = document.getElementById('rate-con-info');
+  const sendBtn = document.getElementById('rc-send-btn');
+  if (!modal) return;
+  info.textContent = 'Loading preview…';
+  frame.srcdoc = '';
+  sendBtn.disabled = true;
+  modal.style.display = 'flex';
+  try {
+    const res = await apiFetch('/api/loads/'+loadId+'/rate-con-preview');
+    const data = await res.json();
+    frame.srcdoc = data.html || '';
+    const toEmail = data.to_email || '';
+    if (data.already_sent) {
+      const d = new Date(data.sent_at).toLocaleDateString();
+      info.innerHTML = `<span style="color:#16a34a">✅ Sent ${d} to <b>${data.sent_to}</b></span>`;
+    } else if (toEmail) {
+      info.innerHTML = `Will send to: <b>${toEmail}</b>`;
+    } else {
+      info.innerHTML = '<span style="color:#ef4444">⚠ No email on file — carrier needs broker_email or carrier email set</span>';
+    }
+    sendBtn.disabled = false;
+    sendBtn.textContent = data.already_sent ? '📧 Resend Rate Con' : '📧 Send Rate Con';
+  } catch(e) {
+    info.textContent = 'Preview failed: ' + e.message;
   }
-  sendRateConEmail(load, toEmail);
 }
 
-async function sendRateConEmail(load, toEmail) {
-  toast('Sending rate confirmation…');
-  const params = {
-    to_email:     toEmail,
-    driver_name:  load.driver_name   || '—',
-    load_number:  load.load_number   || '—',
-    origin:       load.origin        || '—',
-    destination:  load.destination   || '—',
-    miles:        load.miles         || '—',
-    rate:         Number(load.rate   || 0).toLocaleString(),
-    dispatch_fee: Number(load.dispatch_fee || 0).toLocaleString(),
-    dispatch_pct: load.dispatch_pct  || '5',
-    pickup_date:  load.pickup_date   || '—',
-    commodity:    load.commodity     || 'General Freight',
-    broker:       load.notes         || '—',
-  };
+async function sendRateCon(loadId) {
+  // Called from "Send" button inside the preview modal
+  const sendBtn = document.getElementById('rc-send-btn');
+  sendBtn.disabled = true; sendBtn.textContent = 'Sending…';
   try {
-    await emailjs.send(EJS_SERVICE, EJS_RATE_CON, params);
-    toast('✅ Rate confirmation sent to ' + toEmail);
+    const res = await apiFetch('/api/loads/'+loadId+'/send-rate-con', 'POST');
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || 'Send failed');
+    toast('✅ Rate confirmation sent to ' + (data.to || '—'));
+    closeModal('rate-con-modal');
+    await loadLoads();
   } catch(e) {
-    console.error('EmailJS error:', e);
-    toast('Email failed: ' + (e.text || e.message || 'Unknown error'), 'error');
+    toast('Email failed: ' + e.message, 'error');
+    sendBtn.disabled = false; sendBtn.textContent = '📧 Send Rate Con';
   }
 }
 
@@ -11482,6 +11492,23 @@ async function deactivateDriver(driverId) {
   else showToast('Failed to deactivate');
 }
 </script>
+
+<!-- RATE CONFIRMATION MODAL -->
+<div class="modal-overlay" id="rate-con-modal" style="display:none" onclick="if(event.target===this)closeModal('rate-con-modal')">
+  <div class="modal" style="max-width:720px;width:95vw">
+    <div class="modal-hd">
+      <div><div class="modal-title">Rate Confirmation</div><div class="modal-sub" id="rate-con-info">Loading…</div></div>
+      <button class="modal-close" onclick="closeModal('rate-con-modal')">✕</button>
+    </div>
+    <div style="padding:0">
+      <iframe id="rate-con-frame" style="width:100%;height:520px;border:none;border-bottom:1px solid var(--border)" srcdoc=""></iframe>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-out" onclick="closeModal('rate-con-modal')">Close</button>
+      <button class="btn-navy" id="rc-send-btn" onclick="sendRateCon(_rcLoadId)" disabled>📧 Send Rate Con</button>
+    </div>
+  </div>
+</div>
 
 <!-- ASSIGN DRIVER MODAL -->
 <div class="modal-overlay" id="assign-driver-modal" onclick="if(event.target===this)closeModal('assign-driver-modal')">

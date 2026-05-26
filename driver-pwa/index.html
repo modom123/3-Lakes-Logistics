@@ -289,7 +289,10 @@
       <div class="load-card" id="current-load-card">
         <div class="load-header">
           <div class="load-number" id="load-number">Fetching...</div>
-          <span class="pill pill-blue"><span class="dot"></span><span id="load-status-pill">Loading</span></span>
+          <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+            <span class="pill pill-blue"><span class="dot"></span><span id="load-status-pill">Loading</span></span>
+            <span id="rate-con-badge" style="display:none;align-items:center;gap:4px;background:#dcfce7;color:#166534;font-size:10px;font-weight:700;padding:3px 8px;border-radius:20px;border:1px solid #bbf7d0">✓ Rate Con</span>
+          </div>
         </div>
         <div class="route">
           <div class="city">
@@ -1013,6 +1016,17 @@ function renderCurrentLoad(load) {
   if (load.special_instructions) {
     document.getElementById('load-instructions-wrap').style.display = 'block';
     document.getElementById('load-instructions').textContent = load.special_instructions;
+  }
+
+  // Rate confirmation badge
+  const rcBadge = document.getElementById('rate-con-badge');
+  if (rcBadge) {
+    if (load.rate_con_sent_at) {
+      rcBadge.style.display = 'inline-flex';
+      rcBadge.title = 'Rate confirmation sent ' + new Date(load.rate_con_sent_at).toLocaleDateString();
+    } else {
+      rcBadge.style.display = 'none';
+    }
   }
 
   if (load.status === 'in_transit') {
