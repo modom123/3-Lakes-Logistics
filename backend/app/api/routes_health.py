@@ -19,6 +19,7 @@ START_TIME = time.time()
 @router.get("/api/health", tags=["health"])
 async def health_basic():
     """Fast ping — driver app checks this every 30s to detect failover."""
+    import os
     from ..settings import get_settings
     s = get_settings()
     if not s.supabase_url:
@@ -34,6 +35,7 @@ async def health_basic():
         "env": s.env,
         "ts": datetime.now(timezone.utc).isoformat(),
         "supabase": sb_status,
+        "deploy_sha": os.environ.get("RENDER_GIT_COMMIT", "unknown")[:7],
     }
 
 

@@ -38,10 +38,13 @@ def list_mailboxes(_: str = Depends(require_bearer)) -> dict:
 @router.post("/mailboxes/poll")
 def poll_all_mailboxes(_: str = Depends(require_bearer)) -> dict:
     """Trigger IMAP poll for all 5 mailboxes. Returns per-mailbox results."""
-    from ..email.imap_poller import poll_all
-    results = poll_all()
-    total_fetched = sum(r.get("fetched", 0) for r in results)
-    return {"ok": True, "results": results, "total_fetched": total_fetched}
+    try:
+        from ..email.imap_poller import poll_all
+        results = poll_all()
+        total_fetched = sum(r.get("fetched", 0) for r in results)
+        return {"ok": True, "results": results, "total_fetched": total_fetched}
+    except Exception as exc:
+        raise HTTPException(500, f"mailbox poll error: {exc}")
 
 
 @router.post("/mailboxes/{name}/poll")

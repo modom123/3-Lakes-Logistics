@@ -67,7 +67,10 @@ def send_directive(body: DirectiveIn) -> dict:
 
 @_internal.get("/status")
 def channel_status() -> dict:
-    return bond_courier.run({"action": "status"})
+    try:
+        return bond_courier.run({"action": "status"})
+    except Exception as exc:
+        raise HTTPException(500, f"bond channel error: {exc}")
 
 
 @_internal.get("/intel-snapshot")
