@@ -10647,6 +10647,26 @@ const TS_DOMAINS = [
           if (!r.ok) throw new Error(`Email log unreachable: ${r.status}`);
           return `status ${r.status} — email log accessible ✓`;
         }
+      },
+      {
+        name: 'Rate confirmation route reachable',
+        run: async () => {
+          const r = await apiFetch('/api/rate-confirmation/send', 'POST', {
+            load_id: 'FAKE-LOAD-ID-EE-TEST', to_email: 'test@eagleeye.internal'
+          });
+          if (r.status >= 500) throw new Error(`Rate confirmation crashed: ${r.status}`);
+          if (![200,400,404,422].includes(r.status)) throw new Error(`Unexpected status ${r.status}`);
+          return `status ${r.status} — route reachable ✓`;
+        }
+      },
+      {
+        name: 'Mailbox poll endpoint exists',
+        run: async () => {
+          const r = await apiFetch('/api/mailboxes/poll', 'POST', {});
+          if (r.status >= 500) throw new Error(`Mailbox poll crashed: ${r.status}`);
+          if (![200,400,404,422].includes(r.status)) throw new Error(`Unexpected status ${r.status}`);
+          return `status ${r.status} — mailbox poll reachable ✓`;
+        }
       }
     ]
   },

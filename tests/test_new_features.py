@@ -535,3 +535,185 @@ class TestDispatchBoardFlow:
         )
         assert r.status_code == 200, f"Delivered status failed: {r.status_code} {r.text}"
         assert r.json().get("ok") is True
+
+
+# ── Settlements ───────────────────────────────────────────────────────────────
+
+class TestSettlements:
+    """Driver settlements CRUD and calculations."""
+    _settlement_id: str | None = None
+
+    def test_list_settlements(self):
+        r = requests.get(f"{BASE_URL}/api/settlements", headers=HEADERS, timeout=15)
+        assert r.status_code == 200
+        d = r.json()
+        assert "count" in d and "items" in d and "totals" in d
+
+    def test_create_settlement_auto_calc(self):
+        r = requests.post(
+            f"{BASE_URL}/api/settlements",
+            json={"carrier_name": f"Test Carrier {_RUN}", "load_number": f"LD-{_RUN}",
+                  "gross_pay": 2000.0, "dispatch_pct": 10.0, "miles": 500, "status": "pending"},
+            headers=HEADERS, timeout=15,
+        )
+        assert r.status_code in (200, 201)
+        d = r.json()
+        assert d.get("ok") is True
+        item = d.get("item", {})
+        if item.get("id"):
+            TestSettlements._settlement_id = item["id"]
+        # dispatch_fee should be 200 (10% of 2000), net_pay = 1800
+        if item.get("net_pay") is not None:
+            assert abs(float(item["net_pay"]) - 1800.0) < 0.01
+
+    def test_patch_settlement_status(self):
+        if not TestSettlements._settlement_id:
+            pytest.skip("No settlement from create test")
+        r = requests.patch(
+            f"{BASE_URL}/api/settlements/{TestSettlements._settlement_id}",
+            json={"status": "approved"},
+            headers=HEADERS, timeout=15,
+        )
+        assert r.status_code == 200
+        assert r.json().get("ok") is True
+
+    def test_weekly_summary(self):
+        r = requests.get(f"{BASE_URL}/api/settlements/summary/weekly", headers=HEADERS, timeout=15)
+        assert r.status_code == 200
+        d = r.json()
+        assert "week_ending" in d and "carriers" in d
+
+    def test_delete_settlement(self):
+        if not TestSettlements._settlement_id:
+            pytest.skip("No settlement from create test")
+        r = requests.delete(
+            f"{BASE_URL}/api/settlements/{TestSettlements._settlement_id}",
+            headers=HEADERS, timeout=15,
+        )
+        assert r.status_code == 200
+
+
+# ── Shippers CRM ──────────────────────────────────────────────────────────────
+
+class TestShippersCRM:
+    """Shippers / brokers CRM CRUD."""
+    _shipper_id: str | None = None
+
+    def test_list_shippers(self):
+        r = requests.get(f"{BASE_URL}/api/shippers", headers=HEADERS, timeout=15)
+        assert r.status_code == 200
+        d = r.json()
+        assert "count" in d and "items" in d
+
+    def test_create_shipper(self):
+        r = requests.post(
+            f"{BASE_URL}/api/shippers",
+            json={"company_name": f"Test Broker {_RUN}", "shipper_type": "broker",
+                  "contact_name": "Test Contact", "email": f"broker_{_RUN}@test.internal",
+                  "status": "active", "payment_terms": "net30"},
+            headers=HEADERS, timeout=15,
+        )
+        assert r.status_code in (200, 201)
+        d = r.json()
+        assert d.get("ok") is True
+        if d.get("item", {}).get("id"):
+            TestShippersCRM._shipper_id = d["item"]["id"]
+
+    def test_get_shipper(self):
+        if not TestShippersCRM._shipper_id:
+            pytest.skip("No shipper from create test")
+        r = requests.get(f"{BASE_URL}/api/shippers/{TestShippersCRM._shipper_id}", headers=HEADERS, timeout=15)
+        assert r.status_code == 200
+        assert r.json().get("company_name", "").startswith("Test Broker")
+
+    def test_patch_shipper(self):
+        if not TestShippersCRM._shipper_id:
+            pytest.skip("No shipper from create test")
+        r = requests.patch(
+            f"{BASE_URL}/api/shippers/{TestShippersCRM._shipper_id}",
+            json={"notes": "Auto-created by test suite"},
+            headers=HEADERS, timeout=15,
+        )
+        assert r.status_code == 200
+        assert r.json().get("ok") is True
+
+    def test_search_shipper(self):
+        r = requests.get(f"{BASE_URL}/api/shippers?search=Test+Broker", headers=HEADERS, timeout=15)
+        assert r.status_code == 200
+
+    def test_top_shippers(self):
+        r = requests.get(f"{BASE_URL}/api/shippers/search/top?limit=5", headers=HEADERS, timeout=15)
+        assert r.status_code == 200
+        d = r.json()
+        assert "count" in d and "items" in d
+
+    def test_delete_shipper(self):
+        if not TestShippersCRM._shipper_id:
+            pytest.skip("No shipper from create test")
+        r = requests.delete(
+            f"{BASE_URL}/api/shippers/{TestShippersCRM._shipper_id}",
+            headers=HEADERS, timeout=15,
+        )
+        assert r.status_code == 200
+
+
+# ── IFTA / Fuel ───────────────────────────────────────────────────────────────
+
+class TestIFTA:
+    """IFTA quarterly filings and fuel transaction management."""
+    _fuel_tx_id: str | None = None
+
+    def test_fuel_list(self):
+        r = requests.get(f"{BASE_URL}/api/ifta/fuel", headers=HEADERS, timeout=15)
+        assert r.status_code == 200
+        d = r.json()
+        assert "count" in d and "items" in d and "totals" in d
+
+    def test_fuel_create_auto_amount(self):
+        r = requests.post(
+            f"{BASE_URL}/api/ifta/fuel",
+            json={"truck_id": f"TRK-{_RUN}", "gallons": 100.0, "price_per_gal": 3.85,
+                  "location": "Test Station, MI", "is_advance": False},
+            headers=HEADERS, timeout=15,
+        )
+        assert r.status_code in (200, 201)
+        d = r.json()
+        assert d.get("ok") is True
+        item = d.get("item", {})
+        if item.get("id"):
+            TestIFTA._fuel_tx_id = item["id"]
+        if item.get("amount") is not None:
+            assert abs(float(item["amount"]) - 385.0) < 0.01
+
+    def test_fuel_patch(self):
+        if not TestIFTA._fuel_tx_id:
+            pytest.skip("No fuel tx from create test")
+        r = requests.patch(
+            f"{BASE_URL}/api/ifta/fuel/{TestIFTA._fuel_tx_id}",
+            json={"flagged": True, "flag_reason": "Test flag — auto-created"},
+            headers=HEADERS, timeout=15,
+        )
+        assert r.status_code == 200
+        assert r.json().get("ok") is True
+
+    def test_fuel_delete(self):
+        if not TestIFTA._fuel_tx_id:
+            pytest.skip("No fuel tx from create test")
+        r = requests.delete(
+            f"{BASE_URL}/api/ifta/fuel/{TestIFTA._fuel_tx_id}",
+            headers=HEADERS, timeout=15,
+        )
+        assert r.status_code == 200
+
+    def test_ifta_summary(self):
+        r = requests.get(f"{BASE_URL}/api/ifta/summary", headers=HEADERS, timeout=15)
+        assert r.status_code == 200
+        d = r.json()
+        assert "quarters" in d
+        assert isinstance(d["quarters"], list)
+
+    def test_ifta_filings_list(self):
+        r = requests.get(f"{BASE_URL}/api/ifta/filings", headers=HEADERS, timeout=15)
+        assert r.status_code == 200
+        d = r.json()
+        assert "count" in d and "items" in d
