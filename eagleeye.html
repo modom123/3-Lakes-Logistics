@@ -3699,10 +3699,11 @@ async function openLoadDetail(loadId){
       ${load.commodity?'<div style="grid-column:1/-1"><div style="font-size:11px;color:var(--muted);font-weight:700;margin-bottom:4px">COMMODITY</div><div>'+fmt(load.commodity)+'</div></div>':''}
       ${load.special_instructions?'<div style="grid-column:1/-1"><div style="font-size:11px;color:var(--muted);font-weight:700;margin-bottom:4px">SPECIAL INSTRUCTIONS</div><div style="font-size:13px;color:var(--muted)">'+esc(load.special_instructions)+'</div></div>':''}
     </div>
-    <div style="display:flex;gap:8px;margin-top:16px;padding-top:16px;border-top:1px solid var(--border)">
+    <div style="display:flex;gap:8px;margin-top:16px;padding-top:16px;border-top:1px solid var(--border);flex-wrap:wrap">
       <button class="btn-navy" onclick="cycleLoadStatus('${load.id}');closeModal('load-detail-modal')">▶ Next Status</button>
-      <button class="btn-out" onclick="closeModal('load-detail-modal');openAssignModal('${load.id}')">🚛 Assign Driver</button>
+      <button class="btn-out" onclick="closeModal('load-detail-modal');openAssignModal('${load.id}')">🚛 Assign</button>
       <button class="btn-out" onclick="sendRateCon('${load.id}')">📧 Rate Con</button>
+      ${['Delivered','Completed'].includes(load.status)?`<button class="btn-out" style="color:var(--green);border-color:var(--green)" onclick="closeModal('load-detail-modal');createSettlementFromLoad('${load.id}')">💵 Settlement</button>`:''}
     </div>
   `;
   openModal('load-detail-modal');
@@ -4050,18 +4051,23 @@ function renderSettlements(){
   if(!allSettlements.length){el.innerHTML='<div style="padding:40px;text-align:center;color:var(--muted)">No settlements yet. Create one to get started.</div>';return;}
   const statusBadge=s=>s==='paid'?'<span class="badge badge-green">Paid</span>':s==='approved'?'<span class="badge badge-blue">Approved</span>':'<span class="badge badge-orange">Pending</span>';
   el.innerHTML='<div class="tbl-wrap"><table><thead><tr>'+
-    '<th>Carrier</th><th>Load #</th><th>Week Ending</th><th>Gross</th><th>Dispatch Fee</th><th>Net Pay</th><th>Status</th><th>Actions</th>'+
+    '<th>Carrier</th><th>Load #</th><th>Week Ending</th><th>Miles</th><th>Gross</th><th>Dispatch %</th><th>Dispatch Fee</th><th>Net Pay</th><th>Status</th><th>Actions</th>'+
     '</tr></thead><tbody>'+
     allSettlements.map(s=>'<tr>'+
       '<td class="td-name">'+esc(s.carrier_name||'—')+'</td>'+
-      '<td>'+esc(s.load_number||'—')+'</td>'+
-      '<td>'+esc(s.week_ending||'—')+'</td>'+
+      '<td style="font-family:var(--ff-m);font-size:12px">'+esc(s.load_number||'—')+'</td>'+
+      '<td style="font-size:12px">'+esc(s.week_ending||'—')+'</td>'+
+      '<td style="font-size:12px;color:var(--muted)">'+(s.miles?Number(s.miles).toLocaleString()+' mi':'—')+'</td>'+
       '<td class="val-green">$'+Number(s.gross_pay||0).toLocaleString()+'</td>'+
+      '<td style="font-size:12px;color:var(--muted)">'+(s.dispatch_pct?s.dispatch_pct+'%':'—')+'</td>'+
       '<td class="val-gold">$'+Number(s.dispatch_fee||0).toLocaleString()+'</td>'+
       '<td style="font-weight:700">$'+Number(s.net_pay||0).toLocaleString()+'</td>'+
       '<td>'+statusBadge(s.status)+'</td>'+
-      '<td><button class="btn-out" style="font-size:11px;padding:3px 8px" onclick="approveSettlement(\''+s.id+'\')">Approve</button> '+
-         '<button class="btn-navy" style="font-size:11px;padding:3px 8px" onclick="markSettlementPaid(\''+s.id+'\')">Mark Paid</button></td>'+
+      '<td style="white-space:nowrap">'+
+        (s.status==='pending'?'<button class="btn-out" style="font-size:11px;padding:3px 8px" onclick="approveSettlement(\''+s.id+'\')">Approve</button> ':'')  +
+        (s.status!=='paid'?'<button class="btn-navy" style="font-size:11px;padding:3px 8px" onclick="markSettlementPaid(\''+s.id+'\')">Paid</button> ':'')+
+        '<button style="background:rgba(239,68,68,.12);color:#ef4444;border:1px solid rgba(239,68,68,.3);font-size:11px;padding:3px 7px;border-radius:4px;cursor:pointer" onclick="deleteSettlement(\''+s.id+'\')">✕</button>'+
+      '</td>'+
     '</tr>').join('')+
     '</tbody></table></div>';
 }
@@ -4111,6 +4117,38 @@ async function approveSettlement(id){
 async function markSettlementPaid(id){
   const r=await apiFetch('/api/settlements/'+id,'PATCH',{status:'paid'});
   if(r.ok){await loadSettlements();toast('Marked as paid!');}
+}
+async function deleteSettlement(id){
+  if(!confirm('Delete this settlement record?'))return;
+  const r=await apiFetch('/api/settlements/'+id,'DELETE',null);
+  if(r.ok){await loadSettlements();toast('Settlement deleted');}
+  else toast('Error deleting settlement','error');
+}
+
+function createSettlementFromLoad(loadId){
+  const load=allLoads.find(l=>l.id===loadId);
+  if(!load)return;
+  populateSettlementCarrier();
+  openModal('add-settlement-modal');
+  setTimeout(()=>{
+    // Pre-fill load number
+    const ln=document.getElementById('set-load-number');if(ln)ln.value=load.load_number||'';
+    // Pre-fill gross pay
+    const gp=document.getElementById('set-gross-pay');if(gp)gp.value=load.rate_total||load.rate||'';
+    // Pre-fill miles
+    const mi=document.getElementById('set-miles');if(mi)mi.value=load.miles||'';
+    // Pre-fill dispatch pct
+    const dp=document.getElementById('set-dispatch-pct');if(dp)dp.value=load.dispatch_pct||'8';
+    // Pre-select carrier if match found
+    const sel=document.getElementById('set-carrier-select');
+    if(sel&&load.carrier_id){sel.value=load.carrier_id;}
+    else if(sel&&load.driver_name){
+      const match=allCarriers.find(c=>c.company_name===load.driver_name);
+      if(match)sel.value=match.id;
+    }
+    // Recalculate net
+    calcSettlementNet();
+  },50);
 }
 
 function populateSettlementCarrier(){
