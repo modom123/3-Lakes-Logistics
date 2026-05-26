@@ -20,6 +20,7 @@ class Settings(BaseSettings):
     stripe_secret_key: str = ""
     stripe_webhook_secret: str = ""
     stripe_price_founders: str = ""
+    stripe_price_pro: str = ""
 
     twilio_account_sid: str = ""
     twilio_auth_token: str = ""
@@ -40,7 +41,7 @@ class Settings(BaseSettings):
     elevenlabs_api_key: str = ""
 
     postmark_server_token: str = ""
-    postmark_from_email: str = "ops@3lakeslogistics.com"
+    postmark_from_email: str = "info@3lakeslogistics.com"
 
     # Email ingest pipeline
     sendgrid_inbound_email: str = "loads@3lakeslogistics.com"
