@@ -293,9 +293,14 @@ class CreateDriverRequest(BaseModel):
     last_name: str
     phone: str = Field(..., description="10-digit US number or E.164")
     pin: str    = Field(..., description="4-digit PIN")
-    driver_code: str | None = None
-    cdl_number:  str | None = None
-    truck_id:    str | None = None
+    driver_code:          str | None = None
+    email:                str | None = None
+    cdl_number:           str | None = None
+    cdl_state:            str | None = None
+    cdl_expires:          str | None = None   # ISO date YYYY-MM-DD
+    medical_card_expires: str | None = None   # ISO date YYYY-MM-DD
+    hire_date:            str | None = None   # ISO date YYYY-MM-DD
+    truck_id:             str | None = None
 
 
 @router.post("/create", dependencies=[Depends(require_bearer)])
@@ -317,7 +322,7 @@ async def create_driver(req: CreateDriverRequest):
         if existing.data:
             raise HTTPException(status_code=409, detail="Driver with this phone already exists")
 
-        result = get_supabase().table("drivers").insert({
+        payload: dict = {
             "carrier_id":  req.carrier_id,
             "driver_code": driver_code,
             "first_name":  req.first_name,
@@ -326,7 +331,13 @@ async def create_driver(req: CreateDriverRequest):
             "phone_e164":  phone_e164,
             "pin_hash":    pin_hash,
             "status":      "active",
-        }).execute()
+        }
+        for field in ("email", "cdl_number", "cdl_state", "cdl_expires",
+                      "medical_card_expires", "hire_date", "truck_id"):
+            val = getattr(req, field, None)
+            if val is not None:
+                payload[field] = val
+        result = get_supabase().table("drivers").insert(payload).execute()
 
         driver = result.data[0]
         return {

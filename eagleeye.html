@@ -1124,8 +1124,32 @@ td.td-name{font-weight:600;color:var(--navy);}
             <select id="drv-carrier" class="form-input" style="width:100%"><option value="">Select carrier…</option></select>
           </div>
           <div>
+            <label class="form-label" style="font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:6px">EMAIL</label>
+            <input id="drv-email" class="form-input" type="email" placeholder="driver@email.com" style="width:100%">
+          </div>
+          <div>
             <label class="form-label" style="font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:6px">DRIVER CODE (OPTIONAL)</label>
             <input id="drv-code" class="form-input" placeholder="Auto-generated if blank" style="width:100%">
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div>
+              <label class="form-label" style="font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:6px">CDL NUMBER</label>
+              <input id="drv-cdl-num" class="form-input" placeholder="D123456789" style="width:100%">
+            </div>
+            <div>
+              <label class="form-label" style="font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:6px">CDL STATE</label>
+              <input id="drv-cdl-state" class="form-input" placeholder="MI" maxlength="2" style="width:100%;text-transform:uppercase">
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div>
+              <label class="form-label" style="font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:6px">CDL EXPIRATION</label>
+              <input id="drv-cdl-exp" class="form-input" type="date" style="width:100%">
+            </div>
+            <div>
+              <label class="form-label" style="font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:6px">MED CARD EXP</label>
+              <input id="drv-med-exp" class="form-input" type="date" style="width:100%">
+            </div>
           </div>
           <button class="btn-navy" id="drv-submit-btn" onclick="submitCreateDriver()" style="width:100%;padding:13px;font-size:15px">Create Driver Account →</button>
         </div>
@@ -2757,11 +2781,22 @@ td.td-name{font-weight:600;color:var(--navy);}
       </div>
       <div class="form-row">
         <div class="fg"><label class="fl">Pickup Date</label><input class="fi" type="date" id="load-pickup"></div>
-        <div class="fg"><label class="fl">Broker / Shipper</label><input class="fi" id="load-broker" placeholder="e.g. Echo Logistics"></div>
+        <div class="fg"><label class="fl">Broker / Shipper Name</label><input class="fi" id="load-broker" placeholder="e.g. Echo Logistics"></div>
+      </div>
+      <div class="form-row">
+        <div class="fg"><label class="fl">Broker Phone</label><input class="fi" id="load-broker-phone" type="tel" placeholder="(312) 555-0100"></div>
+        <div class="fg"><label class="fl">Broker Email</label><input class="fi" id="load-broker-email" type="email" placeholder="dispatch@broker.com"></div>
+      </div>
+      <div class="form-row">
+        <div class="fg"><label class="fl">Pickup Address</label><input class="fi" id="load-pickup-addr" placeholder="123 Warehouse Dr, Detroit, MI 48201"></div>
+        <div class="fg"><label class="fl">Delivery Address</label><input class="fi" id="load-delivery-addr" placeholder="456 Dock Rd, Atlanta, GA 30301"></div>
       </div>
       <div class="form-row">
         <div class="fg"><label class="fl">Commodity</label><input class="fi" id="load-commodity" placeholder="e.g. General Freight"></div>
         <div class="fg"><label class="fl">Status</label><select class="fsel" id="load-status"><option>Booked</option><option>En Route</option><option>Delivered</option><option>POD Needed</option></select></div>
+      </div>
+      <div class="form-row">
+        <div class="fg" style="flex:1"><label class="fl">Special Instructions</label><input class="fi" id="load-special-inst" placeholder="e.g. Call before arrival, lumper required"></div>
       </div>
       <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--border);margin-top:4px">
         <input type="checkbox" id="load-post-website" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer">
@@ -2826,7 +2861,7 @@ td.td-name{font-weight:600;color:var(--navy);}
       </div>
       <div class="form-row">
         <div class="fg"><label class="fl">Insurance Company</label><input class="fi" id="mc-ins" placeholder="Progressive Commercial"></div>
-        <div class="fg"></div>
+        <div class="fg"><label class="fl">Policy Number</label><input class="fi" id="mc-policy" placeholder="POL-12345678"></div>
       </div>
     </div>
     <div class="modal-footer">
@@ -3149,18 +3184,22 @@ async function saveCarrier(){
   const name=document.getElementById('mc-name').value.trim();
   if(!name){toast('Name is required','error');return;}
   btn.disabled=true;btn.textContent='Saving…';
+  const homeBase=document.getElementById('mc-base').value.trim();
+  const equip=document.getElementById('mc-equip').value;
   const{error}=await sb.from('active_carriers').insert({
     company_name:name,
     mc_number:document.getElementById('mc-number').value.trim(),
     dot_number:document.getElementById('mc-dot').value.trim(),
-    address:document.getElementById('mc-base').value.trim(),
-    trailer_type:document.getElementById('mc-equip').value,
-    equipment_types:[document.getElementById('mc-equip').value],
+    address:homeBase,
+    home_base:homeBase,
+    trailer_type:equip,
+    equipment_types:[equip],
     fleet_size:parseInt(document.getElementById('mc-fleet-size')?.value)||1,
     plan:document.getElementById('mc-plan').value,
     phone:document.getElementById('mc-phone').value.trim(),
     email:document.getElementById('mc-email').value.trim(),
     insurance_carrier:document.getElementById('mc-ins').value.trim(),
+    policy_number:document.getElementById('mc-policy')?.value.trim()||null,
     eld_provider:document.getElementById('mc-eld').value.trim(),
     esign_name:name,
     status:'onboarding'
@@ -3168,7 +3207,7 @@ async function saveCarrier(){
   btn.disabled=false;btn.textContent='Add Carrier';
   if(error){toast('Error: '+error.message,'error');return;}
   closeModal('add-carrier-modal');
-  ['mc-name','mc-number','mc-dot','mc-base','mc-phone','mc-email','mc-ins','mc-eld'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  ['mc-name','mc-number','mc-dot','mc-base','mc-phone','mc-email','mc-ins','mc-policy','mc-eld'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   await loadCarriers();updateDashboard();toast('Carrier saved!');
 }
 
@@ -3746,32 +3785,54 @@ async function saveLoad(){
   const fee=Math.round(rate*pct/100);
   const rpm=miles?parseFloat((rate/miles).toFixed(2)):null;
   const postToWeb=document.getElementById('load-post-website')?.checked||false;
+  // Parse "City, ST" strings into structured fields for the execution engine
+  const _parseCS=s=>{const p=(s||'').split(',');return{city:p[0]?.trim()||'',state:(p[1]||'').trim().split(' ')[0]||''};};
+  const originCS=_parseCS(origin);
+  const destCS=_parseCS(dest);
+  const shipper=document.getElementById('load-broker').value.trim();
   const insRes=await apiFetch('/api/dashboard/loads','POST',{
-    load_number:'#'+loadCounter++,driver_name:driver,origin,destination:dest,miles,rate,
-    dispatch_pct:pct,dispatch_fee:fee,rpm,
+    load_number:'#'+loadCounter++,driver_name:driver,
+    origin,destination:dest,
+    origin_city:originCS.city,origin_state:originCS.state,
+    dest_city:destCS.city,dest_state:destCS.state,
+    miles,
+    // legacy names kept for backward compat; canonical names written too
+    rate,rpm,
+    rate_total:rate,rate_per_mile:rpm,
+    dispatch_pct:pct,dispatch_fee:fee,
     status:document.getElementById('load-status').value,
     pickup_date:document.getElementById('load-pickup').value||null,
     commodity:document.getElementById('load-commodity').value.trim(),
-    notes:document.getElementById('load-broker').value.trim(),
+    shipper_name:shipper,
+    broker_phone:document.getElementById('load-broker-phone')?.value.trim()||null,
+    broker_email:document.getElementById('load-broker-email')?.value.trim()||null,
+    pickup_address:document.getElementById('load-pickup-addr')?.value.trim()||null,
+    delivery_address:document.getElementById('load-delivery-addr')?.value.trim()||null,
+    special_instructions:document.getElementById('load-special-inst')?.value.trim()||null,
     post_to_website:postToWeb,
-    equipment_type: document.getElementById('load-equip-type')?.value||null,
-    weight_lbs: parseInt(document.getElementById('load-weight')?.value)||null
+    equipment_type:document.getElementById('load-equip-type')?.value||null,
+    weight_lbs:parseInt(document.getElementById('load-weight')?.value)||null,
   });
   btn.disabled=false;btn.textContent='Save Load';
   if(!insRes.ok){toast('Error saving load','error');return;}
   closeModal('add-load-modal');
-  ['load-origin','load-dest','load-miles','load-rate','load-pickup','load-broker','load-commodity','load-weight'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  ['load-origin','load-dest','load-miles','load-rate','load-pickup','load-broker','load-broker-phone',
+   'load-broker-email','load-pickup-addr','load-delivery-addr','load-commodity','load-weight','load-special-inst']
+    .forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   const eqSel=document.getElementById('load-equip-type');if(eqSel)eqSel.value='';
   const pwCb=document.getElementById('load-post-website');if(pwCb)pwCb.checked=false;
   const prev=document.getElementById('fee-preview');if(prev)prev.textContent='Enter rate to calculate dispatch fee';
   await loadLoads();updateDashboard();toast('Load saved!');
   // Fire dispatch execution domain in background
-  const savedLoad = allLoads[0];
-  fireTrigger('load_booked', {
-    load_id: savedLoad?.id || '',
-    load_number: savedLoad?.load_number || '',
-    driver_name: driver,
-    origin, destination: dest, rate,
+  const savedLoad=allLoads[0];
+  fireTrigger('load_booked',{
+    load_id:savedLoad?.id||'',
+    load_number:savedLoad?.load_number||'',
+    driver_name:driver,
+    origin,destination:dest,
+    origin_city:originCS.city,origin_state:originCS.state,
+    dest_city:destCS.city,dest_state:destCS.state,
+    rate,
   });
 }
 
@@ -11386,17 +11447,25 @@ async function submitCreateDriver() {
 
   btn.disabled = true; btn.textContent = 'Creating…';
   try {
-    const r = await apiFetch('/api/driver-auth/create', 'POST', {
+    const body = {
       carrier_id: cid, first_name: first, last_name: last,
-      phone, pin, driver_code: code || undefined
-    });
+      phone, pin, driver_code: code || undefined,
+      email:                document.getElementById('drv-email')?.value.trim()||undefined,
+      cdl_number:           document.getElementById('drv-cdl-num')?.value.trim()||undefined,
+      cdl_state:            (document.getElementById('drv-cdl-state')?.value.trim()||'').toUpperCase()||undefined,
+      cdl_expires:          document.getElementById('drv-cdl-exp')?.value||undefined,
+      medical_card_expires: document.getElementById('drv-med-exp')?.value||undefined,
+    };
+    // strip undefined so backend ignores missing optional fields
+    Object.keys(body).forEach(k=>body[k]===undefined&&delete body[k]);
+    const r = await apiFetch('/api/driver-auth/create', 'POST', body);
     const json = await r.json();
     if (!r.ok) throw new Error(json.detail || r.statusText);
     closeModal('add-driver-modal');
     showToast(`✅ Driver ${first} ${last} created — Code: ${json.driver_code}`);
     loadDrivers();
     // Reset form
-    ['drv-first','drv-last','drv-phone','drv-pin','drv-code'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+    ['drv-first','drv-last','drv-phone','drv-pin','drv-code','drv-email','drv-cdl-num','drv-cdl-state','drv-cdl-exp','drv-med-exp'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
     document.getElementById('drv-carrier').value = '';
   } catch(e) {
     errEl.textContent = e.message || 'Failed to create driver';
