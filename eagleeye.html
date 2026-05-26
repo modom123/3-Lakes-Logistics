@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800;900&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin/>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="shared/config.js"></script>
 <script src="shared/tk.js"></script>
@@ -707,6 +708,7 @@ td.td-name{font-weight:600;color:var(--navy);}
     <div class="sb-label">Main</div>
     <div class="sb-item active" onclick="nav('dashboard')"><span class="sb-icon">📊</span> Dashboard</div>
     <div class="sb-item" onclick="nav('dispatch')"><span class="sb-icon">🚛</span> Dispatch Board</div>
+    <div class="sb-item" onclick="nav('fleet-map')"><span class="sb-icon">🗺️</span> Fleet Map <span class="sb-badge" id="fmap-live-count" style="display:none;background:#16a34a;color:#fff">0</span></div>
     <div class="sb-item" onclick="nav('carriers')"><span class="sb-icon">👥</span> Carriers <span class="sb-badge" id="carrier-notif" style="display:none">●</span></div>
     <div class="sb-item" onclick="nav('loads')"><span class="sb-icon">📦</span> Load Manager</div>
     <div class="sb-item" onclick="nav('invoices')"><span class="sb-icon">🧾</span> Invoices <span class="sb-badge" id="invoice-notif" style="display:none">●</span></div>
@@ -911,6 +913,57 @@ td.td-name{font-weight:600;color:var(--navy);}
         <div class="tbl-wrap">
           <table><thead><tr><th>Load #</th><th>Driver</th><th>Route</th><th>Miles</th><th>Rate</th><th>RPM</th><th>Fee</th><th>Status</th><th>Action</th></tr></thead>
           <tbody id="dispatch-table"><tr><td colspan="9"><div class="loading"><div class="spin"></div>Loading…</div></td></tr></tbody></table>
+        </div>
+      </div>
+    </div>
+
+    <!-- FLEET MAP -->
+    <div class="page" id="page-fleet-map">
+<style>
+#page-fleet-map{animation:none;}
+#page-fleet-map.active{position:fixed;top:93px;left:var(--sidebar-w);right:0;bottom:0;z-index:30;display:flex;flex-direction:column;overflow:hidden;background:var(--bg);}
+@media(max-width:768px){#page-fleet-map.active{top:87px;left:0;}}
+#fmap-toolbar{display:flex;align-items:center;gap:10px;padding:10px 16px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;flex-wrap:wrap;}
+#fmap-body{display:flex;flex:1;min-height:0;}
+#fmap-map{flex:1;min-height:0;}
+#fmap-panel{width:320px;border-left:1px solid var(--border);overflow-y:auto;background:var(--surface);flex-shrink:0;display:flex;flex-direction:column;}
+@media(max-width:900px){#fmap-panel{display:none;}}
+.fmap-legend{display:flex;align-items:center;gap:12px;margin-left:auto;font-size:11px;color:var(--muted);}
+.fmap-dot{width:10px;height:10px;border-radius:50%;display:inline-block;margin-right:3px;flex-shrink:0;}
+.fmap-select{padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;background:var(--surface);color:var(--text);}
+.fmap-btn{padding:6px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;background:var(--surface);color:var(--text);cursor:pointer;white-space:nowrap;}
+.fmap-btn:hover{background:var(--border);}
+.fmap-status-chip{font-size:12px;color:var(--muted);white-space:nowrap;}
+#fmap-placeholder{display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;gap:12px;color:var(--muted);padding:40px 24px;text-align:center;}
+#fmap-placeholder .fmap-ph-icon{font-size:48px;opacity:.4;}
+</style>
+      <div id="fmap-toolbar">
+        <button class="fmap-btn" onclick="fmapFitAll()">⊕ Fit All</button>
+        <select class="fmap-select" id="fmap-carrier-filter" onchange="fmapRefresh()">
+          <option value="">All Carriers</option>
+        </select>
+        <label style="display:flex;align-items:center;gap:5px;font-size:13px;cursor:pointer;white-space:nowrap">
+          <input type="checkbox" id="fmap-auto-refresh" checked onchange="fmapToggleAutoRefresh()" style="accent-color:#1e288b"> Auto 30s
+        </label>
+        <span class="fmap-status-chip" id="fmap-status">—</span>
+        <span class="fmap-status-chip" id="fmap-last-update" style="font-size:11px"></span>
+        <div class="fmap-legend">
+          <span><span class="fmap-dot" style="background:#16a34a"></span>Driving</span>
+          <span><span class="fmap-dot" style="background:#2563eb"></span>Parked</span>
+          <span><span class="fmap-dot" style="background:#d97706"></span>Low HOS</span>
+          <span><span class="fmap-dot" style="background:#dc2626"></span>Violation</span>
+          <span><span class="fmap-dot" style="background:#6b7280"></span>Offline</span>
+        </div>
+      </div>
+      <div id="fmap-body">
+        <div id="fmap-map"></div>
+        <div id="fmap-panel">
+          <div id="fmap-placeholder">
+            <div class="fmap-ph-icon">🚚</div>
+            <div style="font-size:14px;font-weight:600">Click a truck to view details</div>
+            <div style="font-size:12px">Truck profile, live telemetry,<br>and HOS hours appear here.</div>
+          </div>
+          <div id="fmap-truck-detail" style="display:none"></div>
         </div>
       </div>
     </div>
@@ -2723,7 +2776,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 let allCarriers=[], allLoads=[], allInvoices=[], currentInvFilter='all', loadCounter=3849;
 
-const pageNames={dashboard:'Dashboard',dispatch:'Dispatch Board',carriers:'Carriers',loads:'Load Manager',invoices:'Invoices & Billing',compliance:'DOT Compliance',ifta:'IFTA / Permits',insurance:'Insurance',revenue:'Revenue Tracker',providers:'Compliance Providers',checklist:'Daily Checklist',notes:'Dispatcher Notes',reports:'Team Reports','exec-command':'Exec Command',agents:'AI Agents',founders:'Founders Program',crm:'Lead CRM',leads:'Lead Pipeline',execution:'Execution Engine',email:'Email Center',vault:'Document Vault',clm:'CLM Scanner',ledger:'Atomic Ledger',agreements:'Agreements'};
+const pageNames={dashboard:'Dashboard',dispatch:'Dispatch Board','fleet-map':'Fleet Map',carriers:'Carriers',loads:'Load Manager',invoices:'Invoices & Billing',compliance:'DOT Compliance',ifta:'IFTA / Permits',insurance:'Insurance',revenue:'Revenue Tracker',providers:'Compliance Providers',checklist:'Daily Checklist',notes:'Dispatcher Notes',reports:'Team Reports','exec-command':'Exec Command',agents:'AI Agents',founders:'Founders Program',crm:'Lead CRM',leads:'Lead Pipeline',execution:'Execution Engine',email:'Email Center',vault:'Document Vault',clm:'CLM Scanner',ledger:'Atomic Ledger',agreements:'Agreements'};
 
 // ── 3 Lakes Logistics Backend API (FastAPI) ──
 const API_BASE = (window.__3LL_API_BASE || 'https://three-lakes-logistics-api.onrender.com').replace(/\/$/,'');
@@ -2827,6 +2880,7 @@ function nav(id){
   if(id==='clm')loadCLMList();
   if(id==='vault')loadVault();
   if(id==='agreements')loadAgreements();
+  if(id==='fleet-map')initFleetMap();
   if(id==='ledger')loadLedger();
   if(id==='execution'){loadExecutionDomains();loadExecutionSteps();}
   if(id==='email'&&typeof mailInit==='function'){mailInit();}
@@ -10480,6 +10534,247 @@ async function tsMissionRetest() {
     }
   };
 })();
+</script>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin></script>
+<script>
+// ── FLEET MAP ─────────────────────────────────────────────────────────────────
+let _fmap = null;
+let _fmapMarkers = {};
+let _fmapRefreshTimer = null;
+let _fmapHosIndex = {};
+let _fmapFleetIndex = {};
+
+const FMAP_COLOR = {
+  driving : '#16a34a',
+  parked  : '#2563eb',
+  lowhos  : '#d97706',
+  offline : '#6b7280',
+  violation:'#dc2626',
+};
+
+function _fmapColor(row, hosRow) {
+  const ageSec = row.ts ? (Date.now() - new Date(row.ts).getTime()) / 1000 : 999999;
+  if (ageSec > 1800) return FMAP_COLOR.offline;
+  if (hosRow && (hosRow.violation_flags || []).length) return FMAP_COLOR.violation;
+  if (hosRow && (hosRow.drive_remaining_min || 0) < 60) return FMAP_COLOR.lowhos;
+  if ((row.speed_mph || 0) > 2) return FMAP_COLOR.driving;
+  return FMAP_COLOR.parked;
+}
+
+function _fmapIcon(color, moving) {
+  return L.divIcon({
+    html: `<div style="width:28px;height:28px;border-radius:50%;background:${color};border:3px solid #fff;
+      box-shadow:0 2px 8px rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;
+      font-size:12px;color:#fff;font-weight:700">${moving ? '▶' : '●'}</div>`,
+    iconSize: [28, 28], iconAnchor: [14, 14], className: ''
+  });
+}
+
+function initFleetMap() {
+  if (_fmap) {
+    setTimeout(() => { _fmap.invalidateSize(); fmapRefresh(); }, 120);
+    return;
+  }
+  _fmap = L.map('fmap-map', { center: [39.83, -98.58], zoom: 4 });
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+    maxZoom: 19
+  }).addTo(_fmap);
+
+  // Populate carrier filter from global allCarriers
+  const sel = document.getElementById('fmap-carrier-filter');
+  if (sel && allCarriers && allCarriers.length) {
+    allCarriers.forEach(c => {
+      const o = document.createElement('option');
+      o.value = c.id; o.textContent = c.company_name || c.id;
+      sel.appendChild(o);
+    });
+  }
+
+  fmapRefresh();
+  fmapToggleAutoRefresh();
+}
+
+async function fmapRefresh() {
+  const carrierId = document.getElementById('fmap-carrier-filter')?.value || '';
+  const statusEl  = document.getElementById('fmap-status');
+  if (statusEl) statusEl.textContent = 'Refreshing…';
+
+  const qs = carrierId ? `?carrier_id=${encodeURIComponent(carrierId)}` : '';
+
+  try {
+    const [telRes, hosRes, fleetRes] = await Promise.all([
+      apiFetch('/api/telemetry/latest' + qs),
+      apiFetch('/api/telemetry/hos' + qs),
+      apiFetch('/api/fleet/' + (carrierId ? `carrier/${encodeURIComponent(carrierId)}` : '')),
+    ]);
+
+    const telData   = telRes.ok   ? await telRes.json()   : { items: [] };
+    const hosData   = hosRes.ok   ? await hosRes.json()   : { items: [] };
+    const fleetData = fleetRes.ok ? await fleetRes.json() : [];
+
+    _fmapHosIndex = {};
+    for (const h of (hosData.items || [])) {
+      if (h.truck_id)    _fmapHosIndex[h.truck_id]    = h;
+      if (h.driver_code) _fmapHosIndex[h.driver_code] = h;
+    }
+    _fmapFleetIndex = {};
+    const farr = Array.isArray(fleetData) ? fleetData : (fleetData.items || []);
+    for (const f of farr) { _fmapFleetIndex[f.truck_id] = f; }
+
+    const items = telData.items || [];
+    _fmapPutMarkers(items);
+
+    const count = items.length;
+    if (statusEl) statusEl.textContent = `${count} truck${count !== 1 ? 's' : ''} live`;
+    const badge = document.getElementById('fmap-live-count');
+    if (badge) { badge.textContent = count; badge.style.display = count ? 'inline-block' : 'none'; }
+    document.getElementById('fmap-last-update').textContent = 'Updated ' + new Date().toLocaleTimeString();
+  } catch (e) {
+    if (statusEl) statusEl.textContent = 'Load error — retrying';
+    console.error('[FleetMap]', e);
+  }
+}
+
+function _fmapPutMarkers(items) {
+  if (!_fmap) return;
+  const seen = new Set();
+
+  for (const row of items) {
+    if (row.lat == null || row.lng == null) continue;
+    const key = `${row.carrier_id}|${row.truck_id}`;
+    seen.add(key);
+    const hos   = _fmapHosIndex[row.truck_id] || null;
+    const fleet = _fmapFleetIndex[row.truck_id] || {};
+    const color = _fmapColor(row, hos);
+    const icon  = _fmapIcon(color, (row.speed_mph || 0) > 2);
+    const label = row.truck_id || 'Truck';
+
+    if (_fmapMarkers[key]) {
+      _fmapMarkers[key].setLatLng([row.lat, row.lng]).setIcon(icon);
+      _fmapMarkers[key]._row = row; _fmapMarkers[key]._fleet = fleet;
+    } else {
+      const m = L.marker([row.lat, row.lng], { icon });
+      m._row = row; m._fleet = fleet;
+      m.bindTooltip(`<b>${label}</b>${(row.speed_mph||0)>2?' · '+Math.round(row.speed_mph)+' mph':''}`,
+        { permanent: false, direction: 'top', offset: [0, -16] });
+      m.on('click', () => fmapShowPanel(m._row, m._fleet));
+      m.addTo(_fmap);
+      _fmapMarkers[key] = m;
+    }
+  }
+
+  for (const key of Object.keys(_fmapMarkers)) {
+    if (!seen.has(key)) { _fmap.removeLayer(_fmapMarkers[key]); delete _fmapMarkers[key]; }
+  }
+}
+
+function fmapFitAll() {
+  if (!_fmap) return;
+  const pts = Object.values(_fmapMarkers).map(m => m.getLatLng());
+  if (!pts.length) { return; }
+  if (pts.length === 1) { _fmap.setView(pts[0], 12); return; }
+  _fmap.fitBounds(L.latLngBounds(pts), { padding: [48, 48] });
+}
+
+function fmapToggleAutoRefresh() {
+  clearInterval(_fmapRefreshTimer);
+  if (document.getElementById('fmap-auto-refresh')?.checked) {
+    _fmapRefreshTimer = setInterval(() => {
+      if (document.getElementById('page-fleet-map')?.classList.contains('active')) fmapRefresh();
+    }, 30000);
+  }
+}
+
+function fmapFlyTo(lat, lng) {
+  if (_fmap) _fmap.flyTo([lat, lng], 14, { animate: true, duration: 1.2 });
+}
+
+function fmapShowPanel(row, fleet) {
+  const ph = document.getElementById('fmap-placeholder');
+  const dt = document.getElementById('fmap-truck-detail');
+  if (!ph || !dt) return;
+  ph.style.display = 'none'; dt.style.display = 'block';
+
+  const hos     = _fmapHosIndex[row.truck_id] || {};
+  const ageSec  = row.ts ? (Date.now() - new Date(row.ts).getTime()) / 1000 : 999999;
+  const age     = ageSec < 60  ? 'Just now' :
+                  ageSec < 3600 ? Math.round(ageSec/60) + 'm ago' :
+                  Math.round(ageSec/3600) + 'h ago';
+  const sColor  = { available:'#16a34a', on_load:'#2563eb', out_of_service:'#dc2626', maintenance:'#d97706' }[fleet.status] || '#6b7280';
+  const hColor  = v => v == null ? '#999' : v < 60 ? '#dc2626' : v < 120 ? '#d97706' : '#16a34a';
+  const fmtMin  = v => v == null ? '--:--' : `${Math.floor(v/60)}h ${v%60<10?'0':''}${v%60}m`;
+  const barPct  = (v, max) => v == null ? 0 : Math.max(0, Math.min(100, v / max * 100));
+
+  const hosRows = [
+    { label:'Drive',  key:'drive_remaining_min',  max:660  },
+    { label:'Shift',  key:'shift_remaining_min',  max:840  },
+    { label:'Cycle',  key:'cycle_remaining_min',  max:4200 },
+  ];
+
+  dt.innerHTML = `
+<div style="border-bottom:1px solid var(--border);padding:14px 16px;display:flex;align-items:flex-start;justify-content:space-between;gap:8px">
+  <div>
+    <div style="font-size:17px;font-weight:700">Unit ${esc(row.truck_id)}</div>
+    <div style="font-size:11px;color:var(--muted);margin-top:2px">Last ping: ${age}</div>
+  </div>
+  <span style="background:${sColor};color:#fff;font-size:10px;font-weight:700;padding:3px 9px;border-radius:20px;text-transform:uppercase;white-space:nowrap;flex-shrink:0">${esc(fleet.status||'unknown')}</span>
+</div>
+
+${(fleet.year||fleet.make||fleet.model||fleet.trailer_type||fleet.vin) ? `
+<div style="padding:12px 16px;border-bottom:1px solid var(--border)">
+  <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:8px">Truck Profile</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:13px">
+    ${fleet.year  ? `<div><div style="font-size:10px;color:var(--muted)">Year</div><div style="font-weight:600">${esc(fleet.year)}</div></div>` : ''}
+    ${fleet.make  ? `<div><div style="font-size:10px;color:var(--muted)">Make</div><div style="font-weight:600">${esc(fleet.make)}</div></div>` : ''}
+    ${fleet.model ? `<div><div style="font-size:10px;color:var(--muted)">Model</div><div style="font-weight:600">${esc(fleet.model)}</div></div>` : ''}
+    ${fleet.trailer_type ? `<div><div style="font-size:10px;color:var(--muted)">Trailer</div><div style="font-weight:600">${esc(fleet.trailer_type)}</div></div>` : ''}
+    ${fleet.max_weight_lbs ? `<div><div style="font-size:10px;color:var(--muted)">Max Weight</div><div style="font-weight:600">${Number(fleet.max_weight_lbs).toLocaleString()} lbs</div></div>` : ''}
+    ${fleet.vin   ? `<div style="grid-column:1/-1"><div style="font-size:10px;color:var(--muted)">VIN</div><div style="font-weight:600;font-family:monospace;font-size:11px;word-break:break-all">${esc(fleet.vin)}</div></div>` : ''}
+  </div>
+</div>` : ''}
+
+<div style="padding:12px 16px;border-bottom:1px solid var(--border)">
+  <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:8px">Live Telemetry</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:13px">
+    <div><div style="font-size:10px;color:var(--muted)">Speed</div><div style="font-weight:600">${row.speed_mph!=null?Math.round(row.speed_mph)+' mph':'—'}</div></div>
+    <div><div style="font-size:10px;color:var(--muted)">Heading</div><div style="font-weight:600">${row.heading!=null?row.heading+'°':'—'}</div></div>
+    <div><div style="font-size:10px;color:var(--muted)">Fuel</div><div style="font-weight:600">${row.fuel_pct!=null?Math.round(row.fuel_pct)+'%':'—'}</div></div>
+    <div><div style="font-size:10px;color:var(--muted)">Odometer</div><div style="font-weight:600">${row.odometer_miles!=null?Number(row.odometer_miles).toLocaleString()+' mi':'—'}</div></div>
+    <div><div style="font-size:10px;color:var(--muted)">Latitude</div><div style="font-weight:600;font-family:monospace;font-size:11px">${Number(row.lat).toFixed(5)}</div></div>
+    <div><div style="font-size:10px;color:var(--muted)">Longitude</div><div style="font-weight:600;font-family:monospace;font-size:11px">${Number(row.lng).toFixed(5)}</div></div>
+  </div>
+</div>
+
+<div style="padding:12px 16px;border-bottom:1px solid var(--border)">
+  <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:10px;display:flex;align-items:center;gap:8px">
+    HOS — Hours of Service
+    ${hos.duty_status?`<span style="background:#e0e7ff;color:#3730a3;font-size:10px;padding:2px 7px;border-radius:10px;font-weight:600">${esc(hos.duty_status)}</span>`:''}
+  </div>
+  ${hosRows.map(r => {
+    const v = hos[r.key]; const pct = barPct(v, r.max); const col = hColor(v);
+    return `<div style="margin-bottom:9px">
+      <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px">
+        <span style="color:var(--muted)">${r.label}</span>
+        <span style="color:${col};font-weight:700">${fmtMin(v)}</span>
+      </div>
+      <div style="height:7px;background:var(--border);border-radius:4px;overflow:hidden">
+        <div style="height:100%;width:${pct.toFixed(1)}%;background:${col};border-radius:4px;transition:width .4s"></div>
+      </div>
+    </div>`;
+  }).join('')}
+  ${(hos.violation_flags||[]).length ? `
+  <div style="margin-top:6px;padding:8px 10px;background:#fef2f2;border:1px solid #fca5a5;border-radius:6px;font-size:12px;color:#b91c1c">
+    ⚠️ Violation: ${esc((hos.violation_flags||[]).join(', '))}
+  </div>` : ''}
+</div>
+
+<div style="padding:12px 16px;display:flex;gap:8px">
+  <button class="btn-navy" style="flex:1;font-size:12px;padding:8px" onclick="fmapFlyTo(${row.lat},${row.lng})">📍 Go to Truck</button>
+  <button class="btn-out" style="flex:1;font-size:12px;padding:8px" onclick="nav('dispatch')">🚛 Dispatch</button>
+</div>`;
+}
 </script>
 
 </body>

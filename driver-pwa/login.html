@@ -199,6 +199,8 @@ async function handleLogin(event) {
     localStorage.setItem('3ll_phone',       normalizedPhone);
     localStorage.setItem('3ll_expires_at',  new Date(Date.now() + 86400000 * 30).toISOString());
     localStorage.setItem('3ll_driver_code', driverCode);
+    if (data.carrier_id) localStorage.setItem('3ll_carrier_id', String(data.carrier_id));
+    if (data.truck_number) localStorage.setItem('3ll_truck', data.truck_number);
     window.location.href = './index.html';
 
   } catch (err) {

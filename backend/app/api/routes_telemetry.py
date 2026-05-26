@@ -43,6 +43,26 @@ def latest_positions(carrier_id: str | None = None, limit: int = 200) -> dict:
     return {"count": len(seen), "items": list(seen.values())}
 
 
+@router.get("/hos")
+def latest_hos(carrier_id: str | None = None, limit: int = 200) -> dict:
+    """Latest HOS record per driver — powers the Fleet Map panel."""
+    q = (
+        get_supabase()
+        .table("driver_hos_status")
+        .select("*")
+        .order("ts", desc=True)
+        .limit(limit * 10)
+    )
+    if carrier_id:
+        q = q.eq("carrier_id", carrier_id)
+    rows = q.execute().data or []
+    seen: dict[tuple, dict] = {}
+    for row in rows:
+        key = (row.get("carrier_id"), row.get("driver_code") or row.get("driver_id", ""))
+        seen.setdefault(key, row)
+    return {"count": len(seen), "items": list(seen.values())[:limit]}
+
+
 @router.post("/hos")
 def update_hos(status: HosStatus) -> dict:
     get_supabase().table("driver_hos_status").insert(status.model_dump(exclude_none=True)).execute()

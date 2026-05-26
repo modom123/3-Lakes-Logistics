@@ -1562,11 +1562,12 @@ async function confirmPickup() {
     if (supabaseClient) {
       try {
         await supabaseClient.from('truck_telemetry').insert({
-          driver_id: DRIVER_ID,
-          latitude: pos.coords.latitude,
-          longitude: pos.coords.longitude,
-          event: 'pickup_confirmed',
-          ts: new Date().toISOString()
+          truck_id:    localStorage.getItem('3ll_truck')      || DRIVER_ID,
+          carrier_id:  localStorage.getItem('3ll_carrier_id') || localStorage.getItem('3ll_driver_id') || DRIVER_ID,
+          lat:         pos.coords.latitude,
+          lng:         pos.coords.longitude,
+          engine_state:'pickup_confirmed',
+          ts:          new Date().toISOString()
         });
       } catch (err) {
         console.error('Telemetry error:', err);
@@ -1583,11 +1584,12 @@ async function confirmDelivery() {
     if (supabaseClient) {
       try {
         await supabaseClient.from('truck_telemetry').insert({
-          driver_id: DRIVER_ID,
-          latitude: pos.coords.latitude,
-          longitude: pos.coords.longitude,
-          event: 'delivery_confirmed',
-          ts: new Date().toISOString()
+          truck_id:    localStorage.getItem('3ll_truck')      || DRIVER_ID,
+          carrier_id:  localStorage.getItem('3ll_carrier_id') || localStorage.getItem('3ll_driver_id') || DRIVER_ID,
+          lat:         pos.coords.latitude,
+          lng:         pos.coords.longitude,
+          engine_state:'delivery_confirmed',
+          ts:          new Date().toISOString()
         });
       } catch (err) {
         console.error('Telemetry error:', err);
@@ -1709,26 +1711,26 @@ async function sendDriverLocation() {
 
   navigator.geolocation.getCurrentPosition(
     async pos => {
-      const { latitude, longitude, accuracy, speed, heading } = pos.coords;
+      const { latitude, longitude, speed, heading } = pos.coords;
       const ts = new Date().toISOString();
+      const truckId   = localStorage.getItem('3ll_truck')      || DRIVER_ID;
+      const carrierId = localStorage.getItem('3ll_carrier_id') || localStorage.getItem('3ll_driver_id') || DRIVER_ID;
 
       try {
-        // Send to Supabase truck_telemetry table
         await supabaseClient.from('truck_telemetry').insert({
-          driver_id: DRIVER_ID,
-          latitude,
-          longitude,
-          accuracy,
-          speed_mph: speed ? (speed * 2.237).toFixed(1) : 0,
-          heading: heading || 0,
+          truck_id:   truckId,
+          carrier_id: carrierId,
+          lat:        latitude,
+          lng:        longitude,
+          speed_mph:  speed ? parseFloat((speed * 2.237).toFixed(1)) : 0,
+          heading:    heading ? Math.round(heading) : 0,
           ts
         });
       } catch (err) {
-        // Silent failure for location tracking
         console.debug('Location tracking error:', err);
       }
     },
-    () => {} // Silent error
+    () => {}
   );
 }
 
