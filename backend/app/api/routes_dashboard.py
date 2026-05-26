@@ -156,3 +156,29 @@ def update_shipper(shipper_id: str, payload: dict) -> dict:
 def delete_shipper(shipper_id: str) -> dict:
     get_supabase().table("shippers").delete().eq("id", shipper_id).execute()
     return {"ok": True}
+
+
+# ── Invoice Factoring ───────────────────────────────────
+
+@router.get("/factoring")
+def list_factoring(limit: int = 200) -> dict:
+    res = get_supabase().table("factoring_submissions").select("*").order("created_at", desc=True).limit(limit).execute()
+    return {"count": len(res.data or []), "items": res.data or []}
+
+
+@router.post("/factoring")
+def create_factoring(payload: dict) -> dict:
+    res = get_supabase().table("factoring_submissions").insert(payload).execute()
+    return {"ok": True, "item": res.data[0] if res.data else {}}
+
+
+@router.patch("/factoring/{factoring_id}")
+def update_factoring(factoring_id: str, payload: dict) -> dict:
+    get_supabase().table("factoring_submissions").update(payload).eq("id", factoring_id).execute()
+    return {"ok": True}
+
+
+@router.delete("/factoring/{factoring_id}")
+def delete_factoring(factoring_id: str) -> dict:
+    get_supabase().table("factoring_submissions").delete().eq("id", factoring_id).execute()
+    return {"ok": True}

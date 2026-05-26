@@ -725,6 +725,7 @@ td.td-name{font-weight:600;color:var(--navy);}
   <div class="sb-section">
     <div class="sb-label">Finance</div>
     <div class="sb-item" onclick="nav('revenue')"><span class="sb-icon">💰</span> Revenue Tracker</div>
+    <div class="sb-item" onclick="nav('factoring')"><span class="sb-icon">💳</span> Factoring <span class="sb-badge" id="factoring-notif" style="display:none">●</span></div>
     <div class="sb-item" onclick="nav('providers')"><span class="sb-icon">🔗</span> Providers</div>
   </div>
   <div class="sb-section">
@@ -1115,6 +1116,26 @@ td.td-name{font-weight:600;color:var(--navy);}
         <div class="mc" onclick="showDashSummary('inv-overdue')" style="cursor:pointer" title="Click for recent 10"><div class="mc-label">Overdue</div><div class="mc-val red" id="inv-overdue">—</div></div>
       </div>
       <div id="invoices-list"><div class="loading"><div class="spin"></div>Loading invoices…</div></div>
+
+      <!-- AR Aging Report -->
+      <div class="card" style="margin-top:20px;border-top:3px solid var(--orange)">
+        <div class="card-hd">
+          <div>
+            <div class="card-title">📊 AR Aging Report</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:2px">Outstanding invoices grouped by days since issued</div>
+          </div>
+          <button class="btn-out" style="font-size:12px" onclick="renderARAging()">Refresh</button>
+        </div>
+        <div id="ar-aging-content">
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px">
+            <div class="mc" style="border-left:3px solid #22c55e"><div class="mc-label">Current (0–30d)</div><div class="mc-val green" id="ar-current-amt">—</div><div class="mc-sub" id="ar-current-ct"></div></div>
+            <div class="mc" style="border-left:3px solid #f59e0b"><div class="mc-label">31–60 Days</div><div class="mc-val gold" id="ar-31-amt">—</div><div class="mc-sub" id="ar-31-ct"></div></div>
+            <div class="mc" style="border-left:3px solid #ef4444"><div class="mc-label">61–90 Days</div><div class="mc-val red" id="ar-61-amt">—</div><div class="mc-sub" id="ar-61-ct"></div></div>
+            <div class="mc" style="border-left:3px solid #7c3aed"><div class="mc-label">90+ Days</div><div class="mc-val" style="color:#7c3aed" id="ar-90-amt">—</div><div class="mc-sub" id="ar-90-ct"></div></div>
+          </div>
+          <div id="ar-aging-table"></div>
+        </div>
+      </div>
     </div>
 
     <!-- SETTLEMENTS -->
@@ -1163,6 +1184,69 @@ td.td-name{font-weight:600;color:var(--navy);}
           <thead><tr><th>Company</th><th>Type</th><th>MC / DOT</th><th>Contact</th><th>Phone</th><th>Payment Terms</th><th>Credit Limit</th><th>Status</th><th>Actions</th></tr></thead>
           <tbody id="shippers-table-body"><tr><td colspan="9"><div class="loading"><div class="spin"></div>Loading…</div></td></tr></tbody>
         </table></div>
+      </div>
+    </div>
+
+    <!-- FACTORING -->
+    <div class="page" id="page-factoring">
+      <div class="page-hdr">
+        <div class="page-hdr-l"><div class="chip">Cash Flow</div><h2>Invoice Factoring</h2></div>
+        <div class="page-hdr-acts">
+          <button class="btn-out" onclick="loadFactoring()">↺ Refresh</button>
+          <button class="btn-navy" onclick="openFactorModal()">+ Submit Invoice</button>
+        </div>
+      </div>
+      <div class="g4" style="margin-bottom:20px">
+        <div class="mc"><div class="mc-label">Factored MTD</div><div class="mc-val green" id="fact-mtd-amt">—</div></div>
+        <div class="mc"><div class="mc-label">Pending Advance</div><div class="mc-val gold" id="fact-pending">—</div></div>
+        <div class="mc"><div class="mc-label">Total Fees Paid</div><div class="mc-val orange" id="fact-fees">—</div></div>
+        <div class="mc"><div class="mc-label">Avg Advance Rate</div><div class="mc-val blue" id="fact-avg-rate">—</div></div>
+      </div>
+
+      <!-- Factoring Company Cards -->
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;margin-bottom:24px">
+        <div class="card" style="border-top:3px solid #22c55e">
+          <div class="card-hd"><div><div class="card-title">OTR Capital</div><div style="font-size:11px;color:var(--muted);margin-top:2px">Non-recourse · Same-day wire</div></div><span class="badge badge-green">Recommended</span></div>
+          <div style="font-size:13px;line-height:1.9;margin-top:10px">
+            <div>⚡ Advance: <strong>93–97%</strong> of invoice</div>
+            <div>💸 Fee: <strong>2–5%</strong> per invoice</div>
+            <div>⏱ Funding: <strong>Same day</strong></div>
+            <div>📞 <a href="tel:18887877777" style="color:var(--accent)">1-888-787-7777</a></div>
+          </div>
+          <button class="btn-navy" style="width:100%;margin-top:12px" onclick="openFactorModal('OTR Capital')">Submit Invoice →</button>
+        </div>
+        <div class="card" style="border-top:3px solid var(--gold)">
+          <div class="card-hd"><div><div class="card-title">Triumph Business Capital</div><div style="font-size:11px;color:var(--muted);margin-top:2px">Recourse &amp; non-recourse options</div></div><span class="badge badge-gold">Popular</span></div>
+          <div style="font-size:13px;line-height:1.9;margin-top:10px">
+            <div>⚡ Advance: <strong>90–96%</strong> of invoice</div>
+            <div>💸 Fee: <strong>2.5–5%</strong> per invoice</div>
+            <div>⏱ Funding: <strong>24–48 hrs</strong></div>
+            <div>📞 <a href="tel:18664862521" style="color:var(--accent)">1-866-486-2521</a></div>
+          </div>
+          <button class="btn-out" style="width:100%;margin-top:12px" onclick="openFactorModal('Triumph Business Capital')">Submit Invoice →</button>
+        </div>
+        <div class="card" style="border-top:3px solid var(--navy)">
+          <div class="card-hd"><div><div class="card-title">RTS Financial</div><div style="font-size:11px;color:var(--muted);margin-top:2px">Full-service factoring + fuel card</div></div><span class="badge badge-navy">Full Service</span></div>
+          <div style="font-size:13px;line-height:1.9;margin-top:10px">
+            <div>⚡ Advance: <strong>up to 97%</strong> of invoice</div>
+            <div>💸 Fee: <strong>1.5–4%</strong> per invoice</div>
+            <div>⏱ Funding: <strong>Same day</strong></div>
+            <div>📞 <a href="tel:18884062570" style="color:var(--accent)">1-888-406-2570</a></div>
+          </div>
+          <button class="btn-out" style="width:100%;margin-top:12px" onclick="openFactorModal('RTS Financial')">Submit Invoice →</button>
+        </div>
+      </div>
+
+      <!-- Factoring Queue -->
+      <div class="g2">
+        <div class="card">
+          <div class="card-hd"><div class="card-title">📋 Eligible Invoices</div><div class="card-chip">Unpaid / Overdue</div></div>
+          <div id="factor-eligible-table"><div class="loading"><div class="spin"></div>Loading…</div></div>
+        </div>
+        <div class="card">
+          <div class="card-hd"><div class="card-title">📤 Submitted for Factoring</div><button class="btn-out" style="font-size:11px" onclick="loadFactoring()">↺</button></div>
+          <div id="factor-submitted-table"><div class="loading"><div class="spin"></div>Loading…</div></div>
+        </div>
       </div>
     </div>
 
@@ -2913,7 +2997,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 let allCarriers=[], allLoads=[], allInvoices=[], allShippers=[], allSettlements=[], currentInvFilter='all', loadCounter=3849;
 
-const pageNames={dashboard:'Dashboard',dispatch:'Dispatch Board','fleet-map':'Fleet Map',carriers:'Carriers',drivers:'Drivers',loads:'Load Manager',invoices:'Invoices & Billing',settlements:'Driver Settlements',shippers:'Shippers / Brokers',compliance:'DOT Compliance',ifta:'IFTA / Permits',insurance:'Insurance',revenue:'Revenue Tracker',providers:'Compliance Providers',checklist:'Daily Checklist',notes:'Dispatcher Notes',reports:'Team Reports','exec-command':'Exec Command',agents:'AI Agents',founders:'Founders Program',crm:'Lead CRM',leads:'Lead Pipeline',execution:'Execution Engine',email:'Email Center',vault:'Document Vault',clm:'CLM Scanner',ledger:'Atomic Ledger',agreements:'Agreements'};
+const pageNames={dashboard:'Dashboard',dispatch:'Dispatch Board','fleet-map':'Fleet Map',carriers:'Carriers',drivers:'Drivers',loads:'Load Manager',invoices:'Invoices & Billing',settlements:'Driver Settlements',shippers:'Shippers / Brokers',factoring:'Invoice Factoring',compliance:'DOT Compliance',ifta:'IFTA / Permits',insurance:'Insurance',revenue:'Revenue Tracker',providers:'Compliance Providers',checklist:'Daily Checklist',notes:'Dispatcher Notes',reports:'Team Reports','exec-command':'Exec Command',agents:'AI Agents',founders:'Founders Program',crm:'Lead CRM',leads:'Lead Pipeline',execution:'Execution Engine',email:'Email Center',vault:'Document Vault',clm:'CLM Scanner',ledger:'Atomic Ledger',agreements:'Agreements'};
 
 // ── 3 Lakes Logistics Backend API (FastAPI) ──
 const API_BASE = (window.__3LL_API_BASE || 'https://three-lakes-logistics-api.onrender.com').replace(/\/$/,'');
@@ -3669,6 +3753,7 @@ async function loadInvoices(){
   }
   updateInvoiceMetrics();
   renderLoadsTable();
+  renderARAging();
 }
 
 function renderInvoices(){
@@ -5525,6 +5610,8 @@ function renderIFTA(){
     else if(id==='ifta'||id==='insurance')renderIFTA();
     else if(id==='settlements'){loadSettlements();initSettleWeekSel();}
     else if(id==='shippers')loadShippers();
+    else if(id==='factoring')loadFactoring();
+    else if(id==='invoices')renderARAging();
   };
 })();
 
@@ -11614,6 +11701,267 @@ async function deleteShipper(id) {
   if (r.ok) { toast('Shipper removed'); loadShippers(); }
   else toast('Error', 'error');
 }
+
+// ══════════════════════════════════════════════════════
+// AR AGING REPORT
+// ══════════════════════════════════════════════════════
+
+function renderARAging() {
+  const now = Date.now();
+  const unpaid = allInvoices.filter(i => i.status === 'Unpaid' || i.status === 'Overdue' || i.status === 'Partial');
+  const buckets = [
+    { key: 'current', min: 0,  max: 30,  label: 'Current (0–30d)',  color: '#22c55e' },
+    { key: '31',      min: 31, max: 60,  label: '31–60 Days',       color: '#f59e0b' },
+    { key: '61',      min: 61, max: 90,  label: '61–90 Days',       color: '#ef4444' },
+    { key: '90',      min: 91, max: 9999,label: '90+ Days',         color: '#7c3aed' },
+  ];
+
+  // Assign each invoice to a bucket
+  const byBucket = { current: [], '31': [], '61': [], '90': [] };
+  unpaid.forEach(inv => {
+    const days = Math.floor((now - new Date(inv.created_at).getTime()) / 86400000);
+    if      (days <= 30) byBucket.current.push({...inv, days});
+    else if (days <= 60) byBucket['31'].push({...inv, days});
+    else if (days <= 90) byBucket['61'].push({...inv, days});
+    else                 byBucket['90'].push({...inv, days});
+  });
+
+  buckets.forEach(b => {
+    const list = byBucket[b.key];
+    const total = list.reduce((a, i) => a + Number(i.amount || 0), 0);
+    setText('ar-' + b.key + '-amt', '$' + total.toLocaleString());
+    const ct = document.getElementById('ar-' + b.key + '-ct');
+    if (ct) ct.textContent = list.length + ' invoice' + (list.length !== 1 ? 's' : '');
+  });
+
+  const tbl = document.getElementById('ar-aging-table');
+  if (!tbl) return;
+  if (!unpaid.length) {
+    tbl.innerHTML = '<div style="padding:16px;text-align:center;color:var(--muted)">No outstanding AR — all invoices collected! 🎉</div>';
+    return;
+  }
+
+  // Sort all unpaid by days descending
+  const allSorted = unpaid.map(i => ({...i, days: Math.floor((now - new Date(i.created_at).getTime()) / 86400000)}))
+    .sort((a, b) => b.days - a.days);
+
+  tbl.innerHTML = '<div class="tbl-wrap"><table><thead><tr><th>Invoice #</th><th>Notes</th><th>Amount</th><th>Days Out</th><th>Bucket</th><th>Actions</th></tr></thead><tbody>' +
+    allSorted.map(inv => {
+      const days = inv.days;
+      let bucket, color;
+      if      (days <= 30) { bucket = 'Current'; color = '#22c55e'; }
+      else if (days <= 60) { bucket = '31–60d';  color = '#f59e0b'; }
+      else if (days <= 90) { bucket = '61–90d';  color = '#ef4444'; }
+      else                 { bucket = '90+d';    color = '#7c3aed'; }
+      return `<tr>
+        <td class="t-mono" style="font-size:12px;font-weight:600">${esc(inv.invoice_number || 'INV-'+inv.id.slice(0,6))}</td>
+        <td style="font-size:12px;color:var(--muted)">${esc(inv.notes || '—')}</td>
+        <td class="val-gold" style="font-weight:700">$${Number(inv.amount||0).toLocaleString()}</td>
+        <td style="font-weight:700;color:${color}">${days}d</td>
+        <td><span class="badge" style="background:${color}22;color:${color};border:1px solid ${color}66">${bucket}</span></td>
+        <td><div style="display:flex;gap:4px">
+          <button class="btn-green-sm" onclick="markInvoicePaid('${inv.id}')">✅ Paid</button>
+          <button class="btn-out" style="font-size:11px;padding:4px 8px" onclick="openFactorModalForInv('${inv.id}')">💳 Factor</button>
+        </div></td>
+      </tr>`;
+    }).join('') + '</tbody></table></div>';
+}
+
+// ══════════════════════════════════════════════════════
+// INVOICE FACTORING
+// ══════════════════════════════════════════════════════
+
+let allFactoring = [];
+
+async function loadFactoring() {
+  try {
+    const res = await apiFetch('/api/dashboard/factoring?limit=200');
+    if (res.ok) allFactoring = (await res.json()).items || [];
+    else allFactoring = [];
+  } catch(e) { allFactoring = []; }
+  renderFactoring();
+  renderFactorEligible();
+}
+
+function renderFactoring() {
+  const now = new Date();
+  const mtd = allFactoring.filter(f => {
+    if (!f.created_at) return false;
+    const d = new Date(f.created_at);
+    return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+  });
+  const mtdAmt  = mtd.reduce((a, f) => a + Number(f.invoice_amount || 0), 0);
+  const pending = allFactoring.filter(f => f.status === 'submitted' || f.status === 'advanced');
+  const pendingAmt = pending.reduce((a, f) => a + Number(f.advance_amount || 0), 0);
+  const fees = allFactoring.reduce((a, f) => a + Number(f.factoring_fee || 0), 0);
+  const rates = allFactoring.map(f => Number(f.advance_pct || 0)).filter(Boolean);
+  const avgRate = rates.length ? (rates.reduce((a,b) => a+b, 0) / rates.length).toFixed(1) : null;
+
+  setText('fact-mtd-amt', '$' + mtdAmt.toLocaleString());
+  setText('fact-pending', '$' + pendingAmt.toLocaleString());
+  setText('fact-fees', '$' + fees.toLocaleString());
+  setText('fact-avg-rate', avgRate ? avgRate + '%' : '—');
+
+  // Badge count for unpaid factoring
+  const notif = document.getElementById('factoring-notif');
+  if (notif) {
+    const n = allFactoring.filter(f => f.status === 'submitted').length;
+    notif.style.display = n > 0 ? 'inline' : 'none';
+    notif.textContent = n;
+  }
+
+  const tbl = document.getElementById('factor-submitted-table');
+  if (!tbl) return;
+  if (!allFactoring.length) {
+    tbl.innerHTML = '<div style="padding:16px;text-align:center;color:var(--muted);font-size:13px">No factored invoices yet.</div>';
+    return;
+  }
+  const stColors = { submitted: '#f59e0b', advanced: '#3b82f6', settled: '#22c55e', rejected: '#ef4444' };
+  tbl.innerHTML = '<table class="tbl"><thead><tr><th>Invoice</th><th>Company</th><th>Inv Amt</th><th>Advance</th><th>Fee</th><th>Status</th><th>Actions</th></tr></thead><tbody>' +
+    allFactoring.map(f => `<tr>
+      <td class="t-mono" style="font-size:12px">${esc(f.invoice_number || '—')}</td>
+      <td style="font-size:12px;font-weight:600">${esc(f.factor_company || '—')}</td>
+      <td class="val-gold">$${Number(f.invoice_amount||0).toLocaleString()}</td>
+      <td style="color:#10b981;font-weight:700">$${Number(f.advance_amount||0).toLocaleString()}</td>
+      <td style="color:var(--orange);font-size:12px">$${Number(f.factoring_fee||0).toLocaleString()}</td>
+      <td><span class="badge" style="background:${(stColors[f.status]||'#888')}22;color:${stColors[f.status]||'#888'};border:1px solid ${(stColors[f.status]||'#888')}55">${f.status}</span></td>
+      <td><div style="display:flex;gap:4px">
+        ${f.status==='submitted'?`<button class="btn-out" style="font-size:11px;padding:4px 8px" onclick="advanceFactoring('${f.id}')">✅ Advanced</button>`:''}
+        ${f.status==='advanced'?`<button class="btn-green-sm" onclick="settleFactoring('${f.id}')">Settled</button>`:''}
+      </div></td>
+    </tr>`).join('') + '</tbody></table>';
+}
+
+function renderFactorEligible() {
+  const tbl = document.getElementById('factor-eligible-table');
+  if (!tbl) return;
+  const eligible = allInvoices.filter(i => i.status === 'Unpaid' || i.status === 'Overdue');
+  const factored = new Set(allFactoring.map(f => f.invoice_id).filter(Boolean));
+  const available = eligible.filter(i => !factored.has(i.id));
+  if (!available.length) {
+    tbl.innerHTML = '<div style="padding:16px;text-align:center;color:var(--muted);font-size:13px">No eligible invoices — all unpaid invoices have been submitted.</div>';
+    return;
+  }
+  tbl.innerHTML = '<table class="tbl"><thead><tr><th>Invoice #</th><th>Notes</th><th>Amount</th><th>Days Out</th><th>Action</th></tr></thead><tbody>' +
+    available.map(inv => {
+      const days = Math.floor((Date.now() - new Date(inv.created_at).getTime()) / 86400000);
+      return `<tr>
+        <td class="t-mono" style="font-size:12px;font-weight:600">${esc(inv.invoice_number || 'INV-'+inv.id.slice(0,6))}</td>
+        <td style="font-size:12px;color:var(--muted)">${esc(inv.notes || '—')}</td>
+        <td class="val-gold" style="font-weight:700">$${Number(inv.amount||0).toLocaleString()}</td>
+        <td style="color:${days>60?'#ef4444':days>30?'#f59e0b':'var(--muted)'}">${days}d</td>
+        <td><button class="btn-navy-sm" onclick="openFactorModalForInv('${inv.id}')">💳 Factor</button></td>
+      </tr>`;
+    }).join('') + '</tbody></table>';
+}
+
+function openFactorModal(company) {
+  // Populate invoice dropdown
+  const sel = document.getElementById('factor-inv-sel');
+  const eligible = allInvoices.filter(i => i.status === 'Unpaid' || i.status === 'Overdue');
+  sel.innerHTML = '<option value="">Select invoice…</option>' +
+    eligible.map(i => `<option value="${i.id}" data-amount="${i.amount}">${esc(i.invoice_number || 'INV-'+i.id.slice(0,6))} — $${Number(i.amount||0).toLocaleString()}</option>`).join('');
+  if (company) {
+    document.getElementById('factor-company-sel').value = company;
+    // Set default rates by company
+    const rates = {'OTR Capital': [3, 95], 'Triumph Business Capital': [3.5, 93], 'RTS Financial': [2.5, 95]};
+    const [fee, adv] = rates[company] || [3, 95];
+    document.getElementById('factor-fee-pct').value = fee;
+    document.getElementById('factor-advance-pct').value = adv;
+  }
+  // Default funding date to tomorrow
+  const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
+  document.getElementById('factor-funding-date').value = tomorrow.toISOString().split('T')[0];
+  factorCalc();
+  openModal('factor-modal');
+}
+
+function openFactorModalForInv(invId) {
+  openFactorModal();
+  setTimeout(() => {
+    const sel = document.getElementById('factor-inv-sel');
+    if (sel) { sel.value = invId; factorCalc(); }
+  }, 50);
+}
+
+function factorCalc() {
+  const sel = document.getElementById('factor-inv-sel');
+  const amount = Number(document.getElementById('factor-amount')?.value || sel?.selectedOptions?.[0]?.dataset?.amount || 0);
+  const feePct = Number(document.getElementById('factor-fee-pct')?.value || 3);
+  const advPct = Number(document.getElementById('factor-advance-pct')?.value || 95);
+  // Auto-fill amount from selected invoice
+  const amtEl = document.getElementById('factor-amount');
+  if (amtEl && sel?.value && sel.selectedOptions[0]?.dataset?.amount && !amtEl.value) {
+    amtEl.value = sel.selectedOptions[0].dataset.amount;
+  }
+  const inv = Number(amtEl?.value || amount);
+  const prev = document.getElementById('factor-calc-preview');
+  if (!prev) return;
+  if (!inv) { prev.textContent = 'Select invoice and enter fee to preview'; return; }
+  const advance = Math.round(inv * advPct / 100);
+  const fee = Math.round(inv * feePct / 100);
+  const reserve = inv - advance;
+  const final = reserve - fee;
+  prev.innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 16px;font-size:13px">
+      <span style="color:var(--muted)">Invoice Total</span><span style="font-weight:700;color:#f59e0b">$${inv.toLocaleString()}</span>
+      <span style="color:var(--muted)">Advance (${advPct}%)</span><span style="font-weight:700;color:#10b981">$${advance.toLocaleString()}</span>
+      <span style="color:var(--muted)">Reserve held back</span><span style="color:var(--muted)">$${reserve.toLocaleString()}</span>
+      <span style="color:var(--muted)">Factoring Fee (${feePct}%)</span><span style="color:#ef4444">− $${fee.toLocaleString()}</span>
+      <span style="font-weight:700;border-top:1px solid var(--border);padding-top:6px">Final Reserve Paid</span>
+      <span style="font-weight:700;color:#10b981;border-top:1px solid var(--border);padding-top:6px">$${final.toLocaleString()}</span>
+    </div>
+    <div style="font-size:11px;color:var(--muted);margin-top:8px">You receive $${advance.toLocaleString()} today + $${final.toLocaleString()} when broker pays = $${(advance+final).toLocaleString()} total</div>`;
+}
+
+async function submitFactoring() {
+  const btn = document.getElementById('factor-submit-btn');
+  const invSel = document.getElementById('factor-inv-sel');
+  const invId = invSel?.value;
+  const company = document.getElementById('factor-company-sel')?.value;
+  if (!invId) { toast('Select an invoice', 'error'); return; }
+  if (!company) { toast('Select a factoring company', 'error'); return; }
+
+  const inv = allInvoices.find(i => i.id === invId);
+  const amount = Number(document.getElementById('factor-amount')?.value || inv?.amount || 0);
+  const feePct = Number(document.getElementById('factor-fee-pct')?.value || 3);
+  const advPct = Number(document.getElementById('factor-advance-pct')?.value || 95);
+  const advance = Math.round(amount * advPct / 100);
+  const fee = Math.round(amount * feePct / 100);
+
+  if (btn) { btn.disabled = true; btn.textContent = 'Submitting…'; }
+  const r = await apiFetch('/api/dashboard/factoring', 'POST', {
+    invoice_id: invId,
+    invoice_number: inv?.invoice_number || '',
+    invoice_amount: amount,
+    factor_company: company,
+    fee_pct: feePct,
+    advance_pct: advPct,
+    advance_amount: advance,
+    factoring_fee: fee,
+    reserve_amount: amount - advance,
+    funding_date: document.getElementById('factor-funding-date')?.value || null,
+    status: 'submitted',
+  });
+  if (btn) { btn.disabled = false; btn.textContent = 'Submit for Factoring'; }
+  if (r.ok) {
+    closeModal('factor-modal');
+    toast('✅ Invoice submitted to ' + company);
+    await loadFactoring();
+  } else toast('Error submitting', 'error');
+}
+
+async function advanceFactoring(id) {
+  const r = await apiFetch('/api/dashboard/factoring/' + id, 'PATCH', { status: 'advanced' });
+  if (r.ok) { toast('Marked as advanced'); loadFactoring(); }
+  else toast('Error', 'error');
+}
+
+async function settleFactoring(id) {
+  const r = await apiFetch('/api/dashboard/factoring/' + id, 'PATCH', { status: 'settled', settled_at: new Date().toISOString() });
+  if (r.ok) { toast('Factoring settled'); loadFactoring(); }
+  else toast('Error', 'error');
+}
 </script>
 
 <!-- ASSIGN DRIVER MODAL -->
@@ -11762,6 +12110,51 @@ async function deleteShipper(id) {
       <div style="display:flex;gap:8px;justify-content:flex-end;padding-top:4px;border-top:1px solid var(--border)">
         <button class="btn-out" onclick="closeModal('add-shipper-modal')">Cancel</button>
         <button class="btn-navy" id="shipper-save-btn" onclick="saveShipper()">Save Shipper</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SUBMIT FOR FACTORING MODAL -->
+<div class="modal-overlay" id="factor-modal" onclick="if(event.target===this)closeModal('factor-modal')">
+  <div class="modal" style="max-width:500px">
+    <div class="modal-hd"><span class="modal-title">Submit Invoice for Factoring</span><button class="modal-close" onclick="closeModal('factor-modal')">✕</button></div>
+    <div style="padding:20px;display:flex;flex-direction:column;gap:14px">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div style="grid-column:1/-1">
+          <label style="font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:6px">INVOICE *</label>
+          <select class="fsel" id="factor-inv-sel" style="width:100%" onchange="factorCalc()"><option value="">Select invoice…</option></select>
+        </div>
+        <div style="grid-column:1/-1">
+          <label style="font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:6px">FACTORING COMPANY *</label>
+          <select class="fsel" id="factor-company-sel" style="width:100%" onchange="factorCalc()">
+            <option value="">Select company…</option>
+            <option value="OTR Capital">OTR Capital</option>
+            <option value="Triumph Business Capital">Triumph Business Capital</option>
+            <option value="RTS Financial">RTS Financial</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:6px">INVOICE AMOUNT ($)</label>
+          <input class="fi" type="number" id="factor-amount" placeholder="0.00" oninput="factorCalc()" style="width:100%">
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:6px">FACTORING FEE (%)</label>
+          <input class="fi" type="number" id="factor-fee-pct" value="3" step="0.1" placeholder="3.0" oninput="factorCalc()" style="width:100%">
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:6px">ADVANCE RATE (%)</label>
+          <input class="fi" type="number" id="factor-advance-pct" value="95" placeholder="95" oninput="factorCalc()" style="width:100%">
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:6px">EXPECTED FUNDING</label>
+          <input class="fi" type="date" id="factor-funding-date" style="width:100%">
+        </div>
+      </div>
+      <div id="factor-calc-preview" style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:14px;font-size:13px">Select invoice and enter fee to preview</div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;padding-top:4px;border-top:1px solid var(--border)">
+        <button class="btn-out" onclick="closeModal('factor-modal')">Cancel</button>
+        <button class="btn-navy" id="factor-submit-btn" onclick="submitFactoring()">Submit for Factoring</button>
       </div>
     </div>
   </div>
