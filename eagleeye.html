@@ -11269,9 +11269,12 @@ ${(fleet.year||fleet.make||fleet.model||fleet.trailer_type||fleet.vin) ? `
   <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:8px">Live Telemetry</div>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:13px">
     <div><div style="font-size:10px;color:var(--muted)">Speed</div><div style="font-weight:600">${row.speed_mph!=null?Math.round(row.speed_mph)+' mph':'—'}</div></div>
-    <div><div style="font-size:10px;color:var(--muted)">Heading</div><div style="font-weight:600">${row.heading!=null?row.heading+'°':'—'}</div></div>
-    <div><div style="font-size:10px;color:var(--muted)">Fuel</div><div style="font-weight:600">${row.fuel_pct!=null?Math.round(row.fuel_pct)+'%':'—'}</div></div>
-    <div><div style="font-size:10px;color:var(--muted)">Odometer</div><div style="font-weight:600">${row.odometer_miles!=null?Number(row.odometer_miles).toLocaleString()+' mi':'—'}</div></div>
+    <div><div style="font-size:10px;color:var(--muted)">Heading</div><div style="font-weight:600">${row.heading_deg!=null?row.heading_deg+'°':'—'}</div></div>
+    <div><div style="font-size:10px;color:var(--muted)">Fuel</div><div style="font-weight:600">${row.fuel_level_pct!=null?Math.round(row.fuel_level_pct)+'%':'—'}</div></div>
+    <div><div style="font-size:10px;color:var(--muted)">Odometer</div><div style="font-weight:600">${row.odometer_mi!=null?Number(row.odometer_mi).toLocaleString()+' mi':'—'}</div></div>
+    ${row.engine_state?`<div style="grid-column:1/-1"><div style="font-size:10px;color:var(--muted)">Event</div><div style="font-weight:600;color:var(--green);text-transform:capitalize">${esc(row.engine_state.replace(/_/g,' '))}</div></div>`:''}
+    ${row.accuracy_m!=null&&row.accuracy_m>50?`<div style="grid-column:1/-1"><div style="font-size:10px;color:var(--orange)">⚠ GPS accuracy ${Math.round(row.accuracy_m)}m — signal may be weak</div></div>`:''}
+
     <div><div style="font-size:10px;color:var(--muted)">Latitude</div><div style="font-weight:600;font-family:monospace;font-size:11px">${Number(row.lat).toFixed(5)}</div></div>
     <div><div style="font-size:10px;color:var(--muted)">Longitude</div><div style="font-weight:600;font-family:monospace;font-size:11px">${Number(row.lng).toFixed(5)}</div></div>
   </div>

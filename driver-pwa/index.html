@@ -1853,31 +1853,68 @@ function stopGpsTracking() {
   console.log('GPS tracking stopped');
 }
 
+// Offline GPS queue — pings stored in localStorage when Supabase write fails
+const GPS_QUEUE_KEY = '3ll_gps_queue';
+function _gpsQueueAdd(ping) {
+  try {
+    const q = JSON.parse(localStorage.getItem(GPS_QUEUE_KEY) || '[]');
+    q.push(ping);
+    // Cap queue at 60 pings (30 min of offline time)
+    if (q.length > 60) q.splice(0, q.length - 60);
+    localStorage.setItem(GPS_QUEUE_KEY, JSON.stringify(q));
+  } catch {}
+}
+async function _gpsQueueFlush() {
+  if (!supabaseClient) return;
+  try {
+    const q = JSON.parse(localStorage.getItem(GPS_QUEUE_KEY) || '[]');
+    if (!q.length) return;
+    const { error } = await supabaseClient.from('truck_telemetry').insert(q);
+    if (!error) { localStorage.removeItem(GPS_QUEUE_KEY); console.log('[GPS] flushed', q.length, 'queued pings'); }
+  } catch {}
+}
+
 async function sendDriverLocation() {
   if (!navigator.geolocation || !supabaseClient) return;
+  // Flush any offline-queued pings first
+  _gpsQueueFlush();
 
   navigator.geolocation.getCurrentPosition(
     async pos => {
-      const { latitude, longitude, speed, heading } = pos.coords;
+      const { latitude, longitude, speed, heading, accuracy } = pos.coords;
       const ts = new Date().toISOString();
       const truckId   = localStorage.getItem('3ll_truck')      || DRIVER_ID;
       const carrierId = localStorage.getItem('3ll_carrier_id') || localStorage.getItem('3ll_driver_id') || DRIVER_ID;
 
+      // Use live-schema column names: heading_deg, not heading
+      const ping = {
+        truck_id:    truckId,
+        carrier_id:  carrierId,
+        lat:         latitude,
+        lng:         longitude,
+        speed_mph:   speed ? parseFloat((speed * 2.237).toFixed(1)) : 0,
+        heading_deg: heading != null ? Math.round(heading) : null,
+        accuracy_m:  accuracy != null ? parseFloat(accuracy.toFixed(1)) : null,
+        ts
+      };
+
       try {
-        await supabaseClient.from('truck_telemetry').insert({
-          truck_id:   truckId,
-          carrier_id: carrierId,
-          lat:        latitude,
-          lng:        longitude,
-          speed_mph:  speed ? parseFloat((speed * 2.237).toFixed(1)) : 0,
-          heading:    heading ? Math.round(heading) : 0,
-          ts
-        });
+        const { error } = await supabaseClient.from('truck_telemetry').insert(ping);
+        if (error) {
+          console.warn('[GPS] write failed, queuing:', error.message);
+          _gpsQueueAdd(ping);
+        }
       } catch (err) {
-        console.debug('Location tracking error:', err);
+        console.warn('[GPS] offline, queuing ping');
+        _gpsQueueAdd(ping);
       }
     },
-    () => {}
+    err => {
+      // PERMISSION_DENIED=1, POSITION_UNAVAILABLE=2, TIMEOUT=3
+      if (err.code === 1) console.warn('[GPS] location permission denied');
+      else console.debug('[GPS] position error:', err.message);
+    },
+    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
   );
 }
 
