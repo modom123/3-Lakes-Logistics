@@ -182,3 +182,37 @@ def update_factoring(factoring_id: str, payload: dict) -> dict:
 def delete_factoring(factoring_id: str) -> dict:
     get_supabase().table("factoring_submissions").delete().eq("id", factoring_id).execute()
     return {"ok": True}
+
+
+# ── Bill of Lading (BOL) ────────────────────────────────
+
+@router.get("/bols")
+def list_bols(limit: int = 500, load_id: str | None = None, status: str | None = None) -> dict:
+    sb = get_supabase()
+    q = sb.table("bols").select("*").order("created_at", desc=True).limit(limit)
+    if load_id:
+        q = q.eq("load_id", load_id)
+    if status:
+        q = q.eq("status", status)
+    res = q.execute()
+    return {"count": len(res.data or []), "items": res.data or []}
+
+
+@router.post("/bols")
+def create_bol(payload: dict) -> dict:
+    res = get_supabase().table("bols").insert(payload).execute()
+    return {"ok": True, "item": res.data[0] if res.data else {}}
+
+
+@router.patch("/bols/{bol_id}")
+def update_bol(bol_id: str, payload: dict) -> dict:
+    from datetime import datetime, timezone
+    payload["updated_at"] = datetime.now(timezone.utc).isoformat()
+    get_supabase().table("bols").update(payload).eq("id", bol_id).execute()
+    return {"ok": True}
+
+
+@router.delete("/bols/{bol_id}")
+def delete_bol(bol_id: str) -> dict:
+    get_supabase().table("bols").delete().eq("id", bol_id).execute()
+    return {"ok": True}

@@ -1114,6 +1114,23 @@ td.td-name{font-weight:600;color:var(--navy);}
           <tbody id="load-table"><tr><td colspan="10"><div class="loading"><div class="spin"></div>Loading…</div></td></tr></tbody></table>
         </div>
       </div>
+
+      <!-- BOL Generator Section -->
+      <div class="card" style="margin-top:20px">
+        <div class="card-hd" style="display:flex;align-items:center;justify-content:space-between">
+          <div style="display:flex;align-items:center;gap:12px">
+            <div class="card-title">📄 Bill of Lading (BOL)</div>
+            <span class="card-chip" id="bols-count-chip">0 BOLs</span>
+          </div>
+          <button class="btn-navy" onclick="generateBOL(null)">+ Generate BOL</button>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px">
+          <div class="mc"><div class="mc-label">Total BOLs</div><div class="mc-val blue" id="bol-total">—</div></div>
+          <div class="mc"><div class="mc-label">Sent / Signed</div><div class="mc-val green" id="bol-sent">—</div></div>
+          <div class="mc"><div class="mc-label">Drafts</div><div class="mc-val gold" id="bol-drafts">—</div></div>
+        </div>
+        <div id="bols-table-wrap"><div class="loading"><div class="spin"></div>Loading…</div></div>
+      </div>
     </div>
 
     <!-- INVOICES -->
@@ -3140,6 +3157,7 @@ function nav(id){
   }
   if(id==='carriers'){const n=document.getElementById('carrier-notif');if(n)n.style.display='none';}
   if(id==='invoices'){const n=document.getElementById('invoice-notif');if(n)n.style.display='none';renderInvoices();}
+  if(id==='loads')loadBOLs();
   if(id==='notes')loadNotes();
   if(id==='reports')loadTeamReports();
   if(id==='exec-command'){const n=document.getElementById('exec-esc-notif');if(n)n.style.display='none';ecRefreshDashboard();}
@@ -3654,6 +3672,7 @@ async function openLoadDetail(loadId){
       <button class="btn-navy" onclick="cycleLoadStatus('${load.id}');closeModal('load-detail-modal')">▶ Next Status</button>
       <button class="btn-out" onclick="closeModal('load-detail-modal');openAssignModal('${load.id}')">🚛 Assign Driver</button>
       <button class="btn-out" onclick="sendRateCon('${load.id}')">📧 Rate Con</button>
+      <button class="btn-out" onclick="closeModal('load-detail-modal');generateBOL('${load.id}')">📄 BOL</button>
     </div>
   `;
   openModal('load-detail-modal');
@@ -11768,6 +11787,374 @@ async function deleteShipper(id) {
 }
 
 // ══════════════════════════════════════════════════════
+// BOL GENERATOR
+// ══════════════════════════════════════════════════════
+
+let allBOLs = [];
+let bolCounter = 1;
+
+async function loadBOLs() {
+  try {
+    const res = await apiFetch('/api/dashboard/bols?limit=500');
+    if (res.ok) allBOLs = (await res.json()).items || [];
+    else allBOLs = [];
+  } catch(e) { allBOLs = []; }
+  renderBOLsTable();
+}
+
+function renderBOLsTable() {
+  const wrap = document.getElementById('bols-table-wrap');
+  const chip = document.getElementById('bols-count-chip');
+  if (!wrap) return;
+  setText('bol-total', allBOLs.length);
+  setText('bol-sent', allBOLs.filter(b => b.status === 'sent' || b.status === 'signed').length);
+  setText('bol-drafts', allBOLs.filter(b => b.status === 'draft').length);
+  if (chip) chip.textContent = allBOLs.length + ' BOL' + (allBOLs.length !== 1 ? 's' : '');
+  if (!allBOLs.length) {
+    wrap.innerHTML = '<div style="padding:20px;text-align:center;color:var(--muted)">No BOLs generated yet. Click "+ Generate BOL" or use the 📄 BOL button on any load.</div>';
+    return;
+  }
+  const statusColor = { draft:'#f59e0b', sent:'#3b82f6', signed:'#22c55e' };
+  wrap.innerHTML = `<div class="tbl-wrap"><table>
+    <thead><tr><th>BOL #</th><th>Load #</th><th>Shipper</th><th>Consignee</th><th>Commodity</th><th>Weight</th><th>Pickup</th><th>Status</th><th></th></tr></thead>
+    <tbody>${allBOLs.map(b => {
+      const color = statusColor[b.status] || '#6b7280';
+      return `<tr>
+        <td style="font-weight:600;font-family:var(--ff-m)">${esc(b.bol_number)}</td>
+        <td style="font-size:12px;color:var(--muted)">${esc(b.pro_number||'—')}</td>
+        <td>${esc(b.shipper_name||'—')}<br><span style="font-size:11px;color:var(--muted)">${esc(b.shipper_city_state||b.origin_city||'')}</span></td>
+        <td>${esc(b.consignee_name||'—')}<br><span style="font-size:11px;color:var(--muted)">${esc(b.consignee_city_state||b.dest_city||'')}</span></td>
+        <td style="font-size:12px">${esc(b.commodity||'—')}</td>
+        <td style="font-size:12px;color:var(--muted)">${b.weight_lbs ? Number(b.weight_lbs).toLocaleString() + ' lbs' : '—'}</td>
+        <td style="font-size:12px;color:var(--muted)">${b.pickup_date||'—'}</td>
+        <td><span class="badge" style="background:${color}22;color:${color};border:1px solid ${color}44">${b.status||'draft'}</span></td>
+        <td style="display:flex;gap:6px">
+          <button class="btn-out" style="font-size:11px;padding:3px 8px" onclick="editBOL('${b.id}')">Edit</button>
+          <button class="btn-out" style="font-size:11px;padding:3px 8px" onclick="printBOL('${b.id}')">🖨️</button>
+          <button class="btn-out" style="font-size:11px;padding:3px 8px;color:#dc2626;border-color:#dc262644" onclick="deleteBOL('${b.id}')">✕</button>
+        </td>
+      </tr>`;
+    }).join('')}</tbody></table></div>`;
+}
+
+function generateBOL(loadId) {
+  const load = loadId ? allLoads.find(l => l.id === loadId) : null;
+  document.getElementById('bol-edit-id').value = '';
+  document.getElementById('bol-load-id').value = loadId || '';
+  document.getElementById('bol-modal-title').textContent = 'Generate Bill of Lading';
+
+  // Auto-generate BOL number
+  const now = new Date();
+  const seq = String(allBOLs.length + 1).padStart(4, '0');
+  document.getElementById('bol-number').value = `BOL-${now.getFullYear()}-${seq}`;
+
+  // Pre-fill from load data
+  if (load) {
+    document.getElementById('bol-pickup-date').value = load.pickup_date || '';
+    document.getElementById('bol-commodity').value = load.commodity || '';
+    document.getElementById('bol-weight').value = load.weight_lbs || '';
+    // Parse origin city/state
+    const origin = (load.origin_city || load.origin || '');
+    const originState = load.origin_state || '';
+    document.getElementById('bol-shipper-city-state').value = origin + (originState ? ', ' + originState : '');
+    const dest = (load.dest_city || load.destination || '');
+    const destState = load.dest_state || '';
+    document.getElementById('bol-consignee-city-state').value = dest + (destState ? ', ' + destState : '');
+    document.getElementById('bol-carrier-name').value = load.driver_name || '';
+    const carrier = allCarriers.find(c => c.company_name === load.driver_name);
+    if (carrier) {
+      document.getElementById('bol-carrier-mc').value = carrier.mc_number || '';
+    }
+    // Broker = shipper name
+    document.getElementById('bol-shipper-name').value = load.broker_name || load.shipper_name || '';
+    // Pro # = load number
+    const proField = document.getElementById('bol-number');
+    // keep BOL number but note pro_number via a data attribute
+    document.getElementById('bol-load-id').dataset.proNumber = load.load_number || '';
+    document.getElementById('bol-trailer-num').value = carrier?.trailer_number || '';
+  } else {
+    ['bol-pickup-date','bol-delivery-date','bol-shipper-name','bol-shipper-address',
+     'bol-shipper-city-state','bol-shipper-zip','bol-shipper-phone',
+     'bol-consignee-name','bol-consignee-address','bol-consignee-city-state',
+     'bol-consignee-zip','bol-consignee-phone','bol-carrier-name','bol-carrier-mc',
+     'bol-trailer-num','bol-commodity','bol-pieces','bol-weight','bol-temp',
+     'bol-instructions'].forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
+    document.getElementById('bol-hazmat').checked = false;
+    document.getElementById('bol-pkg-type').value = 'Pallet';
+    document.getElementById('bol-status').value = 'draft';
+  }
+  openModal('bol-modal');
+}
+
+function editBOL(bolId) {
+  const b = allBOLs.find(x => x.id === bolId);
+  if (!b) return;
+  document.getElementById('bol-edit-id').value = b.id;
+  document.getElementById('bol-load-id').value = b.load_id || '';
+  document.getElementById('bol-modal-title').textContent = 'Edit BOL — ' + b.bol_number;
+  document.getElementById('bol-number').value = b.bol_number || '';
+  document.getElementById('bol-pickup-date').value = b.pickup_date || '';
+  document.getElementById('bol-delivery-date').value = b.delivery_date || '';
+  document.getElementById('bol-shipper-name').value = b.shipper_name || '';
+  document.getElementById('bol-shipper-phone').value = b.shipper_phone || '';
+  document.getElementById('bol-shipper-address').value = b.shipper_address || '';
+  document.getElementById('bol-shipper-city-state').value = (b.shipper_city||'') + (b.shipper_state ? ', '+b.shipper_state : '');
+  document.getElementById('bol-shipper-zip').value = b.shipper_zip || '';
+  document.getElementById('bol-consignee-name').value = b.consignee_name || '';
+  document.getElementById('bol-consignee-phone').value = b.consignee_phone || '';
+  document.getElementById('bol-consignee-address').value = b.consignee_address || '';
+  document.getElementById('bol-consignee-city-state').value = (b.consignee_city||'') + (b.consignee_state ? ', '+b.consignee_state : '');
+  document.getElementById('bol-consignee-zip').value = b.consignee_zip || '';
+  document.getElementById('bol-carrier-name').value = b.carrier_name || '';
+  document.getElementById('bol-carrier-mc').value = b.carrier_mc || '';
+  document.getElementById('bol-trailer-num').value = b.trailer_number || '';
+  document.getElementById('bol-commodity').value = b.commodity || '';
+  document.getElementById('bol-pieces').value = b.num_pieces || '';
+  document.getElementById('bol-pkg-type').value = b.package_type || 'Pallet';
+  document.getElementById('bol-weight').value = b.weight_lbs || '';
+  document.getElementById('bol-temp').value = b.temperature_req || '';
+  document.getElementById('bol-hazmat').checked = !!b.hazmat;
+  document.getElementById('bol-instructions').value = b.special_instructions || '';
+  document.getElementById('bol-status').value = b.status || 'draft';
+  openModal('bol-modal');
+}
+
+function parseCityState(str) {
+  if (!str) return { city: '', state: '' };
+  const parts = str.split(',').map(s => s.trim());
+  return { city: parts[0] || '', state: parts[1] || '' };
+}
+
+async function saveBOL() {
+  const btn = document.getElementById('bol-save-btn');
+  const bolNumber = document.getElementById('bol-number')?.value.trim();
+  if (!bolNumber) { toast('BOL number is required', 'error'); return; }
+  const editId = document.getElementById('bol-edit-id')?.value;
+  const loadId = document.getElementById('bol-load-id')?.value;
+  const proNum = document.getElementById('bol-load-id')?.dataset.proNumber;
+  const load = loadId ? allLoads.find(l => l.id === loadId) : null;
+  const shipperCS = parseCityState(document.getElementById('bol-shipper-city-state')?.value);
+  const consigneeCS = parseCityState(document.getElementById('bol-consignee-city-state')?.value);
+  const body = {
+    load_id: loadId || null,
+    bol_number: bolNumber,
+    pro_number: proNum || load?.load_number || null,
+    pickup_date: document.getElementById('bol-pickup-date')?.value || null,
+    delivery_date: document.getElementById('bol-delivery-date')?.value || null,
+    shipper_name: document.getElementById('bol-shipper-name')?.value.trim() || null,
+    shipper_phone: document.getElementById('bol-shipper-phone')?.value.trim() || null,
+    shipper_address: document.getElementById('bol-shipper-address')?.value.trim() || null,
+    shipper_city: shipperCS.city || null,
+    shipper_state: shipperCS.state || null,
+    shipper_zip: document.getElementById('bol-shipper-zip')?.value.trim() || null,
+    consignee_name: document.getElementById('bol-consignee-name')?.value.trim() || null,
+    consignee_phone: document.getElementById('bol-consignee-phone')?.value.trim() || null,
+    consignee_address: document.getElementById('bol-consignee-address')?.value.trim() || null,
+    consignee_city: consigneeCS.city || null,
+    consignee_state: consigneeCS.state || null,
+    consignee_zip: document.getElementById('bol-consignee-zip')?.value.trim() || null,
+    carrier_name: document.getElementById('bol-carrier-name')?.value.trim() || null,
+    carrier_mc: document.getElementById('bol-carrier-mc')?.value.trim() || null,
+    trailer_number: document.getElementById('bol-trailer-num')?.value.trim() || null,
+    commodity: document.getElementById('bol-commodity')?.value.trim() || null,
+    num_pieces: parseInt(document.getElementById('bol-pieces')?.value) || null,
+    package_type: document.getElementById('bol-pkg-type')?.value || 'Pallet',
+    weight_lbs: parseFloat(document.getElementById('bol-weight')?.value) || null,
+    temperature_req: document.getElementById('bol-temp')?.value.trim() || null,
+    hazmat: document.getElementById('bol-hazmat')?.checked || false,
+    special_instructions: document.getElementById('bol-instructions')?.value.trim() || null,
+    status: document.getElementById('bol-status')?.value || 'draft',
+    origin_city: load?.origin_city || load?.origin || null,
+    origin_state: load?.origin_state || null,
+    dest_city: load?.dest_city || load?.destination || null,
+    dest_state: load?.dest_state || null,
+  };
+  if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
+  const r = editId
+    ? await apiFetch('/api/dashboard/bols/' + editId, 'PATCH', body)
+    : await apiFetch('/api/dashboard/bols', 'POST', body);
+  if (btn) { btn.disabled = false; btn.textContent = 'Save BOL'; }
+  if (r.ok) {
+    closeModal('bol-modal');
+    toast('BOL saved!');
+    fireTrigger('analytics', { event: 'bol_generated', bol_number: bolNumber, load_id: loadId });
+    await loadBOLs();
+  } else toast('Error saving BOL', 'error');
+}
+
+async function deleteBOL(bolId) {
+  if (!confirm('Delete this BOL?')) return;
+  await apiFetch('/api/dashboard/bols/' + bolId, 'DELETE');
+  toast('BOL deleted');
+  await loadBOLs();
+}
+
+function printBOL(bolId) {
+  const b = allBOLs.find(x => x.id === bolId);
+  if (!b) return;
+  printBOLData(b);
+}
+
+function printBOLPreview() {
+  const bolNumber = document.getElementById('bol-number')?.value || 'DRAFT';
+  const shipperCS = parseCityState(document.getElementById('bol-shipper-city-state')?.value);
+  const consigneeCS = parseCityState(document.getElementById('bol-consignee-city-state')?.value);
+  const b = {
+    bol_number: bolNumber,
+    pro_number: document.getElementById('bol-load-id')?.dataset.proNumber || '',
+    pickup_date: document.getElementById('bol-pickup-date')?.value || '',
+    delivery_date: document.getElementById('bol-delivery-date')?.value || '',
+    shipper_name: document.getElementById('bol-shipper-name')?.value || '',
+    shipper_phone: document.getElementById('bol-shipper-phone')?.value || '',
+    shipper_address: document.getElementById('bol-shipper-address')?.value || '',
+    shipper_city: shipperCS.city, shipper_state: shipperCS.state,
+    shipper_zip: document.getElementById('bol-shipper-zip')?.value || '',
+    consignee_name: document.getElementById('bol-consignee-name')?.value || '',
+    consignee_phone: document.getElementById('bol-consignee-phone')?.value || '',
+    consignee_address: document.getElementById('bol-consignee-address')?.value || '',
+    consignee_city: consigneeCS.city, consignee_state: consigneeCS.state,
+    consignee_zip: document.getElementById('bol-consignee-zip')?.value || '',
+    carrier_name: document.getElementById('bol-carrier-name')?.value || '',
+    carrier_mc: document.getElementById('bol-carrier-mc')?.value || '',
+    trailer_number: document.getElementById('bol-trailer-num')?.value || '',
+    commodity: document.getElementById('bol-commodity')?.value || '',
+    num_pieces: document.getElementById('bol-pieces')?.value || '',
+    package_type: document.getElementById('bol-pkg-type')?.value || 'Pallet',
+    weight_lbs: document.getElementById('bol-weight')?.value || '',
+    temperature_req: document.getElementById('bol-temp')?.value || '',
+    hazmat: document.getElementById('bol-hazmat')?.checked || false,
+    special_instructions: document.getElementById('bol-instructions')?.value || '',
+  };
+  printBOLData(b);
+}
+
+function printBOLData(b) {
+  const fw = (v) => v || '&nbsp;';
+  const addr = (name, addr, city, state, zip, phone) =>
+    `<div style="font-weight:700;font-size:14px">${name||'—'}</div>
+     <div>${addr||''}</div>
+     <div>${[city,state].filter(Boolean).join(', ')}${zip?' '+zip:''}</div>
+     ${phone?`<div>${phone}</div>`:''}`;
+
+  const html = `<!DOCTYPE html><html><head><meta charset="utf-8">
+  <title>BOL — ${b.bol_number}</title>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box;font-family:Arial,sans-serif}
+    body{padding:20px;font-size:12px;color:#000}
+    h1{font-size:22px;font-weight:900;text-transform:uppercase;letter-spacing:2px;text-align:center}
+    .subtitle{text-align:center;font-size:11px;color:#555;margin-bottom:16px}
+    .header-row{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px}
+    .bol-num{font-size:18px;font-weight:900;border:2px solid #000;padding:6px 14px}
+    table{width:100%;border-collapse:collapse;margin-bottom:14px}
+    td,th{border:1px solid #999;padding:7px 9px;vertical-align:top}
+    th{background:#f0f0f0;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px}
+    .section-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;background:#f0f0f0;padding:5px 9px;border:1px solid #999;border-bottom:0}
+    .sig-box{height:60px;border-bottom:1px solid #000;margin-top:30px}
+    .sig-label{font-size:10px;color:#555;margin-top:4px}
+    .freight-row td{font-size:13px}
+    .hazmat{display:inline-block;background:#fef3c7;border:2px solid #f59e0b;padding:2px 8px;font-weight:700;font-size:11px;color:#92400e;border-radius:3px}
+    @media print{body{padding:0} button{display:none}}
+  </style></head><body>
+  <div style="text-align:center;margin-bottom:8px">
+    <div style="font-size:9px;color:#555;letter-spacing:1px">3 LAKES LOGISTICS</div>
+    <h1>Bill of Lading</h1>
+    <div class="subtitle">STRAIGHT BILL OF LADING — NOT NEGOTIABLE</div>
+  </div>
+  <div class="header-row">
+    <div>
+      <div style="font-size:10px;color:#555;margin-bottom:2px">BOL NUMBER</div>
+      <div class="bol-num">${fw(b.bol_number)}</div>
+    </div>
+    <div style="text-align:right">
+      ${b.pro_number?`<div style="font-size:10px;color:#555">PRO / LOAD #: <strong>${b.pro_number}</strong></div>`:''}
+      ${b.pickup_date?`<div style="font-size:10px;color:#555">PICKUP DATE: <strong>${b.pickup_date}</strong></div>`:''}
+      ${b.delivery_date?`<div style="font-size:10px;color:#555">DELIVERY DATE: <strong>${b.delivery_date}</strong></div>`:''}
+      ${b.trailer_number?`<div style="font-size:10px;color:#555">TRAILER #: <strong>${b.trailer_number}</strong></div>`:''}
+    </div>
+  </div>
+
+  <table>
+    <thead><tr>
+      <th style="width:50%">Shipper (Origin)</th>
+      <th style="width:50%">Consignee (Destination)</th>
+    </tr></thead>
+    <tbody><tr>
+      <td>${addr(b.shipper_name, b.shipper_address, b.shipper_city, b.shipper_state, b.shipper_zip, b.shipper_phone)}</td>
+      <td>${addr(b.consignee_name, b.consignee_address, b.consignee_city, b.consignee_state, b.consignee_zip, b.consignee_phone)}</td>
+    </tr></tbody>
+  </table>
+
+  <table>
+    <thead><tr><th colspan="3">Carrier Information</th></tr></thead>
+    <tbody><tr>
+      <td><strong>Carrier:</strong> ${fw(b.carrier_name)}</td>
+      <td><strong>MC #:</strong> ${fw(b.carrier_mc)}</td>
+      <td><strong>Trailer #:</strong> ${fw(b.trailer_number)}</td>
+    </tr></tbody>
+  </table>
+
+  <div class="section-title">Freight Description</div>
+  <table>
+    <thead><tr>
+      <th>Quantity</th><th>Package Type</th><th>Description of Articles</th>
+      <th>Weight (lbs)</th><th>Class / Rate</th><th>HM</th>
+    </tr></thead>
+    <tbody class="freight-row"><tr>
+      <td>${fw(b.num_pieces)}</td>
+      <td>${fw(b.package_type)}</td>
+      <td>
+        ${fw(b.commodity)}
+        ${b.temperature_req?`<br><span style="font-size:11px;color:#555">Temp: ${b.temperature_req}</span>`:''}
+      </td>
+      <td>${b.weight_lbs?Number(b.weight_lbs).toLocaleString():'&nbsp;'}</td>
+      <td>&nbsp;</td>
+      <td style="text-align:center">${b.hazmat?'<span class="hazmat">HM</span>':'—'}</td>
+    </tr>
+    <tr><td colspan="3" style="font-weight:700;text-align:right">TOTAL:</td>
+    <td style="font-weight:700">${b.weight_lbs?Number(b.weight_lbs).toLocaleString()+' lbs':'&nbsp;'}</td>
+    <td colspan="2"></td></tr></tbody>
+  </table>
+
+  ${b.special_instructions?`<table><tbody><tr><td><strong>Special Instructions:</strong> ${b.special_instructions}</td></tr></tbody></table>`:''}
+
+  <div style="font-size:10px;color:#555;margin:10px 0;line-height:1.5">
+    RECEIVED, subject to individually determined rates or contracts that have been agreed upon in writing between the carrier and shipper, the property described above in apparent good order, except as noted (contents and condition of contents of packages unknown), marked, consigned, and destined as indicated above which said carrier (the word carrier being understood throughout this contract as meaning any person or corporation in possession of the property under the contract) agrees to carry to its usual place of delivery at said destination, if on its route, otherwise to deliver to another carrier on the route to said destination.
+  </div>
+
+  <table>
+    <tbody><tr>
+      <td style="width:33%">
+        <div class="sig-box"></div>
+        <div class="sig-label">Shipper Signature &amp; Date</div>
+        <div style="font-size:10px;margin-top:4px">Print Name: _______________________</div>
+      </td>
+      <td style="width:33%">
+        <div class="sig-box"></div>
+        <div class="sig-label">Carrier Signature &amp; Date</div>
+        <div style="font-size:10px;margin-top:4px">Print Name: _______________________</div>
+      </td>
+      <td style="width:33%">
+        <div class="sig-box"></div>
+        <div class="sig-label">Consignee Signature &amp; Date (Delivery)</div>
+        <div style="font-size:10px;margin-top:4px">Print Name: _______________________</div>
+      </td>
+    </tr></tbody>
+  </table>
+
+  <div style="text-align:center;font-size:9px;color:#999;margin-top:10px">
+    Generated by 3 Lakes Logistics — Eagle Eye TMS · ${new Date().toLocaleDateString()}
+  </div>
+  <div style="text-align:center;margin-top:12px">
+    <button onclick="window.print()" style="padding:8px 20px;background:#1a2942;color:#fff;border:none;border-radius:6px;font-size:13px;cursor:pointer">🖨️ Print / Save PDF</button>
+  </div>
+  </body></html>`;
+
+  const w = window.open('', '_blank', 'width=850,height=1100');
+  if (w) { w.document.write(html); w.document.close(); }
+  else toast('Allow popups to print BOL', 'error');
+}
+
+// ══════════════════════════════════════════════════════
 // CSA SAFETY SCORES
 // ══════════════════════════════════════════════════════
 
@@ -12363,6 +12750,120 @@ async function settleFactoring(id) {
   <div class="modal" style="max-width:560px">
     <div class="modal-hd"><span class="modal-title">Load Details</span><button class="modal-close" onclick="closeModal('load-detail-modal')">✕</button></div>
     <div style="padding:20px" id="load-detail-body"></div>
+  </div>
+</div>
+
+<!-- BOL GENERATOR MODAL -->
+<div class="modal-overlay" id="bol-modal" onclick="if(event.target===this)closeModal('bol-modal')">
+  <div class="modal" style="max-width:680px;max-height:90vh;overflow-y:auto">
+    <div class="modal-hd"><span class="modal-title" id="bol-modal-title">Generate Bill of Lading</span><button class="modal-close" onclick="closeModal('bol-modal')">✕</button></div>
+    <div style="padding:20px;display:flex;flex-direction:column;gap:16px">
+      <input type="hidden" id="bol-edit-id">
+      <input type="hidden" id="bol-load-id">
+
+      <!-- BOL Number + Status + Dates -->
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
+        <div>
+          <label style="font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:6px">BOL NUMBER *</label>
+          <input class="fi" id="bol-number" placeholder="BOL-2026-0001" style="width:100%">
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:6px">PICKUP DATE</label>
+          <input class="fi" type="date" id="bol-pickup-date" style="width:100%">
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:6px">DELIVERY DATE</label>
+          <input class="fi" type="date" id="bol-delivery-date" style="width:100%">
+        </div>
+      </div>
+
+      <!-- Shipper -->
+      <div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:14px">
+        <div style="font-size:11px;font-weight:700;color:var(--muted);margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px">Shipper (Origin)</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div><label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px">Company Name</label><input class="fi" id="bol-shipper-name" placeholder="Shipper Company" style="width:100%"></div>
+          <div><label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px">Phone</label><input class="fi" id="bol-shipper-phone" placeholder="(555) 000-0000" style="width:100%"></div>
+          <div style="grid-column:1/-1"><label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px">Address</label><input class="fi" id="bol-shipper-address" placeholder="123 Warehouse Dr" style="width:100%"></div>
+          <div><label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px">City, State</label><input class="fi" id="bol-shipper-city-state" placeholder="Detroit, MI" style="width:100%"></div>
+          <div><label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px">ZIP</label><input class="fi" id="bol-shipper-zip" placeholder="48201" style="width:100%"></div>
+        </div>
+      </div>
+
+      <!-- Consignee -->
+      <div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:14px">
+        <div style="font-size:11px;font-weight:700;color:var(--muted);margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px">Consignee (Destination)</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div><label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px">Company Name</label><input class="fi" id="bol-consignee-name" placeholder="Receiving Company" style="width:100%"></div>
+          <div><label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px">Phone</label><input class="fi" id="bol-consignee-phone" placeholder="(555) 000-0000" style="width:100%"></div>
+          <div style="grid-column:1/-1"><label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px">Address</label><input class="fi" id="bol-consignee-address" placeholder="456 Distribution Ave" style="width:100%"></div>
+          <div><label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px">City, State</label><input class="fi" id="bol-consignee-city-state" placeholder="Atlanta, GA" style="width:100%"></div>
+          <div><label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px">ZIP</label><input class="fi" id="bol-consignee-zip" placeholder="30301" style="width:100%"></div>
+        </div>
+      </div>
+
+      <!-- Carrier -->
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
+        <div>
+          <label style="font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:6px">CARRIER NAME</label>
+          <input class="fi" id="bol-carrier-name" placeholder="Carrier LLC" style="width:100%">
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:6px">MC NUMBER</label>
+          <input class="fi" id="bol-carrier-mc" placeholder="MC-000000" style="width:100%">
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:6px">TRAILER #</label>
+          <input class="fi" id="bol-trailer-num" placeholder="T-1234" style="width:100%">
+        </div>
+      </div>
+
+      <!-- Freight Description -->
+      <div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:14px">
+        <div style="font-size:11px;font-weight:700;color:var(--muted);margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px">Freight Description</div>
+        <div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:10px;align-items:end">
+          <div><label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px">Commodity / Description *</label><input class="fi" id="bol-commodity" placeholder="General Freight" style="width:100%"></div>
+          <div><label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px"># Pieces</label><input class="fi" type="number" id="bol-pieces" placeholder="24" style="width:100%"></div>
+          <div><label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px">Package Type</label>
+            <select class="fsel" id="bol-pkg-type" style="width:100%">
+              <option>Pallet</option><option>Box</option><option>Crate</option><option>Drum</option><option>Bag</option><option>Roll</option><option>Bundle</option><option>Loose</option>
+            </select>
+          </div>
+          <div><label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px">Weight (lbs)</label><input class="fi" type="number" id="bol-weight" placeholder="42000" style="width:100%"></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px">
+          <div>
+            <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px">Temperature Req. (Reefer)</label>
+            <input class="fi" id="bol-temp" placeholder="e.g. 34°F / 1°C" style="width:100%">
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;padding-top:20px">
+            <input type="checkbox" id="bol-hazmat" style="width:16px;height:16px;accent-color:var(--accent)">
+            <label for="bol-hazmat" style="font-size:13px;cursor:pointer">Hazardous Material (HM)</label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Special Instructions + Status -->
+      <div style="display:grid;grid-template-columns:2fr 1fr;gap:12px">
+        <div>
+          <label style="font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:6px">SPECIAL INSTRUCTIONS</label>
+          <textarea class="fi" id="bol-instructions" rows="2" placeholder="e.g. Deliver to dock #3 only. Call 30 min ahead." style="width:100%;resize:vertical;font-size:13px"></textarea>
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:6px">STATUS</label>
+          <select class="fsel" id="bol-status" style="width:100%">
+            <option value="draft">Draft</option>
+            <option value="sent">Sent</option>
+            <option value="signed">Signed</option>
+          </select>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:8px;justify-content:flex-end;padding-top:8px;border-top:1px solid var(--border)">
+        <button class="btn-out" onclick="closeModal('bol-modal')">Cancel</button>
+        <button class="btn-out" onclick="printBOLPreview()">🖨️ Print Preview</button>
+        <button class="btn-navy" onclick="saveBOL()" id="bol-save-btn">Save BOL</button>
+      </div>
+    </div>
   </div>
 </div>
 
