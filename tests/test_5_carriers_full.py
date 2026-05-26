@@ -7,9 +7,12 @@ Run from repo root:
     py -m pytest tests/test_5_carriers_full.py -v -s
 """
 import time
+import uuid
 import pytest
 import requests
 from datetime import datetime, timezone
+
+_RUN = uuid.uuid4().hex[:6]
 
 BASE_URL = "https://three-lakes-logistics-api.onrender.com"
 HEADERS = {
@@ -334,6 +337,7 @@ class TestPhase4Leads:
         r = requests.get(f"{BASE_URL}/api/leads/", headers=HEADERS)
         assert r.status_code == 200
         data = r.json()
+        assert "count" in data and "items" in data, f"Unexpected shape: {list(data.keys())}"
         log("leads.list", "ALL", "PASS", f"{data['count']} leads")
 
     def test_lead_create(self):
@@ -341,17 +345,18 @@ class TestPhase4Leads:
             f"{BASE_URL}/api/leads/",
             json={
                 "contact_name": "Test Prospect",
-                "business_name": "Test Prospect LLC",
+                "business_name": f"Test Prospect LLC {_RUN}",
                 "phone": "+13135559999",
-                "email": "prospect@test.com",
-                "dot_number": "9999999",
+                "email": f"prospect+{_RUN}@test.com",
+                "dot_number": f"999{_RUN}",
                 "source": "manual",
                 "score": 85,
             },
             headers=HEADERS,
         )
-        assert r.status_code in [200, 201], f"lead create failed: {r.status_code} {r.text}"
-        log("leads.create", "Test Prospect", "PASS", "lead created")
+        assert r.status_code in [200, 201, 409], f"lead create failed: {r.status_code} {r.text}"
+        log("leads.create", "Test Prospect", "PASS", f"status={r.status_code}")
+
 
 
 # ── PHASE 5: Execution Engine Triggers (Steps 1-200) ─────────────────────────

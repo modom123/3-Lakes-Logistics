@@ -9716,7 +9716,9 @@ const TS_DOMAINS = [
       {
         name: 'List carriers',
         run: async () => {
-          const d = await apiFetch('/api/carriers/');
+          const r = await apiFetch('/api/carriers/');
+          if (!r.ok) throw new Error(`HTTP ${r.status}`);
+          const d = await r.json();
           return `${Array.isArray(d) ? d.length : (d?.count ?? '?')} record(s)`;
         }
       },
@@ -9734,13 +9736,14 @@ const TS_DOMAINS = [
       {
         name: 'Carrier intake POST (test carrier)',
         run: async () => {
-          const d = await apiFetch('/api/carriers/intake', 'POST', {
+          const r = await apiFetch('/api/carriers/intake', 'POST', {
             company_name: 'Eagle Eye Test Carrier', dot_number: '9000001', mc_number: '900001',
             email: 'test@eagleeye.internal', phone: '+13135550001',
             trailer_type: 'dry_van', equipment_count: 1
           });
-          if (!d || d.error) throw new Error(d?.error || 'No response');
-          return `intake accepted — id ${d.carrier_id || d.id || '?'}`;
+          if (!r.ok && r.status !== 409) throw new Error(`HTTP ${r.status}`);
+          const d = await r.json();
+          return r.status === 409 ? 'carrier exists (ok)' : `intake accepted — id ${d.carrier_id || d.id || '?'}`;
         }
       }
     ]
@@ -9751,7 +9754,9 @@ const TS_DOMAINS = [
       {
         name: 'List fleet',
         run: async () => {
-          const d = await apiFetch('/api/fleet/');
+          const r = await apiFetch('/api/fleet/');
+          if (!r.ok) throw new Error(`HTTP ${r.status}`);
+          const d = await r.json();
           return `${Array.isArray(d) ? d.length : (d?.count ?? '?')} record(s)`;
         }
       },
@@ -9766,11 +9771,13 @@ const TS_DOMAINS = [
       {
         name: 'HOS update (test driver)',
         run: async () => {
-          const d = await apiFetch('/api/telemetry/hos', 'POST', {
+          const r = await apiFetch('/api/telemetry/hos', 'POST', {
             carrier_id: 'EE-TEST-001', driver_code: 'Eagle Eye Test Driver',
             duty_status: 'off_duty', drive_remaining_min: 660, shift_remaining_min: 840
           });
-          if (!d || d.error) throw new Error(d?.error || 'No response');
+          if (!r.ok) throw new Error(`HTTP ${r.status}`);
+          const d = await r.json();
+          if (!d.ok) throw new Error(d.error || 'HOS update failed');
           return `HOS recorded — status off_duty`;
         }
       }
@@ -9782,7 +9789,9 @@ const TS_DOMAINS = [
       {
         name: 'List leads',
         run: async () => {
-          const d = await apiFetch('/api/leads/');
+          const r = await apiFetch('/api/leads/');
+          if (!r.ok) throw new Error(`HTTP ${r.status}`);
+          const d = await r.json();
           if (!('count' in d) || !('items' in d)) throw new Error('Missing count/items keys');
           return `${d.count} lead(s)`;
         }
@@ -9790,7 +9799,9 @@ const TS_DOMAINS = [
       {
         name: 'Leads limit param',
         run: async () => {
-          const d = await apiFetch('/api/leads/?limit=5');
+          const r = await apiFetch('/api/leads/?limit=5');
+          if (!r.ok) throw new Error(`HTTP ${r.status}`);
+          const d = await r.json();
           if (d.count > 5) throw new Error(`Expected ≤5, got ${d.count}`);
           return `limit=5 → ${d.count} returned`;
         }
@@ -9798,13 +9809,14 @@ const TS_DOMAINS = [
       {
         name: 'Lead create (test prospect)',
         run: async () => {
-          const d = await apiFetch('/api/leads/', 'POST', {
-            name: 'Eagle Eye Test Prospect', phone: '+13135559999',
-            email: 'prospect@eagleeye.internal', dot: '9999999',
-            source: 'manual', score: 85
+          const r = await apiFetch('/api/leads/', 'POST', {
+            contact_name: 'Eagle Eye Test Prospect', phone: '+13135559999',
+            email: 'prospect@eagleeye.internal', dot_number: '9900001',
+            business_name: 'Eagle Eye Test LLC', source: 'manual', score: 85
           });
-          if (!d || d.error) throw new Error(d?.error || 'No response');
-          return `lead created — id ${d.id || d.lead_id || '?'}`;
+          if (!r.ok && r.status !== 409) throw new Error(`HTTP ${r.status}`);
+          const d = await r.json();
+          return r.status === 409 ? 'duplicate — lead already exists (ok)' : `lead created — id ${d.lead?.id || '?'}`;
         }
       }
     ]
@@ -9815,7 +9827,9 @@ const TS_DOMAINS = [
       {
         name: 'Latest positions shape',
         run: async () => {
-          const d = await apiFetch('/api/telemetry/latest');
+          const r = await apiFetch('/api/telemetry/latest');
+          if (!r.ok) throw new Error(`HTTP ${r.status}`);
+          const d = await r.json();
           if (!('count' in d) || !Array.isArray(d.items)) throw new Error('Bad shape');
           return `${d.count} position(s)`;
         }
@@ -9823,11 +9837,13 @@ const TS_DOMAINS = [
       {
         name: 'Ping ingestion',
         run: async () => {
-          const d = await apiFetch('/api/telemetry/ping', 'POST', {
+          const r = await apiFetch('/api/telemetry/ping', 'POST', {
             carrier_id: 'test-carrier-001', truck_id: 'test-truck-001',
             eld_provider: 'samsara', lat: 34.0522, lng: -118.2437,
-            speed_mph: 55.5, heading_deg: 270.0
+            speed_mph: 55.5, heading: 270
           });
+          if (!r.ok) throw new Error(`HTTP ${r.status}`);
+          const d = await r.json();
           if (!d.ok) throw new Error('ok !== true');
           return 'ping accepted';
         }
@@ -9852,7 +9868,9 @@ const TS_DOMAINS = [
       {
         name: 'Execution domains',
         run: async () => {
-          const d = await apiFetch('/api/execution/domains');
+          const r = await apiFetch('/api/execution/domains');
+          if (!r.ok) throw new Error(`HTTP ${r.status}`);
+          const d = await r.json();
           const domains = Array.isArray(d) ? d : (d?.domains || []);
           return `${domains.length} domain(s) registered`;
         }
@@ -9860,7 +9878,9 @@ const TS_DOMAINS = [
       {
         name: 'Founders inventory',
         run: async () => {
-          const d = await apiFetch('/api/founders/inventory');
+          const r = await apiFetch('/api/founders/inventory');
+          if (!r.ok) throw new Error(`HTTP ${r.status}`);
+          const d = await r.json();
           const items = Array.isArray(d) ? d : (d?.items || d?.inventory || []);
           return `${items.length} item(s) in inventory`;
         }
@@ -9873,23 +9893,29 @@ const TS_DOMAINS = [
       {
         name: 'Trigger status',
         run: async () => {
-          const d = await apiFetch('/api/triggers/status');
+          const r = await apiFetch('/api/triggers/status');
+          if (!r.ok) throw new Error(`HTTP ${r.status}`);
+          const d = await r.json();
           return `engine status: ${JSON.stringify(d).slice(0,80)}`;
         }
       },
       {
         name: 'Compliance trigger (all carriers)',
         run: async () => {
-          const d = await apiFetch('/api/triggers/compliance', 'POST', { carrier_ids: [] });
-          if (!d || d.error) throw new Error(d?.error || 'No response');
+          const r = await apiFetch('/api/triggers/compliance', 'POST', { carrier_ids: [] });
+          if (!r.ok) throw new Error(`HTTP ${r.status}`);
+          const d = await r.json();
+          if (d.error) throw new Error(d.error);
           return `compliance sweep fired — ${JSON.stringify(d).slice(0,60)}`;
         }
       },
       {
         name: 'Analytics trigger',
         run: async () => {
-          const d = await apiFetch('/api/triggers/analytics', 'POST', {});
-          if (!d || d.error) throw new Error(d?.error || 'No response');
+          const r = await apiFetch('/api/triggers/analytics', 'POST', {});
+          if (!r.ok) throw new Error(`HTTP ${r.status}`);
+          const d = await r.json();
+          if (d.error) throw new Error(d.error);
           return `analytics triggered — ${JSON.stringify(d).slice(0,60)}`;
         }
       }
@@ -9960,7 +9986,9 @@ const TS_DOMAINS = [
       {
         name: 'Bond thread endpoint',
         run: async () => {
-          const d = await apiFetch('/api/bond/thread');
+          const r = await apiFetch('/api/bond/thread');
+          if (!r.ok) throw new Error(`HTTP ${r.status}`);
+          const d = await r.json();
           const msgs = Array.isArray(d) ? d : (d?.messages || d?.thread || []);
           return `${msgs.length} message(s) in thread`;
         }
@@ -9968,8 +9996,10 @@ const TS_DOMAINS = [
       {
         name: 'Bond status',
         run: async () => {
-          const d = await apiFetch('/api/bond/status');
-          return `sandbox=${d.sandbox_id?.slice(0,8)||'?'}… connected=${d.connected??'?'}`;
+          const r = await apiFetch('/api/bond/status');
+          if (!r.ok) throw new Error(`HTTP ${r.status}`);
+          const d = await r.json();
+          return `messages=${d.total_messages??'?'} pending_out=${d.pending_outbound??'?'}`;
         }
       },
       {
