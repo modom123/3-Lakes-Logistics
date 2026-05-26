@@ -1427,17 +1427,56 @@ td.td-name{font-weight:600;color:var(--navy);}
 
     <!-- IFTA — rendered dynamically by renderIFTA() -->
     <div class="page" id="page-ifta">
-      <div class="page-hdr"><div class="page-hdr-l"><div class="chip">Quarterly</div><h2>IFTA / Permits / Tax</h2></div><button class="btn-navy">+ Log Miles</button></div>
-      <div id="ifta-metrics" class="g3"></div>
-      <div class="g2">
+      <div class="page-hdr">
+        <div class="page-hdr-l"><div class="chip">Quarterly</div><h2>IFTA Fuel Tax</h2></div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <select id="ifta-quarter-sel" class="fsel" onchange="renderIFTA()" style="font-size:12px;padding:6px 10px"></select>
+          <select id="ifta-carrier-sel" class="fsel" onchange="renderIFTA()" style="font-size:12px;padding:6px 10px;display:none"></select>
+        </div>
+      </div>
+      <div id="ifta-metrics" class="g4"></div>
+      <div class="g2" style="margin-bottom:16px">
+        <!-- Miles by State -->
         <div class="card">
           <div class="card-hd"><div class="card-title" id="ifta-state-title">Miles by State</div></div>
           <div id="ifta-state-table"></div>
+          <div id="ifta-mileage-add-form" style="padding:12px 16px;border-top:1px solid var(--border)">
+            <div style="font-size:11px;font-weight:600;color:var(--muted);letter-spacing:.5px;margin-bottom:8px">ADD MILEAGE</div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end">
+              <div><div style="font-size:10px;color:var(--muted);margin-bottom:3px">State</div><input id="ifta-add-state" class="fi" placeholder="MI" maxlength="2" style="width:60px;text-transform:uppercase"></div>
+              <div><div style="font-size:10px;color:var(--muted);margin-bottom:3px">Miles</div><input id="ifta-add-miles" class="fi" type="number" placeholder="4200" style="width:100px"></div>
+              <button class="btn-navy" onclick="addIFTAMileage()" style="font-size:12px;padding:7px 14px">+ Add</button>
+            </div>
+          </div>
         </div>
+        <!-- Fuel Purchases -->
         <div class="card">
-          <div class="card-hd"><div class="card-title">Permit & Registration Tracker</div></div>
-          <div id="ifta-tracker"></div>
+          <div class="card-hd"><div class="card-title">Fuel Purchases</div></div>
+          <div id="ifta-fuel-table"></div>
+          <div id="ifta-fuel-add-form" style="padding:12px 16px;border-top:1px solid var(--border)">
+            <div style="font-size:11px;font-weight:600;color:var(--muted);letter-spacing:.5px;margin-bottom:8px">LOG FUEL STOP</div>
+            <div style="display:grid;grid-template-columns:60px 90px 90px 120px 1fr;gap:8px;align-items:flex-end;flex-wrap:wrap">
+              <div><div style="font-size:10px;color:var(--muted);margin-bottom:3px">State</div><input id="ifta-fuel-state" class="fi" placeholder="TN" maxlength="2" style="text-transform:uppercase"></div>
+              <div><div style="font-size:10px;color:var(--muted);margin-bottom:3px">Gallons</div><input id="ifta-fuel-gallons" class="fi" type="number" step="0.001" placeholder="500"></div>
+              <div><div style="font-size:10px;color:var(--muted);margin-bottom:3px">Amount ($)</div><input id="ifta-fuel-amount" class="fi" type="number" step="0.01" placeholder="2000"></div>
+              <div><div style="font-size:10px;color:var(--muted);margin-bottom:3px">Date</div><input id="ifta-fuel-date" class="fi" type="date"></div>
+              <button class="btn-navy" onclick="addIFTAFuel()" style="font-size:12px;padding:7px 14px">+ Add</button>
+            </div>
+          </div>
         </div>
+      </div>
+      <!-- Tax Summary -->
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-hd">
+          <div class="card-title">IFTA Tax Summary</div>
+          <button id="ifta-file-btn" class="btn-navy" onclick="markIFTAFiled()" style="font-size:12px;padding:7px 14px;display:none">Mark as Filed</button>
+        </div>
+        <div id="ifta-tax-summary"><div class="loading"><div class="spin"></div>Loading…</div></div>
+      </div>
+      <!-- Permit / Registration Tracker -->
+      <div class="card">
+        <div class="card-hd"><div class="card-title">Permit &amp; Registration Tracker</div></div>
+        <div id="ifta-tracker"></div>
       </div>
     </div>
 

@@ -65,6 +65,45 @@ class ShieldEventResolve(BaseModel):
     resolution_note: str | None = None
 
 
+# Diesel tax rates per gallon (approximate 2025, USD)
+_DIESEL_RATES: dict[str, float] = {
+    "AL":0.2900,"AZ":0.2600,"AR":0.2850,"CA":0.8335,"CO":0.2025,
+    "CT":0.4490,"DE":0.2200,"FL":0.3680,"GA":0.3166,"ID":0.3200,
+    "IL":0.5474,"IN":0.5500,"IA":0.3250,"KS":0.2600,"KY":0.2460,
+    "LA":0.2000,"ME":0.3120,"MD":0.4075,"MA":0.2400,"MI":0.2640,
+    "MN":0.2850,"MS":0.1800,"MO":0.1700,"MT":0.2975,"NE":0.2980,
+    "NV":0.2800,"NH":0.2220,"NJ":0.4180,"NM":0.2100,"NY":0.4390,
+    "NC":0.3640,"ND":0.2300,"OH":0.4700,"OK":0.1900,"OR":0.3800,
+    "PA":0.7460,"RI":0.3400,"SC":0.2800,"SD":0.2800,"TN":0.2700,
+    "TX":0.2000,"UT":0.2950,"VT":0.3200,"VA":0.2775,"WA":0.4940,
+    "WV":0.3575,"WI":0.3290,"WY":0.2400,
+    # Canadian provinces (CAD/litre approx)
+    "AB":0.1300,"BC":0.2780,"MB":0.1400,"NB":0.2160,"NL":0.1630,
+    "NS":0.1540,"ON":0.1430,"PE":0.2060,"QC":0.2020,"SK":0.1500,
+}
+
+
+class IFTAMileageIn(BaseModel):
+    carrier_id: UUID
+    quarter: str       # "2026-Q1"
+    state_code: str
+    miles: float
+
+
+class IFTAFuelIn(BaseModel):
+    carrier_id: UUID
+    quarter: str
+    state_code: str
+    gallons: float
+    amount_usd: float | None = None
+    purchase_date: date | None = None
+    notes: str | None = None
+
+
+class IFTAFileBody(BaseModel):
+    filed_date: date | None = None
+
+
 # ── Trigger endpoints ─────────────────────────────────────────────────────────
 
 @router.post("/sweep", status_code=202)
@@ -425,3 +464,139 @@ def list_leases(
     if status:
         q = q.eq("status", status)
     return q.order("end_date").limit(1000).execute().data
+
+
+# ── IFTA detail: mileage, fuel, tax report ────────────────────────────────────
+
+@router.get("/ifta/report")
+def ifta_quarterly_report(
+    quarter: str,
+    carrier_id: str | None = None,
+    _: str = Depends(require_bearer),
+):
+    """Aggregate IFTA quarterly report: mileage by state, fuel purchases, tax due per state."""
+    sb = get_supabase()
+
+    # Filing record
+    q_f = sb.table("ifta_filings").select("*").eq("quarter", quarter)
+    if carrier_id:
+        q_f = q_f.eq("carrier_id", carrier_id)
+    filing_rows = q_f.limit(1).execute().data or []
+    filing = filing_rows[0] if filing_rows else None
+
+    # Mileage rows
+    q_m = sb.table("ifta_mileage").select("*").eq("quarter", quarter)
+    if carrier_id:
+        q_m = q_m.eq("carrier_id", carrier_id)
+    miles_data = q_m.order("state_code").execute().data or []
+
+    # Fuel rows
+    q_fu = sb.table("ifta_fuel").select("*").eq("quarter", quarter)
+    if carrier_id:
+        q_fu = q_fu.eq("carrier_id", carrier_id)
+    fuel_data = q_fu.order("state_code").execute().data or []
+
+    total_miles   = sum(float(r["miles"]) for r in miles_data)
+    total_gallons = sum(float(r["gallons"]) for r in fuel_data)
+    total_amount  = sum(float(r["amount_usd"] or 0) for r in fuel_data)
+    avg_mpg = total_miles / total_gallons if total_gallons > 0 else 0
+
+    fuel_by_state: dict[str, float] = {}
+    for f in fuel_data:
+        sc = f["state_code"]
+        fuel_by_state[sc] = fuel_by_state.get(sc, 0) + float(f["gallons"])
+
+    state_summary = []
+    net_tax = 0.0
+    for m in miles_data:
+        sc    = m["state_code"]
+        miles = float(m["miles"])
+        rate  = _DIESEL_RATES.get(sc, 0.25)
+        req   = miles / avg_mpg if avg_mpg > 0 else 0
+        purch = fuel_by_state.get(sc, 0)
+        net_g = req - purch
+        tax   = net_g * rate
+        net_tax += tax
+        state_summary.append({
+            "state_code":    sc,
+            "miles":         round(miles, 1),
+            "required_gal":  round(req, 2),
+            "purchased_gal": round(purch, 2),
+            "net_gal":       round(net_g, 2),
+            "rate":          rate,
+            "tax_due":       round(tax, 2),
+        })
+
+    return {
+        "quarter":        quarter,
+        "filing":         filing,
+        "miles":          miles_data,
+        "fuel":           fuel_data,
+        "total_miles":    round(total_miles, 1),
+        "total_gallons":  round(total_gallons, 3),
+        "total_amount_usd": round(total_amount, 2),
+        "avg_mpg":        round(avg_mpg, 2),
+        "state_summary":  state_summary,
+        "net_tax_due":    round(net_tax, 2),
+    }
+
+
+@router.post("/ifta/mileage", status_code=201)
+def upsert_ifta_mileage(body: IFTAMileageIn, _: str = Depends(require_bearer)):
+    sb = get_supabase()
+    row = {
+        "carrier_id": str(body.carrier_id),
+        "quarter":    body.quarter,
+        "state_code": body.state_code.upper(),
+        "miles":      body.miles,
+    }
+    existing = (
+        sb.table("ifta_mileage").select("id")
+        .eq("carrier_id", row["carrier_id"])
+        .eq("quarter",    row["quarter"])
+        .eq("state_code", row["state_code"])
+        .limit(1).execute().data
+    )
+    if existing:
+        sb.table("ifta_mileage").update({"miles": body.miles}).eq("id", existing[0]["id"]).execute()
+        return {"action": "updated", "id": existing[0]["id"]}
+    res = sb.table("ifta_mileage").insert(row).execute()
+    return {"action": "created", **res.data[0]}
+
+
+@router.delete("/ifta/mileage/{entry_id}", status_code=200)
+def delete_ifta_mileage(entry_id: str, _: str = Depends(require_bearer)):
+    get_supabase().table("ifta_mileage").delete().eq("id", entry_id).execute()
+    return {"deleted": True}
+
+
+@router.post("/ifta/fuel", status_code=201)
+def add_ifta_fuel(body: IFTAFuelIn, _: str = Depends(require_bearer)):
+    sb = get_supabase()
+    row = body.model_dump()
+    row["carrier_id"] = str(row["carrier_id"])
+    row["state_code"] = row["state_code"].upper()
+    if row.get("purchase_date"):
+        row["purchase_date"] = str(row["purchase_date"])
+    res = sb.table("ifta_fuel").insert(row).execute()
+    return {"action": "created", **res.data[0]}
+
+
+@router.delete("/ifta/fuel/{fuel_id}", status_code=200)
+def delete_ifta_fuel(fuel_id: str, _: str = Depends(require_bearer)):
+    get_supabase().table("ifta_fuel").delete().eq("id", fuel_id).execute()
+    return {"deleted": True}
+
+
+@router.patch("/ifta/{filing_id}/file")
+def mark_ifta_filed(
+    filing_id: str,
+    body: IFTAFileBody,
+    _: str = Depends(require_bearer),
+):
+    from datetime import date as _date
+    fd = str(body.filed_date) if body.filed_date else _date.today().isoformat()
+    get_supabase().table("ifta_filings").update(
+        {"status": "filed", "filed_date": fd}
+    ).eq("id", filing_id).execute()
+    return {"filed": True, "filed_date": fd}
