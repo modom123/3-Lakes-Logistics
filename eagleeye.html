@@ -1160,12 +1160,21 @@ td.td-name{font-weight:600;color:var(--navy);}
       <div class="page-hdr">
         <div class="page-hdr-l"><div class="chip">Weekly</div><h2>Driver Settlements</h2></div>
         <div class="page-hdr-acts">
+          <select id="set-week-filter" onchange="loadSettlements()" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;background:var(--surface)">
+            <option value="">All Weeks</option>
+          </select>
+          <select id="set-status-filter" onchange="renderSettlements()" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;background:var(--surface)">
+            <option value="">All Status</option>
+            <option value="pending">Pending</option>
+            <option value="approved">Approved</option>
+            <option value="paid">Paid</option>
+          </select>
           <button class="btn-out" onclick="loadSettlements()" id="set-refresh-btn">Refresh</button>
           <button class="btn-navy" onclick="populateSettlementCarrier();openModal('add-settlement-modal')">+ New Settlement</button>
         </div>
       </div>
       <div class="g4">
-        <div class="mc"><div class="mc-label">This Week Gross</div><div class="mc-val green" id="set-gross">—</div></div>
+        <div class="mc"><div class="mc-label">Week Gross</div><div class="mc-val green" id="set-gross">—</div></div>
         <div class="mc"><div class="mc-label">Dispatch Fees</div><div class="mc-val gold" id="set-fees">—</div></div>
         <div class="mc"><div class="mc-label">Net to Carriers</div><div class="mc-val blue" id="set-net">—</div></div>
         <div class="mc"><div class="mc-label">Pending</div><div class="mc-val orange" id="set-pending">—</div></div>
@@ -4032,8 +4041,19 @@ let allSettlements = [];
 async function loadSettlements(){
   const el=document.getElementById('settlements-list');
   if(el)el.innerHTML='<div class="loading"><div class="spin"></div>Loading…</div>';
+  // Populate week filter dropdown if empty
+  const wf=document.getElementById('set-week-filter');
+  if(wf&&wf.options.length<=1){
+    const today=new Date();const fridays=[];
+    let d=new Date(today);d.setDate(d.getDate()-(d.getDay()+2)%7||7);
+    for(let i=0;i<12;i++){fridays.push(d.toISOString().split('T')[0]);d=new Date(d);d.setDate(d.getDate()-7);}
+    wf.innerHTML='<option value="">All Weeks</option>'+fridays.map(f=>'<option value="'+f+'">Week ending '+f+'</option>').join('');
+  }
+  const weekFilter=wf?.value||'';
   try{
-    const r=await apiFetch('/api/settlements');
+    let url='/api/settlements?limit=200';
+    if(weekFilter)url+='&week_ending='+weekFilter;
+    const r=await apiFetch(url);
     if(!r.ok){if(el)el.innerHTML='<div style="padding:20px;color:var(--muted)">Unable to load settlements</div>';return;}
     const d=await r.json();
     allSettlements=d.items||[];
@@ -4048,12 +4068,15 @@ async function loadSettlements(){
 
 function renderSettlements(){
   const el=document.getElementById('settlements-list');if(!el)return;
-  if(!allSettlements.length){el.innerHTML='<div style="padding:40px;text-align:center;color:var(--muted)">No settlements yet. Create one to get started.</div>';return;}
+  const statusFilter=document.getElementById('set-status-filter')?.value||'';
+  const rows=statusFilter?allSettlements.filter(s=>s.status===statusFilter):allSettlements;
+  if(!rows.length){el.innerHTML='<div style="padding:40px;text-align:center;color:var(--muted)">'+(allSettlements.length?'No settlements match filter.':'No settlements yet. Create one to get started.')+'</div>';return;}
+  const allSettlementsRef=rows; // use filtered set for rendering
   const statusBadge=s=>s==='paid'?'<span class="badge badge-green">Paid</span>':s==='approved'?'<span class="badge badge-blue">Approved</span>':'<span class="badge badge-orange">Pending</span>';
   el.innerHTML='<div class="tbl-wrap"><table><thead><tr>'+
     '<th>Carrier</th><th>Load #</th><th>Week Ending</th><th>Miles</th><th>Gross</th><th>Dispatch %</th><th>Dispatch Fee</th><th>Net Pay</th><th>Status</th><th>Actions</th>'+
     '</tr></thead><tbody>'+
-    allSettlements.map(s=>'<tr>'+
+    allSettlementsRef.map(s=>'<tr>'+
       '<td class="td-name">'+esc(s.carrier_name||'—')+'</td>'+
       '<td style="font-family:var(--ff-m);font-size:12px">'+esc(s.load_number||'—')+'</td>'+
       '<td style="font-size:12px">'+esc(s.week_ending||'—')+'</td>'+
