@@ -4188,16 +4188,18 @@ function renderShippers(rows){
   const el=document.getElementById('shippers-table-wrap');if(!el)return;
   if(!rows.length){el.innerHTML='<div style="padding:40px;text-align:center;color:var(--muted)">No shippers yet. Add one to get started.</div>';return;}
   el.innerHTML='<div class="tbl-wrap"><table><thead><tr>'+
-    '<th>Company</th><th>Type</th><th>Contact</th><th>Phone</th><th>Payment Terms</th><th>Total Revenue</th><th>Status</th>'+
+    '<th>Company</th><th>Type</th><th>Contact</th><th>Email</th><th>Payment Terms</th><th>Loads</th><th>Revenue</th><th>Status</th><th></th>'+
     '</tr></thead><tbody>'+
     rows.map(s=>'<tr>'+
       '<td class="td-name">'+esc(s.company_name)+'</td>'+
       '<td><span class="badge badge-navy" style="font-size:10px">'+esc(s.shipper_type||'shipper')+'</span></td>'+
-      '<td>'+esc(s.contact_name||'—')+'</td>'+
-      '<td class="t-mono">'+esc(s.phone||'—')+'</td>'+
-      '<td>'+esc(s.payment_terms||'—')+'</td>'+
+      '<td style="font-size:12px">'+esc(s.contact_name||'—')+'</td>'+
+      '<td style="font-size:12px;color:var(--muted)">'+(s.email?'<a href="mailto:'+esc(s.email)+'" style="color:var(--accent)">'+esc(s.email)+'</a>':'—')+'</td>'+
+      '<td style="font-size:12px">'+esc(s.payment_terms||'—')+'</td>'+
+      '<td style="text-align:center;font-size:12px">'+Number(s.total_loads||0)+'</td>'+
       '<td class="val-green">$'+Number(s.total_revenue||0).toLocaleString()+'</td>'+
       '<td><span class="badge '+(s.status==='active'?'badge-green':'badge-orange')+'">'+esc(s.status||'active')+'</span></td>'+
+      '<td><button style="background:rgba(239,68,68,.12);color:#ef4444;border:1px solid rgba(239,68,68,.3);font-size:11px;padding:3px 7px;border-radius:4px;cursor:pointer" onclick="deleteShipper(\''+s.id+'\')">✕</button></td>'+
     '</tr>').join('')+
     '</tbody></table></div>';
 }
@@ -4223,6 +4225,13 @@ async function saveShipper(){
   closeModal('add-shipper-modal');
   ['shp-name','shp-contact','shp-phone','shp-email','shp-mc','shp-credit','shp-notes'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   await loadShippers();toast('Shipper added to CRM!');
+}
+
+async function deleteShipper(id){
+  if(!confirm('Delete this shipper from CRM?'))return;
+  const r=await apiFetch('/api/shippers/'+id,'DELETE',null);
+  if(r.ok){await loadShippers();toast('Shipper removed');}
+  else toast('Error removing shipper','error');
 }
 
 // ── IFTA / FUEL ──────────────────────────────────────────────────────────────
