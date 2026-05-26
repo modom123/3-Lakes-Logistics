@@ -5719,72 +5719,241 @@ function vanceDialLead(id, name, phone){
   setTimeout(()=>document.getElementById('vc-name').scrollIntoView({behavior:'smooth'}),300);
 }
 
-// ── IFTA / PERMITS — fully dynamic via TK ─────────────────────────────────
-function renderIFTA(){
-  const dl  = TK.currentDeadline;
-  const hv  = TK.hvut();
-  const ucr = TK.ucr();
+// ── IFTA / PERMITS ────────────────────────────────────────────────────────────
+let _iftaCarrierId = null;
+let _iftaReport    = null;
+let _iftaInitSel   = false;
 
-  // ── metric cards ──
+const _IFTA_RATES = {
+  AL:0.290,AZ:0.260,AR:0.285,CA:0.834,CO:0.203,CT:0.449,DE:0.220,FL:0.368,
+  GA:0.317,ID:0.320,IL:0.547,IN:0.550,IA:0.325,KS:0.260,KY:0.246,LA:0.200,
+  ME:0.312,MD:0.408,MA:0.240,MI:0.264,MN:0.285,MS:0.180,MO:0.170,MT:0.298,
+  NE:0.298,NV:0.280,NH:0.222,NJ:0.418,NM:0.210,NY:0.439,NC:0.364,ND:0.230,
+  OH:0.470,OK:0.190,OR:0.380,PA:0.746,RI:0.340,SC:0.280,SD:0.280,TN:0.270,
+  TX:0.200,UT:0.295,VT:0.320,VA:0.278,WA:0.494,WV:0.358,WI:0.329,WY:0.240,
+  AB:0.130,BC:0.278,MB:0.140,NB:0.216,NL:0.163,NS:0.154,ON:0.143,QC:0.202,SK:0.150,
+};
+
+async function renderIFTA(){
+  // ── init quarter selector ──
+  const sel = document.getElementById('ifta-quarter-sel');
+  if(sel && !_iftaInitSel){
+    _iftaInitSel = true;
+    const quarters = TK.allQuarters();
+    quarters.forEach(r=>{
+      const opt = document.createElement('option');
+      opt.value = r.y+'-Q'+r.q;
+      opt.textContent = r.meta.n+' '+r.y+(r.isCurrent?' (Current)':'');
+      if(r.isCurrent) opt.selected = true;
+      sel.appendChild(opt);
+    });
+  }
+  const quarter = sel ? sel.value : (TK.y+'-Q'+TK.q);
+
+  // ── pick carrier ──
+  if(!_iftaCarrierId && allCarriers.length) _iftaCarrierId = allCarriers[0].id;
+  if(allCarriers.length > 1){
+    const csel = document.getElementById('ifta-carrier-sel');
+    if(csel){
+      csel.style.display = '';
+      if(!csel.options.length){
+        allCarriers.forEach(c=>{
+          const o = document.createElement('option');
+          o.value = c.id; o.textContent = c.company_name; csel.appendChild(o);
+        });
+      }
+      _iftaCarrierId = csel.value || _iftaCarrierId;
+    }
+  }
+
+  // ── fetch report ──
+  const tsEl = document.getElementById('ifta-tax-summary');
+  if(tsEl) tsEl.innerHTML='<div class="loading"><div class="spin"></div>Loading…</div>';
+
+  if(_iftaCarrierId){
+    try{
+      const res = await apiFetch('/api/compliance/ifta/report?quarter='+quarter+'&carrier_id='+_iftaCarrierId);
+      if(res.ok){ _iftaReport = await res.json(); _renderIFTAFromData(_iftaReport); }
+      else { _renderIFTAEmpty(quarter); }
+    } catch(e){ _renderIFTAEmpty(quarter); }
+  } else {
+    _renderIFTAEmpty(quarter);
+  }
+  _renderIFTATracker();
+}
+
+function _renderIFTAEmpty(quarter){
   const mEl = document.getElementById('ifta-metrics');
   if(mEl) mEl.innerHTML=
-    '<div class="mc"><div class="mc-label">'+TK.qLabel+' Miles (Truck #1)</div><div class="mc-val blue">28,450</div><div class="mc-sub">'+TK.qRange+'</div></div>'+
-    '<div class="mc"><div class="mc-label">Fuel Purchased ('+TK.qLabel+')</div><div class="mc-val gold">8,240 gal</div><div class="mc-sub">~$32,960 @ $4.00/gal avg</div></div>'+
-    '<div class="mc"><div class="mc-label">IFTA Filing Due</div><div class="mc-val '+(dl.daysLeft<=60?'orange':'blue')+'">'+dl.label.split(',')[0]+'</div><div class="mc-sub">'+TK.qLabel+' '+TK.qYear+' quarterly return</div></div>';
-
-  // ── state miles table ──
+    '<div class="mc"><div class="mc-label">Total Miles</div><div class="mc-val blue">0</div><div class="mc-sub">No data logged yet</div></div>'+
+    '<div class="mc"><div class="mc-label">Fuel Purchased</div><div class="mc-val gold">0 gal</div><div class="mc-sub">Log fuel stops below</div></div>'+
+    '<div class="mc"><div class="mc-label">Avg MPG</div><div class="mc-val">—</div><div class="mc-sub">Computed automatically</div></div>'+
+    '<div class="mc"><div class="mc-label">Est. Net Tax</div><div class="mc-val">$0.00</div><div class="mc-sub">Enter data to compute</div></div>';
   const st = document.getElementById('ifta-state-title');
-  if(st) st.textContent = TK.qLabel+' '+TK.qYear+' Miles by State';
+  if(st) st.textContent = quarter+' Miles by State';
   const tEl = document.getElementById('ifta-state-table');
-  if(tEl) tEl.innerHTML=
-    '<div class="tbl-wrap"><table><thead><tr><th>State</th><th>Miles</th><th>Fuel Bought (gal)</th><th>Tax Status</th></tr></thead><tbody>'+
-    '<tr><td>Michigan</td><td>4,200</td><td>1,800</td><td class="val-green">Credit</td></tr>'+
-    '<tr><td>Ohio</td><td>5,100</td><td>2,100</td><td class="val-green">Credit</td></tr>'+
-    '<tr><td>Tennessee</td><td>6,800</td><td>2,400</td><td class="val-red">Owe: $48</td></tr>'+
-    '<tr><td>Georgia</td><td>4,950</td><td>820</td><td class="val-red">Owe: $122</td></tr>'+
-    '<tr><td>Illinois</td><td>3,600</td><td>620</td><td class="val-red">Owe: $94</td></tr>'+
-    '<tr><td>Texas</td><td>3,800</td><td>500</td><td class="val-red">Owe: $136</td></tr>'+
-    '</tbody></table></div>';
+  if(tEl) tEl.innerHTML='<div class="empty-state" style="padding:20px"><div class="ei">🗺️</div><p>No mileage logged yet for '+quarter+'.<br>Use the form below to add state miles.</p></div>';
+  const ftEl = document.getElementById('ifta-fuel-table');
+  if(ftEl) ftEl.innerHTML='<div class="empty-state" style="padding:20px"><div class="ei">⛽</div><p>No fuel purchases logged yet.</p></div>';
+  const tsEl = document.getElementById('ifta-tax-summary');
+  if(tsEl) tsEl.innerHTML='<div class="empty-state" style="padding:16px">Enter mileage and fuel data above to compute IFTA tax due per state.</div>';
+  const btn = document.getElementById('ifta-file-btn');
+  if(btn) btn.style.display='none';
+}
 
-  // ── permit & registration tracker ──
-  const trEl = document.getElementById('ifta-tracker');
+function _renderIFTAFromData(d){
+  const{quarter,filing,miles,fuel,total_miles,total_gallons,total_amount_usd,avg_mpg,state_summary,net_tax_due}=d;
+  const status    = filing?.status||'pending';
+  const stCls     = status==='filed'?'badge-green':status==='overdue'?'badge-red':'badge-orange';
+  const stLabel   = status==='filed'?'Filed':status==='overdue'?'Overdue':'In Progress';
+  const taxCls    = net_tax_due>0?'red':net_tax_due<0?'green':'';
+  const taxLabel  = net_tax_due>0?'Owe $'+Math.abs(net_tax_due).toFixed(2):net_tax_due<0?'Credit $'+Math.abs(net_tax_due).toFixed(2):'$0.00';
+
+  // metrics
+  const mEl=document.getElementById('ifta-metrics');
+  if(mEl) mEl.innerHTML=
+    '<div class="mc"><div class="mc-label">Total Miles ('+quarter+')</div><div class="mc-val blue">'+parseFloat(total_miles).toLocaleString()+'</div><div class="mc-sub">Across '+miles.length+' state'+(miles.length!==1?'s':'')+'</div></div>'+
+    '<div class="mc"><div class="mc-label">Fuel Purchased</div><div class="mc-val gold">'+parseFloat(total_gallons).toLocaleString()+' gal</div><div class="mc-sub">'+(total_amount_usd?'$'+parseFloat(total_amount_usd).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}):'Amount not logged')+'</div></div>'+
+    '<div class="mc"><div class="mc-label">Avg Fuel Economy</div><div class="mc-val">'+(avg_mpg?parseFloat(avg_mpg).toFixed(1)+' MPG':'—')+'</div><div class="mc-sub">Fleet average this quarter</div></div>'+
+    '<div class="mc"><div class="mc-label">Est. Net Tax</div><div class="mc-val '+taxCls+'">'+taxLabel+'</div><div class="mc-sub"><span class="badge '+stCls+'">'+stLabel+'</span></div></div>';
+
+  // state mileage table
+  const st=document.getElementById('ifta-state-title');
+  if(st) st.textContent=quarter+' Miles by State';
+  const tEl=document.getElementById('ifta-state-table');
+  if(tEl){
+    if(!miles.length){
+      tEl.innerHTML='<div class="empty-state" style="padding:20px"><div class="ei">🗺️</div><p>No mileage logged yet.</p></div>';
+    } else {
+      tEl.innerHTML='<div class="tbl-wrap"><table><thead><tr><th>State</th><th>Miles</th><th></th></tr></thead><tbody>'+
+        miles.map(m=>'<tr><td>'+m.state_code+'</td><td>'+parseFloat(m.miles).toLocaleString()+'</td><td><button class="btn-red-sm" onclick="deleteIFTAMileage(\''+m.id+'\')">✕</button></td></tr>').join('')+
+        '</tbody></table></div>';
+    }
+  }
+
+  // fuel table
+  const ftEl=document.getElementById('ifta-fuel-table');
+  if(ftEl){
+    if(!fuel.length){
+      ftEl.innerHTML='<div class="empty-state" style="padding:20px"><div class="ei">⛽</div><p>No fuel purchases logged yet.</p></div>';
+    } else {
+      ftEl.innerHTML='<div class="tbl-wrap"><table><thead><tr><th>State</th><th>Gallons</th><th>Amount</th><th>Date</th><th></th></tr></thead><tbody>'+
+        fuel.map(f=>'<tr><td>'+f.state_code+'</td><td>'+parseFloat(f.gallons).toLocaleString()+'</td><td>'+(f.amount_usd?'$'+parseFloat(f.amount_usd).toFixed(2):'—')+'</td><td>'+(f.purchase_date||'—')+'</td><td><button class="btn-red-sm" onclick="deleteIFTAFuel(\''+f.id+'\')">✕</button></td></tr>').join('')+
+        '</tbody></table></div>';
+    }
+  }
+
+  // tax summary
+  const tsEl=document.getElementById('ifta-tax-summary');
+  if(tsEl){
+    if(!state_summary.length){
+      tsEl.innerHTML='<div class="empty-state" style="padding:16px">Enter mileage and fuel data above to compute IFTA tax due per state.</div>';
+    } else {
+      const rows=state_summary.map(s=>
+        '<tr><td>'+s.state_code+'</td><td>'+parseFloat(s.miles).toLocaleString()+'</td>'+
+        '<td>'+parseFloat(s.required_gal).toFixed(1)+'</td>'+
+        '<td>'+parseFloat(s.purchased_gal).toFixed(1)+'</td>'+
+        '<td>'+(s.net_gal>0?'+':'')+parseFloat(s.net_gal).toFixed(1)+'</td>'+
+        '<td>$'+parseFloat(s.rate).toFixed(4)+'</td>'+
+        '<td class="'+(s.tax_due>0?'val-red':'val-green')+'">'+(s.tax_due>0?'Owe $'+Math.abs(s.tax_due).toFixed(2):'Credit $'+Math.abs(s.tax_due).toFixed(2))+'</td></tr>'
+      ).join('');
+      tsEl.innerHTML='<div class="tbl-wrap"><table><thead><tr><th>State</th><th>Miles</th><th>Req. Gal</th><th>Purch. Gal</th><th>Net Gal</th><th>Rate/Gal</th><th>Tax Due / Credit</th></tr></thead><tbody>'+rows+
+        '<tr style="font-weight:600;border-top:2px solid var(--border)"><td colspan="6" style="color:var(--muted)">NET TOTAL</td>'+
+        '<td class="'+(net_tax_due>0?'val-red':'val-green')+'">'+(net_tax_due>0?'Owe $'+net_tax_due.toFixed(2):'Credit $'+Math.abs(net_tax_due).toFixed(2))+'</td></tr>'+
+        '</tbody></table></div>';
+    }
+  }
+
+  // file button
+  const btn=document.getElementById('ifta-file-btn');
+  if(btn){
+    if(filing&&filing.status==='filed'){
+      btn.style.display='';btn.textContent='✓ Filed '+(filing.filed_date||'');btn.disabled=true;btn.className='btn-out';
+    } else if(filing){
+      btn.style.display='';btn.textContent='Mark as Filed';btn.disabled=false;btn.className='btn-navy';
+    } else {
+      btn.style.display='none';
+    }
+  }
+}
+
+function _renderIFTATracker(){
+  const trEl=document.getElementById('ifta-tracker');
   if(!trEl) return;
-  const quarters = TK.allQuarters();
-  const qRows = quarters.map(r=>
-    '<div class="comp-item"><div class="comp-left"><span class="comp-ico">📄</span><div>'+
-    '<div class="comp-name">IFTA '+r.meta.n+' '+r.y+' Return</div>'+
-    '<div class="comp-desc">Due '+r.dl.label+(r.q===TK.q&&r.y===TK.y?' · Est. owe: ~$400':r.st.label==='Filed'?' · Filed':'')+'</div>'+
-    '</div></div><span class="badge '+r.st.cls+'">'+r.st.label+'</span></div>'
-  ).join('');
-
+  const hv=TK.hvut(),ucr=TK.ucr();
+  const quarters=TK.allQuarters();
+  const qRows=quarters.map(r=>{
+    const netLabel=_iftaReport&&r.y===parseInt(_iftaReport.quarter)&&('Q'+r.q)===_iftaReport.quarter.split('-')[1]
+      ? (' · Est: '+((_iftaReport.net_tax_due||0)>0?'Owe $'+Math.abs(_iftaReport.net_tax_due).toFixed(2):'Credit $'+Math.abs(_iftaReport.net_tax_due).toFixed(2)))
+      : '';
+    return '<div class="comp-item"><div class="comp-left"><span class="comp-ico">📄</span><div>'+
+      '<div class="comp-name">IFTA '+r.meta.n+' '+r.y+' Return</div>'+
+      '<div class="comp-desc">Due '+r.dl.label+netLabel+'</div>'+
+      '</div></div><span class="badge '+r.st.cls+'">'+r.st.label+'</span></div>';
+  }).join('');
   trEl.innerHTML=
     '<div class="comp-item"><div class="comp-left"><span class="comp-ico">🪙</span><div>'+
-      '<div class="comp-name">Heavy Vehicle Use Tax (2290)</div>'+
-      '<div class="comp-desc">'+hv.desc+'</div>'+
+      '<div class="comp-name">Heavy Vehicle Use Tax (2290)</div><div class="comp-desc">'+hv.desc+'</div>'+
     '</div></div><span class="badge '+hv.badge+'">'+hv.label+'</span></div>'+
     '<div class="comp-item"><div class="comp-left"><span class="comp-ico">🏷️</span><div>'+
-      '<div class="comp-name">IRP Base Plate (Michigan)</div>'+
-      '<div class="comp-desc">Multi-state apportioned plates</div>'+
+      '<div class="comp-name">IRP Base Plate (Michigan)</div><div class="comp-desc">Multi-state apportioned plates</div>'+
     '</div></div><span class="badge badge-orange">Pending</span></div>'+
     '<div class="comp-item"><div class="comp-left"><span class="comp-ico">📊</span><div>'+
-      '<div class="comp-name">UCR Annual Fee</div>'+
-      '<div class="comp-desc">'+ucr.desc+'</div>'+
+      '<div class="comp-name">UCR Annual Fee</div><div class="comp-desc">'+ucr.desc+'</div>'+
     '</div></div><span class="badge '+ucr.badge+'">'+ucr.label+'</span></div>'+
     qRows;
-
-  // ── insurance expiry badges ──
-  [
-    ['ins-exp-pl','ins-st-pl','12/01/26'],
-    ['ins-exp-ci','ins-st-ci','12/01/26'],
-    ['ins-exp-pd','ins-st-pd','12/01/26'],
-    ['ins-exp-gl','ins-st-gl','09/15/26'],
-  ].forEach(([expId, stId, date])=>{
-    const s = TK.insStatus(date);
-    const el = document.getElementById(expId);
-    const st2 = document.getElementById(stId);
-    if(el) el.className = s.cls==='badge-red'?'val-red':'val-green';
+  [['ins-exp-pl','ins-st-pl','12/01/26'],['ins-exp-ci','ins-st-ci','12/01/26'],
+   ['ins-exp-pd','ins-st-pd','12/01/26'],['ins-exp-gl','ins-st-gl','09/15/26']
+  ].forEach(([expId,stId,dt])=>{
+    const s=TK.insStatus(dt);
+    const el=document.getElementById(expId),st2=document.getElementById(stId);
+    if(el) el.className=s.cls==='badge-red'?'val-red':'val-green';
     if(st2) st2.innerHTML='<span class="badge '+s.cls+'">'+s.label+'</span>';
   });
+}
+
+async function addIFTAMileage(){
+  const state=document.getElementById('ifta-add-state')?.value.trim().toUpperCase();
+  const miles=parseFloat(document.getElementById('ifta-add-miles')?.value||'');
+  if(!state||!miles||miles<=0){alert('Enter a 2-letter state code and miles > 0.');return;}
+  if(!_iftaCarrierId){alert('No carrier loaded yet.');return;}
+  const quarter=document.getElementById('ifta-quarter-sel')?.value||(TK.y+'-Q'+TK.q);
+  const r=await apiFetch('/api/compliance/ifta/mileage','POST',{carrier_id:_iftaCarrierId,quarter,state_code:state,miles});
+  if(r.ok){document.getElementById('ifta-add-state').value='';document.getElementById('ifta-add-miles').value='';renderIFTA();}
+}
+
+async function deleteIFTAMileage(id){
+  if(!confirm('Remove this mileage entry?'))return;
+  await apiFetch('/api/compliance/ifta/mileage/'+id,'DELETE');
+  renderIFTA();
+}
+
+async function addIFTAFuel(){
+  const state=document.getElementById('ifta-fuel-state')?.value.trim().toUpperCase();
+  const gallons=parseFloat(document.getElementById('ifta-fuel-gallons')?.value||'');
+  const amount=parseFloat(document.getElementById('ifta-fuel-amount')?.value||'')||null;
+  const dt=document.getElementById('ifta-fuel-date')?.value||null;
+  if(!state||!gallons||gallons<=0){alert('Enter a 2-letter state code and gallons > 0.');return;}
+  if(!_iftaCarrierId){alert('No carrier loaded yet.');return;}
+  const quarter=document.getElementById('ifta-quarter-sel')?.value||(TK.y+'-Q'+TK.q);
+  const r=await apiFetch('/api/compliance/ifta/fuel','POST',{carrier_id:_iftaCarrierId,quarter,state_code:state,gallons,amount_usd:amount,purchase_date:dt});
+  if(r.ok){
+    ['ifta-fuel-state','ifta-fuel-gallons','ifta-fuel-amount','ifta-fuel-date'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+    renderIFTA();
+  }
+}
+
+async function deleteIFTAFuel(id){
+  if(!confirm('Remove this fuel entry?'))return;
+  await apiFetch('/api/compliance/ifta/fuel/'+id,'DELETE');
+  renderIFTA();
+}
+
+async function markIFTAFiled(){
+  if(!_iftaReport?.filing?.id){alert('No filing record found. Run the compliance sweep first (Compliance → Trigger Sweep) to create the quarterly record.');return;}
+  if(!confirm('Mark this quarter as filed with IFTA?'))return;
+  const r=await apiFetch('/api/compliance/ifta/'+_iftaReport.filing.id+'/file','PATCH',{});
+  if(r.ok) renderIFTA();
 }
 
 // Re-route nav so backend pages auto-load on open
