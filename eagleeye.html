@@ -10861,6 +10861,41 @@ const TS_DOMAINS = [
     ]
   },
   {
+    id: 'compliance', label: 'Compliance', icon: '✅',
+    tests: [
+      {
+        name: 'Compliance events list',
+        run: async () => {
+          const r = await apiFetch('/api/compliance/events');
+          if (!r.ok) throw new Error(`HTTP ${r.status}`);
+          const d = await r.json();
+          if (!('count' in d) || !('items' in d)) throw new Error('Missing count/items');
+          return `${d.count} compliance event(s)`;
+        }
+      },
+      {
+        name: 'Compliance scores list',
+        run: async () => {
+          const r = await apiFetch('/api/compliance/scores');
+          if (!r.ok) throw new Error(`HTTP ${r.status}`);
+          const d = await r.json();
+          const items = Array.isArray(d) ? d : (d?.items || d?.scores || []);
+          return `${items.length} carrier score(s)`;
+        }
+      },
+      {
+        name: 'Insurance alerts',
+        run: async () => {
+          const r = await apiFetch('/api/compliance/insurance-alerts');
+          if (!r.ok) throw new Error(`HTTP ${r.status}`);
+          const d = await r.json();
+          const items = Array.isArray(d) ? d : (d?.items || d?.alerts || []);
+          return `${items.length} insurance alert(s)`;
+        }
+      }
+    ]
+  },
+  {
     id: 'ifta', label: 'IFTA / Fuel', icon: '⛽',
     tests: [
       {
