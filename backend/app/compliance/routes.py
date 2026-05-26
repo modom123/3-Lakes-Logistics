@@ -342,21 +342,72 @@ def list_ucr(
     return q.order("reg_year", desc=True).limit(1000).execute().data
 
 
+# ── CSA / BASIC Safety Scores ─────────────────────────────────────────────────
+
+@router.get("/csa")
+def list_csa_scores(
+    limit: int = 200,
+    _: str = Depends(require_bearer),
+):
+    sb = get_supabase()
+    res = sb.table("carrier_csa_scores").select("*").order("created_at", desc=True).limit(min(limit, 1000)).execute()
+    return {"count": len(res.data or []), "items": res.data or []}
+
+
+@router.post("/csa", status_code=201)
+def create_csa_score(payload: dict, _: str = Depends(require_bearer)):
+    res = get_supabase().table("carrier_csa_scores").insert(payload).execute()
+    return {"ok": True, "item": res.data[0] if res.data else {}}
+
+
+@router.patch("/csa/{score_id}")
+def update_csa_score(score_id: str, payload: dict, _: str = Depends(require_bearer)):
+    from datetime import datetime, timezone
+    payload["updated_at"] = datetime.now(timezone.utc).isoformat()
+    get_supabase().table("carrier_csa_scores").update(payload).eq("id", score_id).execute()
+    return {"ok": True}
+
+
+@router.delete("/csa/{score_id}")
+def delete_csa_score(score_id: str, _: str = Depends(require_bearer)):
+    get_supabase().table("carrier_csa_scores").delete().eq("id", score_id).execute()
+    return {"ok": True}
+
+
 # ── MVR checks ────────────────────────────────────────────────────────────────
 
 @router.get("/mvr")
 def list_mvr(
-    carrier_id: str | None = None,
+    limit: int = 200,
     overdue_only: bool = False,
     _: str = Depends(require_bearer),
 ):
     sb = get_supabase()
-    q = sb.table("mvr_checks").select("*")
-    if carrier_id:
-        q = q.eq("carrier_id", carrier_id)
+    q = sb.table("driver_mvr_records").select("*")
     if overdue_only:
-        q = q.lt("next_due", date.today().isoformat())
-    return q.order("next_due").limit(1000).execute().data
+        q = q.lt("next_check_due", date.today().isoformat())
+    res = q.order("check_date", desc=True).limit(min(limit, 1000)).execute()
+    return {"count": len(res.data or []), "items": res.data or []}
+
+
+@router.post("/mvr", status_code=201)
+def create_mvr(payload: dict, _: str = Depends(require_bearer)):
+    res = get_supabase().table("driver_mvr_records").insert(payload).execute()
+    return {"ok": True, "item": res.data[0] if res.data else {}}
+
+
+@router.patch("/mvr/{mvr_id}")
+def update_mvr(mvr_id: str, payload: dict, _: str = Depends(require_bearer)):
+    from datetime import datetime, timezone
+    payload["updated_at"] = datetime.now(timezone.utc).isoformat()
+    get_supabase().table("driver_mvr_records").update(payload).eq("id", mvr_id).execute()
+    return {"ok": True}
+
+
+@router.delete("/mvr/{mvr_id}")
+def delete_mvr(mvr_id: str, _: str = Depends(require_bearer)):
+    get_supabase().table("driver_mvr_records").delete().eq("id", mvr_id).execute()
+    return {"ok": True}
 
 
 # ── Lease agreements ──────────────────────────────────────────────────────────

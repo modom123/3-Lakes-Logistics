@@ -1039,6 +1039,24 @@ td.td-name{font-weight:600;color:var(--navy);}
         </div>
         <div id="drivers-table-wrap" class="scroll-box"><div class="loading"><div class="spin"></div>Loading…</div></div>
       </div>
+
+      <!-- MVR TRACKER -->
+      <div class="card" style="margin-top:20px;border-top:3px solid #7c3aed">
+        <div class="card-hd">
+          <div>
+            <div class="card-title">🪪 MVR Tracker — Motor Vehicle Records</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:2px">Annual CDL check required · Flag violations before they become CSA liabilities</div>
+          </div>
+          <button class="btn-out" style="font-size:12px" onclick="openMVRModal()">+ Log MVR Check</button>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px">
+          <div class="mc" style="border-left:3px solid #22c55e"><div class="mc-label">Clean Records</div><div class="mc-val green" id="mvr-clean">—</div></div>
+          <div class="mc" style="border-left:3px solid #f59e0b"><div class="mc-label">Minor Violations</div><div class="mc-val gold" id="mvr-minor">—</div></div>
+          <div class="mc" style="border-left:3px solid #dc2626"><div class="mc-label">Major / Suspended</div><div class="mc-val red" id="mvr-major">—</div></div>
+          <div class="mc" style="border-left:3px solid #7c3aed"><div class="mc-label">Overdue Check</div><div class="mc-val" style="color:#7c3aed" id="mvr-overdue">—</div></div>
+        </div>
+        <div id="mvr-table"><div class="loading"><div class="spin"></div>Loading MVR records…</div></div>
+      </div>
     </div>
 
     <!-- ADD DRIVER MODAL -->
@@ -1254,8 +1272,31 @@ td.td-name{font-weight:600;color:var(--navy);}
     <div class="page" id="page-compliance">
       <div class="page-hdr"><div class="page-hdr-l"><div class="chip">FMCSA</div><h2>DOT Compliance</h2></div>
         <div class="page-hdr-acts">
+          <button class="btn-out" onclick="runCSASweep()" id="csa-sweep-btn">🛡️ Safety Sweep</button>
           <button class="btn-navy" onclick="runComplianceSweep()" id="compliance-sweep-btn">⚙️ Run Compliance Sweep</button>
         </div>
+      </div>
+
+      <!-- ── CSA SAFETY SCORES ─────────────────────────────────── -->
+      <div class="card" style="margin-bottom:20px;border-top:3px solid #dc2626">
+        <div class="card-hd">
+          <div>
+            <div class="card-title">🛡️ CSA Safety Scores — Carrier Fleet</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:2px">FMCSA Safety Rating + 7 BASIC SMS scores per carrier · Intervention thresholds shown in red</div>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <button class="btn-out" style="font-size:12px" onclick="openCSAModal()">+ Enter Scores</button>
+            <button class="btn-out" style="font-size:12px" onclick="runCSASweep()" id="csa-sweep-btn2">↺ Sweep All</button>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px">
+          <div class="mc" style="border-left:3px solid #22c55e"><div class="mc-label">Carriers Checked</div><div class="mc-val green" id="csa-total">—</div></div>
+          <div class="mc" style="border-left:3px solid #22c55e"><div class="mc-label">Satisfactory</div><div class="mc-val green" id="csa-satisfactory">—</div></div>
+          <div class="mc" style="border-left:3px solid #f59e0b"><div class="mc-label">Conditional</div><div class="mc-val gold" id="csa-conditional">—</div></div>
+          <div class="mc" style="border-left:3px solid #dc2626"><div class="mc-label">OOS / Flagged</div><div class="mc-val red" id="csa-oos">—</div></div>
+        </div>
+        <div id="csa-alerts" style="margin-bottom:12px"></div>
+        <div id="csa-scores-table"><div class="loading"><div class="spin"></div>Loading safety scores…</div></div>
       </div>
 
       <!-- FMCSA LIVE LOOKUP -->
@@ -3102,7 +3143,7 @@ function nav(id){
   if(id==='notes')loadNotes();
   if(id==='reports')loadTeamReports();
   if(id==='exec-command'){const n=document.getElementById('exec-esc-notif');if(n)n.style.display='none';ecRefreshDashboard();}
-  if(id==='compliance'||id==='insurance')renderCarrierCompliance();
+  if(id==='compliance'||id==='insurance'){renderCarrierCompliance();if(id==='compliance'){loadCSAScores();loadMVRRecords();}}
   if(id==='clm')loadCLMList();
   if(id==='vault')loadVault();
   if(id==='agreements')loadAgreements();
@@ -11727,6 +11768,311 @@ async function deleteShipper(id) {
 }
 
 // ══════════════════════════════════════════════════════
+// CSA SAFETY SCORES
+// ══════════════════════════════════════════════════════
+
+let allCSAScores = [], allMVRRecords = [];
+
+async function loadCSAScores() {
+  try {
+    const res = await apiFetch('/api/compliance/csa?limit=200');
+    if (res.ok) allCSAScores = (await res.json()).items || [];
+    else allCSAScores = [];
+  } catch(e) { allCSAScores = []; }
+  renderCSAScores();
+}
+
+async function loadMVRRecords() {
+  try {
+    const res = await apiFetch('/api/compliance/mvr?limit=200');
+    if (res.ok) allMVRRecords = (await res.json()).items || [];
+    else allMVRRecords = [];
+  } catch(e) { allMVRRecords = []; }
+  renderMVRTable();
+}
+
+// BASIC thresholds: score >= threshold triggers intervention
+const CSA_THRESHOLDS = {
+  unsafe: 65, hos: 65, fitness: 80, substances: 80,
+  maintenance: 80, hm: 80, crash: 65
+};
+const CSA_LABELS = {
+  unsafe: 'Unsafe Driving', hos: 'HOS Compliance', fitness: 'Driver Fitness',
+  substances: 'Controlled Substances', maintenance: 'Vehicle Maintenance',
+  hm: 'HM Compliance', crash: 'Crash Indicator'
+};
+
+function csaScoreBar(val, threshold) {
+  if (val == null || val === '') return '<span style="color:var(--muted);font-size:11px">—</span>';
+  const n = Number(val);
+  const over = n >= threshold;
+  const color = n >= threshold ? '#dc2626' : n >= threshold * 0.8 ? '#f59e0b' : '#22c55e';
+  const pct = Math.min(100, n);
+  return `<div title="${n}% (threshold ${threshold})" style="display:flex;align-items:center;gap:6px;min-width:80px">
+    <div style="flex:1;height:6px;background:#eee;border-radius:3px;overflow:hidden">
+      <div style="width:${pct}%;height:100%;background:${color};border-radius:3px"></div>
+    </div>
+    <span style="font-size:11px;font-weight:700;color:${color};min-width:28px">${n}${over?'⚠️':''}</span>
+  </div>`;
+}
+
+function renderCSAScores() {
+  const tbl = document.getElementById('csa-scores-table');
+  const alertEl = document.getElementById('csa-alerts');
+  if (!tbl) return;
+
+  const satisfactory = allCSAScores.filter(s => s.safety_rating === 'Satisfactory').length;
+  const conditional  = allCSAScores.filter(s => s.safety_rating === 'Conditional' || s.safety_rating === 'Unsatisfactory').length;
+  const oos = allCSAScores.filter(s => s.operating_status === 'NOT AUTHORIZED' || s.oos_date).length;
+  setText('csa-total', allCSAScores.length);
+  setText('csa-satisfactory', satisfactory);
+  setText('csa-conditional', conditional);
+  setText('csa-oos', oos);
+
+  // Alert banner for flagged carriers
+  const flagged = allCSAScores.filter(s => {
+    if (s.operating_status === 'NOT AUTHORIZED') return true;
+    const basics = ['unsafe','hos','fitness','substances','maintenance','hm','crash'];
+    return basics.some(k => s['score_'+k] != null && Number(s['score_'+k]) >= CSA_THRESHOLDS[k]);
+  });
+  if (alertEl) {
+    alertEl.innerHTML = flagged.length ? flagged.map(s => {
+      const overBasics = Object.entries(CSA_THRESHOLDS)
+        .filter(([k]) => s['score_'+k] != null && Number(s['score_'+k]) >= CSA_THRESHOLDS[k])
+        .map(([k]) => CSA_LABELS[k]);
+      return `<div style="background:rgba(220,38,38,.08);border:1px solid rgba(220,38,38,.25);border-radius:8px;padding:10px 14px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <span style="font-weight:700;color:#dc2626">⚠️ ${esc(s.carrier_name||'—')}</span>
+          <span style="font-size:12px;color:var(--muted);margin-left:8px">${s.operating_status==='NOT AUTHORIZED'?'NOT AUTHORIZED · ':''} ${overBasics.join(', ') || 'Flagged'}</span>
+        </div>
+        <button class="btn-out" style="font-size:11px" onclick="openCSAModal('${s.carrier_id}')">Review</button>
+      </div>`;
+    }).join('') : '';
+  }
+
+  if (!allCSAScores.length) {
+    tbl.innerHTML = '<div style="padding:20px;text-align:center;color:var(--muted)">No safety scores on file. Click "Safety Sweep" to auto-fetch from FMCSA, or "+ Enter Scores" to add manually.</div>';
+    return;
+  }
+
+  tbl.innerHTML = `<div class="tbl-wrap"><table>
+    <thead><tr><th>Carrier</th><th>Safety Rating</th><th>Unsafe Driving</th><th>HOS</th><th>Driver Fitness</th><th>Vehicle Maint.</th><th>Crash Indicator</th><th>OOS %</th><th>Reviewed</th><th></th></tr></thead>
+    <tbody>${allCSAScores.map(s => {
+      const ratingColor = s.safety_rating === 'Satisfactory' ? '#22c55e' : s.safety_rating === 'Conditional' ? '#f59e0b' : s.safety_rating === 'Unsatisfactory' ? '#dc2626' : '#6b7280';
+      return `<tr>
+        <td style="font-weight:600">${esc(s.carrier_name||'—')}</td>
+        <td><span class="badge" style="background:${ratingColor}22;color:${ratingColor};border:1px solid ${ratingColor}44">${s.safety_rating||'Not Rated'}</span></td>
+        <td>${csaScoreBar(s.score_unsafe, 65)}</td>
+        <td>${csaScoreBar(s.score_hos, 65)}</td>
+        <td>${csaScoreBar(s.score_fitness, 80)}</td>
+        <td>${csaScoreBar(s.score_maintenance, 80)}</td>
+        <td>${csaScoreBar(s.score_crash, 65)}</td>
+        <td style="font-size:12px;color:var(--muted)">${s.oos_pct != null ? s.oos_pct + '%' : '—'}</td>
+        <td style="font-size:11px;color:var(--muted)">${s.review_date || '—'}</td>
+        <td><button class="btn-out" style="font-size:11px;padding:3px 8px" onclick="openCSAModal('${s.carrier_id}')">Edit</button></td>
+      </tr>`;
+    }).join('')}</tbody></table></div>`;
+}
+
+function openCSAModal(carrierId) {
+  const sel = document.getElementById('csa-carrier-sel');
+  if (sel) {
+    sel.innerHTML = '<option value="">Select carrier…</option>' +
+      allCarriers.filter(c => c.status === 'active').map(c =>
+        `<option value="${c.id}">${esc(c.company_name||'—')} ${c.dot_number?'(DOT '+c.dot_number+')':''}</option>`
+      ).join('');
+  }
+  const existing = carrierId ? allCSAScores.find(s => s.carrier_id === carrierId) : null;
+  document.getElementById('csa-edit-id').value = existing?.id || '';
+  if (sel && carrierId) sel.value = carrierId;
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('csa-review-date').value = existing?.review_date || today;
+  document.getElementById('csa-rating').value = existing?.safety_rating || 'Satisfactory';
+  document.getElementById('csa-op-status').value = existing?.operating_status || 'AUTHORIZED';
+  ['unsafe','hos','fitness','substances','maintenance','hm','crash','oos_pct'].forEach(k => {
+    const el = document.getElementById('csa-' + k.replace('_pct','_oos').replace('oos_oos','oos'));
+    const fieldKey = k === 'oos_pct' ? 'oos_pct' : 'score_' + k;
+    if (el) el.value = existing?.[fieldKey] ?? '';
+  });
+  openModal('csa-modal');
+}
+
+async function saveCSAScore() {
+  const btn = document.getElementById('csa-save-btn');
+  const carrierId = document.getElementById('csa-carrier-sel')?.value;
+  if (!carrierId) { toast('Select a carrier', 'error'); return; }
+  const carrier = allCarriers.find(c => c.id === carrierId);
+  const editId = document.getElementById('csa-edit-id')?.value;
+  const body = {
+    carrier_id: carrierId,
+    carrier_name: carrier?.company_name || '',
+    safety_rating: document.getElementById('csa-rating')?.value,
+    operating_status: document.getElementById('csa-op-status')?.value,
+    review_date: document.getElementById('csa-review-date')?.value || null,
+    score_unsafe:      toNum(document.getElementById('csa-unsafe')?.value),
+    score_hos:         toNum(document.getElementById('csa-hos')?.value),
+    score_fitness:     toNum(document.getElementById('csa-fitness')?.value),
+    score_substances:  toNum(document.getElementById('csa-substances')?.value),
+    score_maintenance: toNum(document.getElementById('csa-maintenance')?.value),
+    score_hm:          toNum(document.getElementById('csa-hm')?.value),
+    score_crash:       toNum(document.getElementById('csa-crash')?.value),
+    oos_pct:           toNum(document.getElementById('csa-oos-pct')?.value),
+  };
+  function toNum(v) { const n = parseFloat(v); return isNaN(n) ? null : n; }
+  if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
+  const r = editId
+    ? await apiFetch('/api/compliance/csa/' + editId, 'PATCH', body)
+    : await apiFetch('/api/compliance/csa', 'POST', body);
+  if (btn) { btn.disabled = false; btn.textContent = 'Save Scores'; }
+  if (r.ok) {
+    closeModal('csa-modal');
+    toast('Safety scores saved!');
+    await loadCSAScores();
+  } else toast('Error saving', 'error');
+}
+
+async function runCSASweep() {
+  const btns = ['csa-sweep-btn','csa-sweep-btn2'].map(id => document.getElementById(id)).filter(Boolean);
+  btns.forEach(b => { b.disabled = true; b.textContent = 'Sweeping…'; });
+  toast('Running FMCSA safety sweep for all carriers…');
+  let checked = 0, flagged = 0;
+  const carriers = allCarriers.filter(c => c.dot_number && c.status === 'active');
+  for (const c of carriers) {
+    try {
+      const res = await apiFetch('/api/fmcsa/safety/' + c.dot_number.replace(/\D/g,''));
+      if (res.ok) {
+        const data = await res.json();
+        if (data.found) {
+          const existing = allCSAScores.find(s => s.carrier_id === c.id);
+          const body = {
+            carrier_id: c.id, carrier_name: c.company_name,
+            safety_rating: data.safety_rating || 'None',
+            operating_status: data.operating_status || 'AUTHORIZED',
+            review_date: data.safety_review_date || new Date().toISOString().split('T')[0],
+            oos_date: data.oos_date || null,
+          };
+          if (existing) await apiFetch('/api/compliance/csa/' + existing.id, 'PATCH', body);
+          else await apiFetch('/api/compliance/csa', 'POST', body);
+          checked++;
+          if (data.operating_status === 'NOT AUTHORIZED' || data.safety_rating === 'Unsatisfactory' || data.safety_rating === 'Conditional') flagged++;
+        }
+      }
+    } catch(e) { console.warn('CSA sweep error for', c.company_name, e.message); }
+  }
+  btns.forEach(b => { b.disabled = false; b.textContent = b.id === 'csa-sweep-btn' ? '🛡️ Safety Sweep' : '↺ Sweep All'; });
+  toast(`✅ Sweep complete — ${checked} carriers checked, ${flagged} flagged`);
+  if (flagged > 0) fireTrigger('compliance', { event: 'csa_sweep_flagged', carriers_checked: checked, carriers_flagged: flagged });
+  await loadCSAScores();
+}
+
+// ══════════════════════════════════════════════════════
+// MVR TRACKER
+// ══════════════════════════════════════════════════════
+
+function renderMVRTable() {
+  const tbl = document.getElementById('mvr-table');
+  if (!tbl) return;
+  const now = Date.now();
+  // Annotate each record with overdue status
+  const records = allMVRRecords.map(r => {
+    const nextDue = r.next_check_due ? new Date(r.next_check_due).getTime() : null;
+    return { ...r, overdue: nextDue ? now > nextDue : false };
+  });
+
+  setText('mvr-clean',   records.filter(r => r.result === 'clean').length);
+  setText('mvr-minor',   records.filter(r => r.result === 'minor').length);
+  setText('mvr-major',   records.filter(r => r.result === 'major' || r.result === 'suspended').length);
+  setText('mvr-overdue', records.filter(r => r.overdue).length);
+
+  if (!records.length) {
+    tbl.innerHTML = '<div style="padding:20px;text-align:center;color:var(--muted)">No MVR records yet. Click "+ Log MVR Check" to add driver motor vehicle records.</div>';
+    return;
+  }
+
+  const resultColors = { clean: '#22c55e', minor: '#f59e0b', major: '#dc2626', suspended: '#7c3aed' };
+  const resultLabels = { clean: '✅ Clean', minor: '⚠️ Minor', major: '🔴 Major', suspended: '🚫 Suspended' };
+
+  tbl.innerHTML = `<div class="tbl-wrap"><table>
+    <thead><tr><th>Driver</th><th>CDL</th><th>Endorsements</th><th>MVR Result</th><th>Violations</th><th>Check Date</th><th>CDL Expires</th><th>Next Check</th><th></th></tr></thead>
+    <tbody>${records.map(r => {
+      const color = resultColors[r.result] || '#6b7280';
+      const cdlExp = r.cdl_expires ? new Date(r.cdl_expires) : null;
+      const cdlDays = cdlExp ? Math.ceil((cdlExp - new Date()) / 86400000) : null;
+      const cdlColor = cdlDays != null ? (cdlDays < 30 ? '#dc2626' : cdlDays < 90 ? '#f59e0b' : '#22c55e') : 'var(--muted)';
+      return `<tr${r.overdue ? ' style="background:rgba(220,38,38,.04)"' : ''}>
+        <td style="font-weight:600">${esc(r.driver_name||'—')}</td>
+        <td style="font-size:12px">Class ${r.cdl_class||'A'}</td>
+        <td style="font-size:12px;color:var(--muted)">${esc(r.endorsements||'—')}</td>
+        <td><span class="badge" style="background:${color}22;color:${color};border:1px solid ${color}44">${resultLabels[r.result]||r.result||'—'}</span></td>
+        <td style="font-size:13px;font-weight:700;color:${r.violations>0?'#f59e0b':'var(--muted)'}">${r.violations||0}</td>
+        <td style="font-size:12px;color:var(--muted)">${r.check_date||'—'}</td>
+        <td style="font-size:12px;font-weight:600;color:${cdlColor}">${r.cdl_expires||'—'}${cdlDays!=null&&cdlDays<90?' ('+cdlDays+'d)':''}</td>
+        <td style="font-size:12px;color:${r.overdue?'#dc2626':'var(--muted)'}">${r.next_check_due||'—'}${r.overdue?' ⚠️':''}</td>
+        <td><button class="btn-out" style="font-size:11px;padding:3px 8px" onclick="openMVRModal('${r.id}')">Edit</button></td>
+      </tr>`;
+    }).join('')}</tbody></table></div>`;
+}
+
+function openMVRModal(editId) {
+  const sel = document.getElementById('mvr-driver-sel');
+  if (sel) {
+    sel.innerHTML = '<option value="">Select driver…</option>' +
+      (window.allDrivers || []).map(d =>
+        `<option value="${d.id}">${esc((d.first_name||'')+' '+(d.last_name||'')).trim() || esc(d.phone||d.id)}</option>`
+      ).join('');
+  }
+  const existing = editId ? allMVRRecords.find(r => r.id === editId) : null;
+  document.getElementById('mvr-modal-title').textContent = existing ? 'Edit MVR Record' : 'Log MVR Check';
+  document.getElementById('mvr-edit-id').value = existing?.id || '';
+  if (sel && existing?.driver_id) sel.value = existing.driver_id;
+  const today = new Date().toISOString().split('T')[0];
+  const nextYear = new Date(); nextYear.setFullYear(nextYear.getFullYear() + 1);
+  document.getElementById('mvr-check-date').value   = existing?.check_date || today;
+  document.getElementById('mvr-result').value        = existing?.result || 'clean';
+  document.getElementById('mvr-violations').value    = existing?.violations || 0;
+  document.getElementById('mvr-cdl-class').value     = existing?.cdl_class || 'A';
+  document.getElementById('mvr-cdl-exp').value       = existing?.cdl_expires || '';
+  document.getElementById('mvr-endorsements').value  = existing?.endorsements || '';
+  document.getElementById('mvr-next-due').value      = existing?.next_check_due || nextYear.toISOString().split('T')[0];
+  document.getElementById('mvr-notes').value         = existing?.notes || '';
+  openModal('mvr-modal');
+}
+
+async function saveMVR() {
+  const btn = document.getElementById('mvr-save-btn');
+  const driverSel = document.getElementById('mvr-driver-sel');
+  const editId = document.getElementById('mvr-edit-id')?.value;
+  const driverId = driverSel?.value;
+  const checkDate = document.getElementById('mvr-check-date')?.value;
+  if (!checkDate) { toast('Check date is required', 'error'); return; }
+  const driver = (window.allDrivers || []).find(d => d.id === driverId);
+  const body = {
+    driver_id: driverId || null,
+    driver_name: driver ? ((driver.first_name||'') + ' ' + (driver.last_name||'')).trim() || driver.phone : (driverSel?.selectedOptions[0]?.text || ''),
+    check_date: checkDate,
+    result: document.getElementById('mvr-result')?.value || 'clean',
+    violations: parseInt(document.getElementById('mvr-violations')?.value) || 0,
+    cdl_class: document.getElementById('mvr-cdl-class')?.value || 'A',
+    cdl_expires: document.getElementById('mvr-cdl-exp')?.value || null,
+    endorsements: document.getElementById('mvr-endorsements')?.value.trim() || null,
+    next_check_due: document.getElementById('mvr-next-due')?.value || null,
+    notes: document.getElementById('mvr-notes')?.value.trim() || null,
+  };
+  if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
+  const r = editId
+    ? await apiFetch('/api/compliance/mvr/' + editId, 'PATCH', body)
+    : await apiFetch('/api/compliance/mvr', 'POST', body);
+  if (btn) { btn.disabled = false; btn.textContent = 'Save MVR Record'; }
+  if (r.ok) {
+    closeModal('mvr-modal');
+    toast('MVR record saved!');
+    if (body.result === 'major' || body.result === 'suspended')
+      fireTrigger('compliance', { event: 'mvr_flag', driver_name: body.driver_name, result: body.result });
+    await loadMVRRecords();
+  } else toast('Error saving MVR', 'error');
+}
+
+// ══════════════════════════════════════════════════════
 // AR AGING REPORT
 // ══════════════════════════════════════════════════════
 
@@ -12185,6 +12531,128 @@ async function settleFactoring(id) {
       <div style="display:flex;gap:8px;justify-content:flex-end;padding-top:4px;border-top:1px solid var(--border)">
         <button class="btn-out" onclick="closeModal('factor-modal')">Cancel</button>
         <button class="btn-navy" id="factor-submit-btn" onclick="submitFactoring()">Submit for Factoring</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- CSA SCORE ENTRY MODAL -->
+<div class="modal-overlay" id="csa-modal" onclick="if(event.target===this)closeModal('csa-modal')">
+  <div class="modal" style="max-width:580px">
+    <div class="modal-hd"><span class="modal-title">CSA Safety Scores</span><button class="modal-close" onclick="closeModal('csa-modal')">✕</button></div>
+    <div style="padding:20px;display:flex;flex-direction:column;gap:14px">
+      <input type="hidden" id="csa-edit-id">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div>
+          <label style="font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:6px">CARRIER *</label>
+          <select class="fsel" id="csa-carrier-sel" style="width:100%"><option value="">Select carrier…</option></select>
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:6px">SAFETY RATING</label>
+          <select class="fsel" id="csa-rating" style="width:100%">
+            <option value="Satisfactory">Satisfactory ✅</option>
+            <option value="Conditional">Conditional ⚠️</option>
+            <option value="Unsatisfactory">Unsatisfactory 🔴</option>
+            <option value="None">Not Rated</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:6px">REVIEW DATE</label>
+          <input class="fi" type="date" id="csa-review-date" style="width:100%">
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:6px">OPERATING STATUS</label>
+          <select class="fsel" id="csa-op-status" style="width:100%">
+            <option value="AUTHORIZED">Authorized ✅</option>
+            <option value="NOT AUTHORIZED">Not Authorized 🔴</option>
+            <option value="INACTIVE">Inactive</option>
+          </select>
+        </div>
+      </div>
+      <div style="font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.5px;margin-top:4px">7 BASIC SMS PERCENTILE SCORES (0–100, lower = safer · from FMCSA SMS)</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div><label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px">Unsafe Driving <span style="color:#dc2626">(threshold: 65)</span></label>
+          <input class="fi" type="number" id="csa-unsafe" min="0" max="100" placeholder="0–100" style="width:100%"></div>
+        <div><label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px">HOS Compliance <span style="color:#dc2626">(threshold: 65)</span></label>
+          <input class="fi" type="number" id="csa-hos" min="0" max="100" placeholder="0–100" style="width:100%"></div>
+        <div><label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px">Driver Fitness <span style="color:#dc2626">(threshold: 80)</span></label>
+          <input class="fi" type="number" id="csa-fitness" min="0" max="100" placeholder="0–100" style="width:100%"></div>
+        <div><label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px">Controlled Substances <span style="color:#dc2626">(threshold: 80)</span></label>
+          <input class="fi" type="number" id="csa-substances" min="0" max="100" placeholder="0–100" style="width:100%"></div>
+        <div><label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px">Vehicle Maintenance <span style="color:#dc2626">(threshold: 80)</span></label>
+          <input class="fi" type="number" id="csa-maintenance" min="0" max="100" placeholder="0–100" style="width:100%"></div>
+        <div><label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px">HM Compliance <span style="color:#dc2626">(threshold: 80)</span></label>
+          <input class="fi" type="number" id="csa-hm" min="0" max="100" placeholder="0–100" style="width:100%"></div>
+        <div><label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px">Crash Indicator <span style="color:#dc2626">(threshold: 65)</span></label>
+          <input class="fi" type="number" id="csa-crash" min="0" max="100" placeholder="0–100" style="width:100%"></div>
+        <div><label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px">Out of Service %</label>
+          <input class="fi" type="number" id="csa-oos-pct" min="0" max="100" step="0.1" placeholder="e.g. 4.2" style="width:100%"></div>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;padding-top:4px;border-top:1px solid var(--border)">
+        <button class="btn-out" onclick="closeModal('csa-modal')">Cancel</button>
+        <button class="btn-navy" id="csa-save-btn" onclick="saveCSAScore()">Save Scores</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MVR CHECK MODAL -->
+<div class="modal-overlay" id="mvr-modal" onclick="if(event.target===this)closeModal('mvr-modal')">
+  <div class="modal" style="max-width:500px">
+    <div class="modal-hd"><span class="modal-title" id="mvr-modal-title">Log MVR Check</span><button class="modal-close" onclick="closeModal('mvr-modal')">✕</button></div>
+    <div style="padding:20px;display:flex;flex-direction:column;gap:14px">
+      <input type="hidden" id="mvr-edit-id">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div>
+          <label style="font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:6px">DRIVER *</label>
+          <select class="fsel" id="mvr-driver-sel" style="width:100%"><option value="">Select driver…</option></select>
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:6px">CHECK DATE *</label>
+          <input class="fi" type="date" id="mvr-check-date" style="width:100%">
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:6px">MVR RESULT</label>
+          <select class="fsel" id="mvr-result" style="width:100%">
+            <option value="clean">Clean ✅</option>
+            <option value="minor">Minor Violations ⚠️</option>
+            <option value="major">Major Violations 🔴</option>
+            <option value="suspended">Suspended / Revoked 🚫</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:6px">VIOLATIONS COUNT</label>
+          <input class="fi" type="number" id="mvr-violations" value="0" min="0" style="width:100%">
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:6px">CDL CLASS</label>
+          <select class="fsel" id="mvr-cdl-class" style="width:100%">
+            <option value="A">Class A</option>
+            <option value="B">Class B</option>
+            <option value="C">Class C</option>
+            <option value="none">No CDL</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:6px">CDL EXPIRES</label>
+          <input class="fi" type="date" id="mvr-cdl-exp" style="width:100%">
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:6px">ENDORSEMENTS</label>
+          <input class="fi" id="mvr-endorsements" placeholder="H, N, P, T, X…" style="width:100%">
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:6px">NEXT CHECK DUE</label>
+          <input class="fi" type="date" id="mvr-next-due" style="width:100%">
+        </div>
+        <div style="grid-column:1/-1">
+          <label style="font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:6px">NOTES</label>
+          <input class="fi" id="mvr-notes" placeholder="Violation details, state, notes…" style="width:100%">
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;padding-top:4px;border-top:1px solid var(--border)">
+        <button class="btn-out" onclick="closeModal('mvr-modal')">Cancel</button>
+        <button class="btn-navy" id="mvr-save-btn" onclick="saveMVR()">Save MVR Record</button>
       </div>
     </div>
   </div>
