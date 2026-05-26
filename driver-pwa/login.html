@@ -152,19 +152,15 @@ async function handleLogin(event) {
 
   try {
     const normalizedPhone = '+1' + digits;
-    const { data, error } = await sb
-      .from('drivers')
-      .select('*')
-      .eq('phone', normalizedPhone)
-      .single();
+
+    // Use SECURITY DEFINER RPC — validates phone+pin server-side, bypasses RLS
+    const { data, error } = await sb.rpc('driver_login', {
+      p_phone: normalizedPhone,
+      p_pin:   pin
+    });
 
     if (error || !data) {
-      throw new Error('No driver account found.');
-    }
-
-    // PIN check: if a pin column exists and has a value, match it; otherwise accept any PIN
-    if (data.pin && data.pin !== pin) {
-      errorEl.textContent = 'Incorrect PIN. Please try again.';
+      errorEl.textContent = 'Incorrect phone or PIN. Contact your dispatcher.';
       errorEl.classList.add('show');
       loadingEl.classList.remove('show');
       btnEl.disabled = false;
@@ -185,7 +181,7 @@ async function handleLogin(event) {
     window.location.href = './index.html';
 
   } catch (err) {
-    errorEl.textContent = 'No driver account found. Contact your dispatcher.';
+    errorEl.textContent = 'Connection error — check your internet and try again.';
     errorEl.classList.add('show');
     loadingEl.classList.remove('show');
     btnEl.disabled = false;
