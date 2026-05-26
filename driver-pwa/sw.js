@@ -29,10 +29,16 @@ self.addEventListener('fetch', e => {
 
 self.addEventListener('push', e => {
   const data = e.data?.json() || {};
-  e.waitUntil(self.registration.showNotification(
-    data.title || '3 Lakes Driver',
-    { body: data.body || '', icon: '/favicon.ico', badge: '/favicon.ico', data }
-  ));
+  e.waitUntil(
+    self.registration.showNotification(
+      data.title || '3 Lakes Driver',
+      { body: data.body || '', icon: '/favicon.ico', badge: '/favicon.ico', data }
+    ).then(() =>
+      self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clients =>
+        clients.forEach(c => c.postMessage({ type: 'PUSH_NOTIFICATION', title: data.title, body: data.body, data }))
+      )
+    )
+  );
 });
 
 self.addEventListener('notificationclick', e => {

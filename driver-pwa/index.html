@@ -669,6 +669,36 @@
   </button>
 </div>
 
+<!-- ISSUE REPORT MODAL -->
+<div id="issue-modal" style="display:none;position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.7);align-items:flex-end;justify-content:center">
+  <div style="background:#111827;border-radius:20px 20px 0 0;width:100%;max-width:480px;padding:24px 20px 40px;border-top:1px solid #2d3748">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+      <div style="font-size:16px;font-weight:700;color:#f1f5f9">🚨 Report Issue to Dispatch</div>
+      <button onclick="closeIssueModal()" style="background:none;border:none;color:#94a3b8;font-size:22px;cursor:pointer;padding:0 4px">✕</button>
+    </div>
+    <div style="font-size:12px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px">Issue Type</div>
+    <div id="issue-type-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px">
+      <button class="issue-type-btn" data-type="Breakdown" onclick="selectIssueType(this)">🔧 Breakdown</button>
+      <button class="issue-type-btn" data-type="Accident" onclick="selectIssueType(this)">🚨 Accident</button>
+      <button class="issue-type-btn" data-type="Delay" onclick="selectIssueType(this)">⏰ Delay</button>
+      <button class="issue-type-btn" data-type="Wrong Load" onclick="selectIssueType(this)">📦 Wrong Load</button>
+      <button class="issue-type-btn" data-type="HOS Violation" onclick="selectIssueType(this)">⚖️ HOS Issue</button>
+      <button class="issue-type-btn" data-type="Other" onclick="selectIssueType(this)">❓ Other</button>
+    </div>
+    <div style="font-size:12px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px">Details</div>
+    <textarea id="issue-details" placeholder="Describe what's happening — location, severity, what you need…" style="width:100%;padding:12px;background:#0a0f1e;border:1.5px solid #2d3748;border-radius:10px;color:#f1f5f9;font-size:14px;line-height:1.5;resize:none;height:90px;font-family:inherit"></textarea>
+    <div id="issue-location-row" style="display:flex;align-items:center;gap:8px;margin:10px 0;font-size:12px;color:#94a3b8">
+      <span id="issue-location-txt">📍 Location not attached</span>
+      <button onclick="attachIssueLocation()" style="background:none;border:1px solid #2d3748;color:#3b82f6;font-size:11px;padding:3px 10px;border-radius:6px;cursor:pointer">Get Location</button>
+    </div>
+    <button id="issue-submit-btn" onclick="submitIssueReport()" style="width:100%;padding:14px;background:#dc2626;color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;margin-top:4px">Send to Dispatch</button>
+  </div>
+</div>
+<style>
+.issue-type-btn{padding:10px 8px;background:#1a2235;border:1.5px solid #2d3748;border-radius:10px;color:#94a3b8;font-size:13px;cursor:pointer;text-align:left;transition:border-color .15s,color .15s}
+.issue-type-btn:active,.issue-type-btn.selected{border-color:#ef4444;color:#f1f5f9;background:#1f1515}
+</style>
+
 <!-- TOAST -->
 <div id="toast"></div>
 
@@ -879,7 +909,15 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function registerServiceWorker() {
-  if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+  if (!('serviceWorker' in navigator)) return;
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+  navigator.serviceWorker.addEventListener('message', e => {
+    if (e.data?.type === 'PUSH_NOTIFICATION') {
+      const title = e.data.title || '3 Lakes Driver';
+      const body  = e.data.body  || '';
+      showToast(`🔔 ${title}${body ? ': ' + body : ''}`);
+    }
+  });
 }
 
 // ── VIEW NAVIGATION ───────────────────────────────────────────────────────────
@@ -1336,32 +1374,56 @@ async function loadProfile() {
 async function loadDocs() {
   if (!supabaseClient) return;
   try {
-    const driverId = localStorage.getItem('3ll_driver_id') || '';
-    if (!driverId) return;
-
-    // Query driver_documents for this driver
-    const { data: docs, error } = await supabaseClient
-      .from('driver_documents')
-      .select('*')
-      .eq('driver_id', driverId)
-      .order('uploaded_at', { ascending: false })
+    const driverCode = localStorage.getItem('3ll_driver_code') || DRIVER_ID;
+    const { data: docs } = await supabaseClient
+      .from('document_vault')
+      .select('id,doc_type,filename,storage_path,created_at,status')
+      .eq('uploaded_by', driverCode)
+      .order('created_at', { ascending: false })
       .limit(50);
-
-    if (error || !docs) {
-      console.error('loadDocs error:', error);
-      return;
-    }
-    renderDocuments(docs);
+    renderDocuments(docs || []);
   } catch (err) {
     console.error('loadDocs exception:', err);
   }
 }
 
 function renderDocuments(docs) {
-  // Documents tab content would be rendered here
-  // For now this is a placeholder — implement based on your docs UI design
-  if (docs && docs.length > 0) {
-    console.log('Loaded documents:', docs);
+  const el = document.getElementById('docs-list');
+  if (!el) return;
+  if (!docs || !docs.length) {
+    el.innerHTML = '<div style="color:var(--muted);font-size:13px;padding:8px 0">No documents uploaded for current load.</div>';
+    return;
+  }
+  el.innerHTML = docs.map(d => {
+    const name = d.filename || d.doc_type || 'Document';
+    const date = d.created_at ? new Date(d.created_at).toLocaleDateString() : '';
+    const icon = { bol:'📄', pod:'✍️', lumper:'🧾' }[d.doc_type] || '📎';
+    return `<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border)">
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="font-size:20px">${icon}</span>
+        <div>
+          <div style="font-size:13px;font-weight:600;color:var(--text)">${name}</div>
+          <div style="font-size:11px;color:var(--muted)">${d.doc_type?.toUpperCase() || ''} · ${date}</div>
+        </div>
+      </div>
+      <span class="pill pill-green" style="font-size:10px">✓ Uploaded</span>
+    </div>`;
+  }).join('');
+}
+
+async function loadDocumentsList() {
+  if (!supabaseClient) return;
+  const driverCode = localStorage.getItem('3ll_driver_code') || DRIVER_ID;
+  try {
+    const { data } = await supabaseClient
+      .from('document_vault')
+      .select('id,doc_type,filename,storage_path,created_at,status')
+      .eq('uploaded_by', driverCode)
+      .order('created_at', { ascending: false })
+      .limit(20);
+    renderDocuments(data || []);
+  } catch (e) {
+    console.debug('loadDocumentsList error:', e);
   }
 }
 
@@ -1650,24 +1712,66 @@ async function declineLoad(loadId) {
   loadAvailableLoads();
 }
 
-async function reportIssue() {
-  const issue = prompt('Describe the issue (breakdown, accident, delay):');
-  if (!issue) return;
-  if (DEMO_MODE) { showToast('⚠️ Issue reported to Dispatch (demo)'); return; }
-  if (!supabaseClient) return;
+let _issueType = '';
+let _issueCoords = null;
+
+function reportIssue() {
+  _issueType = '';
+  _issueCoords = null;
+  document.getElementById('issue-details').value = '';
+  document.getElementById('issue-location-txt').textContent = '📍 Location not attached';
+  document.querySelectorAll('.issue-type-btn').forEach(b => b.classList.remove('selected'));
+  const modal = document.getElementById('issue-modal');
+  modal.style.display = 'flex';
+}
+
+function closeIssueModal() {
+  document.getElementById('issue-modal').style.display = 'none';
+}
+
+function selectIssueType(btn) {
+  document.querySelectorAll('.issue-type-btn').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+  _issueType = btn.dataset.type;
+}
+
+function attachIssueLocation() {
+  navigator.geolocation?.getCurrentPosition(pos => {
+    _issueCoords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+    document.getElementById('issue-location-txt').textContent =
+      `📍 ${_issueCoords.lat.toFixed(4)}, ${_issueCoords.lng.toFixed(4)}`;
+  }, () => showToast('Could not get location'));
+}
+
+async function submitIssueReport() {
+  if (!_issueType) { showToast('Select an issue type'); return; }
+  const details = document.getElementById('issue-details').value.trim();
+  const body = `🚨 ISSUE REPORT [${_issueType}]${details ? ': ' + details : ''}${_issueCoords ? ` | GPS: ${_issueCoords.lat.toFixed(4)},${_issueCoords.lng.toFixed(4)}` : ''}`;
+
+  const btn = document.getElementById('issue-submit-btn');
+  btn.disabled = true; btn.textContent = 'Sending…';
+
+  if (DEMO_MODE) {
+    closeIssueModal();
+    showToast('⚠️ Issue reported to Dispatch (demo)');
+    btn.disabled = false; btn.textContent = 'Send to Dispatch';
+    return;
+  }
+  if (!supabaseClient) { showToast('Not connected'); btn.disabled = false; btn.textContent = 'Send to Dispatch'; return; }
   try {
-    // Send issue as a message to dispatch
     await supabaseClient.from('driver_messages').insert({
       driver_phone: MY_PHONE,
-      direction: 'outbound',
-      body: `🚨 ISSUE REPORT: ${issue}`,
-      msg_type: 'issue_report'
+      direction:    'outbound',
+      body,
+      msg_type:     'issue_report',
     });
-    showToast('⚠️ Issue reported to Dispatch');
+    closeIssueModal();
+    showToast('⚠️ Dispatch notified — help is on the way');
   } catch (err) {
     console.error('reportIssue error:', err);
-    showToast('Failed to report issue');
+    showToast('Failed to send — try calling dispatch directly');
   }
+  btn.disabled = false; btn.textContent = 'Send to Dispatch';
 }
 
 function triggerUpload(inputId) { document.getElementById(inputId).click(); }
@@ -1675,12 +1779,41 @@ function triggerUpload(inputId) { document.getElementById(inputId).click(); }
 async function handleUpload(docType, input) {
   const file = input.files[0];
   if (!file) return;
+  if (!supabaseClient) { showToast('Not connected — try again'); return; }
+
   showToast(`📤 Uploading ${docType.toUpperCase()}…`);
-  setTimeout(() => {
-    const el = document.getElementById(docType + '-status');
-    if (el) el.style.display = 'inline-flex';
+  const driverCode = localStorage.getItem('3ll_driver_code') || DRIVER_ID;
+  const carrierId  = localStorage.getItem('3ll_carrier_id') || null;
+  const loadEl     = document.getElementById('load-number');
+  const loadNum    = loadEl ? loadEl.textContent.trim() : 'unknown';
+  const ext        = file.name.split('.').pop() || 'bin';
+  const path       = `driver-docs/${driverCode}/${loadNum}/${docType}_${Date.now()}.${ext}`;
+
+  try {
+    const { error: upErr } = await supabaseClient.storage
+      .from('driver-documents')
+      .upload(path, file, { upsert: true, contentType: file.type });
+    if (upErr) throw upErr;
+
+    await supabaseClient.from('document_vault').insert({
+      doc_type:    docType,
+      filename:    file.name,
+      storage_path: path,
+      status:      'active',
+      uploaded_by: driverCode,
+      carrier_id:  carrierId,
+      load_number: loadNum,
+    }).select().single();
+
+    const statusEl = document.getElementById(docType + '-status');
+    if (statusEl) statusEl.style.display = 'inline-flex';
     showToast(`✅ ${docType.toUpperCase()} uploaded`);
-  }, 1500);
+    input.value = '';
+    loadDocumentsList();
+  } catch (err) {
+    console.error('Upload failed:', err);
+    showToast(`❌ Upload failed — check connection and try again`);
+  }
 }
 
 // ── GPS TRACKING ──────────────────────────────────────────────────────────────────

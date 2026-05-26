@@ -44,9 +44,7 @@
     .loading.show { display: block; }
     .spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid var(--accent); border-top-color: transparent; border-radius: 50%; animation: spin .6s linear infinite; margin-right: 8px; vertical-align: middle; }
     @keyframes spin { to { transform: rotate(360deg); } }
-    .demo-box { margin-top: 20px; padding: 14px 16px; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 12px; font-size: 13px; color: #1e40af; line-height: 1.7; }
-    .demo-box strong { display: block; margin-bottom: 4px; color: #1d4ed8; font-size: 12px; text-transform: uppercase; letter-spacing: .6px; }
-    code { background: #dbeafe; padding: 2px 6px; border-radius: 4px; font-family: monospace; font-weight: 700; }
+    .contact-hint { margin-top: 20px; text-align: center; font-size: 12px; color: var(--muted); }
   </style>
   <script src="../shared/config.js"></script>
 <script src="../shared/tk.js"></script>
@@ -101,19 +99,14 @@
     </form>
   </div>
 
-  <div class="demo-box">
-    <strong>Demo Access</strong>
-    Phone: <code>(312) 555-0100</code>&nbsp;&nbsp;PIN: <code>1234</code><br>
-    <button type="button" onclick="demoLogin()" style="margin-top:10px;width:100%;padding:11px;background:#2563eb;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;">
-      Tap to Auto-Fill Demo &amp; Login →
-    </button>
+  <div class="contact-hint">
+    No account? Contact your dispatcher to get set up.<br>
+    <a href="mailto:info@3lakeslogistics.com" style="color:#3b82f6">info@3lakeslogistics.com</a>
   </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const DEMO_PHONE_DIGITS = '3125550100';
-const DEMO_PIN = '1234';
 
 // Initialize Supabase from shared config (loaded by ../shared/config.js)
 var _cfg = window.__3LL_CONFIG || {};
@@ -147,18 +140,6 @@ async function handleLogin(event) {
 
   loadingEl.classList.add('show');
   btnEl.disabled = true;
-
-  // Demo bypass — works without backend or Supabase
-  if (digits === DEMO_PHONE_DIGITS && pin === DEMO_PIN) {
-    localStorage.setItem('3ll_token',       'demo-token-3lakes');
-    localStorage.setItem('3ll_driver_id',   'DRV-001');
-    localStorage.setItem('3ll_driver_name', 'James Thompson');
-    localStorage.setItem('3ll_phone',       '+13125550100');
-    localStorage.setItem('3ll_expires_at',  new Date(Date.now() + 86400000 * 30).toISOString());
-    localStorage.setItem('3ll_driver_code', 'DRV-001');
-    window.location.href = './index.html';
-    return;
-  }
 
   // Real Supabase lookup
   if (!sb) {
@@ -211,15 +192,6 @@ async function handleLogin(event) {
   }
 }
 
-function demoLogin() {
-  localStorage.setItem('3ll_token',       'demo-token-3lakes');
-  localStorage.setItem('3ll_driver_id',   'DRV-001');
-  localStorage.setItem('3ll_driver_name', 'James Thompson');
-  localStorage.setItem('3ll_phone',       '+13125550100');
-  localStorage.setItem('3ll_expires_at',  new Date(Date.now() + 86400000 * 30).toISOString());
-  localStorage.setItem('3ll_driver_code', 'DRV-001');
-  window.location.href = './index.html';
-}
 
 document.getElementById('pin').addEventListener('input', e => {
   e.target.value = e.target.value.replace(/\D/g, '').substring(0, 4);
