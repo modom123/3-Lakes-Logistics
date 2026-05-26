@@ -392,6 +392,40 @@ td.td-name{font-weight:600;color:var(--navy);}
 .lc-rate{font-family:var(--ff-h);font-size:22px;font-weight:800;color:var(--gold);text-align:right;}
 .lc-rpm{font-family:var(--ff-m);font-size:10px;color:var(--muted);text-align:right;margin-top:2px;}
 
+/* ── DISPATCH KANBAN ── */
+.db-view-toggle{display:flex;border:1.5px solid var(--border);border-radius:7px;overflow:hidden;flex-shrink:0;}
+.db-vt-btn{padding:6px 13px;font-size:12px;border:none;background:var(--surface);color:var(--muted);cursor:pointer;font-family:var(--ff-b);font-weight:600;transition:all .15s;}
+.db-vt-btn.active{background:var(--navy);color:#fff;}
+.db-vt-btn:hover:not(.active){background:var(--slate);}
+.kanban-wrap{display:flex;gap:12px;align-items:flex-start;}
+.kanban-board{display:flex;gap:9px;overflow-x:auto;flex:1;padding-bottom:6px;align-items:flex-start;min-width:0;}
+.kanban-col{min-width:215px;width:215px;flex-shrink:0;background:var(--slate);border-radius:11px;border:1px solid var(--border);overflow:hidden;}
+.kanban-col-hdr{display:flex;align-items:center;justify-content:space-between;padding:9px 11px;background:var(--white);border-bottom:1px solid var(--border);}
+.kanban-col-title{font-size:11px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:.6px;font-family:var(--ff-m);}
+.kanban-col-count{font-size:10px;font-family:var(--ff-m);font-weight:700;padding:2px 7px;border-radius:10px;color:#fff;}
+.kanban-cards{padding:7px;min-height:90px;display:flex;flex-direction:column;gap:6px;transition:background .15s;}
+.kanban-cards.drag-over{background:rgba(200,144,42,.12);border-radius:8px;}
+.kb-card{background:var(--white);border:1.5px solid var(--border);border-radius:9px;padding:11px;cursor:grab;user-select:none;transition:box-shadow .15s,border-color .15s;position:relative;}
+.kb-card:hover{border-color:var(--gold);box-shadow:0 3px 14px rgba(11,37,69,.1);}
+.kb-card.dragging{opacity:.35;cursor:grabbing;}
+.kb-card.check-overdue{border-left:3px solid var(--orange);}
+.kb-card-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;}
+.kb-card-num{font-family:var(--ff-m);font-size:10px;font-weight:600;color:var(--muted);}
+.kb-card-route{font-size:13px;font-weight:700;color:var(--navy);line-height:1.25;margin-bottom:3px;}
+.kb-card-meta{font-family:var(--ff-m);font-size:10px;color:var(--muted);margin-bottom:6px;}
+.kb-card-driver{font-size:11px;font-weight:600;color:var(--navy);padding:4px 8px;background:var(--off);border-radius:5px;margin-bottom:6px;display:flex;align-items:center;gap:5px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;}
+.kb-card-driver.unassigned{color:var(--red);font-style:italic;cursor:pointer;border:1px dashed var(--border);background:rgba(220,38,38,.04);}
+.kb-card-rate-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:7px;}
+.kb-card-rate-val{font-family:var(--ff-h);font-size:15px;font-weight:800;color:var(--gold);}
+.kb-card-rpm{font-family:var(--ff-m);font-size:10px;color:var(--muted);}
+.kb-card-actions{display:flex;gap:3px;}
+.kb-card-actions button{font-size:10px;padding:3px 6px;border-radius:5px;}
+.kanban-sidebar{width:240px;flex-shrink:0;background:var(--white);border:1.5px solid var(--border);border-radius:12px;overflow:hidden;position:sticky;top:16px;}
+.kb-carrier-row{padding:9px 11px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;gap:7px;cursor:grab;}
+.kb-carrier-row:hover{background:var(--off);}
+.kb-carrier-name{font-size:12px;font-weight:600;color:var(--navy);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.kb-carrier-equip{font-size:10px;color:var(--muted);font-family:var(--ff-m);}
+
 /* ── PROVIDER CARD ── */
 .prov-card{
   background:var(--off);border:1.5px solid var(--border);border-radius:12px;
@@ -906,7 +940,12 @@ td.td-name{font-weight:600;color:var(--navy);}
       <div class="page-hdr">
         <div class="page-hdr-l"><div class="chip">Live</div><h2>Dispatch Board</h2></div>
         <div class="page-hdr-acts">
-          <select id="dispatch-filter-status" onchange="renderDispatchBoard()" style="padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px">
+          <div class="db-view-toggle">
+            <button class="db-vt-btn active" id="db-vt-kanban" onclick="setDispatchView('kanban')">⠿ Kanban</button>
+            <button class="db-vt-btn" id="db-vt-table" onclick="setDispatchView('table')">☰ Table</button>
+          </div>
+          <input id="dispatch-search" class="form-input" style="width:160px;font-size:12px" placeholder="Search load # or driver…" oninput="renderDispatchBoard()">
+          <select id="dispatch-filter-status" onchange="renderDispatchBoard()" style="padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;display:none">
             <option value="">Active Only</option>
             <option value="all">All Statuses</option>
             <option value="Booked">Booked</option>
@@ -925,21 +964,39 @@ td.td-name{font-weight:600;color:var(--navy);}
         <div class="mc"><div class="mc-label">Check-Calls Due</div><div class="mc-val orange" id="dispatch-check-calls">—</div></div>
         <div class="mc"><div class="mc-label">PODs Needed</div><div class="mc-val red" id="dispatch-pods">—</div></div>
       </div>
-      <div style="display:grid;grid-template-columns:1fr 270px;gap:16px;align-items:start">
-        <div class="card">
-          <div class="card-hd">
-            <div class="card-title">Active Loads</div>
-            <input id="dispatch-search" class="form-input" style="width:180px;font-size:12px" placeholder="Search load # or driver…" oninput="renderDispatchBoard()">
+
+      <!-- KANBAN VIEW -->
+      <div id="dispatch-kanban-view">
+        <div class="kanban-wrap">
+          <div class="kanban-board" id="kanban-board">
+            <div style="padding:40px;color:var(--muted);font-size:13px"><div class="spin" style="margin:0 auto 10px"></div>Loading…</div>
           </div>
-          <div class="tbl-wrap">
-            <table><thead><tr><th>Load #</th><th>Pickup</th><th>Route</th><th>Driver</th><th>Rate</th><th>RPM</th><th>Status</th><th>Actions</th></tr></thead>
-            <tbody id="dispatch-table"><tr><td colspan="8"><div class="loading"><div class="spin"></div>Loading…</div></td></tr></tbody></table>
+          <div class="kanban-sidebar">
+            <div class="card-hd" style="padding:10px 12px"><div class="card-title" style="font-size:13px">Available Carriers</div><span class="card-chip" id="avail-count">0</span></div>
+            <div id="avail-drivers-list" style="max-height:calc(100vh - 360px);overflow-y:auto">
+              <div style="padding:16px;text-align:center;color:var(--muted);font-size:12px"><div class="spin" style="margin:0 auto 8px"></div>Loading…</div>
+            </div>
           </div>
         </div>
-        <div class="card" style="position:sticky;top:16px">
-          <div class="card-hd"><div class="card-title">Available Carriers</div><span class="card-chip" id="avail-count">0</span></div>
-          <div id="avail-drivers-list" style="max-height:500px;overflow-y:auto">
-            <div style="padding:16px;text-align:center;color:var(--muted);font-size:12px"><div class="spin" style="margin:0 auto 8px"></div>Loading…</div>
+      </div>
+
+      <!-- TABLE VIEW -->
+      <div id="dispatch-table-view" style="display:none">
+        <div style="display:grid;grid-template-columns:1fr 270px;gap:16px;align-items:start">
+          <div class="card">
+            <div class="card-hd">
+              <div class="card-title">Active Loads</div>
+            </div>
+            <div class="tbl-wrap">
+              <table><thead><tr><th>Load #</th><th>Pickup</th><th>Route</th><th>Driver</th><th>Rate</th><th>RPM</th><th>Status</th><th>Actions</th></tr></thead>
+              <tbody id="dispatch-table"><tr><td colspan="8"><div class="loading"><div class="spin"></div>Loading…</div></td></tr></tbody></table>
+            </div>
+          </div>
+          <div class="card" style="position:sticky;top:16px">
+            <div class="card-hd"><div class="card-title">Available Carriers</div><span class="card-chip" id="avail-count-tbl">0</span></div>
+            <div id="avail-drivers-list-tbl" style="max-height:500px;overflow-y:auto">
+              <div style="padding:16px;text-align:center;color:var(--muted);font-size:12px"><div class="spin" style="margin:0 auto 8px"></div>Loading…</div>
+            </div>
           </div>
         </div>
       </div>
@@ -3319,56 +3376,187 @@ function renderLoadsTable(){
   }).join('');
 }
 
+// ── Dispatch view state ──────────────────────────────────────────────────────
+let _dispatchView='kanban';
+
+function setDispatchView(view){
+  _dispatchView=view;
+  document.getElementById('dispatch-kanban-view').style.display=view==='kanban'?'':'none';
+  document.getElementById('dispatch-table-view').style.display=view==='table'?'':'none';
+  const filterSel=document.getElementById('dispatch-filter-status');
+  if(filterSel)filterSel.style.display=view==='table'?'':'none';
+  document.getElementById('db-vt-kanban').classList.toggle('active',view==='kanban');
+  document.getElementById('db-vt-table').classList.toggle('active',view==='table');
+  renderDispatchBoard();
+}
+
 function renderDispatchBoard(){
+  const now=Date.now();
+  const activeStatuses=['En Route','Booked','Check Due','POD Needed'];
+  const onLoad=allLoads.filter(l=>l.status==='En Route').length;
+  const activeNames=new Set(allLoads.filter(l=>activeStatuses.includes(l.status)).map(l=>l.driver_name).filter(Boolean));
+  const availCarriers=allCarriers.filter(c=>c.status==='active'&&!activeNames.has(c.company_name));
+  const checkDue=allLoads.filter(l=>{
+    if(l.status!=='En Route')return false;
+    const last=l.updated_at||l.created_at;
+    return last&&(now-new Date(last).getTime())>4*60*60*1000;
+  }).length;
+  setText('dispatch-on-load',onLoad);
+  setText('dispatch-available',availCarriers.length);
+  setText('dispatch-check-calls',checkDue||0);
+  setText('dispatch-pods',allLoads.filter(l=>l.status==='POD Needed').length);
+  renderAvailableCarriers(availCarriers);
+  if(_dispatchView==='kanban') renderKanbanBoard();
+  else renderDispatchTable();
+}
+
+// ── Kanban columns definition ────────────────────────────────────────────────
+const KANBAN_COLS=[
+  {key:'Unassigned',label:'Unassigned',color:'#6b7280'},
+  {key:'Booked',    label:'Booked',    color:'#2563eb'},
+  {key:'En Route',  label:'En Route',  color:'#059669'},
+  {key:'Check Due', label:'Check Due', color:'#ea580c'},
+  {key:'POD Needed',label:'POD Needed',color:'#dc2626'},
+];
+
+function _kbColKey(l){
+  if(!l.driver_name) return 'Unassigned';
+  if(l.status==='Booked')    return 'Booked';
+  if(l.status==='En Route')  return 'En Route';
+  if(l.status==='Check Due') return 'Check Due';
+  if(l.status==='POD Needed')return 'POD Needed';
+  return 'Booked';
+}
+
+function renderKanbanBoard(){
+  const board=document.getElementById('kanban-board');
+  if(!board)return;
+  const now=Date.now();
+  const q=(document.getElementById('dispatch-search')?.value||'').toLowerCase();
+  let loads=allLoads.filter(l=>!['Delivered','Completed'].includes(l.status));
+  if(q) loads=loads.filter(l=>
+    (l.load_number||'').toLowerCase().includes(q)||
+    (l.driver_name||'').toLowerCase().includes(q)||
+    (l.origin_city||l.origin||'').toLowerCase().includes(q)||
+    (l.dest_city||l.destination||'').toLowerCase().includes(q)
+  );
+
+  board.innerHTML=KANBAN_COLS.map(col=>{
+    const colLoads=loads.filter(l=>_kbColKey(l)===col.key);
+    const cards=colLoads.map(l=>{
+      const overdue=l.status==='En Route'&&(now-new Date(l.updated_at||l.created_at).getTime())>4*60*60*1000;
+      const pickup=(l.pickup_at||l.pickup_date)?new Date(l.pickup_at||l.pickup_date).toLocaleDateString('en-US',{month:'short',day:'numeric'}):'—';
+      const origin=esc(l.origin_city||l.origin||'?');
+      const dest=esc(l.dest_city||l.destination||'?');
+      const oState=l.origin_state?' '+l.origin_state:'';
+      const dState=l.dest_state?' '+l.dest_state:'';
+      const rate=Number(l.rate_total||l.rate||0);
+      const rpm=(l.rate_per_mile||l.rpm)?'$'+Number(l.rate_per_mile||l.rpm).toFixed(2)+'/mi':'';
+      const loadNum=esc(l.load_number||('#'+l.id.slice(0,6)));
+      const driverHtml=l.driver_name
+        ?`<div class="kb-card-driver">🚛 ${esc(l.driver_name)}</div>`
+        :`<div class="kb-card-driver unassigned" onclick="openAssignModal('${l.id}')">+ Assign Driver</div>`;
+      return `<div class="kb-card${overdue?' check-overdue':''}" draggable="true" data-load-id="${l.id}" ondragstart="kbDragStart(event,'${l.id}')" ondragend="kbDragEnd(event)">
+        <div class="kb-card-top">
+          <span class="kb-card-num">${loadNum}${overdue?' ⚠️':''}</span>
+          <span class="badge ${statusBadge(l.status)}" style="font-size:9px">${esc(l.status||'Booked')}</span>
+        </div>
+        <div class="kb-card-route">${origin}${oState} → ${dest}${dState}</div>
+        <div class="kb-card-meta">${pickup}${l.miles?' · '+l.miles+' mi':''}${l.equipment_type?' · '+esc(l.equipment_type):''}</div>
+        ${driverHtml}
+        <div class="kb-card-rate-row">
+          <span class="kb-card-rate-val">$${rate.toLocaleString()}</span>
+          ${rpm?`<span class="kb-card-rpm">${rpm}</span>`:''}
+        </div>
+        <div class="kb-card-actions">
+          <button class="btn-out" onclick="cycleLoadStatus('${l.id}')" title="Next status">▶</button>
+          <button class="btn-navy-sm" onclick="openAssignModal('${l.id}')" title="Assign carrier">🚛</button>
+          <button class="btn-navy-sm" onclick="sendRateCon('${l.id}')" title="Send rate con">📧</button>
+          <button class="btn-out" style="font-size:10px;padding:3px 7px" onclick="openLoadDetail('${l.id}')">⋯</button>
+        </div>
+      </div>`;
+    }).join('');
+
+    return `<div class="kanban-col">
+      <div class="kanban-col-hdr" style="border-top:3px solid ${col.color}">
+        <span class="kanban-col-title">${col.label}</span>
+        <span class="kanban-col-count" style="background:${col.color}">${colLoads.length}</span>
+      </div>
+      <div class="kanban-cards" data-col="${col.key}"
+           ondragover="kbDragOver(event)"
+           ondragleave="kbDragLeave(event)"
+           ondrop="kbDrop(event,'${col.key}')">
+        ${cards||`<div style="padding:18px;text-align:center;color:var(--muted);font-size:11px;font-style:italic">Drop load here</div>`}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── Drag-and-drop handlers ───────────────────────────────────────────────────
+let _kbDragId=null;
+function kbDragStart(e,loadId){
+  _kbDragId=loadId;
+  e.dataTransfer.effectAllowed='move';
+  setTimeout(()=>e.target.classList.add('dragging'),0);
+}
+function kbDragEnd(e){
+  e.target.classList.remove('dragging');
+  document.querySelectorAll('.kanban-cards').forEach(c=>c.classList.remove('drag-over'));
+}
+function kbDragOver(e){
+  e.preventDefault();
+  e.dataTransfer.dropEffect='move';
+  e.currentTarget.classList.add('drag-over');
+}
+function kbDragLeave(e){
+  if(!e.currentTarget.contains(e.relatedTarget)) e.currentTarget.classList.remove('drag-over');
+}
+async function kbDrop(e,colKey){
+  e.preventDefault();
+  e.currentTarget.classList.remove('drag-over');
+  const loadId=_kbDragId;_kbDragId=null;
+  if(!loadId)return;
+  const load=allLoads.find(l=>l.id===loadId);
+  if(!load)return;
+  if(colKey==='Unassigned'){openAssignModal(loadId);return;}
+  if(!load.driver_name&&colKey!=='Unassigned'){
+    showToast('Assign a driver first','error');openAssignModal(loadId);return;
+  }
+  const r=await apiFetch('/api/dashboard/loads/'+loadId,'PATCH',{status:colKey});
+  if(r.ok){showToast('Moved to '+colKey);await loadLoads();}
+  else showToast('Error updating status','error');
+}
+
+// ── Table view renderer ──────────────────────────────────────────────────────
+function renderDispatchTable(){
   const tbody=document.getElementById('dispatch-table');
   if(!tbody)return;
   const filterVal=(document.getElementById('dispatch-filter-status')?.value||'');
   const q=(document.getElementById('dispatch-search')?.value||'').toLowerCase();
   const activeStatuses=['En Route','Booked','Check Due','POD Needed'];
+  const now=Date.now();
 
-  let loads = filterVal==='all' ? allLoads
-    : filterVal ? allLoads.filter(l=>l.status===filterVal)
-    : allLoads.filter(l=>activeStatuses.includes(l.status));
-
+  let loads=filterVal==='all'?allLoads
+    :filterVal?allLoads.filter(l=>l.status===filterVal)
+    :allLoads.filter(l=>activeStatuses.includes(l.status));
   if(q) loads=loads.filter(l=>
     (l.load_number||'').toLowerCase().includes(q)||
     (l.driver_name||'').toLowerCase().includes(q)||
     (l.origin||'').toLowerCase().includes(q)||
     (l.destination||'').toLowerCase().includes(q)
   );
-
-  // KPI counts
-  const onLoad=allLoads.filter(l=>l.status==='En Route').length;
-  const activeNames=new Set(allLoads.filter(l=>activeStatuses.includes(l.status)).map(l=>l.driver_name).filter(Boolean));
-  const availCarriers=allCarriers.filter(c=>c.status==='active'&&!activeNames.has(c.company_name));
-  const now=Date.now();
-  const checkDue=allLoads.filter(l=>{
-    if(l.status!=='En Route')return false;
-    const last=l.updated_at||l.created_at;
-    return last&&(now-new Date(last).getTime())>4*60*60*1000;
-  }).length;
-
-  setText('dispatch-on-load',onLoad);
-  setText('dispatch-available',availCarriers.length);
-  setText('dispatch-check-calls',checkDue||0);
-  setText('dispatch-pods',allLoads.filter(l=>l.status==='POD Needed').length);
-
-  renderAvailableCarriers(availCarriers);
-
   if(loads.length===0){
-    tbody.innerHTML='<tr><td colspan="8"><div class="empty-state"><div class="ei">🚛</div><p>No loads match this filter.</p></div></td></tr>';
-    return;
+    tbody.innerHTML='<tr><td colspan="8"><div class="empty-state"><div class="ei">🚛</div><p>No loads match this filter.</p></div></td></tr>';return;
   }
-
   tbody.innerHTML=loads.map(l=>{
-    const pickup=l.pickup_at||l.pickup_date?new Date(l.pickup_at||l.pickup_date).toLocaleDateString('en-US',{month:'short',day:'numeric'}):'—';
+    const pickup=(l.pickup_at||l.pickup_date)?new Date(l.pickup_at||l.pickup_date).toLocaleDateString('en-US',{month:'short',day:'numeric'}):'—';
     const route=esc((l.origin_city||l.origin||'?')+', '+(l.origin_state||'')+' → '+(l.dest_city||l.destination||'?')+', '+(l.dest_state||''));
-    const driver=l.driver_name||'<span style="color:var(--danger);font-style:italic">Unassigned</span>';
+    const driver=l.driver_name||'<span style="color:var(--red);font-style:italic">Unassigned</span>';
     const rate='$'+Number(l.rate_total||l.rate||0).toLocaleString();
-    const rpm=l.rpm||l.rate_per_mile?(l.rate_per_mile||l.rpm?'$'+Number(l.rate_per_mile||l.rpm).toFixed(2):'—'):'—';
-    const isCheckDue=l.status==='En Route'&&(now-new Date(l.updated_at||l.created_at).getTime())>4*60*60*1000;
-    return '<tr'+(isCheckDue?' style="background:rgba(245,158,11,.06)"':'')+'>'+
-      '<td class="t-mono" style="font-size:12px;font-weight:600">'+esc(l.load_number||('#'+l.id.slice(0,6)))+(isCheckDue?'<span title="Check-call overdue" style="margin-left:4px">⚠️</span>':'')+'</td>'+
+    const rpm=(l.rate_per_mile||l.rpm)?'$'+Number(l.rate_per_mile||l.rpm).toFixed(2):'—';
+    const overdue=l.status==='En Route'&&(now-new Date(l.updated_at||l.created_at).getTime())>4*60*60*1000;
+    return '<tr'+(overdue?' style="background:rgba(245,158,11,.06)"':'')+'>'+
+      '<td class="t-mono" style="font-size:12px;font-weight:600">'+esc(l.load_number||('#'+l.id.slice(0,6)))+(overdue?'<span title="Check-call overdue" style="margin-left:4px">⚠️</span>':'')+'</td>'+
       '<td style="font-size:12px;color:var(--muted)">'+pickup+'</td>'+
       '<td style="font-size:12px">'+route+'</td>'+
       '<td>'+driver+'</td>'+
@@ -3386,23 +3574,24 @@ function renderDispatchBoard(){
 }
 
 function renderAvailableCarriers(available){
-  const wrap=document.getElementById('avail-drivers-list');
-  const countEl=document.getElementById('avail-count');
-  if(!wrap)return;
-  if(countEl)countEl.textContent=available.length;
-  if(available.length===0){
-    wrap.innerHTML='<div style="padding:16px;text-align:center;color:var(--muted);font-size:12px">All carriers on load</div>';
-    return;
-  }
-  wrap.innerHTML=available.map(c=>`
-    <div style="padding:10px 12px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;gap:8px">
-      <div style="min-width:0">
-        <div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(c.company_name||c.name||'—')}</div>
-        <div style="font-size:11px;color:var(--muted)">${esc(c.equipment_type||'Any')} · ${esc(c.home_base||c.base||'—')}</div>
-      </div>
-      <button class="btn-navy-sm" style="white-space:nowrap" onclick="openAssignModalForCarrier('${c.id}','${esc(c.company_name||'')}')">Assign</button>
-    </div>
-  `).join('');
+  const html=available.length===0
+    ?'<div style="padding:16px;text-align:center;color:var(--muted);font-size:12px">All carriers on load</div>'
+    :available.map(c=>`<div class="kb-carrier-row" draggable="true">
+        <div style="min-width:0">
+          <div class="kb-carrier-name">${esc(c.company_name||c.name||'—')}</div>
+          <div class="kb-carrier-equip">${esc(c.equipment_type||'Any')} · ${esc(c.home_base||c.base||'—')}</div>
+        </div>
+        <button class="btn-navy-sm" style="white-space:nowrap" onclick="openAssignModalForCarrier('${c.id}','${esc(c.company_name||'')}')">Assign</button>
+      </div>`).join('');
+  // Update both sidebar elements (kanban and table views)
+  const kb=document.getElementById('avail-drivers-list');
+  const tbl=document.getElementById('avail-drivers-list-tbl');
+  if(kb)kb.innerHTML=html;
+  if(tbl)tbl.innerHTML=html;
+  const kbC=document.getElementById('avail-count');
+  const tblC=document.getElementById('avail-count-tbl');
+  if(kbC)kbC.textContent=available.length;
+  if(tblC)tblC.textContent=available.length;
 }
 
 let _assignLoadId=null;
