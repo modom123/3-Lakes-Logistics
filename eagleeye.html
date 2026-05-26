@@ -4678,45 +4678,116 @@ const EJS_PUBLIC   = 'Qq26GfzWiCTWP9oOP';
 emailjs.init(EJS_PUBLIC);
 
 // Send Rate Confirmation email
-async function sendRateCon(loadId) {
-  const load = allLoads.find(l => l.id === loadId);
-  if (!load) return;
-
-  // Find carrier email from allCarriers by matching driver name
-  const carrier = allCarriers.find(c => c.company_name === load.driver_name || c.company_name === load.carrier_name);
-  const toEmail = carrier?.email || '';
-
-  if (!toEmail) {
-    const manual = prompt('No email on file for ' + (load.driver_name||'this driver') + '.\nEnter their email address:');
-    if (!manual) return;
-    sendRateConEmail(load, manual);
-    return;
-  }
-  sendRateConEmail(load, toEmail);
+let _rcLoadId=null;
+async function sendRateCon(loadId){
+  _rcLoadId=loadId;
+  const load=allLoads.find(l=>l.id===loadId);
+  if(!load)return;
+  const carrier=allCarriers.find(c=>c.company_name===load.driver_name||c.company_name===load.carrier_name);
+  document.getElementById('rc-to-email').value=carrier?.email||'';
+  renderRateConDoc(load);
+  openModal('rate-con-modal');
 }
 
-async function sendRateConEmail(load, toEmail) {
-  toast('Sending rate confirmation…');
-  const params = {
-    to_email:     toEmail,
-    driver_name:  load.driver_name   || '—',
-    load_number:  load.load_number   || '—',
-    origin:       load.origin        || '—',
-    destination:  load.destination   || '—',
-    miles:        load.miles         || '—',
-    rate:         Number(load.rate   || 0).toLocaleString(),
-    dispatch_fee: Number(load.dispatch_fee || 0).toLocaleString(),
-    dispatch_pct: load.dispatch_pct  || '5',
-    pickup_date:  load.pickup_date   || '—',
-    commodity:    load.commodity     || 'General Freight',
-    broker:       load.notes         || '—',
-  };
-  try {
-    await emailjs.send(EJS_SERVICE, EJS_RATE_CON, params);
-    toast('✅ Rate confirmation sent to ' + toEmail);
-  } catch(e) {
-    console.error('EmailJS error:', e);
-    toast('Email failed: ' + (e.text || e.message || 'Unknown error'), 'error');
+function renderRateConDoc(load){
+  const el=document.getElementById('rc-document');
+  if(!el)return;
+  const origin=[load.origin_city||load.origin,load.origin_state].filter(Boolean).join(', ')||'—';
+  const dest=[load.dest_city||load.destination,load.dest_state].filter(Boolean).join(', ')||'—';
+  const pickup=load.pickup_at?new Date(load.pickup_at).toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'}):'—';
+  const delivery=load.delivery_at?new Date(load.delivery_at).toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'}):'—';
+  const rate=Number(load.rate_total||load.rate||0);
+  const fee=Number(load.dispatch_fee||0);
+  const net=rate-fee;
+  const pct=load.dispatch_pct||Math.round(fee/rate*100)||5;
+  el.innerHTML=`
+<div style="font-family:Arial,Helvetica,sans-serif;color:#111;font-size:13px;line-height:1.5">
+  <div style="border-bottom:3px solid #0b2545;padding-bottom:14px;margin-bottom:18px;display:flex;justify-content:space-between;align-items:flex-start">
+    <div>
+      <div style="font-size:22px;font-weight:900;color:#0b2545;letter-spacing:-0.5px">3 LAKES LOGISTICS</div>
+      <div style="font-size:13px;color:#c8902a;font-weight:700;margin-top:2px">RATE CONFIRMATION</div>
+      <div style="font-size:11px;color:#888;margin-top:4px">ops@3lakeslogistics.com &nbsp;·&nbsp; (313) 546-9006</div>
+    </div>
+    <div style="text-align:right">
+      <div style="font-size:22px;font-weight:900;font-family:monospace;color:#0b2545">${esc(load.load_number||'DRAFT')}</div>
+      <div style="font-size:11px;color:#888">Issued: ${new Date().toLocaleDateString()}</div>
+    </div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px">
+    <div style="background:#f4f6fa;padding:14px;border-radius:6px;border-left:4px solid #0b2545">
+      <div style="font-size:10px;font-weight:700;color:#888;margin-bottom:6px;letter-spacing:1px">CARRIER / DRIVER</div>
+      <div style="font-size:15px;font-weight:700">${esc(load.driver_name||'—')}</div>
+    </div>
+    <div style="background:#f4f6fa;padding:14px;border-radius:6px;border-left:4px solid #c8902a">
+      <div style="font-size:10px;font-weight:700;color:#888;margin-bottom:6px;letter-spacing:1px">BROKER / SHIPPER</div>
+      <div style="font-size:15px;font-weight:700">${esc(load.broker_name||load.shipper_name||'—')}</div>
+      ${load.broker_phone?`<div style="font-size:12px;color:#666;margin-top:2px">${esc(load.broker_phone)}</div>`:''}
+    </div>
+  </div>
+  <table style="width:100%;border-collapse:collapse;margin-bottom:18px">
+    <thead><tr style="background:#0b2545;color:#fff">
+      <th style="padding:9px 12px;text-align:left;font-size:10px;letter-spacing:1px;font-weight:700">PICKUP LOCATION &amp; DATE</th>
+      <th style="padding:9px 12px;text-align:left;font-size:10px;letter-spacing:1px;font-weight:700">DELIVERY LOCATION &amp; DATE</th>
+      <th style="padding:9px 12px;text-align:left;font-size:10px;letter-spacing:1px;font-weight:700">MILES</th>
+      <th style="padding:9px 12px;text-align:left;font-size:10px;letter-spacing:1px;font-weight:700">COMMODITY</th>
+      <th style="padding:9px 12px;text-align:left;font-size:10px;letter-spacing:1px;font-weight:700">WEIGHT</th>
+    </tr></thead>
+    <tbody><tr style="border-bottom:1px solid #e5e7eb">
+      <td style="padding:11px 12px"><div style="font-weight:700">${esc(origin)}</div><div style="font-size:11px;color:#666;margin-top:3px">${esc(pickup)}</div></td>
+      <td style="padding:11px 12px"><div style="font-weight:700">${esc(dest)}</div><div style="font-size:11px;color:#666;margin-top:3px">${esc(delivery)}</div></td>
+      <td style="padding:11px 12px">${esc(String(load.miles||'—'))}</td>
+      <td style="padding:11px 12px">${esc(load.commodity||'General Freight')}</td>
+      <td style="padding:11px 12px">${load.weight?Number(load.weight).toLocaleString()+' lbs':'—'}</td>
+    </tr></tbody>
+  </table>
+  <div style="background:#f4f6fa;padding:16px;border-radius:6px;border:1px solid #e5e7eb;margin-bottom:18px">
+    <div style="font-size:10px;font-weight:700;color:#888;margin-bottom:12px;letter-spacing:1px">RATE BREAKDOWN</div>
+    <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #e5e7eb"><span>Gross Load Rate</span><span style="font-weight:600">$${rate.toLocaleString()}</span></div>
+    ${fee>0?`<div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #e5e7eb;color:#dc2626"><span>Dispatch Fee (${pct}%)</span><span>− $${fee.toLocaleString()}</span></div>`:''}
+    <div style="display:flex;justify-content:space-between;padding:10px 0;font-size:18px;font-weight:900;color:#0b2545"><span>CARRIER NET PAY</span><span>$${net.toLocaleString()}</span></div>
+  </div>
+  ${load.special_instructions?`<div style="background:#fffbeb;border:1px solid #fbbf24;border-radius:6px;padding:12px;margin-bottom:18px;font-size:12px"><strong>⚠ Special Instructions:</strong> ${esc(load.special_instructions)}</div>`:''}
+  <div style="font-size:11px;color:#888;border-top:1px solid #e5e7eb;padding-top:12px">
+    By accepting this load, carrier agrees to all applicable terms of 3 Lakes Logistics LLC. Carrier must maintain required insurance minimums and comply with all FMCSA/DOT regulations. Payment processed within agreed net terms upon receipt of signed BOL and POD documentation.
+  </div>
+</div>`;
+}
+
+function printRateCon(){
+  const html=document.getElementById('rc-document')?.innerHTML;
+  if(!html)return;
+  const w=window.open('','_blank','width=900,height=700');
+  w.document.write(`<!DOCTYPE html><html><head><title>Rate Confirmation</title><style>body{font-family:Arial,sans-serif;padding:40px;max-width:800px;margin:0 auto}@media print{@page{margin:20mm}}</style></head><body>${html}<script>setTimeout(()=>{window.print();},400);<\/script></body></html>`);
+  w.document.close();
+}
+
+async function submitRateCon(){
+  const email=document.getElementById('rc-to-email')?.value?.trim();
+  if(!email){showToast('Enter a recipient email','error');return;}
+  const load=allLoads.find(l=>l.id===_rcLoadId);
+  if(!load)return;
+  const btn=document.getElementById('rc-send-btn');
+  btn.disabled=true;btn.textContent='Sending…';
+  try{
+    const r=await apiFetch('/api/rate-confirmation/send','POST',{load_id:_rcLoadId,to_email:email});
+    if(r.ok){
+      closeModal('rate-con-modal');
+      showToast('✅ Rate confirmation sent to '+email);
+      return;
+    }
+  }catch(e){}
+  // Fallback: EmailJS
+  const origin=[load.origin_city||load.origin,load.origin_state].filter(Boolean).join(', ')||'—';
+  const dest=[load.dest_city||load.destination,load.dest_state].filter(Boolean).join(', ')||'—';
+  const params={to_email:email,driver_name:load.driver_name||'—',load_number:load.load_number||'—',origin,destination:dest,miles:load.miles||'—',rate:Number(load.rate_total||load.rate||0).toLocaleString(),dispatch_fee:Number(load.dispatch_fee||0).toLocaleString(),dispatch_pct:load.dispatch_pct||'5',pickup_date:load.pickup_at?new Date(load.pickup_at).toLocaleDateString():'—',commodity:load.commodity||'General Freight',broker:load.broker_name||load.shipper_name||'—'};
+  try{
+    await emailjs.send(EJS_SERVICE,EJS_RATE_CON,params);
+    closeModal('rate-con-modal');
+    showToast('✅ Rate confirmation sent to '+email);
+  }catch(e){
+    showToast('Email failed: '+(e.text||e.message||'Unknown error'),'error');
+  }finally{
+    btn.disabled=false;btn.textContent='📧 Send Email';
   }
 }
 
