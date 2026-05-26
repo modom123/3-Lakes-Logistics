@@ -31,6 +31,8 @@ from .api import (
     mailboxes_router,
     agreements_router,
     rate_confirmation_router,
+    settlements_router,
+    shippers_router,
     driver_auth_router,
     driver_router,
     email_router,
@@ -179,6 +181,8 @@ def create_app() -> FastAPI:
     app.include_router(mailboxes_router,       prefix="/api",              tags=["mailboxes"])
     app.include_router(agreements_router,      prefix="/api/agreements",   tags=["agreements"])
     app.include_router(rate_confirmation_router, prefix="/api",            tags=["rate-confirmation"])
+    app.include_router(settlements_router,     prefix="/api",              tags=["settlements"])
+    app.include_router(shippers_router,        prefix="/api",              tags=["shippers"])
     app.include_router(studio_router,          prefix="/api",              tags=["studio"])
     app.include_router(health_router,                                      tags=["health"])
 
