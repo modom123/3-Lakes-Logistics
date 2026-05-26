@@ -713,6 +713,8 @@ td.td-name{font-weight:600;color:var(--navy);}
     <div class="sb-item" onclick="nav('drivers')"><span class="sb-icon">🪪</span> Drivers <span class="sb-badge" id="drv-notif" style="display:none">●</span></div>
     <div class="sb-item" onclick="nav('loads')"><span class="sb-icon">📦</span> Load Manager</div>
     <div class="sb-item" onclick="nav('invoices')"><span class="sb-icon">🧾</span> Invoices <span class="sb-badge" id="invoice-notif" style="display:none">●</span></div>
+    <div class="sb-item" onclick="nav('settlements')"><span class="sb-icon">💵</span> Settlements <span class="sb-badge" id="settle-notif" style="display:none">●</span></div>
+    <div class="sb-item" onclick="nav('shippers')"><span class="sb-icon">🏭</span> Shippers / Brokers <span class="sb-badge" id="shippers-notif" style="display:none">●</span></div>
   </div>
   <div class="sb-section">
     <div class="sb-label">Compliance</div>
@@ -1113,6 +1115,55 @@ td.td-name{font-weight:600;color:var(--navy);}
         <div class="mc" onclick="showDashSummary('inv-overdue')" style="cursor:pointer" title="Click for recent 10"><div class="mc-label">Overdue</div><div class="mc-val red" id="inv-overdue">—</div></div>
       </div>
       <div id="invoices-list"><div class="loading"><div class="spin"></div>Loading invoices…</div></div>
+    </div>
+
+    <!-- SETTLEMENTS -->
+    <div class="page" id="page-settlements">
+      <div class="page-hdr">
+        <div class="page-hdr-l"><div class="chip">Weekly Pay</div><h2>Driver Settlements</h2></div>
+        <div class="page-hdr-acts">
+          <select class="fsel" id="settle-week-sel" onchange="loadSettlements()" style="min-width:180px"></select>
+          <button class="btn-out" onclick="loadSettlements()">↺ Refresh</button>
+          <button class="btn-navy" onclick="openNewSettlementModal()">+ New Settlement</button>
+        </div>
+      </div>
+      <div class="g4" style="margin-bottom:16px">
+        <div class="mc"><div class="mc-label">Settlements This Week</div><div class="mc-val blue" id="settle-count">—</div></div>
+        <div class="mc"><div class="mc-label">Total Gross Pay</div><div class="mc-val gold" id="settle-gross">—</div></div>
+        <div class="mc"><div class="mc-label">Total Dispatch Fees</div><div class="mc-val green" id="settle-fees">—</div></div>
+        <div class="mc"><div class="mc-label">Total Net to Drivers</div><div class="mc-val" style="color:#10b981" id="settle-net">—</div></div>
+      </div>
+      <div id="settlements-list"><div class="loading"><div class="spin"></div>Loading settlements…</div></div>
+    </div>
+
+    <!-- SHIPPERS / BROKERS CRM -->
+    <div class="page" id="page-shippers">
+      <div class="page-hdr">
+        <div class="page-hdr-l"><div class="chip">Revenue Source</div><h2>Shippers / Brokers</h2></div>
+        <div class="page-hdr-acts">
+          <input id="shipper-search" class="form-input" style="max-width:200px;padding:7px 12px;font-size:13px" placeholder="Search name or MC…" oninput="renderShippers()">
+          <select class="fsel" id="shipper-filter" onchange="renderShippers()" style="min-width:120px">
+            <option value="">All Types</option>
+            <option value="broker">Broker</option>
+            <option value="shipper">Direct Shipper</option>
+            <option value="3pl">3PL</option>
+          </select>
+          <button class="btn-navy" onclick="openAddShipperModal()">+ Add Shipper</button>
+        </div>
+      </div>
+      <div class="g4" style="margin-bottom:16px">
+        <div class="mc"><div class="mc-label">Total Clients</div><div class="mc-val blue" id="ship-total">—</div></div>
+        <div class="mc"><div class="mc-label">Active</div><div class="mc-val green" id="ship-active">—</div></div>
+        <div class="mc"><div class="mc-label">Quick Pay</div><div class="mc-val gold" id="ship-quickpay">—</div></div>
+        <div class="mc"><div class="mc-label">Avg Days to Pay</div><div class="mc-val orange" id="ship-avg-days">—</div></div>
+      </div>
+      <div class="card">
+        <div class="card-hd"><div class="card-title">Shipper / Broker Directory</div></div>
+        <div class="tbl-wrap"><table>
+          <thead><tr><th>Company</th><th>Type</th><th>MC / DOT</th><th>Contact</th><th>Phone</th><th>Payment Terms</th><th>Credit Limit</th><th>Status</th><th>Actions</th></tr></thead>
+          <tbody id="shippers-table-body"><tr><td colspan="9"><div class="loading"><div class="spin"></div>Loading…</div></td></tr></tbody>
+        </table></div>
+      </div>
     </div>
 
     <!-- COMPLIANCE -->
@@ -2860,9 +2911,9 @@ document.addEventListener('DOMContentLoaded', () => {
   if(em) em.addEventListener('keydown', e => { if(e.key==='Enter') document.getElementById('login-password').focus(); });
 });
 
-let allCarriers=[], allLoads=[], allInvoices=[], currentInvFilter='all', loadCounter=3849;
+let allCarriers=[], allLoads=[], allInvoices=[], allShippers=[], allSettlements=[], currentInvFilter='all', loadCounter=3849;
 
-const pageNames={dashboard:'Dashboard',dispatch:'Dispatch Board','fleet-map':'Fleet Map',carriers:'Carriers',drivers:'Drivers',loads:'Load Manager',invoices:'Invoices & Billing',compliance:'DOT Compliance',ifta:'IFTA / Permits',insurance:'Insurance',revenue:'Revenue Tracker',providers:'Compliance Providers',checklist:'Daily Checklist',notes:'Dispatcher Notes',reports:'Team Reports','exec-command':'Exec Command',agents:'AI Agents',founders:'Founders Program',crm:'Lead CRM',leads:'Lead Pipeline',execution:'Execution Engine',email:'Email Center',vault:'Document Vault',clm:'CLM Scanner',ledger:'Atomic Ledger',agreements:'Agreements'};
+const pageNames={dashboard:'Dashboard',dispatch:'Dispatch Board','fleet-map':'Fleet Map',carriers:'Carriers',drivers:'Drivers',loads:'Load Manager',invoices:'Invoices & Billing',settlements:'Driver Settlements',shippers:'Shippers / Brokers',compliance:'DOT Compliance',ifta:'IFTA / Permits',insurance:'Insurance',revenue:'Revenue Tracker',providers:'Compliance Providers',checklist:'Daily Checklist',notes:'Dispatcher Notes',reports:'Team Reports','exec-command':'Exec Command',agents:'AI Agents',founders:'Founders Program',crm:'Lead CRM',leads:'Lead Pipeline',execution:'Execution Engine',email:'Email Center',vault:'Document Vault',clm:'CLM Scanner',ledger:'Atomic Ledger',agreements:'Agreements'};
 
 // ── 3 Lakes Logistics Backend API (FastAPI) ──
 const API_BASE = (window.__3LL_API_BASE || 'https://three-lakes-logistics-api.onrender.com').replace(/\/$/,'');
@@ -5472,6 +5523,8 @@ function renderIFTA(){
     else if(id==='founders')loadFoundersInventory();
     else if(id==='leads')loadLeadsPipeline();
     else if(id==='ifta'||id==='insurance')renderIFTA();
+    else if(id==='settlements'){loadSettlements();initSettleWeekSel();}
+    else if(id==='shippers')loadShippers();
   };
 })();
 
@@ -11184,6 +11237,383 @@ async function deactivateDriver(driverId) {
   if (r.ok) { showToast('Driver deactivated'); loadDrivers(); }
   else showToast('Failed to deactivate');
 }
+
+// ══════════════════════════════════════════════════════
+// DRIVER SETTLEMENTS
+// ══════════════════════════════════════════════════════
+
+function initSettleWeekSel() {
+  const sel = document.getElementById('settle-week-sel');
+  if (!sel || sel.options.length > 1) return;
+  const today = new Date();
+  sel.innerHTML = '';
+  for (let i = 0; i < 12; i++) {
+    const d = new Date(today);
+    d.setDate(d.getDate() - (d.getDay() + 7 * i)); // last Saturday
+    const label = 'Week of ' + d.toLocaleDateString('en-US', {month:'short', day:'numeric'});
+    const val = d.toISOString().split('T')[0];
+    sel.innerHTML += `<option value="${val}"${i===0?' selected':''}>${label}</option>`;
+  }
+}
+
+async function loadSettlements() {
+  initSettleWeekSel();
+  const el = document.getElementById('settlements-list');
+  if (!el) return;
+  el.innerHTML = '<div class="loading"><div class="spin"></div>Loading…</div>';
+  try {
+    const res = await apiFetch('/api/dashboard/settlements?limit=50');
+    if (res.ok) {
+      allSettlements = (await res.json()).items || [];
+    } else {
+      allSettlements = [];
+    }
+  } catch(e) { allSettlements = []; }
+  renderSettlements();
+}
+
+function renderSettlements() {
+  const el = document.getElementById('settlements-list');
+  if (!el) return;
+  const weekVal = document.getElementById('settle-week-sel')?.value || '';
+  const list = weekVal
+    ? allSettlements.filter(s => s.week_ending && s.week_ending.startsWith(weekVal.slice(0,7)))
+    : allSettlements;
+
+  const gross = list.reduce((a,s) => a + Number(s.gross_pay||0), 0);
+  const fees  = list.reduce((a,s) => a + Number(s.dispatch_fee||0), 0);
+  const net   = list.reduce((a,s) => a + Number(s.net_pay||0), 0);
+  setText('settle-count', list.length);
+  setText('settle-gross', '$' + gross.toLocaleString());
+  setText('settle-fees',  '$' + fees.toLocaleString());
+  setText('settle-net',   '$' + net.toLocaleString());
+
+  if (!list.length) {
+    el.innerHTML = '<div class="empty-state"><div class="ei">💵</div><p>No settlements yet. Click "+ New Settlement" to generate your first driver pay statement.</p></div>';
+    return;
+  }
+  el.innerHTML = '<div class="tbl-wrap"><table><thead><tr><th>Week Ending</th><th>Driver / Carrier</th><th>Load #</th><th>Miles</th><th>Gross Pay</th><th>Dispatch Fee</th><th>Insurance</th><th>Net Pay</th><th>Status</th><th>Actions</th></tr></thead><tbody>' +
+    list.map(s => {
+      const st = s.status || 'pending';
+      const stBadge = st === 'paid' ? 'badge-green' : st === 'sent' ? 'badge-blue' : 'badge-orange';
+      return `<tr>
+        <td style="font-size:12px;color:var(--muted)">${s.week_ending || '—'}</td>
+        <td style="font-weight:600">${esc(s.carrier_name || s.driver_name || '—')}</td>
+        <td class="t-mono" style="font-size:12px">${esc(s.load_number || '—')}</td>
+        <td style="font-size:12px;color:var(--muted)">${s.miles ? Number(s.miles).toLocaleString() : '—'}</td>
+        <td class="val-gold" style="font-weight:700">$${Number(s.gross_pay||0).toLocaleString()}</td>
+        <td style="color:var(--green)">$${Number(s.dispatch_fee||0).toLocaleString()}</td>
+        <td style="color:var(--muted);font-size:12px">$${Number(s.insurance_deduction||0).toLocaleString()}</td>
+        <td style="font-weight:700;color:#10b981">$${Number(s.net_pay||0).toLocaleString()}</td>
+        <td><span class="badge ${stBadge}">${st}</span></td>
+        <td><div style="display:flex;gap:4px">
+          <button class="btn-out" style="font-size:11px;padding:4px 8px" onclick="printSettlementById('${s.id}')">🖨️</button>
+          ${st!=='paid'?`<button class="btn-green-sm" onclick="markSettlePaid('${s.id}')">✅ Paid</button>`:''}
+        </div></td>
+      </tr>`;
+    }).join('') + '</tbody></table></div>';
+}
+
+function settleAutoFill() {
+  const loadSel = document.getElementById('settle-load-sel');
+  const loadId = loadSel?.value;
+  if (!loadId) return;
+  const load = allLoads.find(l => l.id === loadId);
+  if (!load) return;
+  const grossEl = document.getElementById('settle-gross-in');
+  const milesEl = document.getElementById('settle-miles-in');
+  const carrSel = document.getElementById('settle-carrier-sel');
+  if (grossEl && !grossEl.value && load.rate) grossEl.value = Number(load.rate_total || load.rate || 0).toFixed(2);
+  if (milesEl && !milesEl.value && load.miles) milesEl.value = load.miles;
+  if (carrSel && !carrSel.value && load.driver_name) {
+    const c = allCarriers.find(c => c.company_name === load.driver_name);
+    if (c) carrSel.value = c.id;
+  }
+  settleCalc();
+}
+
+function settleCalc() {
+  const gross = Number(document.getElementById('settle-gross-in')?.value || 0);
+  const pct   = Number(document.getElementById('settle-pct-in')?.value || 8);
+  const ins   = Number(document.getElementById('settle-ins-in')?.value || 45);
+  const other = Number(document.getElementById('settle-other-in')?.value || 0);
+  const prev  = document.getElementById('settle-calc-preview');
+  if (!prev) return;
+  if (!gross) { prev.textContent = 'Enter gross pay to preview calculation'; return; }
+  const fee   = Math.round(gross * pct / 100);
+  const net   = gross - fee - ins - other;
+  prev.innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 16px;font-size:13px">
+      <span style="color:var(--muted)">Gross Pay</span><span style="font-weight:700;color:#f59e0b">$${gross.toLocaleString()}</span>
+      <span style="color:var(--muted)">Dispatch Fee (${pct}%)</span><span style="color:var(--green)">- $${fee.toLocaleString()}</span>
+      <span style="color:var(--muted)">Insurance</span><span style="color:var(--muted)">- $${ins.toLocaleString()}</span>
+      ${other?`<span style="color:var(--muted)">Other Deductions</span><span style="color:var(--muted)">- $${other.toLocaleString()}</span>`:''}
+      <span style="font-weight:700;border-top:1px solid var(--border);padding-top:6px;margin-top:2px">NET TO DRIVER</span>
+      <span style="font-weight:800;font-size:16px;color:#10b981;border-top:1px solid var(--border);padding-top:6px;margin-top:2px">$${net.toLocaleString()}</span>
+    </div>`;
+}
+
+function openNewSettlementModal() {
+  initSettleWeekSel();
+  const carrSel = document.getElementById('settle-carrier-sel');
+  if (carrSel) {
+    carrSel.innerHTML = '<option value="">Select carrier…</option>' +
+      allCarriers.filter(c => c.status === 'active').map(c =>
+        `<option value="${c.id}">${esc(c.company_name || '—')}</option>`).join('');
+  }
+  const loadSel = document.getElementById('settle-load-sel');
+  if (loadSel) {
+    loadSel.innerHTML = '<option value="">Select load…</option>' +
+      allLoads.filter(l => ['Delivered','Completed','POD Needed'].includes(l.status)).map(l =>
+        `<option value="${l.id}">${esc(l.load_number || '#'+l.id.slice(0,6))} — ${esc(l.driver_name||'Unassigned')}</option>`).join('');
+  }
+  const weekEl = document.getElementById('settle-week-end');
+  if (weekEl && !weekEl.value) {
+    const sat = new Date(); sat.setDate(sat.getDate() + (6 - sat.getDay()));
+    weekEl.value = sat.toISOString().split('T')[0];
+  }
+  settleCalc();
+  openModal('new-settlement-modal');
+}
+
+async function saveSettlement() {
+  const btn = document.getElementById('new-settlement-modal')?.querySelector('.btn-navy');
+  const carrierId = document.getElementById('settle-carrier-sel')?.value;
+  const gross = Number(document.getElementById('settle-gross-in')?.value || 0);
+  if (!gross) { toast('Enter gross pay', 'error'); return; }
+  const pct   = Number(document.getElementById('settle-pct-in')?.value || 8);
+  const ins   = Number(document.getElementById('settle-ins-in')?.value || 45);
+  const other = Number(document.getElementById('settle-other-in')?.value || 0);
+  const fee   = Math.round(gross * pct / 100);
+  const net   = gross - fee - ins - other;
+  const loadSel = document.getElementById('settle-load-sel');
+  const loadId = loadSel?.value || null;
+  const loadObj = allLoads.find(l => l.id === loadId);
+  const carrier = allCarriers.find(c => c.id === carrierId);
+  const body = {
+    carrier_id: carrierId || null,
+    carrier_name: carrier?.company_name || '',
+    load_id: loadId,
+    load_number: loadObj?.load_number || '',
+    week_ending: document.getElementById('settle-week-end')?.value || '',
+    miles: Number(document.getElementById('settle-miles-in')?.value || 0),
+    gross_pay: gross,
+    dispatch_fee: fee,
+    dispatch_pct: pct,
+    insurance_deduction: ins,
+    other_deductions: other,
+    net_pay: net,
+    status: 'pending',
+  };
+  if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
+  try {
+    const r = await apiFetch('/api/dashboard/settlements', 'POST', body);
+    if (r.ok) {
+      closeModal('new-settlement-modal');
+      toast('Settlement saved!');
+      printSettlementData(body);
+      await loadSettlements();
+    } else { toast('Error saving settlement', 'error'); }
+  } catch(e) { toast('Error: ' + e.message, 'error'); }
+  if (btn) { btn.disabled = false; btn.textContent = 'Save & Print'; }
+}
+
+function previewSettlementPrint() {
+  const gross = Number(document.getElementById('settle-gross-in')?.value || 0);
+  const pct   = Number(document.getElementById('settle-pct-in')?.value || 8);
+  const ins   = Number(document.getElementById('settle-ins-in')?.value || 45);
+  const other = Number(document.getElementById('settle-other-in')?.value || 0);
+  const loadSel = document.getElementById('settle-load-sel');
+  const loadId = loadSel?.value;
+  const loadObj = allLoads.find(l => l.id === loadId);
+  const carrierId = document.getElementById('settle-carrier-sel')?.value;
+  const carrier = allCarriers.find(c => c.id === carrierId);
+  printSettlementData({
+    carrier_name: carrier?.company_name || '—',
+    load_number: loadObj?.load_number || '—',
+    week_ending: document.getElementById('settle-week-end')?.value || '—',
+    miles: document.getElementById('settle-miles-in')?.value || '—',
+    gross_pay: gross,
+    dispatch_fee: Math.round(gross * pct / 100),
+    dispatch_pct: pct,
+    insurance_deduction: ins,
+    other_deductions: other,
+    net_pay: gross - Math.round(gross * pct / 100) - ins - other,
+  });
+}
+
+async function markSettlePaid(id) {
+  const r = await apiFetch('/api/dashboard/settlements/' + id, 'PATCH', { status: 'paid' });
+  if (r.ok) { toast('Marked as paid!'); loadSettlements(); }
+  else toast('Error', 'error');
+}
+
+async function printSettlementById(id) {
+  const s = allSettlements.find(x => x.id === id);
+  if (s) printSettlementData(s);
+}
+
+function printSettlementData(s) {
+  const w = window.open('', '_blank');
+  if (!w) { toast('Pop-up blocked', 'error'); return; }
+  const fmt = v => '$' + Number(v||0).toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
+  w.document.write(`<!DOCTYPE html><html><head><title>Settlement — ${s.carrier_name||''}</title>
+<style>
+  body{font-family:"Inter",Arial,sans-serif;padding:48px;color:#0F1D35;max-width:620px;margin:0 auto}
+  h1{color:#0B2545;font-family:Georgia,serif;font-size:28px;margin-bottom:4px}
+  .sub{color:#5A6A82;font-size:12px;margin-bottom:32px;letter-spacing:1px;text-transform:uppercase}
+  .row{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #EEF2F8;font-size:14px}
+  .row.total{border-top:2px solid #0B2545;border-bottom:none;margin-top:8px;padding-top:14px}
+  .lbl{color:#5A6A82}.val{font-weight:600}
+  .net{font-size:28px;font-weight:800;color:#059669}
+  .footer{margin-top:48px;font-size:11px;color:#999;border-top:1px solid #DDE4EF;padding-top:16px;text-align:center}
+  @media print{body{padding:24px}}
+</style></head><body>
+<h1>3 Lakes Logistics LLC</h1>
+<div class="sub">Driver Settlement Statement</div>
+<div class="row"><span class="lbl">Driver / Carrier</span><span class="val">${s.carrier_name||'—'}</span></div>
+<div class="row"><span class="lbl">Week Ending</span><span class="val">${s.week_ending||'—'}</span></div>
+<div class="row"><span class="lbl">Load Number</span><span class="val">${s.load_number||'—'}</span></div>
+${s.miles?`<div class="row"><span class="lbl">Miles</span><span class="val">${Number(s.miles).toLocaleString()}</span></div>`:''}
+<div class="row" style="margin-top:16px"><span class="lbl">Gross Load Pay</span><span class="val">${fmt(s.gross_pay)}</span></div>
+<div class="row"><span class="lbl" style="color:#dc2626">Dispatch Fee (${s.dispatch_pct||8}%)</span><span class="val" style="color:#dc2626">− ${fmt(s.dispatch_fee)}</span></div>
+<div class="row"><span class="lbl" style="color:#dc2626">Insurance Deduction</span><span class="val" style="color:#dc2626">− ${fmt(s.insurance_deduction||45)}</span></div>
+${Number(s.other_deductions||0)>0?`<div class="row"><span class="lbl" style="color:#dc2626">Other Deductions</span><span class="val" style="color:#dc2626">− ${fmt(s.other_deductions)}</span></div>`:''}
+<div class="row total"><span class="lbl" style="font-weight:700;color:#0B2545">NET PAY TO DRIVER</span><span class="net">${fmt(s.net_pay)}</span></div>
+<div class="footer">3 Lakes Logistics LLC · loads@3lakeslogistics.com · Generated ${new Date().toLocaleDateString()}</div>
+<script>window.onload=()=>window.print();<\/script>
+</body></html>`);
+  w.document.close();
+}
+
+// ══════════════════════════════════════════════════════
+// SHIPPERS / BROKERS CRM
+// ══════════════════════════════════════════════════════
+
+async function loadShippers() {
+  try {
+    const res = await apiFetch('/api/dashboard/shippers?limit=200');
+    if (res.ok) {
+      allShippers = (await res.json()).items || [];
+    } else {
+      allShippers = [];
+    }
+  } catch(e) { allShippers = []; }
+  renderShippers();
+}
+
+function renderShippers() {
+  const tbody = document.getElementById('shippers-table-body');
+  if (!tbody) return;
+  const q = (document.getElementById('shipper-search')?.value || '').toLowerCase();
+  const typeFilter = document.getElementById('shipper-filter')?.value || '';
+  let list = allShippers;
+  if (q) list = list.filter(s => (s.company_name||'').toLowerCase().includes(q) || (s.mc_number||'').includes(q) || (s.contact_name||'').toLowerCase().includes(q));
+  if (typeFilter) list = list.filter(s => s.shipper_type === typeFilter);
+
+  setText('ship-total', allShippers.length);
+  setText('ship-active', allShippers.filter(s => s.status === 'active' || s.status === 'preferred').length);
+  setText('ship-quickpay', allShippers.filter(s => s.payment_terms === 'quick_pay').length);
+  const days = allShippers.map(s => ({quick_pay:1,net_7:7,net_15:15,net_30:30,net_45:45,net_60:60}[s.payment_terms]||30)).filter(Boolean);
+  setText('ship-avg-days', days.length ? Math.round(days.reduce((a,b)=>a+b,0)/days.length)+'d' : '—');
+
+  if (!list.length) {
+    tbody.innerHTML = '<tr><td colspan="9"><div class="empty-state"><div class="ei">🏭</div><p>No shippers added yet. Click "+ Add Shipper" to start tracking your broker and shipper relationships.</p></div></td></tr>';
+    return;
+  }
+
+  const termLabel = {quick_pay:'Quick Pay',net_7:'Net 7',net_15:'Net 15',net_30:'Net 30',net_45:'Net 45',net_60:'Net 60'};
+  const typeBadge = {broker:'badge-blue',shipper:'badge-green','3pl':'badge-navy'};
+  const statusBadges = {active:'badge-green',preferred:'badge-gold',inactive:'',do_not_use:'badge-red'};
+
+  tbody.innerHTML = list.map(s => `<tr>
+    <td style="font-weight:600">${esc(s.company_name||'—')}</td>
+    <td><span class="badge ${typeBadge[s.shipper_type]||'badge-blue'}">${esc(s.shipper_type||'broker')}</span></td>
+    <td style="font-size:12px;color:var(--muted)">${s.mc_number?'MC '+esc(s.mc_number):''}${s.mc_number&&s.dot_number?' / ':''}${s.dot_number?'DOT '+esc(s.dot_number):''||'—'}</td>
+    <td style="font-size:12px">${esc(s.contact_name||'—')}</td>
+    <td>${s.phone?`<a href="tel:${esc(s.phone)}" style="color:var(--accent)">${esc(s.phone)}</a>`:'—'}</td>
+    <td style="font-size:12px">${termLabel[s.payment_terms]||s.payment_terms||'—'}</td>
+    <td style="font-size:12px;color:var(--gold)">${s.credit_limit?'$'+Number(s.credit_limit).toLocaleString():'—'}</td>
+    <td><span class="badge ${statusBadges[s.status]||''}">${esc(s.status||'active')}</span></td>
+    <td><div style="display:flex;gap:4px">
+      <button class="btn-out" style="font-size:11px;padding:4px 8px" onclick="editShipper('${s.id}')">Edit</button>
+      <button class="btn-red-sm" onclick="deleteShipper('${s.id}')">✕</button>
+    </div></td>
+  </tr>`).join('');
+}
+
+function openAddShipperModal() {
+  document.getElementById('shipper-edit-id').value = '';
+  document.getElementById('shipper-modal-title').textContent = 'Add Shipper / Broker';
+  document.getElementById('shipper-save-btn').textContent = 'Save Shipper';
+  ['ship-name','ship-mc','ship-dot','ship-contact','ship-email','ship-phone','ship-notes'].forEach(id => {
+    const el = document.getElementById(id); if(el) el.value = '';
+  });
+  document.getElementById('ship-type').value = 'broker';
+  document.getElementById('ship-status').value = 'active';
+  document.getElementById('ship-terms').value = 'net_30';
+  document.getElementById('ship-credit').value = '';
+  openModal('add-shipper-modal');
+}
+
+function editShipper(id) {
+  const s = allShippers.find(x => x.id === id);
+  if (!s) return;
+  document.getElementById('shipper-edit-id').value = s.id;
+  document.getElementById('shipper-modal-title').textContent = 'Edit Shipper';
+  document.getElementById('shipper-save-btn').textContent = 'Save Changes';
+  document.getElementById('ship-name').value    = s.company_name || '';
+  document.getElementById('ship-mc').value      = s.mc_number || '';
+  document.getElementById('ship-dot').value     = s.dot_number || '';
+  document.getElementById('ship-contact').value = s.contact_name || '';
+  document.getElementById('ship-email').value   = s.email || '';
+  document.getElementById('ship-phone').value   = s.phone || '';
+  document.getElementById('ship-notes').value   = s.notes || '';
+  document.getElementById('ship-type').value    = s.shipper_type || 'broker';
+  document.getElementById('ship-status').value  = s.status || 'active';
+  document.getElementById('ship-terms').value   = s.payment_terms || 'net_30';
+  document.getElementById('ship-credit').value  = s.credit_limit || '';
+  openModal('add-shipper-modal');
+}
+
+async function saveShipper() {
+  const btn = document.getElementById('shipper-save-btn');
+  const name = document.getElementById('ship-name')?.value.trim();
+  if (!name) { toast('Company name is required', 'error'); return; }
+  const editId = document.getElementById('shipper-edit-id')?.value;
+  const body = {
+    company_name:   name,
+    shipper_type:   document.getElementById('ship-type')?.value || 'broker',
+    status:         document.getElementById('ship-status')?.value || 'active',
+    mc_number:      document.getElementById('ship-mc')?.value.trim() || null,
+    dot_number:     document.getElementById('ship-dot')?.value.trim() || null,
+    contact_name:   document.getElementById('ship-contact')?.value.trim() || null,
+    email:          document.getElementById('ship-email')?.value.trim() || null,
+    phone:          document.getElementById('ship-phone')?.value.trim() || null,
+    payment_terms:  document.getElementById('ship-terms')?.value || 'net_30',
+    credit_limit:   Number(document.getElementById('ship-credit')?.value) || null,
+    notes:          document.getElementById('ship-notes')?.value.trim() || null,
+  };
+  if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
+  const r = editId
+    ? await apiFetch('/api/dashboard/shippers/' + editId, 'PATCH', body)
+    : await apiFetch('/api/dashboard/shippers', 'POST', body);
+  if (btn) { btn.disabled = false; btn.textContent = editId ? 'Save Changes' : 'Save Shipper'; }
+  if (r.ok) {
+    closeModal('add-shipper-modal');
+    toast(editId ? 'Shipper updated!' : 'Shipper added!');
+    await loadShippers();
+  } else {
+    toast('Error saving shipper', 'error');
+  }
+}
+
+async function deleteShipper(id) {
+  if (!confirm('Remove this shipper from your CRM?')) return;
+  const r = await apiFetch('/api/dashboard/shippers/' + id, 'DELETE');
+  if (r.ok) { toast('Shipper removed'); loadShippers(); }
+  else toast('Error', 'error');
+}
 </script>
 
 <!-- ASSIGN DRIVER MODAL -->
@@ -11209,6 +11639,131 @@ async function deactivateDriver(driverId) {
   <div class="modal" style="max-width:560px">
     <div class="modal-hd"><span class="modal-title">Load Details</span><button class="modal-close" onclick="closeModal('load-detail-modal')">✕</button></div>
     <div style="padding:20px" id="load-detail-body"></div>
+  </div>
+</div>
+
+<!-- NEW SETTLEMENT MODAL -->
+<div class="modal-overlay" id="new-settlement-modal" onclick="if(event.target===this)closeModal('new-settlement-modal')">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-hd"><span class="modal-title">Create Driver Settlement</span><button class="modal-close" onclick="closeModal('new-settlement-modal')">✕</button></div>
+    <div style="padding:20px;display:flex;flex-direction:column;gap:14px">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div>
+          <label style="font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:6px">DRIVER / CARRIER *</label>
+          <select class="fsel" id="settle-carrier-sel" style="width:100%" onchange="settleAutoFill()"><option value="">Select carrier…</option></select>
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:6px">LOAD #</label>
+          <select class="fsel" id="settle-load-sel" style="width:100%" onchange="settleAutoFill()"><option value="">Select load…</option></select>
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:6px">WEEK ENDING</label>
+          <input class="fi" type="date" id="settle-week-end" style="width:100%">
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:6px">GROSS PAY ($) *</label>
+          <input class="fi" type="number" id="settle-gross-in" placeholder="0.00" oninput="settleCalc()" style="width:100%">
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:6px">DISPATCH % *</label>
+          <input class="fi" type="number" id="settle-pct-in" value="8" placeholder="8" oninput="settleCalc()" style="width:100%">
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:6px">INSURANCE ($)</label>
+          <input class="fi" type="number" id="settle-ins-in" value="45" placeholder="45" oninput="settleCalc()" style="width:100%">
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:6px">OTHER DEDUCTIONS ($)</label>
+          <input class="fi" type="number" id="settle-other-in" value="0" placeholder="0" oninput="settleCalc()" style="width:100%">
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:6px">MILES</label>
+          <input class="fi" type="number" id="settle-miles-in" placeholder="0" style="width:100%">
+        </div>
+      </div>
+      <div id="settle-calc-preview" style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:14px;font-size:13px;line-height:1.8">Enter gross pay to preview calculation</div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;padding-top:4px;border-top:1px solid var(--border)">
+        <button class="btn-out" onclick="closeModal('new-settlement-modal')">Cancel</button>
+        <button class="btn-out" onclick="previewSettlementPrint()">🖨️ Preview</button>
+        <button class="btn-navy" onclick="saveSettlement()">Save &amp; Print</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ADD SHIPPER MODAL -->
+<div class="modal-overlay" id="add-shipper-modal" onclick="if(event.target===this)closeModal('add-shipper-modal')">
+  <div class="modal" style="max-width:560px">
+    <div class="modal-hd"><span class="modal-title" id="shipper-modal-title">Add Shipper / Broker</span><button class="modal-close" onclick="closeModal('add-shipper-modal')">✕</button></div>
+    <div style="padding:20px;display:flex;flex-direction:column;gap:14px">
+      <input type="hidden" id="shipper-edit-id">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div style="grid-column:1/-1">
+          <label style="font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:6px">COMPANY NAME *</label>
+          <input class="fi" id="ship-name" placeholder="Blue Ridge Freight Brokers" style="width:100%">
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:6px">TYPE</label>
+          <select class="fsel" id="ship-type" style="width:100%">
+            <option value="broker">Broker</option>
+            <option value="shipper">Direct Shipper</option>
+            <option value="3pl">3PL</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:6px">STATUS</label>
+          <select class="fsel" id="ship-status" style="width:100%">
+            <option value="active">Active</option>
+            <option value="preferred">Preferred</option>
+            <option value="inactive">Inactive</option>
+            <option value="do_not_use">Do Not Use</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:6px">MC NUMBER</label>
+          <input class="fi" id="ship-mc" placeholder="e.g. 884521" style="width:100%">
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:6px">DOT NUMBER</label>
+          <input class="fi" id="ship-dot" placeholder="e.g. 3219847" style="width:100%">
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:6px">CONTACT NAME</label>
+          <input class="fi" id="ship-contact" placeholder="Jane Smith" style="width:100%">
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:6px">EMAIL</label>
+          <input class="fi" type="email" id="ship-email" placeholder="loads@broker.com" style="width:100%">
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:6px">PHONE</label>
+          <input class="fi" type="tel" id="ship-phone" placeholder="(312) 555-0100" style="width:100%">
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:6px">PAYMENT TERMS</label>
+          <select class="fsel" id="ship-terms" style="width:100%">
+            <option value="quick_pay">Quick Pay (&lt;48h)</option>
+            <option value="net_7">Net 7</option>
+            <option value="net_15">Net 15</option>
+            <option value="net_30">Net 30</option>
+            <option value="net_45">Net 45</option>
+            <option value="net_60">Net 60</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:6px">CREDIT LIMIT ($)</label>
+          <input class="fi" type="number" id="ship-credit" placeholder="10000" style="width:100%">
+        </div>
+        <div style="grid-column:1/-1">
+          <label style="font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:6px">NOTES</label>
+          <textarea class="fta" id="ship-notes" placeholder="Preferred lanes, load types, special requirements…" rows="2"></textarea>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;padding-top:4px;border-top:1px solid var(--border)">
+        <button class="btn-out" onclick="closeModal('add-shipper-modal')">Cancel</button>
+        <button class="btn-navy" id="shipper-save-btn" onclick="saveShipper()">Save Shipper</button>
+      </div>
+    </div>
   </div>
 </div>
 

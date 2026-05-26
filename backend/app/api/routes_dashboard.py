@@ -104,3 +104,55 @@ def update_invoice(invoice_id: str, payload: dict) -> dict:
 def delete_invoice(invoice_id: str) -> dict:
     get_supabase().table("invoices").delete().eq("id", invoice_id).execute()
     return {"ok": True}
+
+
+# ── Driver Settlements ──────────────────────────────────
+
+@router.get("/settlements")
+def list_settlements(limit: int = 200) -> dict:
+    res = get_supabase().table("driver_settlements").select("*").order("created_at", desc=True).limit(limit).execute()
+    return {"count": len(res.data or []), "items": res.data or []}
+
+
+@router.post("/settlements")
+def create_settlement(payload: dict) -> dict:
+    res = get_supabase().table("driver_settlements").insert(payload).execute()
+    return {"ok": True, "item": res.data[0] if res.data else {}}
+
+
+@router.patch("/settlements/{settlement_id}")
+def update_settlement(settlement_id: str, payload: dict) -> dict:
+    get_supabase().table("driver_settlements").update(payload).eq("id", settlement_id).execute()
+    return {"ok": True}
+
+
+@router.delete("/settlements/{settlement_id}")
+def delete_settlement(settlement_id: str) -> dict:
+    get_supabase().table("driver_settlements").delete().eq("id", settlement_id).execute()
+    return {"ok": True}
+
+
+# ── Shippers / Brokers CRM ──────────────────────────────
+
+@router.get("/shippers")
+def list_shippers(limit: int = 500) -> dict:
+    res = get_supabase().table("shippers").select("*").order("created_at", desc=True).limit(limit).execute()
+    return {"count": len(res.data or []), "items": res.data or []}
+
+
+@router.post("/shippers")
+def create_shipper(payload: dict) -> dict:
+    res = get_supabase().table("shippers").insert(payload).execute()
+    return {"ok": True, "item": res.data[0] if res.data else {}}
+
+
+@router.patch("/shippers/{shipper_id}")
+def update_shipper(shipper_id: str, payload: dict) -> dict:
+    get_supabase().table("shippers").update(payload).eq("id", shipper_id).execute()
+    return {"ok": True}
+
+
+@router.delete("/shippers/{shipper_id}")
+def delete_shipper(shipper_id: str) -> dict:
+    get_supabase().table("shippers").delete().eq("id", shipper_id).execute()
+    return {"ok": True}
