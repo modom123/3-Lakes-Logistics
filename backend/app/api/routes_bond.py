@@ -72,6 +72,68 @@ def channel_status() -> dict:
     return bond_courier.run({"action": "status"})
 
 
+@_internal.get("/intel-snapshot")
+def intel_snapshot() -> dict:
+    """Internal (bearer) mirror of /bond/api-snapshot — for the Sit Room KPI strip."""
+    from datetime import datetime, timedelta, timezone
+
+    sb  = get_supabase()
+    now = datetime.now(timezone.utc)
+    thirty_min_ago = (now - timedelta(minutes=30)).isoformat()
+    one_hour_ago   = (now - timedelta(hours=1)).isoformat()
+
+    def _count(table: str, filters: list[tuple] | None = None) -> int:
+        q = sb.table(table).select("id", count="exact").limit(1)
+        for col, val in (filters or []):
+            q = q.eq(col, val)
+        try:
+            return q.execute().count or 0
+        except Exception:
+            return -1
+
+    trucks_live = -1
+    try:
+        trucks_live = sb.table("truck_telemetry").select("truck_id", count="exact") \
+            .gte("ts", thirty_min_ago).execute().count or 0
+    except Exception:
+        pass
+
+    violations = -1
+    try:
+        hos_rows = sb.table("driver_hos_status").select("violation_flags") \
+            .gte("ts", one_hour_ago).execute().data or []
+        violations = sum(1 for r in hos_rows if r.get("violation_flags"))
+    except Exception:
+        pass
+
+    loads_active = -1
+    try:
+        all_loads = sb.table("loads").select("status").execute().data or []
+        loads_active = sum(1 for r in all_loads if r.get("status") in
+                          ("dispatched", "en_route", "at_pickup", "in_transit"))
+    except Exception:
+        pass
+
+    pending_directives = -1
+    try:
+        pending_directives = sb.table("bond_channel").select("id", count="exact") \
+            .eq("direction", "internal_to_external").eq("status", "pending") \
+            .execute().count or 0
+    except Exception:
+        pass
+
+    return {
+        "snapshot_ts": now.isoformat(),
+        "trucks_live_30min":        trucks_live,
+        "loads_active":             loads_active,
+        "hos_violations_last_hour": violations,
+        "total_trucks":             _count("fleet_assets"),
+        "total_carriers":           _count("active_carriers"),
+        "trucks_on_load":           _count("fleet_assets", [("status", "on_load")]),
+        "bond_pending_directives":  pending_directives,
+    }
+
+
 @_internal.patch("/message/{msg_id}")
 def update_message_status(msg_id: str, body: StatusPatch) -> dict:
     sb = get_supabase()
@@ -85,6 +147,106 @@ def update_message_status(msg_id: str, body: StatusPatch) -> dict:
 
 
 _external = APIRouter(dependencies=[Depends(_require_bond_key)])
+
+
+@_external.get("/api-snapshot")
+def api_snapshot() -> dict:
+    """Full system intelligence snapshot for External Bond.
+
+    External Bond calls this (X-Bond-Key auth) to get live system state
+    so it can include real data in its reports and audits.
+    """
+    sb = get_supabase()
+    from datetime import datetime, timedelta, timezone
+
+    now = datetime.now(timezone.utc)
+    one_hour_ago = (now - timedelta(hours=1)).isoformat()
+    thirty_min_ago = (now - timedelta(minutes=30)).isoformat()
+
+    def _count(table: str, filters: list[tuple] | None = None) -> int:
+        q = sb.table(table).select("id", count="exact").limit(1)
+        for col, val in (filters or []):
+            q = q.eq(col, val)
+        try:
+            r = q.execute()
+            return r.count or 0
+        except Exception:
+            return -1
+
+    # Carriers
+    total_carriers = _count("active_carriers")
+
+    # Fleet
+    total_trucks = _count("fleet_assets")
+    on_load       = _count("fleet_assets", [("status", "on_load")])
+    available     = _count("fleet_assets", [("status", "available")])
+    out_of_svc    = _count("fleet_assets", [("status", "out_of_service")])
+
+    # Telemetry — pings in last 30 min (trucks that are live)
+    try:
+        tel_live = sb.table("truck_telemetry").select("truck_id", count="exact") \
+            .gte("ts", thirty_min_ago).execute().count or 0
+    except Exception:
+        tel_live = -1
+
+    # Loads
+    try:
+        loads_res = sb.table("loads").select("status", count="exact").execute()
+        loads_all = loads_res.count or 0
+        loads_data = loads_res.data or []
+        loads_active = sum(1 for r in loads_data if r.get("status") in ("dispatched", "en_route", "at_pickup", "in_transit"))
+    except Exception:
+        loads_all = -1
+        loads_active = -1
+
+    # HOS violations
+    try:
+        hos_rows = sb.table("driver_hos_status").select("violation_flags,ts") \
+            .gte("ts", one_hour_ago).execute().data or []
+        violations = sum(1 for r in hos_rows if r.get("violation_flags"))
+    except Exception:
+        violations = -1
+
+    # Unread messages from IEBC waiting for External Bond
+    try:
+        pending_directives = sb.table("bond_channel").select("id", count="exact") \
+            .eq("direction", "internal_to_external").eq("status", "pending") \
+            .execute().count or 0
+    except Exception:
+        pending_directives = -1
+
+    return {
+        "snapshot_ts": now.isoformat(),
+        "carriers": {
+            "total": total_carriers,
+        },
+        "fleet": {
+            "total_trucks": total_trucks,
+            "on_load":      on_load,
+            "available":    available,
+            "out_of_service": out_of_svc,
+        },
+        "telemetry": {
+            "trucks_live_30min": tel_live,
+        },
+        "loads": {
+            "total":  loads_all,
+            "active": loads_active,
+        },
+        "hos": {
+            "violations_last_hour": violations,
+        },
+        "bond_channel": {
+            "pending_directives": pending_directives,
+        },
+        "api_base": os.getenv("SITE_URL", "https://three-lakes-logistics-api.onrender.com"),
+        "endpoints": {
+            "inbox":        "GET  /api/bond/inbox               — pull pending directives",
+            "report":       "POST /api/bond/report              — post report back",
+            "api_snapshot": "GET  /api/bond/api-snapshot        — this endpoint",
+            "health":       "GET  /health/ping                  — liveness check",
+        },
+    }
 
 
 @_external.get("/inbox")

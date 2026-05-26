@@ -802,6 +802,20 @@ td.td-name{font-weight:600;color:var(--navy);}
       🤖
       <span class="notif-count" id="notif-count">0</span>
     </div>
+    <!-- Bond global status chip (click to open Bond Office) -->
+    <div id="bond-global-chip" onclick="nav('bond')" title="James Bond · External Channel" style="
+      display:flex;align-items:center;gap:5px;
+      background:rgba(11,37,69,.8);border:1px solid rgba(228,168,48,.3);
+      border-radius:20px;padding:4px 10px;cursor:pointer;
+      font-family:var(--ff-m);font-size:10px;color:rgba(228,168,48,.8);
+      letter-spacing:.5px;text-transform:uppercase;
+      transition:border-color .2s,background .2s;user-select:none;
+    " onmouseover="this.style.background='rgba(228,168,48,.15)'" onmouseout="this.style.background='rgba(11,37,69,.8)'">
+      <span style="font-size:12px">🕵️</span>
+      <span>JB</span>
+      <span id="bond-global-dot" style="width:6px;height:6px;border-radius:50%;background:#6b7280;transition:background .4s;flex-shrink:0"></span>
+      <span id="bond-global-unread" style="display:none;background:#dc2626;color:#fff;font-size:9px;font-weight:800;border-radius:10px;padding:1px 5px;margin-left:2px">0</span>
+    </div>
     <button class="btn-sync" onclick="refreshAll()">↻ Sync</button>
     <button class="btn-sync" style="background:#1a1a2e;font-size:11px;padding:6px 10px" onclick="const b=document.getElementById('diag-banner');b.style.display=b.style.display==='none'?'block':'none'">⚙ Diag</button>
   </div>
@@ -8230,6 +8244,26 @@ if (typeof nav === 'function') {
             <div class="bo-kpi-l">Bond Messages</div>
             <div class="bo-kpi-sub" id="bokpi-msgs-sub">channel</div>
           </div>
+          <div class="bo-kpi" id="bo-kpi-trucks-live">
+            <div class="bo-kpi-n" id="bokpi-trucks-live">—</div>
+            <div class="bo-kpi-l">Trucks Live</div>
+            <div class="bo-kpi-sub">pinging last 30m</div>
+          </div>
+          <div class="bo-kpi" id="bo-kpi-hos-viol">
+            <div class="bo-kpi-n" id="bokpi-hos-viol">—</div>
+            <div class="bo-kpi-l">HOS Violations</div>
+            <div class="bo-kpi-sub">last hour</div>
+          </div>
+          <div class="bo-kpi" id="bo-kpi-active-loads">
+            <div class="bo-kpi-n" id="bokpi-active-loads">—</div>
+            <div class="bo-kpi-l">Active Loads</div>
+            <div class="bo-kpi-sub">in transit</div>
+          </div>
+          <div class="bo-kpi" id="bo-kpi-bond-pending">
+            <div class="bo-kpi-n gold" id="bokpi-bond-pending">—</div>
+            <div class="bo-kpi-l">Awaiting Bond</div>
+            <div class="bo-kpi-sub">pending directives</div>
+          </div>
         </div>
 
         <!-- 2-col: Intel Feed + Bond Brief -->
@@ -8334,6 +8368,7 @@ if (typeof nav === 'function') {
           <div class="bo-tpl-grid">
             <div class="bo-tpl-title">Quick Templates</div>
             <button class="bo-tpl-btn" onclick="boFillTemplate('connectivity')">📡 API Connectivity Check</button>
+            <button class="bo-tpl-btn" onclick="boFillTemplate('snapshot')" style="border-color:rgba(228,168,48,.5);color:var(--gold2)">📊 Get API Snapshot</button>
             <button class="bo-tpl-btn" onclick="boFillTemplate('health')">❤️ Full Health Report</button>
             <button class="bo-tpl-btn" onclick="boFillTemplate('schema')">🗄️ Schema Verification</button>
             <button class="bo-tpl-btn" onclick="boFillTemplate('deploy')">🚀 Render Deploy Status</button>
@@ -8604,7 +8639,8 @@ async function boSendDirective() {
 
 // ── Templates
 const BO_TEMPLATES = {
-  connectivity: `CONNECTIVITY VERIFICATION\n\nPlease run the following checks and report results:\n1. curl $IEBC_API_URL/api/health/ping\n   Expected: "ok"\n2. curl $IEBC_API_URL/api/health/full\n   Expected: {"ok": true, "services": {"supabase": "ok"}}\n3. curl -H "X-Bond-Key: $BOND_API_KEY" $IEBC_API_URL/api/bond/inbox\n   Expected: HTTP 200\n\nReport: HTTP status codes, response bodies, and any errors encountered.`,
+  connectivity: `CONNECTIVITY VERIFICATION\n\nPlease run the following checks and report results:\n1. curl $IEBC_API_URL/api/health/ping\n   Expected: "ok"\n2. curl $IEBC_API_URL/api/health/full\n   Expected: {"ok": true, "services": {"supabase": "ok"}}\n3. curl -H "X-Bond-Key: $BOND_API_KEY" $IEBC_API_URL/api/bond/inbox\n   Expected: HTTP 200\n4. curl -H "X-Bond-Key: $BOND_API_KEY" $IEBC_API_URL/api/bond/api-snapshot\n   Expected: JSON with carriers, fleet, telemetry, loads, hos sections\n\nReport: HTTP status codes, response bodies, and any errors encountered.`,
+  snapshot: `LIVE API SNAPSHOT REQUEST\n\nRetrieve the current system snapshot by calling:\ncurl -H "X-Bond-Key: $BOND_API_KEY" $IEBC_API_URL/api/bond/api-snapshot\n\nThis endpoint returns:\n- carriers.total: number of active carriers\n- fleet.total_trucks, on_load, available, out_of_service\n- telemetry.trucks_live_30min: trucks pinging in last 30 min\n- loads.total, loads.active\n- hos.violations_last_hour\n- bond_channel.pending_directives\n\nParse the JSON and provide:\n1. A plain-English summary of fleet health\n2. Flag any concerns (low active trucks, HOS violations, stalled loads)\n3. Recommend next action if issues are found\n\nPost your analysis to /api/bond/report when complete.`,
   health: `FULL HEALTH REPORT REQUEST\n\nPlease provide a complete health snapshot:\n1. API connectivity status (ping + full health)\n2. Supabase database connectivity\n3. BOND_API_KEY configured and functional\n4. Any environment variables missing or misconfigured\n5. Last deploy timestamp and status\n\nReturn a structured report: system=OK/DEGRADED/DOWN for each.`,
   schema: `SCHEMA VERIFICATION REQUEST\n\nPlease verify the following tables exist and have data:\n- active_carriers (SELECT COUNT(*) FROM active_carriers;)\n- loads (SELECT COUNT(*) FROM loads;)\n- leads (SELECT COUNT(*) FROM leads;)\n- agent_memory (SELECT COUNT(*) FROM agent_memory;)\n- bond_channel (SELECT COUNT(*) FROM bond_channel;)\n- telemetry_pings (SELECT COUNT(*) FROM telemetry_pings;)\n\nRun in Supabase SQL Editor and report row counts. If any table is missing, run the corresponding migration from sql/ in the repo.`,
   deploy: `RENDER DEPLOY STATUS\n\nPlease check the current deployment:\n1. Go to https://dashboard.render.com\n2. Open the 3-lakes-logistics-api service\n3. Verify: last deploy succeeded, no crashes in logs\n4. Check environment variables are set: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, API_BEARER_TOKEN, BOND_API_KEY\n5. Report: deploy status, last deploy time, any errors in logs`,
@@ -8651,7 +8687,7 @@ async function boPollExternal() {
 // ── Situation Room
 async function boLoadSitRoom() {
   boLoadStatus();
-  // Load KPIs
+  // Load dashboard KPIs
   try {
     const d = await apiFetch('/api/dashboard/kpis');
     const n = (id,v,cls) => {
@@ -8664,6 +8700,23 @@ async function boLoadSitRoom() {
     n('bokpi-sla',      d.sla_violations ?? '—', (d.sla_violations||0)>2?'warn':'ok');
     if(d.sla_violations!=null) document.getElementById('bokpi-sla-sub').textContent=(d.critical_violations||0)+' critical';
   } catch(e){ console.warn('KPI load failed',e); }
+
+  // Load Bond intel-snapshot (fleet + telemetry + HOS)
+  try {
+    const snap = await apiFetch('/api/bond/intel-snapshot');
+    if (snap.ok) {
+      const s = await snap.json();
+      const kpi = (id, v, cls) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = (v == null || v === -1) ? '—' : v;
+        if (cls) { const p = el?.closest('.bo-kpi'); if (p) p.className = 'bo-kpi ' + cls; }
+      };
+      kpi('bokpi-trucks-live',  s.trucks_live_30min, s.trucks_live_30min > 0 ? 'ok' : '');
+      kpi('bokpi-hos-viol',     s.hos_violations_last_hour, s.hos_violations_last_hour > 0 ? 'crit' : 'ok');
+      kpi('bokpi-active-loads', s.loads_active, s.loads_active > 0 ? 'ok' : '');
+      kpi('bokpi-bond-pending', s.bond_pending_directives, s.bond_pending_directives > 0 ? 'warn' : 'ok');
+    }
+  } catch(e){ console.warn('Bond intel-snapshot failed', e); }
 
   // Intel Feed
   boLoadIntelFeed();
@@ -8961,6 +9014,53 @@ window.bondRenderThread= boRenderThread;
 // ── Auto-refresh when Bond page is active
 setInterval(()=>{ if(document.getElementById('page-bond')?.classList.contains('active')){ boLoadThread(); boLoadStatus(); } }, 30000);
 setInterval(()=>{ if(document.getElementById('page-bond')?.classList.contains('active')) boLoadSitRoom(); }, 120000);
+
+// ── Global Bond status poller — runs everywhere, updates topbar chip ──────────
+let _bondGlobalPrev = 0;
+
+async function bondGlobalPoll() {
+  try {
+    const res = await apiFetch('/api/bond/status');
+    if (!res.ok) { _bondSetDot('offline'); return; }
+    const d = await res.json();
+
+    const alive  = d.channel_alive ?? d.ok ?? false;
+    const unread = d.unread_inbound || 0;
+
+    _bondSetDot(alive ? 'live' : 'offline');
+
+    // Unread badge in topbar chip
+    const badge = document.getElementById('bond-global-unread');
+    if (badge) {
+      badge.textContent = unread;
+      badge.style.display = unread > 0 ? 'inline-block' : 'none';
+    }
+
+    // Also update the Bond Office internal dot if page is not active
+    const innerDot = document.getElementById('bo-conn-dot');
+    if (innerDot) innerDot.className = 'bo-conn-dot ' + (alive ? 'live' : 'err');
+
+    // Notify if new inbound messages arrived
+    if (unread > _bondGlobalPrev && _bondGlobalPrev >= 0) {
+      const diff = unread - _bondGlobalPrev;
+      if (_bondGlobalPrev > 0) showNotif(`🕵️ Bond: ${diff} new report${diff>1?'s':''} from External Bond`, 'info');
+    }
+    _bondGlobalPrev = unread;
+  } catch (e) {
+    _bondSetDot('offline');
+  }
+}
+
+function _bondSetDot(state) {
+  const dot = document.getElementById('bond-global-dot');
+  if (!dot) return;
+  dot.style.background = state === 'live' ? '#16a34a' : state === 'offline' ? '#6b7280' : '#dc2626';
+  dot.style.boxShadow  = state === 'live' ? '0 0 6px #16a34a' : 'none';
+}
+
+// Poll immediately on load and then every 3 minutes globally
+bondGlobalPoll();
+setInterval(bondGlobalPoll, 180000);
 </script>
 
 
