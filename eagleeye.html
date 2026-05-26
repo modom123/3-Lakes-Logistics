@@ -1088,6 +1088,44 @@ td.td-name{font-weight:600;color:var(--navy);}
         <div class="mc" onclick="showDashSummary('fees')" style="cursor:pointer" title="Click for recent 10"><div class="mc-label">Gross Revenue (MTD)</div><div class="mc-val green" id="loads-gross-mtd">—</div></div>
         <div class="mc" onclick="showDashSummary('loads-rpm')" style="cursor:pointer" title="Click for recent 10"><div class="mc-label">Avg RPM</div><div class="mc-val gold" id="loads-avg-rpm">—</div></div>
       </div>
+
+      <!-- DAT Load Board Search -->
+      <div class="card" style="margin-bottom:16px;border-top:3px solid var(--gold)">
+        <div class="card-hd">
+          <div>
+            <div class="card-title">🔍 DAT Load Board Search</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:2px">Search available freight and auto-import into Load Manager (requires DAT credentials in Render env)</div>
+          </div>
+          <span id="dat-import-status" style="font-size:12px;color:var(--muted)"></span>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-bottom:12px">
+          <div class="fg" style="flex:1;min-width:140px;margin:0">
+            <label class="fl" style="font-size:11px">Origin ZIP</label>
+            <input id="dat-zip" class="form-input" placeholder="e.g. 48201" style="padding:7px 10px">
+          </div>
+          <div class="fg" style="width:110px;margin:0">
+            <label class="fl" style="font-size:11px">Radius (mi)</label>
+            <input id="dat-radius" type="number" class="form-input" value="250" style="padding:7px 10px">
+          </div>
+          <div class="fg" style="flex:1;min-width:140px;margin:0">
+            <label class="fl" style="font-size:11px">Equipment</label>
+            <select id="dat-equipment" class="form-input" style="padding:7px 10px">
+              <option value="">Any</option>
+              <option value="dry_van">Dry Van</option>
+              <option value="reefer">Reefer</option>
+              <option value="flatbed">Flatbed</option>
+              <option value="step_deck">Step Deck</option>
+            </select>
+          </div>
+          <div class="fg" style="width:120px;margin:0">
+            <label class="fl" style="font-size:11px">Min Rate ($)</label>
+            <input id="dat-min-rate" type="number" class="form-input" value="0" placeholder="0" style="padding:7px 10px">
+          </div>
+          <button class="btn-navy" onclick="searchDAT()" id="dat-search-btn" style="padding:8px 18px;white-space:nowrap">Search DAT</button>
+        </div>
+        <div id="dat-results" style="min-height:40px"></div>
+      </div>
+
       <div class="card">
         <div class="card-hd"><div class="card-title">Load History</div><span class="card-chip">Supabase</span></div>
         <div class="tbl-wrap">
@@ -3660,6 +3698,60 @@ function calcFee(){
     const rpm=miles?(rate/miles).toFixed(2):'—';
     prev.innerHTML='<strong style="color:var(--gold)">Dispatch Fee: $'+fee.toLocaleString()+'</strong>&nbsp; · &nbsp;RPM: $'+rpm+'&nbsp; · &nbsp;Net to Driver: $'+(rate-fee).toLocaleString();
   }else{prev.textContent='Enter rate to calculate dispatch fee';}
+}
+
+// ── DAT LOAD BOARD ─────────────────────────────────────────────────────────
+async function searchDAT(){
+  const btn=document.getElementById('dat-search-btn');
+  const status=document.getElementById('dat-import-status');
+  const results=document.getElementById('dat-results');
+  const zip=document.getElementById('dat-zip')?.value.trim();
+  const radius=document.getElementById('dat-radius')?.value||'250';
+  const equip=document.getElementById('dat-equipment')?.value||'';
+  const minRate=document.getElementById('dat-min-rate')?.value||'0';
+  btn.disabled=true;btn.textContent='Searching…';
+  if(status)status.textContent='';
+  if(results)results.innerHTML='<div class="loading"><div class="spin"></div>Querying DAT…</div>';
+  let url='/api/loads/fetch-dat?radius_miles='+radius+'&min_rate='+minRate;
+  if(zip)url+='&distance_from_zip='+encodeURIComponent(zip);
+  if(equip)url+='&equipment_types='+encodeURIComponent(equip);
+  try{
+    const r=await apiFetch(url,'POST',{});
+    btn.disabled=false;btn.textContent='Search DAT';
+    if(!r.ok){
+      const txt=await r.text();
+      if(r.status===400&&txt.includes('credentials')){
+        results.innerHTML='<p style="color:#f59e0b;padding:10px;font-size:13px">⚠ DAT credentials not configured — set <code>DAT_CLIENT_ID</code> and <code>DAT_CLIENT_SECRET</code> in Render environment variables.</p>';
+      }else{
+        results.innerHTML='<p style="color:#ef4444;padding:10px;font-size:13px">DAT search failed: HTTP '+r.status+'</p>';
+      }
+      return;
+    }
+    const d=await r.json();
+    const imported=d.imported||0;
+    const loads=d.loads||[];
+    if(status)status.textContent=imported+' load(s) imported';
+    if(!loads.length){
+      results.innerHTML='<p style="color:var(--muted);padding:10px;font-size:13px">No new loads found matching your criteria.</p>';
+      return;
+    }
+    results.innerHTML='<div class="tbl-wrap" style="margin-top:8px"><table><thead><tr>'+
+      '<th>Load #</th><th>Route</th><th>Miles</th><th>Rate</th><th>Equipment</th><th>Status</th></tr></thead><tbody>'+
+      loads.map(l=>'<tr>'+
+        '<td style="font-family:var(--ff-m);font-size:12px">'+(l.load_number||l.source_id||'—')+'</td>'+
+        '<td style="font-size:12px">'+(l.pickup_location||'?')+' → '+(l.delivery_location||'?')+'</td>'+
+        '<td style="font-size:12px">'+(l.miles?Number(l.miles).toLocaleString()+' mi':'—')+'</td>'+
+        '<td style="font-size:12px;font-weight:700;color:var(--green)">'+(l.gross_rate?'$'+Number(l.gross_rate).toLocaleString():'—')+'</td>'+
+        '<td style="font-size:12px">'+(l.trailer_type||'—')+'</td>'+
+        '<td><span class="badge badge-green">Imported</span></td>'+
+        '</tr>').join('')+
+      '</tbody></table></div>';
+    await loadLoads();
+    toast(imported+' DAT load(s) imported!');
+  }catch(e){
+    btn.disabled=false;btn.textContent='Search DAT';
+    if(results)results.innerHTML='<p style="color:#ef4444;padding:10px;font-size:13px">Error: '+esc(e.message)+'</p>';
+  }
 }
 
 async function saveLoad(){
