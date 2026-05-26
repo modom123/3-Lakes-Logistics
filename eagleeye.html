@@ -1205,7 +1205,7 @@ td.td-name{font-weight:600;color:var(--navy);}
 
     <!-- IFTA — rendered dynamically by renderIFTA() -->
     <div class="page" id="page-ifta">
-      <div class="page-hdr"><div class="page-hdr-l"><div class="chip">Quarterly</div><h2>IFTA / Permits / Tax</h2></div><button class="btn-navy">+ Log Miles</button></div>
+      <div class="page-hdr"><div class="page-hdr-l"><div class="chip">Quarterly</div><h2>IFTA / Permits / Tax</h2></div><button class="btn-navy" onclick="openModal('log-fuel-modal')">+ Log Fuel</button></div>
       <div id="ifta-metrics" class="g3"></div>
       <div class="g2">
         <div class="card">
@@ -1216,6 +1216,13 @@ td.td-name{font-weight:600;color:var(--navy);}
           <div class="card-hd"><div class="card-title">Permit & Registration Tracker</div></div>
           <div id="ifta-tracker"></div>
         </div>
+      </div>
+      <div class="card" style="margin-top:16px">
+        <div class="card-hd">
+          <div class="card-title">⛽ Fuel Card Transactions</div>
+          <button class="btn-out" style="font-size:12px" onclick="loadIFTA()">Refresh</button>
+        </div>
+        <div id="ifta-fuel-table"><div class="loading"><div class="spin"></div>Loading fuel transactions…</div></div>
       </div>
     </div>
 
@@ -2917,6 +2924,37 @@ td.td-name{font-weight:600;color:var(--navy);}
   </div>
 </div>
 
+<!-- LOG FUEL MODAL -->
+<div class="modal-overlay" id="log-fuel-modal">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-hdr"><h3>Log Fuel Transaction</h3>
+      <button class="modal-close" onclick="closeModal('log-fuel-modal')">✕</button>
+    </div>
+    <div class="fg"><label class="fl">Truck ID</label>
+      <input id="fuel-truck-id" class="form-input" placeholder="e.g. TRK-001"></div>
+    <div class="fg"><label class="fl">Location / Station</label>
+      <input id="fuel-location" class="form-input" placeholder="e.g. Pilot, Nashville TN"></div>
+    <div class="g2">
+      <div class="fg"><label class="fl">Gallons</label>
+        <input id="fuel-gallons" type="number" step="0.1" class="form-input" placeholder="0.0" oninput="calcFuelAmount()"></div>
+      <div class="fg"><label class="fl">Price/Gal ($)</label>
+        <input id="fuel-ppg" type="number" step="0.001" class="form-input" placeholder="0.000" oninput="calcFuelAmount()"></div>
+    </div>
+    <div class="fg"><label class="fl">Total Amount ($)</label>
+      <input id="fuel-amount" type="number" step="0.01" class="form-input" placeholder="Auto-calculated"></div>
+    <div class="fg"><label class="fl">Card # (last 4)</label>
+      <input id="fuel-card" class="form-input" placeholder="e.g. 4321"></div>
+    <div style="display:flex;align-items:center;gap:8px;margin:8px 0">
+      <input type="checkbox" id="fuel-is-advance">
+      <label for="fuel-is-advance" style="font-size:13px;color:var(--text)">Fuel advance (not fuel purchase)</label>
+    </div>
+    <div class="modal-ftr">
+      <button class="btn-out" onclick="closeModal('log-fuel-modal')">Cancel</button>
+      <button class="btn-navy" onclick="saveFuelTx()" id="save-fuel-btn">Log Transaction</button>
+    </div>
+  </div>
+</div>
+
 <script>
 const { createClient } = supabase;
 const sb = createClient('https://zngipootstubwvgdmckt.supabase.co','eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpuZ2lwb290c3R1Ynd2Z2RtY2t0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMxMjk3ODUsImV4cCI6MjA4ODcwNTc4NX0.6MXR8q-CKVuiiJaJKuckxABAUQ-siuyP0-KoaLkt33g');
@@ -4008,6 +4046,55 @@ async function saveShipper(){
   closeModal('add-shipper-modal');
   ['shp-name','shp-contact','shp-phone','shp-email','shp-mc','shp-credit','shp-notes'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   await loadShippers();toast('Shipper added to CRM!');
+}
+
+// ── IFTA / FUEL ──────────────────────────────────────────────────────────────
+function calcFuelAmount(){
+  const gal=parseFloat(document.getElementById('fuel-gallons')?.value)||0;
+  const ppg=parseFloat(document.getElementById('fuel-ppg')?.value)||0;
+  const amtEl=document.getElementById('fuel-amount');
+  if(gal&&ppg&&amtEl)amtEl.value=(gal*ppg).toFixed(2);
+}
+
+async function saveFuelTx(){
+  const truck=document.getElementById('fuel-truck-id')?.value.trim();
+  const gallons=parseFloat(document.getElementById('fuel-gallons')?.value)||null;
+  const ppg=parseFloat(document.getElementById('fuel-ppg')?.value)||null;
+  const amount=parseFloat(document.getElementById('fuel-amount')?.value)||null;
+  const location=document.getElementById('fuel-location')?.value.trim()||null;
+  const card=document.getElementById('fuel-card')?.value.trim()||null;
+  const isAdv=document.getElementById('fuel-is-advance')?.checked||false;
+  if(!truck){toast('Truck ID is required','error');return;}
+  if(!gallons&&!amount){toast('Enter gallons or total amount','error');return;}
+  const btn=document.getElementById('save-fuel-btn');
+  btn.disabled=true;btn.textContent='Saving…';
+  const r=await apiFetch('/api/ifta/fuel','POST',{
+    truck_id:truck,gallons,price_per_gal:ppg,amount,location,
+    card_number:card,is_advance:isAdv
+  });
+  btn.disabled=false;btn.textContent='Log Transaction';
+  if(!r.ok){toast('Error logging fuel','error');return;}
+  closeModal('log-fuel-modal');
+  ['fuel-truck-id','fuel-location','fuel-gallons','fuel-ppg','fuel-amount','fuel-card'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  const cb=document.getElementById('fuel-is-advance');if(cb)cb.checked=false;
+  await loadIFTA();
+  toast('Fuel transaction logged!');
+}
+
+function renderIFTAFuelTable(rows){
+  const el=document.getElementById('ifta-fuel-table');
+  if(!el)return;
+  if(!rows||!rows.length){el.innerHTML='<p style="color:var(--muted);padding:12px;text-align:center">No fuel transactions yet</p>';return;}
+  el.innerHTML='<div class="tbl-wrap"><table><thead><tr><th>Date</th><th>Truck</th><th>Location</th><th>Gallons</th><th>$/Gal</th><th>Amount</th><th>Type</th></tr></thead><tbody>'+
+    rows.map(r=>{
+      const d=(r.transacted_at||r.created_at||'').split('T')[0];
+      const gal=r.gallons?Number(r.gallons).toFixed(1):'—';
+      const ppg=r.price_per_gal?'$'+Number(r.price_per_gal).toFixed(3):'—';
+      const amt=r.amount?'$'+Number(r.amount).toLocaleString():'—';
+      const type=r.is_advance?'<span class="badge badge-orange">Advance</span>':'<span class="badge badge-navy">Fuel</span>';
+      return '<tr><td>'+d+'</td><td>'+esc(r.truck_id||'—')+'</td><td>'+esc(r.location||'—')+'</td><td>'+gal+'</td><td>'+ppg+'</td><td>'+amt+'</td><td>'+type+'</td></tr>';
+    }).join('')+
+    '</tbody></table></div>';
 }
 
 function createInvoiceForCarrier(carrierId,carrierName){
@@ -5731,18 +5818,42 @@ function vanceDialLead(id, name, phone){
   setTimeout(()=>document.getElementById('vc-name').scrollIntoView({behavior:'smooth'}),300);
 }
 
-// ── IFTA / PERMITS — fully dynamic via TK ─────────────────────────────────
+// ── IFTA / PERMITS — load real data then render ───────────────────────────
+async function loadIFTA(){
+  try{
+    const fuelEl=document.getElementById('ifta-fuel-table');
+    if(fuelEl)fuelEl.innerHTML='<div class="loading"><div class="spin"></div>Loading…</div>';
+    const [rs, rf, rFuel] = await Promise.all([
+      apiFetch('/api/ifta/summary'),
+      apiFetch('/api/ifta/filings?limit=20'),
+      apiFetch('/api/ifta/fuel?limit=50'),
+    ]);
+    if(rs.ok){ const sd=await rs.json(); window._iftaSummary=sd.quarters||[]; }
+    if(rf.ok){ const fd=await rf.json(); window._iftaFilings=fd.items||[]; }
+    if(rFuel.ok){ const fd=await rFuel.json(); renderIFTAFuelTable(fd.items||[]); }
+    else if(fuelEl) fuelEl.innerHTML='<p style="color:var(--muted);padding:12px">Could not load fuel transactions</p>';
+  }catch(e){ diagLog('IFTA load error: '+e.message, true); }
+  renderIFTA();
+}
+
 function renderIFTA(){
   const dl  = TK.currentDeadline;
   const hv  = TK.hvut();
   const ucr = TK.ucr();
 
-  // ── metric cards ──
+  // ── metric cards (real data when available) ──
   const mEl = document.getElementById('ifta-metrics');
+  const curQKey = TK.qYear+'-'+TK.q;
+  const qSummary = (window._iftaSummary||[]).find(q=>q.quarter===curQKey)||null;
+  const gallons = qSummary ? qSummary.gallons.toLocaleString() : '—';
+  const fuelAmt = qSummary ? '$'+Math.round(qSummary.amount).toLocaleString() : '—';
+  const txCount = qSummary ? qSummary.tx_count+' transactions' : TK.qRange;
+  const curFiling = (window._iftaFilings||[]).find(f=>f.quarter===curQKey)||null;
+  const filingStatus = curFiling ? curFiling.status : 'not filed';
   if(mEl) mEl.innerHTML=
-    '<div class="mc"><div class="mc-label">'+TK.qLabel+' Miles (Truck #1)</div><div class="mc-val blue">28,450</div><div class="mc-sub">'+TK.qRange+'</div></div>'+
-    '<div class="mc"><div class="mc-label">Fuel Purchased ('+TK.qLabel+')</div><div class="mc-val gold">8,240 gal</div><div class="mc-sub">~$32,960 @ $4.00/gal avg</div></div>'+
-    '<div class="mc"><div class="mc-label">IFTA Filing Due</div><div class="mc-val '+(dl.daysLeft<=60?'orange':'blue')+'">'+dl.label.split(',')[0]+'</div><div class="mc-sub">'+TK.qLabel+' '+TK.qYear+' quarterly return</div></div>';
+    '<div class="mc"><div class="mc-label">'+TK.qLabel+' Fuel (gal)</div><div class="mc-val blue">'+gallons+'</div><div class="mc-sub">'+txCount+'</div></div>'+
+    '<div class="mc"><div class="mc-label">Fuel Spend ('+TK.qLabel+')</div><div class="mc-val gold">'+fuelAmt+'</div><div class="mc-sub">fuel card transactions</div></div>'+
+    '<div class="mc"><div class="mc-label">IFTA Filing Due</div><div class="mc-val '+(dl.daysLeft<=60?'orange':'blue')+'">'+dl.label.split(',')[0]+'</div><div class="mc-sub">'+TK.qLabel+' '+TK.qYear+' · '+filingStatus+'</div></div>';
 
   // ── state miles table ──
   const st = document.getElementById('ifta-state-title');
@@ -5762,12 +5873,26 @@ function renderIFTA(){
   const trEl = document.getElementById('ifta-tracker');
   if(!trEl) return;
   const quarters = TK.allQuarters();
-  const qRows = quarters.map(r=>
-    '<div class="comp-item"><div class="comp-left"><span class="comp-ico">📄</span><div>'+
-    '<div class="comp-name">IFTA '+r.meta.n+' '+r.y+' Return</div>'+
-    '<div class="comp-desc">Due '+r.dl.label+(r.q===TK.q&&r.y===TK.y?' · Est. owe: ~$400':r.st.label==='Filed'?' · Filed':'')+'</div>'+
-    '</div></div><span class="badge '+r.st.cls+'">'+r.st.label+'</span></div>'
-  ).join('');
+  const dbFilings = window._iftaFilings || [];
+  const filingByQ = {};
+  dbFilings.forEach(f=>{filingByQ[f.quarter]=f;});
+  const qRows = quarters.map(r=>{
+    const key = r.y+'-'+r.q;
+    const dbF = filingByQ[key];
+    let badge, stLabel;
+    if(dbF){
+      if(dbF.status==='filed'||dbF.status==='complete'){badge='badge-green';stLabel='Filed';}
+      else if(dbF.status==='overdue'){badge='badge-red';stLabel='Overdue';}
+      else{badge='badge-orange';stLabel=dbF.status.charAt(0).toUpperCase()+dbF.status.slice(1);}
+    }else{
+      badge=r.st.cls; stLabel=r.st.label;
+    }
+    const sub = dbF&&dbF.filed_date ? 'Filed '+dbF.filed_date : 'Due '+r.dl.label+(r.q===TK.q&&r.y===TK.y?' · Est. owe: ~$400':'');
+    return '<div class="comp-item"><div class="comp-left"><span class="comp-ico">📄</span><div>'+
+      '<div class="comp-name">IFTA '+r.meta.n+' '+r.y+' Return</div>'+
+      '<div class="comp-desc">'+sub+'</div>'+
+      '</div></div><span class="badge '+badge+'">'+stLabel+'</span></div>';
+  }).join('');
 
   trEl.innerHTML=
     '<div class="comp-item"><div class="comp-left"><span class="comp-ico">🪙</span><div>'+
@@ -5810,7 +5935,8 @@ function renderIFTA(){
     else if(id==='vault')loadVault();
     else if(id==='founders')loadFoundersInventory();
     else if(id==='leads')loadLeadsPipeline();
-    else if(id==='ifta'||id==='insurance')renderIFTA();
+    else if(id==='ifta')loadIFTA();
+    else if(id==='insurance')renderIFTA();
     else if(id==='settlements')loadSettlements();
     else if(id==='shippers')loadShippers();
   };
@@ -10428,6 +10554,56 @@ const TS_DOMAINS = [
           });
           if (!r.ok) throw new Error(`Email log unreachable: ${r.status}`);
           return `status ${r.status} — email log accessible ✓`;
+        }
+      }
+    ]
+  },
+  {
+    id: 'ifta', label: 'IFTA / Fuel', icon: '⛽',
+    tests: [
+      {
+        name: 'IFTA summary endpoint',
+        run: async () => {
+          const r = await apiFetch('/api/ifta/summary');
+          if (!r.ok) throw new Error(`HTTP ${r.status}`);
+          const d = await r.json();
+          if (!('quarters' in d)) throw new Error('Missing quarters key');
+          return `${d.quarters.length} quarter(s) of data`;
+        }
+      },
+      {
+        name: 'Fuel transactions list',
+        run: async () => {
+          const r = await apiFetch('/api/ifta/fuel');
+          if (!r.ok) throw new Error(`HTTP ${r.status}`);
+          const d = await r.json();
+          if (!('count' in d) || !('items' in d)) throw new Error('Missing count/items');
+          return `${d.count} fuel transaction(s)`;
+        }
+      },
+      {
+        name: 'Log fuel transaction (test)',
+        run: async () => {
+          const r = await apiFetch('/api/ifta/fuel', 'POST', {
+            truck_id: 'EE-TEST-TRUCK-001', gallons: 120.5,
+            price_per_gal: 3.899, location: 'Eagle Eye Test Station, MI',
+            is_advance: false
+          });
+          if (!r.ok) throw new Error(`HTTP ${r.status}`);
+          const d = await r.json();
+          if (!d.ok) throw new Error('ok !== true');
+          const amt = d.item?.amount;
+          return `fuel logged — $${amt ?? '?'}`;
+        }
+      },
+      {
+        name: 'IFTA filings list',
+        run: async () => {
+          const r = await apiFetch('/api/ifta/filings');
+          if (!r.ok) throw new Error(`HTTP ${r.status}`);
+          const d = await r.json();
+          if (!('count' in d) || !('items' in d)) throw new Error('Missing count/items');
+          return `${d.count} filing(s) on record`;
         }
       }
     ]

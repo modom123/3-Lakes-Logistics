@@ -33,6 +33,7 @@ from .api import (
     rate_confirmation_router,
     settlements_router,
     shippers_router,
+    ifta_router,
     driver_auth_router,
     driver_router,
     email_router,
@@ -183,6 +184,7 @@ def create_app() -> FastAPI:
     app.include_router(rate_confirmation_router, prefix="/api",            tags=["rate-confirmation"])
     app.include_router(settlements_router,     prefix="/api",              tags=["settlements"])
     app.include_router(shippers_router,        prefix="/api",              tags=["shippers"])
+    app.include_router(ifta_router,            prefix="/api",              tags=["ifta"])
     app.include_router(studio_router,          prefix="/api",              tags=["studio"])
     app.include_router(health_router,                                      tags=["health"])
 
