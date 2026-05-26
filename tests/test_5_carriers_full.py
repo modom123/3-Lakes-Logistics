@@ -311,7 +311,7 @@ class TestPhase3Telemetry:
                     "eld_provider": eld,
                     "lat": lat, "lng": lng,
                     "speed_mph": speed,
-                    "heading_deg": 270.0,
+                    "heading": 270,
                 },
                 headers=HEADERS,
             )
@@ -340,16 +340,17 @@ class TestPhase4Leads:
         r = requests.post(
             f"{BASE_URL}/api/leads/",
             json={
-                "name": "Test Prospect",
+                "contact_name": "Test Prospect",
+                "business_name": "Test Prospect LLC",
                 "phone": "+13135559999",
                 "email": "prospect@test.com",
-                "dot": "9999999",
+                "dot_number": "9999999",
                 "source": "manual",
                 "score": 85,
             },
             headers=HEADERS,
         )
-        assert r.status_code in [200, 201]
+        assert r.status_code in [200, 201], f"lead create failed: {r.status_code} {r.text}"
         log("leads.create", "Test Prospect", "PASS", "lead created")
 
 

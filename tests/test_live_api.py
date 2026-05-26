@@ -46,7 +46,7 @@ def test_telemetry_ingestion():
             "lat": 34.0522,
             "lng": -118.2437,
             "speed_mph": 55.5,
-            "heading_deg": 270.0,
+            "heading": 270,
         },
         headers=HEADERS,
     )

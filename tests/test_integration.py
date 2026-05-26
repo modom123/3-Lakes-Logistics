@@ -89,7 +89,9 @@ def test_concurrent_agent_runs_no_crash():
 
 def test_agent_list_reachable():
     """Agent registry responds correctly — all known agents registered."""
-    d = requests.get(f"{BASE_URL}/api/agents/list", headers=HEADERS, timeout=15).json()
+    r = requests.get(f"{BASE_URL}/api/agents/list", headers=HEADERS, timeout=15)
+    assert r.status_code == 200, f"Agent list returned {r.status_code}: {r.text[:200]}"
+    d = r.json()
     agents = d.get("agents", [])
     assert len(agents) > 0, "No agents registered in registry"
     assert "beacon" in agents or "bond_courier" in agents, (
