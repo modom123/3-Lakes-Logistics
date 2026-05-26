@@ -1528,29 +1528,44 @@ async function loadPayData() {
   try {
     if (!supabaseClient) return;
     const driverCode = localStorage.getItem('3ll_driver_code') || '';
-    if (!driverCode) return;
+    const driverPhone = localStorage.getItem('3ll_phone') || '';
+    if (!driverCode && !driverPhone) return;
 
-    // Query loads where driver_code matches and status = 'delivered'
+    // ── PRIMARY: Pull official dispatcher-issued settlement statements ──────
+    const carrierName = localStorage.getItem('3ll_carrier_name') || '';
+    let officialSettlements = [];
+    if (carrierName) {
+      const { data: settData } = await supabaseClient
+        .from('driver_settlements')
+        .select('*')
+        .eq('carrier_name', carrierName)
+        .order('week_ending', { ascending: false })
+        .limit(20);
+      if (settData) officialSettlements = settData;
+    }
+
+    // ── FALLBACK: Calculate from delivered loads if no official settlements ──
     const { data: loads, error } = await supabaseClient
       .from('loads')
       .select('*')
       .eq('driver_code', driverCode)
-      .eq('status', 'delivered')
+      .in('status', ['delivered', 'Delivered', 'Completed', 'completed'])
       .order('pickup_at', { ascending: false })
       .limit(100);
 
-    if (error || !loads) {
+    if (error && !officialSettlements.length) {
       console.error('loadPayData error:', error);
       return;
     }
+    const safeLoads = loads || [];
 
     const now       = new Date();
     const weekStart = new Date(now); weekStart.setDate(now.getDate() - now.getDay());
     weekStart.setHours(0,0,0,0);
     const yearStart = new Date(now.getFullYear(), 0, 1);
 
-    const weekLoads = loads.filter(l => l.pickup_at && new Date(l.pickup_at) >= weekStart);
-    const ytdLoads  = loads.filter(l => l.pickup_at && new Date(l.pickup_at) >= yearStart);
+    const weekLoads = safeLoads.filter(l => l.pickup_at && new Date(l.pickup_at) >= weekStart);
+    const ytdLoads  = safeLoads.filter(l => l.pickup_at && new Date(l.pickup_at) >= yearStart);
 
     const sum = arr => arr.reduce((a,l) => a + (Number(l.gross_rate || l.rate_total)||0), 0);
     const mi  = arr => arr.reduce((a,l) => a + (Number(l.miles)||0), 0);
@@ -1558,10 +1573,13 @@ async function loadPayData() {
     const weekGross = sum(weekLoads), weekMi = mi(weekLoads);
     const ytdGross  = sum(ytdLoads),  ytdMi  = mi(ytdLoads);
 
-    const dispatch   = weekLoads.reduce((a,l) => a + (Number(l.dispatch_fee)||0), 0);
-    const insurance  = weekLoads.length * 45;
-    const fuelAdv    = 0;
-    const net        = weekGross - dispatch - insurance - fuelAdv;
+    // If dispatcher issued an official settlement this week, use those numbers
+    const thisWeekKey = weekStart.toISOString().slice(0,10);
+    const officialThisWeek = officialSettlements.find(s => s.week_ending >= thisWeekKey);
+    const dispatch  = officialThisWeek ? Number(officialThisWeek.dispatch_fee) : weekLoads.reduce((a,l) => a + (Number(l.dispatch_fee)||0), 0);
+    const insurance = officialThisWeek ? Number(officialThisWeek.insurance_deduction || 45) : weekLoads.length * 45;
+    const fuelAdv   = 0;
+    const net       = officialThisWeek ? Number(officialThisWeek.net_pay) : (weekGross - dispatch - insurance - fuelAdv);
 
     document.getElementById('pay-week-gross').textContent = weekGross ? '$' + weekGross.toLocaleString() : '—';
     document.getElementById('pay-week-miles').textContent = weekMi    ? weekMi.toLocaleString()          : '—';
@@ -1574,35 +1592,59 @@ async function loadPayData() {
     document.getElementById('pay-ytd-gross').textContent  = ytdGross  ? '$' + ytdGross.toLocaleString() : '—';
     document.getElementById('pay-ytd-miles').textContent  = ytdMi     ? ytdMi.toLocaleString()          : '—';
 
-    // Settlement history by week
-    const byWeek = {};
-    loads.forEach(l => {
-      if (!l.pickup_at) return;
-      const d = new Date(l.pickup_at);
-      const wk = new Date(d); wk.setDate(d.getDate() - d.getDay()); wk.setHours(0,0,0,0);
-      const key = wk.toISOString().slice(0,10);
-      const rate = l.gross_rate || l.rate_total || 0;
-      if (!byWeek[key]) byWeek[key] = { gross:0, loads:0, miles:0, label: wk.toLocaleDateString('en-US',{month:'short',day:'numeric'}) };
-      byWeek[key].gross += Number(rate);
-      byWeek[key].loads += 1;
-      byWeek[key].miles += Number(l.miles)||0;
-    });
-    const weeks = Object.entries(byWeek).sort((a,b) => b[0].localeCompare(a[0])).slice(0,8);
+    // ── Settlement History: official statements take priority over load-calc ──
     const settEl = document.getElementById('settlement-list');
-    if (!weeks.length) {
-      settEl.innerHTML = '<div style="text-align:center;padding:12px;color:var(--muted);font-size:13px">No settlements yet.</div>';
-    } else {
-      settEl.innerHTML = weeks.map(([,w]) => `
-        <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:12px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center">
-          <div>
-            <div style="font-size:13px;font-weight:600;color:var(--text)">Week of ${w.label}</div>
-            <div style="font-size:11px;color:var(--muted);margin-top:2px">${w.loads} load${w.loads!==1?'s':''} · ${w.miles.toLocaleString()} mi</div>
+    if (officialSettlements.length) {
+      // Show official dispatcher-issued pay statements
+      settEl.innerHTML = officialSettlements.map(s => `
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:12px;margin-bottom:8px">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start">
+            <div>
+              <div style="font-size:13px;font-weight:600;color:var(--text)">Week ending ${s.week_ending || '—'}</div>
+              <div style="font-size:11px;color:var(--muted);margin-top:2px">${s.load_number ? 'Load ' + s.load_number : ''} ${s.miles ? '· ' + Number(s.miles).toLocaleString() + ' mi' : ''}</div>
+            </div>
+            <div style="text-align:right">
+              <div style="font-size:16px;font-weight:700;color:var(--green)">$${Number(s.net_pay||0).toLocaleString()}</div>
+              <div style="font-size:10px;color:var(--muted)">net pay</div>
+            </div>
           </div>
-          <div style="text-align:right">
-            <div style="font-size:16px;font-weight:700;color:var(--green)">$${w.gross.toLocaleString()}</div>
-            <div style="font-size:11px;color:var(--muted)">gross</div>
+          <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);display:flex;gap:12px;font-size:11px;color:var(--muted)">
+            <span>Gross: $${Number(s.gross_pay||0).toLocaleString()}</span>
+            <span>Dispatch: -$${Number(s.dispatch_fee||0).toLocaleString()}</span>
+            <span>Insurance: -$${Number(s.insurance_deduction||45).toLocaleString()}</span>
+            <span style="margin-left:auto;font-weight:600;color:${s.status==='paid'?'var(--green)':'var(--muted)'}">${s.status === 'paid' ? '✅ PAID' : s.status?.toUpperCase() || 'PENDING'}</span>
           </div>
         </div>`).join('');
+    } else {
+      // Fallback: group delivered loads by week
+      const byWeek = {};
+      safeLoads.forEach(l => {
+        if (!l.pickup_at) return;
+        const d = new Date(l.pickup_at);
+        const wk = new Date(d); wk.setDate(d.getDate() - d.getDay()); wk.setHours(0,0,0,0);
+        const key = wk.toISOString().slice(0,10);
+        const rate = l.gross_rate || l.rate_total || 0;
+        if (!byWeek[key]) byWeek[key] = { gross:0, loads:0, miles:0, label: wk.toLocaleDateString('en-US',{month:'short',day:'numeric'}) };
+        byWeek[key].gross += Number(rate);
+        byWeek[key].loads += 1;
+        byWeek[key].miles += Number(l.miles)||0;
+      });
+      const weeks = Object.entries(byWeek).sort((a,b) => b[0].localeCompare(a[0])).slice(0,8);
+      if (!weeks.length) {
+        settEl.innerHTML = '<div style="text-align:center;padding:12px;color:var(--muted);font-size:13px">No settlements yet.</div>';
+      } else {
+        settEl.innerHTML = weeks.map(([,w]) => `
+          <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:12px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center">
+            <div>
+              <div style="font-size:13px;font-weight:600;color:var(--text)">Week of ${w.label}</div>
+              <div style="font-size:11px;color:var(--muted);margin-top:2px">${w.loads} load${w.loads!==1?'s':''} · ${w.miles.toLocaleString()} mi</div>
+            </div>
+            <div style="text-align:right">
+              <div style="font-size:16px;font-weight:700;color:var(--green)">$${w.gross.toLocaleString()}</div>
+              <div style="font-size:11px;color:var(--muted)">gross</div>
+            </div>
+          </div>`).join('');
+      }
     }
   } catch (err) {
     console.error('loadPayData exception:', err);

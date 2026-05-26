@@ -2835,7 +2835,12 @@ td.td-name{font-weight:600;color:var(--navy);}
       </div>
       <div class="form-row">
         <div class="fg"><label class="fl">Pickup Date</label><input class="fi" type="date" id="load-pickup"></div>
-        <div class="fg"><label class="fl">Broker / Shipper</label><input class="fi" id="load-broker" placeholder="e.g. Echo Logistics"></div>
+        <div class="fg"><label class="fl">Broker / Shipper</label>
+          <div style="display:flex;gap:6px">
+            <input class="fi" id="load-broker" placeholder="e.g. Echo Logistics" style="flex:1">
+            <select class="fsel" id="load-shipper-pick" style="max-width:150px;font-size:11px" onchange="pickShipperForLoad()" title="Pick from CRM"><option value="">CRM ▾</option></select>
+          </div>
+        </div>
       </div>
       <div class="form-row">
         <div class="fg"><label class="fl">Commodity</label><input class="fi" id="load-commodity" placeholder="e.g. General Freight"></div>
@@ -3110,7 +3115,7 @@ function nav(id){
 
 function openModal(id){
   document.getElementById(id).classList.add('open');
-  if(id==='add-load-modal')populateDriverSelect();
+  if(id==='add-load-modal'){populateDriverSelect();populateShipperPick();}
   if(id==='add-invoice-modal'){populateInvSelects();autoInvNumber();}
 }
 function closeModal(id){document.getElementById(id).classList.remove('open');}
@@ -3719,6 +3724,23 @@ function populateDriverSelect(){
   }).join('');
   const matchCount=needEquip?sorted.filter(c=>(c.equipment_types||[c.trailer_type||'']).some(t=>(t||'').toLowerCase().includes(needEquip))).length:0;
   if(hint)hint.textContent=needEquip&&matchCount?matchCount+' carrier'+(matchCount===1?'':'s')+' match this equipment':'';
+}
+
+function populateShipperPick(){
+  const sel=document.getElementById('load-shipper-pick');
+  if(!sel)return;
+  sel.innerHTML='<option value="">CRM ▾</option>'+
+    allShippers.filter(s=>s.status==='active'||s.status==='preferred').map(s=>
+      `<option value="${esc(s.company_name||'')}">${esc(s.company_name||'')}</option>`
+    ).join('');
+}
+function pickShipperForLoad(){
+  const sel=document.getElementById('load-shipper-pick');
+  const val=sel?.value;
+  if(!val)return;
+  const broker=document.getElementById('load-broker');
+  if(broker)broker.value=val;
+  sel.value='';
 }
 
 function autoSetDispatchPct(){
@@ -11499,6 +11521,8 @@ async function saveSettlement() {
       closeModal('new-settlement-modal');
       toast('Settlement saved!');
       printSettlementData(body);
+      // Fire settlement domain in Execution Engine
+      fireTrigger('delivered', { load_id: body.load_id||'manual', load_number: body.load_number, rate: body.net_pay, carrier_name: body.carrier_name });
       await loadSettlements();
     } else { toast('Error saving settlement', 'error'); }
   } catch(e) { toast('Error: ' + e.message, 'error'); }
@@ -11708,6 +11732,7 @@ async function deleteShipper(id) {
 
 function renderARAging() {
   const now = Date.now();
+  // Factored invoices are excluded — they're no longer outstanding AR
   const unpaid = allInvoices.filter(i => i.status === 'Unpaid' || i.status === 'Overdue' || i.status === 'Partial');
   const buckets = [
     { key: 'current', min: 0,  max: 30,  label: 'Current (0–30d)',  color: '#22c55e' },
@@ -11947,7 +11972,12 @@ async function submitFactoring() {
   if (r.ok) {
     closeModal('factor-modal');
     toast('✅ Invoice submitted to ' + company);
+    // Mark source invoice as Factored so it drops off AR aging
+    if (invId) apiFetch('/api/dashboard/invoices/' + invId, 'PATCH', { status: 'Factored' });
+    // Fire analytics trigger so Execution Engine logs the factoring event
+    fireTrigger('analytics', { event: 'factoring_submitted', invoice_amount: amount, factor_company: company, advance_amount: advance });
     await loadFactoring();
+    await loadInvoices();
   } else toast('Error submitting', 'error');
 }
 
