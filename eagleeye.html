@@ -3392,19 +3392,22 @@ function setDispatchView(view){
 
 function renderDispatchBoard(){
   const now=Date.now();
-  const activeStatuses=['En Route','Booked','Check Due','POD Needed'];
-  const onLoad=allLoads.filter(l=>l.status==='En Route').length;
-  const activeNames=new Set(allLoads.filter(l=>activeStatuses.includes(l.status)).map(l=>l.driver_name).filter(Boolean));
+  // Include execution engine statuses (dispatched, in_transit) alongside Eagle Eye statuses
+  const _isActive=s=>{const n=(s||'').toLowerCase();return['en route','in transit','in_transit','booked','dispatched','check due','pod needed'].includes(n);};
+  const _isOnLoad=s=>{const n=(s||'').toLowerCase();return['en route','in transit','in_transit'].includes(n);};
+  const onLoad=allLoads.filter(l=>_isOnLoad(l.status)).length;
+  const activeNames=new Set(allLoads.filter(l=>_isActive(l.status)).map(l=>l.driver_name||l.driver_code).filter(Boolean));
   const availCarriers=allCarriers.filter(c=>c.status==='active'&&!activeNames.has(c.company_name));
   const checkDue=allLoads.filter(l=>{
-    if(l.status!=='En Route')return false;
+    if(!_isOnLoad(l.status))return false;
     const last=l.updated_at||l.created_at;
     return last&&(now-new Date(last).getTime())>4*60*60*1000;
   }).length;
   setText('dispatch-on-load',onLoad);
   setText('dispatch-available',availCarriers.length);
   setText('dispatch-check-calls',checkDue||0);
-  setText('dispatch-pods',allLoads.filter(l=>l.status==='POD Needed').length);
+  const _podStatuses=['pod needed','pod required'];
+  setText('dispatch-pods',allLoads.filter(l=>_podStatuses.includes((l.status||'').toLowerCase())).length);
   renderAvailableCarriers(availCarriers);
   if(_dispatchView==='kanban') renderKanbanBoard();
   else renderDispatchTable();
@@ -3420,11 +3423,16 @@ const KANBAN_COLS=[
 ];
 
 function _kbColKey(l){
-  if(!l.driver_name) return 'Unassigned';
-  if(l.status==='Booked')    return 'Booked';
-  if(l.status==='En Route')  return 'En Route';
-  if(l.status==='Check Due') return 'Check Due';
-  if(l.status==='POD Needed')return 'POD Needed';
+  // No driver set yet (either field) = unassigned column
+  if(!l.driver_name&&!l.driver_code) return 'Unassigned';
+  // Normalize status to lowercase for cross-system matching
+  // Eagle Eye uses Title Case; execution engine uses snake_case lowercase
+  const s=(l.status||'').toLowerCase().replace(/_/g,' ');
+  if(['booked','dispatched'].includes(s))   return 'Booked';
+  if(['en route','in transit'].includes(s)) return 'En Route';
+  if(['check due'].includes(s))             return 'Check Due';
+  if(['pod needed'].includes(s))            return 'POD Needed';
+  if(['delivered','completed'].includes(s)) return null;
   return 'Booked';
 }
 
@@ -3433,7 +3441,9 @@ function renderKanbanBoard(){
   if(!board)return;
   const now=Date.now();
   const q=(document.getElementById('dispatch-search')?.value||'').toLowerCase();
-  let loads=allLoads.filter(l=>!['Delivered','Completed'].includes(l.status));
+  // Exclude delivered/completed; also handle execution engine lowercase statuses
+  const _doneStatuses=['delivered','completed'];
+  let loads=allLoads.filter(l=>!_doneStatuses.includes((l.status||'').toLowerCase()));
   if(q) loads=loads.filter(l=>
     (l.load_number||'').toLowerCase().includes(q)||
     (l.driver_name||'').toLowerCase().includes(q)||
@@ -3442,7 +3452,7 @@ function renderKanbanBoard(){
   );
 
   board.innerHTML=KANBAN_COLS.map(col=>{
-    const colLoads=loads.filter(l=>_kbColKey(l)===col.key);
+    const colLoads=loads.filter(l=>_kbColKey(l)===col.key&&_kbColKey(l)!==null);
     const cards=colLoads.map(l=>{
       const overdue=l.status==='En Route'&&(now-new Date(l.updated_at||l.created_at).getTime())>4*60*60*1000;
       const pickup=(l.pickup_at||l.pickup_date)?new Date(l.pickup_at||l.pickup_date).toLocaleDateString('en-US',{month:'short',day:'numeric'}):'—';
@@ -3519,12 +3529,18 @@ async function kbDrop(e,colKey){
   const load=allLoads.find(l=>l.id===loadId);
   if(!load)return;
   if(colKey==='Unassigned'){openAssignModal(loadId);return;}
-  if(!load.driver_name&&colKey!=='Unassigned'){
+  if(!load.driver_name&&!load.driver_code){
     showToast('Assign a driver first','error');openAssignModal(loadId);return;
   }
   const r=await apiFetch('/api/dashboard/loads/'+loadId,'PATCH',{status:colKey});
-  if(r.ok){showToast('Moved to '+colKey);await loadLoads();}
-  else showToast('Error updating status','error');
+  if(r.ok){
+    showToast('Moved to '+colKey);
+    // Fire execution engine triggers matching cycleLoadStatus behavior
+    const body={load_id:loadId,load_number:load.load_number||'',rate:load.rate_total||load.rate||null,carrier_id:load.carrier_id||null};
+    if(colKey==='En Route') fireTrigger('pickup',body);
+    if(colKey==='Delivered'||colKey==='Completed') fireTrigger('delivered',body);
+    await loadLoads();
+  } else showToast('Error updating status','error');
 }
 
 // ── Table view renderer ──────────────────────────────────────────────────────
@@ -3624,10 +3640,21 @@ async function submitAssignDriver(){
   if(!carrierId||!_assignLoadId){showToast('Select a carrier first','error');return;}
   const btn=document.getElementById('assign-submit-btn');
   if(btn){btn.disabled=true;btn.textContent='Assigning…';}
-  const r=await apiFetch('/api/dashboard/loads/'+_assignLoadId,'PATCH',{driver_name:carrierName});
+  const r=await apiFetch('/api/dashboard/loads/'+_assignLoadId,'PATCH',{driver_name:carrierName,carrier_id:carrierId});
   if(r.ok){
     closeModal('assign-driver-modal');
-    showToast('✅ '+carrierName+' assigned to load');
+    showToast('✅ '+carrierName+' assigned — dispatch engine queued');
+    // Fire execution engine dispatch domain (steps 31-60: SMS offer, ELD lock, rate con, etc.)
+    const load=allLoads.find(l=>l.id===_assignLoadId);
+    fireTrigger('load_booked',{
+      load_id:_assignLoadId,
+      load_number:load?.load_number||'',
+      carrier_id:carrierId,
+      driver_name:carrierName,
+      origin:load?.origin_city||load?.origin||'',
+      destination:load?.dest_city||load?.destination||'',
+      rate:load?.rate_total||load?.rate||null,
+    });
     await loadLoads();
   } else {
     showToast('Failed to assign carrier','error');
@@ -4626,7 +4653,16 @@ function planPct(p){return normPlanKey(p)==='pay_as_you_go'?8:0;}
 function planMonthly(p){const k=normPlanKey(p);if(k==='founders')return 300;if(k==='pro')return 500;return 0;}
 function planBadgeClass(p){const k=normPlanKey(p);if(k==='founders')return 'badge-gold';if(k==='pro')return 'badge-navy';return 'badge-blue';}
 function planShort(p){const k=normPlanKey(p);if(k==='founders')return 'Founders $300/truck';if(k==='pro')return 'Pro $500/truck';return '8% of Load';}
-function statusBadge(s){if(!s)return 'badge-ghost';if(s.includes('Route')||s==='Active'||s.includes('Completed')||s.includes('Delivered')||s.includes('Paid'))return 'badge-green';if(s.includes('Booked'))return 'badge-blue';if(s.includes('Due')||s.includes('Onboarding')||s.includes('Partial')||s.includes('New')||s.includes('Pending'))return 'badge-orange';if(s.includes('POD')||s.includes('Expiring')||s.includes('Overdue'))return 'badge-red';return 'badge-ghost';}
+function statusBadge(s){
+  if(!s)return 'badge-ghost';
+  const n=s.toLowerCase();
+  // Handle execution-engine statuses (dispatched, in_transit) alongside Eagle Eye statuses
+  if(n==='in_transit'||n==='in transit'||n.includes('route')||n==='active'||n.includes('completed')||n.includes('delivered')||n.includes('paid'))return 'badge-green';
+  if(n==='booked'||n==='dispatched'||n.includes('booked'))return 'badge-blue';
+  if(n==='check due'||n.includes('due')||n.includes('onboarding')||n.includes('partial')||n.includes('new')||n.includes('pending'))return 'badge-orange';
+  if(n==='pod needed'||n.includes('pod')||n.includes('expiring')||n.includes('overdue'))return 'badge-red';
+  return 'badge-ghost';
+}
 
 // ── UNIVERSAL TIME KEEPER ──────────────────────────────────────────────────
 // Loaded from shared/tk.js; inline below is a fallback if that script fails.

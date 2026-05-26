@@ -91,7 +91,7 @@ def public_loads(limit: int = 20) -> dict:
             .table("loads")
             .select("load_number,origin,destination,origin_city,origin_state,dest_city,dest_state,rate_total,miles,rate_per_mile,pickup_at,equipment_type,weight")
             .eq("post_to_website", True)
-            .in_("status", ["booked", "open", "available"])
+            .in_("status", ["booked", "Booked", "open", "available"])
             .order("created_at", desc=True)
             .limit(limit)
             .execute()

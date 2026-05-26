@@ -783,13 +783,25 @@ function initSupabaseRealtime() {
 function subscribeToLoads() {
   try {
     if (!supabaseClient) return;
-    // Listen to booked loads table for load board updates
+    // Listen to ALL load changes (not just booked) so we catch:
+    // 1. New available loads posted on the load board
+    // 2. Eagle Eye dispatcher assigning/advancing THIS driver's load
     realtime.loadsChannel = supabaseClient
-      .channel('loads:status=eq.booked')
+      .channel('loads-all-changes')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'loads' }, payload => {
-        console.log('Load board update:', payload);
+        const myCode = localStorage.getItem('3ll_driver_code') || '';
+        // Refresh available loads board if that view is open
         if (document.getElementById('view-loads').classList.contains('active')) {
           loadAvailableLoads();
+        }
+        // If this load belongs to me, refresh my current load and notify
+        if (myCode && payload.new && payload.new.driver_code === myCode) {
+          loadCurrentLoad();
+          const newStatus = payload.new.status || '';
+          const oldStatus = (payload.old && payload.old.status) || '';
+          if (newStatus !== oldStatus && newStatus) {
+            showToast(`🚛 Load update: ${newStatus.replace(/_/g,' ').toUpperCase()}`);
+          }
         }
       })
       .subscribe(status => {
@@ -940,12 +952,14 @@ async function loadCurrentLoad() {
     const driverCode = localStorage.getItem('3ll_driver_code') || '';
     if (!driverCode) return renderNoLoad();
 
-    // Query loads where driver_code matches and status indicates active
+    // Query loads where driver_code matches and status indicates active.
+    // Include both execution-engine statuses (dispatched, in_transit) and
+    // Eagle Eye dispatcher statuses (Booked, En Route, Check Due, POD Needed).
     const { data: loads, error } = await supabaseClient
       .from('loads')
       .select('*')
       .eq('driver_code', driverCode)
-      .in('status', ['in_transit', 'dispatched', 'booked'])
+      .in('status', ['in_transit', 'dispatched', 'booked', 'Booked', 'En Route', 'Check Due', 'POD Needed'])
       .order('created_at', { ascending: false })
       .limit(1);
 
