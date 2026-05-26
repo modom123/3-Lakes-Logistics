@@ -13,8 +13,8 @@ class Settings(BaseSettings):
     cors_origins: str = "http://localhost:3000,http://localhost:8080,https://3-lakes-logistics.vercel.app,https://3-lakes-logistic.vercel.app,https://3lakeslogistics.com,https://www.3lakeslogistics.com"
     api_bearer_token: str = "taiOFL40cCr5V0pH89hUks8jXVPlOkm2WxKvd3f6BoE"
 
-    supabase_url: str = ""
-    supabase_anon_key: str = ""
+    supabase_url: str = "https://zngipootstubwvgdmckt.supabase.co"
+    supabase_anon_key: str = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpuZ2lwb290c3R1Ynd2Z2RtY2t0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMxMjk3ODUsImV4cCI6MjA4ODcwNTc4NX0.6MXR8q-CKVuiiJaJKuckxABAUQ-siuyP0-KoaLkt33g"
     supabase_service_role_key: str = ""
 
     stripe_secret_key: str = ""
@@ -90,6 +90,14 @@ class Settings(BaseSettings):
     youtube_access_token: str = ""  # OAuth2 token with youtube scope
 
     render_api_key: str = ""
+
+    # External Bond API key — X-Bond-Key header auth for Daytona agent
+    # Default baked in so it works without Render dashboard config.
+    # Override by setting BOND_API_KEY in Render environment variables.
+    bond_api_key: str = "xUvzgCnQZ-j-0HYTh749E1t6AKX3RNYFqNfoNVcnH1Z0KFCQUy693Q"
+
+    # Public-facing backend URL
+    site_url: str = "https://three-lakes-logistics-api.onrender.com"
 
     sentry_dsn: str = ""
 

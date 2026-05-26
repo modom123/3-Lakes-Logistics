@@ -6,26 +6,51 @@ services:
     healthCheckPath: /api/health/ping
     autoDeploy: true
     envVars:
+      # ── Non-secret values baked in — no dashboard action needed ──────────────
       - key: ENV
         value: production
       - key: PORT
         value: 8080
-      # All secrets below are set in the Render dashboard — do NOT add values here
       - key: SUPABASE_URL
-        sync: false
+        value: "https://zngipootstubwvgdmckt.supabase.co"
       - key: SUPABASE_ANON_KEY
-        sync: false
-      - key: SUPABASE_SERVICE_ROLE_KEY
-        sync: false
+        value: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpuZ2lwb290c3R1Ynd2Z2RtY2t0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMxMjk3ODUsImV4cCI6MjA4ODcwNTc4NX0.6MXR8q-CKVuiiJaJKuckxABAUQ-siuyP0-KoaLkt33g"
       - key: API_BEARER_TOKEN
+        value: "taiOFL40cCr5V0pH89hUks8jXVPlOkm2WxKvd3f6BoE"
+      - key: BOND_API_KEY
+        value: "xUvzgCnQZ-j-0HYTh749E1t6AKX3RNYFqNfoNVcnH1Z0KFCQUy693Q"
+      - key: DAYTONA_SANDBOX_ID
+        value: "2a50d3c2-f813-49c0-8dec-f9248581c5c6"
+      - key: TWILIO_FROM_NUMBER
+        value: "+13135469006"
+      - key: OPENROUTER_MODEL
+        value: "qwen/qwen-2.5-72b-instruct"
+      - key: SENDGRID_INBOUND_EMAIL
+        value: "loads@3lakeslogistics.com"
+      - key: POSTMARK_FROM_EMAIL
+        value: "ops@3lakeslogistics.com"
+      - key: CORS_ORIGINS
+        value: "https://3lakeslogistics.com,https://www.3lakeslogistics.com,https://3-lakes-logistics.vercel.app,https://3-lakes-logistic.vercel.app"
+
+      # ── Secrets — MUST be set in Render dashboard → Environment ──────────────
+      # Dashboard: https://dashboard.render.com → 3-lakes-logistics-api → Environment
+      - key: SUPABASE_SERVICE_ROLE_KEY
         sync: false
       - key: ANTHROPIC_API_KEY
         sync: false
       - key: OPENROUTER_API_KEY
         sync: false
-      - key: OPENROUTER_MODEL
-        value: qwen/qwen-2.5-72b-instruct
-      - key: DAYTONA_SANDBOX_ID
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+      - key: TWILIO_ACCOUNT_SID
+        sync: false
+      - key: TWILIO_AUTH_TOKEN
+        sync: false
+      - key: SENDGRID_API_KEY
+        sync: false
+      - key: POSTMARK_SERVER_TOKEN
         sync: false
       - key: BLAND_AI_API_KEY
         sync: false
@@ -33,23 +58,7 @@ services:
         sync: false
       - key: BLAND_AI_WEBHOOK_SECRET
         sync: false
-      - key: TWILIO_ACCOUNT_SID
-        sync: false
-      - key: TWILIO_AUTH_TOKEN
-        sync: false
-      - key: TWILIO_FROM_NUMBER
-        value: "+13135469006"
-      - key: STRIPE_SECRET_KEY
-        sync: false
-      - key: STRIPE_WEBHOOK_SECRET
-        sync: false
-      - key: SENDGRID_API_KEY
-        sync: false
-      - key: POSTMARK_SERVER_TOKEN
-        sync: false
       - key: ADOBE_CLIENT_ID
         sync: false
       - key: ADOBE_CLIENT_SECRET
-        sync: false
-      - key: BOND_API_KEY
         sync: false

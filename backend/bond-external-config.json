@@ -1,0 +1,26 @@
+{
+  "_comment": "External Bond (Daytona) connection config. Keep this file secure — do not share publicly.",
+  "bond_identity": "James Bond — External Agent (Daytona)",
+  "api_base": "https://three-lakes-logistics-api.onrender.com",
+  "bond_api_key": "xUvzgCnQZ-j-0HYTh749E1t6AKX3RNYFqNfoNVcnH1Z0KFCQUy693Q",
+  "daytona_sandbox_id": "2a50d3c2-f813-49c0-8dec-f9248581c5c6",
+  "endpoints": {
+    "api_snapshot":  "GET  /api/bond/api-snapshot",
+    "inbox":         "GET  /api/bond/inbox",
+    "report":        "POST /api/bond/report",
+    "health":        "GET  /api/health/ping"
+  },
+  "auth": {
+    "header": "X-Bond-Key",
+    "value":  "xUvzgCnQZ-j-0HYTh749E1t6AKX3RNYFqNfoNVcnH1Z0KFCQUy693Q"
+  },
+  "poll_interval_seconds": 180,
+  "report_types": ["report", "feedback", "suggestion", "acknowledgment"],
+  "instructions": [
+    "Poll GET /api/bond/inbox every 3 minutes for directives from IEBC.",
+    "After reading directives, post acknowledgment via POST /api/bond/report.",
+    "Fetch GET /api/bond/api-snapshot before writing any analysis to get live data.",
+    "All requests must include the header: X-Bond-Key: <bond_api_key above>.",
+    "Never expose the bond_api_key in logs or reports."
+  ]
+}

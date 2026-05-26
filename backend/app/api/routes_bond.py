@@ -16,8 +16,6 @@ value in the X-Bond-Key request header.
 """
 from __future__ import annotations
 
-import os
-
 from fastapi import APIRouter, Depends, Header, HTTPException
 from pydantic import BaseModel
 
@@ -30,7 +28,7 @@ from .deps import require_bearer
 def _require_bond_key(x_bond_key: str | None = Header(default=None)) -> None:
     if not x_bond_key:
         raise HTTPException(401, "X-Bond-Key header required")
-    expected = os.getenv("BOND_API_KEY", "")
+    expected = get_settings().bond_api_key
     if not expected or x_bond_key != expected:
         raise HTTPException(403, "Invalid Bond API key")
 
@@ -239,7 +237,7 @@ def api_snapshot() -> dict:
         "bond_channel": {
             "pending_directives": pending_directives,
         },
-        "api_base": os.getenv("SITE_URL", "https://three-lakes-logistics-api.onrender.com"),
+        "api_base": get_settings().site_url,
         "endpoints": {
             "inbox":        "GET  /api/bond/inbox               — pull pending directives",
             "report":       "POST /api/bond/report              — post report back",
