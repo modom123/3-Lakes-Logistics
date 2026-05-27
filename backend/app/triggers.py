@@ -32,12 +32,21 @@ from .logging_service import get_logger
 log = get_logger("3ll.triggers")
 
 
-# ── internal helper ───────────────────────────────────────────────────────────
+# ── internal helpers ──────────────────────────────────────────────────────────
 
 def _bg(fn, *args, **kwargs) -> None:
     """Run `fn(*args, **kwargs)` in a daemon thread — fire and forget."""
     t = threading.Thread(target=fn, args=args, kwargs=kwargs, daemon=True)
     t.start()
+
+
+def _agent_enabled(agent_name: str) -> bool:
+    """Check the agent_toggles table; returns True when table doesn't exist yet."""
+    try:
+        from .agents.toggles import is_enabled  # noqa: PLC0415
+        return is_enabled(agent_name)
+    except Exception:  # noqa: BLE001
+        return True
 
 
 def _run_domain_safe(domain: str, carrier_id=None, contract_id=None, context: str = "") -> None:
@@ -97,6 +106,9 @@ def fire_analytics_update() -> None:
 
 def fire_alexander() -> None:
     """Run Alexander Wright daily — market intelligence from FMCSA census."""
+    if not _agent_enabled("alexander"):
+        log.info("daily_agent: alexander skipped (disabled)")
+        return
     def _run():
         try:
             from .agents.alexander import run as alexander_run  # noqa: PLC0415
@@ -110,6 +122,9 @@ def fire_alexander() -> None:
 
 def fire_victoria() -> None:
     """Run Victoria Roth daily — strategic snapshot + org brain directive."""
+    if not _agent_enabled("victoria"):
+        log.info("daily_agent: victoria skipped (disabled)")
+        return
     def _run():
         try:
             from .agents.victoria import run as victoria_run  # noqa: PLC0415
@@ -123,6 +138,9 @@ def fire_victoria() -> None:
 
 def fire_naomi() -> None:
     """Run Naomi daily — lead scoring + FMCSA prospect pull."""
+    if not _agent_enabled("naomi"):
+        log.info("daily_agent: naomi skipped (disabled)")
+        return
     def _run():
         try:
             from .agents.naomi import run as naomi_run  # noqa: PLC0415
@@ -136,6 +154,9 @@ def fire_naomi() -> None:
 
 def fire_winston() -> None:
     """Run Winston Carmichael daily — carrier health + churn signals."""
+    if not _agent_enabled("winston"):
+        log.info("daily_agent: winston skipped (disabled)")
+        return
     def _run():
         try:
             from .agents.winston import run as winston_run  # noqa: PLC0415
@@ -152,6 +173,9 @@ def fire_winston() -> None:
 
 def fire_isabella() -> None:
     """Run Isabella Cruz daily — lead campaigns + carrier re-engagement."""
+    if not _agent_enabled("isabella"):
+        log.info("daily_agent: isabella skipped (disabled)")
+        return
     def _run():
         try:
             from .agents.isabella import run as isabella_run  # noqa: PLC0415
@@ -174,6 +198,9 @@ def fire_isabella() -> None:
 
 def fire_sofia() -> None:
     """Run Sofia Chen daily — financial reconciliation."""
+    if not _agent_enabled("sofia"):
+        log.info("daily_agent: sofia skipped (disabled)")
+        return
     def _run():
         try:
             from .agents.sofia import run as sofia_run  # noqa: PLC0415
@@ -190,6 +217,9 @@ def fire_sofia() -> None:
 
 def fire_vance_batch() -> None:
     """Run Vance batch daily — outbound calls to high-score leads (score >= 8)."""
+    if not _agent_enabled("vance"):
+        log.info("daily_agent: vance_batch skipped (disabled)")
+        return
     def _run():
         try:
             from .agents.vance import run_batch  # noqa: PLC0415
@@ -256,6 +286,9 @@ def fire_social_post() -> None:
 
 def fire_mark_odom() -> None:
     """Run Mark Odom daily — Commander brief + tier-3 review + strategic directives."""
+    if not _agent_enabled("mark_odom"):
+        log.info("daily_agent: mark_odom skipped (disabled)")
+        return
     def _run():
         try:
             from .agents.mark_odom import run as mark_odom_run  # noqa: PLC0415
@@ -273,6 +306,9 @@ def fire_mark_odom() -> None:
 
 def fire_cc_gulley() -> None:
     """Run CC Gulley daily — strategic plan + 30/60/90-day roadmap + risk assessment."""
+    if not _agent_enabled("cc_gulley"):
+        log.info("daily_agent: cc_gulley skipped (disabled)")
+        return
     def _run():
         try:
             from .agents.cc_gulley import run as cc_gulley_run  # noqa: PLC0415

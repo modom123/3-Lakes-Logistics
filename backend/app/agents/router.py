@@ -50,4 +50,7 @@ def has(agent: str) -> bool:
 
 
 def dispatch(agent: str, payload: dict[str, Any]) -> dict[str, Any]:
+    from .toggles import is_enabled
+    if not is_enabled(agent):
+        return {"status": "skipped", "reason": f"agent '{agent}' is disabled"}
     return _DISPATCH[agent](payload)
