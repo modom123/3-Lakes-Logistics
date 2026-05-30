@@ -2503,9 +2503,9 @@ document.getElementById('calendarOverlay')?.addEventListener('click', function(e
       <div style="font-size:52px;margin-bottom:14px;">✅</div>
       <div style="font-family:var(--ff-h);font-size:26px;color:var(--navy);font-weight:800;margin-bottom:8px;">Application Submitted!</div>
       <p style="color:var(--muted);font-size:15px;max-width:440px;margin:0 auto 16px;">We're running your official driving record check now. You'll receive a text message with your result — usually within a few hours.</p>
-      <div style="background:rgba(30,41,59,.04);border-radius:10px;padding:16px 20px;max-width:380px;margin:0 auto 20px;text-align:left;">
+      <div style="background:rgba(30,41,59,.04);border-radius:10px;padding:16px 20px;max-width:420px;margin:0 auto 20px;text-align:left;">
         <div style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:10px;">What happens next:</div>
-        <div style="font-size:13px;color:var(--muted);line-height:1.8;">✔ Driving record check runs automatically<br>✔ Text sent when approved (usually same day)<br>✔ Download the app + get your first trip</div>
+        <div style="font-size:13px;color:var(--muted);line-height:1.8;">✔ Driving record check runs automatically<br>✔ Text sent when approved (usually same day)<br>✔ Download the app + get your first trip<br id="lf-success-plat-line" style="display:none"/><span id="lf-success-plat-msg" style="display:none;"></span></div>
       </div>
       <p style="font-size:12px;color:var(--muted);">Questions? Call or text 661-466-9932</p>
     </div>
@@ -2567,6 +2567,65 @@ document.getElementById('calendarOverlay')?.addEventListener('click', function(e
         </div>
         <p style="font-size:11px;color:var(--muted);margin-top:6px;">Required to run your driving record check. Kept private and secure.</p>
       </div>
+      <!-- Universal Platform Sign-Up -->
+      <div style="background:linear-gradient(135deg,rgba(99,102,241,.06),rgba(59,130,246,.04));border:1.5px solid rgba(99,102,241,.2);border-radius:14px;padding:20px 20px 16px;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;">
+          <span style="font-size:18px;">🚀</span>
+          <label style="font-size:14px;font-weight:700;color:var(--navy);margin:0;">Sign Up for More Platforms <span style="font-weight:400;color:var(--muted);font-size:12px;">(optional)</span></label>
+        </div>
+        <p style="font-size:12px;color:var(--muted);margin:0 0 14px;line-height:1.6;">One background check covers all of them. Check the box and we'll register you — or send you a direct link with everything pre-filled.</p>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          <label id="plat-curri" style="display:flex;gap:12px;padding:12px 14px;border:1.5px solid var(--border);border-radius:10px;cursor:pointer;background:#fff;transition:border .15s,box-shadow .15s;" onmouseover="this.style.borderColor='#6366f1';this.style.boxShadow='0 0 0 3px rgba(99,102,241,.1)'" onmouseout="lfPlatHover(this)">
+            <input type="checkbox" name="platforms" value="curri" style="width:16px;height:16px;accent-color:#6366f1;margin-top:2px;flex-shrink:0;" onchange="lfPlatCheck(this)"/>
+            <div>
+              <div style="font-size:13px;font-weight:700;color:var(--navy);display:flex;align-items:center;gap:6px;flex-wrap:wrap;">📦 Curri <span style="font-size:10px;font-weight:600;background:#dcfce7;color:#16a34a;padding:1px 7px;border-radius:20px;">Dispatched by 3 Lakes</span></div>
+              <div style="font-size:11px;color:var(--muted);margin-top:2px;line-height:1.5;">B2B same-day delivery — retail, restaurant, industrial. Jobs dispatched through our carrier account.</div>
+              <div style="font-size:11px;font-weight:700;color:#6366f1;margin-top:4px;">$25–$45/hr est.</div>
+            </div>
+          </label>
+          <label id="plat-roadie" style="display:flex;gap:12px;padding:12px 14px;border:1.5px solid var(--border);border-radius:10px;cursor:pointer;background:#fff;transition:border .15s,box-shadow .15s;" onmouseover="this.style.borderColor='#6366f1';this.style.boxShadow='0 0 0 3px rgba(99,102,241,.1)'" onmouseout="lfPlatHover(this)">
+            <input type="checkbox" name="platforms" value="roadie" style="width:16px;height:16px;accent-color:#6366f1;margin-top:2px;flex-shrink:0;" onchange="lfPlatCheck(this)"/>
+            <div>
+              <div style="font-size:13px;font-weight:700;color:var(--navy);display:flex;align-items:center;gap:6px;flex-wrap:wrap;">🚚 Roadie (UPS) <span style="font-size:10px;font-weight:600;background:#dcfce7;color:#16a34a;padding:1px 7px;border-radius:20px;">Dispatched by 3 Lakes</span></div>
+              <div style="font-size:11px;color:var(--muted);margin-top:2px;line-height:1.5;">UPS-backed same-day + scheduled gigs. High volume in metro areas.</div>
+              <div style="font-size:11px;font-weight:700;color:#6366f1;margin-top:4px;">$20–$40/hr est.</div>
+            </div>
+          </label>
+          <label id="plat-amazon_flex" style="display:flex;gap:12px;padding:12px 14px;border:1.5px solid var(--border);border-radius:10px;cursor:pointer;background:#fff;transition:border .15s,box-shadow .15s;" onmouseover="this.style.borderColor='#6366f1';this.style.boxShadow='0 0 0 3px rgba(99,102,241,.1)'" onmouseout="lfPlatHover(this)">
+            <input type="checkbox" name="platforms" value="amazon_flex" style="width:16px;height:16px;accent-color:#6366f1;margin-top:2px;flex-shrink:0;" onchange="lfPlatCheck(this)"/>
+            <div>
+              <div style="font-size:13px;font-weight:700;color:var(--navy);display:flex;align-items:center;gap:6px;flex-wrap:wrap;">📬 Amazon Flex <span style="font-size:10px;font-weight:600;background:#fef9c3;color:#92400e;padding:1px 7px;border-radius:20px;">We send you the link</span></div>
+              <div style="font-size:11px;color:var(--muted);margin-top:2px;line-height:1.5;">Amazon package delivery — pick your own 2–4 hr blocks. High demand year-round.</div>
+              <div style="font-size:11px;font-weight:700;color:#6366f1;margin-top:4px;">$18–$25/hr est.</div>
+            </div>
+          </label>
+          <label id="plat-spark" style="display:flex;gap:12px;padding:12px 14px;border:1.5px solid var(--border);border-radius:10px;cursor:pointer;background:#fff;transition:border .15s,box-shadow .15s;" onmouseover="this.style.borderColor='#6366f1';this.style.boxShadow='0 0 0 3px rgba(99,102,241,.1)'" onmouseout="lfPlatHover(this)">
+            <input type="checkbox" name="platforms" value="spark" style="width:16px;height:16px;accent-color:#6366f1;margin-top:2px;flex-shrink:0;" onchange="lfPlatCheck(this)"/>
+            <div>
+              <div style="font-size:13px;font-weight:700;color:var(--navy);display:flex;align-items:center;gap:6px;flex-wrap:wrap;">🛒 Spark Driver <span style="font-size:10px;font-weight:600;background:#fef9c3;color:#92400e;padding:1px 7px;border-radius:20px;">We send you the link</span></div>
+              <div style="font-size:11px;color:var(--muted);margin-top:2px;line-height:1.5;">Walmart grocery + retail delivery. Flexible hours, weekly pay.</div>
+              <div style="font-size:11px;font-weight:700;color:#6366f1;margin-top:4px;">$15–$22/hr est.</div>
+            </div>
+          </label>
+          <label id="plat-doordash" style="display:flex;gap:12px;padding:12px 14px;border:1.5px solid var(--border);border-radius:10px;cursor:pointer;background:#fff;transition:border .15s,box-shadow .15s;" onmouseover="this.style.borderColor='#6366f1';this.style.boxShadow='0 0 0 3px rgba(99,102,241,.1)'" onmouseout="lfPlatHover(this)">
+            <input type="checkbox" name="platforms" value="doordash" style="width:16px;height:16px;accent-color:#6366f1;margin-top:2px;flex-shrink:0;" onchange="lfPlatCheck(this)"/>
+            <div>
+              <div style="font-size:13px;font-weight:700;color:var(--navy);display:flex;align-items:center;gap:6px;flex-wrap:wrap;">🍔 DoorDash Drive <span style="font-size:10px;font-weight:600;background:#fef9c3;color:#92400e;padding:1px 7px;border-radius:20px;">We send you the link</span></div>
+              <div style="font-size:11px;color:var(--muted);margin-top:2px;line-height:1.5;">Food + retail delivery. High order volume in any city, any time of day.</div>
+              <div style="font-size:11px;font-weight:700;color:#6366f1;margin-top:4px;">$15–$25/hr est.</div>
+            </div>
+          </label>
+          <label id="plat-goshare" style="display:flex;gap:12px;padding:12px 14px;border:1.5px solid var(--border);border-radius:10px;cursor:pointer;background:#fff;transition:border .15s,box-shadow .15s;" onmouseover="this.style.borderColor='#6366f1';this.style.boxShadow='0 0 0 3px rgba(99,102,241,.1)'" onmouseout="lfPlatHover(this)">
+            <input type="checkbox" name="platforms" value="goshare" style="width:16px;height:16px;accent-color:#6366f1;margin-top:2px;flex-shrink:0;" onchange="lfPlatCheck(this)"/>
+            <div>
+              <div style="font-size:13px;font-weight:700;color:var(--navy);display:flex;align-items:center;gap:6px;flex-wrap:wrap;">📐 GoShare <span style="font-size:10px;font-weight:600;background:#fef9c3;color:#92400e;padding:1px 7px;border-radius:20px;">We send you the link</span></div>
+              <div style="font-size:11px;color:var(--muted);margin-top:2px;line-height:1.5;">B2B + residential delivery — furniture, appliances, oversized items. Higher payouts per job.</div>
+              <div style="font-size:11px;font-weight:700;color:#6366f1;margin-top:4px;">$20–$35/hr est.</div>
+            </div>
+          </label>
+        </div>
+        <p style="font-size:11px;color:var(--muted);margin:12px 0 0;line-height:1.6;">✔ One Checkr background check covers every platform above — we handle submission automatically upon approval.</p>
+      </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
         <div>
           <label style="font-size:13px;font-weight:600;color:var(--navy);display:block;margin-bottom:8px;">Clean driving record? *</label>
@@ -2620,6 +2679,29 @@ function lfStartSignup(type, label, color) {
   window.scrollTo({top:0,behavior:'smooth'});
 }
 
+// Toggle platform card highlight when checkbox changes
+function lfPlatCheck(cb) {
+  const card = cb.closest('label');
+  if (cb.checked) {
+    card.style.borderColor = '#6366f1';
+    card.style.background = 'rgba(99,102,241,.06)';
+    card.style.boxShadow = '0 0 0 3px rgba(99,102,241,.12)';
+  } else {
+    card.style.borderColor = 'var(--border)';
+    card.style.background = '#fff';
+    card.style.boxShadow = 'none';
+  }
+}
+
+// Restore hover state when not checked
+function lfPlatHover(card) {
+  const cb = card.querySelector('input[type="checkbox"]');
+  if (!cb || !cb.checked) {
+    card.style.borderColor = 'var(--border)';
+    card.style.boxShadow = 'none';
+  }
+}
+
 async function lfSubmitIntake(e){
   e.preventDefault();
   const btn = document.getElementById('lf-intake-btn');
@@ -2636,6 +2718,7 @@ async function lfSubmitIntake(e){
 
   btn.textContent = 'Submitting…'; btn.disabled = true;
   const services = [...form.querySelectorAll('[name="services"]:checked')].map(c=>c.value);
+  const platforms = [...form.querySelectorAll('[name="platforms"]:checked')].map(c=>c.value);
   const payload = {
     name: fd.get('name'), phone: fd.get('phone'), email: fd.get('email'),
     location: fd.get('location'),
@@ -2644,6 +2727,7 @@ async function lfSubmitIntake(e){
     vehicle_year: fd.get('vehicle_year'), vehicle_make: fd.get('vehicle_make'),
     vehicle_model: fd.get('vehicle_model'), vehicle_type: fd.get('vehicle_type'),
     approved_services: services,
+    platforms_opted_in: platforms,
     clean_record: fd.get('clean_record'), has_insurance: fd.get('has_insurance'),
     referral_source: fd.get('referral_source'), notes: fd.get('notes') || ''
   };
@@ -2654,6 +2738,18 @@ async function lfSubmitIntake(e){
     });
     if(r.ok){
       form.style.display='none';
+      // Show platform confirmation in success box if driver opted into any
+      if (platforms.length > 0) {
+        const names = {'curri':'Curri','roadie':'Roadie','amazon_flex':'Amazon Flex','spark':'Spark Driver','doordash':'DoorDash Drive','goshare':'GoShare'};
+        const platList = platforms.map(p=>names[p]||p).join(', ');
+        const line = document.getElementById('lf-success-plat-line');
+        const msg = document.getElementById('lf-success-plat-msg');
+        if (line && msg) {
+          line.style.display = '';
+          msg.style.display = '';
+          msg.textContent = '✔ Platform sign-ups sent: '+platList;
+        }
+      }
       document.getElementById('lf-intake-success').style.display='block';
       window.scrollTo({top:0,behavior:'smooth'});
     } else {
