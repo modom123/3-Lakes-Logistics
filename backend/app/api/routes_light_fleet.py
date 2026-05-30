@@ -625,3 +625,89 @@ def request_instant_pay(driver_id: str, payload: dict) -> dict:
         "created_at": _now_iso(),
     }).execute()
     return {"ok": True, "driver_id": driver_id, "gross": amount, "fee": fee, "net": net, "status": "processing"}
+
+
+# ===========================================================================
+# LIVE GPS — Light Fleet Map
+# ===========================================================================
+
+@public_router.post("/driver-ping")
+def driver_ping(payload: dict) -> dict:
+    """
+    Driver PWA posts GPS location. Updates last_lat/last_lng/last_ping_at on
+    the driver record so Eagle Eye can show real-time positions on the LF Map.
+    Body: { "driver_id": str, "lat": float, "lng": float, "trip_id": str|null }
+    """
+    driver_id = payload.get("driver_id")
+    lat = payload.get("lat")
+    lng = payload.get("lng")
+    trip_id = payload.get("trip_id")
+
+    if not driver_id or lat is None or lng is None:
+        raise HTTPException(status_code=422, detail="driver_id, lat, lng required")
+
+    sb = get_supabase()
+    sb.table("light_vehicle_drivers").update({
+        "last_lat": float(lat),
+        "last_lng": float(lng),
+        "last_ping_at": _now_iso(),
+    }).eq("id", driver_id).execute()
+
+    if trip_id:
+        sb.table("light_vehicle_trips").update({
+            "current_lat": float(lat),
+            "current_lng": float(lng),
+        }).eq("id", trip_id).execute()
+
+    return {"ok": True}
+
+
+@router.get("/live-locations")
+def live_locations() -> dict:
+    """
+    Return active light fleet trips joined with driver GPS location.
+    Used by Eagle Eye Light Fleet Map to place car markers on the map.
+    """
+    sb = get_supabase()
+    trips_res = sb.table("light_vehicle_trips").select(
+        "id,trip_type,status,pickup_address,dropoff_address,"
+        "driver_id,passenger_name,rate_total,current_lat,current_lng"
+    ).in_("status", ["assigned", "en_route", "arrived", "in_progress"]).execute()
+
+    trips = trips_res.data or []
+    driver_ids = list({t["driver_id"] for t in trips if t.get("driver_id")})
+
+    drivers_by_id: dict = {}
+    if driver_ids:
+        drv_res = sb.table("light_vehicle_drivers").select(
+            "id,full_name,vehicle_type,vehicle_plate,last_lat,last_lng,last_ping_at"
+        ).in_("id", driver_ids).execute()
+        for d in (drv_res.data or []):
+            drivers_by_id[d["id"]] = d
+
+    items = []
+    for t in trips:
+        drv = drivers_by_id.get(t.get("driver_id") or "", {})
+        # Prefer trip-level position (fresher), fall back to driver last-ping
+        lat = t.get("current_lat") or drv.get("last_lat")
+        lng = t.get("current_lng") or drv.get("last_lng")
+        if lat is None or lng is None:
+            continue
+        items.append({
+            "trip_id": t["id"],
+            "trip_type": t.get("trip_type", "gig"),
+            "status": t.get("status"),
+            "pickup_address": t.get("pickup_address"),
+            "dropoff_address": t.get("dropoff_address"),
+            "passenger_name": t.get("passenger_name"),
+            "rate_total": t.get("rate_total"),
+            "driver_id": drv.get("id"),
+            "driver_name": drv.get("full_name"),
+            "vehicle_type": drv.get("vehicle_type"),
+            "vehicle_plate": drv.get("vehicle_plate"),
+            "last_ping_at": drv.get("last_ping_at"),
+            "lat": lat,
+            "lng": lng,
+        })
+
+    return {"items": items, "total": len(items)}

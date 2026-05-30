@@ -2045,27 +2045,38 @@ function stopGpsTracking() {
 }
 
 async function sendDriverLocation() {
-  if (!navigator.geolocation || !supabaseClient) return;
+  if (!navigator.geolocation) return;
 
   navigator.geolocation.getCurrentPosition(
     async pos => {
       const { latitude, longitude, speed, heading } = pos.coords;
       const ts = new Date().toISOString();
-      const truckId   = localStorage.getItem('3ll_truck')      || DRIVER_ID;
-      const carrierId = localStorage.getItem('3ll_carrier_id') || localStorage.getItem('3ll_driver_id') || DRIVER_ID;
 
-      try {
-        await supabaseClient.from('truck_telemetry').insert({
-          truck_id:   truckId,
-          carrier_id: carrierId,
-          lat:        latitude,
-          lng:        longitude,
-          speed_mph:  speed ? parseFloat((speed * 2.237).toFixed(1)) : 0,
-          heading:    heading ? Math.round(heading) : 0,
-          ts
-        });
-      } catch (err) {
-        console.debug('Location tracking error:', err);
+      // Truck telemetry (CDL fleet)
+      if (supabaseClient) {
+        const truckId   = localStorage.getItem('3ll_truck')      || DRIVER_ID;
+        const carrierId = localStorage.getItem('3ll_carrier_id') || localStorage.getItem('3ll_driver_id') || DRIVER_ID;
+        try {
+          await supabaseClient.from('truck_telemetry').insert({
+            truck_id: truckId, carrier_id: carrierId,
+            lat: latitude, lng: longitude,
+            speed_mph: speed ? parseFloat((speed * 2.237).toFixed(1)) : 0,
+            heading: heading ? Math.round(heading) : 0, ts
+          });
+        } catch (err) { console.debug('Truck telemetry error:', err); }
+      }
+
+      // Light Fleet GPS ping — posts to Eagle Eye LF Map
+      const lfDriverId = localStorage.getItem('3ll_lf_driver_id');
+      if (lfDriverId && !DEMO_MODE) {
+        try {
+          await apiFetch('/api/light-fleet/driver-ping', 'POST', {
+            driver_id: lfDriverId,
+            lat: latitude,
+            lng: longitude,
+            trip_id: _lfActiveTrip?.id || null,
+          });
+        } catch (err) { console.debug('LF ping error:', err); }
       }
     },
     () => {}

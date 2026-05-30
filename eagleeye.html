@@ -757,6 +757,7 @@ td.td-name{font-weight:600;color:var(--navy);}
 
   <div class="sb-section">
     <div class="sb-label">Light Fleet</div>
+    <div class="sb-item" onclick="nav('lf-map')"><span class="sb-icon">🗺️</span> LF Live Map <span class="sb-badge" id="lfmap-live-count" style="display:none;background:#8b5cf6;color:#fff">0</span></div>
     <div class="sb-item" onclick="nav('lf-nemt')"><span class="sb-icon">🏥</span> NEMT</div>
     <div class="sb-item" onclick="nav('lf-executive')"><span class="sb-icon">🚗</span> Executive</div>
     <div class="sb-item" onclick="nav('lf-courier')"><span class="sb-icon">📦</span> Courier</div>
@@ -1000,6 +1001,68 @@ td.td-name{font-weight:600;color:var(--navy);}
             <div style="font-size:12px">Truck profile, live telemetry,<br>and HOS hours appear here.</div>
           </div>
           <div id="fmap-truck-detail" style="display:none"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- LIGHT FLEET LIVE MAP -->
+    <div class="page" id="page-lf-map">
+<style>
+#page-lf-map{animation:none;}
+#page-lf-map.active{position:fixed;top:93px;left:var(--sidebar-w);right:0;bottom:0;z-index:30;display:flex;flex-direction:column;overflow:hidden;background:var(--bg);}
+@media(max-width:768px){#page-lf-map.active{top:87px;left:0;}}
+#lfmap-toolbar{display:flex;align-items:center;gap:10px;padding:10px 16px;background:var(--surface);border-bottom:2px solid #8b5cf6;flex-shrink:0;flex-wrap:wrap;}
+#lfmap-body{display:flex;flex:1;min-height:0;}
+#lfmap-map{flex:1;min-height:0;}
+#lfmap-panel{width:340px;border-left:1px solid var(--border);overflow-y:auto;background:var(--surface);flex-shrink:0;display:flex;flex-direction:column;}
+@media(max-width:900px){#lfmap-panel{display:none;}}
+.lfmap-legend{display:flex;align-items:center;gap:10px;margin-left:auto;font-size:11px;color:var(--muted);flex-wrap:wrap;}
+.lfmap-dot{width:10px;height:10px;border-radius:3px;display:inline-block;margin-right:3px;flex-shrink:0;}
+.lfmap-select{padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;background:var(--surface);color:var(--text);}
+.lfmap-btn{padding:6px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;background:var(--surface);color:var(--text);cursor:pointer;white-space:nowrap;}
+.lfmap-btn:hover{background:var(--border);}
+.lfmap-btn-purple{background:#8b5cf6;color:#fff;border-color:#8b5cf6;}
+.lfmap-btn-purple:hover{background:#7c3aed;}
+.lfmap-status-chip{font-size:12px;color:var(--muted);white-space:nowrap;}
+#lfmap-placeholder{display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;gap:12px;color:var(--muted);padding:40px 24px;text-align:center;}
+.lfmap-ph-icon{font-size:56px;opacity:.35;}
+.lfmap-detail-hdr{padding:16px 16px 12px;border-bottom:1px solid var(--border);}
+.lfmap-trip-badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;}
+.lfmap-row{display:flex;justify-content:space-between;align-items:flex-start;padding:10px 16px;border-bottom:1px solid var(--border);font-size:13px;}
+.lfmap-row-label{font-size:11px;color:var(--muted);font-weight:600;letter-spacing:.4px;margin-bottom:2px;}
+.lfmap-status-pill{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;}
+</style>
+      <div id="lfmap-toolbar">
+        <button class="lfmap-btn lfmap-btn-purple" onclick="lfmapFitAll()">⊕ Fit All</button>
+        <select class="lfmap-select" id="lfmap-type-filter" onchange="lfMapRefresh()">
+          <option value="">All Trip Types</option>
+          <option value="nemt">🏥 NEMT</option>
+          <option value="executive">⭐ Executive</option>
+          <option value="courier">📦 Courier</option>
+          <option value="gig">⚡ Gig</option>
+        </select>
+        <label style="display:flex;align-items:center;gap:5px;font-size:13px;cursor:pointer;white-space:nowrap">
+          <input type="checkbox" id="lfmap-auto-refresh" checked onchange="lfmapToggleAutoRefresh()" style="accent-color:#8b5cf6"> Auto 30s
+        </label>
+        <span class="lfmap-status-chip" id="lfmap-status">—</span>
+        <span class="lfmap-status-chip" id="lfmap-last-update" style="font-size:11px"></span>
+        <div class="lfmap-legend">
+          <span><span class="lfmap-dot" style="background:#8b5cf6"></span>NEMT</span>
+          <span><span class="lfmap-dot" style="background:#b45309"></span>Executive</span>
+          <span><span class="lfmap-dot" style="background:#2563eb"></span>Courier</span>
+          <span><span class="lfmap-dot" style="background:#16a34a"></span>Gig</span>
+          <span><span class="lfmap-dot" style="background:#6b7280"></span>Stale &gt;10m</span>
+        </div>
+      </div>
+      <div id="lfmap-body">
+        <div id="lfmap-map"></div>
+        <div id="lfmap-panel">
+          <div id="lfmap-placeholder">
+            <div class="lfmap-ph-icon">🚗</div>
+            <div style="font-size:14px;font-weight:600;color:var(--text)">Click a vehicle to view details</div>
+            <div style="font-size:12px;line-height:1.6">Driver profile, trip type, passenger,<br>pickup → dropoff, and ping time appear here.</div>
+          </div>
+          <div id="lfmap-trip-detail" style="display:none"></div>
         </div>
       </div>
     </div>
@@ -2901,7 +2964,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 let allCarriers=[], allLoads=[], allInvoices=[], currentInvFilter='all', loadCounter=3849;
 
-const pageNames={dashboard:'Dashboard',dispatch:'Dispatch Board','fleet-map':'Fleet Map',carriers:'Carriers',drivers:'Drivers',loads:'Load Manager',invoices:'Invoices & Billing',compliance:'DOT Compliance',ifta:'IFTA / Permits',insurance:'Insurance',revenue:'Revenue Tracker',providers:'Compliance Providers',checklist:'Daily Checklist',notes:'Dispatcher Notes',reports:'Team Reports','exec-command':'Exec Command',agents:'AI Agents',founders:'Founders Program',crm:'Lead CRM',leads:'Lead Pipeline',execution:'Execution Engine',email:'Email Center',vault:'Document Vault',clm:'CLM Scanner',ledger:'Atomic Ledger',agreements:'Agreements','lf-nemt':'NEMT — Medical Transport','lf-executive':'Executive Transport','lf-courier':'Courier & Last-Mile','lf-gig':'Gig Fleet Management'};
+const pageNames={dashboard:'Dashboard',dispatch:'Dispatch Board','fleet-map':'Fleet Map',carriers:'Carriers',drivers:'Drivers',loads:'Load Manager',invoices:'Invoices & Billing',compliance:'DOT Compliance',ifta:'IFTA / Permits',insurance:'Insurance',revenue:'Revenue Tracker',providers:'Compliance Providers',checklist:'Daily Checklist',notes:'Dispatcher Notes',reports:'Team Reports','exec-command':'Exec Command',agents:'AI Agents',founders:'Founders Program',crm:'Lead CRM',leads:'Lead Pipeline',execution:'Execution Engine',email:'Email Center',vault:'Document Vault',clm:'CLM Scanner',ledger:'Atomic Ledger',agreements:'Agreements','lf-map':'Light Fleet Live Map','lf-nemt':'NEMT — Medical Transport','lf-executive':'Executive Transport','lf-courier':'Courier & Last-Mile','lf-gig':'Gig Fleet Management'};
 
 // ── 3 Lakes Logistics Backend API (FastAPI) ──
 const API_BASE = (window.__3LL_API_BASE || 'https://three-lakes-logistics-api.onrender.com').replace(/\/$/,'');
@@ -3006,6 +3069,7 @@ function nav(id){
   if(id==='vault')loadVault();
   if(id==='agreements')loadAgreements();
   if(id==='fleet-map')initFleetMap();
+  if(id==='lf-map')initLFMap();
   if(id==='drivers')loadDrivers();
   if(id==='ledger')loadLedger();
   if(id==='lf-nemt'||id==='lf-executive'||id==='lf-courier'||id==='lf-gig') loadLightFleet(id);
@@ -12142,6 +12206,225 @@ async function lfSaveDriver(){
   };
   if(!payload.name){ alert('Name is required.'); return; }
   try { await lfFetch('/api/light-fleet/drivers','POST',payload); lfCloseModal('lf-driver-modal'); lfLoadDrivers(); lfLoadGigKpis(); } catch(e){ alert('Error: '+e.message); }
+}
+
+// ── LIGHT FLEET LIVE MAP ──────────────────────────────────────────────────────
+let _lfmap = null;
+let _lfmapMarkers = {};
+let _lfmapRefreshTimer = null;
+
+const LF_TRIP_COLORS = {
+  nemt:      '#8b5cf6',
+  executive: '#b45309',
+  courier:   '#2563eb',
+  gig:       '#16a34a',
+};
+const LF_TRIP_LABELS = {
+  nemt: 'NEMT', executive: 'Executive', courier: 'Courier', gig: 'Gig',
+};
+const LF_TRIP_EMOJI = {
+  nemt: '🏥', executive: '⭐', courier: '📦', gig: '⚡',
+};
+const LF_STATUS_COLOR = {
+  assigned: '#2563eb', en_route: '#16a34a', arrived: '#d97706', in_progress: '#8b5cf6',
+};
+
+function _lfmapColor(item) {
+  if (!item.last_ping_at) return '#6b7280';
+  const ageSec = (Date.now() - new Date(item.last_ping_at).getTime()) / 1000;
+  if (ageSec > 600) return '#6b7280'; // stale > 10 min
+  return LF_TRIP_COLORS[item.trip_type] || '#6b7280';
+}
+
+function _lfmapIcon(item) {
+  const color = _lfmapColor(item);
+  const emoji = LF_TRIP_EMOJI[item.trip_type] || '🚗';
+  return L.divIcon({
+    html: `<div style="
+      background:${color};border:2.5px solid #fff;border-radius:7px;
+      width:34px;height:24px;display:flex;align-items:center;justify-content:center;
+      box-shadow:0 2px 10px rgba(0,0,0,.5);font-size:14px;line-height:1;cursor:pointer;
+    ">${emoji}</div>`,
+    iconSize: [34, 24], iconAnchor: [17, 12], className: ''
+  });
+}
+
+function initLFMap() {
+  if (_lfmap) {
+    setTimeout(() => { _lfmap.invalidateSize(); lfMapRefresh(); }, 120);
+    return;
+  }
+  _lfmap = L.map('lfmap-map', { center: [39.83, -98.58], zoom: 5 });
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+    maxZoom: 19
+  }).addTo(_lfmap);
+  lfMapRefresh();
+  lfmapToggleAutoRefresh();
+}
+
+async function lfMapRefresh() {
+  const typeFilter = document.getElementById('lfmap-type-filter')?.value || '';
+  const statusEl   = document.getElementById('lfmap-status');
+  if (statusEl) statusEl.textContent = 'Refreshing…';
+
+  try {
+    const res  = await apiFetch('/api/light-fleet/live-locations');
+    const data = res.ok ? await res.json() : { items: [] };
+    let items  = data.items || [];
+
+    if (typeFilter) items = items.filter(i => i.trip_type === typeFilter);
+
+    _lfmapPutMarkers(items);
+
+    const count = items.length;
+    if (statusEl) statusEl.textContent = `${count} vehicle${count !== 1 ? 's' : ''} active`;
+    const badge = document.getElementById('lfmap-live-count');
+    if (badge) { badge.textContent = count; badge.style.display = count ? 'inline-block' : 'none'; }
+    document.getElementById('lfmap-last-update').textContent = 'Updated ' + new Date().toLocaleTimeString();
+
+    // Demo markers if no real data
+    if (!count) _lfmapShowDemo();
+  } catch (e) {
+    if (statusEl) statusEl.textContent = 'Load error';
+    console.error('[LFMap]', e);
+    _lfmapShowDemo();
+  }
+}
+
+function _lfmapPutMarkers(items) {
+  if (!_lfmap) return;
+  const seen = new Set();
+
+  for (const item of items) {
+    if (item.lat == null || item.lng == null) continue;
+    const key = item.trip_id || `${item.driver_id}|${item.trip_type}`;
+    seen.add(key);
+    const icon = _lfmapIcon(item);
+
+    if (_lfmapMarkers[key]) {
+      _lfmapMarkers[key].setLatLng([item.lat, item.lng]).setIcon(icon);
+      _lfmapMarkers[key]._item = item;
+    } else {
+      const m = L.marker([item.lat, item.lng], { icon });
+      m._item = item;
+      const tipType = LF_TRIP_LABELS[item.trip_type] || item.trip_type;
+      m.bindTooltip(
+        `<b>${item.driver_name || 'Driver'}</b> · ${tipType}`,
+        { permanent: false, direction: 'top', offset: [0, -14] }
+      );
+      m.on('click', () => lfmapShowPanel(m._item));
+      m.addTo(_lfmap);
+      _lfmapMarkers[key] = m;
+    }
+  }
+
+  for (const key of Object.keys(_lfmapMarkers)) {
+    if (!seen.has(key)) { _lfmap.removeLayer(_lfmapMarkers[key]); delete _lfmapMarkers[key]; }
+  }
+}
+
+function _lfmapShowDemo() {
+  // Placeholder markers when no live data — shows what the map will look like
+  const demos = [
+    { trip_id:'demo-1', trip_type:'nemt',      driver_name:'Maria R.', lat:41.878, lng:-87.629, status:'en_route',  pickup_address:'Chicago Medical Center', dropoff_address:'Northwestern Hospital', passenger_name:'James Wilson', last_ping_at: new Date().toISOString() },
+    { trip_id:'demo-2', trip_type:'executive', driver_name:'Carlos M.', lat:33.748, lng:-84.387, status:'assigned',  pickup_address:'Hartsfield Airport', dropoff_address:'Marriott Downtown', passenger_name:'Sarah Chen', last_ping_at: new Date().toISOString() },
+    { trip_id:'demo-3', trip_type:'courier',   driver_name:'Dana L.',   lat:34.052, lng:-118.243, status:'in_progress', pickup_address:'FedEx Hub Inglewood', dropoff_address:'Beverly Hills 90210', passenger_name:null, last_ping_at: new Date().toISOString() },
+    { trip_id:'demo-4', trip_type:'gig',       driver_name:'Tony B.',  lat:29.760, lng:-95.369, status:'en_route',  pickup_address:'Curri pickup — Main St', dropoff_address:'Warehouse District', passenger_name:null, last_ping_at: new Date().toISOString() },
+    { trip_id:'demo-5', trip_type:'nemt',      driver_name:'Priya S.', lat:40.712, lng:-74.005, status:'arrived',   pickup_address:'Dialysis Center - Brooklyn', dropoff_address:'Queens Home Care', passenger_name:'Robert G.', last_ping_at: new Date().toISOString() },
+  ];
+  _lfmapPutMarkers(demos);
+  const statusEl = document.getElementById('lfmap-status');
+  if (statusEl) statusEl.textContent = `${demos.length} demo vehicles`;
+}
+
+function lfmapShowPanel(item) {
+  document.getElementById('lfmap-placeholder').style.display = 'none';
+  const detail = document.getElementById('lfmap-trip-detail');
+  detail.style.display = 'block';
+
+  const typeColor = LF_TRIP_COLORS[item.trip_type] || '#6b7280';
+  const typLabel  = LF_TRIP_LABELS[item.trip_type] || item.trip_type;
+  const typEmoji  = LF_TRIP_EMOJI[item.trip_type]  || '🚗';
+  const sColor    = LF_STATUS_COLOR[item.status]   || '#6b7280';
+
+  const pingAgo = item.last_ping_at
+    ? Math.round((Date.now() - new Date(item.last_ping_at).getTime()) / 1000) + 's ago'
+    : 'unknown';
+
+  const stale = item.last_ping_at && (Date.now() - new Date(item.last_ping_at).getTime()) > 600000;
+
+  detail.innerHTML = `
+    <div class="lfmap-detail-hdr">
+      <span class="lfmap-trip-badge" style="background:${typeColor}22;color:${typeColor};border:1px solid ${typeColor}44">
+        ${typEmoji} ${typLabel}
+      </span>
+      <div style="margin-top:10px;font-size:18px;font-weight:700;color:var(--text)">${item.driver_name || '—'}</div>
+      <div style="font-size:12px;color:var(--muted);margin-top:2px">${item.vehicle_type || 'Vehicle'} ${item.vehicle_plate ? '· ' + item.vehicle_plate : ''}</div>
+    </div>
+
+    <div class="lfmap-row">
+      <div>
+        <div class="lfmap-row-label">STATUS</div>
+        <span class="lfmap-status-pill" style="background:${sColor}22;color:${sColor};border:1px solid ${sColor}44">
+          <span style="width:6px;height:6px;border-radius:50%;background:${sColor};display:inline-block"></span>
+          ${(item.status || '').replace('_', ' ').toUpperCase()}
+        </span>
+      </div>
+      <div style="text-align:right">
+        <div class="lfmap-row-label">LAST PING</div>
+        <div style="font-size:12px;color:${stale ? '#dc2626' : '#16a34a'};font-weight:600">${pingAgo}</div>
+      </div>
+    </div>
+
+    ${item.passenger_name ? `
+    <div class="lfmap-row" style="background:rgba(139,92,246,.05)">
+      <div>
+        <div class="lfmap-row-label">PASSENGER / PATIENT</div>
+        <div style="font-weight:600">👤 ${item.passenger_name}</div>
+      </div>
+    </div>` : ''}
+
+    <div class="lfmap-row">
+      <div style="flex:1">
+        <div class="lfmap-row-label">PICKUP</div>
+        <div style="font-size:12px;line-height:1.4">${item.pickup_address || '—'}</div>
+      </div>
+    </div>
+
+    <div class="lfmap-row">
+      <div style="flex:1">
+        <div class="lfmap-row-label">DROP-OFF</div>
+        <div style="font-size:12px;line-height:1.4">${item.dropoff_address || '—'}</div>
+      </div>
+    </div>
+
+    ${item.rate_total ? `
+    <div class="lfmap-row">
+      <div><div class="lfmap-row-label">TRIP RATE</div><div style="font-weight:700;color:var(--green)">$${Number(item.rate_total).toFixed(2)}</div></div>
+    </div>` : ''}
+
+    <div style="padding:14px 16px">
+      <button class="btn-navy" style="width:100%;font-size:13px" onclick="nav('lf-${item.trip_type}')">
+        Open ${typLabel} Board →
+      </button>
+    </div>
+  `;
+}
+
+function lfmapFitAll() {
+  if (!_lfmap) return;
+  const pts = Object.values(_lfmapMarkers).map(m => m.getLatLng());
+  if (!pts.length) return;
+  if (pts.length === 1) { _lfmap.setView(pts[0], 13); return; }
+  _lfmap.fitBounds(L.latLngBounds(pts), { padding: [48, 48] });
+}
+
+function lfmapToggleAutoRefresh() {
+  clearInterval(_lfmapRefreshTimer);
+  if (document.getElementById('lfmap-auto-refresh')?.checked) {
+    _lfmapRefreshTimer = setInterval(lfMapRefresh, 30000);
+  }
 }
 </script>
 
