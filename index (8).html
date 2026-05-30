@@ -690,6 +690,7 @@ button,a,[onclick]{cursor:pointer;}
     <button class="nav-a" id="nl-home" onclick="showPage('home')">Home</button>
     <button class="nav-a" id="nl-about" onclick="showPage('about')">About</button>
     <button class="nav-a" id="nl-services" onclick="showPage('services')">Services</button>
+    <button class="nav-a" id="nl-light-fleet" onclick="showPage('light-fleet')">Light Fleet</button>
     <button class="nav-a" id="nl-pricing" onclick="showPage('services');setTimeout(()=>{const el=document.getElementById('plans-anchor');if(el)el.scrollIntoView({behavior:'smooth',block:'start'});},120)">Pricing</button>
     <button class="nav-a" id="nl-loads" onclick="showPage('loads')" style="position:relative">Load Board<span id="nav-loads-badge" style="display:none;position:absolute;top:2px;right:-4px;background:#22c55e;color:#fff;border-radius:99px;font-size:9px;font-weight:700;padding:1px 5px;"></span></button>
     <button class="nav-a" id="nl-contact" onclick="showPage('contact')">Contact</button>
@@ -703,6 +704,7 @@ button,a,[onclick]{cursor:pointer;}
   <div class="mob-a" onclick="showPage('home');toggleMob()">Home</div>
   <div class="mob-a" onclick="showPage('about');toggleMob()">About</div>
   <div class="mob-a" onclick="showPage('services');toggleMob()">Services</div>
+  <div class="mob-a" onclick="showPage('light-fleet');toggleMob()">🚗 Light Fleet</div>
   <div class="mob-a" onclick="showPage('services');toggleMob();setTimeout(()=>{const el=document.getElementById('plans-anchor');if(el)el.scrollIntoView({behavior:'smooth',block:'start'});},160)">Pricing</div>
   <div class="mob-a" onclick="showPage('loads');toggleMob()">Load Board</div>
   <div class="mob-a" onclick="showPage('contact');toggleMob()">Contact</div>
@@ -804,6 +806,7 @@ button,a,[onclick]{cursor:pointer;}
         <div class="sc rev" onclick="showPage('services')"><div class="sc-bar" style="background:linear-gradient(90deg,var(--navy),var(--navy3))"></div><div class="sc-bd"><span class="sc-ico">🤖</span><div class="sc-t">AI Dispatch &amp; Load Matching</div><div class="sc-p">Our AI agents scan DAT, Truckstop, and direct shipper feeds 24/7 — negotiating rates, booking loads, and managing your lanes automatically. No waiting for a dispatcher to call back.</div></div><div class="sc-ft">See How It Works →</div></div>
         <div class="sc rev" onclick="showPage('services')"><div class="sc-bar" style="background:linear-gradient(90deg,var(--gold),var(--gold3))"></div><div class="sc-bd"><span class="sc-ico">📄</span><div class="sc-t">Automated Document Processing</div><div class="sc-p">BOLs, rate cons, PODs, and invoices uploaded once — our OCR + AI automation routes, files, and submits to factoring with full audit trail. Paperless back office.</div></div><div class="sc-ft">See How It Works →</div></div>
         <div class="sc rev" onclick="showPage('services')"><div class="sc-bar" style="background:linear-gradient(90deg,var(--gold),var(--navy3))"></div><div class="sc-bd"><span class="sc-ico">🛡️</span><div class="sc-t">Shield Safety &amp; Revenue Recovery</div><div class="sc-p">Continuous ELD, CSA, and insurance monitoring plus automated detention, TONU, and lumper claim recovery. Our system captures every dollar the market owes you.</div></div><div class="sc-ft">See How It Works →</div></div>
+        <div class="sc rev" onclick="showPage('light-fleet')"><div class="sc-bar" style="background:linear-gradient(90deg,#8b5cf6,#3b82f6)"></div><div class="sc-bd"><span class="sc-ico">🚗</span><div class="sc-t">Light Fleet — Car &amp; SUV Services</div><div class="sc-p">NEMT medical transport, executive &amp; airport transfers, same-day courier delivery, and gig-fleet driver management — fully dispatched and tracked on the same platform.</div></div><div class="sc-ft">Explore Light Fleet →</div></div>
       </div>
     </div>
   </div>
@@ -2167,5 +2170,138 @@ document.getElementById('calendarOverlay')?.addEventListener('click', function(e
   <button onclick="showPage('contact');setTimeout(()=>{const el=document.getElementById('book-call-anchor');if(el)el.scrollIntoView({behavior:'smooth',block:'start'});},150)">📞 Book a Call</button>
 </div>
 
-<script src="/shared/tk.js"></script></body>
+<script src="/shared/tk.js"></script>
+
+<!-- ════════════════════════════════════════════════════════ -->
+<!-- LIGHT FLEET PAGE                                         -->
+<!-- ════════════════════════════════════════════════════════ -->
+<div class="page" id="page-light-fleet">
+
+  <div class="ph"><div class="ph-dec"></div><div class="ph-inner">
+    <span class="chip">Light Fleet Services</span>
+    <h1 class="ph-h">Car &amp; SUV Services.<br/>4 Revenue Streams.</h1>
+    <p class="ph-p">The same AI dispatch platform that runs 1,000 trucks now powers NEMT medical transport, executive &amp; airport transfers, same-day courier delivery, and a fully managed gig-driver pool — all under one roof.</p>
+    <div class="cta-btns" style="margin-top:28px;"><button class="btn-gold" onclick="showPage('contact')">Get Started →</button></div>
+  </div></div>
+
+  <div class="home-svc"><div class="home-svc-inner">
+    <div class="rev" style="text-align:center;"><span class="chip">The BIG 4</span><h2 class="sh" style="text-align:center;">Four Services.<br/>One Platform.</h2><div class="rule" style="margin:18px auto;"></div><p class="sp" style="margin:0 auto;text-align:center;max-width:600px;">No CDL required. Car &amp; SUV services run on the same dispatch engine, trip tracking, and payout system — zero extra software.</p></div>
+    <div class="svc-grid" style="grid-template-columns:repeat(auto-fill,minmax(260px,1fr));margin-top:32px;">
+
+      <div class="sc rev"><div class="sc-bar" style="background:linear-gradient(90deg,#10b981,#059669)"></div><div class="sc-bd">
+        <span class="sc-ico">🏥</span><div class="sc-t">NEMT — Medical Transport</div>
+        <div class="sc-p">Medicaid &amp; Medicare reimbursed patient rides, specimen delivery, and clinic transport. We handle scheduling, insurance auth tracking, and mobility needs.</div>
+        <ul style="margin-top:12px;padding-left:18px;font-size:13px;color:var(--muted);line-height:1.8;"><li>Insurance authorization tracking</li><li>Recurring patient scheduling</li><li>Wheelchair &amp; stretcher routing</li><li>Medicaid/Medicare billing queue</li></ul>
+      </div><div class="sc-ft">Recurring Revenue Stream</div></div>
+
+      <div class="sc rev"><div class="sc-bar" style="background:linear-gradient(90deg,#6366f1,#4f46e5)"></div><div class="sc-bd">
+        <span class="sc-ico">🚗</span><div class="sc-t">Executive &amp; Airport Transport</div>
+        <div class="sc-p">Corporate accounts, VIP transfers, and airport runs dispatched automatically. SUV, Sedan, or Luxury class — booked by flight number, billed to corporate accounts.</div>
+        <ul style="margin-top:12px;padding-left:18px;font-size:13px;color:var(--muted);line-height:1.8;"><li>Flight tracking &amp; delay management</li><li>Corporate account billing</li><li>Flat-rate airport pricing</li><li>Real-time driver location for clients</li></ul>
+      </div><div class="sc-ft">High-Margin Corporate Contracts</div></div>
+
+      <div class="sc rev"><div class="sc-bar" style="background:linear-gradient(90deg,#f59e0b,#d97706)"></div><div class="sc-bd">
+        <span class="sc-ico">📦</span><div class="sc-t">Courier &amp; Last-Mile Delivery</div>
+        <div class="sc-p">Same-day parcel, document, and medical specimen runs in urban markets. GPS-tracked, POD-confirmed delivery where semis can't go.</div>
+        <ul style="margin-top:12px;padding-left:18px;font-size:13px;color:var(--muted);line-height:1.8;"><li>Same-day / rush dispatch</li><li>Proof-of-delivery (photo + signature)</li><li>Multi-stop route optimization</li><li>Hospital &amp; lab specimen certified</li></ul>
+      </div><div class="sc-ft">Urban Market Opportunity</div></div>
+
+      <div class="sc rev"><div class="sc-bar" style="background:linear-gradient(90deg,#3b82f6,#1d4ed8)"></div><div class="sc-bd">
+        <span class="sc-ico">👥</span><div class="sc-t">Gig Fleet Management</div>
+        <div class="sc-p">Build and manage a pool of car &amp; SUV drivers — MVR checks, background screening, vehicle insurance verification, and approved service assignments.</div>
+        <ul style="margin-top:12px;padding-left:18px;font-size:13px;color:var(--muted);line-height:1.8;"><li>Automated MVR &amp; background check</li><li>Driver rating &amp; performance tracking</li><li>Multi-service driver approval</li><li>Faster scaling than CDL hiring</li></ul>
+      </div><div class="sc-ft">Scale Without CDL Bottlenecks</div></div>
+
+    </div>
+  </div></div>
+
+  <!-- Pricing -->
+  <div class="why-s" id="lf-plans-anchor"><div class="why-inner">
+    <div class="rev" style="text-align:center;"><span class="chip">Light Fleet Pricing</span><h2 class="sh" style="text-align:center;">Simple, Transparent Rates</h2><div class="rule" style="margin:18px auto;"></div><p class="sp" style="margin:0 auto;text-align:center;max-width:560px;">Two ways to get started. Add Light Fleet to an existing trucking plan or launch standalone. We take a small platform fee — you keep the rest.</p></div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:24px;margin-top:40px;">
+
+      <!-- Per-Trip -->
+      <div style="background:var(--surface,#fff);border:1px solid var(--border,#e2e8f0);border-radius:16px;padding:28px;position:relative;">
+        <div style="font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--muted,#64748b);margin-bottom:8px;">Starter</div>
+        <div style="font-size:36px;font-weight:900;color:var(--navy,#0a1628);margin-bottom:4px;">8% <span style="font-size:16px;font-weight:500;color:var(--muted,#64748b)">per trip</span></div>
+        <div style="font-size:13px;color:var(--muted,#64748b);margin-bottom:20px;">Platform dispatch fee on every completed trip</div>
+        <ul style="list-style:none;padding:0;display:flex;flex-direction:column;gap:10px;font-size:14px;margin-bottom:24px;">
+          <li>✅ All 4 service types</li>
+          <li>✅ GPS tracking &amp; POD</li>
+          <li>✅ Driver management portal</li>
+          <li>✅ Eagle Eye dashboard access</li>
+          <li>✅ No monthly fee</li>
+          <li style="color:var(--muted,#64748b)">⬜ Priority dispatch queue</li>
+          <li style="color:var(--muted,#64748b)">⬜ Dedicated account manager</li>
+        </ul>
+        <button class="btn-navy" onclick="showPage('contact')" style="width:100%;padding:13px;border-radius:8px;font-weight:700;">Get Started Free →</button>
+      </div>
+
+      <!-- Flat Monthly -->
+      <div style="background:var(--navy,#0a1628);border:2px solid var(--gold2,#d4a832);border-radius:16px;padding:28px;position:relative;">
+        <div style="position:absolute;top:-12px;left:50%;transform:translateX(-50%);background:var(--gold2,#d4a832);color:#000;font-size:11px;font-weight:800;padding:4px 14px;border-radius:20px;letter-spacing:.5px;">MOST POPULAR</div>
+        <div style="font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--gold2,#d4a832);margin-bottom:8px;">Pro Fleet</div>
+        <div style="font-size:36px;font-weight:900;color:#fff;margin-bottom:4px;">$199 <span style="font-size:16px;font-weight:500;color:rgba(255,255,255,.5)">/month</span></div>
+        <div style="font-size:13px;color:rgba(255,255,255,.5);margin-bottom:20px;">Flat fee · unlimited trips · 3% transaction fee</div>
+        <ul style="list-style:none;padding:0;display:flex;flex-direction:column;gap:10px;font-size:14px;color:#fff;margin-bottom:24px;">
+          <li>✅ All 4 service types</li>
+          <li>✅ GPS tracking &amp; POD</li>
+          <li>✅ Driver management portal</li>
+          <li>✅ Eagle Eye dashboard</li>
+          <li>✅ Priority dispatch queue</li>
+          <li>✅ Corporate account billing</li>
+          <li>✅ NEMT insurance auth tracking</li>
+          <li>✅ Dedicated account manager</li>
+        </ul>
+        <button class="btn-gold" onclick="showPage('contact')" style="width:100%;padding:13px;border-radius:8px;font-weight:700;">Claim Your Spot →</button>
+      </div>
+
+      <!-- Add-on -->
+      <div style="background:var(--surface,#fff);border:1px solid var(--border,#e2e8f0);border-radius:16px;padding:28px;">
+        <div style="font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--muted,#64748b);margin-bottom:8px;">Trucking Add-On</div>
+        <div style="font-size:36px;font-weight:900;color:var(--navy,#0a1628);margin-bottom:4px;">$99 <span style="font-size:16px;font-weight:500;color:var(--muted,#64748b)">/month</span></div>
+        <div style="font-size:13px;color:var(--muted,#64748b);margin-bottom:20px;">Add to any existing 3 Lakes trucking plan + 3% per trip</div>
+        <ul style="list-style:none;padding:0;display:flex;flex-direction:column;gap:10px;font-size:14px;margin-bottom:24px;">
+          <li>✅ All 4 service types</li>
+          <li>✅ Same Eagle Eye dashboard</li>
+          <li>✅ Unified driver &amp; fleet view</li>
+          <li>✅ One payout system for all drivers</li>
+          <li>✅ Requires active trucking plan</li>
+        </ul>
+        <button class="btn-navy" onclick="showPage('onboard')" style="width:100%;padding:13px;border-radius:8px;font-weight:700;">Add to My Plan →</button>
+      </div>
+
+    </div>
+    <p style="text-align:center;font-size:12px;color:var(--muted,#64748b);margin-top:24px;">All plans include onboarding support. NEMT insurance billing setup requires a 30-min setup call.</p>
+  </div></div>
+
+  <!-- Stats -->
+  <div class="nums rev"><div class="nums-g">
+    <div class="num-i"><div class="num-v">4</div><div class="num-l">Service Types</div></div>
+    <div class="num-i"><div class="num-v">8%</div><div class="num-l">Starter Fee Per Trip</div></div>
+    <div class="num-i"><div class="num-v">24h</div><div class="num-l">Driver Activation</div></div>
+    <div class="num-i"><div class="num-v">$0</div><div class="num-l">CDL Required</div></div>
+  </div></div>
+
+  <!-- CTA -->
+  <div class="cta-s rev"><div class="cta-dec"></div><div class="cta-inner">
+    <div class="cta-h">Ready to Launch<br/>Your Light Fleet?</div>
+    <p class="cta-p">NEMT contracts, corporate transport accounts, and same-day courier routes are waiting. Start with 2 drivers or 200 — our dispatch engine scales with you.</p>
+    <div class="cta-btns">
+      <button class="btn-gold" onclick="showPage('contact')">Talk to Our Team →</button>
+      <button class="btn-wht-out" onclick="showPage('onboard')">Apply as a Carrier</button>
+    </div>
+  </div></div>
+
+  <footer><div class="f-inner"><div class="f-g">
+    <div><div class="f-name">3 Lakes Logistics</div><div class="f-tag">Delivering Trust Across America</div></div>
+    <div><div class="f-hd">Navigate</div><ul class="f-ls"><li onclick="showPage('home')">Home</li><li onclick="showPage('services')">Services</li><li onclick="showPage('light-fleet')">Light Fleet</li><li onclick="showPage('contact')">Contact</li></ul></div>
+    <div><div class="f-hd">Light Fleet</div><ul class="f-ls"><li>NEMT — Medical Transport</li><li>Executive &amp; Airport</li><li>Courier &amp; Last-Mile</li><li>Gig Fleet Management</li></ul></div>
+    <div><div class="f-hd">Contact</div><div class="f-ci"><span class="f-ci-ico">📞</span>661-466-9932</div><div class="f-ci"><span class="f-ci-ico">✉️</span>info@3lakeslogistics.com</div></div>
+  </div><div class="f-bot"><div class="f-copy">© <span class="tk-copyright-year">2026</span> 3 Lakes Logistics LLC. All rights reserved.</div></div></div></footer>
+
+</div>
+<!-- END LIGHT FLEET PAGE -->
+
+</body>
 </html>
