@@ -31,6 +31,7 @@ from .api import (
     mailboxes_router,
     agreements_router,
     light_fleet_router,
+    lf_public_router,
     driver_auth_router,
     driver_router,
     email_router,
@@ -183,6 +184,7 @@ def create_app() -> FastAPI:
     app.include_router(mailboxes_router,       prefix="/api",              tags=["mailboxes"])
     app.include_router(agreements_router,      prefix="/api/agreements",   tags=["agreements"])
     app.include_router(light_fleet_router,     prefix="/api/light-fleet",  tags=["light-fleet"])
+    app.include_router(lf_public_router,       prefix="/api/light-fleet",  tags=["light-fleet-public"])
     app.include_router(studio_router,          prefix="/api",              tags=["studio"])
     app.include_router(health_router,                                      tags=["health"])
 

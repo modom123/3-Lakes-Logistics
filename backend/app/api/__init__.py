@@ -29,7 +29,7 @@ from .routes_carrier_brain import router as carrier_brain_router
 from .routes_revenue_brain import router as revenue_brain_router
 from .routes_mailboxes     import router as mailboxes_router
 from .routes_agreements    import router as agreements_router
-from .routes_light_fleet   import router as light_fleet_router
+from .routes_light_fleet   import router as light_fleet_router, public_router as lf_public_router
 
 from ..clm             import clm_router
 from ..email_ingest    import router as email_ingest_router
@@ -78,5 +78,6 @@ __all__ = [
     "mailboxes_router",
     "agreements_router",
     "light_fleet_router",
+    "lf_public_router",
     "studio_router",
 ]

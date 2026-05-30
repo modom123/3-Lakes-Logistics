@@ -17,6 +17,9 @@ from .deps import require_bearer
 
 router = APIRouter(dependencies=[Depends(require_bearer)])
 
+# Public router — no auth required (self-service driver signup)
+public_router = APIRouter()
+
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -532,3 +535,34 @@ def update_executive_account(account_id: str, payload: dict) -> dict:
         raise HTTPException(status_code=404, detail="Executive account not found")
     upd = sb.table("executive_accounts").update(payload).eq("id", account_id).execute()
     return {"ok": True, "item": upd.data[0] if upd.data else {}}
+
+
+# ===========================================================================
+# SELF-SERVICE DRIVER INTAKE (public — no auth)
+# ===========================================================================
+
+@public_router.post("/drivers/intake")
+def driver_intake(payload: dict) -> dict:
+    """
+    Self-service driver signup endpoint — called from website.html signup form.
+
+    Passes the submission through Maya (intake agent) for instant evaluation.
+    Clean record + active insurance → approved immediately and driver row created.
+    Dirty record → denied with reason, no row created.
+    """
+    from ..agents import maya
+    result = maya.run({**payload, "action": "process_intake"})
+    if not result.get("approved"):
+        reason = result.get("reason", "requirements_not_met")
+        status_msg = {
+            "dirty_record": "A clean driving record is required to join 3 Lakes Light Fleet.",
+            "no_insurance": "Active vehicle insurance is required before activation.",
+            "missing_required_fields": "Please fill in all required fields.",
+        }.get(reason, "Your application could not be processed at this time.")
+        raise HTTPException(status_code=422, detail=status_msg)
+    return {
+        "ok": True,
+        "approved": True,
+        "driver_id": result.get("driver_id"),
+        "message": "Welcome to 3 Lakes Light Fleet! Check your phone for next steps.",
+    }

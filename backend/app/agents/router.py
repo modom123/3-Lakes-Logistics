@@ -4,9 +4,9 @@ from __future__ import annotations
 from typing import Any, Callable
 
 from . import (
-    alexander, atlas, audit, beacon, bond_courier, chloe_sinclair, echo,
-    isabella, james_bond, katerina, lucas_sterling, naomi, nova, orbit,
-    outside_bond, penny, pulse, scout, settler, shield, signal, sofia,
+    alexander, atlas, audit, beacon, bond_courier, cash, chloe_sinclair, echo,
+    isabella, james_bond, kai, katerina, lucas_sterling, maya, naomi, nova, orbit,
+    outside_bond, penny, pulse, rio, scout, settler, shield, signal, sofia,
     sonny, technical_team, vance, victoria, winston,
 )
 
@@ -38,6 +38,11 @@ _DISPATCH: dict[str, Callable[[dict[str, Any]], dict[str, Any]]] = {
     "technical_team":   technical_team.run,
     "lucas_sterling":   lucas_sterling.run,
     "chloe_sinclair":   chloe_sinclair.run,
+    # ── Light Fleet workers ──
+    "maya":           maya.run,
+    "kai":            kai.run,
+    "rio":            rio.run,
+    "cash":           cash.run,
 }
 
 
