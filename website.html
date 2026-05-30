@@ -662,6 +662,15 @@ button,a,[onclick]{cursor:pointer;}
   .f-leg{flex-wrap:wrap;justify-content:center;}
 }
 
+/* ── LIGHT FLEET PRICING CARD — RESPONSIVE ── */
+@media(max-width:560px){
+  #lf-plans-anchor { padding: 60px 20px !important; }
+  #lf-plans-anchor > div > div[style*="padding:56px"] { padding: 36px 24px !important; }
+  #lf-plans-anchor > div > div > div[style*="grid-template-columns:1fr 1fr"] {
+    grid-template-columns: 1fr !important;
+  }
+}
+
 /* ── LIGHT FLEET INTAKE FORM — RESPONSIVE ── */
 @media(max-width:560px){
   /* collapse all 2-col grids in the intake form to 1 col */
@@ -2312,7 +2321,7 @@ document.getElementById('calendarOverlay')?.addEventListener('click', function(e
               <div style="font-size:11px;font-weight:700;color:#3b82f6;letter-spacing:.8px;text-transform:uppercase;margin-bottom:4px;">How We Find Your Loads</div>
               <div style="font-size:12px;color:var(--text);line-height:1.7;">You supply the vehicles and drivers. We supply contracts from all 4 segments above, match trips to your drivers by location and service type, and handle all billing and payouts.</div>
             </div>
-            <div style="font-family:var(--ff-m);font-size:11px;color:#3b82f6;background:rgba(59,130,246,.1);padding:4px 12px;border-radius:20px;display:inline-block;">$99–199/mo + per-trip % · Scale fast</div>
+            <div style="font-family:var(--ff-m);font-size:11px;color:#3b82f6;background:rgba(59,130,246,.1);padding:4px 12px;border-radius:20px;display:inline-block;">15% per completed trip · No monthly fee · Scale fast</div>
             <button onclick="lfStartSignup('gig_fleet','Gig Fleet Management','#3b82f6')" style="display:block;width:100%;margin-top:18px;padding:13px;background:linear-gradient(135deg,#3b82f6,#1d4ed8);color:#fff;font-size:14px;font-weight:700;border:none;border-radius:10px;cursor:pointer;transition:opacity .2s;" onmouseover="this.style.opacity='.88'" onmouseout="this.style.opacity='1'">Sign Up for Gig Fleet →</button>
           </div>
         </div>
@@ -2417,74 +2426,69 @@ document.getElementById('calendarOverlay')?.addEventListener('click', function(e
 
   <!-- ── PROGRAM TIERS ── -->
   <div id="lf-plans-anchor" style="padding:88px 60px;background:var(--off);">
-    <div style="max-width:1100px;margin:0 auto;">
+    <div style="max-width:860px;margin:0 auto;">
       <div class="rev" style="text-align:center;margin-bottom:52px;">
-        <span class="chip">Choose Your Program</span>
-        <h2 class="sh" style="text-align:center;">Simple Rates.<br/>No Hidden Fees.</h2>
+        <span class="chip">Pricing</span>
+        <h2 class="sh" style="text-align:center;">One Rate.<br/>No Surprises.</h2>
         <div class="rule" style="margin:18px auto;"></div>
-        <p class="sp" style="max-width:540px;margin:0 auto;">Start on Starter and pay as you earn. Upgrade to Pro when your volume justifies the flat rate — most operators break even in week 1.</p>
+        <p class="sp" style="max-width:520px;margin:0 auto;">We only make money when you make money. No monthly subscription, no hidden fees — just a straightforward split on every completed trip.</p>
       </div>
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:24px;">
 
-        <div class="rev" style="background:var(--white);border:1px solid var(--border);border-radius:18px;padding:36px 32px;transition:box-shadow .25s;">
-          <div style="font-family:var(--ff-m);font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:10px;">Starter</div>
-          <div style="font-family:var(--ff-h);font-size:48px;font-weight:900;color:var(--navy);line-height:1;margin-bottom:4px;">15%</div>
-          <div style="font-size:14px;color:var(--muted);margin-bottom:6px;">per completed trip</div>
-          <div style="font-size:12px;color:var(--muted);margin-bottom:26px;padding-bottom:26px;border-bottom:1px solid var(--border);">No monthly fee · pay as you earn</div>
-          <ul style="list-style:none;padding:0;display:flex;flex-direction:column;gap:11px;margin-bottom:28px;font-size:13px;">
-            <li style="display:flex;align-items:center;gap:9px;color:var(--text);">✅ All 5 service segments</li>
-            <li style="display:flex;align-items:center;gap:9px;color:var(--text);">✅ Mobile driver app</li>
-            <li style="display:flex;align-items:center;gap:9px;color:var(--text);">✅ GPS tracking &amp; POD</li>
-            <li style="display:flex;align-items:center;gap:9px;color:var(--text);">✅ Automated trip records</li>
-            <li style="display:flex;align-items:center;gap:9px;color:var(--text);">✅ Automated driver payout</li>
-            <li style="display:flex;align-items:center;gap:9px;color:var(--muted);opacity:.6;">⬜ Priority dispatch queue</li>
-            <li style="display:flex;align-items:center;gap:9px;color:var(--muted);opacity:.6;">⬜ Corporate account billing</li>
-            <li style="display:flex;align-items:center;gap:9px;color:var(--muted);opacity:.6;">⬜ Dedicated account manager</li>
-          </ul>
-          <div style="font-size:11px;color:#059669;font-weight:600;margin-bottom:14px;text-align:center;">No monthly fee — pay only when you earn 🏆</div>
-          <button onclick="showPage('lf-intake')" style="width:100%;padding:14px;border-radius:9px;font-size:14px;font-weight:700;cursor:pointer;border:1.5px solid var(--border);background:transparent;color:var(--navy);transition:all .2s;" onmouseover="this.style.background='var(--slate)'" onmouseout="this.style.background='transparent'">Apply as a Driver →</button>
+      <!-- Single pricing card -->
+      <div class="rev" style="background:var(--navy);border-radius:24px;padding:56px 52px;text-align:center;position:relative;overflow:hidden;max-width:580px;margin:0 auto 32px;">
+        <div style="position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,var(--gold),var(--gold3));"></div>
+        <div style="font-family:var(--ff-m);font-size:11px;letter-spacing:2.5px;text-transform:uppercase;color:var(--gold2);margin-bottom:18px;">Light Fleet — All Drivers</div>
+        <div style="display:flex;align-items:flex-start;justify-content:center;gap:4px;margin-bottom:8px;">
+          <span style="font-family:var(--ff-h);font-size:28px;font-weight:900;color:var(--gold2);margin-top:14px;">15</span>
+          <span style="font-family:var(--ff-h);font-size:96px;font-weight:900;color:var(--white);line-height:1;">%</span>
         </div>
-
-        <div class="rev" style="background:var(--navy);border:2px solid var(--gold2);border-radius:18px;padding:36px 32px;position:relative;transition:box-shadow .25s;">
-          <div style="position:absolute;top:-14px;left:50%;transform:translateX(-50%);background:var(--gold2);color:var(--navy);font-family:var(--ff-m);font-size:10px;font-weight:800;padding:4px 18px;border-radius:20px;letter-spacing:1px;white-space:nowrap;">MOST POPULAR</div>
-          <div style="font-family:var(--ff-m);font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--gold2);margin-bottom:10px;">Pro Fleet</div>
-          <div style="font-family:var(--ff-h);font-size:48px;font-weight:900;color:var(--white);line-height:1;margin-bottom:4px;">$199</div>
-          <div style="font-size:14px;color:rgba(255,255,255,.5);margin-bottom:6px;">/month + 5% per trip</div>
-          <div style="font-size:12px;color:rgba(255,255,255,.4);margin-bottom:26px;padding-bottom:26px;border-bottom:1px solid rgba(255,255,255,.1);">Unlimited drivers · all 5 segments</div>
-          <ul style="list-style:none;padding:0;display:flex;flex-direction:column;gap:11px;margin-bottom:28px;font-size:13px;color:rgba(255,255,255,.85);">
-            <li>✅ All 5 service segments</li>
-            <li>✅ Mobile driver app</li>
-            <li>✅ GPS tracking &amp; POD</li>
-            <li>✅ Full automated record keeping</li>
-            <li>✅ Automated driver payout</li>
-            <li>✅ Priority dispatch queue</li>
-            <li>✅ Corporate account billing</li>
-            <li>✅ NEMT insurance auth tracking</li>
-            <li>✅ Dedicated account manager</li>
-          </ul>
-          <button class="btn-gold" onclick="showPage('lf-intake')" style="width:100%;padding:14px;border-radius:9px;font-size:14px;font-weight:700;cursor:pointer;border:none;">Claim Your Spot →</button>
+        <div style="font-size:16px;color:rgba(255,255,255,.55);margin-bottom:6px;">per completed trip</div>
+        <div style="font-size:13px;color:rgba(255,255,255,.35);margin-bottom:40px;padding-bottom:40px;border-bottom:1px solid rgba(255,255,255,.08);">No monthly fee &nbsp;·&nbsp; No signup cost &nbsp;·&nbsp; No contracts</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;text-align:left;margin-bottom:36px;">
+          <div style="display:flex;align-items:flex-start;gap:10px;font-size:13px;color:rgba(255,255,255,.8);">
+            <span style="color:var(--gold2);font-size:15px;flex-shrink:0;">✓</span>All 5 service segments
+          </div>
+          <div style="display:flex;align-items:flex-start;gap:10px;font-size:13px;color:rgba(255,255,255,.8);">
+            <span style="color:var(--gold2);font-size:15px;flex-shrink:0;">✓</span>Mobile driver app (iOS &amp; Android)
+          </div>
+          <div style="display:flex;align-items:flex-start;gap:10px;font-size:13px;color:rgba(255,255,255,.8);">
+            <span style="color:var(--gold2);font-size:15px;flex-shrink:0;">✓</span>Universal gig platform sign-up
+          </div>
+          <div style="display:flex;align-items:flex-start;gap:10px;font-size:13px;color:rgba(255,255,255,.8);">
+            <span style="color:var(--gold2);font-size:15px;flex-shrink:0;">✓</span>One background check, all platforms
+          </div>
+          <div style="display:flex;align-items:flex-start;gap:10px;font-size:13px;color:rgba(255,255,255,.8);">
+            <span style="color:var(--gold2);font-size:15px;flex-shrink:0;">✓</span>GPS tracking &amp; proof of delivery
+          </div>
+          <div style="display:flex;align-items:flex-start;gap:10px;font-size:13px;color:rgba(255,255,255,.8);">
+            <span style="color:var(--gold2);font-size:15px;flex-shrink:0;">✓</span>Unified earnings dashboard
+          </div>
+          <div style="display:flex;align-items:flex-start;gap:10px;font-size:13px;color:rgba(255,255,255,.8);">
+            <span style="color:var(--gold2);font-size:15px;flex-shrink:0;">✓</span>Compliance autopilot &amp; alerts
+          </div>
+          <div style="display:flex;align-items:flex-start;gap:10px;font-size:13px;color:rgba(255,255,255,.8);">
+            <span style="color:var(--gold2);font-size:15px;flex-shrink:0;">✓</span>Instant pay (same-day transfer)
+          </div>
+          <div style="display:flex;align-items:flex-start;gap:10px;font-size:13px;color:rgba(255,255,255,.8);">
+            <span style="color:var(--gold2);font-size:15px;flex-shrink:0;">✓</span>Automated driver payout
+          </div>
+          <div style="display:flex;align-items:flex-start;gap:10px;font-size:13px;color:rgba(255,255,255,.8);">
+            <span style="color:var(--gold2);font-size:15px;flex-shrink:0;">✓</span>Priority dispatch queue
+          </div>
+          <div style="display:flex;align-items:flex-start;gap:10px;font-size:13px;color:rgba(255,255,255,.8);">
+            <span style="color:var(--gold2);font-size:15px;flex-shrink:0;">✓</span>Corporate account billing
+          </div>
+          <div style="display:flex;align-items:flex-start;gap:10px;font-size:13px;color:rgba(255,255,255,.8);">
+            <span style="color:var(--gold2);font-size:15px;flex-shrink:0;">✓</span>Dedicated account manager
+          </div>
         </div>
-
-        <div class="rev" style="background:var(--white);border:1px solid var(--border);border-radius:18px;padding:36px 32px;transition:box-shadow .25s;">
-          <div style="font-family:var(--ff-m);font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:10px;">Trucking Add-On</div>
-          <div style="font-family:var(--ff-h);font-size:48px;font-weight:900;color:var(--navy);line-height:1;margin-bottom:4px;">$99</div>
-          <div style="font-size:14px;color:var(--muted);margin-bottom:6px;">/month + 5% per trip</div>
-          <div style="font-size:12px;color:var(--muted);margin-bottom:26px;padding-bottom:26px;border-bottom:1px solid var(--border);">Requires active 3 Lakes trucking plan</div>
-          <ul style="list-style:none;padding:0;display:flex;flex-direction:column;gap:11px;margin-bottom:28px;font-size:13px;color:var(--text);">
-            <li>✅ All 5 service segments</li>
-            <li>✅ Same Eagle Eye dashboard</li>
-            <li>✅ Unified truck + car fleet view</li>
-            <li>✅ One payout system for all drivers</li>
-            <li>✅ Corporate account billing</li>
-            <li>✅ NEMT insurance auth tracking</li>
-            <li>✅ Priority dispatch queue</li>
-            <li>✅ Dedicated account manager</li>
-          </ul>
-          <button onclick="showPage('onboard')" style="width:100%;padding:14px;border-radius:9px;font-size:14px;font-weight:700;cursor:pointer;background:var(--navy);color:var(--gold2);border:none;transition:all .2s;" onmouseover="this.style.background='var(--navy2)'" onmouseout="this.style.background='var(--navy)'">Add to My Trucking Plan →</button>
-        </div>
-
+        <button class="btn-gold" onclick="showPage('lf-intake')" style="width:100%;padding:16px;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;border:none;">Apply Now — Free to Join →</button>
       </div>
-      <p style="text-align:center;font-size:12px;color:var(--muted);margin-top:20px;">Break-even on Pro vs Starter: ~$1,400/month in trip revenue (roughly 12 trips/day at $25 avg). Most NEMT operators hit this in week 1.</p>
+
+      <!-- Bottom reassurance line -->
+      <div style="text-align:center;">
+        <p style="font-size:13px;color:var(--muted);line-height:1.8;">You keep <strong style="color:var(--navy);">85% of every trip</strong>. We earn our 15% by finding your loads, managing dispatch, and handling all billing — so you never have to chase a payment.</p>
+      </div>
     </div>
   </div>
 
