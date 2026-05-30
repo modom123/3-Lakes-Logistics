@@ -11839,7 +11839,7 @@ async function deactivateDriver(driverId) {
 
 <script>
 // ── LIGHT FLEET JS ────────────────────────────────────────────────────────────
-const LF_API = window._API_BASE || '';
+const LF_API = (typeof API_BASE !== 'undefined' ? API_BASE : (window.__3LL_API_BASE || 'https://three-lakes-logistics-api.onrender.com').replace(/\/$/,''));
 
 function lfOpenModal(id){ document.getElementById(id).style.display='flex'; }
 function lfCloseModal(id){ document.getElementById(id).style.display='none'; }
