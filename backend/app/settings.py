@@ -154,6 +154,11 @@ class Settings(BaseSettings):
     roadie_api_key: str = ""
     roadie_webhook_secret: str = ""
 
+    # Checkr — MVR + background check screening (checkr.com)
+    # Free account, ~$15/MVR check. Used by Uber, Lyft, DoorDash.
+    checkr_api_key: str = ""
+    checkr_webhook_secret: str = ""
+
     @property
     def cors_list(self) -> list[str]:
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]

@@ -2495,16 +2495,19 @@ document.getElementById('calendarOverlay')?.addEventListener('click', function(e
     </div>
     <div id="lf-intake-blocked" style="display:none;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);border-radius:14px;padding:36px;text-align:center;margin-bottom:28px;">
       <div style="font-size:40px;margin-bottom:12px;">🚫</div>
-      <div style="font-family:var(--ff-h);font-size:20px;color:#dc2626;font-weight:800;margin-bottom:8px;">Clean Record Required</div>
-      <p style="color:var(--muted);font-size:14px;max-width:380px;margin:0 auto;">A clean driving record is required to join 3 Lakes Light Fleet. Check back if your record clears, or contact us at 661-466-9932 with questions.</p>
+      <div style="font-family:var(--ff-h);font-size:20px;color:#dc2626;font-weight:800;margin-bottom:8px;">Insurance Required</div>
+      <p style="color:var(--muted);font-size:14px;max-width:380px;margin:0 auto;">Active vehicle insurance is required before joining 3 Lakes Light Fleet. Get covered and come back — we'll be here. Questions? Call 661-466-9932.</p>
       <button onclick="document.getElementById('lf-intake-blocked').style.display='none';document.getElementById('lf-intake-form').style.display='flex';" style="margin-top:20px;background:none;border:1.5px solid var(--border);border-radius:8px;padding:9px 18px;font-size:13px;cursor:pointer;color:var(--muted);">← Go Back</button>
     </div>
     <div id="lf-intake-success" style="display:none;background:rgba(5,150,105,.06);border:2px solid #10b981;border-radius:18px;padding:40px;text-align:center;margin-bottom:28px;">
-      <div style="font-size:52px;margin-bottom:14px;">🎉</div>
-      <div style="font-family:var(--ff-h);font-size:26px;color:var(--navy);font-weight:800;margin-bottom:8px;">You're Approved!</div>
-      <p style="color:var(--muted);font-size:15px;max-width:420px;margin:0 auto 20px;">Welcome to 3 Lakes Light Fleet. Download the driver app and your first trip will be dispatched within 24 hours.</p>
-      <a href="#" style="display:inline-block;background:var(--navy);color:#fff;text-decoration:none;padding:14px 30px;border-radius:10px;font-weight:700;font-size:14px;margin-bottom:10px;">Download the Driver App →</a>
-      <p style="font-size:12px;color:var(--muted);margin-top:14px;">We'll also send you a confirmation + next steps by text and email.</p>
+      <div style="font-size:52px;margin-bottom:14px;">✅</div>
+      <div style="font-family:var(--ff-h);font-size:26px;color:var(--navy);font-weight:800;margin-bottom:8px;">Application Submitted!</div>
+      <p style="color:var(--muted);font-size:15px;max-width:440px;margin:0 auto 16px;">We're running your official driving record check now. You'll receive a text message with your result — usually within a few hours.</p>
+      <div style="background:rgba(30,41,59,.04);border-radius:10px;padding:16px 20px;max-width:380px;margin:0 auto 20px;text-align:left;">
+        <div style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:10px;">What happens next:</div>
+        <div style="font-size:13px;color:var(--muted);line-height:1.8;">✔ Driving record check runs automatically<br>✔ Text sent when approved (usually same day)<br>✔ Download the app + get your first trip</div>
+      </div>
+      <p style="font-size:12px;color:var(--muted);">Questions? Call or text 661-466-9932</p>
     </div>
     <form id="lf-intake-form" onsubmit="lfSubmitIntake(event)" style="display:flex;flex-direction:column;gap:20px;">
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
@@ -2552,6 +2555,18 @@ document.getElementById('calendarOverlay')?.addEventListener('click', function(e
           <label style="display:flex;align-items:center;gap:10px;padding:12px 14px;border:1.5px solid var(--border);border-radius:8px;cursor:pointer;font-size:13px;transition:border .2s;grid-column:1/-1;" onmouseover="this.style.borderColor='var(--navy)'" onmouseout="this.style.borderColor='var(--border)'"><input type="checkbox" name="services" value="gig_fleet" style="width:16px;height:16px;accent-color:var(--navy);"/> 👥 Gig Fleet (I own multiple vehicles and want full dispatch management)</label>
         </div>
       </div>
+      <div>
+        <label style="font-size:13px;font-weight:600;color:var(--navy);display:block;margin-bottom:8px;">Driver's License *</label>
+        <div style="display:grid;grid-template-columns:1fr 100px 140px;gap:12px;">
+          <input name="license_number" required type="text" placeholder="License Number" style="padding:11px 14px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;font-family:var(--ff-b);outline:none;transition:border .2s;" onfocus="this.style.borderColor='var(--navy)'" onblur="this.style.borderColor='var(--border)'"/>
+          <input name="license_state" required type="text" placeholder="State" maxlength="2" style="padding:11px 14px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;font-family:var(--ff-b);outline:none;transition:border .2s;text-transform:uppercase;" onfocus="this.style.borderColor='var(--navy)'" onblur="this.style.borderColor='var(--border)'"/>
+          <div>
+            <input name="dob" required type="date" style="width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;font-family:var(--ff-b);outline:none;transition:border .2s;" onfocus="this.style.borderColor='var(--navy)'" onblur="this.style.borderColor='var(--border)'"/>
+            <span style="font-size:11px;color:var(--muted);margin-top:3px;display:block;">Date of Birth</span>
+          </div>
+        </div>
+        <p style="font-size:11px;color:var(--muted);margin-top:6px;">Required to run your driving record check. Kept private and secure.</p>
+      </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
         <div>
           <label style="font-size:13px;font-weight:600;color:var(--navy);display:block;margin-bottom:8px;">Clean driving record? *</label>
@@ -2559,6 +2574,7 @@ document.getElementById('calendarOverlay')?.addEventListener('click', function(e
             <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;"><input type="radio" name="clean_record" value="yes" required style="accent-color:var(--navy);"/> Yes</label>
             <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;"><input type="radio" name="clean_record" value="no" style="accent-color:var(--navy);"/> No</label>
           </div>
+          <p style="font-size:11px;color:var(--muted);margin-top:5px;">We'll verify with an official MVR check.</p>
         </div>
         <div>
           <label style="font-size:13px;font-weight:600;color:var(--navy);display:block;margin-bottom:8px;">Current vehicle insurance? *</label>
@@ -2612,17 +2628,19 @@ async function lfSubmitIntake(e){
   errEl.style.display = 'none';
   const fd = new FormData(form);
 
-  if (fd.get('clean_record') === 'no') {
+  if (fd.get('has_insurance') === 'no') {
     form.style.display = 'none';
     document.getElementById('lf-intake-blocked').style.display = 'block';
     return;
   }
 
-  btn.textContent = 'Creating your account…'; btn.disabled = true;
+  btn.textContent = 'Submitting…'; btn.disabled = true;
   const services = [...form.querySelectorAll('[name="services"]:checked')].map(c=>c.value);
   const payload = {
     name: fd.get('name'), phone: fd.get('phone'), email: fd.get('email'),
     location: fd.get('location'),
+    license_number: fd.get('license_number'), license_state: (fd.get('license_state')||'').toUpperCase(),
+    dob: fd.get('dob'),
     vehicle_year: fd.get('vehicle_year'), vehicle_make: fd.get('vehicle_make'),
     vehicle_model: fd.get('vehicle_model'), vehicle_type: fd.get('vehicle_type'),
     approved_services: services,

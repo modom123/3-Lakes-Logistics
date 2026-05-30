@@ -31,6 +31,7 @@ from .routes_mailboxes     import router as mailboxes_router
 from .routes_agreements    import router as agreements_router
 from .routes_light_fleet   import router as light_fleet_router, public_router as lf_public_router
 from .routes_lf_webhooks   import router as lf_webhooks_router
+from .routes_checkr_webhook import router as checkr_webhook_router
 
 from ..clm             import clm_router
 from ..email_ingest    import router as email_ingest_router
@@ -81,5 +82,6 @@ __all__ = [
     "light_fleet_router",
     "lf_public_router",
     "lf_webhooks_router",
+    "checkr_webhook_router",
     "studio_router",
 ]

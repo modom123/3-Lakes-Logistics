@@ -120,6 +120,12 @@ CREATE TABLE IF NOT EXISTS light_vehicle_drivers (
   -- billing plan (determines platform fee rate)
   plan text DEFAULT 'starter' CHECK (plan IN ('starter','pro_fleet','add_on')),
 
+  -- Checkr screening fields
+  checkr_candidate_id text,
+  checkr_invitation_id text,
+  checkr_report_id text,
+  checkr_package text,
+
   -- intake fields (from self-service signup form)
   location text,
   clean_record boolean DEFAULT true,

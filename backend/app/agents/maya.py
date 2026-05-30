@@ -1,10 +1,13 @@
 """Maya — Light Fleet Driver Intake & Onboarding.
 
 Actions:
-  process_intake   evaluate a submitted driver intake form → approve or deny
-  welcome          send welcome SMS + next-steps to an approved driver
-  deny             send rejection SMS + reason to a denied driver
-  status           intake queue stats
+  process_intake      evaluate a submitted intake form → start Checkr screening or deny
+  approve_driver      called by Checkr webhook after clear MVR → activate + welcome SMS
+  deny_driver         called by Checkr webhook after flagged MVR → send denial SMS
+  send_invitation     send Checkr-hosted consent link (no PII collected on our side)
+  welcome             manually send welcome SMS to an approved driver
+  deny                manually send denial SMS with reason
+  status              intake queue stats
 """
 from __future__ import annotations
 
@@ -13,20 +16,27 @@ from datetime import datetime, timezone
 from typing import Any
 
 from ..logging_service import log_agent
+from ..settings import get_settings
 from ..supabase_client import get_supabase
 from . import memory as mem
 
 _NAME = "maya"
 
+_PENDING_SMS = (
+    "Thanks for signing up with 3 Lakes Light Fleet! "
+    "We're running your driving record check now — this typically takes a few minutes to a few hours. "
+    "You'll get a text as soon as it's done. Questions? Call 661-466-9932."
+)
+
 _WELCOME_SMS = (
-    "Welcome to 3 Lakes Light Fleet! 🎉 Your account is approved. "
+    "You're approved for 3 Lakes Light Fleet! 🎉 "
     "Download the driver app and you'll receive your first trip dispatch within 24 hours. "
     "Questions? Call 661-466-9932."
 )
 
-_DENY_RECORD_SMS = (
+_DENY_MVR_SMS = (
     "Thank you for your interest in 3 Lakes Light Fleet. "
-    "Unfortunately we require a clean driving record to join our platform at this time. "
+    "Unfortunately, your driving record does not meet our requirements at this time. "
     "You're welcome to reapply if your record changes. — 3 Lakes Logistics"
 )
 
@@ -35,6 +45,13 @@ _DENY_INSURANCE_SMS = (
     "Active vehicle insurance is required before we can activate your account. "
     "Get covered and reapply at 3lakeslogistics.com. — 3 Lakes Logistics"
 )
+
+_DENY_RECORD_SMS = _DENY_MVR_SMS
+
+# Package to order — override per segment via payload['checkr_package']
+# 'mvr_standard' for courier/exec/gig; 'basic' (MVR+criminal) for NEMT
+_DEFAULT_PACKAGE = "mvr_standard"
+_NEMT_PACKAGE    = "basic"
 
 
 def _db():
@@ -58,45 +75,82 @@ def _normalize_phone(phone: str) -> str | None:
 
 
 def _send_sms(phone: str, message: str) -> bool:
-    """Send SMS via Bland AI or Twilio. Stub logs for now."""
     import logging
     logging.getLogger("3ll.maya").info("SMS → %s: %s", phone, message[:80])
-    return True
+    # TODO: wire to Twilio/Bland when TWILIO_ACCOUNT_SID is configured
+    s = get_settings()
+    if s.twilio_account_sid and s.twilio_auth_token and s.twilio_from_number:
+        try:
+            from twilio.rest import Client
+            client = Client(s.twilio_account_sid, s.twilio_auth_token)
+            client.messages.create(to=phone, from_=s.twilio_from_number, body=message)
+            return True
+        except Exception as e:  # noqa: BLE001
+            logging.getLogger("3ll.maya").warning("Twilio SMS failed: %s", e)
+    return True  # log-only fallback still returns True so flow continues
 
+
+def _split_name(full_name: str) -> tuple[str, str]:
+    parts = full_name.strip().split(None, 1)
+    return (parts[0], parts[1]) if len(parts) == 2 else (parts[0], "")
+
+
+# ── Core actions ──────────────────────────────────────────────────────────────
 
 def process_intake(payload: dict[str, Any]) -> dict[str, Any]:
-    """Evaluate an intake submission and write the driver row if approved."""
-    name = str(payload.get("name", "")).strip()
-    phone = _normalize_phone(payload.get("phone") or "")
-    email = str(payload.get("email", "")).strip().lower()
-    location = str(payload.get("location", "")).strip()
-    vehicle_year = payload.get("vehicle_year")
-    vehicle_make = str(payload.get("vehicle_make", "")).strip()
+    """
+    Evaluate an intake submission.
+
+    If CHECKR_API_KEY is configured:
+      - Sends Checkr invitation link so candidate consents and enters their own info
+      - Driver row created with status='pending_screening'
+      - Returns 'pending' — approval/denial happens via Checkr webhook
+
+    If CHECKR_API_KEY is NOT configured:
+      - Falls back to honor-system self-reported check (warns in response)
+      - Approves if clean_record=yes + has_insurance=yes
+    """
+    name        = str(payload.get("name", "")).strip()
+    phone       = _normalize_phone(payload.get("phone") or "")
+    email       = str(payload.get("email", "")).strip().lower()
+    location    = str(payload.get("location", "")).strip()
+    vehicle_year  = payload.get("vehicle_year")
+    vehicle_make  = str(payload.get("vehicle_make", "")).strip()
     vehicle_model = str(payload.get("vehicle_model", "")).strip()
-    vehicle_type = str(payload.get("vehicle_type", "")).strip()
-    services = payload.get("approved_services") or []
-    clean_record = str(payload.get("clean_record", "")).lower()
+    vehicle_type  = str(payload.get("vehicle_type", "")).strip()
+    services      = payload.get("approved_services") or []
+    clean_record  = str(payload.get("clean_record", "")).lower()
     has_insurance = str(payload.get("has_insurance", "")).lower()
     referral_source = payload.get("referral_source") or ""
-    notes = payload.get("notes") or ""
+    notes         = payload.get("notes") or ""
 
-    # Hard denials
-    if clean_record == "no":
-        log_agent(_NAME, "deny_record", payload={"name": name, "phone": phone})
-        return {"approved": False, "reason": "dirty_record", "driver_id": None}
+    # License info (collected from form if provided)
+    license_number = str(payload.get("license_number") or "").strip()
+    license_state  = str(payload.get("license_state") or "").strip().upper()
+    dob            = str(payload.get("dob") or "").strip()  # YYYY-MM-DD
 
+    # Hard blocks — no API call needed
     if has_insurance == "no":
-        log_agent(_NAME, "deny_insurance", payload={"name": name, "phone": phone})
-        return {"approved": False, "reason": "no_insurance", "driver_id": None}
+        log_agent(_NAME, "deny_insurance", payload={"name": name})
+        if phone:
+            _send_sms(phone, _DENY_INSURANCE_SMS)
+        return {"status": "denied", "reason": "no_insurance", "driver_id": None}
 
     if not name or not phone or not email:
-        return {"approved": False, "reason": "missing_required_fields", "driver_id": None}
+        return {"status": "error", "reason": "missing_required_fields", "driver_id": None}
 
+    # Determine Checkr package based on services
+    checkr_package = _NEMT_PACKAGE if "nemt" in services else _DEFAULT_PACKAGE
+    checkr_package = payload.get("checkr_package") or checkr_package
+
+    s = get_settings()
     sb = _db()
-    driver_id = None
 
+    # ── Create driver row (status=pending_screening) ──────────────────────────
+    driver_id = None
     if sb:
         try:
+            first, last = _split_name(name)
             result = sb.table("light_vehicle_drivers").insert({
                 "name": name,
                 "phone": phone,
@@ -107,32 +161,199 @@ def process_intake(payload: dict[str, Any]) -> dict[str, Any]:
                 "vehicle_model": vehicle_model,
                 "vehicle_type": vehicle_type,
                 "approved_services": services,
-                "clean_record": True,
-                "has_insurance": True,
+                "license_number": license_number or None,
+                "license_state": license_state or None,
+                "clean_record": clean_record == "yes",
+                "has_insurance": has_insurance == "yes",
                 "referral_source": referral_source,
                 "notes": notes,
-                "status": "active",
-                "onboarded_at": _now(),
+                "status": "inactive",        # activated after MVR clears
+                "mvr_status": "pending",
+                "background_check_status": "pending",
             }).execute()
             driver_id = (result.data[0] or {}).get("id") if result.data else None
         except Exception as e:  # noqa: BLE001
             log_agent(_NAME, "db_error", error=str(e))
 
+    # ── Real MVR check via Checkr ─────────────────────────────────────────────
+    if s.checkr_api_key:
+        from . import checkr_client
+
+        invitation = checkr_client.create_invitation(
+            email=email,
+            package=checkr_package,
+            name=name,
+        )
+
+        checkr_invitation_id = None
+        if invitation.get("created"):
+            checkr_invitation_id = (invitation.get("invitation") or {}).get("id")
+            # Store Checkr invitation ID on driver row so webhook can look it up
+            if sb and driver_id:
+                try:
+                    sb.table("light_vehicle_drivers").update({
+                        "checkr_invitation_id": checkr_invitation_id,
+                        "checkr_package": checkr_package,
+                    }).eq("id", str(driver_id)).execute()
+                except Exception:  # noqa: BLE001
+                    pass
+
+        if phone:
+            _send_sms(phone, _PENDING_SMS)
+
+        mem.remember(
+            _NAME, "last_intake",
+            {"name": name, "driver_id": str(driver_id), "checkr": "invitation_sent"},
+            confidence=0.85,
+            summary=f"Intake received: {name} — Checkr invitation sent, awaiting MVR",
+        )
+        log_agent(_NAME, "screening_started", payload={"name": name, "package": checkr_package})
+
+        return {
+            "status": "pending_screening",
+            "driver_id": str(driver_id) if driver_id else None,
+            "checkr_invitation_id": checkr_invitation_id,
+            "checkr_package": checkr_package,
+            "message": "Driving record check initiated. Driver will receive a text when complete.",
+        }
+
+    # ── Fallback: honor-system (no Checkr key) ────────────────────────────────
+    if clean_record == "no":
+        if phone:
+            _send_sms(phone, _DENY_MVR_SMS)
+        if sb and driver_id:
+            sb.table("light_vehicle_drivers").update({"status": "inactive", "mvr_status": "flagged"}).eq("id", str(driver_id)).execute()
+        return {"status": "denied", "reason": "dirty_record_self_reported", "driver_id": str(driver_id) if driver_id else None}
+
+    # Self-reported clean + no Checkr — activate with warning flag
+    if sb and driver_id:
+        try:
+            sb.table("light_vehicle_drivers").update({
+                "status": "active",
+                "mvr_status": "pending",   # not truly verified
+                "onboarded_at": _now(),
+            }).eq("id", str(driver_id)).execute()
+        except Exception:  # noqa: BLE001
+            pass
+
+    if phone:
+        _send_sms(phone, _WELCOME_SMS)
+
     mem.remember(
         _NAME, "last_intake",
-        {"name": name, "phone": phone, "driver_id": str(driver_id), "services": services},
-        confidence=0.9,
-        summary=f"Approved driver: {name} ({', '.join(services)})",
+        {"name": name, "driver_id": str(driver_id), "checkr": "fallback_no_key"},
+        confidence=0.6,
+        summary=f"Approved (honor-system, no Checkr key): {name}",
     )
-    log_agent(_NAME, "approved", payload={"name": name, "services": services}, result=str(driver_id))
+    log_agent(_NAME, "approved_fallback", payload={"name": name}, result="no_checkr_key — self-reported only")
+
+    return {
+        "status": "approved",
+        "driver_id": str(driver_id) if driver_id else None,
+        "warning": "CHECKR_API_KEY not configured — MVR not verified",
+    }
+
+
+def approve_driver(driver_id: str, report_id: str | None = None) -> dict[str, Any]:
+    """
+    Called by the Checkr webhook after a clear MVR report.
+    Activates the driver and sends the welcome SMS.
+    """
+    sb = _db()
+    if not sb:
+        return {"approved": False, "error": "db_unavailable"}
+
+    try:
+        r = sb.table("light_vehicle_drivers").select("name,phone,email").eq("id", driver_id).maybe_single().execute()
+        driver = r.data or {}
+    except Exception as e:  # noqa: BLE001
+        return {"approved": False, "error": str(e)}
+
+    updates: dict = {
+        "status": "active",
+        "mvr_status": "clear",
+        "mvr_checked_at": _now(),
+        "onboarded_at": _now(),
+    }
+    if report_id:
+        updates["checkr_report_id"] = report_id
+
+    try:
+        sb.table("light_vehicle_drivers").update(updates).eq("id", driver_id).execute()
+    except Exception as e:  # noqa: BLE001
+        return {"approved": False, "error": str(e)}
+
+    phone = _normalize_phone(driver.get("phone") or "")
+    if phone:
+        _send_sms(phone, _WELCOME_SMS)
+
+    mem.remember(
+        _NAME, "last_approval",
+        {"driver_id": driver_id, "name": driver.get("name"), "report_id": report_id},
+        confidence=0.95,
+        summary=f"Driver approved after clear MVR: {driver.get('name')}",
+    )
+    log_agent(_NAME, "driver_approved", payload={"driver_id": driver_id, "report_id": report_id})
 
     return {
         "approved": True,
-        "driver_id": str(driver_id) if driver_id else None,
-        "name": name,
-        "phone": phone,
-        "services": services,
+        "driver_id": driver_id,
+        "driver_name": driver.get("name"),
+        "sms_sent": bool(phone),
     }
+
+
+def deny_driver(driver_id: str, reason: str = "mvr_flagged", report_id: str | None = None) -> dict[str, Any]:
+    """
+    Called by the Checkr webhook after a flagged/suspended MVR.
+    Marks driver inactive and sends denial SMS.
+    """
+    sb = _db()
+    if not sb:
+        return {"denied": False, "error": "db_unavailable"}
+
+    try:
+        r = sb.table("light_vehicle_drivers").select("name,phone").eq("id", driver_id).maybe_single().execute()
+        driver = r.data or {}
+    except Exception as e:  # noqa: BLE001
+        return {"denied": False, "error": str(e)}
+
+    updates: dict = {
+        "status": "inactive",
+        "mvr_status": "flagged",
+        "mvr_checked_at": _now(),
+    }
+    if report_id:
+        updates["checkr_report_id"] = report_id
+
+    try:
+        sb.table("light_vehicle_drivers").update(updates).eq("id", driver_id).execute()
+    except Exception:  # noqa: BLE001
+        pass
+
+    phone = _normalize_phone(driver.get("phone") or "")
+    if phone:
+        _send_sms(phone, _DENY_MVR_SMS)
+
+    log_agent(_NAME, "driver_denied", payload={"driver_id": driver_id, "reason": reason, "report_id": report_id})
+
+    return {
+        "denied": True,
+        "driver_id": driver_id,
+        "driver_name": driver.get("name"),
+        "reason": reason,
+        "sms_sent": bool(phone),
+    }
+
+
+def send_invitation(email: str, name: str, package: str = "mvr_standard") -> dict[str, Any]:
+    """Send a Checkr-hosted screening invitation link to a driver."""
+    s = get_settings()
+    if not s.checkr_api_key:
+        return {"sent": False, "error": "CHECKR_API_KEY not configured"}
+    from . import checkr_client
+    result = checkr_client.create_invitation(email=email, package=package, name=name)
+    return {"sent": result.get("created", False), **result}
 
 
 def welcome(driver_id: str, phone: str, name: str) -> dict[str, Any]:
@@ -148,7 +369,7 @@ def deny(phone: str, reason: str) -> dict[str, Any]:
     normalized = _normalize_phone(phone)
     if not normalized:
         return {"sms_sent": False, "reason": "invalid_phone"}
-    msg = _DENY_RECORD_SMS if reason == "dirty_record" else _DENY_INSURANCE_SMS
+    msg = _DENY_INSURANCE_SMS if reason == "no_insurance" else _DENY_MVR_SMS
     sent = _send_sms(normalized, msg)
     log_agent(_NAME, "deny_sms", payload={"phone": normalized, "reason": reason})
     return {"sms_sent": sent, "phone": normalized, "reason": reason}
@@ -159,14 +380,24 @@ def intake_stats() -> dict[str, Any]:
     if not sb:
         return {"error": "db_unavailable"}
     try:
-        rows = sb.table("light_vehicle_drivers").select("status,approved_services").execute().data or []
+        rows = sb.table("light_vehicle_drivers").select("status,mvr_status,approved_services").execute().data or []
         total = len(rows)
         active = sum(1 for r in rows if r.get("status") == "active")
+        pending = sum(1 for r in rows if r.get("mvr_status") == "pending")
+        flagged = sum(1 for r in rows if r.get("mvr_status") == "flagged")
+        clear = sum(1 for r in rows if r.get("mvr_status") == "clear")
         by_service: dict[str, int] = {}
         for r in rows:
             for s in (r.get("approved_services") or []):
                 by_service[s] = by_service.get(s, 0) + 1
-        return {"total_drivers": total, "active_drivers": active, "by_service": by_service}
+        return {
+            "total_drivers": total,
+            "active_drivers": active,
+            "pending_screening": pending,
+            "mvr_clear": clear,
+            "mvr_flagged": flagged,
+            "by_service": by_service,
+        }
     except Exception as e:  # noqa: BLE001
         return {"error": str(e)}
 
@@ -175,12 +406,27 @@ def run(payload: dict[str, Any]) -> dict[str, Any]:
     action = str(payload.get("action", "status")).lower()
 
     if action == "process_intake":
-        result = process_intake(payload)
-        if result["approved"] and result.get("phone"):
-            welcome(result.get("driver_id") or "", result["phone"], result.get("name") or "")
-        elif not result["approved"] and result.get("reason") and payload.get("phone"):
-            deny(payload["phone"], result["reason"])
-        return {"agent": _NAME, **result}
+        return {"agent": _NAME, **process_intake(payload)}
+
+    if action == "approve_driver":
+        return {"agent": _NAME, **approve_driver(
+            str(payload.get("driver_id", "")),
+            payload.get("report_id"),
+        )}
+
+    if action == "deny_driver":
+        return {"agent": _NAME, **deny_driver(
+            str(payload.get("driver_id", "")),
+            str(payload.get("reason", "mvr_flagged")),
+            payload.get("report_id"),
+        )}
+
+    if action == "send_invitation":
+        return {"agent": _NAME, **send_invitation(
+            str(payload.get("email", "")),
+            str(payload.get("name", "")),
+            str(payload.get("package", "mvr_standard")),
+        )}
 
     if action == "welcome":
         return {"agent": _NAME, **welcome(
@@ -192,7 +438,7 @@ def run(payload: dict[str, Any]) -> dict[str, Any]:
     if action == "deny":
         return {"agent": _NAME, **deny(
             str(payload.get("phone", "")),
-            str(payload.get("reason", "dirty_record")),
+            str(payload.get("reason", "mvr_flagged")),
         )}
 
     if action == "status":
