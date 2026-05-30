@@ -51,12 +51,22 @@ CREATE TABLE IF NOT EXISTS light_vehicle_trips (
   notes text,
   dispatcher_notes text,
 
+  -- External platform fields (Curri, Roadie, etc.)
+  external_id text,        -- order/gig ID from the source platform
+  source text,             -- 'curri' | 'roadie' | 'internal' | 'nemt_clients_table' etc.
+  driver_payout numeric(10,2),
+  platform_fee numeric(10,2),
+  settled_at timestamptz,
+  assigned_at timestamptz,
+  auth_logged_at timestamptz,
+
   created_at timestamptz DEFAULT now(),
   updated_at timestamptz DEFAULT now()
 );
 
 -- Index for common list/filter patterns
 CREATE INDEX IF NOT EXISTS idx_lvt_trip_type   ON light_vehicle_trips (trip_type);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_lvt_external_id ON light_vehicle_trips (external_id) WHERE external_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_lvt_status       ON light_vehicle_trips (status);
 CREATE INDEX IF NOT EXISTS idx_lvt_driver_id    ON light_vehicle_trips (driver_id);
 CREATE INDEX IF NOT EXISTS idx_lvt_completed_at ON light_vehicle_trips (completed_at);
@@ -106,6 +116,17 @@ CREATE TABLE IF NOT EXISTS light_vehicle_drivers (
   status text DEFAULT 'active' CHECK (status IN ('active','inactive','suspended')),
   rating numeric(3,2),
   total_trips int DEFAULT 0,
+
+  -- billing plan (determines platform fee rate)
+  plan text DEFAULT 'starter' CHECK (plan IN ('starter','pro_fleet','add_on')),
+
+  -- intake fields (from self-service signup form)
+  location text,
+  clean_record boolean DEFAULT true,
+  has_insurance boolean DEFAULT true,
+  referral_source text,
+  notes text,
+  onboarded_at timestamptz,
 
   created_at timestamptz DEFAULT now(),
   updated_at timestamptz DEFAULT now()

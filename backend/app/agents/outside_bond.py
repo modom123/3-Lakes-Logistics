@@ -351,12 +351,61 @@ def _handle_generic(context: dict) -> dict:
     return {"automated": False, "reason": "No automated handler for this task type", "server_ip": _server_ip()}
 
 
+def _handle_lf_platform_connect(context: dict) -> dict:
+    """Test and verify Light Fleet platform API connections (Curri, Roadie)."""
+    from . import curri_client, roadie_client
+    s = get_settings()
+
+    results: dict[str, Any] = {}
+
+    # Test Curri
+    if context.get("platform") in (None, "curri", "all"):
+        if s.curri_api_key:
+            results["curri"] = curri_client.ping()
+        else:
+            results["curri"] = {"connected": False, "error": "CURRI_API_KEY not set — add it in Render env vars"}
+
+    # Test Roadie
+    if context.get("platform") in (None, "roadie", "all"):
+        if s.roadie_api_key:
+            results["roadie"] = roadie_client.ping()
+        else:
+            results["roadie"] = {"connected": False, "error": "ROADIE_API_KEY not set — add it in Render env vars"}
+
+    all_connected = all(r.get("connected") for r in results.values())
+    log_agent("outside_bond", "lf_platform_connect", result=str(results))
+    return {"automated": True, "action": "platform_connection_check", "platforms": results, "all_connected": all_connected}
+
+
+def _handle_lf_register_webhooks(context: dict) -> dict:
+    """Register 3 Lakes webhook endpoints with Curri and Roadie."""
+    from . import curri_client, roadie_client
+    s = get_settings()
+    base_url = s.site_url.rstrip("/")
+    results: dict[str, Any] = {}
+
+    if s.curri_api_key:
+        results["curri"] = curri_client.register_webhook(f"{base_url}/api/webhooks/curri")
+    else:
+        results["curri"] = {"registered": False, "error": "CURRI_API_KEY not set"}
+
+    if s.roadie_api_key:
+        results["roadie"] = roadie_client.register_webhook(f"{base_url}/api/webhooks/roadie")
+    else:
+        results["roadie"] = {"registered": False, "error": "ROADIE_API_KEY not set"}
+
+    log_agent("outside_bond", "lf_register_webhooks", result=str(results))
+    return {"automated": True, "action": "webhook_registration", "platforms": results}
+
+
 _HANDLERS: dict[str, Any] = {
-    "bland_ai_allowlist": _handle_bland_ai_allowlist,
-    "render_env":         _handle_render_env,
-    "render_restart":     _handle_render_restart,
-    "api_probe":          _handle_api_probe,
-    "generic":            _handle_generic,
+    "bland_ai_allowlist":    _handle_bland_ai_allowlist,
+    "render_env":            _handle_render_env,
+    "render_restart":        _handle_render_restart,
+    "api_probe":             _handle_api_probe,
+    "lf_platform_connect":   _handle_lf_platform_connect,
+    "lf_register_webhooks":  _handle_lf_register_webhooks,
+    "generic":               _handle_generic,
 }
 
 

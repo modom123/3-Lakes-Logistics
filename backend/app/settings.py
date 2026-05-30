@@ -145,6 +145,15 @@ class Settings(BaseSettings):
     echo_global_api_key: str = ""
     cargo_chief_api_key: str = ""
 
+    # --- Light Fleet Platform API Keys ---
+    # Curri — B2B same-day carrier (carriers.curri.com)
+    curri_api_key: str = ""
+    curri_webhook_secret: str = ""
+
+    # Roadie — UPS same-day delivery (driver.roadie.com / connect.roadie.com)
+    roadie_api_key: str = ""
+    roadie_webhook_secret: str = ""
+
     @property
     def cors_list(self) -> list[str]:
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]

@@ -15,8 +15,10 @@ from datetime import datetime, timezone
 from typing import Any
 
 from ..logging_service import log_agent
+from ..settings import get_settings
 from ..supabase_client import get_supabase
 from . import memory as mem
+from . import curri_client, roadie_client
 
 _NAME = "kai"
 
@@ -161,7 +163,73 @@ def _find_executive_loads(limit: int = 10) -> list[dict]:
 
 
 def _find_courier_loads(limit: int = 10) -> list[dict]:
-    return []
+    """Pull available loads from Curri and Roadie in parallel."""
+    loads: list[dict] = []
+    s = get_settings()
+
+    # ── Curri ─────────────────────────────────────────────────────────────────
+    if s.curri_api_key:
+        try:
+            orders = curri_client.available_orders(limit=limit)
+            for o in orders:
+                loads.append({
+                    "segment": "courier",
+                    "source": "curri",
+                    "external_id": o.get("id") or o.get("order_id"),
+                    "pickup_address": (
+                        o.get("pickup_address")
+                        or o.get("pickup", {}).get("address")
+                    ),
+                    "dropoff_address": (
+                        o.get("delivery_address")
+                        or o.get("delivery", {}).get("address")
+                    ),
+                    "passenger_name": (
+                        o.get("contact_name")
+                        or (o.get("pickup") or {}).get("contact", {}).get("name")
+                    ),
+                    "passenger_phone": (
+                        o.get("contact_phone")
+                        or (o.get("pickup") or {}).get("contact", {}).get("phone")
+                    ),
+                    "scheduled_at": o.get("scheduled_at") or o.get("pickup_by"),
+                    "rate_total": o.get("carrier_pay") or o.get("rate"),
+                    "notes": o.get("description") or o.get("notes"),
+                    "raw": o,
+                })
+        except Exception as e:  # noqa: BLE001
+            log_agent(_NAME, "curri_sweep_error", error=str(e)[:200])
+
+    # ── Roadie ────────────────────────────────────────────────────────────────
+    if s.roadie_api_key:
+        try:
+            gigs = roadie_client.available_gigs(limit=limit)
+            for g in gigs:
+                pickup = g.get("pickup") or {}
+                delivery = g.get("delivery") or {}
+                loads.append({
+                    "segment": "courier",
+                    "source": "roadie",
+                    "external_id": g.get("id") or g.get("gig_id"),
+                    "pickup_address": pickup.get("address") or g.get("pickup_address"),
+                    "dropoff_address": delivery.get("address") or g.get("delivery_address"),
+                    "passenger_name": (
+                        pickup.get("contact", {}).get("name")
+                        or g.get("contact_name")
+                    ),
+                    "passenger_phone": (
+                        pickup.get("contact", {}).get("phone")
+                        or g.get("contact_phone")
+                    ),
+                    "scheduled_at": g.get("pickup_after") or g.get("scheduled_at"),
+                    "rate_total": g.get("driver_pay") or g.get("pay"),
+                    "notes": (g.get("items") or [{}])[0].get("description") if g.get("items") else None,
+                    "raw": g,
+                })
+        except Exception as e:  # noqa: BLE001
+            log_agent(_NAME, "roadie_sweep_error", error=str(e)[:200])
+
+    return loads
 
 
 def _find_gig_fleet_loads(limit: int = 10) -> list[dict]:
