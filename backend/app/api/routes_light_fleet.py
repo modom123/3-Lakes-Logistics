@@ -240,6 +240,11 @@ def assign_driver(trip_id: str, payload: dict) -> dict:
         "updated_at": _now_iso(),
     }
     res = sb.table("light_vehicle_trips").update(update).eq("id", trip_id).execute()
+    try:
+        from ..triggers import fire_lf_trip_booked
+        fire_lf_trip_booked(str(trip_id))
+    except Exception:
+        pass
     return {"ok": True, "item": res.data[0] if res.data else {}}
 
 
@@ -265,6 +270,11 @@ def start_trip(trip_id: str) -> dict:
         "updated_at": _now_iso(),
     }
     res = sb.table("light_vehicle_trips").update(update).eq("id", trip_id).execute()
+    try:
+        from ..triggers import fire_lf_trip_started
+        fire_lf_trip_started(str(trip_id))
+    except Exception:
+        pass
     return {"ok": True, "item": res.data[0] if res.data else {}}
 
 
@@ -297,6 +307,11 @@ def complete_trip(trip_id: str, payload: dict | None = None) -> dict:
             update["rate_total"] = payload["rate_total"]
 
     res = sb.table("light_vehicle_trips").update(update).eq("id", trip_id).execute()
+    try:
+        from ..triggers import fire_lf_trip_completed
+        fire_lf_trip_completed(str(trip_id))
+    except Exception:
+        pass
 
     # Increment driver total_trips counter
     driver_id = trip.get("driver_id")
@@ -360,6 +375,12 @@ def create_driver(payload: dict) -> dict:
     res = get_supabase().table("light_vehicle_drivers").insert(payload).execute()
     if not res.data:
         raise HTTPException(status_code=500, detail="Driver creation failed")
+    try:
+        from ..triggers import fire_lf_driver_onboarding
+        if res.data:
+            fire_lf_driver_onboarding(str(res.data[0]["id"]))
+    except Exception:
+        pass
     return {"ok": True, "item": res.data[0]}
 
 
