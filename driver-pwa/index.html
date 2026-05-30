@@ -436,6 +436,7 @@
         </button>
       </div>
 
+      <div id="hos-section">
       <div class="section-header">HOS — Hours of Service</div>
       <div class="hos-row">
         <div class="hos-card">
@@ -454,17 +455,39 @@
           <div class="hos-bar"><div class="hos-fill" id="hos-cycle-bar" style="width:98%;background:var(--yellow)"></div></div>
         </div>
       </div>
+      </div><!-- /hos-section -->
 
       <div class="section-header">Today's Summary</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
         <div class="card">
-          <div class="card-title">Miles Today</div>
+          <div class="card-title" id="home-stat1-label">Miles Today</div>
           <div class="card-value" id="miles-today">—</div>
         </div>
         <div class="card">
-          <div class="card-title">Est. Pay</div>
+          <div class="card-title" id="home-stat2-label">Est. Pay</div>
           <div class="card-value" style="color:var(--green)" id="est-pay">—</div>
         </div>
+      </div>
+
+      <!-- LF today summary — shown for light fleet drivers -->
+      <div id="lf-home-summary" style="display:none">
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px">
+          <div class="card" style="text-align:center">
+            <div class="card-title" style="font-size:10px">Trips Today</div>
+            <div class="card-value" id="lf-home-trips">—</div>
+          </div>
+          <div class="card" style="text-align:center">
+            <div class="card-title" style="font-size:10px">Earned Today</div>
+            <div class="card-value" style="color:var(--green)" id="lf-home-earned">—</div>
+          </div>
+          <div class="card" style="text-align:center">
+            <div class="card-title" style="font-size:10px">Platforms</div>
+            <div class="card-value" id="lf-home-platforms">—</div>
+          </div>
+        </div>
+        <button onclick="showView('lf-trips')" class="btn btn-primary" style="width:100%;margin-bottom:10px">
+          🚗 View My Trips →
+        </button>
       </div>
     </div>
 
@@ -662,7 +685,7 @@
 
     <div class="view" id="view-profile">
       <div class="section-header">Driver Profile</div>
-      <div class="card">
+      <div class="card" id="profile-cdl-card">
         <div class="card-title">CDL Status</div>
         <div class="cdl-row">
           <div class="cdl-label">CDL Number</div>
@@ -736,7 +759,7 @@
         </div>
       </div>
 
-      <div class="card">
+      <div class="card" id="profile-equipment-card">
         <div class="card-title">Equipment</div>
         <div class="cdl-row">
           <div class="cdl-label">Truck #</div>
@@ -757,7 +780,7 @@
         <button class="btn btn-save" onclick="saveEquipment()" style="margin-top:10px">💾 Save Equipment</button>
       </div>
 
-      <div class="card">
+      <div class="card" id="profile-carrier-card">
         <div class="card-title">Carrier Info</div>
         <div class="cdl-row">
           <div class="cdl-label">Company</div>
@@ -951,6 +974,48 @@ const TOKEN     = localStorage.getItem('3ll_token')       || '';
 const DRIVER_ID = localStorage.getItem('3ll_driver_id')   || 'DRV-001';
 const MY_PHONE  = localStorage.getItem('3ll_phone')        || '';
 
+// Fleet type detection — set at login, drives UI adaptation
+const IS_LF    = !!localStorage.getItem('3ll_lf_driver_id');
+const IS_TRUCK = !!(localStorage.getItem('3ll_driver_code') || localStorage.getItem('3ll_truck'));
+// 'light' | 'truck' | 'both' — if neither key is set, default to truck (legacy)
+const DRIVER_MODE = (IS_LF && IS_TRUCK) ? 'both' : IS_LF ? 'light' : 'truck';
+
+// ── DRIVER MODE SETUP ──────────────────────────────────────────────────────────
+function setupDriverMode() {
+  const hide = id => { const el = document.getElementById(id); if (el) el.style.display = 'none'; };
+  const show = id => { const el = document.getElementById(id); if (el) el.style.display = ''; };
+
+  if (DRIVER_MODE === 'light') {
+    // Light fleet only — strip truck-only UI
+    hide('nav-loads');           // truck load board nav tab
+    hide('hos-section');         // HOS countdown cards
+    hide('profile-cdl-card');    // CDL Status card
+    hide('profile-equipment-card'); // Truck/Trailer/Fuel card
+    hide('profile-carrier-card'); // Company/MC/ELD card
+    show('lf-home-summary');     // LF quick stats on home
+    // Rename home stats
+    const s1 = document.getElementById('home-stat1-label');
+    const s2 = document.getElementById('home-stat2-label');
+    if (s1) s1.textContent = 'Trips Today';
+    if (s2) s2.textContent = 'Earned Today';
+    // Performance labels in profile
+    const perfLoadsLbl = document.getElementById('perf-loads');
+    const perfMilesLbl = document.getElementById('perf-miles');
+    if (perfLoadsLbl) perfLoadsLbl.closest('.cdl-row')?.querySelector('.cdl-label') &&
+      (perfLoadsLbl.closest('.cdl-row').querySelector('.cdl-label').textContent = 'Trips This Month');
+    if (perfMilesLbl) perfMilesLbl.closest('.cdl-row')?.querySelector('.cdl-label') &&
+      (perfMilesLbl.closest('.cdl-row').querySelector('.cdl-label').textContent = 'Platforms Active');
+    // Default landing view
+    showView('lf-trips');
+  } else if (DRIVER_MODE === 'truck') {
+    // Truck only — strip light-fleet-only UI
+    hide('nav-lf-trips');        // My Trips nav tab
+    hide('comp-card');           // LF compliance card in profile
+    hide('lf-home-summary');     // LF quick stats
+  }
+  // DRIVER_MODE === 'both' — show everything, no changes needed
+}
+
 // Supabase Realtime client
 let supabaseClient = null;
 let realtime = {
@@ -1058,8 +1123,10 @@ function updateConnectionStatus() {
 
 document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('driver-name').textContent = localStorage.getItem('3ll_driver_name') || 'Driver';
+  setupDriverMode();
   loadCurrentLoad();
   loadProfile();
+  if (DRIVER_MODE !== 'truck') loadLFHomeStats();
   if (DEMO_MODE) {
     document.getElementById('miles-today').textContent = '2,015';
     document.getElementById('est-pay').textContent     = '$2,304';
@@ -2286,6 +2353,38 @@ function lfNavigateTrip() {
   window.open('https://maps.google.com/?q=' + addr, '_blank');
 }
 
+async function loadLFHomeStats() {
+  if (DRIVER_MODE === 'truck') return;
+  try {
+    const driverLfId = localStorage.getItem('3ll_lf_driver_id');
+    if (!driverLfId && !DEMO_MODE) return;
+
+    if (DEMO_MODE) {
+      document.getElementById('lf-home-trips').textContent   = '4';
+      document.getElementById('lf-home-earned').textContent  = '$187';
+      document.getElementById('lf-home-platforms').textContent = '3';
+      document.getElementById('miles-today').textContent = '4';
+      document.getElementById('est-pay').textContent     = '$187';
+      return;
+    }
+
+    const res  = await apiFetch(`/api/light-fleet/drivers/${driverLfId}/earnings?period=week`);
+    const data = res.ok ? await res.json() : null;
+    if (!data) return;
+
+    const trips   = data.summary?.trips || 0;
+    const gross   = data.summary?.gross || 0;
+    const platCount = Object.keys(data.breakdown || {}).length;
+
+    document.getElementById('lf-home-trips').textContent    = trips;
+    document.getElementById('lf-home-earned').textContent   = '$' + gross.toFixed(0);
+    document.getElementById('lf-home-platforms').textContent = platCount || '—';
+    // also update the generic home stats
+    document.getElementById('miles-today').textContent = trips;
+    document.getElementById('est-pay').textContent     = '$' + gross.toFixed(0);
+  } catch(e) { /* silent */ }
+}
+
 // ── THEME TOGGLE ──────────────────────────────────────────────────────────────
 function applyTheme(light) {
   document.body.classList.toggle('light-mode', light);
@@ -2558,6 +2657,7 @@ function showView(name) {
   _origShowView(name);
   if (name === 'pay') { loadEarningsView(); loadComplianceStatus(); }
   if (name === 'profile') { loadComplianceStatus(); }
+  if (name === 'home' && DRIVER_MODE !== 'truck') { loadLFHomeStats(); }
 }
 </script>
 </body>
