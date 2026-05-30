@@ -81,6 +81,8 @@ def _start_scheduler(app: FastAPI) -> None:
             fire_email_campaign,
             fire_social_post,
             fire_follow_up_reminders,
+            fire_lf_compliance_sweep,
+            fire_lf_nemt_billing_run,
         )
         from .agents.memory import prune_interactions
         from .email.imap_poller import poll_all as poll_all_mailboxes

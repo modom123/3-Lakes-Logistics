@@ -301,6 +301,38 @@ def fire_follow_up_reminders() -> None:
     _bg(_run)
 
 
+# ── LIGHT FLEET TRIGGERS ──────────────────────────────────────────────────────
+
+def fire_lf_driver_onboarding(driver_id: str) -> None:
+    """Trigger when a new light fleet driver is submitted."""
+    _bg(_run_domain_safe, "lf_onboarding", driver_id, None, f"lf_driver:{driver_id}")
+
+
+def fire_lf_trip_booked(trip_id: str, payload: dict | None = None) -> None:
+    """Trigger when a light fleet trip is created (status=pending → assigned)."""
+    _bg(_run_domain_safe, "lf_dispatch", None, None, f"lf_trip_booked:{trip_id}")
+
+
+def fire_lf_trip_started(trip_id: str, payload: dict | None = None) -> None:
+    """Trigger when a driver starts a light fleet trip (status → in_progress)."""
+    _bg(_run_domain_safe, "lf_transit", None, None, f"lf_trip_started:{trip_id}")
+
+
+def fire_lf_trip_completed(trip_id: str, payload: dict | None = None) -> None:
+    """Trigger when a light fleet trip is completed + POD captured."""
+    _bg(_run_domain_safe, "lf_settlement", None, None, f"lf_trip_completed:{trip_id}")
+
+
+def fire_lf_compliance_sweep() -> None:
+    """Daily sweep of all light fleet driver compliance (license, insurance, MVR)."""
+    _bg(_run_domain_safe, "lf_onboarding", None, None, "lf_compliance_daily")
+
+
+def fire_lf_nemt_billing_run() -> None:
+    """Weekly batch — queue all completed NEMT trips for Medicaid/Medicare billing."""
+    _bg(_run_domain_safe, "lf_settlement", None, None, "lf_nemt_billing_weekly")
+
+
 def fire_vault_scan(doc_id: str) -> None:
     """Trigger background AI extraction for a vault document.
 
