@@ -249,3 +249,89 @@ _reg(
     Step(199, "analytics.sentry_health",    "analytics", "Check Sentry error rates and alert if elevated"),
     Step(200, "analytics.complete",         "analytics", "Mark analytics cycle complete — write atomic ledger event", requires_steps=[197]),
 )
+
+# ── DOMAIN 8: LIGHT FLEET ONBOARDING (201–220) ───────────────────────────────
+_reg(
+    Step(201, "lf.intake.receive",              "lf_onboarding", "Receive light fleet driver application"),
+    Step(202, "lf.intake.validate_license",     "lf_onboarding", "Validate driver license number, state, expiry", requires_steps=[201]),
+    Step(203, "lf.intake.run_mvr",              "lf_onboarding", "Run Motor Vehicle Record (MVR) check", requires_steps=[202]),
+    Step(204, "lf.intake.run_background",       "lf_onboarding", "Run background screening check", requires_steps=[203]),
+    Step(205, "lf.intake.verify_insurance",     "lf_onboarding", "Verify vehicle insurance not expired", requires_steps=[201]),
+    Step(206, "lf.intake.classify_vehicle",     "lf_onboarding", "Classify vehicle type: SUV / sedan / cargo_van / luxury", requires_steps=[201]),
+    Step(207, "lf.intake.assign_services",      "lf_onboarding", "Assign approved service types (NEMT/executive/courier/gig)", requires_steps=[203, 204, 205]),
+    Step(208, "lf.intake.create_profile",       "lf_onboarding", "Activate driver profile in light_vehicle_drivers table", requires_steps=[207]),
+    Step(209, "lf.intake.send_welcome_sms",     "lf_onboarding", "Send welcome SMS to new driver", requires_steps=[208]),
+    Step(210, "lf.intake.activate_app",         "lf_onboarding", "Activate driver PWA app access", requires_steps=[208]),
+    Step(211, "lf.nemt.verify_eligibility",     "lf_onboarding", "Verify NEMT Medicaid/Medicare eligibility if applicable", requires_steps=[207]),
+    Step(212, "lf.nemt.create_client",          "lf_onboarding", "Create NEMT client profile if patient data provided", requires_steps=[211]),
+    Step(213, "lf.exec.create_account",         "lf_onboarding", "Create executive corporate account if applicable", requires_steps=[207]),
+    Step(214, "lf.exec.set_rates",              "lf_onboarding", "Set corporate rate agreements", requires_steps=[213]),
+    Step(215, "lf.intake.add_to_pool",          "lf_onboarding", "Add driver to active dispatch pool", requires_steps=[208]),
+    Step(216, "lf.intake.notify_eagle_eye",     "lf_onboarding", "Push new driver notification to Eagle Eye dashboard", requires_steps=[215]),
+    Step(217, "lf.intake.ledger_write",         "lf_onboarding", "Write driver onboarding event to atomic ledger", requires_steps=[208]),
+    Step(218, "lf.intake.compliance_baseline",  "lf_onboarding", "Establish initial compliance score for driver", requires_steps=[203, 204, 205]),
+    Step(219, "lf.intake.vault_setup",          "lf_onboarding", "Create document vault folder for driver", requires_steps=[208]),
+    Step(220, "lf.intake.onboarding_complete",  "lf_onboarding", "Mark driver onboarding workflow complete", requires_steps=[215, 216, 217, 218, 219]),
+)
+
+# ── DOMAIN 9: LIGHT FLEET TRIP DISPATCH (221–240) ────────────────────────────
+_reg(
+    Step(221, "lf.trip.receive",                "lf_dispatch", "Receive new light fleet trip request"),
+    Step(222, "lf.trip.validate_addresses",     "lf_dispatch", "Validate pickup and dropoff addresses", requires_steps=[221]),
+    Step(223, "lf.trip.classify_type",          "lf_dispatch", "Confirm trip type: NEMT / executive / courier / gig", requires_steps=[221]),
+    Step(224, "lf.trip.estimate_distance",      "lf_dispatch", "Estimate trip distance in miles and ETA", requires_steps=[222]),
+    Step(225, "lf.trip.calculate_rate",         "lf_dispatch", "Calculate trip rate if not manually set", requires_steps=[224]),
+    Step(226, "lf.trip.check_nemt_auth",        "lf_dispatch", "Verify NEMT insurance pre-authorization exists", requires_steps=[223]),
+    Step(227, "lf.trip.match_driver",           "lf_dispatch", "Match nearest approved available driver", requires_steps=[223, 225]),
+    Step(228, "lf.trip.offer_driver",           "lf_dispatch", "Send trip offer to matched driver via app", requires_steps=[227]),
+    Step(229, "lf.trip.confirm_acceptance",     "lf_dispatch", "Confirm driver acceptance and lock assignment", requires_steps=[228]),
+    Step(230, "lf.trip.lock_assignment",        "lf_dispatch", "Lock driver_id and set status=assigned", requires_steps=[229]),
+    Step(231, "lf.trip.notify_passenger",       "lf_dispatch", "Send SMS/email confirmation to passenger or client", requires_steps=[230]),
+    Step(232, "lf.trip.start_gps",             "lf_dispatch", "Start GPS tracking session for trip", requires_steps=[230]),
+    Step(233, "lf.trip.doc_expectation",        "lf_dispatch", "Create POD document expectation for trip", requires_steps=[230]),
+    Step(234, "lf.trip.notify_corporate",       "lf_dispatch", "Notify corporate account of executive booking", requires_steps=[230]),
+    Step(235, "lf.trip.log_auth_code",          "lf_dispatch", "Log NEMT insurance auth code to trip record", requires_steps=[226]),
+    Step(236, "lf.trip.dispatch_email",         "lf_dispatch", "Send internal dispatch confirmation email", requires_steps=[230]),
+    Step(237, "lf.trip.ledger_preview",         "lf_dispatch", "Write projected revenue to atomic ledger", requires_steps=[225]),
+    Step(238, "lf.trip.eta_broadcast",          "lf_dispatch", "Broadcast ETA to driver and passenger", requires_steps=[224, 231]),
+    Step(239, "lf.trip.dispatch_complete",      "lf_dispatch", "Mark trip dispatch workflow complete", requires_steps=[231, 232, 236, 237]),
+    Step(240, "lf.trip.eagle_eye_update",       "lf_dispatch", "Refresh Eagle Eye light fleet board", requires_steps=[239]),
+)
+
+# ── DOMAIN 10: LIGHT FLEET TRIP TRANSIT (241–255) ────────────────────────────
+_reg(
+    Step(241, "lf.transit.en_route",            "lf_transit", "Driver starts trip — GPS active"),
+    Step(242, "lf.transit.pickup_confirmed",    "lf_transit", "Driver arrives at pickup location", requires_steps=[241]),
+    Step(243, "lf.transit.passenger_aboard",    "lf_transit", "Passenger aboard — status → in_progress", requires_steps=[242]),
+    Step(244, "lf.transit.gps_ping",           "lf_transit", "Continuous GPS ping loop — 30s interval", requires_steps=[241]),
+    Step(245, "lf.transit.eta_recalculate",     "lf_transit", "Recalculate live ETA every 5 minutes", requires_steps=[244]),
+    Step(246, "lf.transit.delay_detection",     "lf_transit", "Flag if ETA drifts more than 15 minutes", requires_steps=[245]),
+    Step(247, "lf.transit.mobility_assist",     "lf_transit", "Log wheelchair/stretcher assist for NEMT trips", requires_steps=[243]),
+    Step(248, "lf.transit.flight_monitor",      "lf_transit", "Monitor flight status for executive airport trips", requires_steps=[241]),
+    Step(249, "lf.transit.detention_check",     "lf_transit", "Flag driver waiting beyond threshold", requires_steps=[242]),
+    Step(250, "lf.transit.mid_trip_sms",        "lf_transit", "Send mid-trip status SMS to passenger", requires_steps=[244]),
+    Step(251, "lf.transit.geofence_arrival",    "lf_transit", "Detect driver approaching dropoff location", requires_steps=[244]),
+    Step(252, "lf.transit.dropoff_confirmed",   "lf_transit", "Driver confirms arrival at dropoff", requires_steps=[251]),
+    Step(253, "lf.transit.pod_capture",         "lf_transit", "Driver uploads proof of delivery / completion photo", requires_steps=[252]),
+    Step(254, "lf.transit.trip_complete",       "lf_transit", "Mark trip completed — write completed_at timestamp", requires_steps=[253]),
+    Step(255, "lf.transit.transit_complete",    "lf_transit", "Transit domain workflow complete", requires_steps=[254]),
+)
+
+# ── DOMAIN 11: LIGHT FLEET TRIP SETTLEMENT (256–270) ─────────────────────────
+_reg(
+    Step(256, "lf.settle.confirm_completion",   "lf_settlement", "Verify trip completed and POD captured"),
+    Step(257, "lf.settle.apply_rate",           "lf_settlement", "Calculate and confirm final trip rate", requires_steps=[256]),
+    Step(258, "lf.settle.platform_fee",         "lf_settlement", "Deduct platform fee (8% Starter / 3% Pro)", requires_steps=[257]),
+    Step(259, "lf.settle.driver_net",           "lf_settlement", "Calculate driver net earnings after fee", requires_steps=[258]),
+    Step(260, "lf.settle.nemt_billing",         "lf_settlement", "Queue NEMT trip for Medicaid/Medicare billing", requires_steps=[257]),
+    Step(261, "lf.settle.corporate_invoice",    "lf_settlement", "Generate invoice for corporate executive account", requires_steps=[257]),
+    Step(262, "lf.settle.ach_initiation",       "lf_settlement", "Initiate ACH driver payout via Stripe", requires_steps=[259]),
+    Step(263, "lf.settle.ledger_write",         "lf_settlement", "Write settlement event to atomic ledger", requires_steps=[259]),
+    Step(264, "lf.settle.driver_performance",   "lf_settlement", "Update driver rating and total_trips counter", requires_steps=[256]),
+    Step(265, "lf.settle.client_receipt",       "lf_settlement", "Send receipt SMS/email to passenger or client", requires_steps=[257]),
+    Step(266, "lf.settle.kpi_update",           "lf_settlement", "Increment light fleet MTD KPI counters", requires_steps=[263]),
+    Step(267, "lf.settle.nemt_audit_log",       "lf_settlement", "Write Medicaid-compliant audit log for NEMT trip", requires_steps=[260]),
+    Step(268, "lf.settle.dispute_check",        "lf_settlement", "Flag disputes or rate mismatches", requires_steps=[257]),
+    Step(269, "lf.settle.invoice_record",       "lf_settlement", "Write invoice record to invoices table", requires_steps=[261]),
+    Step(270, "lf.settle.settlement_complete",  "lf_settlement", "Settlement domain workflow complete", requires_steps=[262, 263, 265, 266, 267]),
+)
