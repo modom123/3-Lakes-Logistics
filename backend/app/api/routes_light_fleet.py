@@ -566,3 +566,62 @@ def driver_intake(payload: dict) -> dict:
         "driver_id": result.get("driver_id"),
         "message": "Welcome to 3 Lakes Light Fleet! Check your phone for next steps.",
     }
+
+
+@public_router.get("/drivers/{driver_id}/compliance-status")
+def public_driver_compliance(driver_id: str) -> dict:
+    """
+    Public compliance status for a light fleet driver by their driver_id.
+    No auth required — drivers access via their own ID.
+    """
+    from ..agents import compliance_autopilot
+    return compliance_autopilot.get_compliance_status(driver_id)
+
+
+# ===========================================================================
+# DRIVER EARNINGS, COMPLIANCE & INSTANT PAY
+# ===========================================================================
+
+@router.get("/drivers/{driver_id}/earnings")
+def get_driver_earnings(driver_id: str, period: str = "week") -> dict:
+    """Get aggregated earnings for a light fleet driver across all platforms."""
+    from ..agents import earnings_aggregator
+    return {
+        "driver_id": driver_id,
+        "period": period,
+        "summary": earnings_aggregator.get_earnings(driver_id, period),
+        "breakdown": earnings_aggregator.get_platform_breakdown(driver_id, period),
+        "trend": earnings_aggregator.get_weekly_trend(driver_id),
+    }
+
+
+@router.get("/drivers/{driver_id}/compliance")
+def get_driver_compliance(driver_id: str) -> dict:
+    """Get compliance status for a light fleet driver."""
+    from ..agents import compliance_autopilot
+    return compliance_autopilot.get_compliance_status(driver_id)
+
+
+@router.post("/drivers/{driver_id}/instant-pay")
+def request_instant_pay(driver_id: str, payload: dict) -> dict:
+    """
+    Request instant/same-day payout for a driver's pending earnings.
+    Deducts a 1.5% instant pay fee.
+    Body: { "amount": float }
+    """
+    amount = float(payload.get("amount", 0))
+    if amount <= 0:
+        raise HTTPException(status_code=422, detail="amount must be positive")
+    fee = round(amount * 0.015, 2)
+    net = round(amount - fee, 2)
+    # Log to atomic_ledger
+    sb = get_supabase()
+    sb.table("atomic_ledger").insert({
+        "event_type": "instant_pay_requested",
+        "event_source": "light_fleet.instant_pay",
+        "logistics_payload": {"driver_id": driver_id},
+        "financial_payload": {"gross": amount, "fee": fee, "net": net},
+        "compliance_payload": {},
+        "created_at": _now_iso(),
+    }).execute()
+    return {"ok": True, "driver_id": driver_id, "gross": amount, "fee": fee, "net": net, "status": "processing"}
