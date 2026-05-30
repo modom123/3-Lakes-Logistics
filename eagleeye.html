@@ -756,6 +756,14 @@ td.td-name{font-weight:600;color:var(--navy);}
   </div>
 
   <div class="sb-section">
+    <div class="sb-label">Light Fleet</div>
+    <div class="sb-item" onclick="nav('lf-nemt')"><span class="sb-icon">🏥</span> NEMT</div>
+    <div class="sb-item" onclick="nav('lf-executive')"><span class="sb-icon">🚗</span> Executive</div>
+    <div class="sb-item" onclick="nav('lf-courier')"><span class="sb-icon">📦</span> Courier</div>
+    <div class="sb-item" onclick="nav('lf-gig')"><span class="sb-icon">👥</span> Gig Fleet</div>
+  </div>
+
+  <div class="sb-section">
     <div class="sb-label">Dev</div>
     <div class="sb-item" onclick="nav('tests')"><span class="sb-icon">🧪</span> Test Suite</div>
   </div>
@@ -2862,7 +2870,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 let allCarriers=[], allLoads=[], allInvoices=[], currentInvFilter='all', loadCounter=3849;
 
-const pageNames={dashboard:'Dashboard',dispatch:'Dispatch Board','fleet-map':'Fleet Map',carriers:'Carriers',drivers:'Drivers',loads:'Load Manager',invoices:'Invoices & Billing',compliance:'DOT Compliance',ifta:'IFTA / Permits',insurance:'Insurance',revenue:'Revenue Tracker',providers:'Compliance Providers',checklist:'Daily Checklist',notes:'Dispatcher Notes',reports:'Team Reports','exec-command':'Exec Command',agents:'AI Agents',founders:'Founders Program',crm:'Lead CRM',leads:'Lead Pipeline',execution:'Execution Engine',email:'Email Center',vault:'Document Vault',clm:'CLM Scanner',ledger:'Atomic Ledger',agreements:'Agreements'};
+const pageNames={dashboard:'Dashboard',dispatch:'Dispatch Board','fleet-map':'Fleet Map',carriers:'Carriers',drivers:'Drivers',loads:'Load Manager',invoices:'Invoices & Billing',compliance:'DOT Compliance',ifta:'IFTA / Permits',insurance:'Insurance',revenue:'Revenue Tracker',providers:'Compliance Providers',checklist:'Daily Checklist',notes:'Dispatcher Notes',reports:'Team Reports','exec-command':'Exec Command',agents:'AI Agents',founders:'Founders Program',crm:'Lead CRM',leads:'Lead Pipeline',execution:'Execution Engine',email:'Email Center',vault:'Document Vault',clm:'CLM Scanner',ledger:'Atomic Ledger',agreements:'Agreements','lf-nemt':'NEMT — Medical Transport','lf-executive':'Executive Transport','lf-courier':'Courier & Last-Mile','lf-gig':'Gig Fleet Management'};
 
 // ── 3 Lakes Logistics Backend API (FastAPI) ──
 const API_BASE = (window.__3LL_API_BASE || 'https://three-lakes-logistics-api.onrender.com').replace(/\/$/,'');
@@ -2969,6 +2977,7 @@ function nav(id){
   if(id==='fleet-map')initFleetMap();
   if(id==='drivers')loadDrivers();
   if(id==='ledger')loadLedger();
+  if(id==='lf-nemt'||id==='lf-executive'||id==='lf-courier'||id==='lf-gig') loadLightFleet(id);
   if(id==='execution'){loadExecutionDomains();loadExecutionSteps();}
   if(id==='email'&&typeof mailInit==='function'){mailInit();}
 }
@@ -11282,6 +11291,828 @@ async function deactivateDriver(driverId) {
     <div style="padding:20px" id="load-detail-body"></div>
   </div>
 </div>
+
+<!-- ════════════════════════════════════════════════════════════════════ -->
+<!-- LIGHT FLEET — 4 SERVICE PAGES                                       -->
+<!-- ════════════════════════════════════════════════════════════════════ -->
+<style>
+.lf-wrap{padding:20px 24px;height:calc(100vh - 116px);overflow-y:auto;box-sizing:border-box;}
+.lf-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px;}
+.lf-hdr h2{font-size:20px;font-weight:700;margin:0;}
+.lf-kpis{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px;margin-bottom:20px;}
+.lf-kpi{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px;text-align:center;}
+.lf-kpi-val{font-size:26px;font-weight:900;color:var(--gold2);}
+.lf-kpi-lbl{font-size:11px;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);margin-top:3px;}
+.lf-actions{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;}
+.lf-btn{background:var(--gold2);color:#000;border:none;padding:8px 18px;border-radius:6px;font-weight:700;font-size:13px;cursor:pointer;}
+.lf-btn:hover{background:var(--gold1);}
+.lf-btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--border);padding:8px 14px;border-radius:6px;font-size:12px;cursor:pointer;}
+.lf-btn-ghost:hover{color:var(--text);border-color:var(--text);}
+.lf-table-wrap{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;}
+.lf-table{width:100%;border-collapse:collapse;font-size:13px;}
+.lf-table th{text-align:left;padding:10px 14px;font-size:11px;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);border-bottom:1px solid var(--border);background:var(--card);}
+.lf-table td{padding:10px 14px;border-bottom:1px solid var(--border);vertical-align:middle;}
+.lf-table tr:last-child td{border-bottom:none;}
+.lf-table tr:hover td{background:rgba(255,255,255,.03);}
+.lf-badge{display:inline-block;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:600;letter-spacing:.3px;}
+.lf-badge.pending{background:rgba(245,158,11,.15);color:#f59e0b;}
+.lf-badge.assigned{background:rgba(59,130,246,.15);color:#3b82f6;}
+.lf-badge.in_progress{background:rgba(139,92,246,.15);color:#8b5cf6;}
+.lf-badge.completed{background:rgba(34,197,94,.15);color:#22c55e;}
+.lf-badge.cancelled{background:rgba(239,68,68,.15);color:#ef4444;}
+.lf-badge.active{background:rgba(34,197,94,.15);color:#22c55e;}
+.lf-badge.inactive{background:rgba(148,163,184,.15);color:#94a3b8;}
+.lf-badge.suspended{background:rgba(239,68,68,.15);color:#ef4444;}
+.lf-badge.clear{background:rgba(34,197,94,.15);color:#22c55e;}
+.lf-badge.flagged{background:rgba(239,68,68,.15);color:#ef4444;}
+.lf-empty{text-align:center;padding:40px;color:var(--muted);font-size:14px;}
+.lf-section-hdr{font-size:13px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin:20px 0 10px;}
+.lf-driver-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;margin-bottom:20px;}
+.lf-driver-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px;}
+.lf-driver-card-name{font-weight:700;font-size:15px;margin-bottom:4px;}
+.lf-driver-card-meta{font-size:12px;color:var(--muted);margin-bottom:10px;}
+.lf-driver-card-row{display:flex;justify-content:space-between;align-items:center;font-size:12px;margin-top:6px;}
+
+/* Modal */
+.lf-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:900;display:flex;align-items:center;justify-content:center;padding:20px;}
+.lf-modal{background:var(--surface);border:1px solid var(--border);border-radius:12px;max-width:520px;width:100%;max-height:85vh;overflow-y:auto;}
+.lf-modal-hd{display:flex;align-items:center;justify-content:space-between;padding:18px 20px;border-bottom:1px solid var(--border);}
+.lf-modal-title{font-size:16px;font-weight:700;}
+.lf-modal-close{background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;padding:4px;}
+.lf-modal-body{padding:20px;}
+.lf-form-row{margin-bottom:14px;}
+.lf-form-label{display:block;font-size:12px;font-weight:600;color:var(--muted);margin-bottom:5px;text-transform:uppercase;letter-spacing:.5px;}
+.lf-form-input{width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:6px;background:var(--card);color:var(--text);font-size:13px;}
+.lf-form-input:focus{outline:none;border-color:var(--gold2);}
+.lf-form-row-2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.lf-form-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:18px;}
+</style>
+
+<!-- ── NEMT PAGE ── -->
+<div class="page" id="page-lf-nemt">
+  <div class="lf-wrap">
+    <div class="lf-hdr">
+      <div><h2>🏥 NEMT — Medical Transport</h2><div style="font-size:12px;color:var(--muted);margin-top:2px;">Non-Emergency Medical Transport · Medicaid/Medicare</div></div>
+      <div style="display:flex;gap:8px;">
+        <button class="lf-btn-ghost" onclick="lfRefresh('lf-nemt')">↻ Refresh</button>
+        <button class="lf-btn" onclick="lfOpenTrip('nemt')">+ New Trip</button>
+      </div>
+    </div>
+    <div class="lf-kpis" id="lf-nemt-kpis">
+      <div class="lf-kpi"><div class="lf-kpi-val" id="lf-nemt-pending">—</div><div class="lf-kpi-lbl">Pending</div></div>
+      <div class="lf-kpi"><div class="lf-kpi-val" id="lf-nemt-today">—</div><div class="lf-kpi-lbl">Today</div></div>
+      <div class="lf-kpi"><div class="lf-kpi-val" id="lf-nemt-mtd">—</div><div class="lf-kpi-lbl">MTD Trips</div></div>
+      <div class="lf-kpi"><div class="lf-kpi-val" id="lf-nemt-rev">—</div><div class="lf-kpi-lbl">MTD Revenue</div></div>
+    </div>
+    <div class="lf-actions">
+      <select id="lf-nemt-status-filter" onchange="lfLoadTrips('nemt')" style="padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:var(--card);color:var(--text);">
+        <option value="">All Statuses</option>
+        <option value="pending">Pending</option>
+        <option value="assigned">Assigned</option>
+        <option value="in_progress">In Progress</option>
+        <option value="completed">Completed</option>
+        <option value="cancelled">Cancelled</option>
+      </select>
+    </div>
+    <div class="lf-table-wrap">
+      <table class="lf-table">
+        <thead><tr><th>Patient</th><th>Pickup</th><th>Dropoff</th><th>Scheduled</th><th>Driver</th><th>Status</th><th>Rate</th><th></th></tr></thead>
+        <tbody id="lf-nemt-tbody"><tr><td colspan="8" class="lf-empty">Loading…</td></tr></tbody>
+      </table>
+    </div>
+    <div class="lf-section-hdr" style="margin-top:28px;">NEMT Clients</div>
+    <div style="display:flex;gap:8px;margin-bottom:12px;">
+      <button class="lf-btn" onclick="lfOpenNemtClient()">+ Add Client</button>
+    </div>
+    <div class="lf-table-wrap">
+      <table class="lf-table">
+        <thead><tr><th>Name</th><th>Phone</th><th>Insurance</th><th>Mobility</th><th>Total Trips</th><th>Status</th></tr></thead>
+        <tbody id="lf-nemt-clients-tbody"><tr><td colspan="6" class="lf-empty">Loading…</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ── EXECUTIVE PAGE ── -->
+<div class="page" id="page-lf-executive">
+  <div class="lf-wrap">
+    <div class="lf-hdr">
+      <div><h2>🚗 Executive Transport</h2><div style="font-size:12px;color:var(--muted);margin-top:2px;">Corporate · Airport · VIP</div></div>
+      <div style="display:flex;gap:8px;">
+        <button class="lf-btn-ghost" onclick="lfRefresh('lf-executive')">↻ Refresh</button>
+        <button class="lf-btn" onclick="lfOpenTrip('executive')">+ New Booking</button>
+      </div>
+    </div>
+    <div class="lf-kpis">
+      <div class="lf-kpi"><div class="lf-kpi-val" id="lf-exec-pending">—</div><div class="lf-kpi-lbl">Pending</div></div>
+      <div class="lf-kpi"><div class="lf-kpi-val" id="lf-exec-today">—</div><div class="lf-kpi-lbl">Today</div></div>
+      <div class="lf-kpi"><div class="lf-kpi-val" id="lf-exec-mtd">—</div><div class="lf-kpi-lbl">MTD Trips</div></div>
+      <div class="lf-kpi"><div class="lf-kpi-val" id="lf-exec-rev">—</div><div class="lf-kpi-lbl">MTD Revenue</div></div>
+    </div>
+    <div class="lf-actions">
+      <select id="lf-exec-status-filter" onchange="lfLoadTrips('executive')" style="padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:var(--card);color:var(--text);">
+        <option value="">All Statuses</option>
+        <option value="pending">Pending</option>
+        <option value="assigned">Assigned</option>
+        <option value="in_progress">In Progress</option>
+        <option value="completed">Completed</option>
+        <option value="cancelled">Cancelled</option>
+      </select>
+    </div>
+    <div class="lf-table-wrap">
+      <table class="lf-table">
+        <thead><tr><th>Client</th><th>Pickup</th><th>Dropoff</th><th>Scheduled</th><th>Vehicle</th><th>Flight #</th><th>Status</th><th>Rate</th><th></th></tr></thead>
+        <tbody id="lf-exec-tbody"><tr><td colspan="9" class="lf-empty">Loading…</td></tr></tbody>
+      </table>
+    </div>
+    <div class="lf-section-hdr" style="margin-top:28px;">Corporate Accounts</div>
+    <div style="display:flex;gap:8px;margin-bottom:12px;">
+      <button class="lf-btn" onclick="lfOpenExecAccount()">+ Add Account</button>
+    </div>
+    <div class="lf-table-wrap">
+      <table class="lf-table">
+        <thead><tr><th>Company</th><th>Contact</th><th>Billing</th><th>Rate/mi</th><th>Airport Flat</th><th>Total Trips</th><th>Status</th></tr></thead>
+        <tbody id="lf-exec-accounts-tbody"><tr><td colspan="7" class="lf-empty">Loading…</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ── COURIER PAGE ── -->
+<div class="page" id="page-lf-courier">
+  <div class="lf-wrap">
+    <div class="lf-hdr">
+      <div><h2>📦 Courier & Last-Mile</h2><div style="font-size:12px;color:var(--muted);margin-top:2px;">Same-Day · Documents · Urban Delivery</div></div>
+      <div style="display:flex;gap:8px;">
+        <button class="lf-btn-ghost" onclick="lfRefresh('lf-courier')">↻ Refresh</button>
+        <button class="lf-btn" onclick="lfOpenTrip('courier')">+ New Delivery</button>
+      </div>
+    </div>
+    <div class="lf-kpis">
+      <div class="lf-kpi"><div class="lf-kpi-val" id="lf-cour-pending">—</div><div class="lf-kpi-lbl">Pending</div></div>
+      <div class="lf-kpi"><div class="lf-kpi-val" id="lf-cour-today">—</div><div class="lf-kpi-lbl">Today</div></div>
+      <div class="lf-kpi"><div class="lf-kpi-val" id="lf-cour-mtd">—</div><div class="lf-kpi-lbl">MTD Deliveries</div></div>
+      <div class="lf-kpi"><div class="lf-kpi-val" id="lf-cour-rev">—</div><div class="lf-kpi-lbl">MTD Revenue</div></div>
+    </div>
+    <div class="lf-actions">
+      <select id="lf-cour-status-filter" onchange="lfLoadTrips('courier')" style="padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:var(--card);color:var(--text);">
+        <option value="">All Statuses</option>
+        <option value="pending">Pending</option>
+        <option value="assigned">Assigned</option>
+        <option value="in_progress">In Progress</option>
+        <option value="completed">Completed</option>
+        <option value="cancelled">Cancelled</option>
+      </select>
+    </div>
+    <div class="lf-table-wrap">
+      <table class="lf-table">
+        <thead><tr><th>Pickup</th><th>Dropoff</th><th>Scheduled</th><th>Packages</th><th>Weight</th><th>Driver</th><th>Status</th><th>Rate</th><th></th></tr></thead>
+        <tbody id="lf-cour-tbody"><tr><td colspan="9" class="lf-empty">Loading…</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ── GIG FLEET PAGE ── -->
+<div class="page" id="page-lf-gig">
+  <div class="lf-wrap">
+    <div class="lf-hdr">
+      <div><h2>👥 Gig Fleet Management</h2><div style="font-size:12px;color:var(--muted);margin-top:2px;">Car & SUV Drivers · MVR · Background Checks</div></div>
+      <div style="display:flex;gap:8px;">
+        <button class="lf-btn-ghost" onclick="lfRefresh('lf-gig')">↻ Refresh</button>
+        <button class="lf-btn" onclick="lfOpenDriver()">+ Add Driver</button>
+      </div>
+    </div>
+    <div class="lf-kpis">
+      <div class="lf-kpi"><div class="lf-kpi-val" id="lf-gig-total">—</div><div class="lf-kpi-lbl">Total Drivers</div></div>
+      <div class="lf-kpi"><div class="lf-kpi-val" id="lf-gig-active">—</div><div class="lf-kpi-lbl">Active</div></div>
+      <div class="lf-kpi"><div class="lf-kpi-val" id="lf-gig-clear">—</div><div class="lf-kpi-lbl">MVR Clear</div></div>
+      <div class="lf-kpi"><div class="lf-kpi-val" id="lf-gig-trips">—</div><div class="lf-kpi-lbl">Today's Trips</div></div>
+    </div>
+    <div class="lf-actions">
+      <select id="lf-gig-status-filter" onchange="lfLoadDrivers()" style="padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:var(--card);color:var(--text);">
+        <option value="">All Statuses</option>
+        <option value="active">Active</option>
+        <option value="inactive">Inactive</option>
+        <option value="suspended">Suspended</option>
+      </select>
+      <select id="lf-gig-type-filter" onchange="lfLoadDrivers()" style="padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:var(--card);color:var(--text);">
+        <option value="">All Vehicle Types</option>
+        <option value="suv">SUV</option>
+        <option value="sedan">Sedan</option>
+        <option value="cargo_van">Cargo Van</option>
+        <option value="luxury">Luxury</option>
+      </select>
+    </div>
+    <div class="lf-driver-grid" id="lf-gig-driver-grid">
+      <div class="lf-empty" style="grid-column:1/-1">Loading…</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── LIGHT FLEET MODALS ── -->
+
+<!-- New Trip Modal -->
+<div class="lf-modal-overlay" id="lf-trip-modal" style="display:none" onclick="if(event.target===this)lfCloseModal('lf-trip-modal')">
+  <div class="lf-modal">
+    <div class="lf-modal-hd">
+      <span class="lf-modal-title" id="lf-trip-modal-title">New Trip</span>
+      <button class="lf-modal-close" onclick="lfCloseModal('lf-trip-modal')">✕</button>
+    </div>
+    <div class="lf-modal-body">
+      <input type="hidden" id="lf-trip-type">
+      <div class="lf-form-row">
+        <label class="lf-form-label">Passenger / Client Name</label>
+        <input class="lf-form-input" id="lf-trip-passenger" placeholder="Full name">
+      </div>
+      <div class="lf-form-row">
+        <label class="lf-form-label">Phone</label>
+        <input class="lf-form-input" id="lf-trip-phone" placeholder="(555) 000-0000">
+      </div>
+      <div class="lf-form-row">
+        <label class="lf-form-label">Pickup Address</label>
+        <input class="lf-form-input" id="lf-trip-pickup" placeholder="123 Main St, City, State">
+      </div>
+      <div class="lf-form-row">
+        <label class="lf-form-label">Dropoff Address</label>
+        <input class="lf-form-input" id="lf-trip-dropoff" placeholder="456 Oak Ave, City, State">
+      </div>
+      <div class="lf-form-row-2">
+        <div class="lf-form-row">
+          <label class="lf-form-label">Scheduled Date/Time</label>
+          <input class="lf-form-input" id="lf-trip-scheduled" type="datetime-local">
+        </div>
+        <div class="lf-form-row">
+          <label class="lf-form-label">Rate ($)</label>
+          <input class="lf-form-input" id="lf-trip-rate" type="number" placeholder="0.00" step="0.01">
+        </div>
+      </div>
+      <!-- NEMT fields -->
+      <div id="lf-nemt-fields" style="display:none">
+        <div class="lf-form-row">
+          <label class="lf-form-label">Mobility Needs</label>
+          <select class="lf-form-input" id="lf-trip-mobility">
+            <option value="ambulatory">Ambulatory</option>
+            <option value="wheelchair">Wheelchair</option>
+            <option value="stretcher">Stretcher</option>
+          </select>
+        </div>
+        <div class="lf-form-row-2">
+          <div class="lf-form-row">
+            <label class="lf-form-label">Insurance Auth #</label>
+            <input class="lf-form-input" id="lf-trip-auth" placeholder="Auth number">
+          </div>
+          <div class="lf-form-row">
+            <label class="lf-form-label">Insurance Provider</label>
+            <input class="lf-form-input" id="lf-trip-insurer" placeholder="Medicaid / Medicare">
+          </div>
+        </div>
+      </div>
+      <!-- Executive fields -->
+      <div id="lf-exec-fields" style="display:none">
+        <div class="lf-form-row-2">
+          <div class="lf-form-row">
+            <label class="lf-form-label">Flight #</label>
+            <input class="lf-form-input" id="lf-trip-flight" placeholder="AA1234">
+          </div>
+          <div class="lf-form-row">
+            <label class="lf-form-label">Vehicle Class</label>
+            <select class="lf-form-input" id="lf-trip-vclass">
+              <option value="suv">SUV</option>
+              <option value="sedan">Sedan</option>
+              <option value="luxury">Luxury</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <!-- Courier fields -->
+      <div id="lf-cour-fields" style="display:none">
+        <div class="lf-form-row-2">
+          <div class="lf-form-row">
+            <label class="lf-form-label">Package Count</label>
+            <input class="lf-form-input" id="lf-trip-pkgs" type="number" placeholder="1" min="1">
+          </div>
+          <div class="lf-form-row">
+            <label class="lf-form-label">Total Weight (lbs)</label>
+            <input class="lf-form-input" id="lf-trip-weight" type="number" placeholder="0" step="0.1">
+          </div>
+        </div>
+      </div>
+      <div class="lf-form-row">
+        <label class="lf-form-label">Notes</label>
+        <textarea class="lf-form-input" id="lf-trip-notes" rows="2" placeholder="Special instructions…"></textarea>
+      </div>
+      <div class="lf-form-actions">
+        <button class="lf-btn-ghost" onclick="lfCloseModal('lf-trip-modal')">Cancel</button>
+        <button class="lf-btn" onclick="lfSaveTrip()">Create Trip</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- New Driver Modal -->
+<div class="lf-modal-overlay" id="lf-driver-modal" style="display:none" onclick="if(event.target===this)lfCloseModal('lf-driver-modal')">
+  <div class="lf-modal">
+    <div class="lf-modal-hd">
+      <span class="lf-modal-title">Add Light Fleet Driver</span>
+      <button class="lf-modal-close" onclick="lfCloseModal('lf-driver-modal')">✕</button>
+    </div>
+    <div class="lf-modal-body">
+      <div class="lf-form-row-2">
+        <div class="lf-form-row">
+          <label class="lf-form-label">Full Name</label>
+          <input class="lf-form-input" id="lf-drv-name" placeholder="Name">
+        </div>
+        <div class="lf-form-row">
+          <label class="lf-form-label">Phone</label>
+          <input class="lf-form-input" id="lf-drv-phone" placeholder="(555) 000-0000">
+        </div>
+      </div>
+      <div class="lf-form-row">
+        <label class="lf-form-label">Email</label>
+        <input class="lf-form-input" id="lf-drv-email" type="email" placeholder="driver@email.com">
+      </div>
+      <div class="lf-form-row-2">
+        <div class="lf-form-row">
+          <label class="lf-form-label">License Number</label>
+          <input class="lf-form-input" id="lf-drv-lic" placeholder="License #">
+        </div>
+        <div class="lf-form-row">
+          <label class="lf-form-label">License State</label>
+          <input class="lf-form-input" id="lf-drv-licstate" placeholder="TX">
+        </div>
+      </div>
+      <div class="lf-form-row">
+        <label class="lf-form-label">License Expires</label>
+        <input class="lf-form-input" id="lf-drv-licexp" type="date">
+      </div>
+      <div class="lf-form-row">
+        <label class="lf-form-label">Vehicle Type</label>
+        <select class="lf-form-input" id="lf-drv-vtype">
+          <option value="suv">SUV</option>
+          <option value="sedan">Sedan</option>
+          <option value="cargo_van">Cargo Van</option>
+          <option value="luxury">Luxury</option>
+        </select>
+      </div>
+      <div class="lf-form-row-2">
+        <div class="lf-form-row">
+          <label class="lf-form-label">Vehicle Year</label>
+          <input class="lf-form-input" id="lf-drv-vyear" type="number" placeholder="2022">
+        </div>
+        <div class="lf-form-row">
+          <label class="lf-form-label">Make / Model</label>
+          <input class="lf-form-input" id="lf-drv-vmake" placeholder="Toyota Camry">
+        </div>
+      </div>
+      <div class="lf-form-row-2">
+        <div class="lf-form-row">
+          <label class="lf-form-label">Plate</label>
+          <input class="lf-form-input" id="lf-drv-plate" placeholder="ABC1234">
+        </div>
+        <div class="lf-form-row">
+          <label class="lf-form-label">Insurance Expires</label>
+          <input class="lf-form-input" id="lf-drv-insexp" type="date">
+        </div>
+      </div>
+      <div class="lf-form-row">
+        <label class="lf-form-label">Approved Services</label>
+        <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:4px;">
+          <label style="font-size:13px;display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" value="nemt" class="lf-svc-check"> NEMT</label>
+          <label style="font-size:13px;display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" value="executive" class="lf-svc-check"> Executive</label>
+          <label style="font-size:13px;display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" value="courier" class="lf-svc-check"> Courier</label>
+          <label style="font-size:13px;display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" value="gig" class="lf-svc-check"> Gig</label>
+        </div>
+      </div>
+      <div class="lf-form-actions">
+        <button class="lf-btn-ghost" onclick="lfCloseModal('lf-driver-modal')">Cancel</button>
+        <button class="lf-btn" onclick="lfSaveDriver()">Add Driver</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- New NEMT Client Modal -->
+<div class="lf-modal-overlay" id="lf-nemt-client-modal" style="display:none" onclick="if(event.target===this)lfCloseModal('lf-nemt-client-modal')">
+  <div class="lf-modal">
+    <div class="lf-modal-hd">
+      <span class="lf-modal-title">Add NEMT Client</span>
+      <button class="lf-modal-close" onclick="lfCloseModal('lf-nemt-client-modal')">✕</button>
+    </div>
+    <div class="lf-modal-body">
+      <div class="lf-form-row-2">
+        <div class="lf-form-row">
+          <label class="lf-form-label">Full Name</label>
+          <input class="lf-form-input" id="lf-nc-name" placeholder="Patient name">
+        </div>
+        <div class="lf-form-row">
+          <label class="lf-form-label">Date of Birth</label>
+          <input class="lf-form-input" id="lf-nc-dob" type="date">
+        </div>
+      </div>
+      <div class="lf-form-row">
+        <label class="lf-form-label">Phone</label>
+        <input class="lf-form-input" id="lf-nc-phone" placeholder="(555) 000-0000">
+      </div>
+      <div class="lf-form-row">
+        <label class="lf-form-label">Address</label>
+        <input class="lf-form-input" id="lf-nc-address" placeholder="Home address">
+      </div>
+      <div class="lf-form-row-2">
+        <div class="lf-form-row">
+          <label class="lf-form-label">Insurance Provider</label>
+          <input class="lf-form-input" id="lf-nc-insurer" placeholder="Medicaid">
+        </div>
+        <div class="lf-form-row">
+          <label class="lf-form-label">Insurance ID</label>
+          <input class="lf-form-input" id="lf-nc-insid" placeholder="ID #">
+        </div>
+      </div>
+      <div class="lf-form-row">
+        <label class="lf-form-label">Mobility Needs</label>
+        <select class="lf-form-input" id="lf-nc-mobility">
+          <option value="ambulatory">Ambulatory</option>
+          <option value="wheelchair">Wheelchair</option>
+          <option value="stretcher">Stretcher</option>
+        </select>
+      </div>
+      <div class="lf-form-row">
+        <label class="lf-form-label">Notes</label>
+        <textarea class="lf-form-input" id="lf-nc-notes" rows="2" placeholder="Medical notes, special needs…"></textarea>
+      </div>
+      <div class="lf-form-actions">
+        <button class="lf-btn-ghost" onclick="lfCloseModal('lf-nemt-client-modal')">Cancel</button>
+        <button class="lf-btn" onclick="lfSaveNemtClient()">Add Client</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- New Executive Account Modal -->
+<div class="lf-modal-overlay" id="lf-exec-acct-modal" style="display:none" onclick="if(event.target===this)lfCloseModal('lf-exec-acct-modal')">
+  <div class="lf-modal">
+    <div class="lf-modal-hd">
+      <span class="lf-modal-title">Add Corporate Account</span>
+      <button class="lf-modal-close" onclick="lfCloseModal('lf-exec-acct-modal')">✕</button>
+    </div>
+    <div class="lf-modal-body">
+      <div class="lf-form-row">
+        <label class="lf-form-label">Company Name</label>
+        <input class="lf-form-input" id="lf-ea-company" placeholder="ACME Corp">
+      </div>
+      <div class="lf-form-row-2">
+        <div class="lf-form-row">
+          <label class="lf-form-label">Contact Name</label>
+          <input class="lf-form-input" id="lf-ea-contact" placeholder="Jane Doe">
+        </div>
+        <div class="lf-form-row">
+          <label class="lf-form-label">Contact Phone</label>
+          <input class="lf-form-input" id="lf-ea-phone" placeholder="(555) 000-0000">
+        </div>
+      </div>
+      <div class="lf-form-row">
+        <label class="lf-form-label">Contact Email</label>
+        <input class="lf-form-input" id="lf-ea-email" type="email" placeholder="contact@company.com">
+      </div>
+      <div class="lf-form-row-2">
+        <div class="lf-form-row">
+          <label class="lf-form-label">Rate per Mile ($)</label>
+          <input class="lf-form-input" id="lf-ea-rpm" type="number" placeholder="3.50" step="0.01">
+        </div>
+        <div class="lf-form-row">
+          <label class="lf-form-label">Airport Flat Rate ($)</label>
+          <input class="lf-form-input" id="lf-ea-airport" type="number" placeholder="85.00" step="0.01">
+        </div>
+      </div>
+      <div class="lf-form-row-2">
+        <div class="lf-form-row">
+          <label class="lf-form-label">Billing Type</label>
+          <select class="lf-form-input" id="lf-ea-billing">
+            <option value="invoice">Invoice</option>
+            <option value="card">Card</option>
+            <option value="account">Account</option>
+          </select>
+        </div>
+        <div class="lf-form-row">
+          <label class="lf-form-label">Contract Expires</label>
+          <input class="lf-form-input" id="lf-ea-expires" type="date">
+        </div>
+      </div>
+      <div class="lf-form-actions">
+        <button class="lf-btn-ghost" onclick="lfCloseModal('lf-exec-acct-modal')">Cancel</button>
+        <button class="lf-btn" onclick="lfSaveExecAccount()">Add Account</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── LIGHT FLEET JS ────────────────────────────────────────────────────────────
+const LF_API = window._API_BASE || '';
+
+function lfOpenModal(id){ document.getElementById(id).style.display='flex'; }
+function lfCloseModal(id){ document.getElementById(id).style.display='none'; }
+
+function lfRefresh(pageId){
+  if(pageId==='lf-nemt'){ lfLoadKpis('nemt'); lfLoadTrips('nemt'); lfLoadNemtClients(); }
+  if(pageId==='lf-executive'){ lfLoadKpis('executive'); lfLoadTrips('executive'); lfLoadExecAccounts(); }
+  if(pageId==='lf-courier'){ lfLoadKpis('courier'); lfLoadTrips('courier'); }
+  if(pageId==='lf-gig'){ lfLoadGigKpis(); lfLoadDrivers(); }
+}
+
+function loadLightFleet(id){ lfRefresh(id); }
+
+async function lfFetch(path, method='GET', body=null){
+  const token = localStorage.getItem('3ll_admin_token') || localStorage.getItem('3ll_token') || '';
+  const opts = { method, headers: {'Authorization':'Bearer '+token,'Content-Type':'application/json'} };
+  if(body) opts.body = JSON.stringify(body);
+  const r = await fetch(LF_API+path, opts);
+  if(!r.ok) throw new Error(await r.text());
+  if(r.status===204) return null;
+  return r.json();
+}
+
+function lfFmt$(n){ return n!=null ? '$'+Number(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}) : '—'; }
+function lfFmtDate(s){ if(!s) return '—'; const d=new Date(s); return d.toLocaleDateString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}); }
+function lfBadge(s){ return `<span class="lf-badge ${s}">${s.replace('_',' ')}</span>`; }
+
+// ── KPIs ──────────────────────────────────────────────────────────────────────
+async function lfLoadKpis(type){
+  try {
+    const d = await lfFetch('/api/light-fleet/kpis');
+    const t = d.by_type?.[type] || {};
+    if(type==='nemt'){
+      document.getElementById('lf-nemt-pending').textContent = t.pending ?? '0';
+      document.getElementById('lf-nemt-today').textContent   = t.today   ?? '0';
+      document.getElementById('lf-nemt-mtd').textContent     = t.mtd     ?? '0';
+      document.getElementById('lf-nemt-rev').textContent     = lfFmt$(t.mtd_revenue);
+    } else if(type==='executive'){
+      document.getElementById('lf-exec-pending').textContent = t.pending ?? '0';
+      document.getElementById('lf-exec-today').textContent   = t.today   ?? '0';
+      document.getElementById('lf-exec-mtd').textContent     = t.mtd     ?? '0';
+      document.getElementById('lf-exec-rev').textContent     = lfFmt$(t.mtd_revenue);
+    } else if(type==='courier'){
+      document.getElementById('lf-cour-pending').textContent = t.pending ?? '0';
+      document.getElementById('lf-cour-today').textContent   = t.today   ?? '0';
+      document.getElementById('lf-cour-mtd').textContent     = t.mtd     ?? '0';
+      document.getElementById('lf-cour-rev').textContent     = lfFmt$(t.mtd_revenue);
+    }
+  } catch(e){ console.error('lf kpis',e); }
+}
+
+async function lfLoadGigKpis(){
+  try {
+    const d = await lfFetch('/api/light-fleet/kpis');
+    document.getElementById('lf-gig-total').textContent = d.drivers?.total ?? '0';
+    document.getElementById('lf-gig-active').textContent = d.drivers?.active ?? '0';
+    document.getElementById('lf-gig-clear').textContent  = d.drivers?.mvr_clear ?? '0';
+    document.getElementById('lf-gig-trips').textContent  = d.today_total ?? '0';
+  } catch(e){ console.error('lf gig kpis',e); }
+}
+
+// ── TRIPS ─────────────────────────────────────────────────────────────────────
+async function lfLoadTrips(type){
+  const statusFilter = document.getElementById('lf-'+typeKey(type)+'-status-filter')?.value || '';
+  const tbody = document.getElementById('lf-'+typeKey(type)+'-tbody');
+  tbody.innerHTML = '<tr><td colspan="10" class="lf-empty">Loading…</td></tr>';
+  try {
+    let url = '/api/light-fleet/trips?trip_type='+type+'&limit=200';
+    if(statusFilter) url += '&status='+statusFilter;
+    const d = await lfFetch(url);
+    const rows = d.items || [];
+    if(!rows.length){ tbody.innerHTML='<tr><td colspan="10" class="lf-empty">No trips found</td></tr>'; return; }
+    if(type==='nemt'){
+      tbody.innerHTML = rows.map(r=>`<tr>
+        <td>${r.passenger_name||'—'}</td>
+        <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${r.pickup_address||''}">${r.pickup_address||'—'}</td>
+        <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${r.dropoff_address||''}">${r.dropoff_address||'—'}</td>
+        <td>${lfFmtDate(r.scheduled_at)}</td>
+        <td>${r.driver_id||'—'}</td>
+        <td>${lfBadge(r.status)}</td>
+        <td>${lfFmt$(r.rate_total)}</td>
+        <td><button class="lf-btn-ghost" style="padding:4px 10px;font-size:11px" onclick="lfCancelTrip('${r.id}')">Cancel</button></td>
+      </tr>`).join('');
+    } else if(type==='executive'){
+      tbody.innerHTML = rows.map(r=>`<tr>
+        <td>${r.passenger_name||'—'}</td>
+        <td style="max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.pickup_address||'—'}</td>
+        <td style="max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.dropoff_address||'—'}</td>
+        <td>${lfFmtDate(r.scheduled_at)}</td>
+        <td>${r.vehicle_class||'—'}</td>
+        <td>${r.flight_number||'—'}</td>
+        <td>${lfBadge(r.status)}</td>
+        <td>${lfFmt$(r.rate_total)}</td>
+        <td><button class="lf-btn-ghost" style="padding:4px 10px;font-size:11px" onclick="lfCancelTrip('${r.id}')">Cancel</button></td>
+      </tr>`).join('');
+    } else if(type==='courier'){
+      tbody.innerHTML = rows.map(r=>`<tr>
+        <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.pickup_address||'—'}</td>
+        <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.dropoff_address||'—'}</td>
+        <td>${lfFmtDate(r.scheduled_at)}</td>
+        <td>${r.package_count||0}</td>
+        <td>${r.package_weight_lbs!=null?r.package_weight_lbs+' lbs':'—'}</td>
+        <td>${r.driver_id||'—'}</td>
+        <td>${lfBadge(r.status)}</td>
+        <td>${lfFmt$(r.rate_total)}</td>
+        <td><button class="lf-btn-ghost" style="padding:4px 10px;font-size:11px" onclick="lfCancelTrip('${r.id}')">Cancel</button></td>
+      </tr>`).join('');
+    }
+  } catch(e){ console.error('lf trips',e); tbody.innerHTML='<tr><td colspan="10" class="lf-empty" style="color:var(--red)">Error loading trips</td></tr>'; }
+}
+
+function typeKey(type){ return type==='executive'?'exec':type==='courier'?'cour':type; }
+
+async function lfCancelTrip(id){
+  if(!confirm('Cancel this trip?')) return;
+  try { await lfFetch('/api/light-fleet/trips/'+id, 'PATCH', {status:'cancelled'}); lfRefresh(document.querySelector('.page.active')?.id?.replace('page-','')); } catch(e){ alert('Error: '+e.message); }
+}
+
+// ── OPEN TRIP MODAL ───────────────────────────────────────────────────────────
+function lfOpenTrip(type){
+  document.getElementById('lf-trip-type').value = type;
+  document.getElementById('lf-trip-modal-title').textContent = {nemt:'New NEMT Trip',executive:'New Executive Booking',courier:'New Courier Delivery',gig:'New Trip'}[type]||'New Trip';
+  ['lf-trip-passenger','lf-trip-phone','lf-trip-pickup','lf-trip-dropoff','lf-trip-notes','lf-trip-flight','lf-trip-auth','lf-trip-insurer'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+  ['lf-trip-rate','lf-trip-pkgs','lf-trip-weight'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+  document.getElementById('lf-trip-scheduled').value = '';
+  document.getElementById('lf-nemt-fields').style.display = type==='nemt' ? '' : 'none';
+  document.getElementById('lf-exec-fields').style.display = type==='executive' ? '' : 'none';
+  document.getElementById('lf-cour-fields').style.display = type==='courier' ? '' : 'none';
+  lfOpenModal('lf-trip-modal');
+}
+
+async function lfSaveTrip(){
+  const type = document.getElementById('lf-trip-type').value;
+  const payload = {
+    trip_type: type,
+    passenger_name: document.getElementById('lf-trip-passenger').value.trim(),
+    passenger_phone: document.getElementById('lf-trip-phone').value.trim(),
+    pickup_address:  document.getElementById('lf-trip-pickup').value.trim(),
+    dropoff_address: document.getElementById('lf-trip-dropoff').value.trim(),
+    scheduled_at:    document.getElementById('lf-trip-scheduled').value || null,
+    rate_total:      parseFloat(document.getElementById('lf-trip-rate').value) || null,
+    notes:           document.getElementById('lf-trip-notes').value.trim() || null,
+  };
+  if(!payload.pickup_address || !payload.dropoff_address){ alert('Pickup and dropoff are required.'); return; }
+  if(type==='nemt'){
+    payload.mobility_needs = document.getElementById('lf-trip-mobility').value;
+    payload.insurance_auth_number = document.getElementById('lf-trip-auth').value.trim()||null;
+    payload.insurance_provider = document.getElementById('lf-trip-insurer').value.trim()||null;
+  }
+  if(type==='executive'){
+    payload.flight_number = document.getElementById('lf-trip-flight').value.trim()||null;
+    payload.vehicle_class = document.getElementById('lf-trip-vclass').value;
+  }
+  if(type==='courier'){
+    payload.package_count = parseInt(document.getElementById('lf-trip-pkgs').value)||0;
+    payload.package_weight_lbs = parseFloat(document.getElementById('lf-trip-weight').value)||null;
+  }
+  try {
+    await lfFetch('/api/light-fleet/trips', 'POST', payload);
+    lfCloseModal('lf-trip-modal');
+    lfRefresh('lf-'+type);
+  } catch(e){ alert('Error saving trip: '+e.message); }
+}
+
+// ── NEMT CLIENTS ──────────────────────────────────────────────────────────────
+async function lfLoadNemtClients(){
+  const tbody = document.getElementById('lf-nemt-clients-tbody');
+  try {
+    const d = await lfFetch('/api/light-fleet/nemt/clients');
+    const rows = d.items || [];
+    if(!rows.length){ tbody.innerHTML='<tr><td colspan="6" class="lf-empty">No clients yet</td></tr>'; return; }
+    tbody.innerHTML = rows.map(r=>`<tr>
+      <td>${r.name||'—'}</td>
+      <td>${r.phone||'—'}</td>
+      <td>${r.insurance_provider||'—'} ${r.insurance_id?'#'+r.insurance_id:''}</td>
+      <td>${r.mobility_needs||'—'}</td>
+      <td>${r.total_trips||0}</td>
+      <td>${lfBadge(r.status||'active')}</td>
+    </tr>`).join('');
+  } catch(e){ tbody.innerHTML='<tr><td colspan="6" class="lf-empty" style="color:var(--red)">Error</td></tr>'; }
+}
+
+function lfOpenNemtClient(){
+  ['lf-nc-name','lf-nc-phone','lf-nc-address','lf-nc-insurer','lf-nc-insid','lf-nc-notes'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+  document.getElementById('lf-nc-dob').value='';
+  lfOpenModal('lf-nemt-client-modal');
+}
+
+async function lfSaveNemtClient(){
+  const payload = {
+    name: document.getElementById('lf-nc-name').value.trim(),
+    dob: document.getElementById('lf-nc-dob').value||null,
+    phone: document.getElementById('lf-nc-phone').value.trim()||null,
+    address: document.getElementById('lf-nc-address').value.trim()||null,
+    insurance_provider: document.getElementById('lf-nc-insurer').value.trim()||null,
+    insurance_id: document.getElementById('lf-nc-insid').value.trim()||null,
+    mobility_needs: document.getElementById('lf-nc-mobility').value,
+    notes: document.getElementById('lf-nc-notes').value.trim()||null,
+  };
+  if(!payload.name){ alert('Name is required.'); return; }
+  try { await lfFetch('/api/light-fleet/nemt/clients','POST',payload); lfCloseModal('lf-nemt-client-modal'); lfLoadNemtClients(); } catch(e){ alert('Error: '+e.message); }
+}
+
+// ── EXECUTIVE ACCOUNTS ────────────────────────────────────────────────────────
+async function lfLoadExecAccounts(){
+  const tbody = document.getElementById('lf-exec-accounts-tbody');
+  try {
+    const d = await lfFetch('/api/light-fleet/executive/accounts');
+    const rows = d.items || [];
+    if(!rows.length){ tbody.innerHTML='<tr><td colspan="7" class="lf-empty">No accounts yet</td></tr>'; return; }
+    tbody.innerHTML = rows.map(r=>`<tr>
+      <td><strong>${r.company_name||'—'}</strong></td>
+      <td>${r.contact_name||'—'}<br><span style="font-size:11px;color:var(--muted)">${r.contact_phone||''}</span></td>
+      <td>${r.billing_type||'—'}</td>
+      <td>${r.rate_per_mile!=null?'$'+r.rate_per_mile+'/mi':'—'}</td>
+      <td>${r.flat_rate_airport!=null?lfFmt$(r.flat_rate_airport):'—'}</td>
+      <td>${r.total_trips||0}</td>
+      <td>${lfBadge(r.status||'active')}</td>
+    </tr>`).join('');
+  } catch(e){ tbody.innerHTML='<tr><td colspan="7" class="lf-empty" style="color:var(--red)">Error</td></tr>'; }
+}
+
+function lfOpenExecAccount(){
+  ['lf-ea-company','lf-ea-contact','lf-ea-phone','lf-ea-email','lf-ea-rpm','lf-ea-airport'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+  document.getElementById('lf-ea-expires').value='';
+  lfOpenModal('lf-exec-acct-modal');
+}
+
+async function lfSaveExecAccount(){
+  const payload = {
+    company_name: document.getElementById('lf-ea-company').value.trim(),
+    contact_name: document.getElementById('lf-ea-contact').value.trim()||null,
+    contact_phone: document.getElementById('lf-ea-phone').value.trim()||null,
+    contact_email: document.getElementById('lf-ea-email').value.trim()||null,
+    rate_per_mile: parseFloat(document.getElementById('lf-ea-rpm').value)||null,
+    flat_rate_airport: parseFloat(document.getElementById('lf-ea-airport').value)||null,
+    billing_type: document.getElementById('lf-ea-billing').value,
+    contract_expires: document.getElementById('lf-ea-expires').value||null,
+  };
+  if(!payload.company_name){ alert('Company name is required.'); return; }
+  try { await lfFetch('/api/light-fleet/executive/accounts','POST',payload); lfCloseModal('lf-exec-acct-modal'); lfLoadExecAccounts(); } catch(e){ alert('Error: '+e.message); }
+}
+
+// ── GIG DRIVERS ───────────────────────────────────────────────────────────────
+async function lfLoadDrivers(){
+  const status = document.getElementById('lf-gig-status-filter')?.value||'';
+  const vtype  = document.getElementById('lf-gig-type-filter')?.value||'';
+  const grid   = document.getElementById('lf-gig-driver-grid');
+  grid.innerHTML = '<div class="lf-empty" style="grid-column:1/-1">Loading…</div>';
+  try {
+    let url = '/api/light-fleet/drivers?limit=200';
+    if(status) url += '&status='+status;
+    if(vtype)  url += '&vehicle_type='+vtype;
+    const d = await lfFetch(url);
+    const drivers = d.items || [];
+    if(!drivers.length){ grid.innerHTML='<div class="lf-empty" style="grid-column:1/-1">No drivers found</div>'; return; }
+    grid.innerHTML = drivers.map(dr=>`
+      <div class="lf-driver-card">
+        <div class="lf-driver-card-name">${dr.name||'—'}</div>
+        <div class="lf-driver-card-meta">${dr.phone||''} · ${(dr.vehicle_type||'').toUpperCase()} ${dr.vehicle_year||''} ${dr.vehicle_make||''}</div>
+        <div class="lf-driver-card-row"><span>Status</span>${lfBadge(dr.status||'active')}</div>
+        <div class="lf-driver-card-row"><span>MVR</span>${lfBadge(dr.mvr_status||'pending')}</div>
+        <div class="lf-driver-card-row"><span>Background</span>${lfBadge(dr.background_check_status||'pending')}</div>
+        <div class="lf-driver-card-row"><span>Trips</span><strong>${dr.total_trips||0}</strong></div>
+        ${dr.rating!=null?`<div class="lf-driver-card-row"><span>Rating</span><strong>⭐ ${dr.rating}</strong></div>`:''}
+        <div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap;">
+          ${(dr.approved_services||[]).map(s=>`<span class="lf-badge active" style="font-size:10px">${s}</span>`).join('')}
+        </div>
+      </div>
+    `).join('');
+  } catch(e){ console.error('lf drivers',e); grid.innerHTML='<div class="lf-empty" style="grid-column:1/-1;color:var(--red)">Error loading drivers</div>'; }
+}
+
+function lfOpenDriver(){
+  ['lf-drv-name','lf-drv-phone','lf-drv-email','lf-drv-lic','lf-drv-licstate','lf-drv-vmake','lf-drv-plate'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+  ['lf-drv-licexp','lf-drv-insexp'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+  document.getElementById('lf-drv-vyear').value='';
+  document.querySelectorAll('.lf-svc-check').forEach(c=>c.checked=false);
+  lfOpenModal('lf-driver-modal');
+}
+
+async function lfSaveDriver(){
+  const services = [...document.querySelectorAll('.lf-svc-check:checked')].map(c=>c.value);
+  const makeModel = document.getElementById('lf-drv-vmake').value.trim();
+  const [vm, ...vmod] = makeModel.split(' ');
+  const payload = {
+    name: document.getElementById('lf-drv-name').value.trim(),
+    phone: document.getElementById('lf-drv-phone').value.trim()||null,
+    email: document.getElementById('lf-drv-email').value.trim()||null,
+    license_number: document.getElementById('lf-drv-lic').value.trim()||null,
+    license_state: document.getElementById('lf-drv-licstate').value.trim()||null,
+    license_expires: document.getElementById('lf-drv-licexp').value||null,
+    vehicle_type: document.getElementById('lf-drv-vtype').value,
+    vehicle_year: parseInt(document.getElementById('lf-drv-vyear').value)||null,
+    vehicle_make: vm||null,
+    vehicle_model: vmod.join(' ')||null,
+    vehicle_plate: document.getElementById('lf-drv-plate').value.trim()||null,
+    vehicle_insurance_expires: document.getElementById('lf-drv-insexp').value||null,
+    approved_services: services,
+  };
+  if(!payload.name){ alert('Name is required.'); return; }
+  try { await lfFetch('/api/light-fleet/drivers','POST',payload); lfCloseModal('lf-driver-modal'); lfLoadDrivers(); lfLoadGigKpis(); } catch(e){ alert('Error: '+e.message); }
+}
+</script>
 
 </body>
 </html>

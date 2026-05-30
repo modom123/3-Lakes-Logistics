@@ -549,6 +549,66 @@
     </div>
 
     <!-- ── PROFILE VIEW ── -->
+    <!-- ── LIGHT FLEET TRIPS VIEW ─────────────────────────────────────────── -->
+    <div class="view" id="view-lf-trips">
+      <div class="scroll-inner">
+        <div class="section-header">My Trips</div>
+
+        <!-- Active trip card -->
+        <div id="lf-active-trip-card" style="display:none">
+          <div class="card" style="border-left:3px solid var(--accent)">
+            <div class="card-title" style="display:flex;justify-content:space-between;align-items:center">
+              <span>Active Trip</span>
+              <span id="lf-active-badge" style="font-size:11px;padding:2px 10px;border-radius:20px;background:rgba(139,92,246,.2);color:#8b5cf6;font-weight:700">In Progress</span>
+            </div>
+            <div style="margin-top:8px;">
+              <div style="font-size:12px;color:var(--muted);margin-bottom:2px">PICKUP</div>
+              <div id="lf-active-pickup" style="font-size:14px;font-weight:600;margin-bottom:10px">—</div>
+              <div style="font-size:12px;color:var(--muted);margin-bottom:2px">DROPOFF</div>
+              <div id="lf-active-dropoff" style="font-size:14px;font-weight:600;margin-bottom:12px">—</div>
+              <div style="display:flex;gap:6px;flex-wrap:wrap">
+                <div style="flex:1;min-width:80px;background:var(--card);border-radius:8px;padding:8px;text-align:center">
+                  <div id="lf-active-type" style="font-size:13px;font-weight:700;color:var(--accent)">—</div>
+                  <div style="font-size:10px;color:var(--muted);margin-top:2px">Type</div>
+                </div>
+                <div style="flex:1;min-width:80px;background:var(--card);border-radius:8px;padding:8px;text-align:center">
+                  <div id="lf-active-rate" style="font-size:13px;font-weight:700;color:var(--green)">—</div>
+                  <div style="font-size:10px;color:var(--muted);margin-top:2px">Rate</div>
+                </div>
+                <div style="flex:1;min-width:80px;background:var(--card);border-radius:8px;padding:8px;text-align:center">
+                  <div id="lf-active-passenger" style="font-size:13px;font-weight:700">—</div>
+                  <div style="font-size:10px;color:var(--muted);margin-top:2px">Passenger</div>
+                </div>
+              </div>
+              <div style="display:flex;gap:8px;margin-top:12px">
+                <button class="btn btn-primary" style="flex:1" onclick="lfCompleteTrip()">✓ Complete Trip</button>
+                <button class="btn" style="flex:1;background:var(--card);color:var(--text)" onclick="lfNavigateTrip()">🗺 Navigate</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- No active trip -->
+        <div id="lf-no-active" style="display:none">
+          <div class="card" style="text-align:center;padding:24px">
+            <div style="font-size:32px;margin-bottom:8px">🚗</div>
+            <div style="font-weight:700;margin-bottom:4px">No Active Trip</div>
+            <div style="font-size:13px;color:var(--muted)">Check upcoming trips below</div>
+          </div>
+        </div>
+
+        <div class="section-header" style="margin-top:16px">Upcoming Trips</div>
+        <div id="lf-upcoming-list">
+          <div style="text-align:center;padding:20px;color:var(--muted);font-size:13px">Loading…</div>
+        </div>
+
+        <div class="section-header" style="margin-top:16px">Completed Today</div>
+        <div id="lf-completed-list">
+          <div style="text-align:center;padding:20px;color:var(--muted);font-size:13px">Loading…</div>
+        </div>
+      </div>
+    </div>
+
     <div class="view" id="view-profile">
       <div class="section-header">Driver Profile</div>
       <div class="card">
@@ -697,6 +757,10 @@
   <button class="nav-btn" id="nav-pay" onclick="showView('pay')">
     <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
     Pay
+  </button>
+  <button class="nav-btn" id="nav-lf-trips" onclick="showView('lf-trips')">
+    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="1" y="3" width="11" height="18" rx="2"/><path d="M12 7h8l3 4v4h-11"/><circle cx="5" cy="19" r="2"/><circle cx="17" cy="19" r="2"/></svg>
+    My Trips
   </button>
   <button class="nav-btn" id="nav-profile" onclick="showView('profile')">
     <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
@@ -965,6 +1029,7 @@ function showView(name) {
   if (name === 'docs')     loadDocs();
   if (name === 'messages') { loadMessages(true); markRead(); }
   if (name === 'pay')      loadPayData();
+  if (name === 'lf-trips') loadLfTrips();
 }
 
 // ── CURRENT LOAD ──────────────────────────────────────────────────────────────
@@ -1995,6 +2060,114 @@ async function logout() {
   } catch {}
   localStorage.clear();
   window.location.href = './login.html';
+}
+
+// ── LIGHT FLEET TRIPS ─────────────────────────────────────────────────────────
+let _lfActiveTrip = null;
+
+async function loadLfTrips() {
+  const token = localStorage.getItem('3ll_token') || '';
+  const driverCode = localStorage.getItem('3ll_driver_code') || localStorage.getItem('3ll_driver_id') || '';
+
+  document.getElementById('lf-active-trip-card').style.display = 'none';
+  document.getElementById('lf-no-active').style.display = 'none';
+  document.getElementById('lf-upcoming-list').innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted);font-size:13px">Loading…</div>';
+  document.getElementById('lf-completed-list').innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted);font-size:13px">Loading…</div>';
+
+  try {
+    const base = (window.API_BASE || '');
+    const r = await fetch(base + '/api/light-fleet/trips?limit=100', {
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    if (!r.ok) throw new Error(r.status);
+    const { items } = await r.json();
+
+    const myTrips = items.filter(t => t.driver_id === driverCode || !t.driver_id);
+    const today = new Date().toDateString();
+
+    const active   = myTrips.find(t => t.status === 'in_progress' && t.driver_id === driverCode);
+    const upcoming = myTrips.filter(t => ['pending','assigned'].includes(t.status));
+    const completed = myTrips.filter(t => t.status === 'completed' && new Date(t.completed_at).toDateString() === today);
+
+    // Active
+    if (active) {
+      _lfActiveTrip = active;
+      document.getElementById('lf-active-trip-card').style.display = '';
+      document.getElementById('lf-active-pickup').textContent   = active.pickup_address || '—';
+      document.getElementById('lf-active-dropoff').textContent  = active.dropoff_address || '—';
+      document.getElementById('lf-active-type').textContent     = (active.trip_type || '').toUpperCase();
+      document.getElementById('lf-active-rate').textContent     = active.rate_total ? '$' + active.rate_total : '—';
+      document.getElementById('lf-active-passenger').textContent = active.passenger_name || '—';
+    } else {
+      document.getElementById('lf-no-active').style.display = '';
+    }
+
+    // Upcoming
+    document.getElementById('lf-upcoming-list').innerHTML = upcoming.length ? upcoming.map(t => `
+      <div class="card" style="margin-bottom:8px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <span style="font-size:12px;font-weight:700;color:var(--accent)">${(t.trip_type||'').toUpperCase()}</span>
+          <span style="font-size:11px;padding:2px 8px;border-radius:20px;background:rgba(245,158,11,.15);color:#f59e0b;font-weight:600">${t.status}</span>
+        </div>
+        <div style="font-size:13px;font-weight:600;margin-bottom:2px">${t.pickup_address || '—'}</div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:8px">→ ${t.dropoff_address || '—'}</div>
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <span style="font-size:12px;color:var(--muted)">${t.scheduled_at ? new Date(t.scheduled_at).toLocaleString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}) : 'No schedule set'}</span>
+          <span style="font-size:13px;font-weight:700;color:var(--green)">${t.rate_total ? '$' + t.rate_total : '—'}</span>
+        </div>
+        ${t.status === 'assigned' && t.driver_id === driverCode ? `<button class="btn btn-primary" style="margin-top:10px;width:100%" onclick="lfStartTrip('${t.id}')">Start Trip</button>` : ''}
+      </div>
+    `).join('') : '<div style="text-align:center;padding:20px;color:var(--muted);font-size:13px">No upcoming trips</div>';
+
+    // Completed today
+    document.getElementById('lf-completed-list').innerHTML = completed.length ? completed.map(t => `
+      <div class="card" style="margin-bottom:8px;opacity:.8">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+          <span style="font-size:12px;font-weight:700;color:var(--muted)">${(t.trip_type||'').toUpperCase()}</span>
+          <span style="font-size:11px;padding:2px 8px;border-radius:20px;background:rgba(34,197,94,.15);color:#22c55e;font-weight:600">✓ Completed</span>
+        </div>
+        <div style="font-size:13px;margin-bottom:4px">${t.pickup_address || '—'} → ${t.dropoff_address || '—'}</div>
+        <div style="font-size:13px;font-weight:700;color:var(--green)">${t.rate_total ? '$' + t.rate_total : '—'}</div>
+      </div>
+    `).join('') : '<div style="text-align:center;padding:20px;color:var(--muted);font-size:13px">None yet today</div>';
+
+  } catch (e) {
+    document.getElementById('lf-upcoming-list').innerHTML = '<div style="text-align:center;padding:20px;color:var(--red);font-size:13px">Could not load trips</div>';
+    console.error('lf trips', e);
+  }
+}
+
+async function lfStartTrip(id) {
+  const token = localStorage.getItem('3ll_token') || '';
+  try {
+    await fetch((window.API_BASE || '') + '/api/light-fleet/trips/' + id + '/start', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' }
+    });
+    showToast('Trip started!');
+    loadLfTrips();
+  } catch(e) { showToast('Error starting trip'); }
+}
+
+async function lfCompleteTrip() {
+  if (!_lfActiveTrip) return;
+  const token = localStorage.getItem('3ll_token') || '';
+  try {
+    await fetch((window.API_BASE || '') + '/api/light-fleet/trips/' + _lfActiveTrip.id + '/complete', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({})
+    });
+    showToast('Trip completed! 🎉');
+    _lfActiveTrip = null;
+    loadLfTrips();
+  } catch(e) { showToast('Error completing trip'); }
+}
+
+function lfNavigateTrip() {
+  if (!_lfActiveTrip?.dropoff_address) return;
+  const addr = encodeURIComponent(_lfActiveTrip.dropoff_address);
+  window.open('https://maps.google.com/?q=' + addr, '_blank');
 }
 
 // ── THEME TOGGLE ──────────────────────────────────────────────────────────────
