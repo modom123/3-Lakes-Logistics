@@ -2989,14 +2989,15 @@ function nav(id){
   document.getElementById('page-'+id).classList.add('active');
   document.querySelectorAll('.sb-item').forEach(n=>{if(n.getAttribute('onclick')?.includes("'"+id+"'"))n.classList.add('active');});
   document.getElementById('page-title').textContent=pageNames[id]||id;
-  if(id==='bond'){
+  if(id==='bond'||id==='cso'){
     const ticker=document.querySelector('.ticker-strip');
     const topbar=document.querySelector('.topbar');
     const top=(ticker?ticker.offsetHeight:0)+(topbar?topbar.offsetHeight:0);
-    document.getElementById('page-bond').style.top=top+'px';
+    document.getElementById('page-'+id).style.top=top+'px';
     const content=document.querySelector('.content');
     if(content) content.scrollTop=0;
   }
+  if(id==='cso'){ csoTab('strategy'); csoLoadStrategy(); csoLoadPlan(); }
   if(id==='carriers'){const n=document.getElementById('carrier-notif');if(n)n.style.display='none';}
   if(id==='invoices'){const n=document.getElementById('invoice-notif');if(n)n.style.display='none';renderInvoices();}
   if(id==='notes')loadNotes();
