@@ -125,8 +125,13 @@ def analyze_market(limit: int = 200) -> dict[str, Any]:
 
 def run(payload: dict[str, Any]) -> dict[str, Any]:
     limit = int(payload.get("limit", 200))
+    # Pull CC Gulley's strategic plan — shapes which markets to prioritize
+    cso_plan = mem.recall_value("cc_gulley", "strategic_plan") or {}
+    priority_markets = cso_plan.get("priority_markets", [])
     try:
         result = analyze_market(limit=limit)
+        if priority_markets:
+            result["cso_priority_markets"] = priority_markets
         top = result.get("top_state_by_volume") or "N/A"
         log_agent(
             "alexander", "market_intel",
