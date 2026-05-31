@@ -118,7 +118,10 @@ def assess_carriers() -> dict[str, Any]:
 
 
 def run(payload: dict[str, Any]) -> dict[str, Any]:
-    # Read strategic directive — Victoria may have flagged retention as priority
+    # Read CC Gulley's strategic plan — retention programs and priority directives
+    cso_plan = mem.recall_value("cc_gulley", "strategic_plan") or {}
+    retention_focus = cso_plan.get("retention_priority", None)
+    # Read org-wide strategic directive — Victoria may have flagged retention as priority
     directive = mem.recall_value("org", "strategic_directive") or {}
 
     result = assess_carriers()

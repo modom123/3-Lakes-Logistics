@@ -355,6 +355,11 @@ def run(payload: dict[str, Any]) -> dict[str, Any]:
     min_score     = float(payload.get("min_score", 0))
     include_fmcsa = bool(payload.get("include_fmcsa", True))
 
+    # Pull CC Gulley's strategic plan — shapes targeting priorities and market focus
+    cso_plan = mem.recall_value("cc_gulley", "strategic_plan") or {}
+    target_segments  = cso_plan.get("target_segments", [])
+    priority_markets = cso_plan.get("priority_markets", [])
+
     # Learn from Vance outcomes before scoring
     _learn_from_vance()
 
@@ -401,4 +406,10 @@ def run(payload: dict[str, Any]) -> dict[str, Any]:
         outcome="success",
         outcome_notes=f"Isabella should read naomi/tier_b_targets from org brain",
     )
-    return {"agent": "naomi", **result}
+    mem.log_interaction("naomi", "cc_gulley", "report",
+        payload={"target_segments": target_segments, "priority_markets": priority_markets},
+        result={"tier_a": result["tier_a_count"], "tier_b": result["tier_b_count"]},
+        outcome="success",
+        outcome_notes="Targeting run complete — results aligned to CSO strategic plan",
+    )
+    return {"agent": "naomi", "cso_target_segments": target_segments, "cso_priority_markets": priority_markets, **result}
