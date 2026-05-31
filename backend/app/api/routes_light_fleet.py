@@ -562,7 +562,8 @@ def driver_intake(payload: dict) -> dict:
         raise HTTPException(status_code=422, detail=status_msg)
     return {
         "ok": True,
-        "approved": True,
+        "status": result.get("status", "pending_verification"),
         "driver_id": result.get("driver_id"),
-        "message": "Welcome to 3 Lakes Light Fleet! Check your phone for next steps.",
+        "verification_url": result.get("verification_url"),
+        "message": result.get("message", "Check your phone for next steps."),
     }

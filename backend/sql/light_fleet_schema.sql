@@ -120,7 +120,10 @@ CREATE TABLE IF NOT EXISTS light_vehicle_drivers (
   -- billing plan (determines platform fee rate)
   plan text DEFAULT 'starter' CHECK (plan IN ('starter','pro_fleet','add_on')),
 
-  -- Checkr screening fields
+  -- Stripe Identity verification
+  stripe_verification_session_id text,
+
+  -- Checkr screening fields (fallback if Stripe not available)
   checkr_candidate_id text,
   checkr_invitation_id text,
   checkr_report_id text,

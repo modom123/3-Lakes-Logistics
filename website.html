@@ -2653,9 +2653,15 @@ async function lfSubmitIntake(e){
       method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)
     });
     if(r.ok){
+      const res = await r.json();
       form.style.display='none';
-      document.getElementById('lf-intake-success').style.display='block';
-      window.scrollTo({top:0,behavior:'smooth'});
+      // If Stripe Identity verification URL returned, redirect driver to complete it
+      if(res.verification_url){
+        window.location.href = res.verification_url;
+      } else {
+        document.getElementById('lf-intake-success').style.display='block';
+        window.scrollTo({top:0,behavior:'smooth'});
+      }
     } else {
       const msg = await r.text();
       errEl.textContent = 'Could not complete signup: '+msg; errEl.style.display='block';
