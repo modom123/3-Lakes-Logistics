@@ -27,6 +27,7 @@ _INTEL_KEYS = [
     ("winston",    "churn_signals"),        # Carrier retention
     ("org",        "strategic_directive"),  # Org-wide directive
     ("sofia",      "ar_summary"),           # Financial health
+    ("diana_cole", "division_report"),      # Light Fleet Division P&L
 ]
 
 
