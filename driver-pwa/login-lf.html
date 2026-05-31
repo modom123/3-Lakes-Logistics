@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#0a0a1a" />
+  <title>3 Lakes Light Fleet — Sign In</title>
+  <link rel="manifest" href="manifest-lf.json" />
+  <script src="../shared/config.js"></script>
+  <script src="../shared/tk.js"></script>
+  <style>
+    :root {
+      --bg:      #0a0a1a;
+      --surface: #12112a;
+      --card:    #1a1838;
+      --border:  #2d2b52;
+      --accent:  #8b5cf6;
+      --accent2: #6d28d9;
+      --green:   #22c55e;
+      --red:     #ef4444;
+      --text:    #f1f5f9;
+      --muted:   #94a3b8;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+    body { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 16px; }
+
+    .login-container { width: 100%; max-width: 400px; }
+
+    .login-header { text-align: center; margin-bottom: 36px; }
+    .logo-wrap { display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 10px; }
+    .logo-icon {
+      width: 52px; height: 52px;
+      background: linear-gradient(135deg, #8b5cf6, #6d28d9);
+      border-radius: 14px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 26px;
+      box-shadow: 0 4px 20px rgba(139,92,246,.4);
+    }
+    .logo { font-size: 24px; font-weight: 800; color: var(--text); }
+    .logo span { color: var(--accent); }
+    .tagline { font-size: 13px; color: var(--muted); margin-top: 4px; }
+
+    .platform-chips {
+      display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; margin-top: 14px;
+    }
+    .chip {
+      background: rgba(139,92,246,.12); border: 1px solid rgba(139,92,246,.25);
+      color: var(--accent); font-size: 11px; font-weight: 600;
+      padding: 3px 10px; border-radius: 20px;
+    }
+
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 18px; padding: 26px; }
+    .form-group { margin-bottom: 18px; }
+    .form-label { display: block; font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .8px; margin-bottom: 8px; }
+    .form-input { width: 100%; padding: 14px 16px; font-size: 16px; background: var(--bg); border: 1.5px solid var(--border); border-radius: 12px; color: var(--text); transition: border-color .15s; }
+    .form-input:focus { outline: none; border-color: var(--accent); background: var(--card); box-shadow: 0 0 0 3px rgba(139,92,246,.15); }
+    .pin-input { letter-spacing: 8px; text-align: center; font-size: 24px; font-weight: 700; }
+    .form-hint { font-size: 11px; color: var(--muted); margin-top: 5px; }
+
+    .btn-login {
+      width: 100%; padding: 15px; margin-top: 8px;
+      font-size: 16px; font-weight: 700;
+      background: linear-gradient(135deg, #8b5cf6, #6d28d9);
+      color: #fff; border: none; border-radius: 14px; cursor: pointer;
+      box-shadow: 0 4px 18px rgba(139,92,246,.4);
+      transition: opacity .15s;
+    }
+    .btn-login:active { opacity: .85; }
+    .btn-login:disabled { opacity: .5; cursor: not-allowed; }
+
+    .error { display: none; padding: 12px 14px; margin-bottom: 16px; background: rgba(239,68,68,.12); border: 1px solid rgba(239,68,68,.3); border-radius: 10px; color: var(--red); font-size: 13px; }
+    .error.show { display: block; }
+    .loading { display: none; text-align: center; font-size: 14px; color: var(--muted); padding: 8px 0; }
+    .loading.show { display: block; }
+    .spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid var(--accent); border-top-color: transparent; border-radius: 50%; animation: spin .6s linear infinite; margin-right: 8px; vertical-align: middle; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .divider { display: flex; align-items: center; gap: 10px; margin: 20px 0; color: var(--muted); font-size: 12px; }
+    .divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+    .truck-link {
+      display: block; text-align: center; font-size: 13px; color: var(--muted);
+      text-decoration: none; padding: 12px;
+      border: 1px solid var(--border); border-radius: 12px;
+      transition: background .15s;
+    }
+    .truck-link:hover { background: var(--card); color: var(--text); }
+
+    .contact-hint { margin-top: 20px; text-align: center; font-size: 12px; color: var(--muted); line-height: 1.6; }
+    .contact-hint a { color: var(--accent); text-decoration: none; }
+  </style>
+</head>
+<body>
+
+<div class="login-container">
+  <div class="login-header">
+    <div class="logo-wrap">
+      <div class="logo-icon">🚗</div>
+      <div>
+        <div class="logo"><span>3 Lakes</span> Light Fleet</div>
+        <div class="tagline">NEMT · Courier · Executive · Gig</div>
+      </div>
+    </div>
+    <div class="platform-chips">
+      <span class="chip">Curri</span>
+      <span class="chip">Roadie</span>
+      <span class="chip">Amazon Flex</span>
+      <span class="chip">Spark</span>
+      <span class="chip">DoorDash</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <form id="login-form" onsubmit="handleLogin(event)">
+      <div id="error" class="error"></div>
+      <div id="loading" class="loading">
+        <div class="spinner"></div> Signing you in…
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Phone Number</label>
+        <input id="phone" type="tel" class="form-input" placeholder="(312) 555-0100"
+          inputmode="tel" autocomplete="tel" required />
+        <div class="form-hint">Same number you used when you applied</div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">4-Digit PIN</label>
+        <input id="pin" type="password" class="form-input pin-input"
+          placeholder="••••" inputmode="numeric" maxlength="4" minlength="4" required />
+      </div>
+
+      <button id="login-btn" type="submit" class="btn-login">Sign In → Start Earning</button>
+    </form>
+  </div>
+
+  <div class="divider">CDL truck driver?</div>
+  <a href="./login.html" class="truck-link">🚛 Switch to Truck Driver Login</a>
+
+  <div class="contact-hint">
+    No account yet? Complete your driver application at<br>
+    <a href="https://3lakeslogistics.com" target="_blank">3lakeslogistics.com</a>
+    &nbsp;·&nbsp;
+    <a href="mailto:info@3lakeslogistics.com">info@3lakeslogistics.com</a>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+var _cfg = window.__3LL_CONFIG || {};
+var sb = null;
+if (window.supabase && _cfg.SUPABASE_URL && _cfg.SUPABASE_KEY) {
+  sb = window.supabase.createClient(_cfg.SUPABASE_URL, _cfg.SUPABASE_KEY);
+}
+
+async function handleLogin(e) {
+  e.preventDefault();
+  const phone    = document.getElementById('phone').value.trim();
+  const pin      = document.getElementById('pin').value.trim();
+  const errorEl  = document.getElementById('error');
+  const loadEl   = document.getElementById('loading');
+  const btnEl    = document.getElementById('login-btn');
+
+  errorEl.classList.remove('show');
+  const digits = phone.replace(/\D/g, '');
+
+  if (digits.length < 10) {
+    errorEl.textContent = 'Please enter a valid 10-digit phone number.';
+    errorEl.classList.add('show'); return;
+  }
+  if (!/^\d{4}$/.test(pin)) {
+    errorEl.textContent = 'PIN must be exactly 4 digits.';
+    errorEl.classList.add('show'); return;
+  }
+
+  loadEl.classList.add('show');
+  btnEl.disabled = true;
+
+  if (!sb) {
+    errorEl.textContent = 'Service unavailable. Try again shortly.';
+    errorEl.classList.add('show');
+    loadEl.classList.remove('show'); btnEl.disabled = false; return;
+  }
+
+  try {
+    const normalizedPhone = '+1' + digits;
+
+    // Try light_vehicle_drivers table first (LF-native login)
+    const { data: lfData, error: lfErr } = await sb.rpc('lf_driver_login', {
+      p_phone: normalizedPhone,
+      p_pin:   pin
+    });
+
+    if (!lfErr && lfData) {
+      // LF driver found
+      const driverName = [lfData.first_name, lfData.last_name].filter(Boolean).join(' ') || lfData.full_name || lfData.name || 'Driver';
+      localStorage.setItem('3ll_token',         'lf-' + lfData.id);
+      localStorage.setItem('3ll_driver_id',     String(lfData.id));
+      localStorage.setItem('3ll_lf_driver_id',  String(lfData.id));
+      localStorage.setItem('3ll_driver_mode',   'light');
+      localStorage.setItem('3ll_driver_name',   driverName);
+      localStorage.setItem('3ll_phone',         normalizedPhone);
+      localStorage.setItem('3ll_expires_at',    new Date(Date.now() + 86400000 * 30).toISOString());
+      // Clear any truck keys from a previous session
+      ['3ll_driver_code','3ll_truck','3ll_trailer','3ll_carrier_id'].forEach(k => localStorage.removeItem(k));
+      window.location.href = './lf.html';
+      return;
+    }
+
+    // Fallback: universal driver_login RPC (also covers LF drivers registered via carrier table)
+    const { data, error } = await sb.rpc('driver_login', { p_phone: normalizedPhone, p_pin: pin });
+    if (error || !data) {
+      errorEl.textContent = 'Incorrect phone or PIN. Contact dispatch to get set up.';
+      errorEl.classList.add('show');
+      loadEl.classList.remove('show'); btnEl.disabled = false; return;
+    }
+
+    const driverName = [data.first_name, data.last_name].filter(Boolean).join(' ') || data.name || 'Driver';
+    localStorage.setItem('3ll_token',        'lf-' + (data.lf_driver_id || data.id));
+    localStorage.setItem('3ll_driver_id',    String(data.id));
+    localStorage.setItem('3ll_lf_driver_id', String(data.lf_driver_id || data.id));
+    localStorage.setItem('3ll_driver_mode',  'light');
+    localStorage.setItem('3ll_driver_name',  driverName);
+    localStorage.setItem('3ll_phone',        normalizedPhone);
+    localStorage.setItem('3ll_expires_at',   new Date(Date.now() + 86400000 * 30).toISOString());
+    ['3ll_driver_code','3ll_truck','3ll_trailer','3ll_carrier_id'].forEach(k => localStorage.removeItem(k));
+    window.location.href = './lf.html';
+
+  } catch (err) {
+    errorEl.textContent = 'Connection error — check your internet and try again.';
+    errorEl.classList.add('show');
+    loadEl.classList.remove('show'); btnEl.disabled = false;
+  }
+}
+
+document.getElementById('pin').addEventListener('input', e => {
+  e.target.value = e.target.value.replace(/\D/g, '').substring(0, 4);
+});
+document.getElementById('phone').addEventListener('input', e => {
+  const d = e.target.value.replace(/\D/g, '');
+  let f = d;
+  if (d.length >= 6)      f = '(' + d.slice(0,3) + ') ' + d.slice(3,6) + '-' + d.slice(6,10);
+  else if (d.length >= 3) f = '(' + d.slice(0,3) + ') ' + d.slice(3);
+  e.target.value = f.substring(0, 14);
+});
+
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+</script>
+</body>
+</html>

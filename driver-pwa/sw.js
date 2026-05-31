@@ -1,5 +1,13 @@
-const CACHE = '3ll-driver-v1';
-const ASSETS = ['/', '/driver-pwa/', '/driver-pwa/index.html'];
+const CACHE = '3ll-driver-v2';
+const ASSETS = [
+  '/', '/driver-pwa/',
+  '/driver-pwa/index.html',
+  '/driver-pwa/login.html',
+  '/driver-pwa/lf.html',
+  '/driver-pwa/login-lf.html',
+  '/driver-pwa/manifest.json',
+  '/driver-pwa/manifest-lf.json',
+];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS).catch(() => {})));
