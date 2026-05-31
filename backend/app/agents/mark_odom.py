@@ -31,6 +31,27 @@ _INTEL_KEYS = [
 ]
 
 
+def _ledger_revenue() -> dict:
+    try:
+        sb = get_supabase()
+        rows = (
+            sb.table("atomic_ledger")
+            .select("financial_payload,event_type")
+            .in_("event_type", ["lf_trip_settled", "settlement.posted"])
+            .limit(1000)
+            .execute()
+            .data or []
+        )
+        lf = sum(float(r["financial_payload"].get("rate_total") or 0)
+                 for r in rows if r["event_type"] == "lf_trip_settled")
+        tr = sum(float(r["financial_payload"].get("rate_total") or 0)
+                 for r in rows if r["event_type"] == "settlement.posted")
+        return {"lf_revenue": round(lf, 2), "trucking_revenue": round(tr, 2),
+                "total_revenue": round(lf + tr, 2)}
+    except Exception:
+        return {}
+
+
 def _safe_count(table: str, filters: dict | None = None) -> int:
     try:
         sb = get_supabase()
@@ -71,6 +92,8 @@ def commander_brief() -> dict[str, Any]:
         if val:
             intel[f"{agent_key}_{memory_key}"] = val
 
+    ledger_rev = _ledger_revenue()
+
     # Strategic state of the company
     activation_rate = round(active_carriers / total_carriers * 100, 1) if total_carriers else 0
     growth_directive = mem.recall_value("org", "strategic_directive") or {}
@@ -98,6 +121,7 @@ def commander_brief() -> dict[str, Any]:
             "activation_rate_pct": activation_rate,
             "total_leads": total_leads,
             "open_tier3_escalations": open_tier3,
+            "atomic_ledger_revenue": ledger_rev,
         },
         "org_priority": priority,
         "recommended_actions": actions,

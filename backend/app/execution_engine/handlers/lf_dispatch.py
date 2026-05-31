@@ -467,22 +467,22 @@ def h237_ledger_preview(carrier_id, contract_id, payload) -> dict:
         sb = _db()
         if not sb:
             return {"ledger_written": False, "note": "supabase_not_configured"}
-        result = sb.table("atomic_ledger").insert({
-            "event_type": "lf_trip_dispatched",
-            "event_source": "execution_engine.lf_dispatch",
-            "logistics_payload": {
+        from ...atomic_ledger.service import write_event
+        from ...atomic_ledger.models import AtomicEvent
+        row = write_event(AtomicEvent(
+            event_type="lf_trip_dispatched",
+            event_source="execution_engine.lf_dispatch",
+            logistics_payload={
                 "trip_id": trip_id,
                 "trip_type": trip_type,
                 "pickup_address": pickup_address,
                 "dropoff_address": dropoff_address,
             },
-            "financial_payload": {
+            financial_payload={
                 "estimated_revenue": rate_total,
             },
-            "compliance_payload": {},
-            "created_at": _NOW(),
-        }).execute()
-        ledger_id = result.data[0]["id"] if result.data else None
+        ))
+        ledger_id = row.get("id")
         return {
             "ledger_written": True,
             "ledger_id": ledger_id,

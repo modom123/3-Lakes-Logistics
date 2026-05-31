@@ -445,19 +445,18 @@ def h217_ledger_write(carrier_id, contract_id, payload) -> dict:
         sb = _db()
         if not sb:
             return {"ledger_written": False, "note": "supabase_not_configured"}
-        result = sb.table("atomic_ledger").insert({
-            "event_type": "lf_driver_onboarded",
-            "event_source": "execution_engine.lf_onboarding",
-            "logistics_payload": {
+        from ...atomic_ledger.service import write_event
+        from ...atomic_ledger.models import AtomicEvent
+        row = write_event(AtomicEvent(
+            event_type="lf_driver_onboarded",
+            event_source="execution_engine.lf_onboarding",
+            logistics_payload={
                 "driver_id": str(driver_id) if driver_id else None,
                 "name": d.get("name"),
                 "vehicle_type": d.get("vehicle_type"),
             },
-            "financial_payload": {},
-            "compliance_payload": {},
-            "created_at": _NOW(),
-        }).execute()
-        ledger_id = result.data[0]["id"] if result.data else None
+        ))
+        ledger_id = row.get("id")
         return {
             "ledger_written": True,
             "ledger_id": ledger_id,

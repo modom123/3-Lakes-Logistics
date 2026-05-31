@@ -25,6 +25,35 @@ def _safe_count(table: str, filters: dict | None = None) -> int:
         return 0
 
 
+def _ledger_revenue_snapshot() -> dict[str, Any]:
+    """Pull combined revenue from the atomic ledger for growth reporting."""
+    try:
+        sb = get_supabase()
+        rows = (
+            sb.table("atomic_ledger")
+            .select("financial_payload,event_type")
+            .in_("event_type", ["lf_trip_settled", "settlement.posted"])
+            .limit(1000)
+            .execute()
+            .data or []
+        )
+        lf_rev = sum(
+            float(r["financial_payload"].get("rate_total") or 0)
+            for r in rows if r["event_type"] == "lf_trip_settled"
+        )
+        trucking_rev = sum(
+            float(r["financial_payload"].get("rate_total") or 0)
+            for r in rows if r["event_type"] == "settlement.posted"
+        )
+        return {
+            "lf_settled_revenue": round(lf_rev, 2),
+            "trucking_settled_revenue": round(trucking_rev, 2),
+            "combined_ledger_revenue": round(lf_rev + trucking_rev, 2),
+        }
+    except Exception:
+        return {}
+
+
 def strategic_snapshot() -> dict[str, Any]:
     sb = get_supabase()
 
@@ -63,6 +92,8 @@ def strategic_snapshot() -> dict[str, Any]:
     if not signals:
         signals.append("All metrics nominal — focus on geographic lane expansion")
 
+    ledger = _ledger_revenue_snapshot()
+
     return {
         "total_carriers": total_carriers,
         "active_carriers": active_carriers,
@@ -73,6 +104,7 @@ def strategic_snapshot() -> dict[str, Any]:
         "new_leads_untouched": new_leads,
         "lead_to_carrier_conversion_pct": lead_conversion,
         "total_revenue_closed": round(total_rev, 2),
+        "atomic_ledger_revenue": ledger,
         "strategic_signals": signals,
         "recommended_actions": signals[:3],
     }
