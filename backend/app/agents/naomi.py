@@ -355,10 +355,16 @@ def run(payload: dict[str, Any]) -> dict[str, Any]:
     min_score     = float(payload.get("min_score", 0))
     include_fmcsa = bool(payload.get("include_fmcsa", True))
 
-    # Pull CC Gulley's strategic plan — shapes targeting priorities and market focus
+    # Pull CC Gulley's strategic plan and any live directive — shapes targeting
     cso_plan = mem.recall_value("cc_gulley", "strategic_plan") or {}
     target_segments  = cso_plan.get("target_segments", [])
     priority_markets = cso_plan.get("priority_markets", [])
+    directive = mem.recall_value("cc_gulley", "directive_to_naomi") or {}
+    if directive:
+        if directive.get("target_segments"):
+            target_segments = directive["target_segments"]
+        if directive.get("priority_markets"):
+            priority_markets = directive["priority_markets"]
 
     # Learn from Vance outcomes before scoring
     _learn_from_vance()
@@ -410,6 +416,9 @@ def run(payload: dict[str, Any]) -> dict[str, Any]:
         payload={"target_segments": target_segments, "priority_markets": priority_markets},
         result={"tier_a": result["tier_a_count"], "tier_b": result["tier_b_count"]},
         outcome="success",
-        outcome_notes="Targeting run complete — results aligned to CSO strategic plan",
+        outcome_notes=f"Targeting run complete · directive applied: {bool(directive)}",
     )
+    if directive:
+        result["cso_directive"] = directive.get("instruction", "")
+        result["cso_directive_focus"] = directive.get("focus", "")
     return {"agent": "naomi", "cso_target_segments": target_segments, "cso_priority_markets": priority_markets, **result}

@@ -118,9 +118,13 @@ def assess_carriers() -> dict[str, Any]:
 
 
 def run(payload: dict[str, Any]) -> dict[str, Any]:
-    # Read CC Gulley's strategic plan — retention programs and priority directives
+    # Read CC Gulley's strategic plan and live directive — retention programs
     cso_plan = mem.recall_value("cc_gulley", "strategic_plan") or {}
     retention_focus = cso_plan.get("retention_priority", None)
+    cso_directive = mem.recall_value("cc_gulley", "directive_to_winston") or {}
+    if cso_directive:
+        if cso_directive.get("retention_priority"):
+            retention_focus = cso_directive["retention_priority"]
     # Read org-wide strategic directive — Victoria may have flagged retention as priority
     directive = mem.recall_value("org", "strategic_directive") or {}
 
@@ -181,4 +185,13 @@ def run(payload: dict[str, Any]) -> dict[str, Any]:
             outcome="success",
             outcome_notes=f"Isabella should run retention campaign for {result['at_risk_count']} at-risk carriers",
         )
+    mem.log_interaction("winston", "cc_gulley", "report",
+        payload={"retention_focus": retention_focus},
+        result={"at_risk": result["at_risk_count"], "retention_rate_pct": result["retention_rate_pct"]},
+        outcome="success",
+        outcome_notes=f"Retention audit complete · directive applied: {bool(cso_directive)}",
+    )
+    if cso_directive:
+        result["cso_directive"] = cso_directive.get("instruction", "")
+        result["cso_directive_focus"] = cso_directive.get("focus", "")
     return {"agent": "winston", **result}

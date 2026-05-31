@@ -125,13 +125,21 @@ def analyze_market(limit: int = 200) -> dict[str, Any]:
 
 def run(payload: dict[str, Any]) -> dict[str, Any]:
     limit = int(payload.get("limit", 200))
-    # Pull CC Gulley's strategic plan — shapes which markets to prioritize
+    # Pull CC Gulley's strategic plan and any live directive — shapes market priorities
     cso_plan = mem.recall_value("cc_gulley", "strategic_plan") or {}
     priority_markets = cso_plan.get("priority_markets", [])
+    directive = mem.recall_value("cc_gulley", "directive_to_alexander") or {}
+    if directive:
+        # Directive overrides / extends plan-level market focus
+        if directive.get("priority_markets"):
+            priority_markets = directive["priority_markets"]
     try:
         result = analyze_market(limit=limit)
         if priority_markets:
             result["cso_priority_markets"] = priority_markets
+        if directive:
+            result["cso_directive"] = directive.get("instruction", "")
+            result["cso_directive_focus"] = directive.get("focus", "")
         top = result.get("top_state_by_volume") or "N/A"
         log_agent(
             "alexander", "market_intel",
@@ -165,6 +173,13 @@ def run(payload: dict[str, Any]) -> dict[str, Any]:
                 outcome="success",
                 outcome_notes=f"Top state: {result.get('top_state_by_volume')}",
             )
+        mem.log_interaction(
+            "alexander", "cc_gulley", "report",
+            payload={"priority_markets": priority_markets},
+            result={"top_state": result.get("top_state_by_volume"), "records": result.get("records_fetched", 0)},
+            outcome="success",
+            outcome_notes=f"Market intel run complete · directive applied: {bool(directive)}",
+        )
         return {"agent": "alexander", **result}
     except RuntimeError as exc:
         log_agent("alexander", "market_intel", payload={}, result=f"ERROR: {exc}")

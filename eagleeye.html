@@ -2997,7 +2997,7 @@ function nav(id){
     const content=document.querySelector('.content');
     if(content) content.scrollTop=0;
   }
-  if(id==='cso'){ csoTab('strategy'); csoLoadStrategy(); csoLoadPlan(); }
+  if(id==='cso'){ csoTab('strategy'); csoLoadStrategy(); csoLoadPlan(); csoDirLoadActive(); }
   if(id==='carriers'){const n=document.getElementById('carrier-notif');if(n)n.style.display='none';}
   if(id==='invoices'){const n=document.getElementById('invoice-notif');if(n)n.style.display='none';renderInvoices();}
   if(id==='notes')loadNotes();
@@ -8344,6 +8344,18 @@ if (typeof nav === 'function') {
 .cso-plan-hist{flex:1;overflow-y:auto;padding:14px 16px;display:flex;flex-direction:column;gap:7px;scrollbar-width:thin;scrollbar-color:#38bdf8 transparent;}
 .cso-hist-item{font-size:10px;line-height:1.5;border-left:2px solid rgba(56,189,248,.3);padding:4px 8px;color:rgba(255,255,255,.45);}
 .cso-hist-item strong{color:#fff;}
+/* Directives tab */
+.cso-dir-agent-btn{background:rgba(255,255,255,.04);border:1.5px solid rgba(255,255,255,.12);border-radius:10px;padding:12px 18px;color:rgba(255,255,255,.7);font-size:12px;font-weight:700;cursor:pointer;transition:all .15s;text-align:center;line-height:1.6;min-width:110px;font-family:var(--ff-b);}
+.cso-dir-agent-btn:hover{border-color:rgba(56,189,248,.5);color:#38bdf8;background:rgba(14,165,233,.08);}
+.cso-dir-agent-btn.active{border-color:#38bdf8;color:#38bdf8;background:rgba(14,165,233,.12);box-shadow:0 0 12px rgba(14,165,233,.2);}
+.cso-dir-card{border-radius:8px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.03);padding:10px 12px;border-left:3px solid #38bdf8;}
+.cso-dir-card.naomi{border-left-color:#10b981;}.cso-dir-card.winston{border-left-color:#f59e0b;}
+.cso-dir-card-hd{font-weight:700;font-size:11px;color:#fff;margin-bottom:3px;display:flex;align-items:center;gap:6px;}
+.cso-dir-card-to{font-family:var(--ff-m);font-size:9px;color:#38bdf8;letter-spacing:.5px;}
+.cso-dir-card-body{font-size:11px;color:rgba(255,255,255,.55);line-height:1.5;margin-top:4px;}
+.cso-dir-card-ts{font-family:var(--ff-m);font-size:9px;color:rgba(255,255,255,.3);margin-top:5px;}
+.cso-dir-card-clear{background:none;border:1px solid rgba(255,255,255,.15);border-radius:4px;color:rgba(255,255,255,.4);font-size:9px;padding:2px 7px;cursor:pointer;float:right;font-family:var(--ff-b);}
+.cso-dir-card-clear:hover{border-color:#ef4444;color:#ef4444;}
 /* Reporting tab */
 .cso-reporting{display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden;padding:18px 24px;gap:14px;}
 @media(max-width:768px){
@@ -8379,6 +8391,7 @@ if (typeof nav === 'function') {
     <button class="cso-tab active" id="csotab-strategy" onclick="csoTab('strategy')">📊 Strategy Room</button>
     <button class="cso-tab" id="csotab-intel" onclick="csoTab('intel')">📡 Intel Feed</button>
     <button class="cso-tab" id="csotab-plan" onclick="csoTab('plan')">📋 Strategic Plan</button>
+    <button class="cso-tab" id="csotab-directives" onclick="csoTab('directives')">📣 Directives <span id="cso-dir-badge" style="display:none;background:#38bdf8;color:#000;font-size:9px;font-weight:800;border-radius:10px;padding:1px 6px;font-family:var(--ff-m);">NEW</span></button>
     <button class="cso-tab" id="csotab-reporting" onclick="csoTab('reporting')">📈 Reporting Up</button>
   </div>
 
@@ -8656,6 +8669,94 @@ This brief consolidates:
 
       </div>
     </div><!-- /reporting -->
+
+    <!-- ════ DIRECTIVES ════ -->
+    <div class="cso-pane" id="csopane-directives">
+      <div class="cso-plan" style="gap:0;">
+
+        <!-- Compose panel (left) -->
+        <div class="cso-plan-main" style="max-width:520px;">
+          <div>
+            <div class="cso-fl">CC GULLEY · DIRECT ORDERS</div>
+            <div class="cso-label" style="font-size:16px;">Send a Directive to a Direct Report</div>
+            <div style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:16px;">Your directive is written to org memory and applied the next time that agent runs. Use this to redirect focus, adjust priorities, or give specific instructions.</div>
+          </div>
+
+          <!-- Target agent selector -->
+          <div>
+            <div class="cso-fl">SEND TO</div>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;">
+              <button id="dir-btn-alexander" class="cso-dir-agent-btn active" onclick="csoDirSelect('alexander')">
+                <span style="font-size:18px;">🗺️</span><br/>Alexander Wright<br/><span style="font-size:9px;opacity:.6;">Market Intel</span>
+              </button>
+              <button id="dir-btn-naomi" class="cso-dir-agent-btn" onclick="csoDirSelect('naomi')">
+                <span style="font-size:18px;">🎯</span><br/>Naomi Kensington<br/><span style="font-size:9px;opacity:.6;">Targeting</span>
+              </button>
+              <button id="dir-btn-winston" class="cso-dir-agent-btn" onclick="csoDirSelect('winston')">
+                <span style="font-size:18px;">🛡️</span><br/>Winston Carmichael<br/><span style="font-size:9px;opacity:.6;">Retention</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Focus (short) -->
+          <div>
+            <div class="cso-fl">FOCUS / SUBJECT</div>
+            <input class="cso-input" id="dir-focus" placeholder="e.g. Shift focus to TX and FL immediately"/>
+          </div>
+
+          <!-- Agent-specific override fields, shown based on selection -->
+          <div id="dir-fields-alexander">
+            <div class="cso-fl">PRIORITY MARKETS (overrides plan)</div>
+            <input class="cso-input" id="dir-alex-markets" placeholder="e.g. TX, FL, GA — comma-separated states"/>
+          </div>
+          <div id="dir-fields-naomi" style="display:none;">
+            <div class="cso-fl">TARGET SEGMENTS (overrides plan)</div>
+            <input class="cso-input" id="dir-naomi-segments" placeholder="e.g. dry-van, reefer, flatbed"/>
+            <div class="cso-fl" style="margin-top:10px;">PRIORITY MARKETS (overrides plan)</div>
+            <input class="cso-input" id="dir-naomi-markets" placeholder="e.g. TX, FL, GA"/>
+          </div>
+          <div id="dir-fields-winston" style="display:none;">
+            <div class="cso-fl">RETENTION PRIORITY (overrides plan)</div>
+            <input class="cso-input" id="dir-winston-retention" placeholder="e.g. Never-loaded carriers first · escalate to Vance in 48h"/>
+          </div>
+
+          <!-- Full instruction -->
+          <div>
+            <div class="cso-fl">FULL INSTRUCTION</div>
+            <textarea class="cso-textarea" id="dir-instruction" rows="5" placeholder="Write your full directive here. This is stored to org memory and shown to the agent on their next run. Be specific — include timelines, thresholds, and what you expect back."></textarea>
+          </div>
+
+          <!-- Quick templates -->
+          <div>
+            <div class="cso-fl">QUICK TEMPLATES</div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+              <button class="cso-hdr-btn" onclick="csoDirTemplate('expand')">📈 Market Expansion</button>
+              <button class="cso-hdr-btn" onclick="csoDirTemplate('retention')">🔒 Retention Push</button>
+              <button class="cso-hdr-btn" onclick="csoDirTemplate('segment')">🎯 Segment Shift</button>
+              <button class="cso-hdr-btn" onclick="csoDirTemplate('urgent')">⚡ Urgent Refocus</button>
+            </div>
+          </div>
+
+          <div style="display:flex;gap:10px;align-items:center;margin-top:4px;">
+            <button class="cso-save-btn" id="cso-dir-send-btn" onclick="csoDirSend()">📣 Send Directive</button>
+            <button class="cso-hdr-btn" onclick="csoDirClear()">Clear</button>
+            <span id="cso-dir-status" style="font-size:11px;color:#38bdf8;"></span>
+          </div>
+        </div>
+
+        <!-- Active directives side panel -->
+        <div class="cso-plan-side" style="width:340px;">
+          <div style="padding:14px 16px;border-bottom:1px solid rgba(255,255,255,.08);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
+            <div style="font-weight:700;font-size:12px;color:#fff;">📋 Active Directives</div>
+            <button class="cso-hdr-btn" style="font-size:10px;padding:3px 8px;" onclick="csoDirLoadActive()">↺</button>
+          </div>
+          <div style="flex:1;overflow-y:auto;padding:12px 14px;display:flex;flex-direction:column;gap:8px;scrollbar-width:thin;scrollbar-color:#38bdf8 transparent;" id="cso-dir-active">
+            <div style="color:rgba(255,255,255,.3);font-size:11px;">Loading active directives…</div>
+          </div>
+        </div>
+
+      </div>
+    </div><!-- /directives -->
 
   </div><!-- /body -->
 </div><!-- /cso-wrap -->
@@ -9756,6 +9857,7 @@ function csoTab(id){
   if(id==='strategy') csoLoadStrategy();
   if(id==='intel') csoLoadIntelTab();
   if(id==='plan') csoLoadPlan();
+  if(id==='directives') csoDirLoadActive();
   if(id==='reporting') csoLoadReporting();
 }
 
@@ -10072,6 +10174,143 @@ async function csoGenerateBrief(){
   }
 })();
 setInterval(()=>{ if(document.getElementById('page-cso')?.classList.contains('active')) csoLoadStrategy(); }, 120000);
+
+// ── CSO Directives ────────────────────────────────────────────────────────────
+let _csoDirTarget = 'alexander';
+
+function csoDirSelect(agent){
+  _csoDirTarget = agent;
+  ['alexander','naomi','winston'].forEach(a=>{
+    document.getElementById('dir-btn-'+a)?.classList.toggle('active', a===agent);
+    const f=document.getElementById('dir-fields-'+a);
+    if(f) f.style.display=(a===agent?'block':'none');
+  });
+}
+
+function csoDirTemplate(type){
+  const focus = document.getElementById('dir-focus');
+  const instr = document.getElementById('dir-instruction');
+  const mkts  = document.getElementById('dir-alex-markets');
+  const nmkts = document.getElementById('dir-naomi-markets');
+  const segs  = document.getElementById('dir-naomi-segments');
+  const ret   = document.getElementById('dir-winston-retention');
+  if(type==='expand'){
+    focus.value='Expand coverage into new high-density markets immediately';
+    instr.value='Shift primary analysis to markets we have not fully penetrated. Identify states where carrier density is high but our active carrier count is low — these are our biggest opportunity gaps. Report top 3 underserved markets with specific carrier count estimates.';
+    if(mkts) mkts.value='TX, FL, OH, NC, GA';
+    csoDirSelect('alexander');
+  } else if(type==='retention'){
+    csoDirSelect('winston');
+    focus.value='Emergency retention push — prioritize never-loaded carriers';
+    instr.value='Flag every carrier who has been active for 30+ days with zero completed loads. Escalate the top 20 to Vance immediately for personal outreach. Set retention priority: never-loaded first, then 14-day-inactive fleet. Report back count and names within next run.';
+    if(ret) ret.value='Never-loaded carriers first — escalate top 20 to Vance within 24h';
+  } else if(type==='segment'){
+    csoDirSelect('naomi');
+    focus.value='Shift targeting to reefer and flatbed specialists';
+    instr.value='De-prioritize dry-van prospects for this cycle. Focus Tier A scoring on reefer and flatbed carriers in TX, FL, and Midwest. Corporate accounts and NEMT brokers need specialty carriers — score and surface the top 15 flatbed/reefer carriers for Vance call queue.';
+    if(segs) segs.value='reefer, flatbed';
+    if(nmkts) nmkts.value='TX, FL, IL, OH';
+  } else if(type==='urgent'){
+    focus.value='URGENT — immediate refocus required';
+    instr.value='PRIORITY CHANGE: Stand down from current run parameters. The Commander has flagged an urgent need — reassign all capacity to the directive below. Report back within this run with updated numbers. This supersedes the existing strategic plan for this cycle.';
+  }
+}
+
+async function csoDirSend(){
+  const btn = document.getElementById('cso-dir-send-btn');
+  const status = document.getElementById('cso-dir-status');
+  const focus = document.getElementById('dir-focus').value.trim();
+  const instruction = document.getElementById('dir-instruction').value.trim();
+  if(!instruction){ status.textContent='✗ Write an instruction first'; status.style.color='#ef4444'; return; }
+  btn.disabled=true; btn.textContent='Sending…';
+  status.textContent=''; status.style.color='#38bdf8';
+
+  // Build agent-specific payload
+  const value = { instruction, focus, sent_at: new Date().toISOString(), from: 'CC Gulley (CSO)' };
+  if(_csoDirTarget==='alexander'){
+    const mkts = document.getElementById('dir-alex-markets').value.trim();
+    if(mkts) value.priority_markets = mkts.split(',').map(s=>s.trim()).filter(Boolean);
+  } else if(_csoDirTarget==='naomi'){
+    const segs = document.getElementById('dir-naomi-segments').value.trim();
+    const mkts = document.getElementById('dir-naomi-markets').value.trim();
+    if(segs) value.target_segments = segs.split(',').map(s=>s.trim()).filter(Boolean);
+    if(mkts) value.priority_markets = mkts.split(',').map(s=>s.trim()).filter(Boolean);
+  } else if(_csoDirTarget==='winston'){
+    const ret = document.getElementById('dir-winston-retention').value.trim();
+    if(ret) value.retention_priority = ret;
+  }
+
+  try{
+    await csoAPI.post('/api/memory/store',{
+      agent: 'cc_gulley',
+      key: 'directive_to_'+_csoDirTarget,
+      value,
+      confidence: 0.98,
+      summary: `CSO directive to ${_csoDirTarget}: ${focus||instruction.slice(0,60)}`,
+    });
+    status.textContent=`✓ Directive sent to ${_csoDirTarget} — active on next run`;
+    status.style.color='#10b981';
+    // Flash badge
+    const badge=document.getElementById('cso-dir-badge');
+    if(badge){badge.style.display='inline';setTimeout(()=>badge.style.display='none',4000);}
+    csoDirLoadActive();
+    csoDirClear();
+  }catch(e){
+    status.textContent='✗ Failed — API offline';
+    status.style.color='#ef4444';
+  }
+  btn.disabled=false; btn.textContent='📣 Send Directive';
+}
+
+async function csoDirLoadActive(){
+  const el = document.getElementById('cso-dir-active');
+  if(!el) return;
+  const agents = [
+    {key:'directive_to_alexander', label:'Alexander Wright', color:'alexander', icon:'🗺️'},
+    {key:'directive_to_naomi',     label:'Naomi Kensington', color:'naomi',     icon:'🎯'},
+    {key:'directive_to_winston',   label:'Winston Carmichael', color:'winston', icon:'🛡️'},
+  ];
+  const cards = [];
+  for(const a of agents){
+    try{
+      const d = await csoAPI.get('/api/memory/cc_gulley/'+a.key);
+      const v = d?.value || d;
+      if(v && v.instruction){
+        cards.push(`
+          <div class="cso-dir-card ${a.color}">
+            <div class="cso-dir-card-hd">
+              ${a.icon} <span>${a.label}</span>
+              <button class="cso-dir-card-clear" onclick="csoDirClear('${a.key}')">✕ Clear</button>
+            </div>
+            <div class="cso-dir-card-to">TO: ${a.label.toUpperCase()}</div>
+            <div class="cso-dir-card-body">${v.focus ? '<strong>'+v.focus+'</strong><br>' : ''}${v.instruction}</div>
+            <div class="cso-dir-card-ts">Sent ${v.sent_at ? new Date(v.sent_at).toLocaleString() : '—'}</div>
+          </div>`);
+      }
+    }catch(e){}
+  }
+  el.innerHTML = cards.length
+    ? cards.join('')
+    : '<div style="color:rgba(255,255,255,.3);font-size:11px;text-align:center;padding:20px 0;">No active directives<br/>Send one to appear here</div>';
+}
+
+async function csoDirClear(key){
+  if(key){
+    // Clear a specific directive from org memory by overwriting with empty
+    try{
+      await csoAPI.post('/api/memory/store',{
+        agent:'cc_gulley', key, value:{}, confidence:0.5, summary:'Directive cleared by CSO'
+      });
+      csoDirLoadActive();
+    }catch(e){}
+    return;
+  }
+  // Clear compose form
+  ['dir-focus','dir-instruction','dir-alex-markets','dir-naomi-markets','dir-naomi-segments','dir-winston-retention'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.value='';
+  });
+  document.getElementById('cso-dir-status').textContent='';
+}
 
 // ── End CSO Office ────────────────────────────────────────────────────────────
 
