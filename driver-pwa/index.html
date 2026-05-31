@@ -838,7 +838,10 @@ const API_PRIMARY = 'https://three-lakes-logistics-api.onrender.com';
 const API_BACKUP  = 'https://three-lakes-logistics-api.onrender.com';
 let _apiBase = API_PRIMARY;
 
-const API = '';
+// Used by lf trips and any window.API_BASE references
+window.API_BASE = API_PRIMARY;
+
+const API = API_PRIMARY;
 const SUPABASE_URL = 'https://zngipootstubwvgdmckt.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpuZ2lwb290c3R1Ynd2Z2RtY2t0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMxMjk3ODUsImV4cCI6MjA4ODcwNTc4NX0.6MXR8q-CKVuiiJaJKuckxABAUQ-siuyP0-KoaLkt33g';
 
@@ -859,6 +862,7 @@ let _unreadCount  = 0;
 let _lastMsgTs    = null;
 let _gpsTimer = null;
 let _tracking = false;
+let _currentLoadId = null;  // Track active load ID for status updates
 
 // ── INIT ─────────────────────────────────────────────────────────────────────
 // ── SUPABASE REALTIME ────────────────────────────────────────────────────────────
@@ -1055,6 +1059,9 @@ async function loadCurrentLoad() {
 }
 
 function renderCurrentLoad(load) {
+  // Track the active load ID for status update calls
+  _currentLoadId = load.id || null;
+
   // Map field names from actual schema: gross_rate instead of rate_total, etc.
   const rate = load.gross_rate || load.rate_total || 0;
   document.getElementById('load-number').textContent      = load.load_number || load.id?.slice(0,8) || 'LOAD-001';
@@ -1720,44 +1727,65 @@ function saveEquipment() {
 
 // ── ACTIONS ───────────────────────────────────────────────────────────────────
 async function confirmPickup() {
-  navigator.geolocation?.getCurrentPosition(async pos => {
-    if (supabaseClient) {
-      try {
-        await supabaseClient.from('truck_telemetry').insert({
-          truck_id:    localStorage.getItem('3ll_truck')      || DRIVER_ID,
-          carrier_id:  localStorage.getItem('3ll_carrier_id') || localStorage.getItem('3ll_driver_id') || DRIVER_ID,
-          lat:         pos.coords.latitude,
-          lng:         pos.coords.longitude,
-          engine_state:'pickup_confirmed',
-          ts:          new Date().toISOString()
-        });
-      } catch (err) {
-        console.error('Telemetry error:', err);
-      }
-    }
-  });
+  const loadNum = document.getElementById('load-number')?.textContent?.trim();
   document.getElementById('btn-pickup').style.display   = 'none';
   document.getElementById('btn-delivery').style.display = 'flex';
+
+  // Get current position then update via API (triggers execution engine transit domain)
+  navigator.geolocation?.getCurrentPosition(async pos => {
+    const driverId = localStorage.getItem('3ll_driver_id') || DRIVER_ID;
+    const ts = new Date().toISOString();
+    try {
+      // Update location with pickup event
+      await apiFetch('/api/driver/location', 'POST', {
+        driver_id: driverId, lat: pos.coords.latitude, lng: pos.coords.longitude,
+        speed_mph: 0, ts,
+      });
+    } catch {}
+
+    // Update load status to in_transit via API if we have a current load ID
+    if (_currentLoadId) {
+      try {
+        await apiFetch('/api/loads/' + _currentLoadId, 'PATCH', {
+          status: 'in_transit', driver_id: driverId,
+          pickup_confirmed_at: ts,
+        });
+      } catch (err) {
+        console.debug('Load status update error:', err);
+      }
+    }
+    startGpsTracking(); // Begin continuous GPS tracking now that we're in transit
+  }, () => { startGpsTracking(); });
+
   showToast('✅ Pickup confirmed — upload BOL now');
 }
 
 async function confirmDelivery() {
+  const ts = new Date().toISOString();
+  const driverId = localStorage.getItem('3ll_driver_id') || DRIVER_ID;
+
   navigator.geolocation?.getCurrentPosition(async pos => {
-    if (supabaseClient) {
+    try {
+      await apiFetch('/api/driver/location', 'POST', {
+        driver_id: driverId, lat: pos.coords.latitude, lng: pos.coords.longitude,
+        speed_mph: 0, ts,
+      });
+    } catch {}
+
+    // Update load status to delivered — execution engine settlement domain picks this up
+    if (_currentLoadId) {
       try {
-        await supabaseClient.from('truck_telemetry').insert({
-          truck_id:    localStorage.getItem('3ll_truck')      || DRIVER_ID,
-          carrier_id:  localStorage.getItem('3ll_carrier_id') || localStorage.getItem('3ll_driver_id') || DRIVER_ID,
-          lat:         pos.coords.latitude,
-          lng:         pos.coords.longitude,
-          engine_state:'delivery_confirmed',
-          ts:          new Date().toISOString()
+        await apiFetch('/api/loads/' + _currentLoadId, 'PATCH', {
+          status: 'delivered', driver_id: driverId,
+          delivery_confirmed_at: ts,
         });
       } catch (err) {
-        console.error('Telemetry error:', err);
+        console.debug('Load delivery update error:', err);
       }
     }
-  });
+    stopGpsTracking();
+  }, () => { stopGpsTracking(); });
+
   showToast('📦 Delivery confirmed — upload POD now');
   showView('docs');
 }
@@ -1879,31 +1907,32 @@ function triggerUpload(inputId) { document.getElementById(inputId).click(); }
 async function handleUpload(docType, input) {
   const file = input.files[0];
   if (!file) return;
-  if (!supabaseClient) { showToast('Not connected — try again'); return; }
 
   showToast(`📤 Uploading ${docType.toUpperCase()}…`);
+  const token      = localStorage.getItem('3ll_api_token') || localStorage.getItem('3ll_token') || '';
   const driverCode = localStorage.getItem('3ll_driver_code') || DRIVER_ID;
-  const carrierId  = localStorage.getItem('3ll_carrier_id') || null;
   const loadEl     = document.getElementById('load-number');
-  const loadNum    = loadEl ? loadEl.textContent.trim() : 'unknown';
-  const ext        = file.name.split('.').pop() || 'bin';
-  const path       = `driver-docs/${driverCode}/${loadNum}/${docType}_${Date.now()}.${ext}`;
+  const loadNum    = loadEl ? loadEl.textContent.trim() : '';
+
+  const fd = new FormData();
+  fd.append('file', file);
+  fd.append('document_type', docType);
+  if (_currentLoadId)  fd.append('load_id', _currentLoadId);
+  if (loadNum)         fd.append('load_number', loadNum);
 
   try {
-    const { error: upErr } = await supabaseClient.storage
-      .from('driver-documents')
-      .upload(path, file, { upsert: true, contentType: file.type });
-    if (upErr) throw upErr;
+    // Use REST API — goes through execution engine document handler
+    const res = await fetch(API_PRIMARY + '/api/driver/documents/upload', {
+      method:  'POST',
+      headers: { 'Authorization': 'Bearer ' + token },
+      body:    fd,
+      signal:  AbortSignal.timeout(30000),
+    });
 
-    await supabaseClient.from('document_vault').insert({
-      doc_type:    docType,
-      filename:    file.name,
-      storage_path: path,
-      status:      'active',
-      uploaded_by: driverCode,
-      carrier_id:  carrierId,
-      load_number: loadNum,
-    }).select().single();
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData.detail || 'Upload failed: ' + res.status);
+    }
 
     const statusEl = document.getElementById(docType + '-status');
     if (statusEl) statusEl.style.display = 'inline-flex';
@@ -1911,6 +1940,29 @@ async function handleUpload(docType, input) {
     input.value = '';
     loadDocumentsList();
   } catch (err) {
+    // Fallback to Supabase storage if API is unavailable
+    if (supabaseClient) {
+      const carrierId = localStorage.getItem('3ll_carrier_id') || null;
+      const ext = file.name.split('.').pop() || 'bin';
+      const path = `driver-docs/${driverCode}/${loadNum || 'misc'}/${docType}_${Date.now()}.${ext}`;
+      try {
+        const { error: upErr } = await supabaseClient.storage
+          .from('driver-documents')
+          .upload(path, file, { upsert: true, contentType: file.type });
+        if (upErr) throw upErr;
+        await supabaseClient.from('document_vault').insert({
+          doc_type: docType, filename: file.name, storage_path: path,
+          status: 'active', uploaded_by: driverCode, carrier_id: carrierId,
+          load_number: loadNum,
+        });
+        const statusEl = document.getElementById(docType + '-status');
+        if (statusEl) statusEl.style.display = 'inline-flex';
+        showToast(`✅ ${docType.toUpperCase()} uploaded (offline mode)`);
+        input.value = '';
+        loadDocumentsList();
+        return;
+      } catch {}
+    }
     console.error('Upload failed:', err);
     showToast(`❌ Upload failed — check connection and try again`);
   }
@@ -1940,27 +1992,41 @@ function stopGpsTracking() {
 }
 
 async function sendDriverLocation() {
-  if (!navigator.geolocation || !supabaseClient) return;
+  if (!navigator.geolocation) return;
 
   navigator.geolocation.getCurrentPosition(
     async pos => {
-      const { latitude, longitude, speed, heading } = pos.coords;
+      const { latitude, longitude, speed, heading, accuracy } = pos.coords;
       const ts = new Date().toISOString();
-      const truckId   = localStorage.getItem('3ll_truck')      || DRIVER_ID;
-      const carrierId = localStorage.getItem('3ll_carrier_id') || localStorage.getItem('3ll_driver_id') || DRIVER_ID;
+      const driverId = localStorage.getItem('3ll_driver_id') || DRIVER_ID;
 
       try {
-        await supabaseClient.from('truck_telemetry').insert({
-          truck_id:   truckId,
-          carrier_id: carrierId,
-          lat:        latitude,
-          lng:        longitude,
-          speed_mph:  speed ? parseFloat((speed * 2.237).toFixed(1)) : 0,
-          heading:    heading ? Math.round(heading) : 0,
-          ts
+        // Route through REST API — updates truck_telemetry so Eagle Eye fleet map gets it
+        const res = await apiFetch('/api/driver/location', 'POST', {
+          driver_id: driverId,
+          lat:       latitude,
+          lng:       longitude,
+          accuracy:  accuracy || null,
+          speed_mph: speed ? parseFloat((speed * 2.237).toFixed(1)) : 0,
+          heading:   heading ? Math.round(heading) : null,
+          ts,
         });
-      } catch (err) {
-        console.debug('Location tracking error:', err);
+        if (!res.ok) throw new Error('location API ' + res.status);
+      } catch (apiErr) {
+        // Fallback: write direct to Supabase if API is unreachable
+        if (supabaseClient) {
+          const truckId   = localStorage.getItem('3ll_truck')      || DRIVER_ID;
+          const carrierId = localStorage.getItem('3ll_carrier_id') || driverId;
+          try {
+            await supabaseClient.from('truck_telemetry').insert({
+              truck_id:  truckId, carrier_id: carrierId,
+              lat: latitude, lng: longitude,
+              speed_mph: speed ? parseFloat((speed * 2.237).toFixed(1)) : 0,
+              heading: heading ? Math.round(heading) : 0, ts,
+            });
+          } catch {}
+        }
+        console.debug('Location fallback (Supabase direct):', apiErr.message);
       }
     },
     () => {}
@@ -1969,33 +2035,40 @@ async function sendDriverLocation() {
 
 // ── HOS ───────────────────────────────────────────────────────────────────────
 async function pollHOS() {
-  if (!supabaseClient) return;
+  const carrierId = localStorage.getItem('3ll_carrier_id') || '';
   try {
+    // Use API endpoint — powers Eagle Eye HOS widgets with the same data
+    const res = await apiFetch('/api/telemetry/hos' + (carrierId ? '?carrier_id=' + carrierId : ''));
+    if (!res.ok) throw new Error('HOS API ' + res.status);
+    const data = await res.json();
     const driverId = localStorage.getItem('3ll_driver_id') || '';
-    if (!driverId) return;
-
-    // Query driver_hos_status where driver_id matches
-    const { data: hos, error } = await supabaseClient
-      .from('driver_hos_status')
-      .select('*')
-      .eq('driver_id', driverId)
-      .order('ts', { ascending: false })
-      .limit(1);
-
-    if (error || !hos || !hos.length) {
-      console.log('HOS data not available');
-      return;
-    }
-
-    const hosData = hos[0];
-    // Convert minutes to hours for rendering (schema uses minutes, app expects hours)
+    // Find this driver's HOS record
+    const items = data.items || data || [];
+    const hosData = items.find(h => h.driver_id === driverId) || items[0];
+    if (!hosData) return;
     renderHOS({
       drive_remaining: (hosData.drive_remaining_min || 0) / 60,
       shift_remaining: (hosData.shift_remaining_min || 0) / 60,
-      cycle_remaining: (hosData.cycle_remaining_min || 0) / 60
+      cycle_remaining: (hosData.cycle_remaining_min || 0) / 60,
     });
-  } catch (err) {
-    console.error('pollHOS error:', err);
+  } catch {
+    // Fallback to direct Supabase
+    if (!supabaseClient) return;
+    try {
+      const driverId = localStorage.getItem('3ll_driver_id') || '';
+      if (!driverId) return;
+      const { data: hos } = await supabaseClient
+        .from('driver_hos_status').select('*')
+        .eq('driver_id', driverId).order('ts', { ascending: false }).limit(1);
+      if (!hos?.length) return;
+      renderHOS({
+        drive_remaining: (hos[0].drive_remaining_min || 0) / 60,
+        shift_remaining: (hos[0].shift_remaining_min || 0) / 60,
+        cycle_remaining: (hos[0].cycle_remaining_min || 0) / 60,
+      });
+    } catch (err) {
+      console.error('pollHOS fallback error:', err);
+    }
   }
 }
 
@@ -2016,7 +2089,8 @@ function renderHOS(hos) {
 
 // ── HELPERS ───────────────────────────────────────────────────────────────────
 async function apiFetch(path, method = 'GET', body = null) {
-  const token = localStorage.getItem('3ll_token') || TOKEN;
+  // Prefer the real API session token; fall back to any stored token
+  const token = localStorage.getItem('3ll_api_token') || localStorage.getItem('3ll_token') || TOKEN;
   const opts = {
     method,
     headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
@@ -2075,19 +2149,23 @@ async function loadLfTrips() {
   document.getElementById('lf-completed-list').innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted);font-size:13px">Loading…</div>';
 
   try {
-    const base = (window.API_BASE || '');
-    const r = await fetch(base + '/api/light-fleet/trips?limit=100', {
+    const r = await fetch(API_PRIMARY + '/api/light-fleet/trips?limit=100', {
       headers: { 'Authorization': 'Bearer ' + token }
     });
     if (!r.ok) throw new Error(r.status);
-    const { items } = await r.json();
+    const body = await r.json();
+    const items = body.items || body || [];
 
-    const myTrips = items.filter(t => t.driver_id === driverCode || !t.driver_id);
+    // Match on driver_id (UUID) or driver_code (string) — API may return either
+    const driverId = localStorage.getItem('3ll_driver_id') || '';
+    const myTrips = items.filter(t =>
+      t.driver_id === driverCode || t.driver_id === driverId || !t.driver_id
+    );
     const today = new Date().toDateString();
 
-    const active   = myTrips.find(t => t.status === 'in_progress' && t.driver_id === driverCode);
+    const active   = myTrips.find(t => t.status === 'in_progress' && (t.driver_id === driverCode || t.driver_id === driverId));
     const upcoming = myTrips.filter(t => ['pending','assigned'].includes(t.status));
-    const completed = myTrips.filter(t => t.status === 'completed' && new Date(t.completed_at).toDateString() === today);
+    const completed = myTrips.filter(t => t.status === 'completed' && t.completed_at && new Date(t.completed_at).toDateString() === today);
 
     // Active
     if (active) {
@@ -2138,30 +2216,40 @@ async function loadLfTrips() {
 }
 
 async function lfStartTrip(id) {
-  const token = localStorage.getItem('3ll_token') || '';
+  const token = localStorage.getItem('3ll_api_token') || localStorage.getItem('3ll_token') || '';
   try {
-    await fetch((window.API_BASE || '') + '/api/light-fleet/trips/' + id + '/start', {
+    const res = await fetch(API_PRIMARY + '/api/light-fleet/trips/' + id + '/start', {
       method: 'POST',
       headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' }
     });
-    showToast('Trip started!');
+    if (!res.ok) throw new Error(await res.text());
+    showToast('🚗 Trip started!');
+    startGpsTracking(); // Begin location tracking for this trip
     loadLfTrips();
-  } catch(e) { showToast('Error starting trip'); }
+  } catch(e) {
+    console.error('lfStartTrip error:', e);
+    showToast('Error starting trip — try again');
+  }
 }
 
 async function lfCompleteTrip() {
   if (!_lfActiveTrip) return;
-  const token = localStorage.getItem('3ll_token') || '';
+  const token = localStorage.getItem('3ll_api_token') || localStorage.getItem('3ll_token') || '';
   try {
-    await fetch((window.API_BASE || '') + '/api/light-fleet/trips/' + _lfActiveTrip.id + '/complete', {
+    const res = await fetch(API_PRIMARY + '/api/light-fleet/trips/' + _lfActiveTrip.id + '/complete', {
       method: 'POST',
       headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
       body: JSON.stringify({})
     });
-    showToast('Trip completed! 🎉');
+    if (!res.ok) throw new Error(await res.text());
+    showToast('✅ Trip completed! Great work!');
+    stopGpsTracking();
     _lfActiveTrip = null;
     loadLfTrips();
-  } catch(e) { showToast('Error completing trip'); }
+  } catch(e) {
+    console.error('lfCompleteTrip error:', e);
+    showToast('Error completing trip — try again');
+  }
 }
 
 function lfNavigateTrip() {

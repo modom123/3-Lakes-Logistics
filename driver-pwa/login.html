@@ -170,7 +170,7 @@ async function handleLogin(event) {
     const driverCode = data.driver_code || data.id;
     const driverName = [data.first_name, data.last_name].filter(Boolean).join(' ') || data.name || driverCode;
 
-    localStorage.setItem('3ll_token',       'sb-' + driverCode);
+    // Store Supabase identity for real-time subscriptions
     localStorage.setItem('3ll_driver_id',   String(data.id));
     localStorage.setItem('3ll_driver_name', driverName);
     localStorage.setItem('3ll_phone',       normalizedPhone);
@@ -178,6 +178,27 @@ async function handleLogin(event) {
     localStorage.setItem('3ll_driver_code', driverCode);
     if (data.carrier_id) localStorage.setItem('3ll_carrier_id', String(data.carrier_id));
     if (data.truck_number) localStorage.setItem('3ll_truck', data.truck_number);
+
+    // Also get a proper API session token for protected REST endpoints
+    const API_BASE = 'https://three-lakes-logistics-api.onrender.com';
+    try {
+      const apiRes = await fetch(API_BASE + '/api/driver-auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: digits, pin }),
+      });
+      if (apiRes.ok) {
+        const apiData = await apiRes.json();
+        localStorage.setItem('3ll_token',     apiData.token);
+        localStorage.setItem('3ll_api_token', apiData.token);
+        if (apiData.carrier_id) localStorage.setItem('3ll_carrier_id', String(apiData.carrier_id));
+      } else {
+        // API login failed — use a fallback token so the app still loads
+        localStorage.setItem('3ll_token', 'sb-' + driverCode);
+      }
+    } catch {
+      localStorage.setItem('3ll_token', 'sb-' + driverCode);
+    }
     window.location.href = './index.html';
 
   } catch (err) {
