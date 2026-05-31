@@ -573,10 +573,9 @@ def run(payload: dict[str, Any]) -> dict[str, Any]:
             "task":      task,
             "phase":     phase,
             "automated": True,
-            "action":    result.get("action"),
-            "server_ip": result.get("server_ip"),
             "llm":       qwen_report.get("llm"),
             "reasoning": qwen_report.get("reasoning"),
+            **{k: v for k, v in result.items() if k != "automated"},
         }
 
     # Can't automate → escalate to Mark Odom + CC Gulley
