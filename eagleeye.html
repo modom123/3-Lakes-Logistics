@@ -753,6 +753,7 @@ td.td-name{font-weight:600;color:var(--navy);}
   <div class="sb-section">
     <div class="sb-label">Consulting</div>
     <div class="sb-item" onclick="nav('bond')"><span class="sb-icon">🕵️</span> Bond Office <span class="sb-badge" id="bond-notif" style="display:none">0</span></div>
+    <div class="sb-item" onclick="nav('cso')"><span class="sb-icon">🧭</span> CSO Office <span class="sb-badge" id="cso-notif" style="display:none">●</span></div>
   </div>
 
   <div class="sb-section">
@@ -2901,7 +2902,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 let allCarriers=[], allLoads=[], allInvoices=[], currentInvFilter='all', loadCounter=3849;
 
-const pageNames={dashboard:'Dashboard',dispatch:'Dispatch Board','fleet-map':'Fleet Map',carriers:'Carriers',drivers:'Drivers',loads:'Load Manager',invoices:'Invoices & Billing',compliance:'DOT Compliance',ifta:'IFTA / Permits',insurance:'Insurance',revenue:'Revenue Tracker',providers:'Compliance Providers',checklist:'Daily Checklist',notes:'Dispatcher Notes',reports:'Team Reports','exec-command':'Exec Command',agents:'AI Agents',founders:'Founders Program',crm:'Lead CRM',leads:'Lead Pipeline',execution:'Execution Engine',email:'Email Center',vault:'Document Vault',clm:'CLM Scanner',ledger:'Atomic Ledger',agreements:'Agreements','lf-nemt':'NEMT — Medical Transport','lf-executive':'Executive Transport','lf-courier':'Courier & Last-Mile','lf-gig':'Gig Fleet Management'};
+const pageNames={dashboard:'Dashboard',dispatch:'Dispatch Board','fleet-map':'Fleet Map',carriers:'Carriers',drivers:'Drivers',loads:'Load Manager',invoices:'Invoices & Billing',compliance:'DOT Compliance',ifta:'IFTA / Permits',insurance:'Insurance',revenue:'Revenue Tracker',providers:'Compliance Providers',checklist:'Daily Checklist',notes:'Dispatcher Notes',reports:'Team Reports','exec-command':'Exec Command',agents:'AI Agents',founders:'Founders Program',crm:'Lead CRM',leads:'Lead Pipeline',execution:'Execution Engine',email:'Email Center',vault:'Document Vault',clm:'CLM Scanner',ledger:'Atomic Ledger',agreements:'Agreements','lf-nemt':'NEMT — Medical Transport','lf-executive':'Executive Transport','lf-courier':'Courier & Last-Mile','lf-gig':'Gig Fleet Management',cso:'CSO Office — CC Gulley'};
 
 // ── 3 Lakes Logistics Backend API (FastAPI) ──
 const API_BASE = (window.__3LL_API_BASE || 'https://three-lakes-logistics-api.onrender.com').replace(/\/$/,'');
@@ -8261,6 +8262,404 @@ if (typeof nav === 'function') {
 
 <!-- BOND OFFICE PAGE -->
 <div class="page" id="page-bond">
+
+<!-- ════════════════════════════════════════════════════════════════════════
+     CC GULLEY — CSO OFFICE
+     Full-page fixed overlay — same pattern as Bond Office
+     ════════════════════════════════════════════════════════════════════════ -->
+<div class="page" id="page-cso">
+<style>
+#page-cso{animation:none;}
+#page-cso.active{position:fixed;top:93px;left:var(--sidebar-w);right:0;bottom:0;z-index:30;display:flex;flex-direction:column;overflow:hidden;background:var(--bg);}
+@media(max-width:768px){#page-cso.active{top:87px;left:0;}}
+.cso-wrap{display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden;background:#05101e;--text:#fff;--muted:rgba(255,255,255,.6);--border:rgba(255,255,255,.13);--surface:rgba(255,255,255,.05);--bg:#05101e;}
+.cso-header{display:flex;align-items:center;justify-content:space-between;padding:14px 24px;background:linear-gradient(135deg,#03213d 0%,#041a30 100%);flex-shrink:0;border-bottom:2px solid rgba(14,165,233,.5);box-shadow:0 4px 24px rgba(0,0,0,.45);}
+.cso-badge{width:44px;height:44px;border-radius:10px;background:rgba(14,165,233,.15);border:1.5px solid rgba(14,165,233,.5);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;box-shadow:0 0 14px rgba(14,165,233,.2);}
+.cso-title{font-family:var(--ff-h);font-size:18px;font-weight:900;color:#fff;letter-spacing:.3px;}
+.cso-sub{font-size:10px;color:rgba(56,189,248,.8);letter-spacing:.5px;margin-top:1px;font-family:var(--ff-m);}
+.cso-conn{display:flex;align-items:center;gap:6px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:20px;padding:4px 12px;}
+.cso-conn-dot{width:7px;height:7px;border-radius:50%;background:var(--muted);flex-shrink:0;}
+.cso-conn-dot.live{background:#38bdf8;box-shadow:0 0 10px #38bdf8;}
+.cso-conn-label{font-family:var(--ff-m);font-size:9px;color:rgba(255,255,255,.6);letter-spacing:1px;text-transform:uppercase;}
+.cso-hdr-btn{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);color:rgba(255,255,255,.8);padding:5px 14px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;transition:background .15s;font-family:var(--ff-b);}
+.cso-hdr-btn:hover{background:rgba(14,165,233,.2);border-color:rgba(56,189,248,.5);color:#38bdf8;}
+.cso-tabs{display:flex;background:#030e1c;border-bottom:1px solid rgba(14,165,233,.2);flex-shrink:0;padding:0 20px;gap:2px;overflow-x:auto;}
+.cso-tab{background:transparent;border:none;border-bottom:2px solid transparent;padding:10px 18px;font-size:12px;font-weight:600;color:rgba(255,255,255,.45);cursor:pointer;transition:color .15s,border-color .15s;font-family:var(--ff-b);white-space:nowrap;display:flex;align-items:center;gap:6px;}
+.cso-tab:hover{color:rgba(255,255,255,.7);}
+.cso-tab.active{color:#38bdf8;border-bottom-color:#38bdf8;background:rgba(14,165,233,.07);}
+.cso-body{flex:1;min-height:0;overflow:hidden;position:relative;display:flex;flex-direction:column;}
+.cso-pane{display:none;overflow:hidden;}
+.cso-pane.active{display:flex;flex-direction:column;flex:1;min-height:0;}
+/* Strategy Room */
+.cso-room{display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden;padding:18px 24px;gap:14px;}
+.cso-kpi-strip{display:flex;gap:12px;flex-shrink:0;flex-wrap:wrap;}
+.cso-kpi{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-top:3px solid rgba(255,255,255,.1);border-radius:10px;padding:14px 18px;flex:1;min-width:110px;display:flex;flex-direction:column;gap:3px;}
+.cso-kpi.sky{border-top-color:#38bdf8;}.cso-kpi.green{border-top-color:#10b981;}.cso-kpi.warn{border-top-color:#f59e0b;}.cso-kpi.red{border-top-color:#ef4444;}
+.cso-kpi-n{font-size:26px;font-weight:900;line-height:1;font-variant-numeric:tabular-nums;color:#fff;}
+.cso-kpi-l{font-family:var(--ff-m);font-size:9px;text-transform:uppercase;letter-spacing:.8px;color:rgba(255,255,255,.5);margin-top:2px;}
+.cso-kpi-sub{font-size:10px;color:rgba(255,255,255,.4);}
+.cso-grid{flex:1;display:grid;grid-template-columns:1fr 1fr;gap:14px;min-height:0;overflow:hidden;}
+.cso-grid-3{flex:1;display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;min-height:0;overflow:hidden;}
+.cso-panel{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.1);border-radius:10px;display:flex;flex-direction:column;overflow:hidden;}
+.cso-panel-hdr{display:flex;align-items:center;justify-content:space-between;padding:11px 15px;border-bottom:1px solid rgba(255,255,255,.08);flex-shrink:0;}
+.cso-panel-title{font-weight:700;font-size:12px;color:#fff;display:flex;align-items:center;gap:7px;}
+.cso-panel-badge{font-family:var(--ff-m);font-size:8px;letter-spacing:.8px;padding:2px 8px;border-radius:10px;border:1px solid;}
+.cso-panel-body{flex:1;overflow-y:auto;padding:12px 14px;scrollbar-width:thin;scrollbar-color:#38bdf8 transparent;}
+.cso-panel-body::-webkit-scrollbar{width:4px;}
+.cso-panel-body::-webkit-scrollbar-thumb{background:#38bdf8;border-radius:3px;}
+/* Reporter cards */
+.cso-reporter{display:flex;gap:10px;align-items:flex-start;padding:10px 11px;border-radius:8px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);margin-bottom:9px;transition:border-color .15s,background .15s;cursor:pointer;}
+.cso-reporter:hover{border-color:rgba(56,189,248,.4);background:rgba(14,165,233,.06);}
+.cso-reporter:last-child{margin-bottom:0;}
+.cso-rep-avatar{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;flex-shrink:0;}
+.cso-rep-name{font-weight:700;font-size:12px;color:#fff;margin-bottom:1px;}
+.cso-rep-role{font-size:10px;color:rgba(255,255,255,.5);margin-bottom:4px;}
+.cso-rep-last{font-size:10px;color:rgba(255,255,255,.4);line-height:1.45;}
+.cso-rep-kpi{font-family:var(--ff-m);font-size:9px;font-weight:700;padding:2px 8px;border-radius:10px;display:inline-flex;align-items:center;gap:4px;margin-top:4px;}
+/* Feed items */
+.cso-feed{flex:1;overflow-y:auto;padding:10px 14px;display:flex;flex-direction:column;gap:8px;scrollbar-width:thin;scrollbar-color:#38bdf8 transparent;}
+.cso-feed::-webkit-scrollbar{width:4px;}
+.cso-feed::-webkit-scrollbar-thumb{background:#38bdf8;border-radius:3px;}
+.cso-feed-item{padding:9px 11px;border-radius:7px;border-left:3px solid rgba(255,255,255,.1);background:rgba(255,255,255,.03);transition:border-color .15s;}
+.cso-feed-item.sky{border-left-color:#38bdf8;}.cso-feed-item.green{border-left-color:#10b981;}.cso-feed-item.amber{border-left-color:#f59e0b;}.cso-feed-item.red{border-left-color:#ef4444;}.cso-feed-item.purple{border-left-color:#a855f7;}
+.cso-feed-from{font-weight:700;font-size:10px;color:rgba(255,255,255,.7);margin-bottom:2px;display:flex;align-items:center;gap:5px;}
+.cso-feed-text{font-size:11px;color:rgba(255,255,255,.55);line-height:1.5;}
+.cso-feed-ts{font-family:var(--ff-m);font-size:9px;color:rgba(255,255,255,.3);margin-top:3px;}
+/* Strategic Plan tab */
+.cso-plan{display:flex;flex:1;min-height:0;overflow:hidden;gap:0;}
+.cso-plan-main{flex:1;display:flex;flex-direction:column;padding:20px 24px;gap:14px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:#38bdf8 transparent;}
+.cso-plan-main::-webkit-scrollbar{width:5px;}
+.cso-plan-main::-webkit-scrollbar-thumb{background:#38bdf8;border-radius:3px;}
+.cso-plan-side{width:300px;flex-shrink:0;border-left:1px solid rgba(255,255,255,.1);display:flex;flex-direction:column;overflow:hidden;}
+.cso-fl{font-family:var(--ff-m);font-size:9px;color:rgba(255,255,255,.45);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:5px;}
+.cso-label{font-weight:700;font-size:13px;color:#fff;margin-bottom:4px;}
+.cso-textarea{width:100%;min-height:110px;padding:11px 13px;border:1.5px solid rgba(255,255,255,.12);border-radius:8px;font-family:var(--ff-b);font-size:12px;color:#fff;background:rgba(255,255,255,.05);resize:vertical;outline:none;transition:border-color .15s;line-height:1.6;}
+.cso-textarea:focus{border-color:#38bdf8;box-shadow:0 0 0 2px rgba(14,165,233,.12);}
+.cso-input{width:100%;padding:9px 12px;border:1.5px solid rgba(255,255,255,.12);border-radius:8px;font-family:var(--ff-b);font-size:12px;color:#fff;background:rgba(255,255,255,.05);outline:none;transition:border-color .15s;}
+.cso-input:focus{border-color:#38bdf8;}
+.cso-save-btn{background:linear-gradient(135deg,#0369a1,#0284c7);color:#fff;border:none;padding:11px 28px;border-radius:7px;font-weight:800;font-size:13px;cursor:pointer;letter-spacing:.3px;transition:opacity .15s;box-shadow:0 2px 12px rgba(14,165,233,.3);}
+.cso-save-btn:hover{opacity:.88;}
+.cso-save-btn:disabled{opacity:.4;cursor:not-allowed;}
+.cso-plan-hist{flex:1;overflow-y:auto;padding:14px 16px;display:flex;flex-direction:column;gap:7px;scrollbar-width:thin;scrollbar-color:#38bdf8 transparent;}
+.cso-hist-item{font-size:10px;line-height:1.5;border-left:2px solid rgba(56,189,248,.3);padding:4px 8px;color:rgba(255,255,255,.45);}
+.cso-hist-item strong{color:#fff;}
+/* Reporting tab */
+.cso-reporting{display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden;padding:18px 24px;gap:14px;}
+@media(max-width:768px){
+  .cso-grid,.cso-grid-3{grid-template-columns:1fr;}
+  .cso-plan{flex-direction:column;}
+  .cso-plan-side{width:100%;border-left:none;border-top:1px solid rgba(255,255,255,.1);max-height:240px;flex-shrink:0;}
+  .cso-room{padding:12px 14px;}
+}
+</style>
+
+<div class="cso-wrap">
+
+  <!-- Header -->
+  <div class="cso-header">
+    <div style="display:flex;align-items:center;gap:14px;">
+      <div class="cso-badge">🧭</div>
+      <div>
+        <div class="cso-title">CSO Office</div>
+        <div class="cso-sub">CC Gulley · Chief Strategy Officer · Human · Reports to Mark Odom (CEO)</div>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;">
+      <div class="cso-conn">
+        <div class="cso-conn-dot live" id="cso-conn-dot"></div>
+        <span class="cso-conn-label" id="cso-conn-label">live</span>
+      </div>
+      <button class="cso-hdr-btn" onclick="csoRefresh()">↺ Refresh All</button>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="cso-tabs">
+    <button class="cso-tab active" id="csotab-strategy" onclick="csoTab('strategy')">📊 Strategy Room</button>
+    <button class="cso-tab" id="csotab-intel" onclick="csoTab('intel')">📡 Intel Feed</button>
+    <button class="cso-tab" id="csotab-plan" onclick="csoTab('plan')">📋 Strategic Plan</button>
+    <button class="cso-tab" id="csotab-reporting" onclick="csoTab('reporting')">📈 Reporting Up</button>
+  </div>
+
+  <!-- Body -->
+  <div class="cso-body">
+
+    <!-- ════ STRATEGY ROOM ════ -->
+    <div class="cso-pane active" id="csopane-strategy">
+      <div class="cso-room">
+
+        <!-- KPI Strip -->
+        <div class="cso-kpi-strip">
+          <div class="cso-kpi sky">
+            <div class="cso-kpi-n" id="cso-kpi-tier-a">—</div>
+            <div class="cso-kpi-l">Tier A Targets</div>
+            <div class="cso-kpi-sub" id="cso-kpi-tier-a-sub">Naomi · this run</div>
+          </div>
+          <div class="cso-kpi green">
+            <div class="cso-kpi-n" id="cso-kpi-hot-states">—</div>
+            <div class="cso-kpi-l">Hot Markets</div>
+            <div class="cso-kpi-sub" id="cso-kpi-hot-sub">Alexander · top states</div>
+          </div>
+          <div class="cso-kpi warn">
+            <div class="cso-kpi-n" id="cso-kpi-at-risk">—</div>
+            <div class="cso-kpi-l">At-Risk Carriers</div>
+            <div class="cso-kpi-sub" id="cso-kpi-risk-sub">Winston · retention</div>
+          </div>
+          <div class="cso-kpi green">
+            <div class="cso-kpi-n" id="cso-kpi-retention">—%</div>
+            <div class="cso-kpi-l">Retention Rate</div>
+            <div class="cso-kpi-sub">Winston · fleet health</div>
+          </div>
+          <div class="cso-kpi sky">
+            <div class="cso-kpi-n" id="cso-kpi-top-market">—</div>
+            <div class="cso-kpi-l">Top Market</div>
+            <div class="cso-kpi-sub">Alexander · by carrier volume</div>
+          </div>
+          <div class="cso-kpi sky">
+            <div class="cso-kpi-n" id="cso-kpi-bond-alerts">—</div>
+            <div class="cso-kpi-l">Bond Alerts</div>
+            <div class="cso-kpi-sub">James Bond · intel channel</div>
+          </div>
+        </div>
+
+        <!-- 2-col: direct reports + bond intel -->
+        <div class="cso-grid">
+
+          <!-- Direct Reports -->
+          <div class="cso-panel">
+            <div class="cso-panel-hdr">
+              <div class="cso-panel-title">👥 Strategy Unit — Direct Reports</div>
+              <button class="cso-hdr-btn" style="font-size:10px;padding:4px 10px;" onclick="csoRunAll()">Run All →</button>
+            </div>
+            <div class="cso-panel-body">
+              <!-- Alexander -->
+              <div class="cso-reporter" onclick="nav('agents')">
+                <div class="cso-rep-avatar" style="background:rgba(56,189,248,.15);color:#38bdf8;">AW</div>
+                <div style="flex:1;min-width:0;">
+                  <div class="cso-rep-name">Alexander Wright</div>
+                  <div class="cso-rep-role">VP Market Intelligence</div>
+                  <div class="cso-rep-last" id="cso-alex-last">Loading market intel…</div>
+                  <div class="cso-rep-kpi" style="background:rgba(56,189,248,.12);color:#38bdf8;" id="cso-alex-kpi">Hot States: —</div>
+                </div>
+                <button class="cso-hdr-btn" style="font-size:10px;padding:4px 10px;flex-shrink:0;" onclick="event.stopPropagation();csoRunAgent('alexander','Alexander Wright')">Run</button>
+              </div>
+              <!-- Naomi -->
+              <div class="cso-reporter" onclick="nav('agents')">
+                <div class="cso-rep-avatar" style="background:rgba(56,189,248,.15);color:#38bdf8;">NK</div>
+                <div style="flex:1;min-width:0;">
+                  <div class="cso-rep-name">Naomi Kensington</div>
+                  <div class="cso-rep-role">Head of Predictive Targeting</div>
+                  <div class="cso-rep-last" id="cso-naomi-last">Loading targeting intel…</div>
+                  <div class="cso-rep-kpi" style="background:rgba(56,189,248,.12);color:#38bdf8;" id="cso-naomi-kpi">Tier A: —</div>
+                </div>
+                <button class="cso-hdr-btn" style="font-size:10px;padding:4px 10px;flex-shrink:0;" onclick="event.stopPropagation();csoRunAgent('naomi','Naomi Kensington')">Run</button>
+              </div>
+              <!-- Winston -->
+              <div class="cso-reporter" onclick="nav('agents')">
+                <div class="cso-rep-avatar" style="background:rgba(56,189,248,.15);color:#38bdf8;">WC</div>
+                <div style="flex:1;min-width:0;">
+                  <div class="cso-rep-name">Winston Carmichael</div>
+                  <div class="cso-rep-role">VP Carrier Retention</div>
+                  <div class="cso-rep-last" id="cso-winston-last">Loading retention intel…</div>
+                  <div class="cso-rep-kpi" style="background:rgba(56,189,248,.12);color:#38bdf8;" id="cso-winston-kpi">Retention: —%</div>
+                </div>
+                <button class="cso-hdr-btn" style="font-size:10px;padding:4px 10px;flex-shrink:0;" onclick="event.stopPropagation();csoRunAgent('winston','Winston Carmichael')">Run</button>
+              </div>
+              <!-- James Bond -->
+              <div class="cso-reporter" onclick="nav('bond')">
+                <div class="cso-rep-avatar" style="background:rgba(245,200,66,.12);color:#f5c842;font-style:italic;">JB</div>
+                <div style="flex:1;min-width:0;">
+                  <div class="cso-rep-name" style="color:#f5c842;">James Bond</div>
+                  <div class="cso-rep-role">IEBC Consultant — Intel Channel</div>
+                  <div class="cso-rep-last" id="cso-bond-last">Loading Bond intel…</div>
+                  <div class="cso-rep-kpi" style="background:rgba(245,200,66,.12);color:#f5c842;" id="cso-bond-kpi">Channel: —</div>
+                </div>
+                <button class="cso-hdr-btn" style="font-size:10px;padding:4px 10px;flex-shrink:0;" onclick="event.stopPropagation();nav('bond')">Office →</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Live Strategy Intel Feed -->
+          <div class="cso-panel">
+            <div class="cso-panel-hdr">
+              <div class="cso-panel-title">📡 Live Strategy Intel</div>
+              <span style="font-size:10px;color:rgba(56,189,248,.6);font-family:var(--ff-m);" id="cso-feed-ts">—</span>
+            </div>
+            <div class="cso-feed" id="cso-intel-feed">
+              <div style="color:rgba(255,255,255,.3);font-size:11px;text-align:center;padding:20px;">Click Refresh All to load intel from all direct reports</div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div><!-- /strategy -->
+
+    <!-- ════ INTEL FEED ════ -->
+    <div class="cso-pane" id="csopane-intel">
+      <div class="cso-room">
+        <div class="cso-grid-3">
+
+          <!-- Alexander intel -->
+          <div class="cso-panel">
+            <div class="cso-panel-hdr">
+              <div class="cso-panel-title"><span style="color:#38bdf8;">AW</span> Alexander — Market Intel</div>
+              <button class="cso-hdr-btn" style="font-size:10px;padding:4px 10px;" onclick="csoRunAgent('alexander','Alexander Wright')">Run</button>
+            </div>
+            <div class="cso-feed" id="cso-alex-feed">
+              <div style="color:rgba(255,255,255,.3);font-size:11px;text-align:center;padding:20px;">Run Alexander to load market intel</div>
+            </div>
+          </div>
+
+          <!-- Naomi intel -->
+          <div class="cso-panel">
+            <div class="cso-panel-hdr">
+              <div class="cso-panel-title"><span style="color:#38bdf8;">NK</span> Naomi — Targeting Intel</div>
+              <button class="cso-hdr-btn" style="font-size:10px;padding:4px 10px;" onclick="csoRunAgent('naomi','Naomi Kensington')">Run</button>
+            </div>
+            <div class="cso-feed" id="cso-naomi-feed">
+              <div style="color:rgba(255,255,255,.3);font-size:11px;text-align:center;padding:20px;">Run Naomi to load targeting intel</div>
+            </div>
+          </div>
+
+          <!-- Winston intel -->
+          <div class="cso-panel">
+            <div class="cso-panel-hdr">
+              <div class="cso-panel-title"><span style="color:#38bdf8;">WC</span> Winston — Retention Intel</div>
+              <button class="cso-hdr-btn" style="font-size:10px;padding:4px 10px;" onclick="csoRunAgent('winston','Winston Carmichael')">Run</button>
+            </div>
+            <div class="cso-feed" id="cso-winston-feed">
+              <div style="color:rgba(255,255,255,.3);font-size:11px;text-align:center;padding:20px;">Run Winston to load retention intel</div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div><!-- /intel -->
+
+    <!-- ════ STRATEGIC PLAN ════ -->
+    <div class="cso-pane" id="csopane-plan">
+      <div class="cso-plan">
+        <div class="cso-plan-main">
+          <div>
+            <div class="cso-fl">CC GULLEY · STRATEGIC PLAN</div>
+            <div class="cso-label">Current Strategic Directive</div>
+            <div style="font-size:11px;color:rgba(255,255,255,.45);margin-bottom:12px;">This plan is read by Alexander, Naomi, and Winston at the start of every run. Set priority markets, target segments, and retention focus.</div>
+          </div>
+
+          <div>
+            <div class="cso-fl">PRIORITY MARKETS</div>
+            <input class="cso-input" id="cso-plan-markets" placeholder="e.g. TX, FL, GA, OH (comma-separated states to prioritize)"/>
+          </div>
+          <div>
+            <div class="cso-fl">TARGET SEGMENTS</div>
+            <input class="cso-input" id="cso-plan-segments" placeholder="e.g. dry-van, reefer, flatbed, LTL"/>
+          </div>
+          <div>
+            <div class="cso-fl">RETENTION PRIORITY</div>
+            <input class="cso-input" id="cso-plan-retention" placeholder="e.g. Never-loaded carriers first, then 14-day inactive fleet"/>
+          </div>
+          <div>
+            <div class="cso-fl">STRATEGIC DIRECTIVE (30/60/90 DAY)</div>
+            <textarea class="cso-textarea" id="cso-plan-directive" rows="5" placeholder="Write CC Gulley's strategic narrative here. This flows to Alexander, Naomi, and Winston on each run. E.g.: Q2 focus on TX and FL — highest carrier density and demand. Push Tier A prospects to Vance daily. Winston to prioritize never-loaded carriers for re-engagement campaign."></textarea>
+          </div>
+          <div>
+            <div class="cso-fl">GROWTH TARGET</div>
+            <input class="cso-input" id="cso-plan-growth" placeholder="e.g. 50 new carriers onboarded by end of quarter"/>
+          </div>
+
+          <div style="display:flex;gap:10px;align-items:center;">
+            <button class="cso-save-btn" id="cso-save-btn" onclick="csoSavePlan()">💾 Save Strategic Plan</button>
+            <button class="cso-hdr-btn" onclick="csoLoadPlan()">↺ Load Current</button>
+            <span id="cso-save-status" style="font-size:11px;color:#38bdf8;"></span>
+          </div>
+        </div>
+
+        <!-- Side: history -->
+        <div class="cso-plan-side">
+          <div style="padding:14px 16px;border-bottom:1px solid rgba(255,255,255,.08);font-weight:700;font-size:12px;color:#fff;flex-shrink:0;">📜 Recent Plans</div>
+          <div class="cso-plan-hist" id="cso-plan-hist">
+            <div style="color:rgba(255,255,255,.3);font-size:11px;padding:10px 0;">No plan history yet</div>
+          </div>
+        </div>
+      </div>
+    </div><!-- /plan -->
+
+    <!-- ════ REPORTING UP ════ -->
+    <div class="cso-pane" id="csopane-reporting">
+      <div class="cso-reporting">
+        <div style="flex-shrink:0;">
+          <div class="cso-fl">CC GULLEY REPORTS TO</div>
+          <div style="font-weight:700;font-size:16px;color:#fff;margin-bottom:4px;">Mark Odom — CEO &amp; Commander</div>
+          <div style="font-size:11px;color:rgba(255,255,255,.45);">Strategy Unit summary for Commander review. Mark Odom's morning brief includes CC Gulley's strategic plan and Alexander's market intel.</div>
+        </div>
+
+        <div class="cso-grid">
+          <!-- Summary for Commander -->
+          <div class="cso-panel">
+            <div class="cso-panel-hdr">
+              <div class="cso-panel-title">📋 Commander Brief — CSO Section</div>
+              <button class="cso-hdr-btn" style="font-size:10px;padding:4px 10px;" onclick="csoGenerateBrief()">Generate →</button>
+            </div>
+            <div class="cso-panel-body" id="cso-commander-brief" style="font-size:12px;line-height:1.7;color:rgba(255,255,255,.75);white-space:pre-wrap;">
+Click "Generate" to produce CC Gulley's summary for Mark Odom's morning Commander brief.
+
+This brief consolidates:
+  • Alexander's market intelligence (hot states, carrier density)
+  • Naomi's targeting output (Tier A/B lead counts, hot markets)
+  • Winston's retention report (at-risk carriers, retention rate)
+  • Current strategic plan and 30/60/90 day priorities
+            </div>
+          </div>
+
+          <!-- Bond intel flowing to CC Gulley -->
+          <div class="cso-panel">
+            <div class="cso-panel-hdr">
+              <div class="cso-panel-title">🕵️ James Bond — Intel to CSO</div>
+              <button class="cso-hdr-btn" style="font-size:10px;padding:4px 10px;" onclick="nav('bond')">Bond Office →</button>
+            </div>
+            <div class="cso-feed" id="cso-bond-feed">
+              <div style="color:rgba(255,255,255,.3);font-size:11px;text-align:center;padding:20px;">James Bond routes integration health alerts and directive reports to CC Gulley. Open Bond Office to view full channel.</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- KPI summary card for upward reporting -->
+        <div class="cso-panel" style="flex-shrink:0;">
+          <div class="cso-panel-hdr">
+            <div class="cso-panel-title">📊 Strategy Unit KPIs — Upward Report</div>
+            <span id="cso-report-ts" style="font-size:10px;color:rgba(255,255,255,.35);font-family:var(--ff-m);">—</span>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:0;">
+            <div style="padding:14px 18px;border-right:1px solid rgba(255,255,255,.08);">
+              <div style="font-family:var(--ff-h);font-size:22px;color:#38bdf8;font-weight:900;" id="cso-rpt-tier-a">—</div>
+              <div style="font-family:var(--ff-m);font-size:9px;text-transform:uppercase;letter-spacing:.8px;color:rgba(255,255,255,.4);margin-top:3px;">Tier A Targets</div>
+            </div>
+            <div style="padding:14px 18px;border-right:1px solid rgba(255,255,255,.08);">
+              <div style="font-family:var(--ff-h);font-size:22px;color:#10b981;font-weight:900;" id="cso-rpt-retention">—%</div>
+              <div style="font-family:var(--ff-m);font-size:9px;text-transform:uppercase;letter-spacing:.8px;color:rgba(255,255,255,.4);margin-top:3px;">Retention Rate</div>
+            </div>
+            <div style="padding:14px 18px;border-right:1px solid rgba(255,255,255,.08);">
+              <div style="font-family:var(--ff-h);font-size:22px;color:#f59e0b;font-weight:900;" id="cso-rpt-at-risk">—</div>
+              <div style="font-family:var(--ff-m);font-size:9px;text-transform:uppercase;letter-spacing:.8px;color:rgba(255,255,255,.4);margin-top:3px;">At-Risk Carriers</div>
+            </div>
+            <div style="padding:14px 18px;border-right:1px solid rgba(255,255,255,.08);">
+              <div style="font-family:var(--ff-h);font-size:22px;color:#38bdf8;font-weight:900;" id="cso-rpt-top-state">—</div>
+              <div style="font-family:var(--ff-m);font-size:9px;text-transform:uppercase;letter-spacing:.8px;color:rgba(255,255,255,.4);margin-top:3px;">Top Market</div>
+            </div>
+            <div style="padding:14px 18px;">
+              <div style="font-family:var(--ff-h);font-size:22px;color:#38bdf8;font-weight:900;" id="cso-rpt-tier-b">—</div>
+              <div style="font-family:var(--ff-m);font-size:9px;text-transform:uppercase;letter-spacing:.8px;color:rgba(255,255,255,.4);margin-top:3px;">Tier B Pipeline</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div><!-- /reporting -->
+
+  </div><!-- /body -->
+</div><!-- /cso-wrap -->
+</div><!-- /page-cso -->
+
 <style>
 /* ── Bond Office ──────────────────────────────────────────────────────────── */
 /* Suppress the pgIn slide-in animation — Bond is a fixed full-page overlay */
@@ -9341,6 +9740,339 @@ window.bondRenderThread= boRenderThread;
 // ── Auto-refresh when Bond page is active
 setInterval(()=>{ if(document.getElementById('page-bond')?.classList.contains('active')){ boLoadThread(); boLoadStatus(); } }, 30000);
 setInterval(()=>{ if(document.getElementById('page-bond')?.classList.contains('active')) boLoadSitRoom(); }, 120000);
+
+// ── CC Gulley CSO Office ──────────────────────────────────────────────────────
+const csoAPI = {
+  get: p => apiFetch(p,'GET'),
+  post: (p,b) => apiFetch(p,'POST',b),
+};
+
+function csoTab(id){
+  document.querySelectorAll('.cso-tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.cso-pane').forEach(p=>p.classList.remove('active'));
+  document.getElementById('csotab-'+id)?.classList.add('active');
+  document.getElementById('csopane-'+id)?.classList.add('active');
+  if(id==='strategy') csoLoadStrategy();
+  if(id==='intel') csoLoadIntelTab();
+  if(id==='plan') csoLoadPlan();
+  if(id==='reporting') csoLoadReporting();
+}
+
+function csoRefresh(){
+  const active = document.querySelector('.cso-pane.active')?.id?.replace('csopane-','');
+  if(active==='strategy') csoLoadStrategy();
+  else if(active==='intel') csoLoadIntelTab();
+  else if(active==='reporting') csoLoadReporting();
+  else csoLoadStrategy();
+}
+
+function _csoSet(id,v){ const el=document.getElementById(id); if(el) el.textContent=v; }
+function _csoHtml(id,h){ const el=document.getElementById(id); if(el) el.innerHTML=h; }
+
+async function csoLoadStrategy(){
+  // Pull from org memory endpoints
+  try{
+    const [alexMem, naomiMem, winstonMem] = await Promise.allSettled([
+      csoAPI.get('/api/memory/alexander/hot_states'),
+      csoAPI.get('/api/memory/naomi/tier_a_targets'),
+      csoAPI.get('/api/memory/winston/churn_signals'),
+    ]);
+
+    let tierA='—', hotCount='—', topState='—', atRisk='—', retention='—%';
+    let alexSummary='No data — run Alexander', naomiSummary='No data — run Naomi', winstonSummary='No data — run Winston';
+    let alexKpi='Hot States: —', naomiKpi='Tier A: —', winstonKpi='Retention: —%';
+    const feedItems = [];
+
+    if(alexMem.status==='fulfilled'&&alexMem.value){
+      const d=alexMem.value;
+      const states=d.value||d;
+      const stateList=Object.keys(states||{});
+      hotCount=stateList.length;
+      topState=stateList[0]||'—';
+      alexSummary=`Top market: ${topState} · ${stateList.length} hot states identified`;
+      alexKpi=`Hot States: ${stateList.slice(0,3).join(', ')||'—'}`;
+      feedItems.push({color:'sky',from:'Alexander Wright',text:`Top market: ${topState}. Hot states: ${stateList.slice(0,5).join(', ')}.`,ts:'market intel'});
+    }
+    if(naomiMem.status==='fulfilled'&&naomiMem.value){
+      const d=naomiMem.value;
+      const targets=(d.value||d)?.targets||[];
+      const count=(d.value||d)?.count||targets.length;
+      tierA=count;
+      naomiSummary=`${count} Tier A targets ready for Vance call queue`;
+      naomiKpi=`Tier A: ${count} targets`;
+      feedItems.push({color:'sky',from:'Naomi Kensington',text:`${count} Tier A targets scored and queued. Hot market alignment active.`,ts:'targeting'});
+    }
+    if(winstonMem.status==='fulfilled'&&winstonMem.value){
+      const d=winstonMem.value;
+      const v=d.value||d;
+      atRisk=v.at_risk_count??'—';
+      retention=(v.retention_rate_pct!=null?v.retention_rate_pct+'%':'—%');
+      const names=(v.at_risk_names||[]).slice(0,3).join(', ')||'none';
+      winstonSummary=`${atRisk} at-risk carriers · retention ${retention} · top at-risk: ${names}`;
+      winstonKpi=`Retention: ${retention}`;
+      const col = parseFloat(v.retention_rate_pct)>=85?'green':'warn';
+      feedItems.push({color:col,from:'Winston Carmichael',text:`${atRisk} carriers at risk. Retention rate: ${retention}. Top: ${names}.`,ts:'retention'});
+    }
+
+    // Bond intel from memory
+    try{
+      const bondSnap = await csoAPI.get('/api/bond/api-snapshot');
+      const pending = bondSnap?.bond_channel?.pending_directives??0;
+      _csoSet('cso-kpi-bond-alerts', pending);
+      _csoSet('cso-bond-kpi','Channel: '+pending+' pending');
+      _csoSet('cso-bond-last','Integration health checked · '+pending+' pending directives');
+      if(pending>0) feedItems.push({color:'purple',from:'James Bond',text:`${pending} pending directive(s) in Bond channel awaiting CSO review.`,ts:'bond intel'});
+      else feedItems.push({color:'sky',from:'James Bond',text:'All Bond channels clear. No pending directives.',ts:'bond intel'});
+    }catch(e){
+      _csoSet('cso-bond-last','Bond office offline');
+      _csoSet('cso-bond-kpi','Channel: offline');
+    }
+
+    // Update KPIs
+    _csoSet('cso-kpi-tier-a', tierA);
+    _csoSet('cso-kpi-hot-states', hotCount);
+    _csoSet('cso-kpi-at-risk', atRisk);
+    _csoSet('cso-kpi-retention', retention);
+    _csoSet('cso-kpi-top-market', topState);
+    _csoSet('cso-alex-last', alexSummary);
+    _csoSet('cso-alex-kpi', alexKpi);
+    _csoSet('cso-naomi-last', naomiSummary);
+    _csoSet('cso-naomi-kpi', naomiKpi);
+    _csoSet('cso-winston-last', winstonSummary);
+    _csoSet('cso-winston-kpi', winstonKpi);
+
+    // Feed
+    if(feedItems.length){
+      const now = new Date().toLocaleTimeString();
+      _csoSet('cso-feed-ts', now);
+      _csoHtml('cso-intel-feed', feedItems.map(i=>`
+        <div class="cso-feed-item ${i.color}">
+          <div class="cso-feed-from"><span style="font-size:9px;">●</span>${i.from}</div>
+          <div class="cso-feed-text">${i.text}</div>
+          <div class="cso-feed-ts">${i.ts} · ${now}</div>
+        </div>`).join(''));
+    }
+  }catch(e){ console.warn('[CSO] strategy load error',e); }
+}
+
+async function csoLoadIntelTab(){
+  // Alexander detail
+  try{
+    const d = await csoAPI.get('/api/memory/alexander/hot_states');
+    const states = d?.value||d||{};
+    const entries = Object.entries(states);
+    if(entries.length){
+      _csoHtml('cso-alex-feed', entries.map(([st,cnt])=>`
+        <div class="cso-feed-item sky">
+          <div class="cso-feed-from">${st}</div>
+          <div class="cso-feed-text">${cnt} authorized carriers in sample</div>
+        </div>`).join(''));
+    } else {
+      _csoHtml('cso-alex-feed','<div style="color:rgba(255,255,255,.3);font-size:11px;text-align:center;padding:20px;">Run Alexander to load market intel</div>');
+    }
+  }catch(e){}
+
+  // Naomi detail
+  try{
+    const d = await csoAPI.get('/api/memory/naomi/tier_a_targets');
+    const v = d?.value||d||{};
+    const targets = v.targets||[];
+    if(targets.length){
+      _csoHtml('cso-naomi-feed', targets.slice(0,8).map(t=>`
+        <div class="cso-feed-item sky">
+          <div class="cso-feed-from">${t.name||t.carrier_name||'Prospect'} ${t.state?'· '+t.state:''}</div>
+          <div class="cso-feed-text">Score: ${t.score??'—'} · Fleet: ${t.fleet_size??'—'} trucks ${t.tier?' · '+t.tier:''}</div>
+        </div>`).join(''));
+    } else {
+      _csoHtml('cso-naomi-feed','<div style="color:rgba(255,255,255,.3);font-size:11px;text-align:center;padding:20px;">Run Naomi to load targeting intel</div>');
+    }
+  }catch(e){}
+
+  // Winston detail
+  try{
+    const d = await csoAPI.get('/api/memory/winston/churn_signals');
+    const v = d?.value||d||{};
+    const atRisk = v.at_risk_count??'—';
+    const retention = v.retention_rate_pct??'—';
+    const high = v.high_priority||[];
+    let html = `<div class="cso-feed-item ${parseFloat(retention)>=85?'green':'amber'}">
+      <div class="cso-feed-from">Summary</div>
+      <div class="cso-feed-text">${atRisk} at-risk carriers · ${retention}% retention rate · ${v.never_loaded_count??0} never loaded</div>
+    </div>`;
+    html += high.map(c=>`<div class="cso-feed-item red">
+      <div class="cso-feed-from">${c.name||c.carrier_id||'Carrier'}</div>
+      <div class="cso-feed-text">${c.risk_reason||'High priority at-risk'}</div>
+    </div>`).join('');
+    _csoHtml('cso-winston-feed', html||'<div style="color:rgba(255,255,255,.3);font-size:11px;text-align:center;padding:20px;">Run Winston to load retention intel</div>');
+  }catch(e){}
+}
+
+async function csoRunAgent(agent, name){
+  const btn = event?.target;
+  if(btn){ btn.disabled=true; btn.textContent='Running…'; }
+  try{
+    const result = await csoAPI.post(`/api/agents/${agent}/run`,{});
+    // Refresh whichever panel is showing
+    const active = document.querySelector('.cso-pane.active')?.id?.replace('csopane-','');
+    if(active==='strategy') await csoLoadStrategy();
+    if(active==='intel') await csoLoadIntelTab();
+    if(active==='reporting') await csoLoadReporting();
+    if(btn){ btn.disabled=false; btn.textContent='Run'; }
+  }catch(e){
+    if(btn){ btn.disabled=false; btn.textContent='Run'; }
+    console.warn('[CSO] runAgent error',e);
+  }
+}
+
+async function csoRunAll(){
+  document.querySelectorAll('.cso-reporter button').forEach(b=>{b.disabled=true;b.textContent='…';});
+  try{
+    await Promise.allSettled([
+      csoAPI.post('/api/agents/alexander/run',{}),
+      csoAPI.post('/api/agents/naomi/run',{}),
+      csoAPI.post('/api/agents/winston/run',{}),
+    ]);
+    await csoLoadStrategy();
+  }catch(e){}
+  document.querySelectorAll('.cso-reporter button').forEach(b=>{b.disabled=false;b.textContent='Run';});
+}
+
+async function csoLoadPlan(){
+  try{
+    const d = await csoAPI.get('/api/memory/cc_gulley/strategic_plan');
+    const v = d?.value||d||{};
+    if(v.priority_markets) document.getElementById('cso-plan-markets').value = (Array.isArray(v.priority_markets)?v.priority_markets.join(', '):v.priority_markets)||'';
+    if(v.target_segments)  document.getElementById('cso-plan-segments').value = (Array.isArray(v.target_segments)?v.target_segments.join(', '):v.target_segments)||'';
+    if(v.retention_priority) document.getElementById('cso-plan-retention').value = v.retention_priority||'';
+    if(v.directive) document.getElementById('cso-plan-directive').value = v.directive||'';
+    if(v.growth_target) document.getElementById('cso-plan-growth').value = v.growth_target||'';
+  }catch(e){}
+}
+
+async function csoSavePlan(){
+  const btn = document.getElementById('cso-save-btn');
+  const status = document.getElementById('cso-save-status');
+  btn.disabled=true; btn.textContent='Saving…'; status.textContent='';
+  const markets = document.getElementById('cso-plan-markets').value.split(',').map(s=>s.trim()).filter(Boolean);
+  const segments = document.getElementById('cso-plan-segments').value.split(',').map(s=>s.trim()).filter(Boolean);
+  const plan = {
+    priority_markets: markets,
+    target_segments: segments,
+    retention_priority: document.getElementById('cso-plan-retention').value.trim(),
+    directive: document.getElementById('cso-plan-directive').value.trim(),
+    growth_target: document.getElementById('cso-plan-growth').value.trim(),
+    updated_at: new Date().toISOString(),
+  };
+  try{
+    await csoAPI.post('/api/memory/store',{agent:'cc_gulley',key:'strategic_plan',value:plan,confidence:0.95,summary:`CSO Plan: markets=${markets.slice(0,3).join(',')} segments=${segments.slice(0,2).join(',')}`});
+    status.textContent='✓ Saved — Alexander, Naomi & Winston will use this on next run';
+    status.style.color='#10b981';
+    // Add to history
+    const hist = document.getElementById('cso-plan-hist');
+    if(hist){
+      const item = document.createElement('div');
+      item.className='cso-hist-item';
+      item.innerHTML=`<strong>${new Date().toLocaleString()}</strong><br>Markets: ${markets.slice(0,3).join(', ')||'—'} · Segments: ${segments.slice(0,2).join(', ')||'—'}`;
+      hist.prepend(item);
+    }
+  }catch(e){
+    status.textContent='✗ Save failed — API offline';
+    status.style.color='#ef4444';
+  }
+  btn.disabled=false; btn.textContent='💾 Save Strategic Plan';
+}
+
+async function csoLoadReporting(){
+  await csoLoadStrategy(); // reuse same data
+  // Mirror KPIs to reporting tab
+  _csoSet('cso-rpt-tier-a', document.getElementById('cso-kpi-tier-a')?.textContent||'—');
+  _csoSet('cso-rpt-retention', document.getElementById('cso-kpi-retention')?.textContent||'—%');
+  _csoSet('cso-rpt-at-risk', document.getElementById('cso-kpi-at-risk')?.textContent||'—');
+  _csoSet('cso-rpt-top-state', document.getElementById('cso-kpi-top-market')?.textContent||'—');
+  _csoSet('cso-report-ts', new Date().toLocaleString());
+  try{
+    const d = await csoAPI.get('/api/memory/naomi/tier_b_targets');
+    const v=d?.value||d||{};
+    _csoSet('cso-rpt-tier-b', v.count??'—');
+  }catch(e){}
+  // Bond intel for reporting tab
+  try{
+    const d = await csoAPI.get('/api/memory/org/market_intel');
+    const v=d?.value||d||{};
+    const ts = new Date().toLocaleTimeString();
+    _csoHtml('cso-bond-feed',`
+      <div class="cso-feed-item purple">
+        <div class="cso-feed-from">James Bond — Market Context</div>
+        <div class="cso-feed-text">Top state: ${v.top_state||'—'} · Hot states tracked: ${Object.keys(v.hot_states||{}).length}</div>
+        <div class="cso-feed-ts">via Alexander → Bond channel · ${ts}</div>
+      </div>
+      <div class="cso-feed-item sky" style="margin-top:0;">
+        <div class="cso-feed-from">Directive</div>
+        <div class="cso-feed-text">Bond monitors all integration health and routes critical alerts to CC Gulley before they hit Mark Odom. Open Bond Office for full channel history.</div>
+      </div>`);
+  }catch(e){}
+}
+
+async function csoGenerateBrief(){
+  const btn=event.target; btn.disabled=true; btn.textContent='Generating…';
+  const el=document.getElementById('cso-commander-brief');
+  el.textContent='Pulling intel from Strategy Unit…';
+  try{
+    const [alexMem,naomiMem,winstonMem,planMem] = await Promise.allSettled([
+      csoAPI.get('/api/memory/alexander/hot_states'),
+      csoAPI.get('/api/memory/naomi/tier_a_targets'),
+      csoAPI.get('/api/memory/winston/churn_signals'),
+      csoAPI.get('/api/memory/cc_gulley/strategic_plan'),
+    ]);
+    const alexStates = Object.keys(alexMem.value?.value||alexMem.value||{});
+    const naomiData  = naomiMem.value?.value||naomiMem.value||{};
+    const winstonData= winstonMem.value?.value||winstonMem.value||{};
+    const plan       = planMem.value?.value||planMem.value||{};
+    const now = new Date().toLocaleString();
+    el.textContent = [
+      `CSO BRIEF — CC Gulley → Mark Odom (CEO)`,
+      `Generated: ${now}`,
+      ``,
+      `MARKET INTELLIGENCE (Alexander Wright)`,
+      `  Hot states identified: ${alexStates.slice(0,5).join(', ')||'Run Alexander'}`,
+      `  Top market by carrier volume: ${alexStates[0]||'—'}`,
+      ``,
+      `TARGETING PIPELINE (Naomi Kensington)`,
+      `  Tier A targets ready: ${naomiData.count??'—'}`,
+      `  Top prospects queued for Vance call list`,
+      ``,
+      `CARRIER RETENTION (Winston Carmichael)`,
+      `  At-risk carriers: ${winstonData.at_risk_count??'—'}`,
+      `  Never-loaded: ${winstonData.never_loaded_count??'—'}`,
+      `  Fleet retention rate: ${winstonData.retention_rate_pct??'—'}%`,
+      ``,
+      `STRATEGIC PLAN (CC Gulley)`,
+      `  Priority markets: ${(plan.priority_markets||[]).join(', ')||'Not set'}`,
+      `  Target segments: ${(plan.target_segments||[]).join(', ')||'Not set'}`,
+      `  Growth target: ${plan.growth_target||'Not set'}`,
+      `  Directive: ${plan.directive||'No directive saved yet'}`,
+      ``,
+      `STATUS: Strategy Unit operational — all 3 agents reporting to CSO`,
+    ].join('\n');
+  }catch(e){ el.textContent='Error generating brief — check API connection'; }
+  btn.disabled=false; btn.textContent='Generate →';
+}
+
+// Auto-load when navigating to CSO page
+(function(){
+  const _origNav = window.nav;
+  if(typeof _origNav==='function'){
+    window.nav = function(id){
+      _origNav(id);
+      if(id==='cso'){
+        setTimeout(()=>{ csoLoadStrategy(); csoLoadPlan(); }, 80);
+      }
+    };
+  }
+})();
+setInterval(()=>{ if(document.getElementById('page-cso')?.classList.contains('active')) csoLoadStrategy(); }, 120000);
+
+// ── End CSO Office ────────────────────────────────────────────────────────────
 
 // ── Global Bond status poller — runs everywhere, updates topbar chip ──────────
 let _bondGlobalPrev = 0;
