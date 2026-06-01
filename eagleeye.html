@@ -1026,6 +1026,17 @@ td.td-name{font-weight:600;color:var(--navy);}
         </div>
         <div id="carriers-table-wrap" class="scroll-box"><div class="loading"><div class="spin"></div>Loading carriers from Supabase…</div></div>
       </div>
+
+      <!-- Onboarding Progress Panel -->
+      <div class="card" style="margin-top:20px">
+        <div class="card-hd">
+          <div class="card-title">Onboarding Progress</div>
+          <button class="btn-navy" onclick="loadOnboardingProgress()" style="font-size:12px;padding:6px 14px;">Refresh</button>
+        </div>
+        <div id="onboarding-progress-wrap" class="scroll-box">
+          <div class="loading"><div class="spin"></div>Loading onboarding data…</div>
+        </div>
+      </div>
     </div>
 
     <!-- DRIVERS -->
@@ -2999,7 +3010,7 @@ function nav(id){
     const content=document.querySelector('.content');
     if(content) content.scrollTop=0;
   }
-  if(id==='carriers'){const n=document.getElementById('carrier-notif');if(n)n.style.display='none';}
+  if(id==='carriers'){const n=document.getElementById('carrier-notif');if(n)n.style.display='none';loadOnboardingProgress();}
   if(id==='invoices'){const n=document.getElementById('invoice-notif');if(n)n.style.display='none';renderInvoices();}
   if(id==='notes')loadNotes();
   if(id==='reports')loadTeamReports();
@@ -3055,6 +3066,66 @@ async function refreshAll(){
 }
 
 // ── CARRIERS ──
+async function loadOnboardingProgress(){
+  const wrap=document.getElementById('onboarding-progress-wrap');
+  if(!wrap)return;
+  wrap.innerHTML='<div class="loading"><div class="spin"></div>Loading onboarding data…</div>';
+  try{
+    const token=localStorage.getItem('3ll_token')||'eagle-eye-staff';
+    const res=await fetch('/api/onboarding/all-progress',{headers:{'Authorization':'Bearer '+token}});
+    if(!res.ok){wrap.innerHTML='<div style="padding:16px;color:var(--danger);font-size:13px">Failed to load onboarding progress ('+res.status+')</div>';return;}
+    const json=await res.json();
+    const carriers=json.carriers||[];
+    if(!carriers.length){wrap.innerHTML='<div style="padding:16px;text-align:center;color:var(--muted);font-size:13px">No active carriers found.</div>';return;}
+    let rows='';
+    carriers.forEach(c=>{
+      const pct=c.pct_complete||0;
+      const barW=Math.round((pct/100)*120);
+      const phase=c.phase||1;
+      rows+=`<tr>
+        <td style="padding:10px 12px;font-size:13px;font-weight:600;color:var(--text)">${c.company_name||'—'}</td>
+        <td style="padding:10px 12px;font-size:13px;text-align:center">
+          <span style="display:inline-block;background:#0B2545;color:#34D399;font-size:11px;font-weight:700;padding:3px 8px;border-radius:4px">${phase}/10</span>
+        </td>
+        <td style="padding:10px 12px">
+          <div style="width:120px;height:6px;background:#e2e8f0;border-radius:3px;overflow:hidden">
+            <div style="width:${barW}px;height:6px;background:#34D399;border-radius:3px"></div>
+          </div>
+          <span style="font-size:10px;color:var(--muted)">${pct}%</span>
+        </td>
+        <td style="padding:10px 12px;font-size:12px;color:var(--muted)">${c.phase_name||'—'}</td>
+        <td style="padding:10px 12px;font-size:12px;color:var(--muted)">${c.days_in_system||0}d</td>
+        <td style="padding:10px 12px">
+          <button onclick="resendOnboardingEmail('${c.carrier_id}')" style="background:none;border:1px solid var(--border);color:var(--text);font-size:11px;padding:4px 10px;border-radius:5px;cursor:pointer">Resend Email</button>
+        </td>
+      </tr>`;
+    });
+    wrap.innerHTML=`<table width="100%" style="border-collapse:collapse">
+      <thead><tr style="border-bottom:1px solid var(--border)">
+        <th style="padding:8px 12px;text-align:left;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Carrier Name</th>
+        <th style="padding:8px 12px;text-align:center;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Phase</th>
+        <th style="padding:8px 12px;text-align:left;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Progress</th>
+        <th style="padding:8px 12px;text-align:left;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Phase Name</th>
+        <th style="padding:8px 12px;text-align:left;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Days in System</th>
+        <th style="padding:8px 12px;text-align:left;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Action</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+  }catch(e){
+    wrap.innerHTML='<div style="padding:16px;color:var(--danger);font-size:13px">Error: '+e.message+'</div>';
+  }
+}
+
+async function resendOnboardingEmail(carrierId){
+  try{
+    const token=localStorage.getItem('3ll_token')||'eagle-eye-staff';
+    const res=await fetch('/api/onboarding/resend-email/'+carrierId,{method:'POST',headers:{'Authorization':'Bearer '+token}});
+    const json=await res.json().catch(()=>({}));
+    if(res.ok){alert('Email resent for phase '+json.phase+' ('+json.phase_name+')');}
+    else{alert('Failed to resend email: '+(json.detail||res.status));}
+  }catch(e){alert('Error: '+e.message);}
+}
+
 async function loadCarriers(){
   try{
     const res=await apiFetch('/api/carriers/?limit=15');

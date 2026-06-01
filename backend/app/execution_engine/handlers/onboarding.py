@@ -74,7 +74,13 @@ def h2_intake_dedupe_check(carrier_id, contract_id, payload):
                 dupes.append({"field": field, "value": val, **r})
         except Exception:  # noqa: BLE001
             pass
-    return {"duplicate_found": bool(dupes), "duplicates": dupes}
+    result = {"duplicate_found": bool(dupes), "duplicates": dupes}
+    try:
+        from ...onboarding.phase_tracker import advance_phase_notification
+        advance_phase_notification(str(carrier_id) if carrier_id else "", 1)
+    except Exception as _exc:  # noqa: BLE001
+        log.debug("advance_phase_notification phase 1 failed: %s", _exc)
+    return result
 
 
 # ── Step 3: fmcsa.lookup ──────────────────────────────────────────────────────
@@ -127,7 +133,13 @@ def h5_shield_safety_light(carrier_id, contract_id, payload):
             ).eq("carrier_id", str(carrier_id)).execute()
         except Exception:  # noqa: BLE001
             pass
-    return {"safety_light": light, "insurance_expiry": expiry}
+    result = {"safety_light": light, "insurance_expiry": expiry}
+    try:
+        from ...onboarding.phase_tracker import advance_phase_notification
+        advance_phase_notification(str(carrier_id) if carrier_id else "", 2)
+    except Exception as _exc:  # noqa: BLE001
+        log.debug("advance_phase_notification phase 2 failed: %s", _exc)
+    return result
 
 
 # ── Step 6: insurance.verify ──────────────────────────────────────────────────
@@ -191,7 +203,13 @@ def h7_insurance_expiry_watch(carrier_id, contract_id, payload):
             ).eq("carrier_id", str(carrier_id)).execute()
         except Exception:  # noqa: BLE001
             pass
-    return {"scheduled": True, "policy_expiry": expiry_str, "alert_schedule": alerts}
+    result = {"scheduled": True, "policy_expiry": expiry_str, "alert_schedule": alerts}
+    try:
+        from ...onboarding.phase_tracker import advance_phase_notification
+        advance_phase_notification(str(carrier_id) if carrier_id else "", 3)
+    except Exception as _exc:  # noqa: BLE001
+        log.debug("advance_phase_notification phase 3 failed: %s", _exc)
+    return result
 
 
 # ── Step 8: eld.detect_provider ───────────────────────────────────────────────
@@ -235,6 +253,11 @@ def h9_eld_sync_credentials(carrier_id, contract_id, payload):
             sb.table("eld_connections").update(data).eq("carrier_id", str(carrier_id)).execute()
         else:
             sb.table("eld_connections").insert(data).execute()
+        try:
+            from ...onboarding.phase_tracker import advance_phase_notification
+            advance_phase_notification(str(carrier_id), 4)
+        except Exception as _exc:  # noqa: BLE001
+            log.debug("advance_phase_notification phase 4 failed: %s", _exc)
         return {"synced": True, "provider": provider}
     except Exception as e:  # noqa: BLE001
         return {"synced": False, "error": str(e)}
@@ -318,11 +341,17 @@ def h13_stripe_attach_subscription(carrier_id, contract_id, payload):
         c.get("plan", "founders"),
         c.get("email", ""),
     )
-    return {
+    result = {
         "plan": c.get("plan", "founders"),
         "checkout_url": checkout_url,
         "status": "checkout_sent" if checkout_url else "stripe_not_configured",
     }
+    try:
+        from ...onboarding.phase_tracker import advance_phase_notification
+        advance_phase_notification(str(carrier_id) if carrier_id else "", 5)
+    except Exception as _exc:  # noqa: BLE001
+        log.debug("advance_phase_notification phase 5 failed: %s", _exc)
+    return result
 
 
 # ── Step 14: esign.send_agreement ────────────────────────────────────────────
@@ -353,8 +382,15 @@ def h15_esign_track_completion(carrier_id, contract_id, payload):
     try:
         r = sb.table("active_carriers").select("esign_name,esign_ip,esign_timestamp").eq("id", str(carrier_id)).maybe_single().execute()
         rec = r.data or {}
+        completed = bool(rec.get("esign_timestamp"))
+        if completed:
+            try:
+                from ...onboarding.phase_tracker import advance_phase_notification
+                advance_phase_notification(str(carrier_id), 6)
+            except Exception as _exc:  # noqa: BLE001
+                log.debug("advance_phase_notification phase 6 failed: %s", _exc)
         return {
-            "completed": bool(rec.get("esign_timestamp")),
+            "completed": completed,
             "esign_name": rec.get("esign_name"),
             "esign_timestamp": rec.get("esign_timestamp"),
         }
@@ -454,10 +490,17 @@ def h19_nova_welcome_email(carrier_id, contract_id, payload):
                     "You'll receive your first load offer shortly.\n\n— 3 Lakes Logistics"
                 ),
             )
-            return {"sent": True, "to": email}
+            result = {"sent": True, "to": email}
         except Exception as e:  # noqa: BLE001
-            return {"sent": False, "error": str(e)}
-    return {"sent": False, "note": "postmark_not_configured", "would_send_to": email}
+            result = {"sent": False, "error": str(e)}
+    else:
+        result = {"sent": False, "note": "postmark_not_configured", "would_send_to": email}
+    try:
+        from ...onboarding.phase_tracker import advance_phase_notification
+        advance_phase_notification(str(carrier_id) if carrier_id else "", 7)
+    except Exception as _exc:  # noqa: BLE001
+        log.debug("advance_phase_notification phase 7 failed: %s", _exc)
+    return result
 
 
 # ── Step 20: vance.welcome_call ──────────────────────────────────────────────
@@ -515,6 +558,11 @@ def h22_document_vault_upload_agreement(carrier_id, contract_id, payload):
             "storage_path": doc_url or f"carriers/{str(carrier_id)}/agreement.pdf",
             "scan_status": "complete",
         }).execute()
+        try:
+            from ...onboarding.phase_tracker import advance_phase_notification
+            advance_phase_notification(str(carrier_id), 8)
+        except Exception as _exc:  # noqa: BLE001
+            log.debug("advance_phase_notification phase 8 failed: %s", _exc)
         return {"uploaded": True, "doc_url": doc_url}
     except Exception as e:  # noqa: BLE001
         return {"uploaded": False, "error": str(e)}
@@ -551,6 +599,11 @@ def h24_beacon_activate_dashboard(carrier_id, contract_id, payload):
         sb.table("active_carriers").update(
             {"dashboard_active": True, "dashboard_activated_at": _NOW()}
         ).eq("id", str(carrier_id)).execute()
+        try:
+            from ...onboarding.phase_tracker import advance_phase_notification
+            advance_phase_notification(str(carrier_id), 9)
+        except Exception as _exc:  # noqa: BLE001
+            log.debug("advance_phase_notification phase 9 failed: %s", _exc)
         return {"activated": True}
     except Exception as e:  # noqa: BLE001
         return {"activated": False, "error": str(e)}
@@ -715,12 +768,18 @@ def h30_onboarding_complete(carrier_id, contract_id, payload):
         ))
     except Exception as e:  # noqa: BLE001
         log.warning("atomic_ledger write failed at step 30: %s", e)
-    return {
+    result = {
         "onboarding_complete": True,
         "carrier_id": str(carrier_id) if carrier_id else None,
         "company_name": c.get("company_name"),
         "completed_at": _NOW(),
     }
+    try:
+        from ...onboarding.phase_tracker import advance_phase_notification
+        advance_phase_notification(str(carrier_id) if carrier_id else "", 10)
+    except Exception as _exc:  # noqa: BLE001
+        log.debug("advance_phase_notification phase 10 failed: %s", _exc)
+    return result
 
 
 # ── Dispatch table ────────────────────────────────────────────────────────────

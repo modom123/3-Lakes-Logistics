@@ -398,6 +398,18 @@ def fire_insurance_expiry_alerts() -> None:
     _bg(_run)
 
 
+def fire_stall_reminders() -> None:
+    """Daily job — sends one reminder email when a carrier stops progressing mid-onboarding."""
+    def _run():
+        try:
+            from .execution_engine.handlers.onboarding_scheduler import send_stall_reminders  # noqa: PLC0415
+            result = send_stall_reminders()
+            log.info("fire_stall_reminders sent=%s errors=%s", result.get("sent"), result.get("errors"))
+        except Exception as exc:  # noqa: BLE001
+            log.error("fire_stall_reminders failed: %s", exc)
+    _bg(_run)
+
+
 def fire_vault_scan(doc_id: str) -> None:
     """Trigger background AI extraction for a vault document.
 

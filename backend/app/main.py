@@ -53,6 +53,7 @@ from .api import (
     telemetry_router,
     triggers_router,
     webhooks_router,
+    onboarding_status_router,
 )
 from .logging_service import get_logger
 from .settings import get_settings
@@ -87,6 +88,7 @@ def _start_scheduler(app: FastAPI) -> None:
             fire_partial_submission_reminders,
             fire_insurance_expiry_alerts,
             fire_onboarding_bond_audit,
+            fire_stall_reminders,
         )
         from .agents.memory import prune_interactions
         from .email.imap_poller import poll_all as poll_all_mailboxes
@@ -116,6 +118,7 @@ def _start_scheduler(app: FastAPI) -> None:
         scheduler.add_job(fire_partial_submission_reminders, CronTrigger(hour=9, minute=0), id="partial_submission_reminders", replace_existing=True)
         scheduler.add_job(fire_insurance_expiry_alerts, CronTrigger(hour=6, minute=45), id="insurance_expiry_alerts", replace_existing=True)
         scheduler.add_job(fire_onboarding_bond_audit, CronTrigger(hour=7, minute=45), id="onboarding_bond_audit_daily", replace_existing=True)
+        scheduler.add_job(fire_stall_reminders, CronTrigger(hour=10, minute=0), id="stall_reminders_daily", replace_existing=True)
 
         scheduler.start()
         app.state.scheduler = scheduler
@@ -192,6 +195,7 @@ def create_app() -> FastAPI:
     app.include_router(agreements_router,      prefix="/api/agreements",   tags=["agreements"])
     app.include_router(light_fleet_router,     prefix="/api/light-fleet",  tags=["light-fleet"])
     app.include_router(studio_router,          prefix="/api",              tags=["studio"])
+    app.include_router(onboarding_status_router, prefix="/api",           tags=["onboarding-status"])
     app.include_router(health_router,                                      tags=["health"])
 
     _marketing_dir = os.path.normpath(

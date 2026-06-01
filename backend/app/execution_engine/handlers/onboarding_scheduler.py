@@ -349,3 +349,126 @@ def send_insurance_expiry_alerts() -> dict[str, Any]:
 
     log.info("send_insurance_expiry_alerts alerts_sent=%d", alerts_sent)
     return {"alerts_sent": alerts_sent}
+
+
+# ── Stall Reminder Sweep ──────────────────────────────────────────────────────
+
+def send_stall_reminders() -> dict[str, Any]:
+    """Daily sweep — one reminder email when a carrier stops progressing mid-onboarding.
+
+    Fires at 24h, 72h, and 7d of no phase advancement. Never sends more than
+    one reminder per window per carrier.
+    """
+    from ...onboarding.phase_tracker import get_carrier_phase, send_stall_reminder
+
+    sb = _db()
+    if not sb:
+        return {"sent": 0, "note": "no_db"}
+
+    now = datetime.now(timezone.utc)
+    sent = errors = 0
+    WINDOWS = [
+        (24,  72,   "24h"),
+        (72,  168,  "72h"),
+        (168, 999,  "7d"),
+    ]
+
+    try:
+        rows = (
+            sb.table("active_carriers")
+            .select("id,company_name,status,created_at")
+            .in_("status", ["incomplete", "pending", "onboarding"])
+            .execute()
+            .data or []
+        )
+    except Exception as exc:
+        log.error("send_stall_reminders query failed: %s", exc)
+        return {"sent": 0, "errors": 1}
+
+    for carrier in rows:
+        carrier_id = carrier.get("id")
+        if not carrier_id:
+            continue
+        try:
+            # Find how long since last phase advancement
+            phase_data = get_carrier_phase(str(carrier_id))
+            current_phase = phase_data.get("phase", 0)
+            if current_phase >= 10:
+                continue  # fully onboarded
+
+            # Get last phase advancement timestamp
+            last_advanced = None
+            try:
+                log_row = (
+                    sb.table("onboarding_phase_log")
+                    .select("advanced_at")
+                    .eq("carrier_id", str(carrier_id))
+                    .order("phase", desc=True)
+                    .limit(1)
+                    .maybe_single()
+                    .execute()
+                )
+                if log_row.data:
+                    last_advanced = datetime.fromisoformat(
+                        log_row.data["advanced_at"].replace("Z", "+00:00")
+                    )
+            except Exception:
+                pass
+
+            if not last_advanced:
+                # Fall back to created_at
+                try:
+                    last_advanced = datetime.fromisoformat(
+                        carrier["created_at"].replace("Z", "+00:00")
+                    )
+                except Exception:
+                    continue
+
+            stalled_hours = (now - last_advanced).total_seconds() / 3600
+
+            for min_h, max_h, window_key in WINDOWS:
+                if not (min_h <= stalled_hours < max_h):
+                    continue
+
+                # Check dedup — only one reminder per window
+                reminder_key = f"stall_reminder:{carrier_id}:{window_key}"
+                already_sent = False
+                try:
+                    existing = (
+                        sb.table("scheduled_tasks")
+                        .select("id")
+                        .eq("carrier_id", str(carrier_id))
+                        .eq("task_type", reminder_key)
+                        .limit(1)
+                        .execute()
+                    )
+                    already_sent = bool(existing.data)
+                except Exception:
+                    pass
+
+                if already_sent:
+                    break
+
+                ok = send_stall_reminder(str(carrier_id), int(stalled_hours / 24) or 1)
+                if ok:
+                    sent += 1
+                    try:
+                        sb.table("scheduled_tasks").insert({
+                            "task_type": reminder_key,
+                            "carrier_id": str(carrier_id),
+                            "status": "completed",
+                            "scheduled_for": now.isoformat(),
+                            "executed_at": now.isoformat(),
+                            "created_at": now.isoformat(),
+                        }).execute()
+                    except Exception:
+                        pass
+                else:
+                    errors += 1
+                break
+        except Exception as exc:
+            log.warning("stall reminder failed carrier=%s: %s", carrier_id, exc)
+            errors += 1
+
+    log.info("send_stall_reminders sent=%d errors=%d", sent, errors)
+    return {"sent": sent, "errors": errors}

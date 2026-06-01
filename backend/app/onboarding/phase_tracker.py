@@ -208,50 +208,45 @@ def get_all_carriers_phases() -> list[dict]:
 
 
 def advance_phase_notification(carrier_id: str, new_phase: int) -> None:
-    """Send phase email if not already sent; log the transition."""
+    """Log a phase transition. No email sent here — reminders fire only when carrier stalls."""
     log = _log()
     try:
         sb = _db()
+        from datetime import datetime, timezone
+        now = datetime.now(timezone.utc).isoformat()
 
-        # Check idempotency — has this phase email been sent?
-        already_sent = False
         if sb:
             try:
-                existing = (
-                    sb.table("onboarding_phase_log")
-                    .select("id")
-                    .eq("carrier_id", str(carrier_id))
-                    .eq("phase", new_phase)
-                    .maybe_single()
-                    .execute()
-                )
-                already_sent = bool(existing.data)
-            except Exception:
-                # Table may not exist — fall through and try agent_memory
-                pass
-
-        if not already_sent:
-            # Try agent_memory as fallback idempotency check
-            try:
-                from ..agents.memory import remember, recall
-                mem_key = f"phase_email_sent:{carrier_id}:{new_phase}"
-                existing_mem = recall(mem_key)
-                if existing_mem:
-                    already_sent = True
+                sb.table("onboarding_phase_log").upsert({
+                    "carrier_id": str(carrier_id),
+                    "phase": new_phase,
+                    "phase_name": PHASE_INFO.get(new_phase, {}).get("name", ""),
+                    "advanced_at": now,
+                }, on_conflict="carrier_id,phase").execute()
             except Exception:
                 pass
 
-        if already_sent:
-            log.debug("Phase %d email already sent for carrier %s — skipping", new_phase, carrier_id)
-            return
+        log.info("Carrier %s advanced to phase %d (%s)",
+                 carrier_id, new_phase, PHASE_INFO.get(new_phase, {}).get("name", ""))
+    except Exception as e:
+        log.error("advance_phase_notification failed carrier=%s phase=%d: %s", carrier_id, new_phase, e)
 
-        # Get carrier info
+
+def send_stall_reminder(carrier_id: str, stalled_days: int) -> bool:
+    """Send a single reminder email when a carrier has stopped progressing.
+
+    Called by the scheduled task executor (onboarding_scheduler.py) when a
+    carrier hasn't advanced a phase in stalled_days. Returns True if sent.
+    """
+    log = _log()
+    try:
+        sb = _db()
         carrier_info: dict = {}
         if sb:
             try:
                 r = (
                     sb.table("active_carriers")
-                    .select("company_name,email")
+                    .select("company_name,email,status")
                     .eq("id", str(carrier_id))
                     .maybe_single()
                     .execute()
@@ -260,59 +255,44 @@ def advance_phase_notification(carrier_id: str, new_phase: int) -> None:
             except Exception:
                 pass
 
-        carrier_name = carrier_info.get("company_name", "Carrier")
         carrier_email = carrier_info.get("email")
+        carrier_name = carrier_info.get("company_name", "there")
+        if not carrier_email:
+            return False
 
-        # Build and send email
-        if carrier_email:
-            try:
-                from .email_templates import get_phase_email
-                from ..settings import get_settings
-                s = get_settings()
+        phase_data = get_carrier_phase(carrier_id)
+        current_phase = phase_data.get("phase", 1)
+        phase_name = phase_data.get("phase_name", "")
+        next_action = phase_data.get("next_action", "complete your application")
 
-                email_data = get_phase_email(new_phase, carrier_name)
+        from .email_templates import build_stall_reminder_email
+        from ..settings import get_settings
+        s = get_settings()
+        if not s.postmark_server_token:
+            log.info("Stall reminder would send to %s (postmark not configured)", carrier_email)
+            return False
 
-                if s.postmark_server_token:
-                    try:
-                        from postmarker.core import PostmarkClient  # type: ignore
-                        PostmarkClient(server_token=s.postmark_server_token).emails.send(
-                            From=s.postmark_from_email,
-                            To=carrier_email,
-                            Subject=email_data["subject"],
-                            HtmlBody=email_data["html"],
-                            TextBody=email_data["text"],
-                        )
-                        log.info("Phase %d email sent to %s (%s)", new_phase, carrier_email, carrier_id)
-                    except Exception as e:
-                        log.warning("Postmark send failed for phase %d / %s: %s", new_phase, carrier_id, e)
-                else:
-                    log.info("Phase %d email would send to %s (postmark not configured)", new_phase, carrier_email)
-            except Exception as e:
-                log.warning("Email build failed for phase %d / %s: %s", new_phase, carrier_id, e)
-
-        # Record in onboarding_phase_log
-        if sb:
-            try:
-                from datetime import datetime, timezone
-                sb.table("onboarding_phase_log").insert({
-                    "carrier_id": str(carrier_id),
-                    "phase": new_phase,
-                    "phase_name": PHASE_INFO.get(new_phase, {}).get("name", ""),
-                    "email_sent": bool(carrier_email),
-                    "sent_at": datetime.now(timezone.utc).isoformat(),
-                }).execute()
-            except Exception as e:
-                log.debug("onboarding_phase_log insert failed (table may not exist): %s", e)
-
-        # Record in agent memory
+        email_data = build_stall_reminder_email(
+            carrier_name=carrier_name,
+            current_phase=current_phase,
+            phase_name=phase_name,
+            next_action=next_action,
+            stalled_days=stalled_days,
+        )
         try:
-            from ..agents.memory import remember
-            remember(
-                f"phase_email_sent:{carrier_id}:{new_phase}",
-                {"carrier_id": carrier_id, "phase": new_phase, "sent": True},
+            from postmarker.core import PostmarkClient  # type: ignore
+            PostmarkClient(server_token=s.postmark_server_token).emails.send(
+                From=s.postmark_from_email,
+                To=carrier_email,
+                Subject=email_data["subject"],
+                HtmlBody=email_data["html"],
+                TextBody=email_data["text"],
             )
-        except Exception:
-            pass
-
+            log.info("Stall reminder sent to %s (phase %d, stalled %d days)", carrier_email, current_phase, stalled_days)
+            return True
+        except Exception as e:
+            log.warning("Postmark stall reminder failed for %s: %s", carrier_id, e)
+            return False
     except Exception as e:
-        log.error("advance_phase_notification failed for carrier %s phase %d: %s", carrier_id, new_phase, e)
+        log.error("send_stall_reminder failed carrier=%s: %s", carrier_id, e)
+        return False
