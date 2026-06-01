@@ -507,6 +507,17 @@
           🚗 View My Trips →
         </button>
       </div>
+
+      <!-- Check-In Card -->
+      <div class="card" id="checkin-card" style="text-align:center;padding:18px 14px">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);margin-bottom:8px">Dispatch Check-In</div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:4px" id="checkin-last-label">Last check-in: —</div>
+        <div style="font-size:12px;font-weight:600;margin-bottom:14px" id="checkin-countdown"></div>
+        <button onclick="doCheckIn()" id="checkin-btn" style="width:100%;padding:13px;border:none;border-radius:12px;background:var(--accent);color:#fff;font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px">
+          📍 Check In with Dispatch
+        </button>
+        <div style="font-size:11px;color:var(--muted);margin-top:8px">Required every 2 hours while on duty</div>
+      </div>
     </div>
 
     <!-- ── LOADS VIEW ── -->
@@ -584,7 +595,10 @@
       </div>
 
       <!-- settlement history -->
-      <div class="section-header">Settlement History</div>
+      <div class="section-header" style="display:flex;justify-content:space-between;align-items:center">
+        Settlement History
+        <button onclick="downloadPayStub()" style="font-size:11px;font-weight:600;background:var(--card);border:1px solid var(--border);border-radius:8px;padding:5px 12px;color:var(--text);cursor:pointer">⬇ Download Pay Stub</button>
+      </div>
       <div id="settlement-list">
         <div style="text-align:center;padding:16px;color:var(--muted);font-size:13px">Loading settlements…</div>
       </div>
@@ -633,6 +647,44 @@
           <input type="file" id="lumper-upload" accept="image/*,application/pdf" onchange="handleUpload('lumper', this)" />
           <div class="upload-icon">🧾</div>
           <div class="upload-text"><strong>Tap to upload receipt</strong>Required for reimbursement</div>
+        </div>
+      </div>
+
+      <div class="section-header">My Credentials</div>
+
+      <div class="card">
+        <div class="card-title">Driver's License <span id="cred-license-badge" style="display:none;font-size:10px;background:rgba(34,197,94,.15);color:var(--green);padding:2px 8px;border-radius:10px;font-weight:600;margin-left:6px">✓ On File</span></div>
+        <div class="upload-zone" onclick="triggerUpload('license-upload')">
+          <input type="file" id="license-upload" accept="image/*,application/pdf" onchange="handleUpload('license', this)" />
+          <div class="upload-icon">🪪</div>
+          <div class="upload-text"><strong>Tap to upload license</strong>Front & back, JPG or PDF</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Insurance Certificate <span id="cred-insurance-badge" style="display:none;font-size:10px;background:rgba(34,197,94,.15);color:var(--green);padding:2px 8px;border-radius:10px;font-weight:600;margin-left:6px">✓ On File</span></div>
+        <div class="upload-zone" onclick="triggerUpload('ins-upload')">
+          <input type="file" id="ins-upload" accept="image/*,application/pdf" onchange="handleUpload('insurance_cert', this)" />
+          <div class="upload-icon">🛡️</div>
+          <div class="upload-text"><strong>Tap to upload certificate</strong>Current policy COI</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Vehicle Registration <span id="cred-registration-badge" style="display:none;font-size:10px;background:rgba(34,197,94,.15);color:var(--green);padding:2px 8px;border-radius:10px;font-weight:600;margin-left:6px">✓ On File</span></div>
+        <div class="upload-zone" onclick="triggerUpload('reg-upload')">
+          <input type="file" id="reg-upload" accept="image/*,application/pdf" onchange="handleUpload('registration', this)" />
+          <div class="upload-icon">📋</div>
+          <div class="upload-text"><strong>Tap to upload registration</strong>Must be current year</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Medical Certificate (DOT Physical) <span id="cred-medical-badge" style="display:none;font-size:10px;background:rgba(34,197,94,.15);color:var(--green);padding:2px 8px;border-radius:10px;font-weight:600;margin-left:6px">✓ On File</span></div>
+        <div class="upload-zone" onclick="triggerUpload('med-upload')">
+          <input type="file" id="med-upload" accept="image/*,application/pdf" onchange="handleUpload('medical_cert', this)" />
+          <div class="upload-icon">🏥</div>
+          <div class="upload-text"><strong>Tap to upload DOT physical card</strong>Required for CDL operation</div>
         </div>
       </div>
 
@@ -1199,11 +1251,16 @@ document.addEventListener('DOMContentLoaded', () => {
     startMsgPolling();
   }
   registerServiceWorker();
+  _updateCheckInUI();
+  _startCheckInCountdown();
+  loadCredentialBadges();
 });
 
 function registerServiceWorker() {
   if (!('serviceWorker' in navigator)) return;
-  navigator.serviceWorker.register('sw.js').catch(() => {});
+  navigator.serviceWorker.register('sw.js')
+    .then(reg => { _subscribePush(reg); })
+    .catch(() => {});
   navigator.serviceWorker.addEventListener('message', e => {
     if (e.data?.type === 'PUSH_NOTIFICATION') {
       const title = e.data.title || '3 Lakes Driver';
@@ -1211,6 +1268,139 @@ function registerServiceWorker() {
       showToast(`🔔 ${title}${body ? ': ' + body : ''}`);
     }
   });
+}
+
+async function _subscribePush(reg) {
+  const vapid = (window.__3LL_CONFIG || {}).VAPID_PUBLIC_KEY;
+  if (!vapid || !reg.pushManager) return;
+  try {
+    const existing = await reg.pushManager.getSubscription();
+    if (existing) return;
+    const sub = await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: _urlB64ToUint8(vapid),
+    });
+    const driverId = localStorage.getItem('3ll_driver_id') || '';
+    await apiFetch('/api/driver/push-subscribe', 'POST', { driver_id: driverId, subscription: sub.toJSON() });
+  } catch { /* push not supported or denied */ }
+}
+function _urlB64ToUint8(b64) {
+  const pad = '='.repeat((4 - b64.length % 4) % 4);
+  const raw = atob((b64 + pad).replace(/-/g,'+').replace(/_/g,'/'));
+  return Uint8Array.from([...raw].map(c => c.charCodeAt(0)));
+}
+
+// ── CHECK-IN ──────────────────────────────────────────────────────────────────
+let _checkInTimer = null;
+const CHECK_IN_INTERVAL = 2 * 60 * 60 * 1000; // 2 hours
+
+async function doCheckIn() {
+  const btn = document.getElementById('checkin-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Checking in…'; }
+  try {
+    const pos = await new Promise((res, rej) =>
+      navigator.geolocation.getCurrentPosition(res, rej, { timeout: 6000 })
+    ).catch(() => null);
+    await apiFetch('/api/driver/check-call', 'POST', {
+      driver_id: localStorage.getItem('3ll_driver_id') || DRIVER_ID,
+      lat:  pos?.coords.latitude  || null,
+      lng:  pos?.coords.longitude || null,
+      note: 'Driver check-in',
+      ts:   new Date().toISOString(),
+    }).catch(() => {});
+    localStorage.setItem('3ll_last_checkin', Date.now().toString());
+    showToast('✅ Check-in sent to dispatch');
+  } finally {
+    if (btn) { btn.disabled = false; btn.innerHTML = '📍 Check In with Dispatch'; }
+    _updateCheckInUI();
+    _startCheckInCountdown();
+  }
+}
+
+function _updateCheckInUI() {
+  const last = parseInt(localStorage.getItem('3ll_last_checkin') || '0');
+  const lbl  = document.getElementById('checkin-last-label');
+  if (!lbl) return;
+  if (!last) { lbl.textContent = 'Last check-in: —'; return; }
+  const d = new Date(last);
+  lbl.textContent = `Last check-in: ${d.toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' })}`;
+}
+
+function _startCheckInCountdown() {
+  clearInterval(_checkInTimer);
+  const countEl = document.getElementById('checkin-countdown');
+  const card    = document.getElementById('checkin-card');
+  if (!countEl) return;
+  function tick() {
+    const last = parseInt(localStorage.getItem('3ll_last_checkin') || '0');
+    if (!last) { countEl.textContent = ''; return; }
+    const remaining = (last + CHECK_IN_INTERVAL) - Date.now();
+    if (remaining <= 0) {
+      countEl.textContent = '⚠️ Check-in overdue';
+      countEl.style.color = 'var(--red)';
+      if (card) card.style.borderLeft = '3px solid var(--red)';
+    } else {
+      const h = Math.floor(remaining / 3600000);
+      const m = Math.floor((remaining % 3600000) / 60000);
+      const s = Math.floor((remaining % 60000) / 1000);
+      countEl.textContent = h > 0
+        ? `Next check-in in ${h}h ${m}m`
+        : `Next check-in in ${m}m ${s}s`;
+      countEl.style.color = remaining < 900000 ? 'var(--yellow)' : 'var(--muted)';
+      if (card) card.style.borderLeft = '';
+    }
+  }
+  tick();
+  _checkInTimer = setInterval(tick, 1000);
+}
+
+// ── PAY STUB DOWNLOAD ─────────────────────────────────────────────────────────
+function downloadPayStub() {
+  const name    = localStorage.getItem('3ll_driver_name') || 'Driver';
+  const gross   = document.getElementById('pay-week-gross')?.textContent || '—';
+  const dedDisp = document.getElementById('ded-dispatch')?.textContent   || '—';
+  const dedFuel = document.getElementById('ded-fuel')?.textContent       || '—';
+  const dedIns  = document.getElementById('ded-insurance')?.textContent  || '—';
+  const net     = document.getElementById('pay-net')?.textContent        || '—';
+  const period  = document.getElementById('earn-period-label')?.textContent || 'This Week';
+  const today   = new Date().toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' });
+  const html = `<!DOCTYPE html><html><head><title>Pay Stub — ${name}</title>
+<style>body{font-family:Arial,sans-serif;max-width:600px;margin:40px auto;padding:20px;color:#111}
+h1{font-size:22px;margin-bottom:4px}h2{font-size:14px;color:#555;font-weight:normal;margin:0 0 24px}
+table{width:100%;border-collapse:collapse;margin-top:16px}
+td{padding:10px 0;border-bottom:1px solid #e5e7eb;font-size:14px}
+td:last-child{text-align:right;font-weight:600}
+.total td{font-size:17px;font-weight:700;border-top:2px solid #111;border-bottom:none}
+.green{color:#16a34a}.red{color:#dc2626}
+footer{margin-top:32px;font-size:11px;color:#9ca3af;border-top:1px solid #e5e7eb;padding-top:12px}
+@media print{button{display:none}}</style></head><body>
+<h1>3 Lakes Logistics — Pay Stub</h1><h2>${name} &nbsp;·&nbsp; ${period} &nbsp;·&nbsp; Printed ${today}</h2>
+<table>
+  <tr><td>Gross Earnings</td><td class="green">${gross}</td></tr>
+  <tr><td>Dispatch Fee</td><td class="red">${dedDisp}</td></tr>
+  <tr><td>Fuel Advance</td><td>${dedFuel}</td></tr>
+  <tr><td>Insurance</td><td>${dedIns}</td></tr>
+  <tr class="total"><td>Net Pay</td><td class="green">${net}</td></tr>
+</table>
+<button onclick="window.print()" style="margin-top:24px;padding:10px 24px;background:#1d4ed8;color:#fff;border:none;border-radius:8px;font-size:14px;cursor:pointer">🖨 Print / Save PDF</button>
+<footer>3 Lakes Logistics · info@3lakeslogistics.com · 661-466-9932 · 15% commission structure</footer>
+</body></html>`;
+  const w = window.open('', '_blank');
+  if (w) { w.document.write(html); w.document.close(); }
+}
+
+// ── CREDENTIAL DOC BADGES ─────────────────────────────────────────────────────
+function loadCredentialBadges() {
+  const driverId = localStorage.getItem('3ll_driver_id');
+  if (!driverId || DEMO_MODE) return;
+  apiFetch(`/api/driver/documents?driver_id=${driverId}&category=credential`)
+    .then(r => r.json()).then(data => {
+      const types = (data.items || []).map(d => d.doc_type);
+      if (types.includes('license'))       { const el = document.getElementById('cred-license-badge');     if (el) el.style.display = ''; }
+      if (types.includes('insurance_cert')){ const el = document.getElementById('cred-insurance-badge');   if (el) el.style.display = ''; }
+      if (types.includes('registration'))  { const el = document.getElementById('cred-registration-badge');if (el) el.style.display = ''; }
+      if (types.includes('medical_cert'))  { const el = document.getElementById('cred-medical-badge');     if (el) el.style.display = ''; }
+    }).catch(() => {});
 }
 
 // ── VIEW NAVIGATION ───────────────────────────────────────────────────────────
