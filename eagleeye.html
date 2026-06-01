@@ -667,8 +667,11 @@ td.td-name{font-weight:600;color:var(--navy);}
     <b style="color:#f1c40f">Eagle Eye Diagnostics</b>
     <button onclick="document.getElementById('diag-banner').style.display='none'" style="background:none;border:1px solid #555;color:#fff;cursor:pointer;padding:2px 8px;border-radius:4px">✕</button>
   </div>
-  <div>API: <span id="diag-url" style="color:#3498db">—</span></div>
-  <div>Health: <span id="diag-health" style="color:#e74c3c">checking…</span></div>
+  <div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap">
+    <span>API: <span id="diag-url" style="color:#3498db">—</span></span>
+    <span>Health: <span id="diag-health" style="color:#e74c3c">checking…</span></span>
+    <span id="diag-auto-fix-status" style="font-size:11px;color:#94a3b8"></span>
+  </div>
   <div id="diag-errors" style="color:#e74c3c;margin-top:2px"></div>
 </div>
 
@@ -1023,6 +1026,17 @@ td.td-name{font-weight:600;color:var(--navy);}
           <span class="badge badge-navy" id="carrier-roster-badge">Loading…</span>
         </div>
         <div id="carriers-table-wrap" class="scroll-box"><div class="loading"><div class="spin"></div>Loading carriers from Supabase…</div></div>
+      </div>
+
+      <!-- Onboarding Progress Panel -->
+      <div class="card" style="margin-top:20px">
+        <div class="card-hd">
+          <div class="card-title">Onboarding Progress</div>
+          <button class="btn-navy" onclick="loadOnboardingProgress()" style="font-size:12px;padding:6px 14px;">Refresh</button>
+        </div>
+        <div id="onboarding-progress-wrap" class="scroll-box">
+          <div class="loading"><div class="spin"></div>Loading onboarding data…</div>
+        </div>
       </div>
     </div>
 
@@ -2437,6 +2451,34 @@ td.td-name{font-weight:600;color:var(--navy);}
     </div>
   </div>
 
+  <!-- CSO Office — CC Gulley Strategy Panel -->
+  <div class="ec-card" id="ec-cso-section">
+    <div class="ec-sec-hd">
+      <h2>🧭 CSO Office — CC Gulley</h2>
+      <span class="ec-count-badge">Strategy Unit</span>
+    </div>
+    <div id="ec-cso-body">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-bottom:20px;">
+        <div id="ec-cso-strategy" style="background:#f0f7ff;border:1px solid #bfdbfe;border-radius:10px;padding:16px;">
+          <div style="font-size:10px;font-weight:700;letter-spacing:1.5px;color:#1e40af;text-transform:uppercase;margin-bottom:8px;">30/60/90 Roadmap</div>
+          <div id="ec-cso-roadmap-text" style="font-size:13px;color:#1e3a5f;line-height:1.65;">Loading strategy plan…</div>
+        </div>
+        <div id="ec-cso-directives" style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:16px;">
+          <div style="font-size:10px;font-weight:700;letter-spacing:1.5px;color:#15803d;text-transform:uppercase;margin-bottom:8px;">Active Directives</div>
+          <div id="ec-cso-directives-text" style="font-size:13px;color:#14532d;line-height:1.65;">Loading directives…</div>
+        </div>
+        <div id="ec-cso-ops" style="background:#fefce8;border:1px solid #fde68a;border-radius:10px;padding:16px;">
+          <div style="font-size:10px;font-weight:700;letter-spacing:1.5px;color:#92400e;text-transform:uppercase;margin-bottom:8px;">Ops Intelligence (Bond)</div>
+          <div id="ec-cso-ops-text" style="font-size:13px;color:#78350f;line-height:1.65;">Loading ops brief…</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <button class="ec-btn ec-btn-outline" style="font-size:12px;padding:8px 16px;" onclick="ecLoadCSOOffice()">↻ Refresh CSO Panel</button>
+        <button class="ec-btn ec-btn-primary" style="font-size:12px;padding:8px 16px;" onclick="ecRunCCGulley()">▶ Run CC Gulley Agent</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Active Triage Escalations -->
   <div class="ec-card" id="ec-esc-section">
     <div class="ec-sec-hd"><h2>Active Triage Escalations</h2><span class="ec-count-badge" id="ec-esc-count">0</span></div>
@@ -2475,7 +2517,7 @@ td.td-name{font-weight:600;color:var(--navy);}
       </thead>
       <tbody id="ec-org-tbody">
         <!-- Pre-populated with all 20 executives — also refreshed from API -->
-        <tr><td colspan="6" style="text-align:center;padding:24px;color:#5A6A82;font-size:13px;">Click "Refresh Dashboard" to load from API, or see static roster below.</td></tr>
+        <tr><td colspan="6" style="text-align:center;padding:24px;color:#5A6A82;font-size:13px;">Click <strong>Refresh Dashboard</strong> to load all 34 executives from the API. Includes CC Gulley's Strategy Unit (Alexander Wright, Naomi Kensington, Winston Carmichael) and the Light Fleet Division.</td></tr>
       </tbody>
     </table>
   </div>
@@ -3003,8 +3045,12 @@ function nav(id){
     const content=document.querySelector('.content');
     if(content) content.scrollTop=0;
   }
-  if(id==='cso'){ csoTab('strategy'); csoLoadStrategy(); csoLoadPlan(); csoDirLoadActive(); }
-  if(id==='carriers'){const n=document.getElementById('carrier-notif');if(n)n.style.display='none';}
+
+
+
+
+
+
   if(id==='invoices'){const n=document.getElementById('invoice-notif');if(n)n.style.display='none';renderInvoices();}
   if(id==='notes')loadNotes();
   if(id==='reports')loadTeamReports();
@@ -3060,6 +3106,66 @@ async function refreshAll(){
 }
 
 // ── CARRIERS ──
+async function loadOnboardingProgress(){
+  const wrap=document.getElementById('onboarding-progress-wrap');
+  if(!wrap)return;
+  wrap.innerHTML='<div class="loading"><div class="spin"></div>Loading onboarding data…</div>';
+  try{
+    const token=localStorage.getItem('3ll_token')||'eagle-eye-staff';
+    const res=await fetch('/api/onboarding/all-progress',{headers:{'Authorization':'Bearer '+token}});
+    if(!res.ok){wrap.innerHTML='<div style="padding:16px;color:var(--danger);font-size:13px">Failed to load onboarding progress ('+res.status+')</div>';return;}
+    const json=await res.json();
+    const carriers=json.carriers||[];
+    if(!carriers.length){wrap.innerHTML='<div style="padding:16px;text-align:center;color:var(--muted);font-size:13px">No active carriers found.</div>';return;}
+    let rows='';
+    carriers.forEach(c=>{
+      const pct=c.pct_complete||0;
+      const barW=Math.round((pct/100)*120);
+      const phase=c.phase||1;
+      rows+=`<tr>
+        <td style="padding:10px 12px;font-size:13px;font-weight:600;color:var(--text)">${c.company_name||'—'}</td>
+        <td style="padding:10px 12px;font-size:13px;text-align:center">
+          <span style="display:inline-block;background:#0B2545;color:#34D399;font-size:11px;font-weight:700;padding:3px 8px;border-radius:4px">${phase}/10</span>
+        </td>
+        <td style="padding:10px 12px">
+          <div style="width:120px;height:6px;background:#e2e8f0;border-radius:3px;overflow:hidden">
+            <div style="width:${barW}px;height:6px;background:#34D399;border-radius:3px"></div>
+          </div>
+          <span style="font-size:10px;color:var(--muted)">${pct}%</span>
+        </td>
+        <td style="padding:10px 12px;font-size:12px;color:var(--muted)">${c.phase_name||'—'}</td>
+        <td style="padding:10px 12px;font-size:12px;color:var(--muted)">${c.days_in_system||0}d</td>
+        <td style="padding:10px 12px">
+          <button onclick="resendOnboardingEmail('${c.carrier_id}')" style="background:none;border:1px solid var(--border);color:var(--text);font-size:11px;padding:4px 10px;border-radius:5px;cursor:pointer">Resend Email</button>
+        </td>
+      </tr>`;
+    });
+    wrap.innerHTML=`<table width="100%" style="border-collapse:collapse">
+      <thead><tr style="border-bottom:1px solid var(--border)">
+        <th style="padding:8px 12px;text-align:left;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Carrier Name</th>
+        <th style="padding:8px 12px;text-align:center;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Phase</th>
+        <th style="padding:8px 12px;text-align:left;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Progress</th>
+        <th style="padding:8px 12px;text-align:left;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Phase Name</th>
+        <th style="padding:8px 12px;text-align:left;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Days in System</th>
+        <th style="padding:8px 12px;text-align:left;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Action</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+  }catch(e){
+    wrap.innerHTML='<div style="padding:16px;color:var(--danger);font-size:13px">Error: '+e.message+'</div>';
+  }
+}
+
+async function resendOnboardingEmail(carrierId){
+  try{
+    const token=localStorage.getItem('3ll_token')||'eagle-eye-staff';
+    const res=await fetch('/api/onboarding/resend-email/'+carrierId,{method:'POST',headers:{'Authorization':'Bearer '+token}});
+    const json=await res.json().catch(()=>({}));
+    if(res.ok){alert('Email resent for phase '+json.phase+' ('+json.phase_name+')');}
+    else{alert('Failed to resend email: '+(json.detail||res.status));}
+  }catch(e){alert('Error: '+e.message);}
+}
+
 async function loadCarriers(){
   try{
     const res=await apiFetch('/api/carriers/?limit=15');
@@ -4341,11 +4447,79 @@ async function saveTeamReport(){
 
 // ── IEBC EXECUTIVE COMMAND ──
 async function ecRefreshDashboard(){
-  await Promise.all([ecLoadDashboard(),ecLoadEscalations(),ecLoadBrief(),ecLoadExecutives(),ecLoadContingencies()]);
+  await Promise.all([ecLoadDashboard(),ecLoadEscalations(),ecLoadBrief(),ecLoadExecutives(),ecLoadContingencies(),ecLoadCSOOffice()]);
+}
+async function ecLoadCSOOffice(){
+  const roadmapEl=document.getElementById('ec-cso-roadmap-text');
+  const directivesEl=document.getElementById('ec-cso-directives-text');
+  const opsEl=document.getElementById('ec-cso-ops-text');
+  // Load strategy_plan and 30_60_90 from memory recall
+  try{
+    const [sp,plan,dirs]=await Promise.all([
+      API.agentBrain('cc_gulley').catch(()=>null),
+      Promise.resolve(null),
+      Promise.resolve(null)
+    ]);
+    // sp holds the full cc_gulley brain — extract keys from memories array
+    const _mems = (sp&&sp.memories)||[];
+    const _pick = key => (_mems.find(m=>m.memory_key===key)||{}).memory_value;
+    const roadmapData = _pick('30_60_90') || _pick('strategy_plan');
+    if(roadmapEl){
+      if(roadmapData){
+        const txt=typeof roadmapData==='string'?roadmapData:JSON.stringify(roadmapData,null,2);
+        roadmapEl.textContent=txt.slice(0,400)+(txt.length>400?'…':'');
+      } else {
+        roadmapEl.innerHTML='<span style="color:#6b7280;font-style:italic;">No roadmap stored. Run CC Gulley to generate.</span>';
+      }
+    }
+    // Directives
+    const dirsData=_pick('directives');
+    if(directivesEl){
+      if(dirsData){
+        const items=Array.isArray(dirsData)?dirsData:[dirsData];
+        directivesEl.innerHTML=items.slice(0,5).map((d,i)=>'<div style="margin-bottom:6px;">&#x2022; '+esc(typeof d==='string'?d:(d.text||d.directive||JSON.stringify(d)))+'</div>').join('');
+      } else {
+        directivesEl.innerHTML='<span style="color:#6b7280;font-style:italic;">No directives stored yet.</span>';
+      }
+    }
+  }catch(e){
+    if(roadmapEl)roadmapEl.innerHTML='<span style="color:#ef4444;font-size:12px;">Memory API offline — connect backend.</span>';
+  }
+  // Load ops intel from James Bond
+  if(opsEl){
+    try{
+      const bond=await API.post('/api/agents/james_bond/run',{scope:'ops',top_n:3});
+      const items=bond.items||bond.results||bond.summary||null;
+      if(items){
+        const arr=Array.isArray(items)?items:[items];
+        opsEl.innerHTML=arr.slice(0,3).map(i=>{
+          const txt=typeof i==='string'?i:(i.value||i.text||i.summary||JSON.stringify(i));
+          return '<div style="margin-bottom:6px;padding-bottom:6px;border-bottom:1px solid rgba(0,0,0,.08);">'+esc(txt)+'</div>';
+        }).join('');
+      } else if(bond.executive_brief){
+        opsEl.textContent=bond.executive_brief.slice?bond.executive_brief.slice(0,300):String(bond.executive_brief);
+      } else {
+        opsEl.innerHTML='<span style="color:#6b7280;font-style:italic;">Bond returned no ops items.</span>';
+      }
+    }catch(e){
+      opsEl.innerHTML='<button class="ec-btn ec-btn-outline" style="font-size:11px;padding:6px 12px;" onclick="ecLoadCSOOffice()">Bond API offline — Retry</button>';
+    }
+  }
+}
+async function ecRunCCGulley(){
+  const btn=event.currentTarget;
+  btn.textContent='Running…';btn.disabled=true;
+  try{
+    await API.post('/api/agents/cc_gulley/run',{});
+    setTimeout(()=>{ecLoadCSOOffice();btn.textContent='▶ Run CC Gulley Agent';btn.disabled=false;},1200);
+  }catch(e){
+    btn.textContent='▶ Run CC Gulley Agent';btn.disabled=false;
+    toast('CC Gulley agent offline — check API connection.','error');
+  }
 }
 async function ecLoadDashboard(){
   try{
-    const d=await API.get('/executives/dashboard');
+    const d=await API.get('/api/executives/dashboard');
     const ms=d.master_scores||{};
     if(ms.growth_velocity){setText('ec-score-growth',ms.growth_velocity.score||87);document.getElementById('ec-bar-growth').style.width=(ms.growth_velocity.score||87)+'%';}
     if(ms.operational_margin){setText('ec-score-margin',ms.operational_margin.score||94);document.getElementById('ec-bar-margin').style.width=(ms.operational_margin.score||94)+'%';}
@@ -4355,7 +4529,7 @@ async function ecLoadDashboard(){
 async function ecLoadExecutives(){
   const tbody=document.getElementById('ec-org-tbody');if(!tbody)return;
   try{
-    const d=await API.get('/executives');
+    const d=await API.get('/api/executives');
     const all=(d.all||[]).sort((a,b)=>{
       const aTop=!a.reports_to?-1:0, bTop=!b.reports_to?-1:0;
       if(aTop!==bTop)return aTop-bTop;
@@ -4393,7 +4567,7 @@ async function ecLoadExecutives(){
 async function ecLoadEscalations(){
   const tbody=document.getElementById('ec-esc-tbody');if(!tbody)return;
   try{
-    const d=await API.get('/executives/escalations');
+    const d=await API.get('/api/executives/escalations');
     const open=(d.items||[]).filter(i=>i.status==='open'||i.status==='in_review');
     setText('ec-esc-count',open.length);
     const notif=document.getElementById('exec-esc-notif');
@@ -4412,7 +4586,7 @@ async function ecLoadEscalations(){
 }
 async function ecLoadBrief(){
   try{
-    const d=await API.get('/executives/brief/today');
+    const d=await API.get('/api/executives/brief/today');
     const b=d.brief||{};
     setText('ec-brief-date',b.date||new Date().toLocaleDateString());
     setText('ec-brief-t1',b.tier1_resolved||0);
@@ -4423,13 +4597,16 @@ async function ecLoadBrief(){
     setText('ec-brief-rev',b.revenue_today?'$'+Number(b.revenue_today).toLocaleString():'$0');
     setText('ec-brief-summary',b.summary||'No summary provided.');
   }catch(e){
-    setText('ec-brief-date',new Date().toLocaleDateString());
-    setText('ec-brief-summary','No brief yet for today. POST /api/executives/brief to generate one.');
+    const today=new Date();
+    setText('ec-brief-date',today.toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'}));
+    setText('ec-brief-t1','—');setText('ec-brief-t2','—');setText('ec-brief-t3','—');
+    setText('ec-brief-uptime','—');setText('ec-brief-loads','—');setText('ec-brief-rev','—');
+    setText('ec-brief-summary','No brief generated yet for today. Click "View Today\'s Brief" or POST /api/executives/brief to generate Dr. Sterling\'s daily State of the Fleet report.');
   }
 }
 async function ecLoadContingencies(){
   try{
-    const d=await API.get('/executives/contingencies');
+    const d=await API.get('/api/executives/contingencies');
     const countMap={'OCR Verification & AI-Refinement Loop':'ec-cont-1-count','API Resilience & Polling Fallback':'ec-cont-2-count','Triage Escalation Hierarchy':'ec-cont-3-count','Dynamic Geo-Fencing & Delta Tracking':'ec-cont-4-count','Financial Variance Thresholds':'ec-cont-5-count'};
     window._ecContIds={};
     (d.plans||[]).forEach(p=>{
@@ -4446,7 +4623,7 @@ async function ecSubmitEscalation(){
   const assigned=document.getElementById('ec-new-assigned').value.trim();
   const desc=document.getElementById('ec-new-desc').value.trim();
   try{
-    await API.post('/executives/escalations',{tier,event_type:type,assigned_to:assigned||null,description:desc||null});
+    await API.post('/api/executives/escalations',{tier,event_type:type,assigned_to:assigned||null,description:desc||null});
     document.getElementById('ec-esc-modal').style.display='none';
     ['ec-new-assigned','ec-new-desc'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
     await ecLoadEscalations();toast('Escalation created.');
@@ -4459,7 +4636,7 @@ async function ecSubmitKpi(){
   const current=document.getElementById('ec-kpi-current').value;
   const target=document.getElementById('ec-kpi-target').value;
   try{
-    await API.post('/executives/kpis',{executive_id:execId,kpi_name:kpiName,current_value:current?parseFloat(current):null,target_value:target?parseFloat(target):null,unit:document.getElementById('ec-kpi-unit').value,status:document.getElementById('ec-kpi-status').value});
+    await API.post('/api/executives/kpis',{executive_id:execId,kpi_name:kpiName,current_value:current?parseFloat(current):null,target_value:target?parseFloat(target):null,unit:document.getElementById('ec-kpi-unit').value,status:document.getElementById('ec-kpi-status').value});
     document.getElementById('ec-kpi-modal').style.display='none';
     toast('KPI snapshot recorded.');
   }catch(e){toast('Failed to record KPI — check executive ID and API.','error');}
@@ -4468,7 +4645,7 @@ async function ecTriggerCont(name){
   if(!window._ecContIds||!window._ecContIds[name]){toast('Load contingencies first (Refresh Dashboard)','error');return;}
   if(!confirm('Trigger contingency plan: '+name+'?'))return;
   try{
-    const d=await API.post('/executives/contingencies/'+window._ecContIds[name]+'/trigger',{});
+    const d=await API.post('/api/executives/contingencies/'+window._ecContIds[name]+'/trigger',{});
     toast('Contingency triggered. Count: '+d.trigger_count);
     await ecLoadContingencies();
   }catch(e){toast('Failed to trigger — check API connection.','error');}
@@ -4942,15 +5119,77 @@ const AGENT_META = {
   naomi:     {icon:'🎯', label:'Naomi',     desc:'Predictive lead scoring'},
 };
 
-function diagLog(msg,isError=false){
-  const d=document.getElementById('diag-errors');
-  if(!d)return;
-  const line=document.createElement('div');
-  line.style.color=isError?'#e74c3c':'#2ecc71';
-  line.textContent='['+new Date().toISOString().substr(11,8)+'] '+msg;
+// ── Error queue → auto-dispatch to Bond + Technical Team ─────────────────────
+const _diagErrorQueue = [];
+let _diagDispatchTimer = null;
+let _diagDispatching = false;
+
+function _diagMaybeDispatch() {
+  if (_diagDispatching || _diagErrorQueue.length === 0) return;
+  if (_diagDispatchTimer) clearTimeout(_diagDispatchTimer);
+  // Fire immediately if 5+ errors queued, otherwise wait 30s for more to batch
+  const delay = _diagErrorQueue.length >= 5 ? 0 : 30000;
+  _diagDispatchTimer = setTimeout(_diagAutoDispatch, delay);
+}
+
+async function _diagAutoDispatch() {
+  if (_diagDispatching || _diagErrorQueue.length === 0) return;
+  _diagDispatching = true;
+  const errors = _diagErrorQueue.splice(0, 20); // take up to 20
+  const failures = errors.map(e => ({
+    domain: e.domain,
+    test_name: e.msg.slice(0, 60),
+    error: e.msg,
+    ts: e.ts,
+  }));
+
+  // Show indicator in diag banner
+  const indicator = document.getElementById('diag-auto-fix-status');
+  if (indicator) { indicator.textContent = '⏳ Bond + Tech Team investigating…'; indicator.style.color = '#f59e0b'; }
+
+  try {
+    // 1. Bond runs a focused audit
+    apiFetch('/api/agents/james_bond/run', 'POST', { scope: 'tech', top_n: 3 }).catch(() => {});
+
+    // 2. Technical Team remediates
+    const res = await apiFetch('/api/agents/technical_team/run', 'POST', {
+      action: 'remediate',
+      failures,
+      requested_by: 'eagle_eye_auto',
+    });
+    const fixed = (res.fixes_applied || []).length;
+    const status = fixed > 0 ? `✅ ${fixed} fix(es) applied` : '🔍 Analysis complete — check Bond Office';
+    if (indicator) { indicator.textContent = status; indicator.style.color = fixed > 0 ? '#10b981' : '#94a3b8'; }
+    setTimeout(() => { if (indicator) indicator.textContent = ''; }, 15000);
+  } catch(e) {
+    if (indicator) { indicator.textContent = '⚠ Auto-dispatch failed'; indicator.style.color = '#ef4444'; }
+  } finally {
+    _diagDispatching = false;
+    // If more errors piled up while we were working, schedule another run
+    if (_diagErrorQueue.length > 0) _diagMaybeDispatch();
+  }
+}
+
+function diagLog(msg, isError=false){
+  const d = document.getElementById('diag-errors');
+  if (!d) return;
+  const line = document.createElement('div');
+  line.style.color = isError ? '#e74c3c' : '#2ecc71';
+  line.textContent = '[' + new Date().toISOString().substr(11,8) + '] ' + msg;
   d.prepend(line);
-  // keep last 10 lines
-  while(d.children.length>10)d.removeChild(d.lastChild);
+  while (d.children.length > 10) d.removeChild(d.lastChild);
+
+  // Queue errors for auto-dispatch to Bond + Technical Team
+  if (isError) {
+    const domain = msg.includes('carrier') ? 'Carriers'
+      : msg.includes('load') ? 'Loads'
+      : msg.includes('invoice') ? 'Invoices'
+      : msg.includes('health') || msg.includes('CORS') ? 'Health'
+      : msg.includes('supabase') || msg.includes('SUPABASE') ? 'Database'
+      : 'API';
+    _diagErrorQueue.push({ msg, domain, ts: new Date().toISOString() });
+    _diagMaybeDispatch();
+  }
 }
 
 async function checkBackend(){
@@ -7064,6 +7303,7 @@ setInterval(()=>{
     ecLoadBrief();
     ecLoadExecutives();
     ecLoadContingencies();
+    if(typeof ecLoadCSOOffice==='function')ecLoadCSOOffice();
   };
 
   function ecLoadDashboard(){
@@ -9754,11 +9994,13 @@ async function boLoadUIStatus() {
   // Pull from org memory (no re-run) — show cached results if available
   try {
     const [lm, cm] = await Promise.all([
-      apiFetch('/api/memory/lucas_sterling/last_ui_audit','GET').catch(()=>null),
-      apiFetch('/api/memory/chloe_sinclair/last_viewport_audit','GET').catch(()=>null),
+      API.agentBrain('lucas_sterling').catch(()=>null),
+      API.agentBrain('chloe_sinclair').catch(()=>null),
     ]);
-    if(lm?.value) _boRenderLucas(lm.value);
-    if(cm?.value) _boRenderChloe(cm.value);
+    const _lmVal = (lm?.memories||[]).find(m=>m.memory_key==='last_ui_audit')?.memory_value;
+    const _cmVal = (cm?.memories||[]).find(m=>m.memory_key==='last_viewport_audit')?.memory_value;
+    if(_lmVal) _boRenderLucas(_lmVal);
+    if(_cmVal) _boRenderChloe(_cmVal);
   } catch(e) { /* memory offline — show stale if any */ }
 }
 
@@ -12323,22 +12565,22 @@ async function deactivateDriver(driverId) {
 <!-- LIGHT FLEET — 4 SERVICE PAGES                                       -->
 <!-- ════════════════════════════════════════════════════════════════════ -->
 <style>
-.lf-wrap{padding:0;box-sizing:border-box;}
-.lf-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px;}
-.lf-hdr h2{font-size:20px;font-weight:700;margin:0;}
-.lf-kpis{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px;margin-bottom:20px;}
-.lf-kpi{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px;text-align:center;}
-.lf-kpi-val{font-size:26px;font-weight:900;color:var(--gold2);}
-.lf-kpi-lbl{font-size:11px;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);margin-top:3px;}
-.lf-actions{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;}
+.lf-wrap{max-width:1280px;margin:0 auto;padding:28px 32px 80px;box-sizing:border-box;overflow-y:auto;}
+.lf-hdr{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:20px;}
+.lf-hdr h2{font-size:clamp(18px,2.5vw,26px);margin:0;font-weight:700;}
+.lf-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:14px;margin-bottom:20px;}
+.lf-kpi{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px 18px;text-align:center;}
+.lf-kpi-val{font-size:26px;font-weight:700;color:var(--text);}
+.lf-kpi-lbl{font-size:11px;color:var(--muted);margin-top:4px;text-transform:uppercase;letter-spacing:.5px;}
+.lf-actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:16px;}
 .lf-btn{background:var(--gold2);color:#000;border:none;padding:8px 18px;border-radius:6px;font-weight:700;font-size:13px;cursor:pointer;}
 .lf-btn:hover{background:var(--gold1);}
 .lf-btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--border);padding:8px 14px;border-radius:6px;font-size:12px;cursor:pointer;}
 .lf-btn-ghost:hover{color:var(--text);border-color:var(--text);}
-.lf-table-wrap{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;}
-.lf-table{width:100%;border-collapse:collapse;font-size:13px;}
-.lf-table th{text-align:left;padding:10px 14px;font-size:11px;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);border-bottom:1px solid var(--border);background:var(--card);}
-.lf-table td{padding:10px 14px;border-bottom:1px solid var(--border);vertical-align:middle;}
+.lf-table-wrap{overflow-x:auto;border-radius:8px;border:1px solid var(--border);}
+.lf-table{width:100%;border-collapse:collapse;font-size:13px;min-width:600px;}
+.lf-table thead th{background:var(--surface);padding:10px 14px;text-align:left;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;white-space:nowrap;border-bottom:1px solid var(--border);}
+.lf-table tbody td{padding:10px 14px;border-bottom:1px solid var(--border);vertical-align:middle;}
 .lf-table tr:last-child td{border-bottom:none;}
 .lf-table tr:hover td{background:rgba(255,255,255,.03);}
 .lf-badge{display:inline-block;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:600;letter-spacing:.3px;}
@@ -12353,7 +12595,8 @@ async function deactivateDriver(driverId) {
 .lf-badge.clear{background:rgba(34,197,94,.15);color:#22c55e;}
 .lf-badge.flagged{background:rgba(239,68,68,.15);color:#ef4444;}
 .lf-empty{text-align:center;padding:40px;color:var(--muted);font-size:14px;}
-.lf-section-hdr{font-size:13px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin:20px 0 10px;}
+.lf-section-hdr{font-size:13px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid var(--border);padding-bottom:8px;margin:28px 0 16px;}
+@media(max-width:768px){.lf-wrap{padding:16px 14px 60px;}}
 .lf-driver-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;margin-bottom:20px;}
 .lf-driver-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px;}
 .lf-driver-card-name{font-weight:700;font-size:15px;margin-bottom:4px;}

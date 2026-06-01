@@ -33,6 +33,7 @@ from .routes_light_fleet   import router as light_fleet_router, public_router as
 from .routes_lf_webhooks   import router as lf_webhooks_router
 from .routes_checkr_webhook          import router as checkr_webhook_router
 from .routes_stripe_identity_webhook import router as stripe_identity_webhook_router
+from .routes_onboarding_status import router as onboarding_status_router
 
 from ..clm             import clm_router
 from ..email_ingest    import router as email_ingest_router
@@ -86,4 +87,5 @@ __all__ = [
     "checkr_webhook_router",
     "stripe_identity_webhook_router",
     "studio_router",
+    "onboarding_status_router",
 ]
