@@ -30,6 +30,7 @@ from .api import (
     revenue_brain_router,
     mailboxes_router,
     agreements_router,
+    factoring_router,
     light_fleet_router,
     lf_public_router,
     lf_webhooks_router,
@@ -197,6 +198,7 @@ def create_app() -> FastAPI:
     app.include_router(adobe_intake_router,    prefix="/api",              tags=["adobe"])
     app.include_router(mailboxes_router,       prefix="/api",              tags=["mailboxes"])
     app.include_router(agreements_router,      prefix="/api/agreements",   tags=["agreements"])
+    app.include_router(factoring_router,       prefix="/api/factoring",    tags=["factoring"])
     app.include_router(light_fleet_router,     prefix="/api/light-fleet",  tags=["light-fleet"])
     app.include_router(lf_public_router,       prefix="/api/light-fleet",  tags=["light-fleet-public"])
     app.include_router(lf_webhooks_router,     prefix="/api",              tags=["lf-webhooks"])

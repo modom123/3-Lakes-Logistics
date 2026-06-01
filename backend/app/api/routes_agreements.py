@@ -39,6 +39,7 @@ AGREEMENT_LABELS = {
     "rate_confirmation":         "Rate Confirmation",
     "insurance_requirements":    "Insurance Minimum Requirements",
     "dispatcher_service":        "Dispatcher Service Agreement",
+    "factoring_acknowledgment":  "Factoring Acknowledgment & Notice of Assignment",
 }
 
 AGREEMENT_PATHS = {
@@ -54,6 +55,7 @@ AGREEMENT_PATHS = {
     "rate_confirmation":         "/rate-confirmation-template.html",
     "insurance_requirements":    "/insurance-requirements.html",
     "dispatcher_service":        "/dispatcher-service-agreement.html",
+    "factoring_acknowledgment":  "/factoring-acknowledgment.html",
 }
 
 SITE_URL = os.getenv("SITE_URL", "https://www.3lakeslogistics.com")
