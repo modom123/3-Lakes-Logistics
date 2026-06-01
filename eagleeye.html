@@ -667,8 +667,11 @@ td.td-name{font-weight:600;color:var(--navy);}
     <b style="color:#f1c40f">Eagle Eye Diagnostics</b>
     <button onclick="document.getElementById('diag-banner').style.display='none'" style="background:none;border:1px solid #555;color:#fff;cursor:pointer;padding:2px 8px;border-radius:4px">✕</button>
   </div>
-  <div>API: <span id="diag-url" style="color:#3498db">—</span></div>
-  <div>Health: <span id="diag-health" style="color:#e74c3c">checking…</span></div>
+  <div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap">
+    <span>API: <span id="diag-url" style="color:#3498db">—</span></span>
+    <span>Health: <span id="diag-health" style="color:#e74c3c">checking…</span></span>
+    <span id="diag-auto-fix-status" style="font-size:11px;color:#94a3b8"></span>
+  </div>
   <div id="diag-errors" style="color:#e74c3c;margin-top:2px"></div>
 </div>
 
@@ -4934,15 +4937,77 @@ const AGENT_META = {
   naomi:     {icon:'🎯', label:'Naomi',     desc:'Predictive lead scoring'},
 };
 
-function diagLog(msg,isError=false){
-  const d=document.getElementById('diag-errors');
-  if(!d)return;
-  const line=document.createElement('div');
-  line.style.color=isError?'#e74c3c':'#2ecc71';
-  line.textContent='['+new Date().toISOString().substr(11,8)+'] '+msg;
+// ── Error queue → auto-dispatch to Bond + Technical Team ─────────────────────
+const _diagErrorQueue = [];
+let _diagDispatchTimer = null;
+let _diagDispatching = false;
+
+function _diagMaybeDispatch() {
+  if (_diagDispatching || _diagErrorQueue.length === 0) return;
+  if (_diagDispatchTimer) clearTimeout(_diagDispatchTimer);
+  // Fire immediately if 5+ errors queued, otherwise wait 30s for more to batch
+  const delay = _diagErrorQueue.length >= 5 ? 0 : 30000;
+  _diagDispatchTimer = setTimeout(_diagAutoDispatch, delay);
+}
+
+async function _diagAutoDispatch() {
+  if (_diagDispatching || _diagErrorQueue.length === 0) return;
+  _diagDispatching = true;
+  const errors = _diagErrorQueue.splice(0, 20); // take up to 20
+  const failures = errors.map(e => ({
+    domain: e.domain,
+    test_name: e.msg.slice(0, 60),
+    error: e.msg,
+    ts: e.ts,
+  }));
+
+  // Show indicator in diag banner
+  const indicator = document.getElementById('diag-auto-fix-status');
+  if (indicator) { indicator.textContent = '⏳ Bond + Tech Team investigating…'; indicator.style.color = '#f59e0b'; }
+
+  try {
+    // 1. Bond runs a focused audit
+    apiFetch('/api/agents/james_bond/run', 'POST', { scope: 'tech', top_n: 3 }).catch(() => {});
+
+    // 2. Technical Team remediates
+    const res = await apiFetch('/api/agents/technical_team/run', 'POST', {
+      action: 'remediate',
+      failures,
+      requested_by: 'eagle_eye_auto',
+    });
+    const fixed = (res.fixes_applied || []).length;
+    const status = fixed > 0 ? `✅ ${fixed} fix(es) applied` : '🔍 Analysis complete — check Bond Office';
+    if (indicator) { indicator.textContent = status; indicator.style.color = fixed > 0 ? '#10b981' : '#94a3b8'; }
+    setTimeout(() => { if (indicator) indicator.textContent = ''; }, 15000);
+  } catch(e) {
+    if (indicator) { indicator.textContent = '⚠ Auto-dispatch failed'; indicator.style.color = '#ef4444'; }
+  } finally {
+    _diagDispatching = false;
+    // If more errors piled up while we were working, schedule another run
+    if (_diagErrorQueue.length > 0) _diagMaybeDispatch();
+  }
+}
+
+function diagLog(msg, isError=false){
+  const d = document.getElementById('diag-errors');
+  if (!d) return;
+  const line = document.createElement('div');
+  line.style.color = isError ? '#e74c3c' : '#2ecc71';
+  line.textContent = '[' + new Date().toISOString().substr(11,8) + '] ' + msg;
   d.prepend(line);
-  // keep last 10 lines
-  while(d.children.length>10)d.removeChild(d.lastChild);
+  while (d.children.length > 10) d.removeChild(d.lastChild);
+
+  // Queue errors for auto-dispatch to Bond + Technical Team
+  if (isError) {
+    const domain = msg.includes('carrier') ? 'Carriers'
+      : msg.includes('load') ? 'Loads'
+      : msg.includes('invoice') ? 'Invoices'
+      : msg.includes('health') || msg.includes('CORS') ? 'Health'
+      : msg.includes('supabase') || msg.includes('SUPABASE') ? 'Database'
+      : 'API';
+    _diagErrorQueue.push({ msg, domain, ts: new Date().toISOString() });
+    _diagMaybeDispatch();
+  }
 }
 
 async function checkBackend(){
