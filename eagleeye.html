@@ -2450,6 +2450,34 @@ td.td-name{font-weight:600;color:var(--navy);}
     </div>
   </div>
 
+  <!-- CSO Office — CC Gulley Strategy Panel -->
+  <div class="ec-card" id="ec-cso-section">
+    <div class="ec-sec-hd">
+      <h2>🧭 CSO Office — CC Gulley</h2>
+      <span class="ec-count-badge">Strategy Unit</span>
+    </div>
+    <div id="ec-cso-body">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-bottom:20px;">
+        <div id="ec-cso-strategy" style="background:#f0f7ff;border:1px solid #bfdbfe;border-radius:10px;padding:16px;">
+          <div style="font-size:10px;font-weight:700;letter-spacing:1.5px;color:#1e40af;text-transform:uppercase;margin-bottom:8px;">30/60/90 Roadmap</div>
+          <div id="ec-cso-roadmap-text" style="font-size:13px;color:#1e3a5f;line-height:1.65;">Loading strategy plan…</div>
+        </div>
+        <div id="ec-cso-directives" style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:16px;">
+          <div style="font-size:10px;font-weight:700;letter-spacing:1.5px;color:#15803d;text-transform:uppercase;margin-bottom:8px;">Active Directives</div>
+          <div id="ec-cso-directives-text" style="font-size:13px;color:#14532d;line-height:1.65;">Loading directives…</div>
+        </div>
+        <div id="ec-cso-ops" style="background:#fefce8;border:1px solid #fde68a;border-radius:10px;padding:16px;">
+          <div style="font-size:10px;font-weight:700;letter-spacing:1.5px;color:#92400e;text-transform:uppercase;margin-bottom:8px;">Ops Intelligence (Bond)</div>
+          <div id="ec-cso-ops-text" style="font-size:13px;color:#78350f;line-height:1.65;">Loading ops brief…</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <button class="ec-btn ec-btn-outline" style="font-size:12px;padding:8px 16px;" onclick="ecLoadCSOOffice()">↻ Refresh CSO Panel</button>
+        <button class="ec-btn ec-btn-primary" style="font-size:12px;padding:8px 16px;" onclick="ecRunCCGulley()">▶ Run CC Gulley Agent</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Active Triage Escalations -->
   <div class="ec-card" id="ec-esc-section">
     <div class="ec-sec-hd"><h2>Active Triage Escalations</h2><span class="ec-count-badge" id="ec-esc-count">0</span></div>
@@ -2488,7 +2516,7 @@ td.td-name{font-weight:600;color:var(--navy);}
       </thead>
       <tbody id="ec-org-tbody">
         <!-- Pre-populated with all 20 executives — also refreshed from API -->
-        <tr><td colspan="6" style="text-align:center;padding:24px;color:#5A6A82;font-size:13px;">Click "Refresh Dashboard" to load from API, or see static roster below.</td></tr>
+        <tr><td colspan="6" style="text-align:center;padding:24px;color:#5A6A82;font-size:13px;">Click <strong>Refresh Dashboard</strong> to load all 34 executives from the API. Includes CC Gulley's Strategy Unit (Alexander Wright, Naomi Kensington, Winston Carmichael) and the Light Fleet Division.</td></tr>
       </tbody>
     </table>
   </div>
@@ -4407,7 +4435,74 @@ async function saveTeamReport(){
 
 // ── IEBC EXECUTIVE COMMAND ──
 async function ecRefreshDashboard(){
-  await Promise.all([ecLoadDashboard(),ecLoadEscalations(),ecLoadBrief(),ecLoadExecutives(),ecLoadContingencies()]);
+  await Promise.all([ecLoadDashboard(),ecLoadEscalations(),ecLoadBrief(),ecLoadExecutives(),ecLoadContingencies(),ecLoadCSOOffice()]);
+}
+async function ecLoadCSOOffice(){
+  const roadmapEl=document.getElementById('ec-cso-roadmap-text');
+  const directivesEl=document.getElementById('ec-cso-directives-text');
+  const opsEl=document.getElementById('ec-cso-ops-text');
+  // Load strategy_plan and 30_60_90 from memory recall
+  try{
+    const [sp,plan,dirs]=await Promise.all([
+      API.get('/memory/recall?agent=cc_gulley&key=strategy_plan').catch(()=>null),
+      API.get('/memory/recall?agent=cc_gulley&key=30_60_90').catch(()=>null),
+      API.get('/memory/recall?agent=cc_gulley&key=directives').catch(()=>null)
+    ]);
+    // Roadmap text: prefer 30_60_90, fallback to strategy_plan
+    const roadmapData=plan&&(plan.value||plan.data||plan.content)||
+                       sp&&(sp.value||sp.data||sp.content)||null;
+    if(roadmapEl){
+      if(roadmapData){
+        const txt=typeof roadmapData==='string'?roadmapData:JSON.stringify(roadmapData,null,2);
+        roadmapEl.textContent=txt.slice(0,400)+(txt.length>400?'…':'');
+      } else {
+        roadmapEl.innerHTML='<span style="color:#6b7280;font-style:italic;">No roadmap stored. Run CC Gulley to generate.</span>';
+      }
+    }
+    // Directives
+    const dirsData=dirs&&(dirs.value||dirs.data||dirs.content)||null;
+    if(directivesEl){
+      if(dirsData){
+        const items=Array.isArray(dirsData)?dirsData:[dirsData];
+        directivesEl.innerHTML=items.slice(0,5).map((d,i)=>'<div style="margin-bottom:6px;">&#x2022; '+esc(typeof d==='string'?d:(d.text||d.directive||JSON.stringify(d)))+'</div>').join('');
+      } else {
+        directivesEl.innerHTML='<span style="color:#6b7280;font-style:italic;">No directives stored yet.</span>';
+      }
+    }
+  }catch(e){
+    if(roadmapEl)roadmapEl.innerHTML='<span style="color:#ef4444;font-size:12px;">Memory API offline — connect backend.</span>';
+  }
+  // Load ops intel from James Bond
+  if(opsEl){
+    try{
+      const bond=await API.post('/agents/james_bond/run',{scope:'ops',top_n:3});
+      const items=bond.items||bond.results||bond.summary||null;
+      if(items){
+        const arr=Array.isArray(items)?items:[items];
+        opsEl.innerHTML=arr.slice(0,3).map(i=>{
+          const txt=typeof i==='string'?i:(i.value||i.text||i.summary||JSON.stringify(i));
+          return '<div style="margin-bottom:6px;padding-bottom:6px;border-bottom:1px solid rgba(0,0,0,.08);">'+esc(txt)+'</div>';
+        }).join('');
+      } else if(bond.executive_brief){
+        opsEl.textContent=bond.executive_brief.slice?bond.executive_brief.slice(0,300):String(bond.executive_brief);
+      } else {
+        opsEl.innerHTML='<span style="color:#6b7280;font-style:italic;">Bond returned no ops items.</span>';
+      }
+    }catch(e){
+      opsEl.innerHTML='<button class="ec-btn ec-btn-outline" style="font-size:11px;padding:6px 12px;" onclick="ecLoadCSOOffice()">Bond API offline — Retry</button>';
+    }
+  }
+}
+async function ecRunCCGulley(){
+  const btn=event.currentTarget;
+  btn.textContent='Running…';btn.disabled=true;
+  try{
+    await API.post('/agents/cc_gulley/run',{});
+    setTimeout(()=>{ecLoadCSOOffice();btn.textContent='▶ Run CC Gulley Agent';btn.disabled=false;},1200);
+  }catch(e){
+    btn.textContent='▶ Run CC Gulley Agent';btn.disabled=false;
+    toast('CC Gulley agent offline — check API connection.','error');
+  }
 }
 async function ecLoadDashboard(){
   try{
@@ -4489,8 +4584,11 @@ async function ecLoadBrief(){
     setText('ec-brief-rev',b.revenue_today?'$'+Number(b.revenue_today).toLocaleString():'$0');
     setText('ec-brief-summary',b.summary||'No summary provided.');
   }catch(e){
-    setText('ec-brief-date',new Date().toLocaleDateString());
-    setText('ec-brief-summary','No brief yet for today. POST /api/executives/brief to generate one.');
+    const today=new Date();
+    setText('ec-brief-date',today.toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'}));
+    setText('ec-brief-t1','—');setText('ec-brief-t2','—');setText('ec-brief-t3','—');
+    setText('ec-brief-uptime','—');setText('ec-brief-loads','—');setText('ec-brief-rev','—');
+    setText('ec-brief-summary','No brief generated yet for today. Click "View Today\'s Brief" or POST /api/executives/brief to generate Dr. Sterling\'s daily State of the Fleet report.');
   }
 }
 async function ecLoadContingencies(){
@@ -7192,6 +7290,7 @@ setInterval(()=>{
     ecLoadBrief();
     ecLoadExecutives();
     ecLoadContingencies();
+    if(typeof ecLoadCSOOffice==='function')ecLoadCSOOffice();
   };
 
   function ecLoadDashboard(){
@@ -11474,22 +11573,22 @@ async function deactivateDriver(driverId) {
 <!-- LIGHT FLEET — 4 SERVICE PAGES                                       -->
 <!-- ════════════════════════════════════════════════════════════════════ -->
 <style>
-.lf-wrap{padding:20px 24px;height:calc(100vh - 116px);overflow-y:auto;box-sizing:border-box;}
-.lf-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px;}
-.lf-hdr h2{font-size:20px;font-weight:700;margin:0;}
-.lf-kpis{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px;margin-bottom:20px;}
-.lf-kpi{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px;text-align:center;}
-.lf-kpi-val{font-size:26px;font-weight:900;color:var(--gold2);}
-.lf-kpi-lbl{font-size:11px;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);margin-top:3px;}
-.lf-actions{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;}
+.lf-wrap{max-width:1280px;margin:0 auto;padding:28px 32px 80px;box-sizing:border-box;overflow-y:auto;}
+.lf-hdr{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:20px;}
+.lf-hdr h2{font-size:clamp(18px,2.5vw,26px);margin:0;font-weight:700;}
+.lf-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:14px;margin-bottom:20px;}
+.lf-kpi{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px 18px;text-align:center;}
+.lf-kpi-val{font-size:26px;font-weight:700;color:var(--text);}
+.lf-kpi-lbl{font-size:11px;color:var(--muted);margin-top:4px;text-transform:uppercase;letter-spacing:.5px;}
+.lf-actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:16px;}
 .lf-btn{background:var(--gold2);color:#000;border:none;padding:8px 18px;border-radius:6px;font-weight:700;font-size:13px;cursor:pointer;}
 .lf-btn:hover{background:var(--gold1);}
 .lf-btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--border);padding:8px 14px;border-radius:6px;font-size:12px;cursor:pointer;}
 .lf-btn-ghost:hover{color:var(--text);border-color:var(--text);}
-.lf-table-wrap{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;}
-.lf-table{width:100%;border-collapse:collapse;font-size:13px;}
-.lf-table th{text-align:left;padding:10px 14px;font-size:11px;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);border-bottom:1px solid var(--border);background:var(--card);}
-.lf-table td{padding:10px 14px;border-bottom:1px solid var(--border);vertical-align:middle;}
+.lf-table-wrap{overflow-x:auto;border-radius:8px;border:1px solid var(--border);}
+.lf-table{width:100%;border-collapse:collapse;font-size:13px;min-width:600px;}
+.lf-table thead th{background:var(--surface);padding:10px 14px;text-align:left;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;white-space:nowrap;border-bottom:1px solid var(--border);}
+.lf-table tbody td{padding:10px 14px;border-bottom:1px solid var(--border);vertical-align:middle;}
 .lf-table tr:last-child td{border-bottom:none;}
 .lf-table tr:hover td{background:rgba(255,255,255,.03);}
 .lf-badge{display:inline-block;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:600;letter-spacing:.3px;}
@@ -11504,7 +11603,8 @@ async function deactivateDriver(driverId) {
 .lf-badge.clear{background:rgba(34,197,94,.15);color:#22c55e;}
 .lf-badge.flagged{background:rgba(239,68,68,.15);color:#ef4444;}
 .lf-empty{text-align:center;padding:40px;color:var(--muted);font-size:14px;}
-.lf-section-hdr{font-size:13px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin:20px 0 10px;}
+.lf-section-hdr{font-size:13px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid var(--border);padding-bottom:8px;margin:28px 0 16px;}
+@media(max-width:768px){.lf-wrap{padding:16px 14px 60px;}}
 .lf-driver-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;margin-bottom:20px;}
 .lf-driver-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px;}
 .lf-driver-card-name{font-weight:700;font-size:15px;margin-bottom:4px;}
