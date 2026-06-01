@@ -9190,6 +9190,7 @@ This brief consolidates:
     <button class="ccg-tab"        id="ccgtab-team"       onclick="ccgTab('team')">👥 My Team</button>
     <button class="ccg-tab"        id="ccgtab-strategy"   onclick="ccgTab('strategy')">📊 Strategy</button>
     <button class="ccg-tab"        id="ccgtab-directives" onclick="ccgTab('directives')">📣 Directives <span id="ccg-dir-badge" style="display:none;background:#38bdf8;color:#000;font-size:9px;font-weight:800;border-radius:10px;padding:1px 6px;">NEW</span></button>
+    <button class="ccg-tab"        id="ccgtab-docs"       onclick="ccgTab('docs')">📁 Documents</button>
     <button class="ccg-tab"        id="ccgtab-email"      onclick="ccgTab('email')">📧 Email <span id="ccg-email-ct" style="display:none;background:#38bdf8;color:#000;font-size:9px;font-weight:800;border-radius:10px;padding:1px 6px;">0</span></button>
     <button class="ccg-tab"        id="ccgtab-zoom"       onclick="ccgTab('zoom')">📹 Zoom</button>
     <button class="ccg-tab"        id="ccgtab-tv"         onclick="ccgTab('tv')">📺 Watch TV</button>
@@ -9351,32 +9352,158 @@ This brief consolidates:
 
     <!-- ════ STRATEGY ════ -->
     <div class="ccg-pane" id="ccgpane-strategy">
-      <div class="ccg-plan">
-        <div class="ccg-plan-main">
-          <div>
-            <div class="ccg-fl">CC GULLEY · STRATEGIC PLAN</div>
-            <div class="ccg-label" style="font-size:16px;">Current Strategic Directive</div>
-            <div style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:4px;">Set priority markets, target segments, and retention focus. Alexander, Naomi, and Winston read this on every run.</div>
+      <div style="display:flex;flex:1;min-height:0;overflow:hidden;">
+
+        <!-- Left: strategy editor + broadcast -->
+        <div style="flex:1;display:flex;flex-direction:column;overflow-y:auto;padding:20px 24px;gap:18px;scrollbar-width:thin;scrollbar-color:#38bdf8 transparent;">
+
+          <!-- Plan Editor -->
+          <div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:18px 20px;display:flex;flex-direction:column;gap:12px;">
+            <div>
+              <div class="ccg-fl">CC GULLEY · STRATEGIC PLAN</div>
+              <div class="ccg-label" style="font-size:15px;">Active Strategic Directive</div>
+              <div style="font-size:11px;">Set priority markets, segments, and retention focus. Alexander, Naomi, and Winston read this on every run.</div>
+            </div>
+            <div><div class="ccg-fl">PRIORITY MARKETS</div><input class="ccg-input" id="ccg-plan-markets" placeholder="e.g. TX, FL, GA, OH"/></div>
+            <div><div class="ccg-fl">TARGET SEGMENTS</div><input class="ccg-input" id="ccg-plan-segments" placeholder="e.g. dry-van, reefer, flatbed, LTL"/></div>
+            <div><div class="ccg-fl">RETENTION PRIORITY</div><input class="ccg-input" id="ccg-plan-retention" placeholder="e.g. Never-loaded carriers first, then 14-day inactive"/></div>
+            <div><div class="ccg-fl">30/60/90 DAY NARRATIVE</div><textarea class="ccg-textarea" id="ccg-plan-directive" rows="4" placeholder="Write the full strategic narrative. This flows to every agent on each run."></textarea></div>
+            <div><div class="ccg-fl">GROWTH TARGET</div><input class="ccg-input" id="ccg-plan-growth" placeholder="e.g. 50 new carriers onboarded by end of quarter"/></div>
+            <div style="display:flex;gap:10px;align-items:center;">
+              <button class="ccg-btn" onclick="ccgSavePlan()">💾 Save Plan</button>
+              <button class="ccg-hdr-btn" onclick="ccgLoadPlan()">↺ Load Current</button>
+              <span id="ccg-plan-status" style="font-size:11px;color:#38bdf8;"></span>
+            </div>
           </div>
-          <div><div class="ccg-fl">PRIORITY MARKETS</div><input class="ccg-input" id="ccg-plan-markets" placeholder="e.g. TX, FL, GA, OH"/></div>
-          <div><div class="ccg-fl">TARGET SEGMENTS</div><input class="ccg-input" id="ccg-plan-segments" placeholder="e.g. dry-van, reefer, flatbed, LTL"/></div>
-          <div><div class="ccg-fl">RETENTION PRIORITY</div><input class="ccg-input" id="ccg-plan-retention" placeholder="e.g. Never-loaded carriers first, then 14-day inactive"/></div>
-          <div><div class="ccg-fl">30/60/90 DAY STRATEGIC DIRECTIVE</div><textarea class="ccg-textarea" id="ccg-plan-directive" rows="5" placeholder="Write the full strategic narrative here. Flows to Alexander, Naomi, and Winston on each run."></textarea></div>
-          <div><div class="ccg-fl">GROWTH TARGET</div><input class="ccg-input" id="ccg-plan-growth" placeholder="e.g. 50 new carriers onboarded by end of quarter"/></div>
-          <div style="display:flex;gap:10px;align-items:center;">
-            <button class="ccg-btn" onclick="ccgSavePlan()">💾 Save Strategic Plan</button>
-            <button class="ccg-hdr-btn" onclick="ccgLoadPlan()">↺ Load Current</button>
-            <span id="ccg-plan-status" style="font-size:11px;color:#38bdf8;"></span>
+
+          <!-- ── BROADCAST STRATEGY ── -->
+          <div style="background:linear-gradient(135deg,rgba(56,189,248,.1),rgba(124,58,237,.07));border:1px solid rgba(56,189,248,.25);border-radius:12px;padding:18px 20px;display:flex;flex-direction:column;gap:12px;">
+            <div>
+              <div class="ccg-fl" style="color:#38bdf8;">BROADCAST STRATEGY TO EXECUTIVES</div>
+              <div class="ccg-label" style="font-size:15px;">Route Strategy to Team</div>
+              <div style="font-size:11px;">Type a strategy message below and route it directly to any combination of executives. They will receive it in their org memory and act on it at next run.</div>
+            </div>
+
+            <!-- Strategy message -->
+            <div>
+              <div class="ccg-fl">STRATEGY MESSAGE</div>
+              <textarea class="ccg-textarea" id="ccg-broadcast-msg" rows="5" placeholder="Type your strategy here… e.g. 'Shift all focus to TX and FL for Q3. Alexander: update hot states list immediately. Naomi: Tier A list must prioritize reefer carriers in these markets. Winston: identify any TX/FL carriers inactive for 7+ days and flag for Vance re-engagement.'"></textarea>
+            </div>
+
+            <!-- Subject line -->
+            <div>
+              <div class="ccg-fl">SUBJECT / TITLE</div>
+              <input class="ccg-input" id="ccg-broadcast-subject" placeholder="e.g. Q3 Market Pivot — TX/FL Focus"/>
+            </div>
+
+            <!-- Route to -->
+            <div>
+              <div class="ccg-fl">ROUTE TO</div>
+              <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                <label style="display:flex;align-items:center;gap:7px;cursor:pointer;padding:8px 14px;background:rgba(56,189,248,.1);border:1px solid rgba(56,189,248,.25);border-radius:8px;font-size:12px;font-weight:600;">
+                  <input type="checkbox" id="ccg-route-alexander" checked style="accent-color:#38bdf8;width:14px;height:14px;"> 🗺️ Alexander Wright
+                </label>
+                <label style="display:flex;align-items:center;gap:7px;cursor:pointer;padding:8px 14px;background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.25);border-radius:8px;font-size:12px;font-weight:600;">
+                  <input type="checkbox" id="ccg-route-naomi" checked style="accent-color:#10b981;width:14px;height:14px;"> 🎯 Naomi Kensington
+                </label>
+                <label style="display:flex;align-items:center;gap:7px;cursor:pointer;padding:8px 14px;background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.25);border-radius:8px;font-size:12px;font-weight:600;">
+                  <input type="checkbox" id="ccg-route-winston" checked style="accent-color:#f59e0b;width:14px;height:14px;"> 🛡️ Winston Carmichael
+                </label>
+                <label style="display:flex;align-items:center;gap:7px;cursor:pointer;padding:8px 14px;background:rgba(168,85,247,.1);border:1px solid rgba(168,85,247,.25);border-radius:8px;font-size:12px;font-weight:600;">
+                  <input type="checkbox" id="ccg-route-mark" style="accent-color:#a855f7;width:14px;height:14px;"> 👑 Mark Odom (CEO)
+                </label>
+                <label style="display:flex;align-items:center;gap:7px;cursor:pointer;padding:8px 14px;background:rgba(245,200,66,.07);border:1px solid rgba(245,200,66,.2);border-radius:8px;font-size:12px;font-weight:600;">
+                  <input type="checkbox" id="ccg-route-bond" style="accent-color:#f5c842;width:14px;height:14px;"> 🕵️ James Bond
+                </label>
+              </div>
+            </div>
+
+            <div style="display:flex;gap:10px;align-items:center;">
+              <button class="ccg-btn" style="background:linear-gradient(135deg,#0369a1,#7c3aed);" onclick="ccgBroadcast()">📡 Broadcast Strategy</button>
+              <button class="ccg-hdr-btn" onclick="document.getElementById('ccg-broadcast-msg').value='';document.getElementById('ccg-broadcast-subject').value='';">Clear</button>
+              <span id="ccg-broadcast-status" style="font-size:11px;color:#38bdf8;"></span>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Right sidebar: recent plans + broadcast log -->
+        <div style="width:290px;flex-shrink:0;border-left:1px solid rgba(255,255,255,.09);display:flex;flex-direction:column;overflow:hidden;">
+          <div style="padding:11px 14px;border-bottom:1px solid rgba(255,255,255,.08);font-weight:700;font-size:12px;color:#fff;flex-shrink:0;">📜 Recent Plans &amp; Broadcasts</div>
+          <div style="flex:1;overflow-y:auto;padding:12px 14px;scrollbar-width:thin;scrollbar-color:#38bdf8 transparent;display:flex;flex-direction:column;gap:8px;" id="ccg-plan-hist">
+            <div style="font-size:11px;">No history yet</div>
           </div>
         </div>
-        <div class="ccg-plan-side">
-          <div style="padding:12px 14px;border-bottom:1px solid rgba(255,255,255,.08);font-weight:700;font-size:12px;color:#fff;flex-shrink:0;">📜 Recent Plans</div>
-          <div style="flex:1;overflow-y:auto;padding:12px 14px;scrollbar-width:thin;scrollbar-color:#38bdf8 transparent;" id="ccg-plan-hist">
-            <div style="font-size:11px;color:rgba(255,255,255,.3);">No plan history yet</div>
-          </div>
-        </div>
+
       </div>
     </div><!-- /strategy -->
+
+    <!-- ════ DOCUMENTS ════ -->
+    <div class="ccg-pane" id="ccgpane-docs">
+      <div style="display:flex;flex:1;min-height:0;overflow:hidden;">
+
+        <!-- Left: upload + list -->
+        <div style="flex:1;display:flex;flex-direction:column;overflow:hidden;">
+
+          <!-- Upload zone -->
+          <div style="padding:18px 22px;border-bottom:1px solid rgba(255,255,255,.09);flex-shrink:0;">
+            <div class="ccg-fl">CC GULLEY · DOCUMENT VAULT</div>
+            <div class="ccg-label" style="font-size:15px;margin-bottom:10px;">Upload Documents</div>
+            <div id="ccg-drop-zone" style="border:2px dashed rgba(56,189,248,.35);border-radius:12px;padding:28px 20px;text-align:center;cursor:pointer;transition:border-color .2s,background .2s;background:rgba(56,189,248,.04);"
+              onclick="document.getElementById('ccg-file-input').click()"
+              ondragover="event.preventDefault();this.style.borderColor='#38bdf8';this.style.background='rgba(56,189,248,.1)'"
+              ondragleave="this.style.borderColor='rgba(56,189,248,.35)';this.style.background='rgba(56,189,248,.04)'"
+              ondrop="ccgHandleDrop(event)">
+              <div style="font-size:32px;margin-bottom:8px;">📁</div>
+              <div style="font-weight:700;font-size:14px;color:#fff;margin-bottom:4px;">Drop files here or click to upload</div>
+              <div style="font-size:11px;">PDF, DOCX, XLSX, PNG, JPG, TXT — up to 25 MB each</div>
+              <input type="file" id="ccg-file-input" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.txt,.csv" style="display:none" onchange="ccgHandleFileSelect(event)"/>
+            </div>
+            <div style="display:flex;gap:10px;margin-top:12px;align-items:center;">
+              <select id="ccg-doc-category" class="ccg-input" style="max-width:220px;">
+                <option value="strategy">📊 Strategy Documents</option>
+                <option value="market">🗺️ Market Research</option>
+                <option value="retention">🛡️ Retention Reports</option>
+                <option value="contracts">📑 Contracts</option>
+                <option value="general">📄 General</option>
+              </select>
+              <span id="ccg-upload-status" style="font-size:11px;color:#38bdf8;"></span>
+            </div>
+          </div>
+
+          <!-- Upload queue (files pending) -->
+          <div id="ccg-upload-queue" style="display:none;padding:10px 22px;border-bottom:1px solid rgba(255,255,255,.09);flex-shrink:0;display:flex;flex-direction:column;gap:6px;max-height:160px;overflow-y:auto;">
+            <!-- Populated by JS -->
+          </div>
+
+          <!-- Document list -->
+          <div style="flex:1;overflow-y:auto;scrollbar-width:thin;scrollbar-color:#38bdf8 transparent;">
+            <div style="padding:12px 22px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(255,255,255,.07);">
+              <div style="font-weight:700;font-size:12px;color:#fff;">Uploaded Documents</div>
+              <button class="ccg-hdr-btn" style="font-size:10px;padding:3px 8px;" onclick="ccgLoadDocs()">↺ Refresh</button>
+            </div>
+            <div id="ccg-docs-list" style="padding:10px 22px;display:flex;flex-direction:column;gap:6px;">
+              <div style="font-size:12px;padding:16px 0;text-align:center;">Loading documents…</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right sidebar: doc categories + recent -->
+        <div style="width:260px;flex-shrink:0;border-left:1px solid rgba(255,255,255,.09);display:flex;flex-direction:column;overflow:hidden;">
+          <div style="padding:11px 14px;border-bottom:1px solid rgba(255,255,255,.08);font-weight:700;font-size:12px;color:#fff;flex-shrink:0;">📂 Categories</div>
+          <div style="padding:10px 14px;display:flex;flex-direction:column;gap:6px;flex-shrink:0;border-bottom:1px solid rgba(255,255,255,.08);">
+            <button class="ccg-hdr-btn" style="text-align:left;font-size:11px;" onclick="ccgFilterDocs('')">📄 All Documents</button>
+            <button class="ccg-hdr-btn" style="text-align:left;font-size:11px;" onclick="ccgFilterDocs('strategy')">📊 Strategy</button>
+            <button class="ccg-hdr-btn" style="text-align:left;font-size:11px;" onclick="ccgFilterDocs('market')">🗺️ Market Research</button>
+            <button class="ccg-hdr-btn" style="text-align:left;font-size:11px;" onclick="ccgFilterDocs('retention')">🛡️ Retention Reports</button>
+            <button class="ccg-hdr-btn" style="text-align:left;font-size:11px;" onclick="ccgFilterDocs('contracts')">📑 Contracts</button>
+          </div>
+          <div style="padding:11px 14px;border-bottom:1px solid rgba(255,255,255,.08);font-weight:700;font-size:12px;color:#fff;flex-shrink:0;">💡 Tip</div>
+          <div style="padding:12px 14px;font-size:11px;line-height:1.6;">Upload strategy documents here to keep CC Gulley's office organized. Strategy PDFs and reports are stored in the Document Vault and can be shared with your team.</div>
+        </div>
+
+      </div>
+    </div><!-- /docs -->
 
     <!-- ════ DIRECTIVES ════ -->
     <div class="ccg-pane" id="ccgpane-directives">
@@ -9917,6 +10044,165 @@ window.ccgTVCustom=function(){
     frame.src=`https://www.youtube.com/embed?listType=search&list=${encodeURIComponent(val)}`;
   }
   document.querySelectorAll('.ccg-tv-ch-btn').forEach(b=>b.classList.remove('active'));
+};
+
+/* ── Broadcast Strategy ── */
+window.ccgBroadcast = async function(){
+  const msg = document.getElementById('ccg-broadcast-msg')?.value.trim();
+  const subject = document.getElementById('ccg-broadcast-subject')?.value.trim() || 'Strategy Update from CC Gulley';
+  if(!msg){toast('Write a strategy message first','error');return;}
+  const targets = [];
+  if(document.getElementById('ccg-route-alexander')?.checked) targets.push('alexander');
+  if(document.getElementById('ccg-route-naomi')?.checked)     targets.push('naomi');
+  if(document.getElementById('ccg-route-winston')?.checked)   targets.push('winston');
+  if(document.getElementById('ccg-route-mark')?.checked)      targets.push('mark_odom');
+  if(document.getElementById('ccg-route-bond')?.checked)      targets.push('james_bond');
+  if(!targets.length){toast('Select at least one executive','error');return;}
+  const st = document.getElementById('ccg-broadcast-status');
+  if(st) st.textContent = `Routing to ${targets.length} executive${targets.length>1?'s':''}…`;
+  const payload = {subject, message: msg, from: 'cc_gulley', broadcast_at: new Date().toISOString()};
+  const results = await Promise.all(targets.map(t =>
+    API.post('/api/memory/write', {agent: t, key: 'strategy_from_cc_gulley', value: payload}).then(()=>({t,ok:true})).catch(()=>({t,ok:false}))
+  ));
+  // Also save to CC Gulley's own memory as broadcast log
+  const successList = results.filter(r=>r.ok).map(r=>r.t);
+  const failList    = results.filter(r=>!r.ok).map(r=>r.t);
+  try {
+    const log = {subject, message: msg, routed_to: successList, sent_at: new Date().toISOString()};
+    await API.post('/api/memory/write', {agent:'cc_gulley', key:'last_broadcast', value: log});
+    // Append to history panel
+    const hist = document.getElementById('ccg-plan-hist');
+    if(hist){
+      const item = document.createElement('div');
+      item.style.cssText='padding:9px 11px;border-radius:7px;border:1px solid rgba(56,189,248,.2);background:rgba(56,189,248,.06);font-size:11px;border-left:3px solid #38bdf8;';
+      item.innerHTML=`<div style="font-weight:700;color:#fff;margin-bottom:2px;">📡 ${subject}</div><div style="opacity:.75;margin-bottom:3px;">${msg.slice(0,120)}${msg.length>120?'…':''}</div><div style="font-size:9px;font-family:var(--ff-m);opacity:.5;">→ ${successList.join(', ')} · ${new Date().toLocaleString()}</div>`;
+      if(hist.firstChild && hist.firstChild.textContent?.includes('No history')) hist.innerHTML='';
+      hist.prepend(item);
+    }
+  } catch(e){}
+  if(failList.length){
+    if(st) st.textContent = `✓ Sent to ${successList.join(', ')} · Failed: ${failList.join(', ')}`;
+    toast(`Strategy routed to ${successList.length} exec(s). ${failList.length} failed.`,'error');
+  } else {
+    if(st) st.textContent = `✓ Broadcast sent to ${successList.join(', ')}`;
+    toast(`Strategy broadcast to: ${successList.join(', ')}`,'success');
+    document.getElementById('ccg-broadcast-msg').value='';
+    document.getElementById('ccg-broadcast-subject').value='';
+    setTimeout(()=>{if(st)st.textContent='';},5000);
+  }
+};
+
+/* ── Documents ── */
+let _ccgAllDocs = [];
+let _ccgDocFilter = '';
+
+window.ccgTab = (function(_orig){
+  return function(id){
+    _orig(id);
+    if(id==='docs') ccgLoadDocs();
+  };
+})(window.ccgTab);
+
+window.ccgHandleFileSelect = function(e){
+  const files = Array.from(e.target.files||[]);
+  ccgQueueFiles(files);
+};
+window.ccgHandleDrop = function(e){
+  e.preventDefault();
+  document.getElementById('ccg-drop-zone').style.borderColor='rgba(56,189,248,.35)';
+  document.getElementById('ccg-drop-zone').style.background='rgba(56,189,248,.04)';
+  const files = Array.from(e.dataTransfer.files||[]);
+  ccgQueueFiles(files);
+};
+function ccgQueueFiles(files){
+  const q = document.getElementById('ccg-upload-queue');
+  if(!q) return;
+  q.style.display='flex';
+  files.forEach(f=>{
+    const row = document.createElement('div');
+    row.style.cssText='display:flex;align-items:center;gap:10px;padding:7px 10px;background:rgba(255,255,255,.04);border-radius:6px;border:1px solid rgba(255,255,255,.08);';
+    const icon = f.name.endsWith('.pdf')?'📄':f.name.match(/\.(doc|docx)$/)?'📝':f.name.match(/\.(xls|xlsx|csv)$/)?'📊':f.name.match(/\.(png|jpg|jpeg)$/)?'🖼️':'📎';
+    row.innerHTML=`<span style="font-size:18px;">${icon}</span><div style="flex:1;min-width:0;"><div style="font-weight:700;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${f.name}</div><div style="font-size:10px;opacity:.6;">${(f.size/1024).toFixed(1)} KB</div></div><span class="ccg-upload-row-status" style="font-size:10px;color:#38bdf8;">Pending</span>`;
+    q.appendChild(row);
+    ccgUploadFile(f, row.querySelector('.ccg-upload-row-status'));
+  });
+}
+async function ccgUploadFile(file, statusEl){
+  const category = document.getElementById('ccg-doc-category')?.value || 'general';
+  const st = document.getElementById('ccg-upload-status');
+  if(statusEl) statusEl.textContent = 'Uploading…';
+  if(st) st.textContent = `Uploading ${file.name}…`;
+  try {
+    const fd = new FormData();
+    fd.append('file', file);
+    fd.append('folder', 'ccg-office');
+    fd.append('category', category);
+    fd.append('uploaded_by', 'cc_gulley');
+    fd.append('description', `${category} document — CC Gulley Office`);
+    // Try vault upload endpoint
+    const r = await fetch(API_BASE+'/api/vault/upload', {method:'POST', headers:{'Authorization':'Bearer '+API_TOKEN}, body:fd});
+    if(!r.ok) throw new Error(await r.text());
+    const data = await r.json();
+    if(statusEl) statusEl.textContent = '✓ Uploaded';
+    if(statusEl) statusEl.style.color='#10b981';
+    if(st) st.textContent = `✓ ${file.name} uploaded`;
+    setTimeout(()=>{if(st)st.textContent='';},4000);
+    ccgLoadDocs();
+  } catch(e){
+    if(statusEl){statusEl.textContent='Failed';statusEl.style.color='#ef4444';}
+    if(st) st.textContent = `Upload failed: ${e.message}`;
+    toast(`Upload failed: ${file.name}`,'error');
+  }
+}
+window.ccgLoadDocs = async function(){
+  const el = document.getElementById('ccg-docs-list');
+  if(!el) return;
+  el.innerHTML='<div style="font-size:12px;padding:16px 0;text-align:center;">Loading…</div>';
+  try {
+    const r = await API.get('/api/vault?folder=ccg-office').catch(()=>null)
+           || await API.get('/api/vault/files?uploaded_by=cc_gulley').catch(()=>null);
+    _ccgAllDocs = (r?.files||r?.documents||r?.data||[]);
+    ccgRenderDocs();
+  } catch(e){
+    el.innerHTML='<div style="font-size:11px;padding:16px 0;text-align:center;opacity:.6;">No documents found — upload files above to get started.</div>';
+  }
+};
+window.ccgFilterDocs = function(cat){_ccgDocFilter=cat;ccgRenderDocs();};
+function ccgRenderDocs(){
+  const el = document.getElementById('ccg-docs-list');
+  if(!el) return;
+  const docs = _ccgDocFilter ? _ccgAllDocs.filter(d=>(d.category||d.folder||'').includes(_ccgDocFilter)) : _ccgAllDocs;
+  if(!docs.length){
+    el.innerHTML='<div style="font-size:11px;padding:24px 0;text-align:center;opacity:.6;">No documents yet — drop files in the upload zone above.</div>';
+    return;
+  }
+  el.innerHTML = docs.map(d=>{
+    const name = d.file_name||d.name||d.filename||'Document';
+    const ext = name.split('.').pop().toLowerCase();
+    const icon = ext==='pdf'?'📄':ext.match(/^doc/)? '📝':ext.match(/^xls|csv/)?'📊':ext.match(/^png|jpg|jpeg/)?'🖼️':'📎';
+    const size = d.file_size ? `${(d.file_size/1024).toFixed(0)} KB` : '';
+    const date = d.created_at ? new Date(d.created_at).toLocaleDateString() : '';
+    const url  = d.url||d.file_url||d.download_url||'#';
+    return `<div style="display:flex;align-items:center;gap:10px;padding:9px 12px;background:rgba(255,255,255,.03);border-radius:8px;border:1px solid rgba(255,255,255,.08);transition:border-color .15s;" onmouseover="this.style.borderColor='rgba(56,189,248,.3)'" onmouseout="this.style.borderColor='rgba(255,255,255,.08)'">
+      <span style="font-size:22px;flex-shrink:0;">${icon}</span>
+      <div style="flex:1;min-width:0;">
+        <div style="font-weight:700;font-size:12px;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${name}</div>
+        <div style="font-size:10px;opacity:.6;">${[d.category||'',size,date].filter(Boolean).join(' · ')}</div>
+      </div>
+      <div style="display:flex;gap:6px;flex-shrink:0;">
+        ${url!=='#'?`<a href="${url}" target="_blank" class="ccg-hdr-btn" style="font-size:10px;padding:3px 8px;text-decoration:none;">↗ Open</a>`:''}
+        <button class="ccg-hdr-btn" style="font-size:10px;padding:3px 8px;color:#ef4444;border-color:rgba(239,68,68,.3);" onclick="ccgDeleteDoc('${d.id||d.file_id||''}','${name}')">🗑</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+window.ccgDeleteDoc = async function(id, name){
+  if(!id||!confirm(`Delete "${name}"?`)) return;
+  try{
+    await API.delete(`/api/vault/${id}`);
+    toast(`Deleted ${name}`);
+    ccgLoadDocs();
+  }catch(e){toast('Delete failed','error');}
 };
 
 /* auto-load is wired directly in nav() */
