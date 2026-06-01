@@ -3044,7 +3044,7 @@ function nav(id){
   document.querySelectorAll('.sb-item').forEach(n=>{if(n.getAttribute('onclick')?.includes("'"+id+"'"))n.classList.add('active');});
   document.getElementById('page-title').textContent=pageNames[id]||id;
   // Fixed full-page overlays: always measure actual header stack
-  if(['bond','cso','fleet-map'].includes(id)){
+  if(['bond','cso','fleet-map','ccg-office'].includes(id)){
     const top = _overlayTop();
     document.getElementById('page-'+id).style.top=top+'px';
     const content=document.querySelector('.content');
@@ -3060,6 +3060,7 @@ function nav(id){
   if(id==='notes')loadNotes();
   if(id==='reports')loadTeamReports();
   if(id==='exec-command'){const n=document.getElementById('exec-esc-notif');if(n)n.style.display='none';ecRefreshDashboard();}
+  if(id==='ccg-office'){if(typeof ccgLoadOfficeData==='function')ccgLoadOfficeData();if(typeof ccgLoadEmail==='function')ccgLoadEmail();}
   if(id==='compliance'||id==='insurance')renderCarrierCompliance();
   if(id==='clm')loadCLMList();
   if(id==='vault')loadVault();
@@ -9906,24 +9907,7 @@ window.ccgTVCustom=function(){
   document.querySelectorAll('.ccg-tv-ch-btn').forEach(b=>b.classList.remove('active'));
 };
 
-/* ── Auto-load when page activates ── */
-const _ccgOrigNav=window.nav;
-const _ccgLoaded={};
-const _origNavCcg=window.nav;
-// Hook nav calls to load CCG data on first visit
-document.addEventListener('DOMContentLoaded',()=>{
-  const origNav=window.nav;
-  if(origNav){
-    const wrapped=function(id){
-      origNav(id);
-      if(id==='ccg-office'&&!_ccgLoaded.home){
-        _ccgLoaded.home=true;
-        setTimeout(()=>{ccgLoadOfficeData();ccgLoadEmail();},300);
-      }
-    };
-    window.nav=wrapped;
-  }
-});
+/* auto-load is wired directly in nav() */
 
 })();
 </script>
