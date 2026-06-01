@@ -27,15 +27,33 @@ from fastapi import Depends
 log = get_logger("agreements")
 
 AGREEMENT_LABELS = {
-    "carrier_agreement": "Carrier Dispatch Agreement",
-    "broker_agreement":  "Broker–Carrier Agreement",
-    "terms_of_service":  "Terms of Service",
+    "carrier_agreement":         "Carrier Dispatch Agreement",
+    "broker_agreement":          "Broker–Carrier Agreement",
+    "terms_of_service":          "Terms of Service",
+    "independent_contractor":    "Independent Contractor Agreement",
+    "nda":                       "Non-Disclosure Agreement",
+    "non_solicitation":          "Non-Solicitation Agreement",
+    "driver_lease_on":           "Driver Lease-On Agreement",
+    "fuel_advance":              "Fuel Advance Agreement",
+    "cargo_claims":              "Cargo Claims Procedure",
+    "rate_confirmation":         "Rate Confirmation",
+    "insurance_requirements":    "Insurance Minimum Requirements",
+    "dispatcher_service":        "Dispatcher Service Agreement",
 }
 
 AGREEMENT_PATHS = {
-    "carrier_agreement": "/carrier-agreement.html",
-    "broker_agreement":  "/broker-agreement.html",
-    "terms_of_service":  "/terms-of-service.html",
+    "carrier_agreement":         "/carrier-agreement.html",
+    "broker_agreement":          "/broker-agreement.html",
+    "terms_of_service":          "/terms-of-service.html",
+    "independent_contractor":    "/independent-contractor-agreement.html",
+    "nda":                       "/nda.html",
+    "non_solicitation":          "/non-solicitation-agreement.html",
+    "driver_lease_on":           "/driver-lease-on-agreement.html",
+    "fuel_advance":              "/fuel-advance-agreement.html",
+    "cargo_claims":              "/cargo-claims-procedure.html",
+    "rate_confirmation":         "/rate-confirmation-template.html",
+    "insurance_requirements":    "/insurance-requirements.html",
+    "dispatcher_service":        "/dispatcher-service-agreement.html",
 }
 
 SITE_URL = os.getenv("SITE_URL", "https://www.3lakeslogistics.com")
