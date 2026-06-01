@@ -2261,6 +2261,239 @@ td.td-name{font-weight:600;color:var(--navy);}
         </div>
       </div>
 
+      <!-- Agreements by Domain -->
+      <div class="card" style="margin-bottom:16px;border-top:3px solid #6366f1">
+        <div class="card-hd">
+          <div class="card-title">📋 Agreements by Execution Domain</div>
+          <span class="card-chip">Required docs per workflow stage</span>
+        </div>
+        <p class="t-sm t-muted" style="margin-bottom:16px">Each domain requires specific signed documents before or during execution. Click <strong>✍️ Send</strong> to e-sign any agreement directly from here.</p>
+
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px">
+
+          <!-- Onboarding -->
+          <div style="border:1.5px solid var(--border);border-radius:10px;overflow:hidden">
+            <div style="background:#7c3aed;padding:10px 14px;display:flex;align-items:center;gap:8px">
+              <span style="font-size:16px">🚛</span>
+              <span style="color:#fff;font-weight:700;font-size:13px">Onboarding</span>
+              <span style="margin-left:auto;background:rgba(255,255,255,.2);color:#fff;font-size:10px;padding:2px 8px;border-radius:100px">Steps 1–40</span>
+            </div>
+            <div style="padding:10px 14px;display:flex;flex-direction:column;gap:8px">
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+                <div>
+                  <div style="font-size:12px;font-weight:600;color:var(--text)">Carrier Dispatch Agreement</div>
+                  <div style="font-size:11px;color:var(--muted)">Required before first dispatch</div>
+                </div>
+                <button class="btn-gold" style="font-size:10px;padding:3px 9px;white-space:nowrap" onclick="openSendAgreementModal('carrier_agreement')">✍️ Send</button>
+              </div>
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+                <div>
+                  <div style="font-size:12px;font-weight:600;color:var(--text)">Independent Contractor Agreement</div>
+                  <div style="font-size:11px;color:var(--muted)">IC status, compensation, IP</div>
+                </div>
+                <button class="btn-gold" style="font-size:10px;padding:3px 9px;white-space:nowrap" onclick="openSendAgreementModal('independent_contractor')">✍️ Send</button>
+              </div>
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+                <div>
+                  <div style="font-size:12px;font-weight:600;color:var(--text)">Non-Disclosure Agreement</div>
+                  <div style="font-size:11px;color:var(--muted)">Carrier data, rate & trade secrets</div>
+                </div>
+                <button class="btn-gold" style="font-size:10px;padding:3px 9px;white-space:nowrap" onclick="openSendAgreementModal('nda')">✍️ Send</button>
+              </div>
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+                <div>
+                  <div style="font-size:12px;font-weight:600;color:var(--text)">Non-Solicitation Agreement</div>
+                  <div style="font-size:11px;color:var(--muted)">Protects carrier/customer network</div>
+                </div>
+                <button class="btn-gold" style="font-size:10px;padding:3px 9px;white-space:nowrap" onclick="openSendAgreementModal('non_solicitation')">✍️ Send</button>
+              </div>
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+                <div>
+                  <div style="font-size:12px;font-weight:600;color:var(--text)">Driver Lease-On Agreement</div>
+                  <div style="font-size:11px;color:var(--muted)">Owner-operators — FMCSA 49 CFR §376</div>
+                </div>
+                <button class="btn-gold" style="font-size:10px;padding:3px 9px;white-space:nowrap" onclick="openSendAgreementModal('driver_lease_on')">✍️ Send</button>
+              </div>
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+                <div>
+                  <div style="font-size:12px;font-weight:600;color:var(--text)">Insurance Requirements</div>
+                  <div style="font-size:11px;color:var(--muted)">COI verification &amp; minimums</div>
+                </div>
+                <button class="btn-gold" style="font-size:10px;padding:3px 9px;white-space:nowrap" onclick="openSendAgreementModal('insurance_requirements')">✍️ Send</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Dispatch -->
+          <div style="border:1.5px solid var(--border);border-radius:10px;overflow:hidden">
+            <div style="background:#1e288b;padding:10px 14px;display:flex;align-items:center;gap:8px">
+              <span style="font-size:16px">🚛</span>
+              <span style="color:#fff;font-weight:700;font-size:13px">Dispatch</span>
+              <span style="margin-left:auto;background:rgba(255,255,255,.2);color:#fff;font-size:10px;padding:2px 8px;border-radius:100px">Steps 41–80</span>
+            </div>
+            <div style="padding:10px 14px;display:flex;flex-direction:column;gap:8px">
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+                <div>
+                  <div style="font-size:12px;font-weight:600;color:var(--text)">Rate Confirmation</div>
+                  <div style="font-size:11px;color:var(--muted)">Sent per load — binding load tender</div>
+                </div>
+                <button class="btn-gold" style="font-size:10px;padding:3px 9px;white-space:nowrap" onclick="openSendAgreementModal('rate_confirmation')">✍️ Send</button>
+              </div>
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+                <div>
+                  <div style="font-size:12px;font-weight:600;color:var(--text)">Broker–Carrier Agreement</div>
+                  <div style="font-size:11px;color:var(--muted)">For broker-tendered loads</div>
+                </div>
+                <button class="btn-gold" style="font-size:10px;padding:3px 9px;white-space:nowrap" onclick="openSendAgreementModal('broker_agreement')">✍️ Send</button>
+              </div>
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+                <div>
+                  <div style="font-size:12px;font-weight:600;color:var(--text)">Cargo Claims Procedure</div>
+                  <div style="font-size:11px;color:var(--muted)">Carrier acknowledgment before load</div>
+                </div>
+                <button class="btn-gold" style="font-size:10px;padding:3px 9px;white-space:nowrap" onclick="openSendAgreementModal('cargo_claims')">✍️ Send</button>
+              </div>
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+                <div>
+                  <div style="font-size:12px;font-weight:600;color:var(--text)">Fuel Advance Agreement</div>
+                  <div style="font-size:11px;color:var(--muted)">When advance is requested pre-load</div>
+                </div>
+                <button class="btn-gold" style="font-size:10px;padding:3px 9px;white-space:nowrap" onclick="openSendAgreementModal('fuel_advance')">✍️ Send</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Settlement -->
+          <div style="border:1.5px solid var(--border);border-radius:10px;overflow:hidden">
+            <div style="background:#b45309;padding:10px 14px;display:flex;align-items:center;gap:8px">
+              <span style="font-size:16px">💵</span>
+              <span style="color:#fff;font-weight:700;font-size:13px">Settlement</span>
+              <span style="margin-left:auto;background:rgba(255,255,255,.2);color:#fff;font-size:10px;padding:2px 8px;border-radius:100px">Steps 121–160</span>
+            </div>
+            <div style="padding:10px 14px;display:flex;flex-direction:column;gap:8px">
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+                <div>
+                  <div style="font-size:12px;font-weight:600;color:var(--text)">Fuel Advance Agreement</div>
+                  <div style="font-size:11px;color:var(--muted)">Deduction authorization &amp; settlement</div>
+                </div>
+                <button class="btn-gold" style="font-size:10px;padding:3px 9px;white-space:nowrap" onclick="openSendAgreementModal('fuel_advance')">✍️ Send</button>
+              </div>
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+                <div>
+                  <div style="font-size:12px;font-weight:600;color:var(--text)">Rate Confirmation</div>
+                  <div style="font-size:11px;color:var(--muted)">Verified against settlement payout</div>
+                </div>
+                <a href="/rate-confirmation-template.html" target="_blank" class="btn-out" style="font-size:10px;padding:3px 9px;white-space:nowrap;text-decoration:none">👁 View</a>
+              </div>
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+                <div>
+                  <div style="font-size:12px;font-weight:600;color:var(--text)">Cargo Claims Procedure</div>
+                  <div style="font-size:11px;color:var(--muted)">Referenced on any claim deduction</div>
+                </div>
+                <a href="/cargo-claims-procedure.html" target="_blank" class="btn-out" style="font-size:10px;padding:3px 9px;white-space:nowrap;text-decoration:none">👁 View</a>
+              </div>
+            </div>
+          </div>
+
+          <!-- Compliance -->
+          <div style="border:1.5px solid var(--border);border-radius:10px;overflow:hidden">
+            <div style="background:#065f46;padding:10px 14px;display:flex;align-items:center;gap:8px">
+              <span style="font-size:16px">🛡️</span>
+              <span style="color:#fff;font-weight:700;font-size:13px">Compliance</span>
+              <span style="margin-left:auto;background:rgba(255,255,255,.2);color:#fff;font-size:10px;padding:2px 8px;border-radius:100px">Steps 161–200</span>
+            </div>
+            <div style="padding:10px 14px;display:flex;flex-direction:column;gap:8px">
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+                <div>
+                  <div style="font-size:12px;font-weight:600;color:var(--text)">Insurance Requirements</div>
+                  <div style="font-size:11px;color:var(--muted)">Annual COI renewal &amp; verification</div>
+                </div>
+                <button class="btn-gold" style="font-size:10px;padding:3px 9px;white-space:nowrap" onclick="openSendAgreementModal('insurance_requirements')">✍️ Send</button>
+              </div>
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+                <div>
+                  <div style="font-size:12px;font-weight:600;color:var(--text)">Cargo Claims Procedure</div>
+                  <div style="font-size:11px;color:var(--muted)">Carmack Amendment compliance</div>
+                </div>
+                <button class="btn-gold" style="font-size:10px;padding:3px 9px;white-space:nowrap" onclick="openSendAgreementModal('cargo_claims')">✍️ Send</button>
+              </div>
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+                <div>
+                  <div style="font-size:12px;font-weight:600;color:var(--text)">Terms of Service</div>
+                  <div style="font-size:11px;color:var(--muted)">Platform &amp; GPS usage agreement</div>
+                </div>
+                <button class="btn-gold" style="font-size:10px;padding:3px 9px;white-space:nowrap" onclick="openSendAgreementModal('terms_of_service')">✍️ Send</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- LF Onboarding -->
+          <div style="border:1.5px solid var(--border);border-radius:10px;overflow:hidden">
+            <div style="background:#8b5cf6;padding:10px 14px;display:flex;align-items:center;gap:8px">
+              <span style="font-size:16px">🚗</span>
+              <span style="color:#fff;font-weight:700;font-size:13px">LF Onboarding</span>
+              <span style="margin-left:auto;background:rgba(255,255,255,.2);color:#fff;font-size:10px;padding:2px 8px;border-radius:100px">Steps 201–220</span>
+            </div>
+            <div style="padding:10px 14px;display:flex;flex-direction:column;gap:8px">
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+                <div>
+                  <div style="font-size:12px;font-weight:600;color:var(--text)">Independent Contractor Agreement</div>
+                  <div style="font-size:11px;color:var(--muted)">Gig/NEMT/Exec/Courier drivers</div>
+                </div>
+                <button class="btn-gold" style="font-size:10px;padding:3px 9px;white-space:nowrap" onclick="openSendAgreementModal('independent_contractor')">✍️ Send</button>
+              </div>
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+                <div>
+                  <div style="font-size:12px;font-weight:600;color:var(--text)">Non-Disclosure Agreement</div>
+                  <div style="font-size:11px;color:var(--muted)">Passenger &amp; client data protection</div>
+                </div>
+                <button class="btn-gold" style="font-size:10px;padding:3px 9px;white-space:nowrap" onclick="openSendAgreementModal('nda')">✍️ Send</button>
+              </div>
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+                <div>
+                  <div style="font-size:12px;font-weight:600;color:var(--text)">Insurance Requirements</div>
+                  <div style="font-size:11px;color:var(--muted)">Personal auto + NEMT coverage check</div>
+                </div>
+                <button class="btn-gold" style="font-size:10px;padding:3px 9px;white-space:nowrap" onclick="openSendAgreementModal('insurance_requirements')">✍️ Send</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Dispatcher / Internal -->
+          <div style="border:1.5px solid var(--border);border-radius:10px;overflow:hidden">
+            <div style="background:#ea580c;padding:10px 14px;display:flex;align-items:center;gap:8px">
+              <span style="font-size:16px">📡</span>
+              <span style="color:#fff;font-weight:700;font-size:13px">Dispatcher / Internal</span>
+              <span style="margin-left:auto;background:rgba(255,255,255,.2);color:#fff;font-size:10px;padding:2px 8px;border-radius:100px">All Domains</span>
+            </div>
+            <div style="padding:10px 14px;display:flex;flex-direction:column;gap:8px">
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+                <div>
+                  <div style="font-size:12px;font-weight:600;color:var(--text)">Dispatcher Service Agreement</div>
+                  <div style="font-size:11px;color:var(--muted)">External/subcontract dispatchers</div>
+                </div>
+                <button class="btn-gold" style="font-size:10px;padding:3px 9px;white-space:nowrap" onclick="openSendAgreementModal('dispatcher_service')">✍️ Send</button>
+              </div>
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+                <div>
+                  <div style="font-size:12px;font-weight:600;color:var(--text)">Non-Solicitation Agreement</div>
+                  <div style="font-size:11px;color:var(--muted)">All internal dispatch staff</div>
+                </div>
+                <button class="btn-gold" style="font-size:10px;padding:3px 9px;white-space:nowrap" onclick="openSendAgreementModal('non_solicitation')">✍️ Send</button>
+              </div>
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+                <div>
+                  <div style="font-size:12px;font-weight:600;color:var(--text)">Non-Disclosure Agreement</div>
+                  <div style="font-size:11px;color:var(--muted)">Rate data, carrier lists, systems access</div>
+                </div>
+                <button class="btn-gold" style="font-size:10px;padding:3px 9px;white-space:nowrap" onclick="openSendAgreementModal('nda')">✍️ Send</button>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
       <!-- Step Log -->
       <div class="card">
         <div class="card-hd"><div class="card-title">Recent Step Executions</div></div>
