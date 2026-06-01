@@ -83,6 +83,10 @@ def _start_scheduler(app: FastAPI) -> None:
             fire_follow_up_reminders,
             fire_lf_compliance_sweep,
             fire_lf_nemt_billing_run,
+            fire_scheduled_tasks,
+            fire_partial_submission_reminders,
+            fire_insurance_expiry_alerts,
+            fire_onboarding_bond_audit,
         )
         from .agents.memory import prune_interactions
         from .email.imap_poller import poll_all as poll_all_mailboxes
@@ -108,6 +112,10 @@ def _start_scheduler(app: FastAPI) -> None:
         scheduler.add_job(fire_social_post, CronTrigger(day_of_week="mon", hour=13, minute=0), id="social_post_weekly", replace_existing=True)
         scheduler.add_job(fire_lf_compliance_sweep, CronTrigger(hour=6, minute=15), id="lf_compliance_daily", replace_existing=True)
         scheduler.add_job(fire_lf_nemt_billing_run, CronTrigger(day_of_week="mon", hour=9, minute=0), id="lf_nemt_billing_weekly", replace_existing=True)
+        scheduler.add_job(fire_scheduled_tasks, IntervalTrigger(hours=1), id="scheduled_tasks_executor", replace_existing=True)
+        scheduler.add_job(fire_partial_submission_reminders, CronTrigger(hour=9, minute=0), id="partial_submission_reminders", replace_existing=True)
+        scheduler.add_job(fire_insurance_expiry_alerts, CronTrigger(hour=6, minute=45), id="insurance_expiry_alerts", replace_existing=True)
+        scheduler.add_job(fire_onboarding_bond_audit, CronTrigger(hour=7, minute=45), id="onboarding_bond_audit_daily", replace_existing=True)
 
         scheduler.start()
         app.state.scheduler = scheduler
