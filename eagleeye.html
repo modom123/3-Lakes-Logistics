@@ -12597,8 +12597,49 @@ async function deactivateDriver(driverId) {
 .lf-empty{text-align:center;padding:40px;color:var(--muted);font-size:14px;}
 .lf-section-hdr{font-size:13px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid var(--border);padding-bottom:8px;margin:28px 0 16px;}
 @media(max-width:768px){.lf-wrap{padding:16px 14px 60px;}}
+/* Service accent colors */
+:root{--lf-nemt:#3b82f6;--lf-exec:#f59e0b;--lf-cour:#8b5cf6;--lf-gig:#22c55e;}
+.lf-hero{border-radius:12px;padding:22px 24px;margin-bottom:22px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;position:relative;overflow:hidden;}
+.lf-hero::before{content:'';position:absolute;inset:0;opacity:.07;border-radius:12px;}
+.lf-hero-nemt{background:linear-gradient(135deg,rgba(59,130,246,.18) 0%,rgba(59,130,246,.06) 100%);border:1px solid rgba(59,130,246,.3);}
+.lf-hero-nemt .lf-hero-icon{color:#3b82f6;}
+.lf-hero-exec{background:linear-gradient(135deg,rgba(245,158,11,.18) 0%,rgba(245,158,11,.06) 100%);border:1px solid rgba(245,158,11,.3);}
+.lf-hero-exec .lf-hero-icon{color:#f59e0b;}
+.lf-hero-cour{background:linear-gradient(135deg,rgba(139,92,246,.18) 0%,rgba(139,92,246,.06) 100%);border:1px solid rgba(139,92,246,.3);}
+.lf-hero-cour .lf-hero-icon{color:#8b5cf6;}
+.lf-hero-gig{background:linear-gradient(135deg,rgba(34,197,94,.18) 0%,rgba(34,197,94,.06) 100%);border:1px solid rgba(34,197,94,.3);}
+.lf-hero-gig .lf-hero-icon{color:#22c55e;}
+.lf-hero-left{display:flex;align-items:center;gap:16px;}
+.lf-hero-icon{font-size:42px;line-height:1;}
+.lf-hero-title{font-size:22px;font-weight:800;margin:0 0 4px;letter-spacing:-.3px;}
+.lf-hero-sub{font-size:13px;color:var(--muted);margin:0;}
+.lf-hero-actions{display:flex;gap:8px;flex-shrink:0;}
+/* Accented KPI cards */
+.lf-kpi-nemt{border-left:3px solid var(--lf-nemt)!important;}
+.lf-kpi-nemt .lf-kpi-val{color:var(--lf-nemt);}
+.lf-kpi-exec{border-left:3px solid var(--lf-exec)!important;}
+.lf-kpi-exec .lf-kpi-val{color:var(--lf-exec);}
+.lf-kpi-cour{border-left:3px solid var(--lf-cour)!important;}
+.lf-kpi-cour .lf-kpi-val{color:var(--lf-cour);}
+.lf-kpi-gig{border-left:3px solid var(--lf-gig)!important;}
+.lf-kpi-gig .lf-kpi-val{color:var(--lf-gig);}
+/* Accented table header */
+.lf-table-nemt thead th{border-bottom:2px solid var(--lf-nemt)!important;}
+.lf-table-exec thead th{border-bottom:2px solid var(--lf-exec)!important;}
+.lf-table-cour thead th{border-bottom:2px solid var(--lf-cour)!important;}
+.lf-table-gig thead th{border-bottom:2px solid var(--lf-gig)!important;}
+/* Section divider */
+.lf-section-rule{display:flex;align-items:center;gap:10px;margin:28px 0 16px;}
+.lf-section-rule-label{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;white-space:nowrap;}
+.lf-section-rule-line{flex:1;height:1px;background:var(--border);}
+/* Better empty state */
+.lf-empty-state{text-align:center;padding:48px 20px;color:var(--muted);}
+.lf-empty-state-icon{font-size:36px;margin-bottom:10px;opacity:.5;}
+.lf-empty-state-msg{font-size:14px;margin-bottom:4px;}
+.lf-empty-state-sub{font-size:12px;opacity:.6;}
+/* Driver grid */
 .lf-driver-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;margin-bottom:20px;}
-.lf-driver-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px;}
+.lf-driver-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px;border-top:3px solid var(--lf-gig);}
 .lf-driver-card-name{font-weight:700;font-size:15px;margin-bottom:4px;}
 .lf-driver-card-meta{font-size:12px;color:var(--muted);margin-bottom:10px;}
 .lf-driver-card-row{display:flex;justify-content:space-between;align-items:center;font-size:12px;margin-top:6px;}
@@ -12621,18 +12662,24 @@ async function deactivateDriver(driverId) {
 <!-- ── NEMT PAGE ── -->
 <div class="page" id="page-lf-nemt">
   <div class="lf-wrap">
-    <div class="lf-hdr">
-      <div><h2>🏥 NEMT — Medical Transport</h2><div style="font-size:12px;color:var(--muted);margin-top:2px;">Non-Emergency Medical Transport · Medicaid/Medicare</div></div>
-      <div style="display:flex;gap:8px;">
+    <div class="lf-hero lf-hero-nemt">
+      <div class="lf-hero-left">
+        <div class="lf-hero-icon">🏥</div>
+        <div>
+          <div class="lf-hero-title">NEMT — Medical Transport</div>
+          <div class="lf-hero-sub">Non-Emergency Medical Transport &nbsp;·&nbsp; Medicaid / Medicare Billing &nbsp;·&nbsp; Wheelchair & Stretcher Equipped</div>
+        </div>
+      </div>
+      <div class="lf-hero-actions">
         <button class="lf-btn-ghost" onclick="lfRefresh('lf-nemt')">↻ Refresh</button>
-        <button class="lf-btn" onclick="lfOpenTrip('nemt')">+ New Trip</button>
+        <button class="lf-btn" style="background:var(--lf-nemt);color:#fff;" onclick="lfOpenTrip('nemt')">+ New Trip</button>
       </div>
     </div>
     <div class="lf-kpis" id="lf-nemt-kpis">
-      <div class="lf-kpi"><div class="lf-kpi-val" id="lf-nemt-pending">—</div><div class="lf-kpi-lbl">Pending</div></div>
-      <div class="lf-kpi"><div class="lf-kpi-val" id="lf-nemt-today">—</div><div class="lf-kpi-lbl">Today</div></div>
-      <div class="lf-kpi"><div class="lf-kpi-val" id="lf-nemt-mtd">—</div><div class="lf-kpi-lbl">MTD Trips</div></div>
-      <div class="lf-kpi"><div class="lf-kpi-val" id="lf-nemt-rev">—</div><div class="lf-kpi-lbl">MTD Revenue</div></div>
+      <div class="lf-kpi lf-kpi-nemt"><div class="lf-kpi-val" id="lf-nemt-pending">—</div><div class="lf-kpi-lbl">Pending Trips</div></div>
+      <div class="lf-kpi lf-kpi-nemt"><div class="lf-kpi-val" id="lf-nemt-today">—</div><div class="lf-kpi-lbl">Today's Trips</div></div>
+      <div class="lf-kpi lf-kpi-nemt"><div class="lf-kpi-val" id="lf-nemt-mtd">—</div><div class="lf-kpi-lbl">MTD Trips</div></div>
+      <div class="lf-kpi lf-kpi-nemt"><div class="lf-kpi-val" id="lf-nemt-rev">—</div><div class="lf-kpi-lbl">MTD Revenue</div></div>
     </div>
     <div class="lf-actions">
       <select id="lf-nemt-status-filter" onchange="lfLoadTrips('nemt')" style="padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:var(--card);color:var(--text);">
@@ -12645,19 +12692,20 @@ async function deactivateDriver(driverId) {
       </select>
     </div>
     <div class="lf-table-wrap">
-      <table class="lf-table">
+      <table class="lf-table lf-table-nemt">
         <thead><tr><th>Patient</th><th>Pickup</th><th>Dropoff</th><th>Scheduled</th><th>Driver</th><th>Status</th><th>Rate</th><th></th></tr></thead>
-        <tbody id="lf-nemt-tbody"><tr><td colspan="8" class="lf-empty">Loading…</td></tr></tbody>
+        <tbody id="lf-nemt-tbody">
+          <tr><td colspan="8"><div class="lf-empty-state"><div class="lf-empty-state-icon">🏥</div><div class="lf-empty-state-msg">No trips found</div><div class="lf-empty-state-sub">Schedule a new medical transport trip to get started</div></div></td></tr>
+        </tbody>
       </table>
     </div>
-    <div class="lf-section-hdr" style="margin-top:28px;">NEMT Clients</div>
-    <div style="display:flex;gap:8px;margin-bottom:12px;">
-      <button class="lf-btn" onclick="lfOpenNemtClient()">+ Add Client</button>
-    </div>
+    <div class="lf-section-rule"><div class="lf-section-rule-label">NEMT Clients</div><div class="lf-section-rule-line"></div><button class="lf-btn" style="background:var(--lf-nemt);color:#fff;flex-shrink:0;" onclick="lfOpenNemtClient()">+ Add Client</button></div>
     <div class="lf-table-wrap">
-      <table class="lf-table">
+      <table class="lf-table lf-table-nemt">
         <thead><tr><th>Name</th><th>Phone</th><th>Insurance</th><th>Mobility</th><th>Total Trips</th><th>Status</th></tr></thead>
-        <tbody id="lf-nemt-clients-tbody"><tr><td colspan="6" class="lf-empty">Loading…</td></tr></tbody>
+        <tbody id="lf-nemt-clients-tbody">
+          <tr><td colspan="6"><div class="lf-empty-state"><div class="lf-empty-state-icon">👤</div><div class="lf-empty-state-msg">No clients registered</div><div class="lf-empty-state-sub">Add recurring NEMT patients to pre-fill trip details</div></div></td></tr>
+        </tbody>
       </table>
     </div>
   </div>
@@ -12666,18 +12714,24 @@ async function deactivateDriver(driverId) {
 <!-- ── EXECUTIVE PAGE ── -->
 <div class="page" id="page-lf-executive">
   <div class="lf-wrap">
-    <div class="lf-hdr">
-      <div><h2>🚗 Executive Transport</h2><div style="font-size:12px;color:var(--muted);margin-top:2px;">Corporate · Airport · VIP</div></div>
-      <div style="display:flex;gap:8px;">
+    <div class="lf-hero lf-hero-exec">
+      <div class="lf-hero-left">
+        <div class="lf-hero-icon">🚗</div>
+        <div>
+          <div class="lf-hero-title">Executive Transport</div>
+          <div class="lf-hero-sub">Corporate Accounts &nbsp;·&nbsp; Airport Transfers &nbsp;·&nbsp; VIP & Black Car Service</div>
+        </div>
+      </div>
+      <div class="lf-hero-actions">
         <button class="lf-btn-ghost" onclick="lfRefresh('lf-executive')">↻ Refresh</button>
-        <button class="lf-btn" onclick="lfOpenTrip('executive')">+ New Booking</button>
+        <button class="lf-btn" style="background:var(--lf-exec);color:#000;" onclick="lfOpenTrip('executive')">+ New Booking</button>
       </div>
     </div>
     <div class="lf-kpis">
-      <div class="lf-kpi"><div class="lf-kpi-val" id="lf-exec-pending">—</div><div class="lf-kpi-lbl">Pending</div></div>
-      <div class="lf-kpi"><div class="lf-kpi-val" id="lf-exec-today">—</div><div class="lf-kpi-lbl">Today</div></div>
-      <div class="lf-kpi"><div class="lf-kpi-val" id="lf-exec-mtd">—</div><div class="lf-kpi-lbl">MTD Trips</div></div>
-      <div class="lf-kpi"><div class="lf-kpi-val" id="lf-exec-rev">—</div><div class="lf-kpi-lbl">MTD Revenue</div></div>
+      <div class="lf-kpi lf-kpi-exec"><div class="lf-kpi-val" id="lf-exec-pending">—</div><div class="lf-kpi-lbl">Pending</div></div>
+      <div class="lf-kpi lf-kpi-exec"><div class="lf-kpi-val" id="lf-exec-today">—</div><div class="lf-kpi-lbl">Today</div></div>
+      <div class="lf-kpi lf-kpi-exec"><div class="lf-kpi-val" id="lf-exec-mtd">—</div><div class="lf-kpi-lbl">MTD Trips</div></div>
+      <div class="lf-kpi lf-kpi-exec"><div class="lf-kpi-val" id="lf-exec-rev">—</div><div class="lf-kpi-lbl">MTD Revenue</div></div>
     </div>
     <div class="lf-actions">
       <select id="lf-exec-status-filter" onchange="lfLoadTrips('executive')" style="padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:var(--card);color:var(--text);">
@@ -12690,19 +12744,20 @@ async function deactivateDriver(driverId) {
       </select>
     </div>
     <div class="lf-table-wrap">
-      <table class="lf-table">
+      <table class="lf-table lf-table-exec">
         <thead><tr><th>Client</th><th>Pickup</th><th>Dropoff</th><th>Scheduled</th><th>Vehicle</th><th>Flight #</th><th>Status</th><th>Rate</th><th></th></tr></thead>
-        <tbody id="lf-exec-tbody"><tr><td colspan="9" class="lf-empty">Loading…</td></tr></tbody>
+        <tbody id="lf-exec-tbody">
+          <tr><td colspan="9"><div class="lf-empty-state"><div class="lf-empty-state-icon">🚗</div><div class="lf-empty-state-msg">No bookings yet</div><div class="lf-empty-state-sub">Create a new executive booking or add a corporate account below</div></div></td></tr>
+        </tbody>
       </table>
     </div>
-    <div class="lf-section-hdr" style="margin-top:28px;">Corporate Accounts</div>
-    <div style="display:flex;gap:8px;margin-bottom:12px;">
-      <button class="lf-btn" onclick="lfOpenExecAccount()">+ Add Account</button>
-    </div>
+    <div class="lf-section-rule"><div class="lf-section-rule-label">Corporate Accounts</div><div class="lf-section-rule-line"></div><button class="lf-btn" style="background:var(--lf-exec);color:#000;flex-shrink:0;" onclick="lfOpenExecAccount()">+ Add Account</button></div>
     <div class="lf-table-wrap">
-      <table class="lf-table">
+      <table class="lf-table lf-table-exec">
         <thead><tr><th>Company</th><th>Contact</th><th>Billing</th><th>Rate/mi</th><th>Airport Flat</th><th>Total Trips</th><th>Status</th></tr></thead>
-        <tbody id="lf-exec-accounts-tbody"><tr><td colspan="7" class="lf-empty">Loading…</td></tr></tbody>
+        <tbody id="lf-exec-accounts-tbody">
+          <tr><td colspan="7"><div class="lf-empty-state"><div class="lf-empty-state-icon">🏢</div><div class="lf-empty-state-msg">No corporate accounts</div><div class="lf-empty-state-sub">Add recurring corporate clients for streamlined booking</div></div></td></tr>
+        </tbody>
       </table>
     </div>
   </div>
@@ -12711,18 +12766,24 @@ async function deactivateDriver(driverId) {
 <!-- ── COURIER PAGE ── -->
 <div class="page" id="page-lf-courier">
   <div class="lf-wrap">
-    <div class="lf-hdr">
-      <div><h2>📦 Courier & Last-Mile</h2><div style="font-size:12px;color:var(--muted);margin-top:2px;">Same-Day · Documents · Urban Delivery</div></div>
-      <div style="display:flex;gap:8px;">
+    <div class="lf-hero lf-hero-cour">
+      <div class="lf-hero-left">
+        <div class="lf-hero-icon">📦</div>
+        <div>
+          <div class="lf-hero-title">Courier & Last-Mile</div>
+          <div class="lf-hero-sub">Same-Day Delivery &nbsp;·&nbsp; Documents &nbsp;·&nbsp; Urban & Metro Routes</div>
+        </div>
+      </div>
+      <div class="lf-hero-actions">
         <button class="lf-btn-ghost" onclick="lfRefresh('lf-courier')">↻ Refresh</button>
-        <button class="lf-btn" onclick="lfOpenTrip('courier')">+ New Delivery</button>
+        <button class="lf-btn" style="background:var(--lf-cour);color:#fff;" onclick="lfOpenTrip('courier')">+ New Delivery</button>
       </div>
     </div>
     <div class="lf-kpis">
-      <div class="lf-kpi"><div class="lf-kpi-val" id="lf-cour-pending">—</div><div class="lf-kpi-lbl">Pending</div></div>
-      <div class="lf-kpi"><div class="lf-kpi-val" id="lf-cour-today">—</div><div class="lf-kpi-lbl">Today</div></div>
-      <div class="lf-kpi"><div class="lf-kpi-val" id="lf-cour-mtd">—</div><div class="lf-kpi-lbl">MTD Deliveries</div></div>
-      <div class="lf-kpi"><div class="lf-kpi-val" id="lf-cour-rev">—</div><div class="lf-kpi-lbl">MTD Revenue</div></div>
+      <div class="lf-kpi lf-kpi-cour"><div class="lf-kpi-val" id="lf-cour-pending">—</div><div class="lf-kpi-lbl">Pending</div></div>
+      <div class="lf-kpi lf-kpi-cour"><div class="lf-kpi-val" id="lf-cour-today">—</div><div class="lf-kpi-lbl">Today</div></div>
+      <div class="lf-kpi lf-kpi-cour"><div class="lf-kpi-val" id="lf-cour-mtd">—</div><div class="lf-kpi-lbl">MTD Deliveries</div></div>
+      <div class="lf-kpi lf-kpi-cour"><div class="lf-kpi-val" id="lf-cour-rev">—</div><div class="lf-kpi-lbl">MTD Revenue</div></div>
     </div>
     <div class="lf-actions">
       <select id="lf-cour-status-filter" onchange="lfLoadTrips('courier')" style="padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:var(--card);color:var(--text);">
@@ -12735,9 +12796,11 @@ async function deactivateDriver(driverId) {
       </select>
     </div>
     <div class="lf-table-wrap">
-      <table class="lf-table">
+      <table class="lf-table lf-table-cour">
         <thead><tr><th>Pickup</th><th>Dropoff</th><th>Scheduled</th><th>Packages</th><th>Weight</th><th>Driver</th><th>Status</th><th>Rate</th><th></th></tr></thead>
-        <tbody id="lf-cour-tbody"><tr><td colspan="9" class="lf-empty">Loading…</td></tr></tbody>
+        <tbody id="lf-cour-tbody">
+          <tr><td colspan="9"><div class="lf-empty-state"><div class="lf-empty-state-icon">📦</div><div class="lf-empty-state-msg">No deliveries in queue</div><div class="lf-empty-state-sub">Dispatch a new courier run to begin tracking</div></div></td></tr>
+        </tbody>
       </table>
     </div>
   </div>
@@ -12746,18 +12809,24 @@ async function deactivateDriver(driverId) {
 <!-- ── GIG FLEET PAGE ── -->
 <div class="page" id="page-lf-gig">
   <div class="lf-wrap">
-    <div class="lf-hdr">
-      <div><h2>👥 Gig Fleet Management</h2><div style="font-size:12px;color:var(--muted);margin-top:2px;">Car & SUV Drivers · MVR · Background Checks</div></div>
-      <div style="display:flex;gap:8px;">
+    <div class="lf-hero lf-hero-gig">
+      <div class="lf-hero-left">
+        <div class="lf-hero-icon">👥</div>
+        <div>
+          <div class="lf-hero-title">Gig Fleet Management</div>
+          <div class="lf-hero-sub">Car & SUV Drivers &nbsp;·&nbsp; MVR & Background Screening &nbsp;·&nbsp; Driver Activation</div>
+        </div>
+      </div>
+      <div class="lf-hero-actions">
         <button class="lf-btn-ghost" onclick="lfRefresh('lf-gig')">↻ Refresh</button>
-        <button class="lf-btn" onclick="lfOpenDriver()">+ Add Driver</button>
+        <button class="lf-btn" style="background:var(--lf-gig);color:#000;" onclick="lfOpenDriver()">+ Add Driver</button>
       </div>
     </div>
     <div class="lf-kpis">
-      <div class="lf-kpi"><div class="lf-kpi-val" id="lf-gig-total">—</div><div class="lf-kpi-lbl">Total Drivers</div></div>
-      <div class="lf-kpi"><div class="lf-kpi-val" id="lf-gig-active">—</div><div class="lf-kpi-lbl">Active</div></div>
-      <div class="lf-kpi"><div class="lf-kpi-val" id="lf-gig-clear">—</div><div class="lf-kpi-lbl">MVR Clear</div></div>
-      <div class="lf-kpi"><div class="lf-kpi-val" id="lf-gig-trips">—</div><div class="lf-kpi-lbl">Today's Trips</div></div>
+      <div class="lf-kpi lf-kpi-gig"><div class="lf-kpi-val" id="lf-gig-total">—</div><div class="lf-kpi-lbl">Total Drivers</div></div>
+      <div class="lf-kpi lf-kpi-gig"><div class="lf-kpi-val" id="lf-gig-active">—</div><div class="lf-kpi-lbl">Active</div></div>
+      <div class="lf-kpi lf-kpi-gig"><div class="lf-kpi-val" id="lf-gig-clear">—</div><div class="lf-kpi-lbl">MVR Clear</div></div>
+      <div class="lf-kpi lf-kpi-gig"><div class="lf-kpi-val" id="lf-gig-trips">—</div><div class="lf-kpi-lbl">Today's Trips</div></div>
     </div>
     <div class="lf-actions">
       <select id="lf-gig-status-filter" onchange="lfLoadDrivers()" style="padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:var(--card);color:var(--text);">
@@ -12775,7 +12844,7 @@ async function deactivateDriver(driverId) {
       </select>
     </div>
     <div class="lf-driver-grid" id="lf-gig-driver-grid">
-      <div class="lf-empty" style="grid-column:1/-1">Loading…</div>
+      <div style="grid-column:1/-1"><div class="lf-empty-state"><div class="lf-empty-state-icon">👥</div><div class="lf-empty-state-msg">No drivers on file</div><div class="lf-empty-state-sub">Add gig drivers to start assigning trips</div></div></div>
     </div>
   </div>
 </div>
