@@ -52,7 +52,7 @@ _KNOWN_AGENTS = [
     "alexander", "atlas", "audit", "beacon", "cc_gulley", "chloe_sinclair",
     "echo", "isabella", "katerina", "lucas_sterling", "mark_odom", "naomi",
     "nova", "orbit", "penny", "pulse", "scout", "settler", "shield", "signal",
-    "sofia", "sonny", "vance", "victoria", "winston",
+    "sofia", "sonny", "vance", "vance_follow_up", "victoria", "winston",
 ]
 
 _EXPECTED_MEMORY_KEYS: dict[str, list[str]] = {
@@ -64,7 +64,7 @@ _EXPECTED_MEMORY_KEYS: dict[str, list[str]] = {
     "victoria":  ["growth_snapshot"],
     "winston":   ["at_risk_carriers"],
     "penny":     ["billing_health"],
-    "atlas":          ["pipeline_state"],
+    "atlas":          ["pipeline_state", "onboarding_active_count"],
     "beacon":         ["last_brief"],
     "lucas_sterling": ["last_ui_audit", "ui_directives", "pending_fixes"],
     "chloe_sinclair": ["last_viewport_audit", "visual_anomalies", "qa_clearance"],
@@ -478,6 +478,57 @@ def _attempt_agent_wakeup(silent_agents: list[str]) -> dict[str, Any]:
     return results
 
 
+def _assess_onboarding_pipeline() -> dict[str, Any]:
+    """Query Supabase for onboarding pipeline health: scheduled_tasks + active_carriers."""
+    result: dict[str, Any] = {
+        "pending_tasks": 0,
+        "overdue_tasks": 0,
+        "carriers_by_status": {},
+        "error": None,
+    }
+    try:
+        from ..supabase_client import get_supabase  # noqa: PLC0415
+        from datetime import datetime, timezone  # noqa: PLC0415
+        sb = get_supabase()
+        now_iso = datetime.now(timezone.utc).isoformat()
+
+        # Pending tasks
+        try:
+            pending_rows = (
+                sb.table("scheduled_tasks")
+                .select("id,scheduled_for,task_type")
+                .eq("status", "pending")
+                .execute()
+            ).data or []
+            result["pending_tasks"] = len(pending_rows)
+            result["overdue_tasks"] = sum(
+                1 for r in pending_rows
+                if (r.get("scheduled_for") or "") < now_iso
+            )
+        except Exception as exc:  # noqa: BLE001
+            result["scheduled_tasks_error"] = str(exc)
+
+        # Active carriers by onboarding_status
+        try:
+            carriers = (
+                sb.table("active_carriers")
+                .select("onboarding_status")
+                .execute()
+            ).data or []
+            by_status: dict[str, int] = {}
+            for c in carriers:
+                s = c.get("onboarding_status") or "unknown"
+                by_status[s] = by_status.get(s, 0) + 1
+            result["carriers_by_status"] = by_status
+        except Exception as exc:  # noqa: BLE001
+            result["carriers_error"] = str(exc)
+
+    except Exception as exc:  # noqa: BLE001
+        result["error"] = str(exc)
+
+    return result
+
+
 def run(payload: dict[str, Any]) -> dict[str, Any]:
     """Execute a James Bond consulting audit with auto-remediation."""
     scope: str       = str(payload.get("scope", "full")).lower()
@@ -494,6 +545,7 @@ def run(payload: dict[str, Any]) -> dict[str, Any]:
 
     coverage = _agent_coverage_report(by_agent)
     pipeline = _assess_lead_pipeline(intel["by_agent"])
+    onboarding_pipeline = _assess_onboarding_pipeline()
     gaps     = _identify_tech_gaps(coverage, org_mems, top_n=top_n)
 
     # ── Qwen enrichment: find gaps the rule-based scan missed ────────────────
@@ -553,6 +605,7 @@ def run(payload: dict[str, Any]) -> dict[str, Any]:
         "high_gap_count":    sum(1 for g in gaps if g.get("priority") == "HIGH"),
         "remediation":       wakeup_report,
         "outside_bond":      outside_bond_report,
+        "onboarding_pipeline": onboarding_pipeline,
     }
 
     mem.remember(
@@ -575,6 +628,15 @@ def run(payload: dict[str, Any]) -> dict[str, Any]:
         {"directives": directives},
         confidence=0.9,
         summary=directives[0] if directives else "All clear",
+    )
+    mem.remember(
+        _NAME, "onboarding_audit",
+        onboarding_pipeline,
+        confidence=0.85,
+        summary=(
+            f"Onboarding pipeline: {onboarding_pipeline.get('pending_tasks', 0)} pending tasks, "
+            f"{onboarding_pipeline.get('overdue_tasks', 0)} overdue"
+        ),
     )
     mem.remember(
         "org", "consultant_brief",

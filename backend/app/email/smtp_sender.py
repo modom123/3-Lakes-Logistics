@@ -4,7 +4,7 @@ Transactional emails (settlement, welcome, dispatch) continue to use Postmark.
 Manual compose/reply from the Email Center uses this module to send directly
 from the appropriate Hostinger mailbox account.
 
-Hostinger SMTP: smtp.hostinger.com:587 (STARTTLS)
+Hostinger SMTP: smtp.hostinger.com:465 (SSL)
 """
 from __future__ import annotations
 
@@ -20,7 +20,7 @@ from ..supabase_client import get_supabase
 log = logging.getLogger("3ll.email.smtp")
 
 SMTP_HOST = "smtp.hostinger.com"
-SMTP_PORT = 587
+SMTP_PORT = 465
 
 MAILBOX_ADDRESSES: dict[str, str] = {
     "loads": "loads@3lakeslogistics.com",
@@ -41,7 +41,7 @@ def send_from_mailbox(
     reply_to_message_id: str | None = None,
     in_reply_to_db_id: str | None = None,
 ) -> dict:
-    """Send an email from one of the Hostinger mailboxes via SMTP STARTTLS.
+    """Send an email from one of the Hostinger mailboxes via SMTP SSL (port 465).
 
     Records the outbound message in mailbox_emails for unified inbox visibility.
 
@@ -84,12 +84,9 @@ def send_from_mailbox(
     if not body_text and not body_html:
         msg.attach(MIMEText("(no content)", "plain", "utf-8"))
 
-    # Send via Hostinger SMTP
+    # Send via Hostinger SMTP (SSL on port 465 — use SMTP_SSL, not STARTTLS)
     try:
-        with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=20) as server:
-            server.ehlo()
-            server.starttls()
-            server.ehlo()
+        with smtplib.SMTP_SSL(SMTP_HOST, SMTP_PORT, timeout=20) as server:
             server.login(from_address, password)
             all_recipients = to + (cc or [])
             server.sendmail(from_address, all_recipients, msg.as_string())

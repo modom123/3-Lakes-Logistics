@@ -732,7 +732,7 @@ button,a,[onclick]{cursor:pointer;}
     <button class="nav-a" id="nl-loads" onclick="showPage('loads')" style="position:relative">Load Board<span id="nav-loads-badge" style="display:none;position:absolute;top:2px;right:-4px;background:#22c55e;color:#fff;border-radius:99px;font-size:9px;font-weight:700;padding:1px 5px;"></span></button>
     <button class="nav-a" id="nl-contact" onclick="showPage('contact')">Contact</button>
     <button class="nav-a" onclick="showPage('contact');setTimeout(()=>{const el=document.getElementById('book-call-anchor');if(el)el.scrollIntoView({behavior:'smooth',block:'start'});},120)" style="color:var(--gold2);font-weight:700;">📞 Book a Call</button>
-    <a class="nav-a" href="/eagleeye.html" style="text-decoration:none;color:var(--muted)">Admin</a>
+    <a class="nav-a" href="eagleeye.html" target="_blank" style="text-decoration:none;color:var(--muted)">Admin</a>
     <button class="nav-cta" onclick="showPage('onboard')">Claim Founders Spot</button>
   </div>
   <div class="hamburger" onclick="toggleMob()"><span></span><span></span><span></span></div>
@@ -748,7 +748,7 @@ button,a,[onclick]{cursor:pointer;}
   <div class="mob-a" onclick="showPage('contact');toggleMob()">Contact</div>
   <div class="mob-a" onclick="showPage('contact');toggleMob();setTimeout(()=>{const el=document.getElementById('book-call-anchor');if(el)el.scrollIntoView({behavior:'smooth',block:'start'});},200)" style="color:var(--gold2);font-weight:700;">📞 Book a Call</div>
   <div class="mob-cta" onclick="showPage('onboard');toggleMob()">⚡ Claim Founders Spot — $300/mo</div>
-  <a class="mob-a" href="/eagleeye.html" style="text-decoration:none;color:var(--muted);font-size:13px;">🔐 Admin Login</a>
+  <a class="mob-a" href="eagleeye.html" target="_blank" style="text-decoration:none;color:var(--muted);font-size:13px;">🔐 Admin Login</a>
 </div>
 
 <!-- ═══════════════ HOME ═══════════════ -->
@@ -2214,115 +2214,243 @@ document.getElementById('calendarOverlay')?.addEventListener('click', function(e
 <!-- LIGHT FLEET PAGE                                         -->
 <!-- ════════════════════════════════════════════════════════ -->
 <div class="page" id="page-light-fleet">
+<style>
+/* ── Light Fleet — Cross-Platform Responsive ──────────────────────────────────
+   Targets: iPhone SE (375px), iPhone 14 Pro (393px), Android mid (412px),
+            iPad mini (768px), iPad Pro (1024px), Mac/desktop (1200px+)
+   ─────────────────────────────────────────────────────────────────────────── */
 
-  <!-- ── LF HERO ── -->
-  <div style="background:var(--navy);padding:96px 60px 80px;position:relative;overflow:hidden;">
+/* Hero section */
+.lf-hero-wrap   { padding: clamp(48px,8vw,96px) clamp(16px,6vw,60px) clamp(40px,6vw,80px); }
+.lf-hero-inner  { max-width: 860px; margin: 0 auto; text-align: center; position: relative; z-index: 1; }
+.lf-hero-badge  { display: inline-flex; align-items: center; gap: 9px;
+                  background: rgba(99,102,241,.2); border: 1px solid rgba(99,102,241,.4);
+                  color: #a5b4fc; padding: 6px 20px; border-radius: 100px;
+                  font-family: var(--ff-m); font-size: 10px; letter-spacing: 2.5px;
+                  text-transform: uppercase; margin-bottom: 28px; }
+.lf-hero-h1     { font-family: var(--ff-h); font-size: clamp(32px,6vw,76px);
+                  line-height: 1; color: var(--white); font-weight: 900; margin-bottom: 22px; }
+.lf-hero-p      { font-size: clamp(14px,2.5vw,17px); font-weight: 300; line-height: 1.78;
+                  color: rgba(255,255,255,.62); max-width: 580px; margin: 0 auto 38px; }
+
+/* Hero stats bar — 4 across desktop, 2x2 on mobile */
+.lf-stats-bar   { display: grid; grid-template-columns: repeat(4,1fr);
+                  background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.1);
+                  border-radius: 14px; overflow: hidden; margin-top: 52px; }
+.lf-stat-cell   { padding: 18px 16px; text-align: center; border-right: 1px solid rgba(255,255,255,.08); }
+.lf-stat-cell:last-child { border-right: none; }
+.lf-stat-n      { font-family: var(--ff-h); font-size: clamp(20px,3vw,24px);
+                  color: var(--gold2); font-weight: 800; }
+.lf-stat-l      { font-size: 9px; color: rgba(255,255,255,.45); margin-top: 4px;
+                  font-family: var(--ff-m); letter-spacing: 1.5px; text-transform: uppercase; }
+
+/* Segments section */
+.lf-seg-wrap    { padding: clamp(48px,8vw,88px) clamp(16px,5vw,60px); background: var(--off); }
+.lf-seg-inner   { max-width: 1180px; margin: 0 auto; }
+.lf-seg-grid    { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
+                  gap: clamp(14px,2.5vw,24px); margin-top: 0; }
+.lf-card        { background: var(--white); border: 1px solid var(--border); border-radius: 18px;
+                  overflow: hidden; transition: box-shadow .25s, transform .25s; }
+.lf-card:hover  { box-shadow: 0 8px 48px rgba(11,37,69,.14); transform: translateY(-4px); }
+.lf-card-body   { padding: clamp(18px,4vw,28px) clamp(18px,4vw,30px); }
+.lf-card-title  { font-family: var(--ff-h); font-size: clamp(17px,2.5vw,20px);
+                  color: var(--navy); font-weight: 800; margin-bottom: 8px; }
+.lf-card-p      { font-size: 13px; color: var(--muted); line-height: 1.75; margin-bottom: 16px; }
+.lf-card-box    { border-radius: 10px; padding: 12px 14px; margin-bottom: 16px; }
+.lf-card-box-hd { font-size: 11px; font-weight: 700; letter-spacing: .8px;
+                  text-transform: uppercase; margin-bottom: 4px; }
+.lf-card-box-p  { font-size: 12px; color: var(--text); line-height: 1.7; }
+.lf-card-pill   { font-family: var(--ff-m); font-size: 11px; padding: 4px 12px;
+                  border-radius: 20px; display: inline-block; }
+.lf-card-btn    { display: block; width: 100%; margin-top: 18px;
+                  padding: clamp(11px,2vw,13px); color: #fff;
+                  font-size: clamp(13px,2vw,14px); font-weight: 700;
+                  border: none; border-radius: 10px; cursor: pointer;
+                  transition: opacity .2s; -webkit-tap-highlight-color: transparent; }
+.lf-card-btn:hover, .lf-card-btn:active { opacity: .88; }
+
+/* Plans section */
+.lf-plans-wrap  { padding: clamp(48px,8vw,88px) clamp(16px,5vw,60px); }
+.lf-plans-grid  { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%,280px),1fr));
+                  gap: clamp(14px,2.5vw,24px); margin-top: 0; }
+
+/* How it works — 3-col strip */
+.lf-how-wrap    { padding: clamp(40px,7vw,80px) clamp(16px,5vw,60px); }
+.lf-how-grid    { display: grid; grid-template-columns: repeat(3,1fr); gap: 32px;
+                  max-width: 860px; margin: 40px auto 0; }
+.lf-how-step    { text-align: center; }
+
+/* FAQ */
+.lf-faq-wrap    { padding: clamp(40px,7vw,80px) clamp(16px,5vw,60px); background: var(--off); }
+.lf-faq-inner   { max-width: 720px; margin: 0 auto; }
+
+/* Intake form page */
+.lf-intake-wrap { max-width: 720px; margin: 0 auto;
+                  padding: clamp(32px,6vw,60px) clamp(16px,4vw,24px) clamp(48px,8vw,80px); }
+.lf-form-row    { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.lf-form-row-4  { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 12px; }
+.lf-form-row-lic{ display: grid; grid-template-columns: 1fr 90px 130px; gap: 12px; }
+.lf-form-checks { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.lf-form-input  { width: 100%; padding: 12px 14px; border: 1.5px solid var(--border);
+                  border-radius: 8px; font-size: 15px; font-family: var(--ff-b);
+                  outline: none; transition: border .2s; box-sizing: border-box;
+                  -webkit-appearance: none; appearance: none; background: #fff; }
+.lf-form-input:focus { border-color: var(--navy); }
+.lf-form-select { width: 100%; padding: 12px 14px; border: 1.5px solid var(--border);
+                  border-radius: 8px; font-size: 15px; font-family: var(--ff-b);
+                  outline: none; background: #fff; cursor: pointer;
+                  -webkit-appearance: none; appearance: none;
+                  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%235A6A82' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+                  background-repeat: no-repeat; background-position: right 14px center; }
+.lf-form-label  { font-size: 13px; font-weight: 600; color: var(--navy);
+                  display: block; margin-bottom: 6px; }
+.lf-form-check-label { display: flex; align-items: center; gap: 10px;
+                  padding: 12px 14px; border: 1.5px solid var(--border);
+                  border-radius: 8px; cursor: pointer; font-size: 13px;
+                  transition: border .2s; -webkit-tap-highlight-color: transparent; }
+.lf-form-check-label:hover { border-color: var(--navy); }
+
+/* ── Mobile breakpoints ───────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .lf-stats-bar   { grid-template-columns: repeat(2,1fr); }
+  .lf-stat-cell:nth-child(2) { border-right: none; }
+  .lf-stat-cell:nth-child(3) { border-right: 1px solid rgba(255,255,255,.08); border-top: 1px solid rgba(255,255,255,.08); }
+  .lf-stat-cell:nth-child(4) { border-top: 1px solid rgba(255,255,255,.08); }
+  .lf-how-grid    { grid-template-columns: 1fr; gap: 24px; }
+}
+
+@media (max-width: 600px) {
+  .lf-form-row    { grid-template-columns: 1fr; gap: 0; }
+  .lf-form-row > * + * { margin-top: 16px; }
+  .lf-form-row-4  { grid-template-columns: 1fr 1fr; }
+  .lf-form-row-4 > *:nth-child(3),
+  .lf-form-row-4 > *:nth-child(4) { margin-top: 12px; }
+  .lf-form-row-lic{ grid-template-columns: 1fr; gap: 0; }
+  .lf-form-row-lic > * + * { margin-top: 12px; }
+  .lf-form-checks { grid-template-columns: 1fr; }
+  .lf-plans-grid  { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 480px) {
+  .lf-stats-bar   { grid-template-columns: repeat(2,1fr); }
+  .lf-hero-badge  { font-size: 9px; padding: 5px 14px; letter-spacing: 1.5px; }
+  .lf-card-body   { padding: 18px; }
+  .lf-form-row-4  { grid-template-columns: 1fr; gap: 0; }
+  .lf-form-row-4 > * + * { margin-top: 12px; }
+  .lf-form-check-label { font-size: 12px; padding: 10px 12px; }
+  /* Larger tap targets on small phones */
+  .lf-card-btn    { padding: 15px; font-size: 15px; }
+  .lf-form-input,
+  .lf-form-select { font-size: 16px; } /* prevents iOS zoom on focus */
+}
+</style>
+  <div class="lf-hero-wrap" style="background:var(--navy);position:relative;overflow:hidden;">
     <div style="position:absolute;top:-100px;right:-100px;width:500px;height:500px;border-radius:50%;background:rgba(99,102,241,.07);pointer-events:none;"></div>
     <div style="position:absolute;bottom:-60px;left:-60px;width:320px;height:320px;border-radius:50%;background:rgba(255,255,255,.02);pointer-events:none;"></div>
-    <div style="max-width:860px;margin:0 auto;text-align:center;position:relative;z-index:1;">
-      <div style="display:inline-flex;align-items:center;gap:9px;background:rgba(99,102,241,.2);border:1px solid rgba(99,102,241,.4);color:#a5b4fc;padding:6px 20px;border-radius:100px;font-family:var(--ff-m);font-size:10px;letter-spacing:2.5px;text-transform:uppercase;margin-bottom:28px;">🚗 Light Fleet Division — Now Open</div>
-      <h1 style="font-family:var(--ff-h);font-size:clamp(44px,5.5vw,76px);line-height:.93;color:var(--white);font-weight:900;margin-bottom:22px;">Build a Light Fleet Business.<br/><span style="color:#a5b4fc;">We Find the Loads.</span></h1>
-      <p style="font-size:17px;font-weight:300;line-height:1.78;color:rgba(255,255,255,.62);max-width:580px;margin:0 auto 38px;">No CDL. No truck. Just a car, SUV, or cargo van — and our AI dispatch engine connects you to NEMT brokers, corporate accounts, hospital networks, and courier contracts.</p>
+    <div class="lf-hero-inner">
+      <div class="lf-hero-badge">🚗 Light Fleet Division — Now Open</div>
+      <h1 class="lf-hero-h1">Build a Light Fleet Business.<br/><span style="color:#a5b4fc;">We Find the Loads.</span></h1>
+      <p class="lf-hero-p">No CDL. No truck. Just a car, SUV, or cargo van — and our AI dispatch engine connects you to NEMT brokers, corporate accounts, hospital networks, and courier contracts.</p>
       <div style="display:flex;gap:14px;justify-content:center;flex-wrap:wrap;">
         <button class="btn-gold" onclick="document.getElementById('lf-segments').scrollIntoView({behavior:'smooth'})">Choose Your Program — Start Earning →</button>
       </div>
-      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:0;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:14px;overflow:hidden;margin-top:52px;">
-        <div style="padding:18px 16px;text-align:center;border-right:1px solid rgba(255,255,255,.08);"><div style="font-family:var(--ff-h);font-size:24px;color:var(--gold2);font-weight:800;">5</div><div style="font-size:9px;color:rgba(255,255,255,.45);margin-top:4px;font-family:var(--ff-m);letter-spacing:1.5px;text-transform:uppercase;">Business Segments</div></div>
-        <div style="padding:18px 16px;text-align:center;border-right:1px solid rgba(255,255,255,.08);"><div style="font-family:var(--ff-h);font-size:24px;color:var(--gold2);font-weight:800;">$0</div><div style="font-size:9px;color:rgba(255,255,255,.45);margin-top:4px;font-family:var(--ff-m);letter-spacing:1.5px;text-transform:uppercase;">CDL Required</div></div>
-        <div style="padding:18px 16px;text-align:center;border-right:1px solid rgba(255,255,255,.08);"><div style="font-family:var(--ff-h);font-size:24px;color:var(--gold2);font-weight:800;">24h</div><div style="font-size:9px;color:rgba(255,255,255,.45);margin-top:4px;font-family:var(--ff-m);letter-spacing:1.5px;text-transform:uppercase;">Driver Live</div></div>
-        <div style="padding:18px 16px;text-align:center;"><div style="font-family:var(--ff-h);font-size:24px;color:var(--gold2);font-weight:800;">AI</div><div style="font-size:9px;color:rgba(255,255,255,.45);margin-top:4px;font-family:var(--ff-m);letter-spacing:1.5px;text-transform:uppercase;">Dispatch Engine</div></div>
+      <div class="lf-stats-bar">
+        <div class="lf-stat-cell"><div class="lf-stat-n">5</div><div class="lf-stat-l">Business Segments</div></div>
+        <div class="lf-stat-cell"><div class="lf-stat-n">$0</div><div class="lf-stat-l">CDL Required</div></div>
+        <div class="lf-stat-cell"><div class="lf-stat-n">24h</div><div class="lf-stat-l">Driver Live</div></div>
+        <div class="lf-stat-cell" style="border-right:none;"><div class="lf-stat-n">AI</div><div class="lf-stat-l">Dispatch Engine</div></div>
       </div>
     </div>
   </div>
 
   <!-- ── 5 SEGMENTS ── -->
-  <div id="lf-segments" style="padding:88px 60px;background:var(--off);">
-    <div style="max-width:1180px;margin:0 auto;">
+  <div id="lf-segments" class="lf-seg-wrap">
+    <div class="lf-seg-inner">
       <div class="rev" style="text-align:center;margin-bottom:52px;">
         <span class="chip">Who We Serve</span>
         <h2 class="sh" style="text-align:center;">5 Business Segments.<br/>We Find the Loads for Each.</h2>
         <div class="rule" style="margin:18px auto;"></div>
         <p class="sp" style="max-width:600px;margin:0 auto;">You bring the vehicle. We bring the contracts. Our team works the NEMT broker networks, corporate travel accounts, hospital supply chains, and courier platforms — then our AI dispatches the work directly to your drivers.</p>
       </div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:24px;">
+      <div class="lf-seg-grid">
 
         <!-- NEMT -->
-        <div class="rev" style="background:var(--white);border:1px solid var(--border);border-radius:18px;overflow:hidden;transition:box-shadow .25s,transform .25s;" onmouseover="this.style.boxShadow='0 8px 48px rgba(11,37,69,.14)';this.style.transform='translateY(-4px)'" onmouseout="this.style.boxShadow='';this.style.transform=''">
+        <div class="rev lf-card">
           <div style="height:4px;background:linear-gradient(90deg,#10b981,#059669);"></div>
-          <div style="padding:28px 30px;">
+          <div class="lf-card-body">
             <div style="font-size:32px;margin-bottom:14px;">🏥</div>
-            <div style="font-family:var(--ff-h);font-size:20px;color:var(--navy);font-weight:800;margin-bottom:8px;">NEMT — Medical Transport</div>
-            <p style="font-size:13px;color:var(--muted);line-height:1.75;margin-bottom:16px;">Medicaid &amp; Medicare patient rides — dialysis, chemo, therapy, SNF transfers. Government-backed recurring revenue. The most stable income stream in light fleet.</p>
-            <div style="background:rgba(5,150,105,.07);border:1px solid rgba(5,150,105,.15);border-radius:10px;padding:12px 14px;margin-bottom:16px;">
-              <div style="font-size:11px;font-weight:700;color:#059669;letter-spacing:.8px;text-transform:uppercase;margin-bottom:4px;">How We Find Your Loads</div>
-              <div style="font-size:12px;color:var(--text);line-height:1.7;">We contract directly with MTM, Modivcare, LogistiCare, and Kaizen Health — the 4 largest Medicaid broker networks. Trips flow to your drivers automatically.</div>
+            <div class="lf-card-title">NEMT — Medical Transport</div>
+            <p class="lf-card-p">Medicaid &amp; Medicare patient rides — dialysis, chemo, therapy, SNF transfers. Government-backed recurring revenue. The most stable income stream in light fleet.</p>
+            <div class="lf-card-box" style="background:rgba(5,150,105,.07);border:1px solid rgba(5,150,105,.15);">
+              <div class="lf-card-box-hd" style="color:#059669;">How We Find Your Loads</div>
+              <div class="lf-card-box-p">We contract directly with MTM, Modivcare, LogistiCare, and Kaizen Health — the 4 largest Medicaid broker networks. Trips flow to your drivers automatically.</div>
             </div>
-            <div style="font-family:var(--ff-m);font-size:11px;color:#059669;background:rgba(5,150,105,.1);padding:4px 12px;border-radius:20px;display:inline-block;">Avg $2–4/mi · Gov't contracts</div>
-            <button onclick="lfStartSignup('nemt','NEMT Medical Transport','#10b981')" style="display:block;width:100%;margin-top:18px;padding:13px;background:linear-gradient(135deg,#10b981,#059669);color:#fff;font-size:14px;font-weight:700;border:none;border-radius:10px;cursor:pointer;transition:opacity .2s;" onmouseover="this.style.opacity='.88'" onmouseout="this.style.opacity='1'">Sign Up as NEMT Driver →</button>
+            <div class="lf-card-pill" style="color:#059669;background:rgba(5,150,105,.1);">Avg $2–4/mi · Gov't contracts</div>
+            <button onclick="lfStartSignup('nemt','NEMT Medical Transport','#10b981')" class="lf-card-btn" style="background:linear-gradient(135deg,#10b981,#059669);">Sign Up as NEMT Driver →</button>
           </div>
         </div>
 
         <!-- Medical Courier -->
-        <div class="rev" style="background:var(--white);border:1px solid var(--border);border-radius:18px;overflow:hidden;transition:box-shadow .25s,transform .25s;" onmouseover="this.style.boxShadow='0 8px 48px rgba(11,37,69,.14)';this.style.transform='translateY(-4px)'" onmouseout="this.style.boxShadow='';this.style.transform=''">
+        <div class="rev lf-card">
           <div style="height:4px;background:linear-gradient(90deg,#ef4444,#dc2626);"></div>
-          <div style="padding:28px 30px;">
+          <div class="lf-card-body">
             <div style="font-size:32px;margin-bottom:14px;">🧪</div>
-            <div style="font-family:var(--ff-h);font-size:20px;color:var(--navy);font-weight:800;margin-bottom:8px;">Medical Courier</div>
-            <p style="font-size:13px;color:var(--muted);line-height:1.75;margin-bottom:16px;">Lab specimens, pharmacy runs, blood supply, clinical trial materials, and hospital-to-hospital transfers. Time-critical deliveries that pay premium rates.</p>
-            <div style="background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.15);border-radius:10px;padding:12px 14px;margin-bottom:16px;">
-              <div style="font-size:11px;font-weight:700;color:#dc2626;letter-spacing:.8px;text-transform:uppercase;margin-bottom:4px;">How We Find Your Loads</div>
-              <div style="font-size:12px;color:var(--text);line-height:1.7;">We work the Quest Diagnostics, LabCorp, CVS, Walgreens, and regional hospital networks. We sign the supply agreements — your drivers fulfill the runs.</div>
+            <div class="lf-card-title">Medical Courier</div>
+            <p class="lf-card-p">Lab specimens, pharmacy runs, blood supply, clinical trial materials, and hospital-to-hospital transfers. Time-critical deliveries that pay premium rates.</p>
+            <div class="lf-card-box" style="background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.15);">
+              <div class="lf-card-box-hd" style="color:#dc2626;">How We Find Your Loads</div>
+              <div class="lf-card-box-p">We work the Quest Diagnostics, LabCorp, CVS, Walgreens, and regional hospital networks. We sign the supply agreements — your drivers fulfill the runs.</div>
             </div>
-            <div style="font-family:var(--ff-m);font-size:11px;color:#dc2626;background:rgba(239,68,68,.08);padding:4px 12px;border-radius:20px;display:inline-block;">Avg $15–45/run · Hospital contracts</div>
-            <button onclick="lfStartSignup('medical_courier','Medical Courier','#ef4444')" style="display:block;width:100%;margin-top:18px;padding:13px;background:linear-gradient(135deg,#ef4444,#dc2626);color:#fff;font-size:14px;font-weight:700;border:none;border-radius:10px;cursor:pointer;transition:opacity .2s;" onmouseover="this.style.opacity='.88'" onmouseout="this.style.opacity='1'">Sign Up as Medical Courier →</button>
+            <div class="lf-card-pill" style="color:#dc2626;background:rgba(239,68,68,.08);">Avg $15–45/run · Hospital contracts</div>
+            <button onclick="lfStartSignup('medical_courier','Medical Courier','#ef4444')" class="lf-card-btn" style="background:linear-gradient(135deg,#ef4444,#dc2626);">Sign Up as Medical Courier →</button>
           </div>
         </div>
 
         <!-- Executive -->
-        <div class="rev" style="background:var(--white);border:1px solid var(--border);border-radius:18px;overflow:hidden;transition:box-shadow .25s,transform .25s;" onmouseover="this.style.boxShadow='0 8px 48px rgba(11,37,69,.14)';this.style.transform='translateY(-4px)'" onmouseout="this.style.boxShadow='';this.style.transform=''">
+        <div class="rev lf-card">
           <div style="height:4px;background:linear-gradient(90deg,#6366f1,#4f46e5);"></div>
-          <div style="padding:28px 30px;">
+          <div class="lf-card-body">
             <div style="font-size:32px;margin-bottom:14px;">🚗</div>
-            <div style="font-family:var(--ff-h);font-size:20px;color:var(--navy);font-weight:800;margin-bottom:8px;">Executive &amp; Black Car</div>
-            <p style="font-size:13px;color:var(--muted);line-height:1.75;margin-bottom:16px;">Airport runs, corporate accounts, VIP clients, hotel concierge fleets, and event transport. High-margin flat-rate contracts with professional repeat clients.</p>
-            <div style="background:rgba(99,102,241,.07);border:1px solid rgba(99,102,241,.15);border-radius:10px;padding:12px 14px;margin-bottom:16px;">
-              <div style="font-size:11px;font-weight:700;color:#6366f1;letter-spacing:.8px;text-transform:uppercase;margin-bottom:4px;">How We Find Your Loads</div>
-              <div style="font-size:12px;color:var(--text);line-height:1.7;">We sign corporate travel agreements with companies, hotels, and event firms. Your SUV or luxury sedan is pre-approved for their runs — we handle billing and flight tracking.</div>
+            <div class="lf-card-title">Executive &amp; Black Car</div>
+            <p class="lf-card-p">Airport runs, corporate accounts, VIP clients, hotel concierge fleets, and event transport. High-margin flat-rate contracts with professional repeat clients.</p>
+            <div class="lf-card-box" style="background:rgba(99,102,241,.07);border:1px solid rgba(99,102,241,.15);">
+              <div class="lf-card-box-hd" style="color:#6366f1;">How We Find Your Loads</div>
+              <div class="lf-card-box-p">We sign corporate travel agreements with companies, hotels, and event firms. Your SUV or luxury sedan is pre-approved for their runs — we handle billing and flight tracking.</div>
             </div>
-            <div style="font-family:var(--ff-m);font-size:11px;color:#6366f1;background:rgba(99,102,241,.1);padding:4px 12px;border-radius:20px;display:inline-block;">Avg $85–250/run · Corporate accounts</div>
-            <button onclick="lfStartSignup('executive','Executive &amp; Black Car','#6366f1')" style="display:block;width:100%;margin-top:18px;padding:13px;background:linear-gradient(135deg,#6366f1,#4f46e5);color:#fff;font-size:14px;font-weight:700;border:none;border-radius:10px;cursor:pointer;transition:opacity .2s;" onmouseover="this.style.opacity='.88'" onmouseout="this.style.opacity='1'">Sign Up as Executive Driver →</button>
+            <div class="lf-card-pill" style="color:#6366f1;background:rgba(99,102,241,.1);">Avg $85–250/run · Corporate accounts</div>
+            <button onclick="lfStartSignup('executive','Executive &amp; Black Car','#6366f1')" class="lf-card-btn" style="background:linear-gradient(135deg,#6366f1,#4f46e5);">Sign Up as Executive Driver →</button>
           </div>
         </div>
 
         <!-- Same-Day Courier -->
-        <div class="rev" style="background:var(--white);border:1px solid var(--border);border-radius:18px;overflow:hidden;transition:box-shadow .25s,transform .25s;" onmouseover="this.style.boxShadow='0 8px 48px rgba(11,37,69,.14)';this.style.transform='translateY(-4px)'" onmouseout="this.style.boxShadow='';this.style.transform=''">
+        <div class="rev lf-card">
           <div style="height:4px;background:linear-gradient(90deg,#f59e0b,#d97706);"></div>
-          <div style="padding:28px 30px;">
+          <div class="lf-card-body">
             <div style="font-size:32px;margin-bottom:14px;">📦</div>
-            <div style="font-family:var(--ff-h);font-size:20px;color:var(--navy);font-weight:800;margin-bottom:8px;">Same-Day Courier</div>
-            <p style="font-size:13px;color:var(--muted);line-height:1.75;margin-bottom:16px;">Legal documents, court filings, parcels, restaurant supply, and urban last-mile delivery where semis can't go. GPS-tracked with photo proof-of-delivery.</p>
-            <div style="background:rgba(245,158,11,.07);border:1px solid rgba(245,158,11,.2);border-radius:10px;padding:12px 14px;margin-bottom:16px;">
-              <div style="font-size:11px;font-weight:700;color:#d97706;letter-spacing:.8px;text-transform:uppercase;margin-bottom:4px;">How We Find Your Loads</div>
-              <div style="font-size:12px;color:var(--text);line-height:1.7;">We partner with law firms, courthouses, GoShare, Roadie, and local distributors. Same-day orders hit our platform and dispatch to your nearest approved driver.</div>
+            <div class="lf-card-title">Same-Day Courier</div>
+            <p class="lf-card-p">Legal documents, court filings, parcels, restaurant supply, and urban last-mile delivery where semis can't go. GPS-tracked with photo proof-of-delivery.</p>
+            <div class="lf-card-box" style="background:rgba(245,158,11,.07);border:1px solid rgba(245,158,11,.2);">
+              <div class="lf-card-box-hd" style="color:#d97706;">How We Find Your Loads</div>
+              <div class="lf-card-box-p">We partner with law firms, courthouses, GoShare, Roadie, and local distributors. Same-day orders hit our platform and dispatch to your nearest approved driver.</div>
             </div>
-            <div style="font-family:var(--ff-m);font-size:11px;color:#d97706;background:rgba(245,158,11,.1);padding:4px 12px;border-radius:20px;display:inline-block;">Avg $15–80/delivery · Urban market</div>
-            <button onclick="lfStartSignup('courier','Same-Day Courier','#f59e0b')" style="display:block;width:100%;margin-top:18px;padding:13px;background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;font-size:14px;font-weight:700;border:none;border-radius:10px;cursor:pointer;transition:opacity .2s;" onmouseover="this.style.opacity='.88'" onmouseout="this.style.opacity='1'">Sign Up as Courier Driver →</button>
+            <div class="lf-card-pill" style="color:#d97706;background:rgba(245,158,11,.1);">Avg $15–80/delivery · Urban market</div>
+            <button onclick="lfStartSignup('courier','Same-Day Courier','#f59e0b')" class="lf-card-btn" style="background:linear-gradient(135deg,#f59e0b,#d97706);">Sign Up as Courier Driver →</button>
           </div>
         </div>
 
         <!-- Gig Fleet -->
-        <div class="rev" style="background:var(--white);border:1px solid var(--border);border-radius:18px;overflow:hidden;transition:box-shadow .25s,transform .25s;" onmouseover="this.style.boxShadow='0 8px 48px rgba(11,37,69,.14)';this.style.transform='translateY(-4px)'" onmouseout="this.style.boxShadow='';this.style.transform=''">
+        <div class="rev lf-card">
           <div style="height:4px;background:linear-gradient(90deg,#3b82f6,#1d4ed8);"></div>
-          <div style="padding:28px 30px;">
+          <div class="lf-card-body">
             <div style="font-size:32px;margin-bottom:14px;">👥</div>
-            <div style="font-family:var(--ff-h);font-size:20px;color:var(--navy);font-weight:800;margin-bottom:8px;">Gig Fleet Management</div>
-            <p style="font-size:13px;color:var(--muted);line-height:1.75;margin-bottom:16px;">Own 2–20 cars and want to maximize them? We manage dispatch across all 4 segments above — MVR checks, driver ratings, automated payouts, and full Eagle Eye visibility.</p>
-            <div style="background:rgba(59,130,246,.07);border:1px solid rgba(59,130,246,.15);border-radius:10px;padding:12px 14px;margin-bottom:16px;">
-              <div style="font-size:11px;font-weight:700;color:#3b82f6;letter-spacing:.8px;text-transform:uppercase;margin-bottom:4px;">How We Find Your Loads</div>
-              <div style="font-size:12px;color:var(--text);line-height:1.7;">You supply the vehicles and drivers. We supply contracts from all 4 segments above, match trips to your drivers by location and service type, and handle all billing and payouts.</div>
+            <div class="lf-card-title">Gig Fleet Management</div>
+            <p class="lf-card-p">Own 2–20 cars and want to maximize them? We manage dispatch across all 4 segments above — MVR checks, driver ratings, automated payouts, and full Eagle Eye visibility.</p>
+            <div class="lf-card-box" style="background:rgba(59,130,246,.07);border:1px solid rgba(59,130,246,.15);">
+              <div class="lf-card-box-hd" style="color:#3b82f6;">How We Find Your Loads</div>
+              <div class="lf-card-box-p">You supply the vehicles and drivers. We supply contracts from all 4 segments above, match trips to your drivers by location and service type, and handle all billing and payouts.</div>
             </div>
             <div style="font-family:var(--ff-m);font-size:11px;color:#3b82f6;background:rgba(59,130,246,.1);padding:4px 12px;border-radius:20px;display:inline-block;">15% per completed trip · No monthly fee · Scale fast</div>
-            <button onclick="lfStartSignup('gig_fleet','Gig Fleet Management','#3b82f6')" style="display:block;width:100%;margin-top:18px;padding:13px;background:linear-gradient(135deg,#3b82f6,#1d4ed8);color:#fff;font-size:14px;font-weight:700;border:none;border-radius:10px;cursor:pointer;transition:opacity .2s;" onmouseover="this.style.opacity='.88'" onmouseout="this.style.opacity='1'">Sign Up for Gig Fleet →</button>
+            <button onclick="lfStartSignup('gig_fleet','Gig Fleet Management','#3b82f6')" class="lf-card-btn" style="background:linear-gradient(135deg,#3b82f6,#1d4ed8);">Sign Up for Gig Fleet →</button>
           </div>
         </div>
 
@@ -2690,7 +2818,7 @@ async function bizSubmit(e) {
 <!-- LIGHT FLEET DRIVER INTAKE PAGE                          -->
 <!-- ════════════════════════════════════════════════════════ -->
 <div class="page" id="page-lf-intake">
-  <div style="max-width:720px;margin:0 auto;padding:60px 24px 80px;">
+  <div class="lf-intake-wrap">
     <button onclick="showPage('light-fleet')" style="background:none;border:none;color:var(--muted);font-size:13px;cursor:pointer;margin-bottom:28px;display:flex;align-items:center;gap:6px;padding:0;">← Back to Programs</button>
     <div style="text-align:center;margin-bottom:40px;">
       <span id="lf-intake-chip" class="chip">Driver Sign Up</span>
@@ -2715,33 +2843,33 @@ async function bizSubmit(e) {
       <p style="font-size:12px;color:var(--muted);">Questions? Call or text 661-466-9932</p>
     </div>
     <form id="lf-intake-form" onsubmit="lfSubmitIntake(event)" style="display:flex;flex-direction:column;gap:20px;">
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+      <div class="lf-form-row">
         <div>
-          <label style="font-size:13px;font-weight:600;color:var(--navy);display:block;margin-bottom:6px;">Full Name *</label>
-          <input name="name" required type="text" placeholder="John Smith" style="width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;font-family:var(--ff-b);outline:none;transition:border .2s;" onfocus="this.style.borderColor='var(--navy)'" onblur="this.style.borderColor='var(--border)'"/>
+          <label class="lf-form-label">Full Name *</label>
+          <input name="name" required type="text" placeholder="John Smith" class="lf-form-input"/>
         </div>
         <div>
-          <label style="font-size:13px;font-weight:600;color:var(--navy);display:block;margin-bottom:6px;">Phone Number *</label>
-          <input name="phone" required type="tel" placeholder="(555) 000-0000" style="width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;font-family:var(--ff-b);outline:none;transition:border .2s;" onfocus="this.style.borderColor='var(--navy)'" onblur="this.style.borderColor='var(--border)'"/>
+          <label class="lf-form-label">Phone Number *</label>
+          <input name="phone" required type="tel" placeholder="(555) 000-0000" class="lf-form-input"/>
         </div>
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+      <div class="lf-form-row">
         <div>
-          <label style="font-size:13px;font-weight:600;color:var(--navy);display:block;margin-bottom:6px;">Email Address *</label>
-          <input name="email" required type="email" placeholder="john@email.com" style="width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;font-family:var(--ff-b);outline:none;transition:border .2s;" onfocus="this.style.borderColor='var(--navy)'" onblur="this.style.borderColor='var(--border)'"/>
+          <label class="lf-form-label">Email Address *</label>
+          <input name="email" required type="email" placeholder="john@email.com" class="lf-form-input"/>
         </div>
         <div>
-          <label style="font-size:13px;font-weight:600;color:var(--navy);display:block;margin-bottom:6px;">City &amp; State *</label>
-          <input name="location" required type="text" placeholder="Chicago, IL" style="width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;font-family:var(--ff-b);outline:none;transition:border .2s;" onfocus="this.style.borderColor='var(--navy)'" onblur="this.style.borderColor='var(--border)'"/>
+          <label class="lf-form-label">City &amp; State *</label>
+          <input name="location" required type="text" placeholder="Chicago, IL" class="lf-form-input"/>
         </div>
       </div>
       <div>
-        <label style="font-size:13px;font-weight:600;color:var(--navy);display:block;margin-bottom:8px;">Vehicle Information *</label>
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px;">
-          <input name="vehicle_year" required type="number" placeholder="Year" min="2010" max="2026" style="padding:11px 14px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;font-family:var(--ff-b);outline:none;transition:border .2s;" onfocus="this.style.borderColor='var(--navy)'" onblur="this.style.borderColor='var(--border)'"/>
-          <input name="vehicle_make" required type="text" placeholder="Make" style="padding:11px 14px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;font-family:var(--ff-b);outline:none;transition:border .2s;" onfocus="this.style.borderColor='var(--navy)'" onblur="this.style.borderColor='var(--border)'"/>
-          <input name="vehicle_model" required type="text" placeholder="Model" style="padding:11px 14px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;font-family:var(--ff-b);outline:none;transition:border .2s;" onfocus="this.style.borderColor='var(--navy)'" onblur="this.style.borderColor='var(--border)'"/>
-          <select name="vehicle_type" required style="padding:11px 14px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;font-family:var(--ff-b);outline:none;background:white;transition:border .2s;" onfocus="this.style.borderColor='var(--navy)'" onblur="this.style.borderColor='var(--border)'">
+        <label class="lf-form-label" style="margin-bottom:8px;">Vehicle Information *</label>
+        <div class="lf-form-row-4">
+          <input name="vehicle_year" required type="number" placeholder="Year" min="2010" max="2026" class="lf-form-input"/>
+          <input name="vehicle_make" required type="text" placeholder="Make" class="lf-form-input"/>
+          <input name="vehicle_model" required type="text" placeholder="Model" class="lf-form-input"/>
+          <select name="vehicle_type" required class="lf-form-select">
             <option value="">Type</option>
             <option value="sedan">Sedan</option>
             <option value="suv">SUV</option>
@@ -2751,22 +2879,22 @@ async function bizSubmit(e) {
         </div>
       </div>
       <div>
-        <label style="font-size:13px;font-weight:600;color:var(--navy);display:block;margin-bottom:10px;">Services I'm Interested In * <span style="font-weight:400;color:var(--muted);">(select all that apply)</span></label>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-          <label style="display:flex;align-items:center;gap:10px;padding:12px 14px;border:1.5px solid var(--border);border-radius:8px;cursor:pointer;font-size:13px;transition:border .2s;" onmouseover="this.style.borderColor='var(--navy)'" onmouseout="this.style.borderColor='var(--border)'"><input type="checkbox" name="services" value="nemt" style="width:16px;height:16px;accent-color:var(--navy);"/> 🏥 NEMT Medical Transport</label>
-          <label style="display:flex;align-items:center;gap:10px;padding:12px 14px;border:1.5px solid var(--border);border-radius:8px;cursor:pointer;font-size:13px;transition:border .2s;" onmouseover="this.style.borderColor='var(--navy)'" onmouseout="this.style.borderColor='var(--border)'"><input type="checkbox" name="services" value="medical_courier" style="width:16px;height:16px;accent-color:var(--navy);"/> 🧪 Medical Courier</label>
-          <label style="display:flex;align-items:center;gap:10px;padding:12px 14px;border:1.5px solid var(--border);border-radius:8px;cursor:pointer;font-size:13px;transition:border .2s;" onmouseover="this.style.borderColor='var(--navy)'" onmouseout="this.style.borderColor='var(--border)'"><input type="checkbox" name="services" value="executive" style="width:16px;height:16px;accent-color:var(--navy);"/> 🚗 Executive &amp; Airport</label>
-          <label style="display:flex;align-items:center;gap:10px;padding:12px 14px;border:1.5px solid var(--border);border-radius:8px;cursor:pointer;font-size:13px;transition:border .2s;" onmouseover="this.style.borderColor='var(--navy)'" onmouseout="this.style.borderColor='var(--border)'"><input type="checkbox" name="services" value="courier" style="width:16px;height:16px;accent-color:var(--navy);"/> 📦 Same-Day Courier</label>
-          <label style="display:flex;align-items:center;gap:10px;padding:12px 14px;border:1.5px solid var(--border);border-radius:8px;cursor:pointer;font-size:13px;transition:border .2s;grid-column:1/-1;" onmouseover="this.style.borderColor='var(--navy)'" onmouseout="this.style.borderColor='var(--border)'"><input type="checkbox" name="services" value="gig_fleet" style="width:16px;height:16px;accent-color:var(--navy);"/> 👥 Gig Fleet (I own multiple vehicles and want full dispatch management)</label>
+        <label class="lf-form-label" style="margin-bottom:10px;">Services I'm Interested In * <span style="font-weight:400;color:var(--muted);">(select all that apply)</span></label>
+        <div class="lf-form-checks">
+          <label class="lf-form-check-label"><input type="checkbox" name="services" value="nemt" style="width:16px;height:16px;accent-color:var(--navy);"/> 🏥 NEMT Medical Transport</label>
+          <label class="lf-form-check-label"><input type="checkbox" name="services" value="medical_courier" style="width:16px;height:16px;accent-color:var(--navy);"/> 🧪 Medical Courier</label>
+          <label class="lf-form-check-label"><input type="checkbox" name="services" value="executive" style="width:16px;height:16px;accent-color:var(--navy);"/> 🚗 Executive &amp; Airport</label>
+          <label class="lf-form-check-label"><input type="checkbox" name="services" value="courier" style="width:16px;height:16px;accent-color:var(--navy);"/> 📦 Same-Day Courier</label>
+          <label class="lf-form-check-label" style="grid-column:1/-1;"><input type="checkbox" name="services" value="gig_fleet" style="width:16px;height:16px;accent-color:var(--navy);"/> 👥 Gig Fleet (I own multiple vehicles and want full dispatch management)</label>
         </div>
       </div>
       <div>
-        <label style="font-size:13px;font-weight:600;color:var(--navy);display:block;margin-bottom:8px;">Driver's License *</label>
-        <div style="display:grid;grid-template-columns:1fr 100px 140px;gap:12px;">
-          <input name="license_number" required type="text" placeholder="License Number" style="padding:11px 14px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;font-family:var(--ff-b);outline:none;transition:border .2s;" onfocus="this.style.borderColor='var(--navy)'" onblur="this.style.borderColor='var(--border)'"/>
-          <input name="license_state" required type="text" placeholder="State" maxlength="2" style="padding:11px 14px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;font-family:var(--ff-b);outline:none;transition:border .2s;text-transform:uppercase;" onfocus="this.style.borderColor='var(--navy)'" onblur="this.style.borderColor='var(--border)'"/>
+        <label class="lf-form-label" style="margin-bottom:8px;">Driver's License *</label>
+        <div class="lf-form-row-lic">
+          <input name="license_number" required type="text" placeholder="License Number" class="lf-form-input"/>
+          <input name="license_state" required type="text" placeholder="State" maxlength="2" class="lf-form-input" style="text-transform:uppercase;"/>
           <div>
-            <input name="dob" required type="date" style="width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;font-family:var(--ff-b);outline:none;transition:border .2s;" onfocus="this.style.borderColor='var(--navy)'" onblur="this.style.borderColor='var(--border)'"/>
+            <input name="dob" required type="date" class="lf-form-input"/>
             <span style="font-size:11px;color:var(--muted);margin-top:3px;display:block;">Date of Birth</span>
           </div>
         </div>
@@ -2833,7 +2961,7 @@ async function bizSubmit(e) {
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
         <div>
-          <label style="font-size:13px;font-weight:600;color:var(--navy);display:block;margin-bottom:8px;">Clean driving record? *</label>
+          <label class="lf-form-label" style="margin-bottom:8px;">Clean driving record? *</label>
           <div style="display:flex;gap:12px;">
             <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;"><input type="radio" name="clean_record" value="yes" required style="accent-color:var(--navy);"/> Yes</label>
             <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;"><input type="radio" name="clean_record" value="no" style="accent-color:var(--navy);"/> No</label>
@@ -2841,7 +2969,7 @@ async function bizSubmit(e) {
           <p style="font-size:11px;color:var(--muted);margin-top:5px;">We'll verify with an official MVR check.</p>
         </div>
         <div>
-          <label style="font-size:13px;font-weight:600;color:var(--navy);display:block;margin-bottom:8px;">Current vehicle insurance? *</label>
+          <label class="lf-form-label" style="margin-bottom:8px;">Current vehicle insurance? *</label>
           <div style="display:flex;gap:12px;">
             <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;"><input type="radio" name="has_insurance" value="yes" required style="accent-color:var(--navy);"/> Yes</label>
             <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;"><input type="radio" name="has_insurance" value="no" style="accent-color:var(--navy);"/> No</label>
@@ -2849,8 +2977,8 @@ async function bizSubmit(e) {
         </div>
       </div>
       <div>
-        <label style="font-size:13px;font-weight:600;color:var(--navy);display:block;margin-bottom:6px;">How did you hear about us?</label>
-        <select name="referral_source" style="width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;font-family:var(--ff-b);outline:none;background:white;">
+        <label class="lf-form-label">How did you hear about us?</label>
+        <select name="referral_source" class="lf-form-select">
           <option value="">Select...</option>
           <option value="google">Google Search</option>
           <option value="referral">Referral / Word of Mouth</option>
@@ -2860,8 +2988,8 @@ async function bizSubmit(e) {
         </select>
       </div>
       <div>
-        <label style="font-size:13px;font-weight:600;color:var(--navy);display:block;margin-bottom:6px;">Additional Notes <span style="font-weight:400;color:var(--muted);">(optional)</span></label>
-        <textarea name="notes" rows="3" placeholder="Any questions, special vehicle equipment (wheelchair ramp, etc.), or anything else we should know..." style="width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;font-family:var(--ff-b);outline:none;resize:vertical;transition:border .2s;" onfocus="this.style.borderColor='var(--navy)'" onblur="this.style.borderColor='var(--border)'"></textarea>
+        <label class="lf-form-label">Additional Notes <span style="font-weight:400;color:var(--muted);">(optional)</span></label>
+        <textarea name="notes" rows="3" placeholder="Any questions, special vehicle equipment (wheelchair ramp, etc.), or anything else we should know..." class="lf-form-input" style="resize:vertical;"></textarea>
       </div>
       <div id="lf-intake-error" style="display:none;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);border-radius:8px;padding:12px 16px;font-size:13px;color:#dc2626;"></div>
       <button type="submit" id="lf-intake-btn" class="btn-gold" style="padding:16px;font-size:15px;font-weight:700;border:none;border-radius:10px;cursor:pointer;width:100%;">Create My Account →</button>
@@ -2942,21 +3070,27 @@ async function lfSubmitIntake(e){
       method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)
     });
     if(r.ok){
+      const res = await r.json();
       form.style.display='none';
-      // Show platform confirmation in success box if driver opted into any
-      if (platforms.length > 0) {
-        const names = {'curri':'Curri','roadie':'Roadie','amazon_flex':'Amazon Flex','spark':'Spark Driver','doordash':'DoorDash Drive','goshare':'GoShare'};
-        const platList = platforms.map(p=>names[p]||p).join(', ');
-        const line = document.getElementById('lf-success-plat-line');
-        const msg = document.getElementById('lf-success-plat-msg');
-        if (line && msg) {
-          line.style.display = '';
-          msg.style.display = '';
-          msg.textContent = '✔ Platform sign-ups sent: '+platList;
+      // If Stripe Identity verification URL returned, redirect driver to complete it
+      if (res.verification_url) {
+        window.location.href = res.verification_url;
+      } else {
+        // Show platform confirmation in success box if driver opted into any
+        if (platforms.length > 0) {
+          const names = {'curri':'Curri','roadie':'Roadie','amazon_flex':'Amazon Flex','spark':'Spark Driver','doordash':'DoorDash Drive','goshare':'GoShare'};
+          const platList = platforms.map(p=>names[p]||p).join(', ');
+          const line = document.getElementById('lf-success-plat-line');
+          const msg = document.getElementById('lf-success-plat-msg');
+          if (line && msg) {
+            line.style.display = '';
+            msg.style.display = '';
+            msg.textContent = '✔ Platform sign-ups sent: '+platList;
+          }
         }
+        document.getElementById('lf-intake-success').style.display='block';
+        window.scrollTo({top:0,behavior:'smooth'});
       }
-      document.getElementById('lf-intake-success').style.display='block';
-      window.scrollTo({top:0,behavior:'smooth'});
     } else {
       const msg = await r.text();
       errEl.textContent = 'Could not complete signup: '+msg; errEl.style.display='block';

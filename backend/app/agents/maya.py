@@ -1,10 +1,9 @@
 """Maya — Light Fleet Driver Intake & Onboarding.
 
 Actions:
-  process_intake      evaluate a submitted intake form → start Checkr screening or deny
-  approve_driver      called by Checkr webhook after clear MVR → activate + welcome SMS
-  deny_driver         called by Checkr webhook after flagged MVR → send denial SMS
-  send_invitation     send Checkr-hosted consent link (no PII collected on our side)
+  process_intake      evaluate intake form → start Stripe Identity verification or deny
+  approve_driver      called by Stripe Identity webhook after verified → activate + SMS
+  deny_driver         called after failed verification → send denial SMS
   welcome             manually send welcome SMS to an approved driver
   deny                manually send denial SMS with reason
   status              intake queue stats
@@ -24,8 +23,9 @@ _NAME = "maya"
 
 _PENDING_SMS = (
     "Thanks for signing up with 3 Lakes Light Fleet! "
-    "We're running your driving record check now — this typically takes a few minutes to a few hours. "
-    "You'll get a text as soon as it's done. Questions? Call 661-466-9932."
+    "One last step: verify your driver's license to complete your account. "
+    "Check your email for a secure verification link — takes about 60 seconds. "
+    "Questions? Call 661-466-9932."
 )
 
 _WELCOME_SMS = (
@@ -179,46 +179,46 @@ def process_intake(payload: dict[str, Any]) -> dict[str, Any]:
         except Exception as e:  # noqa: BLE001
             log_agent(_NAME, "db_error", error=str(e))
 
-    # ── Real MVR check via Checkr ─────────────────────────────────────────────
-    if s.checkr_api_key:
-        from . import checkr_client
+    # ── License verification via Stripe Identity ──────────────────────────────
+    if s.stripe_secret_key:
+        from . import stripe_identity_client
 
-        invitation = checkr_client.create_invitation(
+        site = s.site_url.rstrip("/")
+        session = stripe_identity_client.create_verification_session(
+            driver_id=str(driver_id) if driver_id else "",
             email=email,
-            package=checkr_package,
             name=name,
+            return_url=f"https://3lakeslogistics.com/driver-verified",
         )
 
-        checkr_invitation_id = None
-        if invitation.get("created"):
-            checkr_invitation_id = (invitation.get("invitation") or {}).get("id")
-            # Store Checkr invitation ID on driver row so webhook can look it up
-            if sb and driver_id:
-                try:
-                    sb.table("light_vehicle_drivers").update({
-                        "checkr_invitation_id": checkr_invitation_id,
-                        "checkr_package": checkr_package,
-                    }).eq("id", str(driver_id)).execute()
-                except Exception:  # noqa: BLE001
-                    pass
+        verification_url = session.get("url")
+        session_id = session.get("session_id")
+
+        if session.get("created") and sb and driver_id:
+            try:
+                sb.table("light_vehicle_drivers").update({
+                    "stripe_verification_session_id": session_id,
+                }).eq("id", str(driver_id)).execute()
+            except Exception:  # noqa: BLE001
+                pass
 
         if phone:
             _send_sms(phone, _PENDING_SMS)
 
         mem.remember(
             _NAME, "last_intake",
-            {"name": name, "driver_id": str(driver_id), "checkr": "invitation_sent"},
+            {"name": name, "driver_id": str(driver_id), "stripe_session": session_id},
             confidence=0.85,
-            summary=f"Intake received: {name} — Checkr invitation sent, awaiting MVR",
+            summary=f"Intake received: {name} — Stripe Identity session created",
         )
-        log_agent(_NAME, "screening_started", payload={"name": name, "package": checkr_package})
+        log_agent(_NAME, "verification_started", payload={"name": name, "email": email})
 
         return {
-            "status": "pending_screening",
+            "status": "pending_verification",
             "driver_id": str(driver_id) if driver_id else None,
-            "checkr_invitation_id": checkr_invitation_id,
-            "checkr_package": checkr_package,
-            "message": "Driving record check initiated. Driver will receive a text when complete.",
+            "verification_url": verification_url,
+            "stripe_session_id": session_id,
+            "message": "License verification link sent. Driver will be approved automatically when verified.",
         }
 
     # ── Fallback: honor-system (no Checkr key) ────────────────────────────────
@@ -258,10 +258,14 @@ def process_intake(payload: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def approve_driver(driver_id: str, report_id: str | None = None) -> dict[str, Any]:
+def approve_driver(
+    driver_id: str,
+    session_id: str | None = None,
+    verified_outputs: dict | None = None,
+) -> dict[str, Any]:
     """
-    Called by the Checkr webhook after a clear MVR report.
-    Activates the driver, sends the welcome SMS, and registers on opted-in platforms.
+    Called after identity/MVR verification clears.
+    Activates the driver, stores verified license data, sends welcome SMS, and registers on opted-in platforms.
     """
     sb = _db()
     if not sb:
@@ -286,8 +290,15 @@ def approve_driver(driver_id: str, report_id: str | None = None) -> dict[str, An
         "onboarded_at": _now(),
         "activated_at": _now(),
     }
-    if report_id:
-        updates["checkr_report_id"] = report_id
+
+    # Store verified license data extracted by Stripe
+    if verified_outputs:
+        if verified_outputs.get("first_name") and verified_outputs.get("last_name"):
+            updates["name"] = f"{verified_outputs['first_name']} {verified_outputs['last_name']}".strip()
+        if verified_outputs.get("id_number"):
+            updates["license_number"] = verified_outputs["id_number"]
+        if verified_outputs.get("dob"):
+            updates["dob"] = str(verified_outputs["dob"])
 
     try:
         sb.table("light_vehicle_drivers").update(updates).eq("id", driver_id).execute()
@@ -314,12 +325,12 @@ def approve_driver(driver_id: str, report_id: str | None = None) -> dict[str, An
 
     mem.remember(
         _NAME, "last_approval",
-        {"driver_id": driver_id, "name": driver.get("name"), "report_id": report_id,
+        {"driver_id": driver_id, "name": driver.get("name"), "session_id": session_id,
          "platforms": platform_result.get("registered", [])},
         confidence=0.95,
-        summary=f"Driver approved after clear MVR: {driver.get('name')}",
+        summary=f"Driver approved via Stripe Identity: {driver.get('name')}",
     )
-    log_agent(_NAME, "driver_approved", payload={"driver_id": driver_id, "report_id": report_id})
+    log_agent(_NAME, "driver_approved", payload={"driver_id": driver_id, "session_id": session_id})
 
     return {
         "approved": True,

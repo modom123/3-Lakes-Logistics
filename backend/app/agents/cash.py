@@ -114,24 +114,24 @@ def settle_trip(trip_id: str) -> dict[str, Any]:
         return {"settled": False, "error": f"db_update_failed: {e}"}
 
     try:
-        sb.table("atomic_ledger").insert({
-            "event_type": "lf_trip_settled",
-            "event_source": "cash_agent",
-            "logistics_payload": {
+        from ..atomic_ledger.service import write_event
+        from ..atomic_ledger.models import AtomicEvent
+        write_event(AtomicEvent(
+            event_type="lf_trip_settled",
+            event_source="cash_agent",
+            logistics_payload={
                 "trip_id": trip_id,
                 "trip_type": trip_type,
                 "driver_id": str(driver_id) if driver_id else None,
             },
-            "financial_payload": {
+            financial_payload={
                 "rate_total": rate_total,
                 "platform_fee": platform_fee,
                 "driver_payout": driver_payout,
                 "fee_rate": fee_rate,
                 "driver_plan": plan,
             },
-            "compliance_payload": {},
-            "created_at": settled_at,
-        }).execute()
+        ))
     except Exception:  # noqa: BLE001
         pass
 

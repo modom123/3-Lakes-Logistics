@@ -1,0 +1,1160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="theme-color" content="#0B1F3A"/>
+<title>3 Lakes Heavy Fleet</title>
+<link rel="manifest" href="driver-heavy-manifest.json"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+:root{
+  --navy:#0B1F3A;--navy2:#142E5B;--navy3:#1B3E75;
+  --gold:#C8902A;--gold2:#E4A830;--gold3:#F5C842;
+  --white:#fff;--off:#F5F7FB;--border:#D4DCE8;
+  --muted:#6B7A99;--text:#0F1D35;
+  --green:#059669;--red:#DC2626;--amber:#D97706;
+  --r:12px;--r-sm:8px;
+  --safe-top:env(safe-area-inset-top,0px);
+  --safe-bot:env(safe-area-inset-bottom,0px);
+}
+html,body{height:100%;overflow:hidden;background:var(--navy);font-family:'Segoe UI',system-ui,sans-serif;}
+
+/* ── SCREENS ── */
+.screen{position:fixed;inset:0;display:none;flex-direction:column;background:var(--off);}
+.screen.active{display:flex;}
+
+/* ── LOGIN ── */
+#scr-login{background:var(--navy);align-items:center;justify-content:center;padding:40px 24px;}
+.login-logo{width:72px;height:72px;border-radius:18px;background:var(--gold2);display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:900;color:var(--navy);margin-bottom:16px;letter-spacing:-1px;}
+.login-title{color:var(--white);font-size:22px;font-weight:700;text-align:center;margin-bottom:4px;}
+.login-sub{color:rgba(255,255,255,.5);font-size:13px;text-align:center;margin-bottom:36px;letter-spacing:.5px;}
+.login-card{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:16px;padding:28px 24px;width:100%;max-width:340px;}
+.login-label{color:rgba(255,255,255,.6);font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;}
+.login-input{width:100%;padding:14px 16px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:var(--r-sm);color:var(--white);font-size:16px;outline:none;margin-bottom:20px;}
+.login-input::placeholder{color:rgba(255,255,255,.3);}
+.login-input:focus{border-color:var(--gold2);}
+.pin-display{display:flex;gap:10px;justify-content:center;margin-bottom:20px;}
+.pin-dot{width:16px;height:16px;border-radius:50%;background:rgba(255,255,255,.15);border:2px solid rgba(255,255,255,.3);transition:all .15s;}
+.pin-dot.filled{background:var(--gold2);border-color:var(--gold2);}
+.pin-pad{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px;}
+.pin-btn{padding:18px 0;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:var(--r-sm);color:var(--white);font-size:20px;font-weight:600;cursor:pointer;transition:all .1s;user-select:none;}
+.pin-btn:active{background:var(--gold2);color:var(--navy);transform:scale(.96);}
+.pin-del{font-size:16px;}
+.login-btn{width:100%;padding:16px;background:var(--gold2);border:none;border-radius:var(--r-sm);color:var(--navy);font-size:16px;font-weight:700;cursor:pointer;transition:all .2s;}
+.login-btn:disabled{opacity:.4;}
+.login-btn:not(:disabled):active{transform:scale(.98);}
+.login-err{color:#F87171;font-size:13px;text-align:center;margin-top:12px;min-height:18px;}
+
+/* ── TOP BAR ── */
+.topbar{background:var(--navy);padding:calc(12px + var(--safe-top)) 20px 12px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+.tb-left{display:flex;flex-direction:column;}
+.tb-name{color:var(--white);font-size:15px;font-weight:700;}
+.tb-sub{color:var(--gold2);font-size:11px;font-weight:600;letter-spacing:.5px;}
+.tb-badge{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);border-radius:20px;padding:5px 12px;display:flex;align-items:center;gap:6px;cursor:pointer;}
+.tb-dot{width:8px;height:8px;border-radius:50%;background:var(--green);}
+.tb-dot.off{background:var(--muted);}
+.tb-status{color:var(--white);font-size:12px;font-weight:600;}
+
+/* ── BOTTOM NAV ── */
+.bottomnav{background:var(--navy);border-top:1px solid rgba(255,255,255,.1);display:flex;padding:0 0 calc(4px + var(--safe-bot));flex-shrink:0;}
+.bn-item{flex:1;display:flex;flex-direction:column;align-items:center;padding:10px 4px 6px;cursor:pointer;position:relative;border:none;background:none;}
+.bn-icon{font-size:20px;margin-bottom:3px;line-height:1;}
+.bn-label{font-size:9px;font-weight:600;color:var(--muted);letter-spacing:.3px;text-transform:uppercase;}
+.bn-item.active .bn-label{color:var(--gold2);}
+.bn-badge{position:absolute;top:6px;right:calc(50% - 18px);background:var(--red);color:#fff;font-size:9px;font-weight:700;border-radius:10px;padding:1px 5px;min-width:16px;text-align:center;}
+
+/* ── SCROLL BODY ── */
+.page-body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:16px;}
+
+/* ── CARDS ── */
+.card{background:var(--white);border-radius:var(--r);padding:18px;margin-bottom:14px;box-shadow:0 1px 8px rgba(11,37,69,.08);}
+.card-title{font-size:11px;font-weight:700;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:12px;}
+
+/* ── STATS ROW ── */
+.stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px;}
+.stat-box{background:var(--white);border-radius:var(--r-sm);padding:14px 10px;text-align:center;box-shadow:0 1px 6px rgba(11,37,69,.06);}
+.stat-n{font-size:22px;font-weight:800;color:var(--navy);}
+.stat-l{font-size:10px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-top:2px;}
+
+/* ── LOAD CARD ── */
+.load-card{background:linear-gradient(135deg,var(--navy),var(--navy2));border-radius:var(--r);padding:20px;margin-bottom:14px;color:var(--white);}
+.load-hd{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;}
+.load-num{font-size:13px;font-weight:700;color:var(--gold2);}
+.load-status-pill{background:rgba(255,255,255,.15);border-radius:20px;padding:4px 10px;font-size:11px;font-weight:700;color:var(--white);}
+.load-route{display:flex;align-items:center;gap:8px;margin-bottom:14px;}
+.load-city{font-size:17px;font-weight:700;}
+.load-arrow{color:var(--gold2);font-size:18px;flex-shrink:0;}
+.load-details{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px;}
+.load-det{background:rgba(255,255,255,.08);border-radius:var(--r-sm);padding:10px;}
+.load-det-v{font-size:14px;font-weight:700;color:var(--gold3);}
+.load-det-l{font-size:10px;color:rgba(255,255,255,.5);margin-top:2px;}
+.load-action-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.btn{padding:13px;border-radius:var(--r-sm);font-size:14px;font-weight:700;cursor:pointer;border:none;transition:all .15s;text-align:center;}
+.btn:active{transform:scale(.97);}
+.btn-gold{background:var(--gold2);color:var(--navy);}
+.btn-outline{background:transparent;border:1px solid rgba(255,255,255,.3);color:var(--white);}
+.btn-navy{background:var(--navy);color:var(--gold2);}
+.btn-green{background:var(--green);color:#fff;}
+.btn-red{background:var(--red);color:#fff;}
+.btn-full{width:100%;display:block;margin-bottom:10px;}
+.btn-muted{background:var(--border);color:var(--muted);}
+
+/* ── QUICK ACTIONS ── */
+.qa-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:14px;}
+.qa-btn{background:var(--white);border-radius:var(--r);padding:18px;display:flex;align-items:center;gap:12px;cursor:pointer;border:none;box-shadow:0 1px 6px rgba(11,37,69,.06);transition:all .15s;}
+.qa-btn:active{transform:scale(.97);}
+.qa-icon{font-size:26px;width:44px;height:44px;border-radius:10px;display:flex;align-items:center;justify-content:center;background:var(--off);}
+.qa-txt{text-align:left;}
+.qa-label{font-size:13px;font-weight:700;color:var(--text);}
+.qa-sub{font-size:11px;color:var(--muted);}
+
+/* ── LOAD BOARD ── */
+.lb-item{background:var(--white);border-radius:var(--r);padding:16px;margin-bottom:10px;box-shadow:0 1px 6px rgba(11,37,69,.06);}
+.lb-hd{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;}
+.lb-route{font-size:15px;font-weight:700;color:var(--text);}
+.lb-rate{font-size:18px;font-weight:800;color:var(--green);}
+.lb-meta{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;}
+.lb-tag{background:var(--off);border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-size:11px;font-weight:600;color:var(--muted);}
+.lb-tag.eq{color:var(--navy);background:rgba(11,37,69,.06);}
+.lb-empty{text-align:center;padding:40px 20px;color:var(--muted);}
+.lb-empty-icon{font-size:48px;margin-bottom:12px;}
+.filter-row{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;margin-bottom:14px;scrollbar-width:none;}
+.filter-row::-webkit-scrollbar{display:none;}
+.filter-chip{padding:7px 14px;border-radius:20px;font-size:12px;font-weight:600;white-space:nowrap;cursor:pointer;border:1px solid var(--border);background:var(--white);color:var(--muted);}
+.filter-chip.active{background:var(--navy);color:var(--gold2);border-color:var(--navy);}
+
+/* ── STATUS STEPPER ── */
+.stepper{margin-bottom:20px;}
+.step{display:flex;gap:14px;margin-bottom:8px;}
+.step-left{display:flex;flex-direction:column;align-items:center;}
+.step-circle{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;flex-shrink:0;}
+.step-circle.done{background:var(--green);color:#fff;}
+.step-circle.active{background:var(--gold2);color:var(--navy);}
+.step-circle.pending{background:var(--border);color:var(--muted);}
+.step-line{width:2px;flex:1;background:var(--border);margin:4px 0;min-height:20px;}
+.step-line.done{background:var(--green);}
+.step-right{padding-top:6px;}
+.step-title{font-size:14px;font-weight:700;color:var(--text);}
+.step-title.done{color:var(--green);}
+.step-title.active{color:var(--gold);}
+.step-title.pending{color:var(--muted);}
+.step-sub{font-size:11px;color:var(--muted);margin-top:2px;}
+
+/* ── LOCATION ── */
+.loc-card{background:linear-gradient(135deg,var(--navy),#1e3a5f);border-radius:var(--r);padding:24px;margin-bottom:14px;color:var(--white);text-align:center;}
+.loc-coords{font-size:13px;font-family:monospace;color:var(--gold2);margin:10px 0;}
+.loc-time{font-size:11px;color:rgba(255,255,255,.5);}
+.loc-big-btn{padding:18px;background:var(--gold2);border:none;border-radius:var(--r-sm);color:var(--navy);font-size:16px;font-weight:700;cursor:pointer;width:100%;margin-top:12px;}
+.loc-toggle{display:flex;align-items:center;justify-content:space-between;padding:16px;background:var(--white);border-radius:var(--r);margin-bottom:14px;box-shadow:0 1px 6px rgba(11,37,69,.06);}
+.toggle-wrap{position:relative;width:52px;height:28px;}
+.toggle-wrap input{opacity:0;width:0;height:0;}
+.toggle-slider{position:absolute;inset:0;background:var(--border);border-radius:14px;cursor:pointer;transition:.3s;}
+.toggle-slider::before{content:'';position:absolute;width:22px;height:22px;border-radius:50%;background:#fff;top:3px;left:3px;transition:.3s;box-shadow:0 1px 4px rgba(0,0,0,.2);}
+input:checked+.toggle-slider{background:var(--green);}
+input:checked+.toggle-slider::before{transform:translateX(24px);}
+
+/* ── EARNINGS ── */
+.earn-hero{background:linear-gradient(135deg,var(--green),#065F46);border-radius:var(--r);padding:24px;margin-bottom:14px;text-align:center;color:var(--white);}
+.earn-amt{font-size:42px;font-weight:800;color:var(--white);}
+.earn-label{font-size:12px;color:rgba(255,255,255,.6);text-transform:uppercase;letter-spacing:1px;}
+.earn-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;}
+.earn-box{background:var(--white);border-radius:var(--r-sm);padding:16px;text-align:center;box-shadow:0 1px 6px rgba(11,37,69,.06);}
+.earn-box-n{font-size:20px;font-weight:800;color:var(--navy);}
+.earn-box-l{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;}
+.history-item{display:flex;justify-content:space-between;align-items:center;padding:14px;background:var(--white);border-radius:var(--r-sm);margin-bottom:8px;box-shadow:0 1px 4px rgba(11,37,69,.05);}
+.history-load{font-size:13px;font-weight:700;color:var(--text);}
+.history-date{font-size:11px;color:var(--muted);}
+.history-amt{font-size:15px;font-weight:800;color:var(--green);}
+
+/* ── PROFILE ── */
+.profile-hero{background:var(--navy);padding:30px 20px;text-align:center;}
+.profile-avatar{width:80px;height:80px;border-radius:50%;background:var(--gold2);display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:800;color:var(--navy);margin:0 auto 12px;}
+.profile-name{color:var(--white);font-size:20px;font-weight:700;}
+.profile-phone{color:rgba(255,255,255,.5);font-size:13px;margin-top:4px;}
+.profile-row{display:flex;justify-content:space-between;align-items:center;padding:16px 0;border-bottom:1px solid var(--border);}
+.profile-row:last-child{border-bottom:none;}
+.profile-key{font-size:13px;color:var(--muted);font-weight:500;}
+.profile-val{font-size:13px;font-weight:700;color:var(--text);}
+.profile-val.green{color:var(--green);}
+.profile-val.amber{color:var(--amber);}
+.doc-row{display:flex;align-items:center;gap:10px;padding:12px;background:var(--off);border-radius:var(--r-sm);margin-bottom:8px;}
+.doc-icon{font-size:18px;}
+.doc-label{flex:1;font-size:13px;font-weight:600;color:var(--text);}
+.doc-status{font-size:11px;font-weight:700;padding:3px 8px;border-radius:10px;}
+.doc-status.ok{background:#D1FAE5;color:#065F46;}
+.doc-status.exp{background:#FEE2E2;color:#991B1B;}
+.doc-status.pend{background:#FEF3C7;color:#92400E;}
+
+/* ── DVIR ── */
+.dvir-section{margin-bottom:16px;}
+.dvir-section-title{font-size:12px;font-weight:700;color:var(--muted);letter-spacing:.8px;text-transform:uppercase;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border);}
+.dvir-check{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--off);}
+.dvir-check:last-child{border-bottom:none;}
+.dvir-check input[type=checkbox]{width:22px;height:22px;cursor:pointer;accent-color:var(--green);}
+.dvir-check label{font-size:14px;color:var(--text);cursor:pointer;flex:1;}
+.dvir-defect{border-left:3px solid var(--red);padding-left:12px;}
+.dvir-defect label{color:var(--red);}
+.dvir-notes{width:100%;padding:12px;border:1px solid var(--border);border-radius:var(--r-sm);font-size:14px;font-family:inherit;resize:vertical;min-height:80px;outline:none;margin-top:8px;}
+.dvir-notes:focus{border-color:var(--navy);}
+
+/* ── TOAST ── */
+.toast{position:fixed;bottom:calc(80px + var(--safe-bot));left:50%;transform:translateX(-50%) translateY(20px);background:var(--navy);color:var(--white);padding:12px 20px;border-radius:20px;font-size:13px;font-weight:600;pointer-events:none;opacity:0;transition:all .3s;z-index:9999;white-space:nowrap;max-width:90vw;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+.toast.green{background:var(--green);}
+.toast.red{background:var(--red);}
+
+/* ── MODAL ── */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:500;display:none;align-items:flex-end;}
+.modal-bg.open{display:flex;}
+.modal-sheet{background:var(--white);border-radius:20px 20px 0 0;padding:24px 20px calc(24px + var(--safe-bot));width:100%;max-height:85vh;overflow-y:auto;}
+.modal-handle{width:40px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 20px;}
+.modal-title{font-size:17px;font-weight:700;color:var(--text);margin-bottom:16px;}
+.modal-close{position:absolute;top:16px;right:20px;font-size:22px;cursor:pointer;color:var(--muted);}
+
+/* ── FORM ── */
+.form-label{font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.8px;text-transform:uppercase;margin-bottom:6px;display:block;}
+.form-input{width:100%;padding:13px 14px;border:1px solid var(--border);border-radius:var(--r-sm);font-size:15px;font-family:inherit;outline:none;margin-bottom:16px;background:var(--white);}
+.form-input:focus{border-color:var(--navy);}
+.form-select{width:100%;padding:13px 14px;border:1px solid var(--border);border-radius:var(--r-sm);font-size:15px;font-family:inherit;outline:none;margin-bottom:16px;background:var(--white);appearance:none;}
+.section-hd{font-size:13px;font-weight:700;color:var(--text);margin-bottom:10px;}
+
+/* ── SPINNER ── */
+.spinner{display:inline-block;width:20px;height:20px;border:2px solid rgba(255,255,255,.3);border-top-color:var(--white);border-radius:50%;animation:spin .7s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.loading-overlay{position:fixed;inset:0;background:rgba(11,31,58,.8);z-index:200;display:none;align-items:center;justify-content:center;flex-direction:column;gap:12px;}
+.loading-overlay.show{display:flex;}
+.loading-overlay .spinner{width:40px;height:40px;border-width:3px;}
+.loading-overlay p{color:var(--white);font-size:14px;font-weight:600;}
+
+/* ── EMPTY STATES ── */
+.empty{text-align:center;padding:40px 20px;color:var(--muted);}
+.empty-icon{font-size:52px;margin-bottom:12px;}
+.empty h3{font-size:16px;font-weight:700;color:var(--text);margin-bottom:6px;}
+.empty p{font-size:13px;line-height:1.5;}
+
+/* ── SECTION PAGE WITH NO ACTIVE LOAD ── */
+.alert-card{background:#FEF3C7;border:1px solid #FCD34D;border-radius:var(--r);padding:16px;margin-bottom:14px;display:flex;gap:12px;align-items:flex-start;}
+.alert-icon{font-size:20px;}
+.alert-text{font-size:13px;color:#92400E;font-weight:500;line-height:1.4;}
+</style>
+</head>
+<body>
+
+<!-- LOADING OVERLAY -->
+<div class="loading-overlay" id="loading">
+  <div class="spinner"></div>
+  <p id="loading-msg">Loading…</p>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- ═══════════════════════════ LOGIN ═══════════════════════════ -->
+<div class="screen active" id="scr-login">
+  <div class="login-logo">3L</div>
+  <div class="login-title">3 Lakes Logistics</div>
+  <div class="login-sub">HEAVY FLEET · CDL DRIVER PORTAL</div>
+  <div class="login-card">
+    <div class="login-label">Phone Number</div>
+    <input class="login-input" id="login-phone" type="tel" placeholder="(312) 555-0100" autocomplete="tel"/>
+    <div class="login-label">4-Digit PIN</div>
+    <div class="pin-display" id="pin-display">
+      <div class="pin-dot" id="pd0"></div>
+      <div class="pin-dot" id="pd1"></div>
+      <div class="pin-dot" id="pd2"></div>
+      <div class="pin-dot" id="pd3"></div>
+    </div>
+    <div class="pin-pad" id="pin-pad">
+      <button class="pin-btn" data-d="1">1</button>
+      <button class="pin-btn" data-d="2">2</button>
+      <button class="pin-btn" data-d="3">3</button>
+      <button class="pin-btn" data-d="4">4</button>
+      <button class="pin-btn" data-d="5">5</button>
+      <button class="pin-btn" data-d="6">6</button>
+      <button class="pin-btn" data-d="7">7</button>
+      <button class="pin-btn" data-d="8">8</button>
+      <button class="pin-btn" data-d="9">9</button>
+      <button class="pin-btn pin-del" data-d="clr">⌫</button>
+      <button class="pin-btn" data-d="0">0</button>
+      <button class="pin-btn pin-del" data-d="del">←</button>
+    </div>
+    <button class="login-btn" id="login-btn" disabled onclick="doLogin()">Sign In</button>
+    <div class="login-err" id="login-err"></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════ HOME ═══════════════════════════ -->
+<div class="screen" id="scr-home">
+  <div class="topbar">
+    <div class="tb-left">
+      <div class="tb-name" id="home-driver-name">Driver</div>
+      <div class="tb-sub">HEAVY FLEET</div>
+    </div>
+    <div class="tb-badge" onclick="toggleStatus()">
+      <div class="tb-dot" id="status-dot"></div>
+      <div class="tb-status" id="status-label">Active</div>
+    </div>
+  </div>
+  <div class="page-body" id="home-body">
+    <!-- stats -->
+    <div class="stats-row" id="home-stats">
+      <div class="stat-box"><div class="stat-n" id="stat-trips">0</div><div class="stat-l">Loads Today</div></div>
+      <div class="stat-box"><div class="stat-n" id="stat-miles">0</div><div class="stat-l">Miles</div></div>
+      <div class="stat-box"><div class="stat-n" id="stat-earn">$0</div><div class="stat-l">Earned</div></div>
+    </div>
+    <!-- active load -->
+    <div id="home-active-load"></div>
+    <!-- quick actions -->
+    <div class="qa-grid">
+      <button class="qa-btn" onclick="nav('loads')">
+        <div class="qa-icon">📋</div>
+        <div class="qa-txt"><div class="qa-label">Load Board</div><div class="qa-sub">View available</div></div>
+      </button>
+      <button class="qa-btn" onclick="nav('myload')">
+        <div class="qa-icon">🚛</div>
+        <div class="qa-txt"><div class="qa-label">My Load</div><div class="qa-sub">Active load</div></div>
+      </button>
+      <button class="qa-btn" onclick="nav('location')">
+        <div class="qa-icon">📍</div>
+        <div class="qa-txt"><div class="qa-label">Location</div><div class="qa-sub">Update ping</div></div>
+      </button>
+      <button class="qa-btn" onclick="nav('earnings')">
+        <div class="qa-icon">💰</div>
+        <div class="qa-txt"><div class="qa-label">Earnings</div><div class="qa-sub">Pay & history</div></div>
+      </button>
+    </div>
+    <!-- DVIR prompt -->
+    <div class="card" style="border-left:4px solid var(--amber);">
+      <div class="card-title">⚠️ Pre-Trip Inspection</div>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:12px;">Complete your DVIR before departing. Federal requirement.</p>
+      <button class="btn btn-navy btn-full" onclick="nav('dvir')">Start DVIR Inspection →</button>
+    </div>
+  </div>
+  <div class="bottomnav" id="home-nav"></div>
+</div>
+
+<!-- ═══════════════════════════ LOAD BOARD ═══════════════════════════ -->
+<div class="screen" id="scr-loads">
+  <div class="topbar">
+    <div class="tb-left"><div class="tb-name">Load Board</div><div class="tb-sub" id="lb-count">Available Loads</div></div>
+    <button class="tb-badge" onclick="loadLoads()"><span style="color:var(--gold2);font-size:13px;font-weight:700;">↻ Refresh</span></button>
+  </div>
+  <div style="padding:12px 16px 0;">
+    <div class="filter-row" id="lb-filters">
+      <div class="filter-chip active" data-eq="all" onclick="lbFilter(this)">All</div>
+      <div class="filter-chip" data-eq="Van" onclick="lbFilter(this)">Van</div>
+      <div class="filter-chip" data-eq="Flatbed" onclick="lbFilter(this)">Flatbed</div>
+      <div class="filter-chip" data-eq="Reefer" onclick="lbFilter(this)">Reefer</div>
+      <div class="filter-chip" data-eq="Step Deck" onclick="lbFilter(this)">Step Deck</div>
+      <div class="filter-chip" data-eq="Tanker" onclick="lbFilter(this)">Tanker</div>
+    </div>
+  </div>
+  <div class="page-body" id="lb-body"></div>
+  <div class="bottomnav" id="loads-nav"></div>
+</div>
+
+<!-- ═══════════════════════════ MY LOAD ═══════════════════════════ -->
+<div class="screen" id="scr-myload">
+  <div class="topbar">
+    <div class="tb-left"><div class="tb-name">My Load</div><div class="tb-sub" id="myload-sub">Active Load</div></div>
+    <button class="tb-badge" onclick="loadMyLoad()"><span style="color:var(--gold2);font-size:13px;font-weight:700;">↻</span></button>
+  </div>
+  <div class="page-body" id="myload-body"></div>
+  <div class="bottomnav" id="myload-nav"></div>
+</div>
+
+<!-- ═══════════════════════════ LOCATION ═══════════════════════════ -->
+<div class="screen" id="scr-location">
+  <div class="topbar">
+    <div class="tb-left"><div class="tb-name">Location</div><div class="tb-sub">GPS Tracking</div></div>
+  </div>
+  <div class="page-body">
+    <div class="loc-card">
+      <div style="font-size:13px;font-weight:600;margin-bottom:6px;">Current Position</div>
+      <div class="loc-coords" id="loc-coords">Acquiring GPS…</div>
+      <div class="loc-time" id="loc-time">Not yet sent</div>
+      <button class="loc-big-btn" onclick="pingLocation()">📍 Send My Location Now</button>
+    </div>
+    <div class="loc-toggle">
+      <div>
+        <div class="section-hd">Auto-Ping Every 5 Minutes</div>
+        <div style="font-size:12px;color:var(--muted);">Keeps dispatch updated while on duty</div>
+      </div>
+      <label class="toggle-wrap">
+        <input type="checkbox" id="auto-ping-toggle" onchange="toggleAutoPing(this.checked)"/>
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+    <div class="card">
+      <div class="card-title">Last Pings</div>
+      <div id="ping-history"><div class="empty"><div class="empty-icon">🗺️</div><p>No pings yet this session</p></div></div>
+    </div>
+  </div>
+  <div class="bottomnav" id="loc-nav"></div>
+</div>
+
+<!-- ═══════════════════════════ EARNINGS ═══════════════════════════ -->
+<div class="screen" id="scr-earnings">
+  <div class="topbar">
+    <div class="tb-left"><div class="tb-name">Earnings</div><div class="tb-sub">Pay & Payouts</div></div>
+  </div>
+  <div class="page-body">
+    <div class="earn-hero">
+      <div class="earn-label">Available Balance</div>
+      <div class="earn-amt" id="earn-balance">$0.00</div>
+      <button style="margin-top:14px;padding:12px 28px;background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.4);border-radius:20px;color:#fff;font-size:14px;font-weight:700;cursor:pointer;" onclick="requestPayout()">💸 Request Payout</button>
+    </div>
+    <div class="earn-row">
+      <div class="earn-box"><div class="earn-box-n" id="earn-pending">$0</div><div class="earn-box-l">Pending</div></div>
+      <div class="earn-box"><div class="earn-box-n" id="earn-total">$0</div><div class="earn-box-l">Total Earned</div></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Recent Loads</div>
+      <div id="earn-history"></div>
+    </div>
+  </div>
+  <div class="bottomnav" id="earn-nav"></div>
+</div>
+
+<!-- ═══════════════════════════ PROFILE ═══════════════════════════ -->
+<div class="screen" id="scr-profile">
+  <div class="profile-hero" id="profile-hero">
+    <div class="profile-avatar" id="profile-avatar">?</div>
+    <div class="profile-name" id="profile-name">Driver</div>
+    <div class="profile-phone" id="profile-phone"></div>
+  </div>
+  <div class="page-body">
+    <div class="card">
+      <div class="card-title">Driver Info</div>
+      <div class="profile-row"><span class="profile-key">CDL Number</span><span class="profile-val" id="prof-cdl">—</span></div>
+      <div class="profile-row"><span class="profile-key">Truck #</span><span class="profile-val" id="prof-truck">—</span></div>
+      <div class="profile-row"><span class="profile-key">Carrier</span><span class="profile-val" id="prof-carrier">—</span></div>
+      <div class="profile-row"><span class="profile-key">Status</span><span class="profile-val green" id="prof-status">Active</span></div>
+    </div>
+    <div class="card">
+      <div class="card-title">HOS Status</div>
+      <div class="profile-row"><span class="profile-key">Drive Time Remaining</span><span class="profile-val" id="hos-drive">11:00</span></div>
+      <div class="profile-row"><span class="profile-key">On-Duty Remaining</span><span class="profile-val" id="hos-duty">14:00</span></div>
+      <div class="profile-row"><span class="profile-key">Cycle Remaining</span><span class="profile-val" id="hos-cycle">70:00</span></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Documents</div>
+      <div id="doc-list">
+        <div class="doc-row"><div class="doc-icon">🪪</div><div class="doc-label">CDL License</div><div class="doc-status pend">Pending</div></div>
+        <div class="doc-row"><div class="doc-icon">🏥</div><div class="doc-label">Medical Card</div><div class="doc-status pend">Pending</div></div>
+        <div class="doc-row"><div class="doc-icon">📋</div><div class="doc-label">Drug Test</div><div class="doc-status pend">Pending</div></div>
+        <div class="doc-row"><div class="doc-icon">📄</div><div class="doc-label">Driver Agreement</div><div class="doc-status pend">Pending</div></div>
+      </div>
+    </div>
+    <button class="btn btn-red btn-full" onclick="doLogout()">Sign Out</button>
+  </div>
+  <div class="bottomnav" id="prof-nav"></div>
+</div>
+
+<!-- ═══════════════════════════ DVIR ═══════════════════════════ -->
+<div class="screen" id="scr-dvir">
+  <div class="topbar" style="background:var(--navy);">
+    <div class="tb-left"><div class="tb-name">DVIR</div><div class="tb-sub">Driver Vehicle Inspection</div></div>
+    <button class="tb-badge" onclick="nav('home')"><span style="color:rgba(255,255,255,.6);font-size:13px;">✕ Close</span></button>
+  </div>
+  <div class="page-body">
+    <div class="alert-card">
+      <div class="alert-icon">⚠️</div>
+      <div class="alert-text">Federal law (49 CFR 396.11) requires a Driver Vehicle Inspection Report before every trip. Check all items and note any defects.</div>
+    </div>
+    <div class="card">
+      <div class="dvir-section">
+        <div class="dvir-section-title">🚛 Engine & Powertrain</div>
+        <div id="dvir-engine"></div>
+      </div>
+      <div class="dvir-section">
+        <div class="dvir-section-title">🛑 Brakes & Steering</div>
+        <div id="dvir-brakes"></div>
+      </div>
+      <div class="dvir-section">
+        <div class="dvir-section-title">💡 Lights & Signals</div>
+        <div id="dvir-lights"></div>
+      </div>
+      <div class="dvir-section">
+        <div class="dvir-section-title">🔧 Tires & Wheels</div>
+        <div id="dvir-tires"></div>
+      </div>
+      <div class="dvir-section">
+        <div class="dvir-section-title">📦 Cargo & Trailer</div>
+        <div id="dvir-cargo"></div>
+      </div>
+      <div class="dvir-section">
+        <div class="dvir-section-title">🪟 Cab & Interior</div>
+        <div id="dvir-cab"></div>
+      </div>
+      <div class="dvir-section">
+        <div class="dvir-section-title">📝 Driver Notes</div>
+        <textarea class="dvir-notes" id="dvir-notes" placeholder="Describe any defects or observations…"></textarea>
+      </div>
+      <button class="btn btn-green btn-full" onclick="submitDvir()">✓ Submit DVIR &amp; Certify Safe to Drive</button>
+    </div>
+  </div>
+</div>
+
+<!-- REQUEST LOAD MODAL -->
+<div class="modal-bg" id="modal-request">
+  <div class="modal-sheet" style="position:relative;">
+    <div class="modal-handle"></div>
+    <span class="modal-close" onclick="closeModal('modal-request')">✕</span>
+    <div class="modal-title">Request This Load</div>
+    <div id="modal-load-detail" style="margin-bottom:20px;"></div>
+    <button class="btn btn-gold btn-full" id="modal-confirm-btn" onclick="confirmLoadRequest()">Confirm Request</button>
+    <button class="btn btn-muted btn-full" onclick="closeModal('modal-request')" style="margin-top:6px;">Cancel</button>
+  </div>
+</div>
+
+<!-- POD UPLOAD MODAL -->
+<div class="modal-bg" id="modal-pod">
+  <div class="modal-sheet" style="position:relative;">
+    <div class="modal-handle"></div>
+    <span class="modal-close" onclick="closeModal('modal-pod')">✕</span>
+    <div class="modal-title">Upload Proof of Delivery</div>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:16px;">Take a photo of the signed Bill of Lading or delivery confirmation.</p>
+    <label class="form-label">Select Photo / Document</label>
+    <input type="file" id="pod-file" accept="image/*,application/pdf" capture="environment" style="margin-bottom:16px;width:100%;"/>
+    <button class="btn btn-gold btn-full" onclick="uploadPOD()">📤 Upload POD</button>
+  </div>
+</div>
+
+<script>
+// ── CONFIG ──────────────────────────────────────────────────────────────────
+const API = 'https://three-lakes-logistics-api.onrender.com';
+
+// ── STATE ───────────────────────────────────────────────────────────────────
+let _token = localStorage.getItem('hf_token') || '';
+let _driver = JSON.parse(localStorage.getItem('hf_driver') || 'null');
+let _pin = '';
+let _onDuty = localStorage.getItem('hf_onduty') !== 'false';
+let _autoPing = false;
+let _autoPingTimer = null;
+let _lastLat = null, _lastLng = null;
+let _pingHistory = [];
+let _allLoads = [];
+let _lbFilter = 'all';
+let _myLoad = null;
+let _selectedLoad = null;
+let _currentScreen = 'home';
+
+// ── BOOT ─────────────────────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+  renderBottomNavs();
+  buildDvir();
+  if (_token && _driver) {
+    showScreen('home');
+    bootHome();
+  } else {
+    showScreen('login');
+  }
+});
+
+// ── NAV ──────────────────────────────────────────────────────────────────────
+const NAV_ITEMS = [
+  {id:'home', icon:'🏠', label:'Home'},
+  {id:'loads', icon:'📋', label:'Loads'},
+  {id:'myload', icon:'🚛', label:'My Load'},
+  {id:'location', icon:'📍', label:'Location'},
+  {id:'earnings', icon:'💰', label:'Pay'},
+];
+
+function renderBottomNavs() {
+  ['home','loads','myload','location','earnings','prof'].forEach(sid => {
+    const el = document.getElementById(sid+'-nav') || document.getElementById(sid.replace('prof','prof')+'-nav');
+    if (!el) return;
+    el.innerHTML = NAV_ITEMS.map(n => `
+      <button class="bn-item${_currentScreen===n.id?' active':''}" onclick="nav('${n.id}')">
+        <div class="bn-icon">${n.icon}</div>
+        <div class="bn-label">${n.label}</div>
+      </button>`).join('') + `<button class="bn-item${_currentScreen==='profile'?' active':''}" onclick="nav('profile')">
+        <div class="bn-icon">👤</div><div class="bn-label">Profile</div></button>`;
+  });
+}
+
+function nav(screen) {
+  _currentScreen = screen;
+  renderBottomNavs();
+  showScreen(screen);
+  if (screen === 'loads') loadLoads();
+  else if (screen === 'myload') loadMyLoad();
+  else if (screen === 'earnings') loadEarnings();
+  else if (screen === 'profile') loadProfile();
+  else if (screen === 'location') initLocation();
+  else if (screen === 'home') loadHomeActive();
+}
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  const el = document.getElementById('scr-'+id);
+  if (el) el.classList.add('active');
+}
+
+// ── API HELPER ───────────────────────────────────────────────────────────────
+async function api(method, path, body) {
+  const opts = {
+    method,
+    headers: {'Content-Type':'application/json', 'Authorization': 'Bearer '+_token},
+  };
+  if (body) opts.body = JSON.stringify(body);
+  const r = await fetch(API+path, opts);
+  if (!r.ok) {
+    const err = await r.json().catch(() => ({detail:'Request failed'}));
+    throw new Error(err.detail || r.statusText);
+  }
+  return r.json();
+}
+
+// ── TOAST ────────────────────────────────────────────────────────────────────
+function toast(msg, type='') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast show ' + type;
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.classList.remove('show'), 2800);
+}
+
+// ── LOADING ──────────────────────────────────────────────────────────────────
+function showLoading(msg='Loading…') {
+  document.getElementById('loading-msg').textContent = msg;
+  document.getElementById('loading').classList.add('show');
+}
+function hideLoading() { document.getElementById('loading').classList.remove('show'); }
+
+// ── MODAL ────────────────────────────────────────────────────────────────────
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+// ── LOGIN ─────────────────────────────────────────────────────────────────────
+document.querySelectorAll('.pin-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const d = btn.dataset.d;
+    if (d === 'del') { _pin = _pin.slice(0,-1); }
+    else if (d === 'clr') { _pin = ''; }
+    else if (_pin.length < 4) { _pin += d; }
+    updatePinUI();
+  });
+});
+
+document.getElementById('login-phone').addEventListener('input', updatePinUI);
+
+function updatePinUI() {
+  for (let i=0;i<4;i++) {
+    document.getElementById('pd'+i).classList.toggle('filled', i < _pin.length);
+  }
+  const phone = document.getElementById('login-phone').value.replace(/\D/g,'');
+  document.getElementById('login-btn').disabled = _pin.length < 4 || phone.length < 10;
+}
+
+async function doLogin() {
+  const phone = document.getElementById('login-phone').value.replace(/\D/g,'');
+  document.getElementById('login-err').textContent = '';
+  showLoading('Signing in…');
+  try {
+    const res = await fetch(API+'/api/driver-auth/login', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({phone, pin:_pin}),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(()=>({detail:'Login failed'}));
+      throw new Error(err.detail || 'Login failed');
+    }
+    const data = await res.json();
+    _token = data.token;
+    _driver = {id: data.driver_id, name: data.driver_name, carrier_id: data.carrier_id};
+    localStorage.setItem('hf_token', _token);
+    localStorage.setItem('hf_driver', JSON.stringify(_driver));
+    hideLoading();
+    showScreen('home');
+    bootHome();
+  } catch(e) {
+    hideLoading();
+    document.getElementById('login-err').textContent = e.message;
+    _pin = '';
+    updatePinUI();
+  }
+}
+
+async function doLogout() {
+  try { await api('POST', '/api/driver-auth/logout'); } catch(e) {}
+  _token = ''; _driver = null; _pin = '';
+  localStorage.removeItem('hf_token');
+  localStorage.removeItem('hf_driver');
+  showScreen('login');
+  updatePinUI();
+}
+
+// ── HOME ──────────────────────────────────────────────────────────────────────
+function bootHome() {
+  if (_driver) document.getElementById('home-driver-name').textContent = _driver.name || 'Driver';
+  updateStatusUI();
+  loadHomeActive();
+  loadHomeStats();
+}
+
+function updateStatusUI() {
+  const dot = document.getElementById('status-dot');
+  const lbl = document.getElementById('status-label');
+  dot.className = 'tb-dot' + (_onDuty ? '' : ' off');
+  lbl.textContent = _onDuty ? 'On Duty' : 'Off Duty';
+}
+
+async function toggleStatus() {
+  _onDuty = !_onDuty;
+  localStorage.setItem('hf_onduty', _onDuty);
+  updateStatusUI();
+  toast(_onDuty ? '✅ You are now On Duty' : '🔴 You are now Off Duty');
+  if (_onDuty) pingLocation();
+}
+
+async function loadHomeStats() {
+  // Use payout/status for earnings if available
+  try {
+    const data = await api('GET', '/api/payout/status');
+    document.getElementById('stat-earn').textContent = '$' + ((data.available_balance || 0)/100).toFixed(0);
+  } catch(e) {}
+}
+
+async function loadHomeActive() {
+  const el = document.getElementById('home-active-load');
+  el.innerHTML = '';
+  try {
+    const data = await api('GET', '/api/loads?status=assigned&limit=1');
+    const loads = Array.isArray(data) ? data : (data.items || data.loads || []);
+    if (loads.length > 0) {
+      _myLoad = loads[0];
+      el.innerHTML = renderActiveLoadCard(_myLoad);
+    } else {
+      el.innerHTML = `<div class="alert-card"><div class="alert-icon">📭</div><div class="alert-text">No active load assigned. Check the Load Board for available runs.</div></div>`;
+    }
+  } catch(e) {
+    el.innerHTML = `<div class="alert-card"><div class="alert-icon">📭</div><div class="alert-text">No active load. Check the Load Board.</div></div>`;
+  }
+}
+
+function renderActiveLoadCard(load) {
+  const status = load.status || 'assigned';
+  const statusColor = {assigned:'#F5C842',in_transit:'#3B82F6',dispatched:'#6366F1',delivered:'#059669'}[status] || '#6B7A99';
+  return `
+  <div class="load-card">
+    <div class="load-hd">
+      <div>
+        <div class="load-num">LOAD #${load.load_number || load.id?.slice(0,8).toUpperCase()}</div>
+        <div style="font-size:11px;color:rgba(255,255,255,.5);margin-top:2px;">${load.equipment_type || 'Truck'}</div>
+      </div>
+      <div class="load-status-pill" style="color:${statusColor};">${status.replace('_',' ').toUpperCase()}</div>
+    </div>
+    <div class="load-route">
+      <div class="load-city">${load.origin_city || 'Origin'}, ${load.origin_state || ''}</div>
+      <div class="load-arrow">→</div>
+      <div class="load-city">${load.dest_city || load.destination_city || 'Dest'}, ${load.dest_state || load.destination_state || ''}</div>
+    </div>
+    <div class="load-details">
+      <div class="load-det"><div class="load-det-v">$${Number(load.rate || 0).toLocaleString()}</div><div class="load-det-l">Rate</div></div>
+      <div class="load-det"><div class="load-det-v">${load.miles || '—'}</div><div class="load-det-l">Miles</div></div>
+      <div class="load-det"><div class="load-det-v">${load.weight ? Math.round(load.weight/1000)+'k' : '—'}</div><div class="load-det-l">Lbs</div></div>
+    </div>
+    <div class="load-action-row">
+      <button class="btn btn-gold" onclick="nav('myload')">View Load →</button>
+      <button class="btn btn-outline" onclick="openMapsDir('${(load.dest_address||load.destination_address||'')+' '+(load.dest_city||load.destination_city||'')+' '+(load.dest_state||load.destination_state||'')}')">🗺️ Navigate</button>
+    </div>
+  </div>`;
+}
+
+function openMapsDir(addr) {
+  window.open('https://maps.google.com/?q='+encodeURIComponent(addr), '_blank');
+}
+
+// ── LOAD BOARD ───────────────────────────────────────────────────────────────
+async function loadLoads() {
+  const body = document.getElementById('lb-body');
+  body.innerHTML = '<div class="empty"><div class="spinner" style="border-color:var(--border);border-top-color:var(--navy);width:36px;height:36px;border-width:3px;"></div></div>';
+  try {
+    const data = await fetch(API+'/api/loads/public').then(r=>r.json());
+    _allLoads = Array.isArray(data) ? data : (data.items || data.loads || []);
+    renderLoads();
+    document.getElementById('lb-count').textContent = _allLoads.length + ' Available';
+  } catch(e) {
+    body.innerHTML = `<div class="empty"><div class="empty-icon">📭</div><h3>Could not load board</h3><p>${e.message}</p></div>`;
+  }
+}
+
+function lbFilter(el) {
+  document.querySelectorAll('.filter-chip').forEach(c=>c.classList.remove('active'));
+  el.classList.add('active');
+  _lbFilter = el.dataset.eq;
+  renderLoads();
+}
+
+function renderLoads() {
+  const body = document.getElementById('lb-body');
+  let loads = _allLoads;
+  if (_lbFilter !== 'all') loads = loads.filter(l => (l.equipment_type||'').toLowerCase().includes(_lbFilter.toLowerCase()));
+  if (!loads.length) {
+    body.innerHTML = '<div class="empty"><div class="empty-icon">📭</div><h3>No loads found</h3><p>Try a different filter or check back soon.</p></div>';
+    return;
+  }
+  body.innerHTML = loads.map(l => `
+  <div class="lb-item">
+    <div class="lb-hd">
+      <div>
+        <div class="lb-route">${l.origin_city||'?'}, ${l.origin_state||''} → ${l.dest_city||l.destination_city||'?'}, ${l.dest_state||l.destination_state||''}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:3px;">#${l.load_number||l.id?.slice(0,8).toUpperCase()}</div>
+      </div>
+      <div class="lb-rate">$${Number(l.rate||0).toLocaleString()}</div>
+    </div>
+    <div class="lb-meta">
+      <span class="lb-tag eq">🚛 ${l.equipment_type||'Truck'}</span>
+      ${l.miles?`<span class="lb-tag">📏 ${l.miles} mi</span>`:''}
+      ${l.weight?`<span class="lb-tag">⚖️ ${Math.round(l.weight/1000)}k lbs</span>`:''}
+      ${l.pickup_date?`<span class="lb-tag">📅 ${l.pickup_date?.slice(0,10)}</span>`:''}
+    </div>
+    <button class="btn btn-navy" style="width:100%;" onclick="openLoadRequest(${JSON.stringify(l).replace(/"/g,'&quot;')})">Request This Load →</button>
+  </div>`).join('');
+}
+
+function openLoadRequest(load) {
+  _selectedLoad = load;
+  document.getElementById('modal-load-detail').innerHTML = `
+    <div style="background:var(--off);border-radius:var(--r-sm);padding:14px;">
+      <div style="font-size:15px;font-weight:700;margin-bottom:8px;">${load.origin_city}, ${load.origin_state} → ${load.dest_city||load.destination_city}, ${load.dest_state||load.destination_state}</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <div><div style="font-size:18px;font-weight:800;color:var(--green);">$${Number(load.rate||0).toLocaleString()}</div><div style="font-size:11px;color:var(--muted);">Rate</div></div>
+        <div><div style="font-size:18px;font-weight:800;">${load.miles||'—'}</div><div style="font-size:11px;color:var(--muted);">Miles</div></div>
+      </div>
+    </div>`;
+  openModal('modal-request');
+}
+
+async function confirmLoadRequest() {
+  if (!_selectedLoad || !_token) return;
+  showLoading('Submitting request…');
+  try {
+    await api('POST', '/api/loads/'+_selectedLoad.id+'/request', {driver_id: _driver?.id});
+    hideLoading();
+    closeModal('modal-request');
+    toast('✅ Load request submitted! Dispatch will confirm.', 'green');
+  } catch(e) {
+    hideLoading();
+    toast('⚠️ '+e.message, 'red');
+  }
+}
+
+// ── MY LOAD ───────────────────────────────────────────────────────────────────
+async function loadMyLoad() {
+  const body = document.getElementById('myload-body');
+  body.innerHTML = '<div class="empty"><div class="spinner" style="border-color:var(--border);border-top-color:var(--navy);width:36px;height:36px;border-width:3px;"></div></div>';
+  try {
+    const data = await api('GET', '/api/loads?status=assigned&limit=1');
+    const loads = Array.isArray(data) ? data : (data.items || data.loads || []);
+    if (!loads.length) {
+      body.innerHTML = '<div class="empty"><div class="empty-icon">🚛</div><h3>No Active Load</h3><p>You have no assigned loads. Check the Load Board.</p></div>';
+      return;
+    }
+    _myLoad = loads[0];
+    renderMyLoad(body, _myLoad);
+  } catch(e) {
+    body.innerHTML = `<div class="empty"><div class="empty-icon">⚠️</div><h3>Error</h3><p>${e.message}</p></div>`;
+  }
+}
+
+function renderMyLoad(body, load) {
+  const steps = ['assigned','dispatched','in_transit','delivered'];
+  const stepLabels = ['Assigned','Dispatched','Picked Up','Delivered'];
+  const stepIcons = ['📋','🚀','🚛','✅'];
+  const curIdx = steps.indexOf(load.status);
+
+  body.innerHTML = `
+  <div class="card">
+    <div class="card-title">Load #${load.load_number || load.id?.slice(0,8).toUpperCase()}</div>
+    <div style="font-size:17px;font-weight:700;margin-bottom:4px;">${load.origin_city}, ${load.origin_state} → ${load.dest_city||load.destination_city}, ${load.dest_state||load.destination_state}</div>
+    <div style="font-size:13px;color:var(--muted);margin-bottom:14px;">${load.shipper_name||'Shipper'}</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px;">
+      <div class="stat-box"><div class="stat-n" style="font-size:18px;">$${Number(load.rate||0).toLocaleString()}</div><div class="stat-l">Rate</div></div>
+      <div class="stat-box"><div class="stat-n" style="font-size:18px;">${load.miles||'—'}</div><div class="stat-l">Miles</div></div>
+      <div class="stat-box"><div class="stat-n" style="font-size:18px;">${load.weight?Math.round(load.weight/1000)+'k':'—'}</div><div class="stat-l">Lbs</div></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Trip Progress</div>
+    <div class="stepper">
+      ${steps.map((s,i) => {
+        const state = i < curIdx ? 'done' : i === curIdx ? 'active' : 'pending';
+        const last = i === steps.length-1;
+        return `<div class="step">
+          <div class="step-left">
+            <div class="step-circle ${state}">${state==='done'?'✓':stepIcons[i]}</div>
+            ${!last ? `<div class="step-line ${i<curIdx?'done':''}"></div>` : ''}
+          </div>
+          <div class="step-right">
+            <div class="step-title ${state}">${stepLabels[i]}</div>
+            <div class="step-sub">${state==='done'?'Completed':state==='active'?'Current step':'Upcoming'}</div>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>
+    ${renderStatusActions(load, curIdx, steps)}
+  </div>
+
+  <div class="card">
+    <div class="card-title">Pickup Address</div>
+    <div style="font-size:14px;margin-bottom:10px;">${load.origin_address||load.pickup_address||load.origin_city+', '+load.origin_state}</div>
+    <button class="btn btn-navy" style="width:100%;" onclick="openMapsDir('${load.origin_address||load.origin_city+' '+load.origin_state}')">🗺️ Navigate to Pickup</button>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Delivery Address</div>
+    <div style="font-size:14px;margin-bottom:10px;">${load.dest_address||load.destination_address||load.dest_city+', '+load.dest_state}</div>
+    <button class="btn btn-navy" style="width:100%;margin-bottom:8px;" onclick="openMapsDir('${load.dest_address||load.destination_address||load.dest_city+' '+load.dest_state}')">🗺️ Navigate to Delivery</button>
+    <button class="btn btn-outline" style="width:100%;background:var(--off);color:var(--text);border:1px solid var(--border);" onclick="openModal('modal-pod')">📸 Upload POD</button>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Check Call Notes</div>
+    <textarea class="dvir-notes" id="check-call-notes" placeholder="Add check call notes, delays, issues…" style="min-height:80px;">${load.driver_notes||''}</textarea>
+    <button class="btn btn-navy" style="width:100%;margin-top:8px;" onclick="saveCheckCall()">Save Notes</button>
+  </div>`;
+
+  document.getElementById('myload-sub').textContent = 'Load #' + (load.load_number || load.id?.slice(0,8).toUpperCase());
+}
+
+function renderStatusActions(load, curIdx, steps) {
+  if (load.status === 'delivered') return `<div class="alert-card" style="background:#D1FAE5;border-color:#6EE7B7;"><div class="alert-icon">✅</div><div class="alert-text" style="color:#065F46;">This load has been delivered. Great work!</div></div>`;
+  const nextStatus = steps[curIdx + 1];
+  if (!nextStatus) return '';
+  const labels = {dispatched:'🚀 Mark as Dispatched', in_transit:'🚛 Confirm Pickup / In Transit', delivered:'✅ Mark as Delivered'};
+  return `<button class="btn btn-green btn-full" onclick="updateLoadStatus('${load.id}','${nextStatus}')">${labels[nextStatus]||'Update Status'}</button>`;
+}
+
+async function updateLoadStatus(loadId, newStatus) {
+  showLoading('Updating status…');
+  try {
+    await api('PATCH', '/api/loads/'+loadId, {status: newStatus, driver_id: _driver?.id});
+    hideLoading();
+    toast('✅ Status updated to: '+newStatus.replace('_',' ').toUpperCase(), 'green');
+    loadMyLoad();
+    if (newStatus === 'in_transit') pingLocation();
+  } catch(e) {
+    hideLoading();
+    toast('⚠️ '+e.message, 'red');
+  }
+}
+
+async function saveCheckCall() {
+  const notes = document.getElementById('check-call-notes').value;
+  if (!_myLoad) return;
+  try {
+    await api('PATCH', '/api/loads/'+_myLoad.id, {driver_notes: notes});
+    toast('✅ Notes saved', 'green');
+  } catch(e) {
+    toast('⚠️ Could not save notes', 'red');
+  }
+}
+
+// ── POD UPLOAD ────────────────────────────────────────────────────────────────
+async function uploadPOD() {
+  const file = document.getElementById('pod-file').files[0];
+  if (!file) { toast('⚠️ Select a file first', 'red'); return; }
+  showLoading('Uploading POD…');
+  try {
+    const fd = new FormData();
+    fd.append('file', file);
+    fd.append('document_type', 'pod');
+    if (_myLoad) fd.append('load_id', _myLoad.id);
+    const r = await fetch(API+'/api/driver/documents/upload', {
+      method:'POST',
+      headers:{'Authorization':'Bearer '+_token},
+      body: fd,
+    });
+    if (!r.ok) throw new Error('Upload failed');
+    hideLoading();
+    closeModal('modal-pod');
+    toast('✅ POD uploaded successfully', 'green');
+  } catch(e) {
+    hideLoading();
+    toast('⚠️ '+e.message, 'red');
+  }
+}
+
+// ── LOCATION ──────────────────────────────────────────────────────────────────
+function initLocation() {
+  document.getElementById('auto-ping-toggle').checked = _autoPing;
+  getGPS();
+}
+
+function getGPS() {
+  if (!navigator.geolocation) return;
+  navigator.geolocation.getCurrentPosition(pos => {
+    _lastLat = pos.coords.latitude;
+    _lastLng = pos.coords.longitude;
+    document.getElementById('loc-coords').textContent = _lastLat.toFixed(5) + ', ' + _lastLng.toFixed(5);
+  }, err => {
+    document.getElementById('loc-coords').textContent = 'GPS unavailable';
+  });
+}
+
+async function pingLocation() {
+  if (!_token) return;
+  if (!_lastLat) {
+    return new Promise(res => navigator.geolocation?.getCurrentPosition(pos => {
+      _lastLat = pos.coords.latitude;
+      _lastLng = pos.coords.longitude;
+      sendPing().then(res);
+    }, ()=>res()));
+  }
+  return sendPing();
+}
+
+async function sendPing() {
+  try {
+    await api('POST', '/api/driver/location', {
+      latitude: _lastLat,
+      longitude: _lastLng,
+      status: _onDuty ? 'active' : 'offline',
+      driver_id: _driver?.id,
+    });
+    const now = new Date().toLocaleTimeString();
+    document.getElementById('loc-time').textContent = 'Last ping: '+now;
+    _pingHistory.unshift({lat:_lastLat, lng:_lastLng, time:now});
+    if (_pingHistory.length > 10) _pingHistory.pop();
+    renderPingHistory();
+    toast('📍 Location sent');
+  } catch(e) {
+    toast('⚠️ Ping failed: '+e.message, 'red');
+  }
+}
+
+function renderPingHistory() {
+  const el = document.getElementById('ping-history');
+  if (!el) return;
+  el.innerHTML = _pingHistory.map(p => `
+    <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--off);">
+      <span style="font-size:12px;font-family:monospace;color:var(--navy);">${p.lat.toFixed(4)}, ${p.lng.toFixed(4)}</span>
+      <span style="font-size:11px;color:var(--muted);">${p.time}</span>
+    </div>`).join('');
+}
+
+function toggleAutoPing(on) {
+  _autoPing = on;
+  if (on) {
+    pingLocation();
+    _autoPingTimer = setInterval(pingLocation, 5 * 60 * 1000);
+    toast('📍 Auto-ping every 5 minutes ON', 'green');
+  } else {
+    clearInterval(_autoPingTimer);
+    toast('📍 Auto-ping OFF');
+  }
+}
+
+// ── EARNINGS ──────────────────────────────────────────────────────────────────
+async function loadEarnings() {
+  try {
+    const status = await api('GET', '/api/payout/status');
+    document.getElementById('earn-balance').textContent = '$'+(Number(status.available_balance||0)/100).toFixed(2);
+    document.getElementById('earn-pending').textContent = '$'+(Number(status.pending_amount||0)/100).toFixed(2);
+    document.getElementById('earn-total').textContent = '$'+(Number(status.total_earned||0)/100).toFixed(0);
+  } catch(e) {}
+
+  try {
+    const hist = await api('GET', '/api/payout/history?limit=20');
+    const items = Array.isArray(hist) ? hist : (hist.items || []);
+    const el = document.getElementById('earn-history');
+    if (!items.length) { el.innerHTML = '<div class="empty" style="padding:20px 0;"><p>No payout history yet.</p></div>'; return; }
+    el.innerHTML = items.map(p => `
+      <div class="history-item">
+        <div><div class="history-load">${p.description||p.load_number||'Load'}</div><div class="history-date">${(p.paid_at||p.created_at||'').slice(0,10)}</div></div>
+        <div class="history-amt">$${(Number(p.amount||0)/100).toFixed(2)}</div>
+      </div>`).join('');
+  } catch(e) {}
+}
+
+async function requestPayout() {
+  showLoading('Requesting payout…');
+  try {
+    await api('POST', '/api/payout/request');
+    hideLoading();
+    toast('✅ Payout requested! Funds in 1-2 business days.', 'green');
+    loadEarnings();
+  } catch(e) {
+    hideLoading();
+    toast('⚠️ '+e.message, 'red');
+  }
+}
+
+// ── PROFILE ───────────────────────────────────────────────────────────────────
+async function loadProfile() {
+  if (_driver) {
+    const init = (_driver.name||'D').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+    document.getElementById('profile-avatar').textContent = init;
+    document.getElementById('profile-name').textContent = _driver.name || 'Driver';
+  }
+  try {
+    const data = await api('GET', '/api/driver-auth/me');
+    document.getElementById('profile-phone').textContent = data.phone||'';
+    document.getElementById('prof-cdl').textContent = data.cdl_number || '—';
+    document.getElementById('prof-carrier').textContent = data.carrier_id?.slice(0,8)||'—';
+  } catch(e) {}
+}
+
+// ── DVIR ─────────────────────────────────────────────────────────────────────
+const DVIR_ITEMS = {
+  engine: ['Engine oil level','Coolant level','Power steering fluid','Belts & hoses','Air filter','Battery','Exhaust system','Fuel level'],
+  brakes: ['Service brakes','Parking brake','Air lines & connections','Brake drums / rotors','Brake hoses','Steering wheel play','Steering linkage','Suspension'],
+  lights: ['Headlights (high & low)','Taillights','Brake lights','Turn signals','Hazard lights','Marker lights','Reflectors & reflective tape','Dash warning lights'],
+  tires: ['Left steer tire','Right steer tire','Drive tires (all)','Trailer tires (all)','Lug nuts & wheels','Spare tire','Mud flaps'],
+  cargo: ['Fifth wheel coupling','Trailer hitch','Safety chains','Cargo securement','Tarps & straps','Rear doors & latches','Hazmat placard (if applicable)'],
+  cab: ['Wipers & washers','Mirrors (all)','Horn','Seat & seat belt','Fire extinguisher','Emergency triangles','First aid kit','Heater & defroster'],
+};
+
+function buildDvir() {
+  Object.entries(DVIR_ITEMS).forEach(([section, items]) => {
+    const el = document.getElementById('dvir-'+section);
+    if (!el) return;
+    el.innerHTML = items.map((item,i) => `
+      <div class="dvir-check">
+        <input type="checkbox" id="dvir-${section}-${i}" checked/>
+        <label for="dvir-${section}-${i}">${item}</label>
+      </div>`).join('');
+  });
+}
+
+async function submitDvir() {
+  const defects = [];
+  Object.entries(DVIR_ITEMS).forEach(([section, items]) => {
+    items.forEach((item, i) => {
+      const cb = document.getElementById('dvir-'+section+'-'+i);
+      if (cb && !cb.checked) defects.push({section, item});
+    });
+  });
+  const notes = document.getElementById('dvir-notes').value;
+
+  showLoading('Submitting DVIR…');
+  try {
+    await api('POST', '/api/driver/dvir', {
+      driver_id: _driver?.id,
+      defects,
+      notes,
+      vehicle_condition: defects.length ? 'defects_noted' : 'satisfactory',
+      submitted_at: new Date().toISOString(),
+    });
+    hideLoading();
+    toast('✅ DVIR submitted. Safe travels!', 'green');
+    nav('home');
+  } catch(e) {
+    hideLoading();
+    // Store locally if API fails
+    localStorage.setItem('hf_dvir_'+Date.now(), JSON.stringify({defects, notes, submitted_at: new Date().toISOString()}));
+    toast('✅ DVIR saved locally (offline mode)', 'green');
+    nav('home');
+  }
+}
+</script>
+</body>
+</html>

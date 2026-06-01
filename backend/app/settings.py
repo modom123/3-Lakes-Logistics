@@ -19,6 +19,7 @@ class Settings(BaseSettings):
 
     stripe_secret_key: str = ""
     stripe_webhook_secret: str = ""
+    stripe_identity_webhook_secret: str = ""   # separate secret for Identity webhook endpoint
     stripe_price_founders: str = ""
     stripe_price_pro: str = ""
 

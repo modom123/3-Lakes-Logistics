@@ -81,6 +81,21 @@ def handle_event(event: dict[str, Any]) -> None:
             "subscription_status": "canceled", "status": "churned",
         }).eq("id", carrier_id).execute()
 
+    elif etype == "payment_intent.succeeded" and carrier_id:
+        # Advance onboarding: run step 14 (esign.send_agreement) then mark payment confirmed
+        try:
+            from ..execution_engine.executor import run_step  # noqa: PLC0415
+            run_step(14, carrier_id, None, {"trigger": "payment_intent.succeeded"})
+        except Exception as exc:  # noqa: BLE001
+            log_agent("penny", "step14_failed", carrier_id=carrier_id, error=str(exc))
+        try:
+            sb.table("active_carriers").update({
+                "status": "payment_confirmed",
+            }).eq("id", carrier_id).execute()
+        except Exception as exc:  # noqa: BLE001
+            log_agent("penny", "status_update_failed", carrier_id=carrier_id, error=str(exc))
+        log_agent("penny", "payment_intent_succeeded", carrier_id=carrier_id, result=etype)
+
 
 def run(payload: dict[str, Any]) -> dict[str, Any]:
     log_agent("penny", "manual_run", payload=payload, result="noop")

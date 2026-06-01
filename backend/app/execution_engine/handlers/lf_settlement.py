@@ -176,28 +176,28 @@ def h263_ledger_write(carrier_id, contract_id, payload) -> dict:
     driver_net = payload.get("driver_net", 0.0)
     trip = _trip(trip_id)
     sb = _db()
-    if sb:
-        try:
-            sb.table("atomic_ledger").insert({
-                "event_type": "lf_trip_settled",
+    try:
+        from ...atomic_ledger.service import write_event
+        from ...atomic_ledger.models import AtomicEvent
+        write_event(AtomicEvent(
+            event_type="lf_trip_settled",
+            event_source="execution_engine.lf_settlement",
+            logistics_payload={
+                "trip_id": trip_id,
+                "trip_type": trip_type,
                 "carrier_id": str(carrier_id) if carrier_id else None,
                 "contract_id": str(contract_id) if contract_id else None,
-                "logistics_payload": {
-                    "trip_id": trip_id,
-                    "trip_type": trip_type,
-                    "pickup_address": trip.get("pickup_address", payload.get("pickup_address", "")),
-                    "dropoff_address": trip.get("dropoff_address", payload.get("dropoff_address", "")),
-                },
-                "financial_payload": {
-                    "rate_total": float(rate_total) if rate_total is not None else 0.0,
-                    "platform_fee": float(platform_fee) if platform_fee is not None else 0.0,
-                    "driver_net": float(driver_net) if driver_net is not None else 0.0,
-                },
-                "compliance_payload": {},
-                "created_at": _NOW(),
-            }).execute()
-        except Exception:  # noqa: BLE001
-            pass
+                "pickup_address": trip.get("pickup_address", payload.get("pickup_address", "")),
+                "dropoff_address": trip.get("dropoff_address", payload.get("dropoff_address", "")),
+            },
+            financial_payload={
+                "rate_total": float(rate_total) if rate_total is not None else 0.0,
+                "platform_fee": float(platform_fee) if platform_fee is not None else 0.0,
+                "driver_net": float(driver_net) if driver_net is not None else 0.0,
+            },
+        ))
+    except Exception:  # noqa: BLE001
+        pass
     return {
         "ledger_written": True,
         "event_type": "lf_trip_settled",

@@ -4,10 +4,11 @@ from __future__ import annotations
 from typing import Any, Callable
 
 from . import (
-    alexander, atlas, audit, beacon, bond_courier, cash, chloe_sinclair, echo,
-    isabella, james_bond, kai, katerina, lucas_sterling, maya, naomi, nova, orbit,
-    outside_bond, penny, pulse, rio, scout, settler, shield, signal, sofia,
-    sonny, technical_team, vance, victoria, winston,
+    alexander, atlas, audit, beacon, bond_courier, cash, chloe_sinclair, diana_cole,
+    dr_james_nemt, echo, elena_ross, felix_grant, isabella, james_bond, kai, katerina,
+    lucas_sterling, maya, morgan_hayes, naomi, nova, orbit, outside_bond, penny, pulse,
+    rio, scout, settler, shield, signal, sofia, sonny, technical_team, vance, victor_nash,
+    victoria, winston,
 )
 
 _DISPATCH: dict[str, Callable[[dict[str, Any]], dict[str, Any]]] = {
@@ -43,6 +44,13 @@ _DISPATCH: dict[str, Callable[[dict[str, Any]], dict[str, Any]]] = {
     "kai":            kai.run,
     "rio":            rio.run,
     "cash":           cash.run,
+    # ── Light Fleet IEBC Executives ──
+    "diana_cole":     diana_cole.run,
+    "dr_james_nemt":  dr_james_nemt.run,
+    "elena_ross":     elena_ross.run,
+    "victor_nash":    victor_nash.run,
+    "felix_grant":    felix_grant.run,
+    "morgan_hayes":   morgan_hayes.run,
 }
 
 
