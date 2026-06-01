@@ -4444,13 +4444,14 @@ async function ecLoadCSOOffice(){
   // Load strategy_plan and 30_60_90 from memory recall
   try{
     const [sp,plan,dirs]=await Promise.all([
-      API.get('/api/memory/recall?agent=cc_gulley&key=strategy_plan').catch(()=>null),
-      API.get('/api/memory/recall?agent=cc_gulley&key=30_60_90').catch(()=>null),
-      API.get('/api/memory/recall?agent=cc_gulley&key=directives').catch(()=>null)
+      API.agentBrain('cc_gulley').catch(()=>null),
+      Promise.resolve(null),
+      Promise.resolve(null)
     ]);
-    // Roadmap text: prefer 30_60_90, fallback to strategy_plan
-    const roadmapData=plan&&(plan.value||plan.data||plan.content)||
-                       sp&&(sp.value||sp.data||sp.content)||null;
+    // sp holds the full cc_gulley brain — extract keys from memories array
+    const _mems = (sp&&sp.memories)||[];
+    const _pick = key => (_mems.find(m=>m.memory_key===key)||{}).memory_value;
+    const roadmapData = _pick('30_60_90') || _pick('strategy_plan');
     if(roadmapEl){
       if(roadmapData){
         const txt=typeof roadmapData==='string'?roadmapData:JSON.stringify(roadmapData,null,2);
@@ -4460,7 +4461,7 @@ async function ecLoadCSOOffice(){
       }
     }
     // Directives
-    const dirsData=dirs&&(dirs.value||dirs.data||dirs.content)||null;
+    const dirsData=_pick('directives');
     if(directivesEl){
       if(dirsData){
         const items=Array.isArray(dirsData)?dirsData:[dirsData];
@@ -9475,11 +9476,13 @@ async function boLoadUIStatus() {
   // Pull from org memory (no re-run) — show cached results if available
   try {
     const [lm, cm] = await Promise.all([
-      apiFetch('/api/memory/lucas_sterling/last_ui_audit','GET').catch(()=>null),
-      apiFetch('/api/memory/chloe_sinclair/last_viewport_audit','GET').catch(()=>null),
+      API.agentBrain('lucas_sterling').catch(()=>null),
+      API.agentBrain('chloe_sinclair').catch(()=>null),
     ]);
-    if(lm?.value) _boRenderLucas(lm.value);
-    if(cm?.value) _boRenderChloe(cm.value);
+    const _lmVal = (lm?.memories||[]).find(m=>m.memory_key==='last_ui_audit')?.memory_value;
+    const _cmVal = (cm?.memories||[]).find(m=>m.memory_key==='last_viewport_audit')?.memory_value;
+    if(_lmVal) _boRenderLucas(_lmVal);
+    if(_cmVal) _boRenderChloe(_cmVal);
   } catch(e) { /* memory offline — show stale if any */ }
 }
 
