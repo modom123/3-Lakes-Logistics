@@ -4444,9 +4444,9 @@ async function ecLoadCSOOffice(){
   // Load strategy_plan and 30_60_90 from memory recall
   try{
     const [sp,plan,dirs]=await Promise.all([
-      API.get('/memory/recall?agent=cc_gulley&key=strategy_plan').catch(()=>null),
-      API.get('/memory/recall?agent=cc_gulley&key=30_60_90').catch(()=>null),
-      API.get('/memory/recall?agent=cc_gulley&key=directives').catch(()=>null)
+      API.get('/api/memory/recall?agent=cc_gulley&key=strategy_plan').catch(()=>null),
+      API.get('/api/memory/recall?agent=cc_gulley&key=30_60_90').catch(()=>null),
+      API.get('/api/memory/recall?agent=cc_gulley&key=directives').catch(()=>null)
     ]);
     // Roadmap text: prefer 30_60_90, fallback to strategy_plan
     const roadmapData=plan&&(plan.value||plan.data||plan.content)||
@@ -4475,7 +4475,7 @@ async function ecLoadCSOOffice(){
   // Load ops intel from James Bond
   if(opsEl){
     try{
-      const bond=await API.post('/agents/james_bond/run',{scope:'ops',top_n:3});
+      const bond=await API.post('/api/agents/james_bond/run',{scope:'ops',top_n:3});
       const items=bond.items||bond.results||bond.summary||null;
       if(items){
         const arr=Array.isArray(items)?items:[items];
@@ -4497,7 +4497,7 @@ async function ecRunCCGulley(){
   const btn=event.currentTarget;
   btn.textContent='Running…';btn.disabled=true;
   try{
-    await API.post('/agents/cc_gulley/run',{});
+    await API.post('/api/agents/cc_gulley/run',{});
     setTimeout(()=>{ecLoadCSOOffice();btn.textContent='▶ Run CC Gulley Agent';btn.disabled=false;},1200);
   }catch(e){
     btn.textContent='▶ Run CC Gulley Agent';btn.disabled=false;
@@ -4506,7 +4506,7 @@ async function ecRunCCGulley(){
 }
 async function ecLoadDashboard(){
   try{
-    const d=await API.get('/executives/dashboard');
+    const d=await API.get('/api/executives/dashboard');
     const ms=d.master_scores||{};
     if(ms.growth_velocity){setText('ec-score-growth',ms.growth_velocity.score||87);document.getElementById('ec-bar-growth').style.width=(ms.growth_velocity.score||87)+'%';}
     if(ms.operational_margin){setText('ec-score-margin',ms.operational_margin.score||94);document.getElementById('ec-bar-margin').style.width=(ms.operational_margin.score||94)+'%';}
@@ -4516,7 +4516,7 @@ async function ecLoadDashboard(){
 async function ecLoadExecutives(){
   const tbody=document.getElementById('ec-org-tbody');if(!tbody)return;
   try{
-    const d=await API.get('/executives');
+    const d=await API.get('/api/executives');
     const all=(d.all||[]).sort((a,b)=>{
       const aTop=!a.reports_to?-1:0, bTop=!b.reports_to?-1:0;
       if(aTop!==bTop)return aTop-bTop;
@@ -4554,7 +4554,7 @@ async function ecLoadExecutives(){
 async function ecLoadEscalations(){
   const tbody=document.getElementById('ec-esc-tbody');if(!tbody)return;
   try{
-    const d=await API.get('/executives/escalations');
+    const d=await API.get('/api/executives/escalations');
     const open=(d.items||[]).filter(i=>i.status==='open'||i.status==='in_review');
     setText('ec-esc-count',open.length);
     const notif=document.getElementById('exec-esc-notif');
@@ -4573,7 +4573,7 @@ async function ecLoadEscalations(){
 }
 async function ecLoadBrief(){
   try{
-    const d=await API.get('/executives/brief/today');
+    const d=await API.get('/api/executives/brief/today');
     const b=d.brief||{};
     setText('ec-brief-date',b.date||new Date().toLocaleDateString());
     setText('ec-brief-t1',b.tier1_resolved||0);
@@ -4593,7 +4593,7 @@ async function ecLoadBrief(){
 }
 async function ecLoadContingencies(){
   try{
-    const d=await API.get('/executives/contingencies');
+    const d=await API.get('/api/executives/contingencies');
     const countMap={'OCR Verification & AI-Refinement Loop':'ec-cont-1-count','API Resilience & Polling Fallback':'ec-cont-2-count','Triage Escalation Hierarchy':'ec-cont-3-count','Dynamic Geo-Fencing & Delta Tracking':'ec-cont-4-count','Financial Variance Thresholds':'ec-cont-5-count'};
     window._ecContIds={};
     (d.plans||[]).forEach(p=>{
@@ -4610,7 +4610,7 @@ async function ecSubmitEscalation(){
   const assigned=document.getElementById('ec-new-assigned').value.trim();
   const desc=document.getElementById('ec-new-desc').value.trim();
   try{
-    await API.post('/executives/escalations',{tier,event_type:type,assigned_to:assigned||null,description:desc||null});
+    await API.post('/api/executives/escalations',{tier,event_type:type,assigned_to:assigned||null,description:desc||null});
     document.getElementById('ec-esc-modal').style.display='none';
     ['ec-new-assigned','ec-new-desc'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
     await ecLoadEscalations();toast('Escalation created.');
@@ -4623,7 +4623,7 @@ async function ecSubmitKpi(){
   const current=document.getElementById('ec-kpi-current').value;
   const target=document.getElementById('ec-kpi-target').value;
   try{
-    await API.post('/executives/kpis',{executive_id:execId,kpi_name:kpiName,current_value:current?parseFloat(current):null,target_value:target?parseFloat(target):null,unit:document.getElementById('ec-kpi-unit').value,status:document.getElementById('ec-kpi-status').value});
+    await API.post('/api/executives/kpis',{executive_id:execId,kpi_name:kpiName,current_value:current?parseFloat(current):null,target_value:target?parseFloat(target):null,unit:document.getElementById('ec-kpi-unit').value,status:document.getElementById('ec-kpi-status').value});
     document.getElementById('ec-kpi-modal').style.display='none';
     toast('KPI snapshot recorded.');
   }catch(e){toast('Failed to record KPI — check executive ID and API.','error');}
@@ -4632,7 +4632,7 @@ async function ecTriggerCont(name){
   if(!window._ecContIds||!window._ecContIds[name]){toast('Load contingencies first (Refresh Dashboard)','error');return;}
   if(!confirm('Trigger contingency plan: '+name+'?'))return;
   try{
-    const d=await API.post('/executives/contingencies/'+window._ecContIds[name]+'/trigger',{});
+    const d=await API.post('/api/executives/contingencies/'+window._ecContIds[name]+'/trigger',{});
     toast('Contingency triggered. Count: '+d.trigger_count);
     await ecLoadContingencies();
   }catch(e){toast('Failed to trigger — check API connection.','error');}
