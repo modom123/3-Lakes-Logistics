@@ -140,6 +140,47 @@ def register_webhook(url: str, events: list[str] | None = None) -> dict[str, Any
         return {"registered": False, "error": str(e)[:200]}
 
 
+def register_driver(
+    driver_id: str,
+    name: str,
+    email: str,
+    phone: str,
+    vehicle_type: str = "sedan",
+) -> dict[str, Any]:
+    """
+    Register a driver in the 3 Lakes Curri carrier fleet.
+
+    Curri operates at the carrier level — 3 Lakes accepts orders and dispatches to
+    sub-drivers. This call adds the driver to our Curri fleet roster so they can be
+    assigned Curri orders through the Eagle Eye dispatch console.
+
+    If Curri's API doesn't expose a /fleet/drivers endpoint for your tier, the driver
+    is tagged fleet_eligible in our DB and assigned Curri jobs via our carrier account.
+    """
+    body: dict = {
+        "external_driver_id": driver_id,
+        "name": name,
+        "email": email,
+        "phone": phone,
+        "vehicle_type": vehicle_type,
+    }
+    try:
+        result = _post("/fleet/drivers", body)
+        curri_driver_id = result.get("id") if isinstance(result, dict) else None
+        log_agent(_NAME, "register_driver", payload={"driver_id": driver_id}, result=str(curri_driver_id))
+        return {"registered": True, "curri_driver_id": curri_driver_id, "driver": result}
+    except httpx.HTTPStatusError as e:
+        if e.response.status_code == 404:
+            # Carrier tier doesn't expose fleet roster — driver is still eligible via our account
+            log_agent(_NAME, "register_driver", payload={"driver_id": driver_id}, result="fleet_eligible_only")
+            return {"registered": True, "curri_driver_id": None, "note": "fleet_eligible"}
+        return {"registered": False, "error": f"HTTP {e.response.status_code}: {e.response.text[:200]}"}
+    except RuntimeError as e:
+        return {"registered": False, "error": str(e)}
+    except Exception as e:  # noqa: BLE001
+        return {"registered": False, "error": str(e)[:200]}
+
+
 def ping() -> dict[str, Any]:
     """Test the API connection. Returns True if credentials are valid."""
     try:

@@ -214,6 +214,49 @@ def register_webhook(url: str, events: list[str] | None = None) -> dict[str, Any
 
 # ── Health check ──────────────────────────────────────────────────────────────
 
+def register_driver(
+    driver_id: str,
+    name: str,
+    email: str,
+    phone: str,
+    vehicle_type: str = "sedan",
+    zip_code: str | None = None,
+) -> dict[str, Any]:
+    """
+    Register a driver in the 3 Lakes Roadie carrier fleet.
+
+    Roadie operates at the carrier level — 3 Lakes claims gigs and dispatches to
+    sub-drivers. This call adds the driver to our Roadie fleet so they can be
+    assigned Roadie gigs through the Eagle Eye dispatch console.
+
+    If Roadie's API doesn't expose a /fleet/drivers endpoint, the driver is tagged
+    fleet_eligible in our DB and assigned Roadie gigs via our carrier account.
+    """
+    body: dict = {
+        "external_id": driver_id,
+        "name": name,
+        "email": email,
+        "phone": phone,
+        "vehicle_type": vehicle_type,
+    }
+    if zip_code:
+        body["zip_code"] = zip_code
+    try:
+        result = _post("/fleet/drivers", body)
+        roadie_driver_id = result.get("id") if isinstance(result, dict) else None
+        log_agent(_NAME, "register_driver", payload={"driver_id": driver_id}, result=str(roadie_driver_id))
+        return {"registered": True, "roadie_driver_id": roadie_driver_id, "driver": result}
+    except httpx.HTTPStatusError as e:
+        if e.response.status_code == 404:
+            log_agent(_NAME, "register_driver", payload={"driver_id": driver_id}, result="fleet_eligible_only")
+            return {"registered": True, "roadie_driver_id": None, "note": "fleet_eligible"}
+        return {"registered": False, "error": f"HTTP {e.response.status_code}: {e.response.text[:200]}"}
+    except RuntimeError as e:
+        return {"registered": False, "error": str(e)}
+    except Exception as e:  # noqa: BLE001
+        return {"registered": False, "error": str(e)[:200]}
+
+
 def ping() -> dict[str, Any]:
     """Test the API connection."""
     try:

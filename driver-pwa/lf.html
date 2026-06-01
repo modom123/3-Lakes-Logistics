@@ -1,0 +1,1026 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script>
+    const _t = localStorage.getItem('3ll_token');
+    const _e = localStorage.getItem('3ll_expires_at');
+    if (!_t || (_e && new Date(_e) < new Date())) window.location.href = './login-lf.html';
+  </script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#0a0a1a" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>3 Lakes Light Fleet</title>
+  <link rel="manifest" href="manifest-lf.json" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.41.0"></script>
+  <script src="../shared/config.js"></script>
+  <script src="../shared/tk.js"></script>
+  <style>
+    :root {
+      --bg:       #0a0a1a;
+      --surface:  #12112a;
+      --card:     #1a1838;
+      --border:   #2d2b52;
+      --accent:   #8b5cf6;
+      --accent2:  #6d28d9;
+      --green:    #22c55e;
+      --red:      #ef4444;
+      --yellow:   #f59e0b;
+      --text:     #f1f5f9;
+      --muted:    #94a3b8;
+      --safe-bot: env(safe-area-inset-bottom, 0px);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    html, body { height: 100%; background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; overflow: hidden; }
+
+    /* ── LAYOUT ── */
+    #app { display: flex; flex-direction: column; height: 100%; height: 100dvh; }
+    #header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 10px 16px; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+    .header-logo { display: flex; align-items: center; gap: 9px; }
+    .header-icon { width: 30px; height: 30px; background: linear-gradient(135deg, var(--accent), var(--accent2)); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px; }
+    .header-name { font-size: 15px; font-weight: 800; color: var(--text); }
+    .header-name span { color: var(--accent); }
+    .header-right { display: flex; align-items: center; gap: 10px; }
+    .driver-badge { font-size: 13px; font-weight: 600; color: var(--text); }
+    .conn-dot { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--muted); }
+    .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); box-shadow: 0 0 5px var(--green); }
+
+    #main { flex: 1; overflow: hidden; }
+    .view { display: none; height: 100%; overflow-y: auto; padding: 14px 16px calc(76px + var(--safe-bot)) 16px; }
+    .view.active { display: block; }
+
+    /* ── CARDS ── */
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 16px; margin-bottom: 12px; }
+    .card-title { font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .8px; margin-bottom: 12px; }
+    .card-value { font-size: 28px; font-weight: 800; color: var(--text); }
+    .section-header { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin: 16px 0 10px; }
+
+    /* ── ACTIVE TRIP CARD ── */
+    .trip-card-active { border: 2px solid var(--accent); background: linear-gradient(135deg, rgba(139,92,246,.08), rgba(109,40,217,.04)); }
+    .trip-type-badge { display: inline-flex; align-items: center; gap: 4px; font-size: 10px; font-weight: 700; letter-spacing: .8px; text-transform: uppercase; padding: 3px 10px; border-radius: 20px; }
+
+    /* ── STATS GRID ── */
+    .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 12px; }
+    .stat-box { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 12px 8px; text-align: center; }
+    .stat-val { font-size: 22px; font-weight: 800; color: var(--text); line-height: 1; }
+    .stat-lbl { font-size: 10px; color: var(--muted); margin-top: 4px; font-weight: 600; text-transform: uppercase; letter-spacing: .5px; }
+
+    /* ── EARN VIEW ── */
+    .period-tab { flex: 1; padding: 8px 4px; border: none; background: none; border-radius: 7px; font-size: 13px; font-weight: 600; color: var(--muted); cursor: pointer; transition: all .15s; }
+    .period-tab.active { background: var(--accent); color: #fff; }
+    .earn-hero { background: linear-gradient(135deg, #1e1040, #4c1d95); border-radius: 16px; padding: 20px; margin-bottom: 10px; text-align: center; border: 1px solid rgba(139,92,246,.3); }
+    .earn-hero-total { font-size: 44px; font-weight: 800; color: #fff; line-height: 1; }
+    .earn-hero-sub { font-size: 13px; color: rgba(255,255,255,.55); margin-top: 6px; }
+    .plat-earn-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 14px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
+    .plat-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+
+    /* ── COMPLIANCE ── */
+    .comp-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+    .comp-label { color: var(--muted); font-size: 12px; }
+    .comp-ok   { color: #22c55e; font-size: 12px; font-weight: 600; }
+    .comp-warn { color: #f59e0b; font-size: 12px; font-weight: 600; }
+    .comp-crit { color: #ef4444; font-size: 12px; font-weight: 600; }
+    .comp-banner-warn { background: rgba(245,158,11,.12); border: 1px solid rgba(245,158,11,.3); color: #b45309; border-radius: 10px; padding: 10px 14px; font-size: 13px; margin-bottom: 10px; }
+    .comp-banner-crit { background: rgba(239,68,68,.1); border: 1px solid rgba(239,68,68,.25); color: #dc2626; border-radius: 10px; padding: 10px 14px; font-size: 13px; margin-bottom: 10px; }
+
+    /* ── PROFILE ── */
+    .cdl-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+    .cdl-row:last-child { border-bottom: none; }
+    .cdl-label { color: var(--muted); font-size: 12px; }
+    .cdl-value { font-weight: 600; }
+    .profile-input { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; color: var(--text); padding: 6px 10px; font-size: 13px; width: 130px; }
+
+    /* ── MESSAGES ── */
+    #view-messages { display: none; flex-direction: column; padding: 0; }
+    #view-messages.active { display: flex; }
+    #msg-list { flex: 1; overflow-y: auto; padding: 14px 16px; }
+    .msg-bubble { max-width: 80%; margin-bottom: 12px; }
+    .msg-bubble.mine { margin-left: auto; }
+    .msg-text { padding: 10px 14px; border-radius: 16px; font-size: 14px; line-height: 1.4; }
+    .msg-bubble.theirs .msg-text { background: var(--card); border-bottom-left-radius: 4px; }
+    .msg-bubble.mine .msg-text { background: var(--accent); color: #fff; border-bottom-right-radius: 4px; }
+    .msg-meta { font-size: 10px; color: var(--muted); margin-top: 3px; }
+    .msg-bubble.mine .msg-meta { text-align: right; }
+    #msg-input-bar { display: flex; align-items: center; gap: 8px; padding: 10px 16px calc(10px + var(--safe-bot)); background: var(--surface); border-top: 1px solid var(--border); flex-shrink: 0; }
+    #msg-input { flex: 1; background: var(--card); border: 1px solid var(--border); border-radius: 20px; padding: 10px 14px; color: var(--text); font-size: 14px; resize: none; max-height: 100px; font-family: inherit; }
+    #msg-send-btn { width: 38px; height: 38px; background: var(--accent); border: none; border-radius: 50%; color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+
+    /* ── DOCS ── */
+    .upload-zone { border: 2px dashed var(--border); border-radius: 12px; padding: 20px 16px; text-align: center; cursor: pointer; transition: border-color .15s; margin-bottom: 10px; }
+    .upload-zone:active { border-color: var(--accent); }
+    .upload-icon { font-size: 28px; margin-bottom: 8px; }
+    .upload-text { font-size: 13px; color: var(--muted); line-height: 1.5; }
+    .upload-text strong { display: block; color: var(--text); margin-bottom: 2px; }
+    .pill { display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; }
+    .pill-green { background: rgba(34,197,94,.15); color: var(--green); }
+
+    /* ── BOTTOM NAV ── */
+    #bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: var(--surface); border-top: 1px solid var(--border); display: flex; padding: 6px 0 calc(6px + var(--safe-bot)); z-index: 100; }
+    .nav-btn { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 6px 2px; background: none; border: none; color: var(--muted); font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: .4px; cursor: pointer; position: relative; transition: color .15s; }
+    .nav-btn svg { width: 22px; height: 22px; }
+    .nav-btn.active { color: var(--accent); }
+    .nav-badge { position: absolute; top: 2px; right: calc(50% - 18px); background: var(--red); color: #fff; font-size: 9px; font-weight: 800; min-width: 16px; height: 16px; border-radius: 8px; display: flex; align-items: center; justify-content: center; padding: 0 3px; }
+
+    /* ── BUTTONS ── */
+    .btn { width: 100%; padding: 14px; border: none; border-radius: 12px; font-size: 14px; font-weight: 700; cursor: pointer; margin-bottom: 8px; transition: opacity .15s; }
+    .btn:active { opacity: .8; }
+    .btn-primary { background: linear-gradient(135deg, var(--accent), var(--accent2)); color: #fff; box-shadow: 0 3px 12px rgba(139,92,246,.4); }
+    .btn-success { background: var(--green); color: #fff; }
+    .btn-ghost { background: var(--card); color: var(--muted); border: 1px solid var(--border); }
+    .btn-save { background: var(--surface); color: var(--accent); border: 1px solid var(--accent); padding: 10px; border-radius: 10px; width: 100%; font-size: 13px; font-weight: 700; cursor: pointer; }
+
+    /* ── INSTANT PAY MODAL ── */
+    #instant-pay-modal { display: none; position: fixed; inset: 0; z-index: 300; background: rgba(0,0,0,.8); align-items: flex-end; justify-content: center; }
+    #instant-pay-modal.open { display: flex; }
+    .ipm-sheet { background: var(--surface); border-radius: 20px 20px 0 0; width: 100%; max-width: 480px; padding: 24px 20px calc(24px + var(--safe-bot)); border-top: 2px solid var(--accent); }
+
+    /* ── TOAST ── */
+    #toast { position: fixed; bottom: calc(80px + var(--safe-bot)); left: 50%; transform: translateX(-50%); background: rgba(30,28,60,.95); color: var(--text); padding: 12px 20px; border-radius: 12px; font-size: 14px; font-weight: 600; z-index: 500; opacity: 0; pointer-events: none; transition: opacity .25s; white-space: nowrap; border: 1px solid var(--border); }
+    #toast.show { opacity: 1; }
+
+    /* ── EMPTY STATE ── */
+    .empty-state { text-align: center; padding: 40px 20px; color: var(--muted); }
+    .empty-icon { font-size: 40px; margin-bottom: 12px; opacity: .5; }
+    .empty-state p { font-size: 14px; line-height: 1.6; }
+
+    /* ── SCROLLBAR ── */
+    ::-webkit-scrollbar { width: 3px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+  </style>
+</head>
+<body>
+<div id="app">
+
+  <!-- HEADER -->
+  <div id="header">
+    <div class="header-logo">
+      <div class="header-icon">🚗</div>
+      <div>
+        <div class="header-name"><span>3 Lakes</span> Light Fleet</div>
+      </div>
+    </div>
+    <div class="header-right">
+      <span class="driver-badge" id="driver-name">Driver</span>
+      <div class="conn-dot">
+        <span class="dot" id="online-dot"></span>
+        <span id="conn-label">Online</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN CONTENT -->
+  <div id="main">
+
+    <!-- HOME VIEW -->
+    <div class="view active" id="view-home">
+      <div id="earn-comp-banner-home"></div>
+
+      <!-- Active Trip (if any) -->
+      <div id="home-active-trip" style="display:none">
+        <div class="section-header">Active Trip</div>
+        <div class="card trip-card-active">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+            <span id="home-trip-type-badge" class="trip-type-badge" style="background:rgba(139,92,246,.2);color:#8b5cf6">—</span>
+            <span style="font-size:11px;color:var(--muted)" id="home-trip-rate"></span>
+          </div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:2px">PICKUP</div>
+          <div id="home-trip-pickup" style="font-size:14px;font-weight:600;margin-bottom:8px">—</div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:2px">DROPOFF</div>
+          <div id="home-trip-dropoff" style="font-size:14px;font-weight:600;margin-bottom:14px">—</div>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-success" style="margin-bottom:0;flex:1" onclick="lfCompleteTrip()">✓ Complete</button>
+            <button class="btn btn-ghost" style="margin-bottom:0;flex:1" onclick="lfNavigateTrip()">🗺 Navigate</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- No active trip -->
+      <div id="home-no-trip">
+        <div style="text-align:center;padding:28px 16px 20px">
+          <div style="font-size:48px;margin-bottom:10px">🚗</div>
+          <div style="font-size:18px;font-weight:800;margin-bottom:6px">Ready to Earn?</div>
+          <div style="font-size:13px;color:var(--muted);margin-bottom:20px;line-height:1.6">No active trip. Check your upcoming queue<br>or wait for dispatch to assign one.</div>
+          <button class="btn btn-primary" style="max-width:280px;margin:0 auto" onclick="showView('lf-trips')">
+            View My Trips →
+          </button>
+        </div>
+      </div>
+
+      <!-- Today's stats -->
+      <div class="section-header">Today's Summary</div>
+      <div class="stats-grid">
+        <div class="stat-box">
+          <div class="stat-val" id="home-trips-today">—</div>
+          <div class="stat-lbl">Trips</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-val" style="color:var(--green)" id="home-earned-today">—</div>
+          <div class="stat-lbl">Earned</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-val" style="color:var(--accent)" id="home-platforms-today">—</div>
+          <div class="stat-lbl">Platforms</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MY TRIPS VIEW -->
+    <div class="view" id="view-lf-trips">
+      <div class="section-header">My Trips</div>
+
+      <div id="lf-active-trip-card" style="display:none">
+        <div class="card trip-card-active">
+          <div class="card-title" style="display:flex;justify-content:space-between;align-items:center">
+            <span>Active Trip</span>
+            <span id="lf-active-badge" class="trip-type-badge" style="background:rgba(139,92,246,.2);color:#8b5cf6">In Progress</span>
+          </div>
+          <div>
+            <div style="font-size:11px;color:var(--muted);margin-bottom:2px">PICKUP</div>
+            <div id="lf-active-pickup" style="font-size:14px;font-weight:600;margin-bottom:10px">—</div>
+            <div style="font-size:11px;color:var(--muted);margin-bottom:2px">DROPOFF</div>
+            <div id="lf-active-dropoff" style="font-size:14px;font-weight:600;margin-bottom:12px">—</div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">
+              <div style="flex:1;min-width:80px;background:var(--bg);border-radius:8px;padding:8px;text-align:center">
+                <div id="lf-active-type" style="font-size:13px;font-weight:700;color:var(--accent)">—</div>
+                <div style="font-size:10px;color:var(--muted);margin-top:2px">Type</div>
+              </div>
+              <div style="flex:1;min-width:80px;background:var(--bg);border-radius:8px;padding:8px;text-align:center">
+                <div id="lf-active-rate" style="font-size:13px;font-weight:700;color:var(--green)">—</div>
+                <div style="font-size:10px;color:var(--muted);margin-top:2px">Rate</div>
+              </div>
+              <div style="flex:1;min-width:80px;background:var(--bg);border-radius:8px;padding:8px;text-align:center">
+                <div id="lf-active-passenger" style="font-size:13px;font-weight:700">—</div>
+                <div style="font-size:10px;color:var(--muted);margin-top:2px">Passenger</div>
+              </div>
+            </div>
+            <div style="display:flex;gap:8px">
+              <button class="btn btn-primary" style="flex:1;margin-bottom:0" onclick="lfCompleteTrip()">✓ Complete Trip</button>
+              <button class="btn btn-ghost" style="flex:1;margin-bottom:0" onclick="lfNavigateTrip()">🗺 Navigate</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="lf-no-active" style="display:none">
+        <div class="card" style="text-align:center;padding:20px">
+          <div style="font-size:28px;margin-bottom:8px">🚗</div>
+          <div style="font-weight:700;margin-bottom:4px">No Active Trip</div>
+          <div style="font-size:12px;color:var(--muted)">Check upcoming trips below</div>
+        </div>
+      </div>
+
+      <div class="section-header" style="margin-top:16px">Upcoming</div>
+      <div id="lf-upcoming-list">
+        <div style="text-align:center;padding:20px;color:var(--muted);font-size:13px">Loading…</div>
+      </div>
+
+      <div class="section-header" style="margin-top:16px">Completed Today</div>
+      <div id="lf-completed-list">
+        <div style="text-align:center;padding:20px;color:var(--muted);font-size:13px">Loading…</div>
+      </div>
+    </div>
+
+    <!-- MESSAGES VIEW -->
+    <div class="view" id="view-messages">
+      <div id="msg-list">
+        <div class="empty-state"><div class="empty-icon">💬</div><p>No messages yet.<br>Dispatch will reach you here and via SMS.</p></div>
+      </div>
+      <div id="msg-input-bar">
+        <textarea id="msg-input" rows="1" placeholder="Message dispatch…" oninput="autoResize(this)" onkeydown="msgKeydown(event)"></textarea>
+        <button id="msg-send-btn" onclick="sendMessage()">
+          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- DOCS VIEW -->
+    <div class="view" id="view-docs">
+      <div class="section-header">Upload Documents</div>
+      <div class="card">
+        <div class="card-title">Proof of Delivery (POD)</div>
+        <div class="upload-zone" onclick="triggerUpload('pod-upload')">
+          <input type="file" id="pod-upload" accept="image/*,application/pdf" onchange="handleUpload('pod', this)" />
+          <div class="upload-icon">📸</div>
+          <div class="upload-text"><strong>Tap to upload POD</strong>Photo or PDF of delivery confirmation</div>
+        </div>
+        <div id="pod-status" style="display:none" class="pill pill-green">✓ POD uploaded</div>
+      </div>
+      <div class="card">
+        <div class="card-title">Patient / Rider Signature (NEMT)</div>
+        <div class="upload-zone" onclick="triggerUpload('sig-upload')">
+          <input type="file" id="sig-upload" accept="image/*" onchange="handleUpload('signature', this)" />
+          <div class="upload-icon">✍️</div>
+          <div class="upload-text"><strong>Tap to upload signature</strong>Required for NEMT Medicaid billing</div>
+        </div>
+        <div id="sig-status" style="display:none" class="pill pill-green">✓ Signature uploaded</div>
+      </div>
+      <div class="card">
+        <div class="card-title">Vehicle Inspection / Incident Photo</div>
+        <div class="upload-zone" onclick="triggerUpload('incident-upload')">
+          <input type="file" id="incident-upload" accept="image/*" onchange="handleUpload('incident', this)" />
+          <div class="upload-icon">📷</div>
+          <div class="upload-text"><strong>Tap to upload photo</strong>Pre/post-trip or incident documentation</div>
+        </div>
+      </div>
+      <div class="section-header">Uploaded This Trip</div>
+      <div id="docs-list" style="color:var(--muted);font-size:13px;padding:8px 0">No documents uploaded yet.</div>
+    </div>
+
+    <!-- EARN VIEW -->
+    <div class="view" id="view-pay">
+      <div id="earn-comp-banner" style="display:none"></div>
+
+      <div style="display:flex;gap:4px;margin-bottom:10px;background:var(--card);border-radius:10px;padding:3px">
+        <button class="period-tab active" id="period-week"  onclick="setEarnPeriod('week')">Week</button>
+        <button class="period-tab"        id="period-month" onclick="setEarnPeriod('month')">Month</button>
+        <button class="period-tab"        id="period-ytd"   onclick="setEarnPeriod('ytd')">YTD</button>
+      </div>
+
+      <div class="earn-hero">
+        <div style="font-size:11px;color:rgba(255,255,255,.65);text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px">Total Earnings — <span id="earn-period-label">This Week</span></div>
+        <div class="earn-hero-total" id="earn-total">—</div>
+        <div class="earn-hero-sub"><span id="earn-trips">—</span> trips &nbsp;·&nbsp; Net <span id="earn-net">—</span></div>
+        <button onclick="showInstantPay()" style="margin-top:14px;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);color:#fff;border-radius:9px;padding:9px 20px;font-size:13px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:6px">
+          ⚡ Instant Pay <span style="font-size:11px;opacity:.7">(1.5% fee)</span>
+        </button>
+      </div>
+
+      <div class="section-header" style="display:flex;justify-content:space-between;align-items:center">
+        By Platform <span style="font-size:10px;color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0">All platforms</span>
+      </div>
+      <div id="earn-platform-list">
+        <div style="text-align:center;padding:16px;color:var(--muted);font-size:13px">Loading…</div>
+      </div>
+
+      <div class="section-header">Last 4 Weeks</div>
+      <div id="earn-trend" style="display:flex;gap:6px;height:72px;align-items:flex-end;margin-bottom:8px;padding:0 2px">
+        <div style="text-align:center;color:var(--muted);font-size:12px;width:100%;padding-top:20px">Loading trend…</div>
+      </div>
+
+      <div class="section-header">This Period</div>
+      <div class="card">
+        <div class="cdl-row"><div class="cdl-label">Gross Earnings</div><div class="cdl-value" style="color:var(--green)" id="pay-week-gross">—</div></div>
+        <div class="cdl-row"><div class="cdl-label">Platform Fee (15%)</div><div class="cdl-value" style="color:var(--red)" id="ded-dispatch">—</div></div>
+        <div class="cdl-row" style="border-top:1px solid var(--border);padding-top:10px;margin-top:4px">
+          <div class="cdl-label" style="font-weight:700;color:var(--text)">Your Net</div>
+          <div class="cdl-value" id="pay-net" style="color:var(--green);font-size:18px;font-weight:700">—</div>
+        </div>
+      </div>
+
+      <div style="display:none">
+        <span id="pay-week-miles"></span><span id="pay-week-loads"></span>
+        <span id="pay-week-rpm"></span><span id="pay-ytd-gross"></span>
+        <span id="pay-ytd-miles"></span><span id="earn-net-label"></span>
+        <span id="deductions-card"></span><span id="ded-fuel"></span><span id="ded-insurance"></span>
+      </div>
+
+      <div class="section-header">Settlement History</div>
+      <div id="settlement-list">
+        <div style="text-align:center;padding:16px;color:var(--muted);font-size:13px">Loading…</div>
+      </div>
+    </div>
+
+    <!-- PROFILE VIEW -->
+    <div class="view" id="view-profile">
+      <div class="section-header">My Profile</div>
+
+      <!-- LF Compliance Card -->
+      <div class="card" id="comp-card">
+        <div class="card-title" style="display:flex;justify-content:space-between;align-items:center">
+          Compliance Status
+          <span id="comp-overall-badge" style="font-size:10px;padding:2px 9px;border-radius:20px;font-weight:700;background:#d1fae5;color:#065f46">✓ All Clear</span>
+        </div>
+        <div class="comp-row">
+          <div class="comp-label">Driver's License</div>
+          <div id="comp-license" class="comp-ok">Checking…</div>
+        </div>
+        <div class="comp-row">
+          <div class="comp-label">Vehicle Insurance</div>
+          <div id="comp-insurance" class="comp-ok">Checking…</div>
+        </div>
+        <div class="comp-row">
+          <div class="comp-label">Background Check</div>
+          <div id="comp-background" class="comp-ok">Checking…</div>
+        </div>
+        <div class="comp-row" style="border:none;flex-wrap:wrap;gap:6px">
+          <div class="comp-label" style="width:100%;margin-bottom:4px">Active Platforms</div>
+          <div id="comp-platforms" style="display:flex;flex-wrap:wrap;gap:5px;width:100%">
+            <span style="font-size:11px;color:var(--muted)">Loading…</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Performance -->
+      <div class="card">
+        <div class="card-title">Performance</div>
+        <div class="cdl-row">
+          <div class="cdl-label">On-Time Rate</div>
+          <div class="cdl-value" id="perf-ontime">—</div>
+        </div>
+        <div class="cdl-row">
+          <div class="cdl-label">Trips This Month</div>
+          <div class="cdl-value" id="perf-loads">—</div>
+        </div>
+        <div class="cdl-row">
+          <div class="cdl-label">Platforms Active</div>
+          <div class="cdl-value" id="perf-miles">—</div>
+        </div>
+        <div class="cdl-row">
+          <div class="cdl-label">Gross This Month</div>
+          <div class="cdl-value" id="perf-gross">—</div>
+        </div>
+      </div>
+
+      <!-- Emergency Contacts -->
+      <div class="card">
+        <div class="card-title">Quick Contacts</div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <a href="tel:+18005551234" style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:var(--bg);border:1px solid var(--border);border-radius:10px;text-decoration:none">
+            <div><div style="font-size:13px;font-weight:600;color:var(--text)">🚨 Roadside / Emergency</div><div style="font-size:11px;color:var(--muted)">24/7</div></div>
+            <div style="background:var(--red);color:#fff;padding:6px 12px;border-radius:8px;font-size:12px;font-weight:700">Call</div>
+          </a>
+          <a href="tel:+18005550911" style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:var(--bg);border:1px solid var(--border);border-radius:10px;text-decoration:none">
+            <div><div style="font-size:13px;font-weight:600;color:var(--text)">📞 Dispatch</div><div style="font-size:11px;color:var(--muted)">Mon–Fri 6am–8pm CT</div></div>
+            <div style="background:var(--accent);color:#fff;padding:6px 12px;border-radius:8px;font-size:12px;font-weight:700">Call</div>
+          </a>
+          <a href="tel:+18005550100" style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:var(--bg);border:1px solid var(--border);border-radius:10px;text-decoration:none">
+            <div><div style="font-size:13px;font-weight:600;color:var(--text)">🏥 Insurance Claims</div><div style="font-size:11px;color:var(--muted)">Accidents / incidents</div></div>
+            <div style="background:var(--yellow);color:#0a0a1a;padding:6px 12px;border-radius:8px;font-size:12px;font-weight:700">Call</div>
+          </a>
+        </div>
+      </div>
+
+      <!-- Phone -->
+      <div class="card">
+        <div class="card-title">Contact & Messaging</div>
+        <div style="margin-bottom:14px">
+          <label style="display:block;font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">My Phone (for SMS dispatches)</label>
+          <input class="profile-input" id="phone-input" type="tel" placeholder="+1 (312) 555-0000"
+            inputmode="tel" autocomplete="tel" style="width:100%;padding:12px 14px;font-size:15px" />
+          <div style="font-size:11px;color:var(--muted);margin-top:5px">Reply YES/NO by SMS to accept or decline trips.</div>
+        </div>
+        <button class="btn-save" onclick="savePhone()">💾 Save Phone Number</button>
+        <div id="phone-saved-msg" style="display:none;font-size:12px;color:var(--green);margin-top:8px;text-align:center">✓ Saved</div>
+      </div>
+
+      <button class="btn btn-ghost" onclick="logout()" style="margin-top:4px">Sign Out</button>
+    </div>
+
+  </div><!-- /main -->
+
+  <!-- BOTTOM NAV -->
+  <div id="bottom-nav">
+    <button class="nav-btn active" id="nav-home" onclick="showView('home')">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      Home
+    </button>
+    <button class="nav-btn" id="nav-lf-trips" onclick="showView('lf-trips')">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="1" y="3" width="11" height="18" rx="2"/><path d="M12 7h8l3 4v4h-11"/><circle cx="5" cy="19" r="2"/><circle cx="17" cy="19" r="2"/></svg>
+      My Trips
+    </button>
+    <button class="nav-btn" id="nav-messages" onclick="showView('messages')">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+      Messages
+      <span class="nav-badge" id="msg-badge" style="display:none">0</span>
+    </button>
+    <button class="nav-btn" id="nav-docs" onclick="showView('docs')">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      Docs
+    </button>
+    <button class="nav-btn" id="nav-pay" onclick="showView('pay')">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+      Earn
+    </button>
+    <button class="nav-btn" id="nav-profile" onclick="showView('profile')">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      Profile
+    </button>
+  </div>
+
+</div><!-- /app -->
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<!-- INSTANT PAY MODAL -->
+<div id="instant-pay-modal">
+  <div class="ipm-sheet">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+      <div style="font-size:18px;font-weight:800">⚡ Instant Pay</div>
+      <button onclick="closeInstantPay()" style="background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer">✕</button>
+    </div>
+    <div class="card" style="margin-bottom:16px">
+      <div class="cdl-row"><div class="cdl-label">Available Balance</div><div class="cdl-value" style="color:var(--green)" id="ipm-balance">—</div></div>
+      <div class="cdl-row"><div class="cdl-label">Instant Pay Fee (1.5%)</div><div class="cdl-value" style="color:var(--red)" id="ipm-fee">—</div></div>
+      <div class="cdl-row" style="border-top:1px solid var(--border);padding-top:10px;margin-top:4px">
+        <div class="cdl-label" style="font-weight:700;color:var(--text)">You Receive</div>
+        <div class="cdl-value" id="ipm-net" style="color:var(--green);font-size:18px;font-weight:700">—</div>
+      </div>
+    </div>
+    <button class="btn btn-primary" id="ipm-submit-btn" onclick="submitInstantPay()">
+      ⚡ Transfer Now → Same-Day ACH
+    </button>
+    <div style="font-size:11px;color:var(--muted);text-align:center;margin-top:10px">Funds arrive in 2–8 hours via ACH</div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.41.0"></script>
+<script>
+// ── CONSTANTS ─────────────────────────────────────────────────────────────────
+const DRIVER_MODE = 'light'; // Hard-coded — this is the LF-only app
+const DEMO_MODE   = localStorage.getItem('3ll_token') === 'demo-token-3lakes';
+const DRIVER_ID   = localStorage.getItem('3ll_lf_driver_id') || localStorage.getItem('3ll_driver_id') || 'DRV-LF-001';
+const MY_PHONE    = localStorage.getItem('3ll_phone') || '';
+
+const API_PRIMARY = 'https://three-lakes-logistics-api.onrender.com';
+let _apiBase = API_PRIMARY;
+
+const SUPABASE_URL = 'https://zngipootstubwvgdmckt.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpuZ2lwb290c3R1Ynd2Z2RtY2t0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMxMjk3ODUsImV4cCI6MjA4ODcwNTc4NX0.6MXR8q-CKVuiiJaJKuckxABAUQ-siuyP0-KoaLkt33g';
+
+let supabaseClient = null;
+let _gpsTimer  = null;
+let _tracking  = false;
+let _lfActiveTrip = null;
+let _unreadCount  = 0;
+let _msgPollTimer = null;
+let _lastMsgTs    = null;
+let _earnPeriod   = 'week';
+
+// ── INIT ─────────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('driver-name').textContent = localStorage.getItem('3ll_driver_name') || 'Driver';
+  const phone = localStorage.getItem('3ll_phone') || '';
+  if (phone) { const el = document.getElementById('phone-input'); if (el) el.value = phone; }
+  initSupabase();
+  loadLfTrips();
+  loadLFHomeStats();
+  if (DEMO_MODE) loadDemoData();
+  startMsgPoll();
+});
+
+function initSupabase() {
+  try {
+    if (!window.supabase) return;
+    supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  } catch(e) { console.debug('Supabase init error', e); }
+}
+
+function loadDemoData() {
+  document.getElementById('home-trips-today').textContent  = '4';
+  document.getElementById('home-earned-today').textContent = '$187';
+  document.getElementById('home-platforms-today').textContent = '3';
+  document.getElementById('perf-ontime').textContent = '96%';
+  document.getElementById('perf-loads').textContent  = '62';
+  document.getElementById('perf-miles').textContent  = '4';
+  document.getElementById('perf-gross').textContent  = '$3,840';
+}
+
+// ── NAVIGATION ────────────────────────────────────────────────────────────────
+function showView(name) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  const view = document.getElementById('view-' + name);
+  const btn  = document.getElementById('nav-' + name);
+  if (view) view.classList.add('active');
+  if (btn)  btn.classList.add('active');
+  if (name === 'lf-trips') loadLfTrips();
+  if (name === 'pay')      { loadEarningsView(); loadComplianceStatus(); }
+  if (name === 'profile')  loadComplianceStatus();
+  if (name === 'home')     loadLFHomeStats();
+  if (name === 'messages') loadMessages();
+}
+
+// ── LF TRIPS ─────────────────────────────────────────────────────────────────
+async function loadLfTrips() {
+  const token = localStorage.getItem('3ll_token') || '';
+  const driverCode = DRIVER_ID;
+  document.getElementById('lf-active-trip-card').style.display = 'none';
+  document.getElementById('lf-no-active').style.display = 'none';
+  document.getElementById('lf-upcoming-list').innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted);font-size:13px">Loading…</div>';
+  document.getElementById('lf-completed-list').innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted);font-size:13px">Loading…</div>';
+
+  if (DEMO_MODE) {
+    renderDemoTrips(); return;
+  }
+  try {
+    const r = await fetch(_apiBase + '/api/light-fleet/trips?limit=100', {
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    if (!r.ok) throw new Error(r.status);
+    const { items } = await r.json();
+    const myTrips  = items.filter(t => t.driver_id === driverCode || !t.driver_id);
+    const today    = new Date().toDateString();
+    const active   = myTrips.find(t => ['in_progress','en_route','arrived'].includes(t.status) && t.driver_id === driverCode);
+    const upcoming = myTrips.filter(t => ['pending','assigned'].includes(t.status));
+    const completed = myTrips.filter(t => t.status === 'completed' && new Date(t.completed_at||0).toDateString() === today);
+    renderActiveTripCards(active);
+    renderUpcomingTrips(upcoming);
+    renderCompletedTrips(completed);
+  } catch(e) {
+    document.getElementById('lf-upcoming-list').innerHTML = '<div style="text-align:center;padding:20px;color:var(--red);font-size:13px">Could not load trips</div>';
+  }
+}
+
+function renderDemoTrips() {
+  _lfActiveTrip = { id: 'demo-1', trip_type: 'nemt', pickup_address: '1234 Dialysis Center Dr', dropoff_address: '5678 Home Care Ave', rate_total: 42.00, passenger_name: 'R. Johnson' };
+  renderActiveTripCards(_lfActiveTrip);
+  document.getElementById('lf-upcoming-list').innerHTML = `
+    ${tripCard({trip_type:'executive',pickup_address:'O\'Hare Airport T3',dropoff_address:'Marriott Downtown',rate_total:65,status:'assigned'})}
+    ${tripCard({trip_type:'courier',pickup_address:'Walgreens #4421',dropoff_address:'Northwestern Hospital Lab',rate_total:28,status:'pending'})}
+  `;
+  document.getElementById('lf-completed-list').innerHTML = `
+    ${tripCard({trip_type:'nemt',pickup_address:'Rush Medical Center',dropoff_address:'Patient Home',rate_total:38,status:'completed'})}
+    ${tripCard({trip_type:'gig',pickup_address:'Curri Pickup – Fulton Market',dropoff_address:'West Loop Warehouse',rate_total:22,status:'completed'})}
+  `;
+}
+
+function renderActiveTripCards(active) {
+  const card = document.getElementById('lf-active-trip-card');
+  const noActive = document.getElementById('lf-no-active');
+  const homeActive = document.getElementById('home-active-trip');
+  const homeNoTrip = document.getElementById('home-no-trip');
+  if (active) {
+    _lfActiveTrip = active;
+    document.getElementById('lf-active-pickup').textContent   = active.pickup_address || '—';
+    document.getElementById('lf-active-dropoff').textContent  = active.dropoff_address || '—';
+    document.getElementById('lf-active-type').textContent     = (active.trip_type || '').toUpperCase();
+    document.getElementById('lf-active-rate').textContent     = active.rate_total ? '$' + Number(active.rate_total).toFixed(2) : '—';
+    document.getElementById('lf-active-passenger').textContent = active.passenger_name || 'N/A';
+    card.style.display = '';
+    noActive.style.display = 'none';
+    if (homeActive) {
+      homeActive.style.display = '';
+      homeNoTrip.style.display = 'none';
+      document.getElementById('home-trip-type-badge').textContent = (active.trip_type || '').toUpperCase();
+      document.getElementById('home-trip-pickup').textContent  = active.pickup_address || '—';
+      document.getElementById('home-trip-dropoff').textContent = active.dropoff_address || '—';
+      document.getElementById('home-trip-rate').textContent    = active.rate_total ? '$' + Number(active.rate_total).toFixed(2) : '';
+    }
+    startGpsTracking();
+  } else {
+    _lfActiveTrip = null;
+    card.style.display = 'none';
+    noActive.style.display = '';
+    if (homeActive) { homeActive.style.display = 'none'; homeNoTrip.style.display = ''; }
+    stopGpsTracking();
+  }
+}
+
+function renderUpcomingTrips(trips) {
+  const el = document.getElementById('lf-upcoming-list');
+  if (!trips.length) { el.innerHTML = '<div class="empty-state"><div class="empty-icon">🗓</div><p>No upcoming trips yet.</p></div>'; return; }
+  el.innerHTML = trips.map(tripCard).join('');
+}
+
+function renderCompletedTrips(trips) {
+  const el = document.getElementById('lf-completed-list');
+  if (!trips.length) { el.innerHTML = '<div style="text-align:center;padding:16px;color:var(--muted);font-size:12px">No completed trips today.</div>'; return; }
+  el.innerHTML = trips.map(tripCard).join('');
+}
+
+const TRIP_COLORS = { nemt:'#8b5cf6', executive:'#b45309', courier:'#2563eb', gig:'#16a34a' };
+function tripCard(t) {
+  const col = TRIP_COLORS[t.trip_type] || '#6b7280';
+  return `<div style="background:var(--card);border:1px solid var(--border);border-left:3px solid ${col};border-radius:12px;padding:14px;margin-bottom:8px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <span style="font-size:10px;font-weight:700;color:${col};text-transform:uppercase;letter-spacing:.6px">${t.trip_type||'trip'}</span>
+      <span style="font-size:13px;font-weight:700;color:var(--green)">${t.rate_total?'$'+Number(t.rate_total).toFixed(2):''}</span>
+    </div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:1px">FROM</div>
+    <div style="font-size:13px;font-weight:600;margin-bottom:6px">${t.pickup_address||'—'}</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:1px">TO</div>
+    <div style="font-size:13px;font-weight:600">${t.dropoff_address||'—'}</div>
+  </div>`;
+}
+
+async function lfStartTrip(tripId) {
+  const token = localStorage.getItem('3ll_token') || '';
+  try {
+    await fetch(_apiBase + '/api/light-fleet/trips/' + tripId + '/start', {
+      method: 'POST', headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' }
+    });
+    showToast('Trip started! 🚗');
+    loadLfTrips();
+  } catch(e) { showToast('Error starting trip'); }
+}
+
+async function lfCompleteTrip() {
+  if (!_lfActiveTrip) return;
+  const token = localStorage.getItem('3ll_token') || '';
+  try {
+    await fetch(_apiBase + '/api/light-fleet/trips/' + _lfActiveTrip.id + '/complete', {
+      method: 'POST', headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' }, body: '{}'
+    });
+    showToast('Trip completed! 🎉');
+    _lfActiveTrip = null;
+    loadLfTrips();
+    loadLFHomeStats();
+  } catch(e) { showToast('Error completing trip'); }
+}
+
+function lfNavigateTrip() {
+  const addr = (_lfActiveTrip?.dropoff_address || '').trim();
+  if (!addr) return;
+  window.open('https://maps.google.com/?q=' + encodeURIComponent(addr), '_blank');
+}
+
+// ── HOME STATS ────────────────────────────────────────────────────────────────
+async function loadLFHomeStats() {
+  if (DEMO_MODE) {
+    document.getElementById('home-trips-today').textContent    = '4';
+    document.getElementById('home-earned-today').textContent   = '$187';
+    document.getElementById('home-platforms-today').textContent = '3';
+    return;
+  }
+  const lfId = localStorage.getItem('3ll_lf_driver_id');
+  if (!lfId) return;
+  try {
+    const res  = await apiFetch('/api/light-fleet/drivers/' + lfId + '/earnings?period=week');
+    const data = res.ok ? await res.json() : null;
+    if (!data) return;
+    document.getElementById('home-trips-today').textContent    = data.summary?.trips || '0';
+    document.getElementById('home-earned-today').textContent   = '$' + (data.summary?.gross || 0).toFixed(0);
+    document.getElementById('home-platforms-today').textContent = Object.keys(data.breakdown || {}).length || '—';
+  } catch(e) {}
+}
+
+// ── EARNINGS ─────────────────────────────────────────────────────────────────
+const PLAT_COLORS = { '3lakes':'#8b5cf6','curri':'#16a34a','roadie':'#b45309','amazon_flex':'#d97706','spark':'#0891b2','doordash':'#dc2626','goshare':'#7c3aed' };
+const PLAT_NAMES  = { '3lakes':'3 Lakes','curri':'Curri','roadie':'Roadie (UPS)','amazon_flex':'Amazon Flex','spark':'Spark Driver','doordash':'DoorDash Drive','goshare':'GoShare' };
+
+function setEarnPeriod(p) {
+  _earnPeriod = p;
+  ['week','month','ytd'].forEach(x => {
+    const el = document.getElementById('period-' + x);
+    if (el) el.classList.toggle('active', x === p);
+  });
+  const labels = { week:'This Week', month:'This Month', ytd:'Year to Date' };
+  document.getElementById('earn-period-label').textContent = labels[p] || p;
+  loadEarningsView();
+}
+
+async function loadEarningsView() {
+  const lfId = localStorage.getItem('3ll_lf_driver_id');
+  if (!lfId || DEMO_MODE) { renderDemoEarnings(); return; }
+  try {
+    const res  = await apiFetch('/api/light-fleet/drivers/' + lfId + '/earnings?period=' + _earnPeriod);
+    const data = res.ok ? await res.json() : null;
+    if (data) renderEarnings(data); else renderDemoEarnings();
+  } catch(e) { renderDemoEarnings(); }
+}
+
+function renderDemoEarnings() {
+  const gross = 847.50, net = 720.38;
+  document.getElementById('earn-total').textContent    = '$' + gross.toFixed(2);
+  document.getElementById('earn-trips').textContent    = '22';
+  document.getElementById('earn-net').textContent      = '$' + net.toFixed(2);
+  document.getElementById('pay-week-gross').textContent = '$' + gross.toFixed(2);
+  document.getElementById('ded-dispatch').textContent  = '-$' + (gross * 0.15).toFixed(2);
+  document.getElementById('pay-net').textContent       = '$' + net.toFixed(2);
+  const platList = document.getElementById('earn-platform-list');
+  const demo = [['3lakes',420],['curri',180],['amazon_flex',140],['doordash',107.50]];
+  platList.innerHTML = demo.map(([k,v]) => `
+    <div class="plat-earn-card">
+      <div style="display:flex;align-items:center;gap:10px">
+        <span class="plat-dot" style="background:${PLAT_COLORS[k]||'#6b7280'}"></span>
+        <span style="font-size:13px;font-weight:600">${PLAT_NAMES[k]||k}</span>
+      </div>
+      <span style="font-size:14px;font-weight:700;color:var(--green)">$${v.toFixed(2)}</span>
+    </div>`).join('');
+  const trendEl = document.getElementById('earn-trend');
+  const weeks = [612, 741, 698, 847];
+  const mx = Math.max(...weeks);
+  trendEl.innerHTML = weeks.map((w,i) => `
+    <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px">
+      <div style="font-size:10px;color:var(--muted)">$${w}</div>
+      <div style="width:100%;background:${i===3?'var(--accent)':'var(--border)'};border-radius:4px 4px 0 0;height:${Math.round(w/mx*52)}px"></div>
+      <div style="font-size:9px;color:var(--muted)">W${i+1}</div>
+    </div>`).join('');
+}
+
+function renderEarnings(data) {
+  const s = data.summary || {};
+  const gross = s.gross || 0, net = s.net || 0;
+  document.getElementById('earn-total').textContent    = '$' + gross.toFixed(2);
+  document.getElementById('earn-trips').textContent    = s.trips || 0;
+  document.getElementById('earn-net').textContent      = '$' + net.toFixed(2);
+  document.getElementById('pay-week-gross').textContent = '$' + gross.toFixed(2);
+  document.getElementById('ded-dispatch').textContent  = '-$' + (s.fees || gross * 0.15).toFixed(2);
+  document.getElementById('pay-net').textContent       = '$' + net.toFixed(2);
+  const breakdown = data.breakdown || {};
+  const platEl = document.getElementById('earn-platform-list');
+  platEl.innerHTML = Object.entries(breakdown).length
+    ? Object.entries(breakdown).map(([k,v]) => `
+      <div class="plat-earn-card">
+        <div style="display:flex;align-items:center;gap:10px">
+          <span class="plat-dot" style="background:${PLAT_COLORS[k]||'#6b7280'}"></span>
+          <span style="font-size:13px;font-weight:600">${PLAT_NAMES[k]||k}</span>
+        </div>
+        <span style="font-size:14px;font-weight:700;color:var(--green)">$${Number(v.gross||v).toFixed(2)}</span>
+      </div>`).join('')
+    : '<div style="text-align:center;padding:16px;color:var(--muted);font-size:12px">No earnings this period.</div>';
+  const trend = data.trend || [];
+  if (trend.length) {
+    const mx = Math.max(...trend.map(t => t.gross || 0), 1);
+    document.getElementById('earn-trend').innerHTML = trend.map((t,i) => `
+      <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px">
+        <div style="font-size:9px;color:var(--muted)">$${Math.round(t.gross||0)}</div>
+        <div style="width:100%;background:${i===trend.length-1?'var(--accent)':'var(--border)'};border-radius:4px 4px 0 0;height:${Math.max(4,Math.round((t.gross||0)/mx*52))}px"></div>
+        <div style="font-size:9px;color:var(--muted)">W${i+1}</div>
+      </div>`).join('');
+  }
+}
+
+// ── COMPLIANCE ────────────────────────────────────────────────────────────────
+async function loadComplianceStatus() {
+  const lfId = localStorage.getItem('3ll_lf_driver_id');
+  if (!lfId || DEMO_MODE) { renderDemoCompliance(); return; }
+  try {
+    const res  = await fetch(_apiBase + '/api/light-fleet/driver-ping', { method: 'GET' }).catch(() => null);
+    const res2 = await fetch(_apiBase + '/api/light-fleet/' + lfId + '/compliance-status');
+    const comp = res2.ok ? await res2.json() : null;
+    if (comp) renderCompliance(comp); else renderDemoCompliance();
+  } catch(e) { renderDemoCompliance(); }
+}
+
+function renderDemoCompliance() {
+  document.getElementById('comp-license').className = 'comp-ok';
+  document.getElementById('comp-license').textContent = '✓ 847 days';
+  document.getElementById('comp-insurance').className = 'comp-ok';
+  document.getElementById('comp-insurance').textContent = '✓ 203 days';
+  document.getElementById('comp-background').className = 'comp-ok';
+  document.getElementById('comp-background').textContent = '✓ Clear';
+  document.getElementById('comp-overall-badge').style.background = '#d1fae5';
+  document.getElementById('comp-overall-badge').style.color = '#065f46';
+  document.getElementById('comp-overall-badge').textContent = '✓ All Clear';
+  document.getElementById('comp-platforms').innerHTML = `
+    <span style="font-size:11px;background:rgba(34,197,94,.15);color:#22c55e;padding:2px 8px;border-radius:20px;font-weight:600">Curri ✓</span>
+    <span style="font-size:11px;background:rgba(34,197,94,.15);color:#22c55e;padding:2px 8px;border-radius:20px;font-weight:600">Roadie ✓</span>
+    <span style="font-size:11px;background:rgba(34,197,94,.15);color:#22c55e;padding:2px 8px;border-radius:20px;font-weight:600">Amazon Flex ✓</span>`;
+}
+
+function renderCompliance(c) {
+  const set = (id, val, cls) => {
+    const el = document.getElementById(id);
+    if (el) { el.textContent = val; el.className = cls; }
+  };
+  const level = d => d <= 30 ? 'comp-crit' : d <= 60 ? 'comp-warn' : 'comp-ok';
+  if (c.license_days_remaining != null)  set('comp-license',  (c.license_days_remaining > 0 ? '✓ ' : '⚠ ') + c.license_days_remaining + ' days', level(c.license_days_remaining));
+  if (c.insurance_days_remaining != null) set('comp-insurance', (c.insurance_days_remaining > 0 ? '✓ ' : '⚠ ') + c.insurance_days_remaining + ' days', level(c.insurance_days_remaining));
+  set('comp-background', c.background_clear ? '✓ Clear' : '⚠ Needed', c.background_clear ? 'comp-ok' : 'comp-crit');
+  const worst = Math.min(c.license_days_remaining||999, c.insurance_days_remaining||999);
+  const badge = document.getElementById('comp-overall-badge');
+  if (badge) {
+    if (!c.background_clear || worst <= 30) { badge.style.background='#fee2e2';badge.style.color='#991b1b';badge.textContent='⚠ Action Needed'; }
+    else if (worst <= 60)                   { badge.style.background='#fef3c7';badge.style.color='#92400e';badge.textContent='! Check Required'; }
+    else                                    { badge.style.background='#d1fae5';badge.style.color='#065f46';badge.textContent='✓ All Clear'; }
+  }
+}
+
+// ── INSTANT PAY ───────────────────────────────────────────────────────────────
+function showInstantPay() {
+  const gross = parseFloat(document.getElementById('earn-total').textContent.replace(/[^0-9.]/g,'')) || 0;
+  const fee   = gross * 0.015;
+  const net   = gross - fee;
+  document.getElementById('ipm-balance').textContent = '$' + gross.toFixed(2);
+  document.getElementById('ipm-fee').textContent     = '-$' + fee.toFixed(2);
+  document.getElementById('ipm-net').textContent     = '$' + net.toFixed(2);
+  document.getElementById('instant-pay-modal').classList.add('open');
+}
+function closeInstantPay() { document.getElementById('instant-pay-modal').classList.remove('open'); }
+async function submitInstantPay() {
+  const lfId = localStorage.getItem('3ll_lf_driver_id');
+  if (!lfId || DEMO_MODE) { showToast('⚡ Instant pay initiated (demo)'); closeInstantPay(); return; }
+  const gross = parseFloat(document.getElementById('ipm-balance').textContent.replace(/[^0-9.]/g,'')) || 0;
+  try {
+    const r = await apiFetch('/api/light-fleet/drivers/' + lfId + '/instant-pay', 'POST', { amount: gross });
+    if (r.ok) { showToast('⚡ Transfer initiated — arrives in 2–8 hrs'); closeInstantPay(); }
+    else showToast('Transfer failed — try again');
+  } catch(e) { showToast('Error processing payment'); }
+}
+
+// ── MESSAGES ─────────────────────────────────────────────────────────────────
+function loadMessages() { if (DEMO_MODE) renderDemoMessages(); else pollMessages(); }
+function renderDemoMessages() {
+  document.getElementById('msg-list').innerHTML = `
+    <div class="msg-bubble theirs"><div class="msg-text">Welcome to 3 Lakes Light Fleet! Your first trip will be assigned shortly.</div><div class="msg-meta">Dispatch · 9:14 AM</div></div>
+    <div class="msg-bubble theirs"><div class="msg-text">NEMT trip ready — dialysis pickup at Rush Medical 10:30 AM. Accept?</div><div class="msg-meta">Maya AI · 10:22 AM</div></div>
+    <div class="msg-bubble mine"><div class="msg-text">YES</div><div class="msg-meta">You · 10:23 AM</div></div>
+    <div class="msg-bubble theirs"><div class="msg-text">Confirmed. Patient: R. Johnson. Dropoff: 5678 Home Care Ave. Good luck!</div><div class="msg-meta">Maya AI · 10:23 AM</div></div>`;
+}
+async function pollMessages() {
+  if (!MY_PHONE) return;
+  const q = _lastMsgTs ? `?after=${encodeURIComponent(_lastMsgTs)}` : '';
+  try {
+    const r = await apiFetch('/api/messages/thread' + q);
+    if (!r.ok) return;
+    const { messages } = await r.json();
+    if (messages?.length) renderMessages(messages);
+  } catch(e) {}
+}
+function renderMessages(msgs, cb) {
+  const el = document.getElementById('msg-list');
+  if (!msgs.length) return;
+  el.innerHTML = msgs.map(m => `
+    <div class="msg-bubble ${m.direction==='outbound'?'mine':'theirs'}">
+      <div class="msg-text">${esc(m.body||m.message||'')}</div>
+      <div class="msg-meta">${m.direction==='outbound'?'You':'Dispatch'} · ${new Date(m.created_at||m.ts||Date.now()).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</div>
+    </div>`).join('');
+  if (cb) cb(); else el.scrollTop = el.scrollHeight;
+}
+function startMsgPoll() { _msgPollTimer = setInterval(pollMessages, 15000); }
+async function sendMessage() {
+  const inp  = document.getElementById('msg-input');
+  const text = inp.value.trim();
+  if (!text) return;
+  inp.value = '';
+  if (DEMO_MODE) { showToast('Message sent (demo)'); return; }
+  try {
+    await apiFetch('/api/messages/send', 'POST', { phone: MY_PHONE, body: text });
+    showToast('Message sent');
+    setTimeout(pollMessages, 1000);
+  } catch(e) { showToast('Failed to send'); }
+}
+function msgKeydown(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } }
+function autoResize(el) { el.style.height = 'auto'; el.style.height = Math.min(el.scrollHeight, 100) + 'px'; }
+
+// ── DOCS ──────────────────────────────────────────────────────────────────────
+function triggerUpload(id) { document.getElementById(id)?.click(); }
+async function handleUpload(docType, input) {
+  const file = input.files[0];
+  if (!file) return;
+  const statusId = docType === 'pod' ? 'pod-status' : docType === 'signature' ? 'sig-status' : null;
+  showToast('📤 Uploading…');
+  if (DEMO_MODE) { if (statusId) { const el = document.getElementById(statusId); if (el) el.style.display=''; } showToast('✓ Uploaded (demo)'); return; }
+  const form = new FormData();
+  form.append('file', file);
+  form.append('doc_type', docType);
+  try {
+    const token = localStorage.getItem('3ll_token') || '';
+    const r = await fetch(_apiBase + '/api/light-fleet/upload', { method:'POST', headers:{'Authorization':'Bearer '+token}, body:form });
+    if (r.ok) { if (statusId) { const el = document.getElementById(statusId); if (el) el.style.display=''; } showToast('✓ Uploaded successfully'); }
+    else showToast('Upload failed — check connection');
+  } catch(e) { showToast('Upload error'); }
+}
+
+// ── GPS ───────────────────────────────────────────────────────────────────────
+function startGpsTracking() {
+  if (_tracking || !navigator.geolocation) return;
+  _tracking = true;
+  sendLFPing();
+  _gpsTimer = setInterval(sendLFPing, 30000);
+}
+function stopGpsTracking() {
+  if (!_tracking) return;
+  _tracking = false;
+  if (_gpsTimer) { clearInterval(_gpsTimer); _gpsTimer = null; }
+}
+function sendLFPing() {
+  if (!navigator.geolocation || DEMO_MODE) return;
+  navigator.geolocation.getCurrentPosition(async pos => {
+    try {
+      await apiFetch('/api/light-fleet/driver-ping', 'POST', {
+        driver_id: DRIVER_ID,
+        lat: pos.coords.latitude,
+        lng: pos.coords.longitude,
+        trip_id: _lfActiveTrip?.id || null,
+      });
+    } catch(e) {}
+  }, () => {});
+}
+
+// ── PROFILE ───────────────────────────────────────────────────────────────────
+function savePhone() {
+  const v = document.getElementById('phone-input').value.trim();
+  if (v) { localStorage.setItem('3ll_phone', v); const el = document.getElementById('phone-saved-msg'); if (el) { el.style.display=''; setTimeout(()=>el.style.display='none',2500); } }
+}
+
+// ── AUTH ──────────────────────────────────────────────────────────────────────
+function logout() {
+  ['3ll_token','3ll_expires_at','3ll_driver_id','3ll_lf_driver_id','3ll_driver_mode','3ll_driver_name','3ll_phone'].forEach(k => localStorage.removeItem(k));
+  window.location.href = './login-lf.html';
+}
+
+// ── UTILITIES ─────────────────────────────────────────────────────────────────
+function showToast(msg, dur = 2800) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), dur);
+}
+function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+async function apiFetch(path, method = 'GET', body = null) {
+  const token = localStorage.getItem('3ll_token') || '';
+  const opts  = { method, headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' } };
+  if (body) opts.body = JSON.stringify(body);
+  try { return await fetch(_apiBase + path, opts); }
+  catch(e) { throw e; }
+}
+
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+</script>
+</body>
+</html>
