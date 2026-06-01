@@ -2355,7 +2355,7 @@ document.getElementById('calendarOverlay')?.addEventListener('click', function(e
         <button class="btn-gold" onclick="document.getElementById('lf-segments').scrollIntoView({behavior:'smooth'})">Choose Your Program — Start Earning →</button>
       </div>
       <div class="lf-stats-bar">
-        <div class="lf-stat-cell"><div class="lf-stat-n">5</div><div class="lf-stat-l">Business Segments</div></div>
+        <div class="lf-stat-cell"><div class="lf-stat-n">6</div><div class="lf-stat-l">Business Segments</div></div>
         <div class="lf-stat-cell"><div class="lf-stat-n">$0</div><div class="lf-stat-l">CDL Required</div></div>
         <div class="lf-stat-cell"><div class="lf-stat-n">24h</div><div class="lf-stat-l">Driver Live</div></div>
         <div class="lf-stat-cell" style="border-right:none;"><div class="lf-stat-n">AI</div><div class="lf-stat-l">Dispatch Engine</div></div>
@@ -2368,7 +2368,7 @@ document.getElementById('calendarOverlay')?.addEventListener('click', function(e
     <div class="lf-seg-inner">
       <div class="rev" style="text-align:center;margin-bottom:52px;">
         <span class="chip">Who We Serve</span>
-        <h2 class="sh" style="text-align:center;">5 Business Segments.<br/>We Find the Loads for Each.</h2>
+        <h2 class="sh" style="text-align:center;">6 Business Segments.<br/>We Find the Loads for Each.</h2>
         <div class="rule" style="margin:18px auto;"></div>
         <p class="sp" style="max-width:600px;margin:0 auto;">You bring the vehicle. We bring the contracts. Our team works the NEMT broker networks, corporate travel accounts, hospital supply chains, and courier platforms — then our AI dispatches the work directly to your drivers.</p>
       </div>
@@ -2431,10 +2431,26 @@ document.getElementById('calendarOverlay')?.addEventListener('click', function(e
             <p class="lf-card-p">Legal documents, court filings, parcels, restaurant supply, and urban last-mile delivery where semis can't go. GPS-tracked with photo proof-of-delivery.</p>
             <div class="lf-card-box" style="background:rgba(245,158,11,.07);border:1px solid rgba(245,158,11,.2);">
               <div class="lf-card-box-hd" style="color:#d97706;">How We Find Your Loads</div>
-              <div class="lf-card-box-p">We partner with law firms, courthouses, GoShare, Roadie, and local distributors. Same-day orders hit our platform and dispatch to your nearest approved driver.</div>
+              <div class="lf-card-box-p">We partner with law firms, courthouses, Lugg, AxleHire, and local distributors. Same-day orders hit our platform and dispatch to your nearest approved driver.</div>
             </div>
             <div class="lf-card-pill" style="color:#d97706;background:rgba(245,158,11,.1);">Avg $15–80/delivery · Urban market</div>
             <button onclick="lfStartSignup('courier','Same-Day Courier','#f59e0b')" class="lf-card-btn" style="background:linear-gradient(135deg,#f59e0b,#d97706);">Sign Up as Courier Driver →</button>
+          </div>
+        </div>
+
+        <!-- Cargo Van & Moving -->
+        <div class="rev lf-card">
+          <div style="height:4px;background:linear-gradient(90deg,#f97316,#ea580c);"></div>
+          <div class="lf-card-body">
+            <div style="font-size:32px;margin-bottom:14px;">🚐</div>
+            <div class="lf-card-title">Cargo Van &amp; Moving</div>
+            <p class="lf-card-p">Furniture, appliances, large parcel, and junk-removal runs — the high-ticket jobs a car can't take. Cargo vans command 2–3× standard delivery rates and get repeat business from moving companies.</p>
+            <div class="lf-card-box" style="background:rgba(249,115,22,.07);border:1px solid rgba(249,115,22,.2);">
+              <div class="lf-card-box-hd" style="color:#ea580c;">How We Find Your Loads</div>
+              <div class="lf-card-box-p">We dispatch through Lugg (on-demand moving) and AxleHire (B2B freight), plus direct corporate relocation accounts. You bring the van — we fill it.</div>
+            </div>
+            <div class="lf-card-pill" style="color:#ea580c;background:rgba(249,115,22,.1);">Avg $25–$80/hr · Cargo van required</div>
+            <button onclick="lfStartSignup('cargo_van','Cargo Van &amp; Moving','#f97316')" class="lf-card-btn" style="background:linear-gradient(135deg,#f97316,#ea580c);">Sign Up — Cargo Van Driver →</button>
           </div>
         </div>
 
@@ -2956,8 +2972,16 @@ async function bizSubmit(e) {
               <div style="font-size:11px;font-weight:700;color:#6366f1;margin-top:4px;">$35–$80/hr est.</div>
             </div>
           </label>
+          <label id="plat-lugg" style="display:flex;gap:12px;padding:12px 14px;border:1.5px solid var(--border);border-radius:10px;cursor:pointer;background:#fff;transition:border .15s,box-shadow .15s;" onmouseover="this.style.borderColor='#6366f1';this.style.boxShadow='0 0 0 3px rgba(99,102,241,.1)'" onmouseout="lfPlatHover(this)">
+            <input type="checkbox" name="platforms" value="lugg" style="width:16px;height:16px;accent-color:#6366f1;margin-top:2px;flex-shrink:0;" onchange="lfPlatCheck(this)"/>
+            <div>
+              <div style="font-size:13px;font-weight:700;color:var(--navy);display:flex;align-items:center;gap:6px;flex-wrap:wrap;">🚐 Lugg <span style="font-size:10px;font-weight:600;background:#dcfce7;color:#16a34a;padding:1px 7px;border-radius:20px;">Dispatched by 3 Lakes</span></div>
+              <div style="font-size:11px;color:var(--muted);margin-top:2px;line-height:1.5;">On-demand moving, furniture delivery &amp; large-item transport — cargo van jobs that pay 2–3× standard delivery rates. High-ticket, low-competition.</div>
+              <div style="font-size:11px;font-weight:700;color:#6366f1;margin-top:4px;">$25–$80/hr est. · Cargo van required</div>
+            </div>
+          </label>
         </div>
-        <p style="font-size:11px;color:var(--muted);margin:12px 0 0;line-height:1.6;">✔ All 6 platforms are dispatched directly by 3 Lakes — one background check, one app, one weekly settlement covering every platform you're on.</p>
+        <p style="font-size:11px;color:var(--muted);margin:12px 0 0;line-height:1.6;">✔ All 7 platforms are dispatched directly by 3 Lakes — one background check, one app, one weekly settlement covering every platform you're on.</p>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
         <div>
@@ -3078,7 +3102,7 @@ async function lfSubmitIntake(e){
       } else {
         // Show platform confirmation in success box if driver opted into any
         if (platforms.length > 0) {
-          const names = {'curri':'Curri','roadie':'Roadie (UPS)','modivcare':'Modivcare','veho':'Veho','axlehire':'AxleHire','blacklane':'Blacklane'};
+          const names = {'curri':'Curri','roadie':'Roadie (UPS)','modivcare':'Modivcare','veho':'Veho','axlehire':'AxleHire','blacklane':'Blacklane','lugg':'Lugg'};
           const platList = platforms.map(p=>names[p]||p).join(', ');
           const line = document.getElementById('lf-success-plat-line');
           const msg = document.getElementById('lf-success-plat-msg');
