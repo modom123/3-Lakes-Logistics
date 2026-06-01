@@ -710,6 +710,7 @@ td.td-name{font-weight:600;color:var(--navy);}
   <div class="sb-section">
     <div class="sb-label">Command</div>
     <div class="sb-item" onclick="nav('exec-command')"><span class="sb-icon">🎖️</span> Exec Command <span class="sb-badge" id="exec-esc-notif" style="display:none">●</span></div>
+    <div class="sb-item" onclick="nav('ccg-office')"><span class="sb-icon">🧭</span> CC Gulley Office <span class="sb-badge" id="ccg-email-notif" style="display:none">●</span></div>
   </div>
 
   <div class="sb-section">
@@ -2948,7 +2949,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 let allCarriers=[], allLoads=[], allInvoices=[], currentInvFilter='all', loadCounter=3849;
 
-const pageNames={dashboard:'Dashboard',dispatch:'Dispatch Board','fleet-map':'Fleet Map',carriers:'Carriers',drivers:'Drivers',loads:'Load Manager',invoices:'Invoices & Billing',compliance:'DOT Compliance',ifta:'IFTA / Permits',insurance:'Insurance',revenue:'Revenue Tracker',providers:'Compliance Providers',checklist:'Daily Checklist',notes:'Dispatcher Notes',reports:'Team Reports','exec-command':'Exec Command',agents:'AI Agents',founders:'Founders Program',crm:'Lead CRM',leads:'Lead Pipeline',execution:'Execution Engine',email:'Email Center',vault:'Document Vault',clm:'CLM Scanner',ledger:'Atomic Ledger',agreements:'Agreements','lf-nemt':'NEMT — Medical Transport','lf-executive':'Executive Transport','lf-courier':'Courier & Last-Mile','lf-gig':'Gig Fleet Management',cso:'CSO Office — CC Gulley'};
+const pageNames={dashboard:'Dashboard',dispatch:'Dispatch Board','fleet-map':'Fleet Map',carriers:'Carriers',drivers:'Drivers',loads:'Load Manager',invoices:'Invoices & Billing',compliance:'DOT Compliance',ifta:'IFTA / Permits',insurance:'Insurance',revenue:'Revenue Tracker',providers:'Compliance Providers',checklist:'Daily Checklist',notes:'Dispatcher Notes',reports:'Team Reports','exec-command':'Exec Command',agents:'AI Agents',founders:'Founders Program',crm:'Lead CRM',leads:'Lead Pipeline',execution:'Execution Engine',email:'Email Center',vault:'Document Vault',clm:'CLM Scanner',ledger:'Atomic Ledger',agreements:'Agreements','lf-nemt':'NEMT — Medical Transport','lf-executive':'Executive Transport','lf-courier':'Courier & Last-Mile','lf-gig':'Gig Fleet Management',cso:'CSO Office — CC Gulley','ccg-office':'CC Gulley Office'};
 
 // ── 3 Lakes Logistics Backend API (FastAPI) ──
 const API_BASE = (window.__3LL_API_BASE || 'https://three-lakes-logistics-api.onrender.com').replace(/\/$/,'');
@@ -9017,6 +9018,915 @@ This brief consolidates:
   </div><!-- /body -->
 </div><!-- /cso-wrap -->
 </div><!-- /page-cso -->
+
+<!-- ════════════════════════════════════════════════════════════════════════
+     CC GULLEY — PERSONAL OFFICE
+     Full-page fixed overlay — Strategy, Team, Directives, Email, Zoom, TV
+     ════════════════════════════════════════════════════════════════════════ -->
+<div class="page" id="page-ccg-office">
+<style>
+#page-ccg-office{animation:none;}
+#page-ccg-office.active{position:fixed;top:93px;left:var(--sidebar-w);right:0;bottom:0;z-index:30;display:flex;flex-direction:column;overflow:hidden;background:var(--bg);}
+@media(max-width:768px){#page-ccg-office.active{top:87px;left:0;}}
+/* ── CCG Office shell ── */
+.ccg{display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden;--ccg-sky:#38bdf8;--ccg-teal:#14b8a6;--ccg-purple:#a855f7;--ccg-green:#10b981;background:#050f1c;}
+.ccg-hdr{display:flex;align-items:center;justify-content:space-between;padding:12px 24px;background:linear-gradient(135deg,#030c17 0%,#051525 100%);flex-shrink:0;border-bottom:2px solid rgba(56,189,248,.35);box-shadow:0 4px 20px rgba(0,0,0,.5);}
+.ccg-hdr-left{display:flex;align-items:center;gap:14px;}
+.ccg-avatar{width:46px;height:46px;border-radius:50%;background:linear-gradient(135deg,#0369a1,#7c3aed);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:900;color:#fff;flex-shrink:0;box-shadow:0 0 16px rgba(56,189,248,.35);}
+.ccg-name{font-size:17px;font-weight:900;color:#fff;letter-spacing:.2px;}
+.ccg-role{font-size:10px;color:rgba(56,189,248,.8);letter-spacing:.5px;margin-top:1px;font-family:var(--ff-m);}
+.ccg-hdr-right{display:flex;align-items:center;gap:8px;}
+.ccg-status{display:flex;align-items:center;gap:6px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:20px;padding:4px 12px;}
+.ccg-status-dot{width:7px;height:7px;border-radius:50%;background:#10b981;box-shadow:0 0 8px #10b981;flex-shrink:0;}
+.ccg-status-lbl{font-size:9px;color:rgba(255,255,255,.6);letter-spacing:1px;font-family:var(--ff-m);text-transform:uppercase;}
+.ccg-hdr-btn{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14);color:rgba(255,255,255,.8);padding:5px 14px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;font-family:var(--ff-b);}
+.ccg-hdr-btn:hover{background:rgba(56,189,248,.2);border-color:rgba(56,189,248,.5);color:#38bdf8;}
+/* ── Tabs ── */
+.ccg-tabs{display:flex;flex-wrap:nowrap;background:#030a14;border-bottom:1px solid rgba(56,189,248,.18);flex-shrink:0;padding:0 20px;gap:2px;overflow-x:auto;scrollbar-width:none;}
+.ccg-tabs::-webkit-scrollbar{display:none;}
+.ccg-tab{background:transparent;border:none;border-bottom:2px solid transparent;padding:10px 16px;font-size:12px;font-weight:600;color:rgba(255,255,255,.4);cursor:pointer;transition:color .15s,border-color .15s;font-family:var(--ff-b);white-space:nowrap;display:flex;align-items:center;gap:6px;}
+.ccg-tab:hover{color:rgba(255,255,255,.7);}
+.ccg-tab.active{color:#38bdf8;border-bottom-color:#38bdf8;background:rgba(56,189,248,.06);}
+/* ── Body ── */
+.ccg-body{flex:1;min-height:0;overflow:hidden;display:flex;flex-direction:column;}
+.ccg-pane{display:none;overflow:hidden;}
+.ccg-pane.active{display:flex;flex-direction:column;flex:1;min-height:0;}
+/* ── Shared scroll room ── */
+.ccg-room{display:flex;flex-direction:column;flex:1;min-height:0;overflow-y:auto;padding:18px 24px;gap:14px;scrollbar-width:thin;scrollbar-color:rgba(56,189,248,.4) transparent;}
+.ccg-room::-webkit-scrollbar{width:5px;}
+.ccg-room::-webkit-scrollbar-thumb{background:#38bdf8;border-radius:3px;}
+/* ── KPI strip ── */
+.ccg-kpi-strip{display:flex;gap:12px;flex-shrink:0;flex-wrap:wrap;}
+.ccg-kpi{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.09);border-top:3px solid rgba(255,255,255,.1);border-radius:10px;padding:13px 16px;flex:1;min-width:110px;}
+.ccg-kpi.sky{border-top-color:#38bdf8;}.ccg-kpi.teal{border-top-color:#14b8a6;}.ccg-kpi.purple{border-top-color:#a855f7;}.ccg-kpi.green{border-top-color:#10b981;}.ccg-kpi.amber{border-top-color:#f59e0b;}
+.ccg-kpi-n{font-size:26px;font-weight:900;color:#fff;line-height:1;}
+.ccg-kpi-l{font-size:9px;color:rgba(255,255,255,.45);text-transform:uppercase;letter-spacing:.8px;margin-top:3px;font-family:var(--ff-m);}
+/* ── Panel ── */
+.ccg-panel{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.09);border-radius:10px;display:flex;flex-direction:column;overflow:hidden;min-height:200px;}
+.ccg-panel-hdr{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid rgba(255,255,255,.07);flex-shrink:0;}
+.ccg-panel-title{font-weight:700;font-size:12px;color:#fff;display:flex;align-items:center;gap:6px;}
+.ccg-panel-body{flex:1;overflow-y:auto;padding:12px 14px;scrollbar-width:thin;scrollbar-color:#38bdf8 transparent;}
+.ccg-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.ccg-grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;}
+/* ── Reporter card ── */
+.ccg-reporter{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border-radius:8px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);margin-bottom:8px;cursor:pointer;transition:border-color .15s,background .15s;}
+.ccg-reporter:hover{border-color:rgba(56,189,248,.4);background:rgba(56,189,248,.06);}
+.ccg-rep-avatar{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;flex-shrink:0;}
+.ccg-rep-name{font-weight:700;font-size:12px;color:#fff;margin-bottom:1px;}
+.ccg-rep-role{font-size:10px;color:rgba(255,255,255,.5);margin-bottom:4px;}
+.ccg-rep-last{font-size:10px;color:rgba(255,255,255,.4);line-height:1.45;}
+/* ── Feed ── */
+.ccg-feed{flex:1;overflow-y:auto;padding:10px 14px;display:flex;flex-direction:column;gap:7px;scrollbar-width:thin;scrollbar-color:#38bdf8 transparent;}
+.ccg-feed-item{padding:8px 10px;border-radius:6px;border-left:3px solid rgba(255,255,255,.1);background:rgba(255,255,255,.03);}
+.ccg-feed-item.sky{border-left-color:#38bdf8;}.ccg-feed-item.green{border-left-color:#10b981;}.ccg-feed-item.amber{border-left-color:#f59e0b;}.ccg-feed-item.red{border-left-color:#ef4444;}.ccg-feed-item.purple{border-left-color:#a855f7;}
+.ccg-feed-from{font-weight:700;font-size:10px;color:rgba(255,255,255,.7);margin-bottom:2px;}
+.ccg-feed-text{font-size:11px;color:rgba(255,255,255,.55);line-height:1.5;}
+.ccg-feed-ts{font-size:9px;color:rgba(255,255,255,.3);margin-top:3px;font-family:var(--ff-m);}
+/* ── Form ── */
+.ccg-fl{font-size:9px;font-family:var(--ff-m);color:rgba(255,255,255,.45);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:5px;}
+.ccg-label{font-weight:700;font-size:13px;color:#fff;margin-bottom:8px;}
+.ccg-input{width:100%;padding:9px 12px;border:1.5px solid rgba(255,255,255,.12);border-radius:8px;font-size:12px;color:#fff;background:rgba(255,255,255,.05);outline:none;font-family:var(--ff-b);box-sizing:border-box;}
+.ccg-input:focus{border-color:#38bdf8;}
+.ccg-textarea{width:100%;min-height:100px;padding:10px 12px;border:1.5px solid rgba(255,255,255,.12);border-radius:8px;font-size:12px;color:#fff;background:rgba(255,255,255,.05);outline:none;resize:vertical;font-family:var(--ff-b);box-sizing:border-box;}
+.ccg-textarea:focus{border-color:#38bdf8;}
+.ccg-btn{background:linear-gradient(135deg,#0369a1,#0284c7);color:#fff;border:none;padding:9px 22px;border-radius:7px;font-weight:800;font-size:12px;cursor:pointer;box-shadow:0 2px 10px rgba(14,165,233,.3);}
+.ccg-btn.teal{background:linear-gradient(135deg,#0d9488,#14b8a6);}
+.ccg-btn.purple{background:linear-gradient(135deg,#7c3aed,#a855f7);}
+.ccg-btn.green{background:linear-gradient(135deg,#059669,#10b981);}
+.ccg-btn:hover{opacity:.88;}
+/* ── Email pane ── */
+.ccg-mail-wrap{display:flex;flex:1;min-height:0;overflow:hidden;}
+.ccg-mail-list{width:320px;flex-shrink:0;border-right:1px solid rgba(255,255,255,.09);display:flex;flex-direction:column;overflow:hidden;}
+.ccg-mail-list-hdr{padding:12px 14px;border-bottom:1px solid rgba(255,255,255,.09);flex-shrink:0;display:flex;align-items:center;justify-content:space-between;}
+.ccg-mail-items{flex:1;overflow-y:auto;scrollbar-width:thin;scrollbar-color:#38bdf8 transparent;}
+.ccg-mail-item{padding:11px 14px;border-bottom:1px solid rgba(255,255,255,.06);cursor:pointer;transition:background .15s;}
+.ccg-mail-item:hover,.ccg-mail-item.selected{background:rgba(56,189,248,.08);}
+.ccg-mail-item-from{font-weight:700;font-size:12px;color:#fff;margin-bottom:2px;}
+.ccg-mail-item-sub{font-size:11px;color:rgba(255,255,255,.55);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.ccg-mail-item-ts{font-size:9px;color:rgba(255,255,255,.3);margin-top:2px;font-family:var(--ff-m);}
+.ccg-mail-unread{width:7px;height:7px;border-radius:50%;background:#38bdf8;flex-shrink:0;margin-top:3px;}
+.ccg-mail-view{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+.ccg-mail-view-hdr{padding:14px 20px;border-bottom:1px solid rgba(255,255,255,.09);flex-shrink:0;}
+.ccg-mail-view-sub{font-weight:700;font-size:15px;color:#fff;margin-bottom:4px;}
+.ccg-mail-view-meta{font-size:11px;color:rgba(255,255,255,.45);}
+.ccg-mail-view-body{flex:1;overflow-y:auto;padding:16px 20px;font-size:13px;color:rgba(255,255,255,.75);line-height:1.7;scrollbar-width:thin;scrollbar-color:#38bdf8 transparent;}
+.ccg-mail-compose{border-top:1px solid rgba(255,255,255,.09);padding:12px 16px;display:flex;flex-direction:column;gap:8px;flex-shrink:0;background:rgba(255,255,255,.02);}
+/* ── Zoom pane ── */
+.ccg-zoom-wrap{display:flex;flex:1;min-height:0;gap:0;overflow:hidden;}
+.ccg-zoom-main{flex:1;display:flex;flex-direction:column;padding:24px;gap:18px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:#38bdf8 transparent;}
+.ccg-zoom-side{width:300px;flex-shrink:0;border-left:1px solid rgba(255,255,255,.09);display:flex;flex-direction:column;overflow:hidden;}
+.ccg-zoom-card{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:18px 20px;display:flex;flex-direction:column;gap:12px;}
+.ccg-zoom-big-btn{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:22px 16px;border-radius:12px;border:none;cursor:pointer;gap:8px;font-family:var(--ff-b);transition:opacity .15s;min-width:150px;}
+.ccg-zoom-big-btn:hover{opacity:.88;}
+.ccg-zoom-big-btn-icon{font-size:34px;}
+.ccg-zoom-big-btn-label{font-size:14px;font-weight:800;color:#fff;}
+.ccg-zoom-big-btn-sub{font-size:10px;color:rgba(255,255,255,.6);}
+/* ── TV pane ── */
+.ccg-tv-wrap{display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden;background:#000;position:relative;}
+.ccg-tv-player{flex:1;min-height:0;position:relative;}
+.ccg-tv-player iframe{width:100%;height:100%;border:none;display:block;}
+.ccg-tv-bar{display:flex;align-items:center;gap:8px;padding:8px 14px;background:rgba(5,15,30,.95);border-top:1px solid rgba(56,189,248,.15);flex-shrink:0;flex-wrap:wrap;}
+.ccg-tv-ch-btn{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:6px;color:rgba(255,255,255,.75);font-size:11px;font-weight:600;padding:5px 12px;cursor:pointer;font-family:var(--ff-b);white-space:nowrap;}
+.ccg-tv-ch-btn:hover,.ccg-tv-ch-btn.active{background:rgba(56,189,248,.18);border-color:#38bdf8;color:#38bdf8;}
+/* ── Directives ── */
+.ccg-dir-btn{background:rgba(255,255,255,.04);border:1.5px solid rgba(255,255,255,.12);border-radius:10px;padding:12px 16px;color:rgba(255,255,255,.7);font-size:11px;font-weight:700;cursor:pointer;text-align:center;line-height:1.6;min-width:100px;font-family:var(--ff-b);transition:all .15s;}
+.ccg-dir-btn:hover,.ccg-dir-btn.active{border-color:#38bdf8;color:#38bdf8;background:rgba(56,189,248,.1);}
+.ccg-dir-card{padding:10px 12px;border-radius:8px;border:1px solid rgba(255,255,255,.09);background:rgba(255,255,255,.03);border-left:3px solid #38bdf8;margin-bottom:8px;}
+.ccg-dir-card-hd{font-weight:700;font-size:11px;color:#fff;margin-bottom:3px;}
+.ccg-dir-card-body{font-size:11px;color:rgba(255,255,255,.5);line-height:1.5;}
+.ccg-dir-card-ts{font-size:9px;color:rgba(255,255,255,.3);margin-top:4px;font-family:var(--ff-m);}
+/* ── Plan ── */
+.ccg-plan{display:flex;flex:1;min-height:0;overflow:hidden;}
+.ccg-plan-main{flex:1;padding:20px 24px;display:flex;flex-direction:column;gap:14px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:#38bdf8 transparent;}
+.ccg-plan-side{width:280px;flex-shrink:0;border-left:1px solid rgba(255,255,255,.09);display:flex;flex-direction:column;overflow:hidden;}
+@media(max-width:768px){
+  .ccg-grid,.ccg-grid-3{grid-template-columns:1fr!important;}
+  .ccg-mail-wrap{flex-direction:column;}
+  .ccg-mail-list{width:100%;max-height:220px;border-right:none;border-bottom:1px solid rgba(255,255,255,.09);}
+  .ccg-zoom-wrap{flex-direction:column;}
+  .ccg-zoom-side{width:100%;border-left:none;border-top:1px solid rgba(255,255,255,.09);max-height:200px;}
+  .ccg-plan{flex-direction:column;}
+  .ccg-plan-side{width:100%;border-left:none;border-top:1px solid rgba(255,255,255,.09);max-height:200px;}
+}
+</style>
+
+<div class="ccg">
+
+  <!-- Header -->
+  <div class="ccg-hdr">
+    <div class="ccg-hdr-left">
+      <div class="ccg-avatar">CC</div>
+      <div>
+        <div class="ccg-name">CC Gulley — CSO Office</div>
+        <div class="ccg-role">Chief Strategy Officer · Strategy Unit Command · Reports to Mark Odom (CEO)</div>
+      </div>
+    </div>
+    <div class="ccg-hdr-right">
+      <div class="ccg-status">
+        <div class="ccg-status-dot"></div>
+        <span class="ccg-status-lbl">live</span>
+      </div>
+      <button class="ccg-hdr-btn" onclick="ccgRefreshAll()">↺ Refresh All</button>
+      <button class="ccg-hdr-btn" onclick="ccgRunAgent('cc_gulley','CC Gulley')">▶ Run CC Gulley</button>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="ccg-tabs">
+    <button class="ccg-tab active" id="ccgtab-home"       onclick="ccgTab('home')">🏠 Office Home</button>
+    <button class="ccg-tab"        id="ccgtab-team"       onclick="ccgTab('team')">👥 My Team</button>
+    <button class="ccg-tab"        id="ccgtab-strategy"   onclick="ccgTab('strategy')">📊 Strategy</button>
+    <button class="ccg-tab"        id="ccgtab-directives" onclick="ccgTab('directives')">📣 Directives <span id="ccg-dir-badge" style="display:none;background:#38bdf8;color:#000;font-size:9px;font-weight:800;border-radius:10px;padding:1px 6px;">NEW</span></button>
+    <button class="ccg-tab"        id="ccgtab-email"      onclick="ccgTab('email')">📧 Email <span id="ccg-email-ct" style="display:none;background:#38bdf8;color:#000;font-size:9px;font-weight:800;border-radius:10px;padding:1px 6px;">0</span></button>
+    <button class="ccg-tab"        id="ccgtab-zoom"       onclick="ccgTab('zoom')">📹 Zoom</button>
+    <button class="ccg-tab"        id="ccgtab-tv"         onclick="ccgTab('tv')">📺 Watch TV</button>
+  </div>
+
+  <!-- Body -->
+  <div class="ccg-body">
+
+    <!-- ════ HOME ════ -->
+    <div class="ccg-pane active" id="ccgpane-home">
+      <div class="ccg-room">
+
+        <!-- Welcome strip -->
+        <div style="background:linear-gradient(135deg,rgba(56,189,248,.12),rgba(124,58,237,.08));border:1px solid rgba(56,189,248,.2);border-radius:12px;padding:18px 22px;display:flex;align-items:center;gap:18px;flex-shrink:0;">
+          <div style="font-size:44px;">🧭</div>
+          <div>
+            <div style="font-size:18px;font-weight:900;color:#fff;margin-bottom:3px;">Good morning, CC Gulley</div>
+            <div style="font-size:12px;color:rgba(255,255,255,.55);line-height:1.6;">Your Strategy Unit is active. Alexander is scanning markets, Naomi is targeting Tier A carriers, and Winston is monitoring retention. James Bond is on intel watch.</div>
+          </div>
+          <div style="margin-left:auto;display:flex;flex-direction:column;gap:6px;flex-shrink:0;">
+            <button class="ccg-btn" onclick="ccgRunAll()">▶ Run All Agents</button>
+            <button class="ccg-btn teal" onclick="ccgTab('directives')">📣 Send Directive</button>
+          </div>
+        </div>
+
+        <!-- KPI Strip -->
+        <div class="ccg-kpi-strip">
+          <div class="ccg-kpi sky"><div class="ccg-kpi-n" id="ccg-kpi-tier-a">—</div><div class="ccg-kpi-l">Tier A Targets</div></div>
+          <div class="ccg-kpi green"><div class="ccg-kpi-n" id="ccg-kpi-hot-states">—</div><div class="ccg-kpi-l">Hot Markets</div></div>
+          <div class="ccg-kpi amber"><div class="ccg-kpi-n" id="ccg-kpi-at-risk">—</div><div class="ccg-kpi-l">At-Risk Carriers</div></div>
+          <div class="ccg-kpi teal"><div class="ccg-kpi-n" id="ccg-kpi-retention">—%</div><div class="ccg-kpi-l">Retention Rate</div></div>
+          <div class="ccg-kpi purple"><div class="ccg-kpi-n" id="ccg-kpi-directives">—</div><div class="ccg-kpi-l">Active Directives</div></div>
+          <div class="ccg-kpi sky"><div class="ccg-kpi-n" id="ccg-kpi-emails">—</div><div class="ccg-kpi-l">Unread Emails</div></div>
+        </div>
+
+        <!-- 2-col: live intel + quick actions -->
+        <div class="ccg-grid">
+          <!-- Intel stream -->
+          <div class="ccg-panel" style="min-height:280px;">
+            <div class="ccg-panel-hdr">
+              <div class="ccg-panel-title">📡 Live Strategy Intel</div>
+              <span id="ccg-intel-ts" style="font-size:10px;color:rgba(56,189,248,.6);font-family:var(--ff-m);">—</span>
+            </div>
+            <div class="ccg-feed" id="ccg-home-feed">
+              <div style="color:rgba(255,255,255,.3);font-size:11px;text-align:center;padding:20px;">Click Refresh All to load team intel</div>
+            </div>
+          </div>
+
+          <!-- Quick Actions -->
+          <div class="ccg-panel" style="min-height:280px;">
+            <div class="ccg-panel-hdr"><div class="ccg-panel-title">⚡ Quick Actions</div></div>
+            <div class="ccg-panel-body" style="display:flex;flex-direction:column;gap:10px;">
+              <button class="ccg-hdr-btn" style="text-align:left;padding:10px 14px;font-size:12px;" onclick="ccgTab('email')">📧 Open Email Inbox (cece@3lakeslogistics.com)</button>
+              <button class="ccg-hdr-btn" style="text-align:left;padding:10px 14px;font-size:12px;" onclick="ccgStartMeeting()">📹 Start Instant Zoom Meeting</button>
+              <button class="ccg-hdr-btn" style="text-align:left;padding:10px 14px;font-size:12px;" onclick="ccgTab('directives')">📣 Send Directive to Team</button>
+              <button class="ccg-hdr-btn" style="text-align:left;padding:10px 14px;font-size:12px;" onclick="ccgRunAgent('cc_gulley','CC Gulley')">🧭 Run CC Gulley Strategy Agent</button>
+              <button class="ccg-hdr-btn" style="text-align:left;padding:10px 14px;font-size:12px;" onclick="ccgRunAll()">▶ Run Entire Strategy Unit</button>
+              <button class="ccg-hdr-btn" style="text-align:left;padding:10px 14px;font-size:12px;" onclick="nav('bond')">🕵️ Open Bond Office</button>
+              <button class="ccg-hdr-btn" style="text-align:left;padding:10px 14px;font-size:12px;" onclick="ccgTab('tv')">📺 Watch Live TV</button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div><!-- /home -->
+
+    <!-- ════ MY TEAM ════ -->
+    <div class="ccg-pane" id="ccgpane-team">
+      <div class="ccg-room">
+        <div style="flex-shrink:0;">
+          <div class="ccg-fl">STRATEGY UNIT — CC GULLEY'S DIRECT REPORTS</div>
+          <div class="ccg-label" style="font-size:16px;">Team Command</div>
+          <div style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:4px;">All agents below report directly to CC Gulley. She sets their priorities via the Directives tab and reviews their intel in the Strategy and Intel Feed tabs.</div>
+        </div>
+
+        <div class="ccg-grid">
+          <!-- Alexander -->
+          <div class="ccg-panel">
+            <div class="ccg-panel-hdr" style="background:rgba(56,189,248,.08);border-bottom-color:rgba(56,189,248,.2);">
+              <div class="ccg-panel-title">
+                <div style="width:30px;height:30px;border-radius:50%;background:rgba(56,189,248,.2);color:#38bdf8;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;">AW</div>
+                Alexander Wright — VP Market Intelligence
+              </div>
+              <button class="ccg-hdr-btn" onclick="ccgRunAgent('alexander','Alexander Wright')">▶ Run</button>
+            </div>
+            <div class="ccg-panel-body">
+              <div style="font-size:12px;color:rgba(255,255,255,.6);margin-bottom:10px;">Scans FMCSA for carrier density by state, identifies hot markets and emerging corridors, feeds Naomi's targeting list and CC Gulley's strategic plan.</div>
+              <div style="font-size:11px;color:rgba(255,255,255,.35);margin-bottom:8px;font-family:var(--ff-m);">LATEST OUTPUT</div>
+              <div id="ccg-alex-summary" style="font-size:11px;color:rgba(255,255,255,.55);line-height:1.6;background:rgba(255,255,255,.03);border-radius:6px;padding:10px 12px;border:1px solid rgba(255,255,255,.07);">Run Alexander to load latest market intelligence.</div>
+              <div style="display:flex;gap:8px;margin-top:10px;">
+                <button class="ccg-hdr-btn" onclick="ccgRunAgent('alexander','Alexander Wright')">▶ Run Now</button>
+                <button class="ccg-hdr-btn" onclick="ccgSendDirective('alexander')">📣 Directive</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Naomi -->
+          <div class="ccg-panel">
+            <div class="ccg-panel-hdr" style="background:rgba(16,185,129,.08);border-bottom-color:rgba(16,185,129,.2);">
+              <div class="ccg-panel-title">
+                <div style="width:30px;height:30px;border-radius:50%;background:rgba(16,185,129,.2);color:#10b981;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;">NK</div>
+                Naomi Kensington — Head of Predictive Targeting
+              </div>
+              <button class="ccg-hdr-btn" onclick="ccgRunAgent('naomi','Naomi Kensington')">▶ Run</button>
+            </div>
+            <div class="ccg-panel-body">
+              <div style="font-size:12px;color:rgba(255,255,255,.6);margin-bottom:10px;">Builds prioritized lead lists from Alexander's market data. Classifies carriers as Tier A / B / C. Feeds Vance's daily call queue.</div>
+              <div style="font-size:11px;color:rgba(255,255,255,.35);margin-bottom:8px;font-family:var(--ff-m);">LATEST OUTPUT</div>
+              <div id="ccg-naomi-summary" style="font-size:11px;color:rgba(255,255,255,.55);line-height:1.6;background:rgba(255,255,255,.03);border-radius:6px;padding:10px 12px;border:1px solid rgba(255,255,255,.07);">Run Naomi to load latest targeting intel.</div>
+              <div style="display:flex;gap:8px;margin-top:10px;">
+                <button class="ccg-hdr-btn" onclick="ccgRunAgent('naomi','Naomi Kensington')">▶ Run Now</button>
+                <button class="ccg-hdr-btn" onclick="ccgSendDirective('naomi')">📣 Directive</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Winston -->
+          <div class="ccg-panel">
+            <div class="ccg-panel-hdr" style="background:rgba(245,158,11,.08);border-bottom-color:rgba(245,158,11,.2);">
+              <div class="ccg-panel-title">
+                <div style="width:30px;height:30px;border-radius:50%;background:rgba(245,158,11,.2);color:#f59e0b;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;">WC</div>
+                Winston Carmichael — VP Carrier Retention
+              </div>
+              <button class="ccg-hdr-btn" onclick="ccgRunAgent('winston','Winston Carmichael')">▶ Run</button>
+            </div>
+            <div class="ccg-panel-body">
+              <div style="font-size:12px;color:rgba(255,255,255,.6);margin-bottom:10px;">Monitors at-risk carriers, tracks fleet activity rates, identifies never-loaded carriers for re-engagement. Reports churn risk directly to CC Gulley.</div>
+              <div style="font-size:11px;color:rgba(255,255,255,.35);margin-bottom:8px;font-family:var(--ff-m);">LATEST OUTPUT</div>
+              <div id="ccg-winston-summary" style="font-size:11px;color:rgba(255,255,255,.55);line-height:1.6;background:rgba(255,255,255,.03);border-radius:6px;padding:10px 12px;border:1px solid rgba(255,255,255,.07);">Run Winston to load latest retention intel.</div>
+              <div style="display:flex;gap:8px;margin-top:10px;">
+                <button class="ccg-hdr-btn" onclick="ccgRunAgent('winston','Winston Carmichael')">▶ Run Now</button>
+                <button class="ccg-hdr-btn" onclick="ccgSendDirective('winston')">📣 Directive</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- James Bond (consulting channel) -->
+          <div class="ccg-panel">
+            <div class="ccg-panel-hdr" style="background:rgba(245,200,66,.07);border-bottom-color:rgba(245,200,66,.25);">
+              <div class="ccg-panel-title">
+                <div style="width:30px;height:30px;border-radius:50%;background:rgba(245,200,66,.15);color:#f5c842;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;font-style:italic;">JB</div>
+                <span style="color:#f5c842;">James Bond — IEBC Consultant</span>
+              </div>
+              <button class="ccg-hdr-btn" onclick="nav('bond')">Bond Office →</button>
+            </div>
+            <div class="ccg-panel-body">
+              <div style="font-size:12px;color:rgba(255,255,255,.6);margin-bottom:10px;">External IEBC consultant feeding tech gap analysis, system directive reports, and integration health alerts directly to CC Gulley's intelligence channel.</div>
+              <div style="font-size:11px;color:rgba(255,255,255,.35);margin-bottom:8px;font-family:var(--ff-m);">LATEST BOND INTEL</div>
+              <div id="ccg-bond-summary" style="font-size:11px;color:rgba(255,255,255,.55);line-height:1.6;background:rgba(255,255,255,.03);border-radius:6px;padding:10px 12px;border:1px solid rgba(245,200,66,.15);">Open the Bond Office to view the full intelligence channel.</div>
+              <div style="margin-top:10px;">
+                <button class="ccg-hdr-btn" style="color:#f5c842;border-color:rgba(245,200,66,.3);" onclick="nav('bond')">🕵️ Open Bond Office</button>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div><!-- /team -->
+
+    <!-- ════ STRATEGY ════ -->
+    <div class="ccg-pane" id="ccgpane-strategy">
+      <div class="ccg-plan">
+        <div class="ccg-plan-main">
+          <div>
+            <div class="ccg-fl">CC GULLEY · STRATEGIC PLAN</div>
+            <div class="ccg-label" style="font-size:16px;">Current Strategic Directive</div>
+            <div style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:4px;">Set priority markets, target segments, and retention focus. Alexander, Naomi, and Winston read this on every run.</div>
+          </div>
+          <div><div class="ccg-fl">PRIORITY MARKETS</div><input class="ccg-input" id="ccg-plan-markets" placeholder="e.g. TX, FL, GA, OH"/></div>
+          <div><div class="ccg-fl">TARGET SEGMENTS</div><input class="ccg-input" id="ccg-plan-segments" placeholder="e.g. dry-van, reefer, flatbed, LTL"/></div>
+          <div><div class="ccg-fl">RETENTION PRIORITY</div><input class="ccg-input" id="ccg-plan-retention" placeholder="e.g. Never-loaded carriers first, then 14-day inactive"/></div>
+          <div><div class="ccg-fl">30/60/90 DAY STRATEGIC DIRECTIVE</div><textarea class="ccg-textarea" id="ccg-plan-directive" rows="5" placeholder="Write the full strategic narrative here. Flows to Alexander, Naomi, and Winston on each run."></textarea></div>
+          <div><div class="ccg-fl">GROWTH TARGET</div><input class="ccg-input" id="ccg-plan-growth" placeholder="e.g. 50 new carriers onboarded by end of quarter"/></div>
+          <div style="display:flex;gap:10px;align-items:center;">
+            <button class="ccg-btn" onclick="ccgSavePlan()">💾 Save Strategic Plan</button>
+            <button class="ccg-hdr-btn" onclick="ccgLoadPlan()">↺ Load Current</button>
+            <span id="ccg-plan-status" style="font-size:11px;color:#38bdf8;"></span>
+          </div>
+        </div>
+        <div class="ccg-plan-side">
+          <div style="padding:12px 14px;border-bottom:1px solid rgba(255,255,255,.08);font-weight:700;font-size:12px;color:#fff;flex-shrink:0;">📜 Recent Plans</div>
+          <div style="flex:1;overflow-y:auto;padding:12px 14px;scrollbar-width:thin;scrollbar-color:#38bdf8 transparent;" id="ccg-plan-hist">
+            <div style="font-size:11px;color:rgba(255,255,255,.3);">No plan history yet</div>
+          </div>
+        </div>
+      </div>
+    </div><!-- /strategy -->
+
+    <!-- ════ DIRECTIVES ════ -->
+    <div class="ccg-pane" id="ccgpane-directives">
+      <div class="ccg-plan" style="gap:0;">
+        <div class="ccg-plan-main" style="max-width:560px;">
+          <div>
+            <div class="ccg-fl">CC GULLEY · DIRECT ORDERS</div>
+            <div class="ccg-label" style="font-size:16px;">Send a Directive</div>
+            <div style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:16px;">Written to org memory. Applied the next time that agent runs.</div>
+          </div>
+          <div>
+            <div class="ccg-fl">SEND TO</div>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;">
+              <button id="ccg-dir-btn-alexander" class="ccg-dir-btn active" onclick="ccgDirSelect('alexander')"><span style="font-size:18px;">🗺️</span><br/>Alexander<br/><span style="font-size:9px;opacity:.6;">Market Intel</span></button>
+              <button id="ccg-dir-btn-naomi"     class="ccg-dir-btn" onclick="ccgDirSelect('naomi')"><span style="font-size:18px;">🎯</span><br/>Naomi<br/><span style="font-size:9px;opacity:.6;">Targeting</span></button>
+              <button id="ccg-dir-btn-winston"   class="ccg-dir-btn" onclick="ccgDirSelect('winston')"><span style="font-size:18px;">🛡️</span><br/>Winston<br/><span style="font-size:9px;opacity:.6;">Retention</span></button>
+            </div>
+          </div>
+          <div><div class="ccg-fl">FOCUS / SUBJECT</div><input class="ccg-input" id="ccg-dir-focus" placeholder="e.g. Shift focus to TX and FL immediately"/></div>
+          <div id="ccg-dir-fields-alexander"><div class="ccg-fl">PRIORITY MARKETS</div><input class="ccg-input" id="ccg-dir-alex-markets" placeholder="e.g. TX, FL, GA"/></div>
+          <div id="ccg-dir-fields-naomi" style="display:none;"><div class="ccg-fl">TARGET SEGMENTS</div><input class="ccg-input" id="ccg-dir-naomi-segs" placeholder="e.g. dry-van, reefer"/></div>
+          <div id="ccg-dir-fields-winston" style="display:none;"><div class="ccg-fl">RETENTION PRIORITY</div><input class="ccg-input" id="ccg-dir-winston-ret" placeholder="e.g. Never-loaded carriers first"/></div>
+          <div><div class="ccg-fl">FULL INSTRUCTION</div><textarea class="ccg-textarea" id="ccg-dir-instruction" rows="4" placeholder="Full directive text — stored to org memory and shown to the agent on their next run."></textarea></div>
+          <div>
+            <div class="ccg-fl">QUICK TEMPLATES</div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+              <button class="ccg-hdr-btn" onclick="ccgDirTemplate('expand')">📈 Market Expansion</button>
+              <button class="ccg-hdr-btn" onclick="ccgDirTemplate('retention')">🔒 Retention Push</button>
+              <button class="ccg-hdr-btn" onclick="ccgDirTemplate('segment')">🎯 Segment Shift</button>
+              <button class="ccg-hdr-btn" onclick="ccgDirTemplate('urgent')">⚡ Urgent Refocus</button>
+            </div>
+          </div>
+          <div style="display:flex;gap:10px;align-items:center;">
+            <button class="ccg-btn" onclick="ccgDirSend()">📣 Send Directive</button>
+            <button class="ccg-hdr-btn" onclick="ccgDirClear()">Clear</button>
+            <span id="ccg-dir-status" style="font-size:11px;color:#38bdf8;"></span>
+          </div>
+        </div>
+        <div class="ccg-plan-side" style="width:340px;">
+          <div style="padding:12px 14px;border-bottom:1px solid rgba(255,255,255,.08);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
+            <div style="font-weight:700;font-size:12px;color:#fff;">📋 Active Directives</div>
+            <button class="ccg-hdr-btn" style="font-size:10px;padding:3px 8px;" onclick="ccgDirLoadActive()">↺</button>
+          </div>
+          <div style="flex:1;overflow-y:auto;padding:12px 14px;scrollbar-width:thin;scrollbar-color:#38bdf8 transparent;" id="ccg-dir-active">
+            <div style="font-size:11px;color:rgba(255,255,255,.3);">Loading active directives…</div>
+          </div>
+        </div>
+      </div>
+    </div><!-- /directives -->
+
+    <!-- ════ EMAIL ════ -->
+    <div class="ccg-pane" id="ccgpane-email">
+      <div class="ccg-mail-wrap">
+        <!-- Left: message list -->
+        <div class="ccg-mail-list">
+          <div class="ccg-mail-list-hdr">
+            <div style="font-weight:700;font-size:12px;color:#fff;">📧 cece@3lakeslogistics.com</div>
+            <button class="ccg-hdr-btn" style="font-size:10px;padding:3px 8px;" onclick="ccgLoadEmail()">↺</button>
+          </div>
+          <div style="padding:8px 12px;border-bottom:1px solid rgba(255,255,255,.07);display:flex;gap:6px;">
+            <button class="ccg-hdr-btn" style="font-size:10px;padding:4px 8px;flex:1;" onclick="ccgEmailCompose()">✏️ Compose</button>
+            <select id="ccg-mail-folder" onchange="ccgLoadEmail()" style="flex:1;padding:4px 8px;border:1px solid rgba(255,255,255,.12);border-radius:5px;background:rgba(255,255,255,.05);color:rgba(255,255,255,.7);font-size:10px;">
+              <option value="inbox">Inbox</option>
+              <option value="sent">Sent</option>
+              <option value="draft">Drafts</option>
+            </select>
+          </div>
+          <div class="ccg-mail-items" id="ccg-mail-list">
+            <div style="padding:20px;text-align:center;color:rgba(255,255,255,.3);font-size:11px;">Loading emails…</div>
+          </div>
+        </div>
+        <!-- Right: email view + compose -->
+        <div class="ccg-mail-view">
+          <div id="ccg-mail-view-area" style="flex:1;display:flex;flex-direction:column;overflow:hidden;">
+            <div class="ccg-mail-view-hdr" style="flex-shrink:0;">
+              <div class="ccg-mail-view-sub" id="ccg-mail-subject" style="color:rgba(255,255,255,.5);">Select an email to read</div>
+              <div class="ccg-mail-view-meta" id="ccg-mail-meta"></div>
+            </div>
+            <div class="ccg-mail-view-body" id="ccg-mail-body">
+              <div style="color:rgba(255,255,255,.25);font-size:13px;padding:24px 0;text-align:center;">No message selected</div>
+            </div>
+            <div id="ccg-mail-reply-bar" style="display:none;padding:10px 16px;border-top:1px solid rgba(255,255,255,.08);display:flex;gap:8px;flex-shrink:0;">
+              <button class="ccg-btn" style="font-size:11px;padding:7px 14px;" onclick="ccgEmailReply()">↩ Reply</button>
+              <button class="ccg-hdr-btn" onclick="ccgEmailForward()">↪ Forward</button>
+              <button class="ccg-hdr-btn" style="color:#ef4444;border-color:rgba(239,68,68,.3);" onclick="ccgEmailDelete()">🗑 Delete</button>
+            </div>
+          </div>
+          <!-- Compose panel (shown when composing) -->
+          <div id="ccg-compose-area" style="display:none;flex:1;display:flex;flex-direction:column;overflow:hidden;">
+            <div style="padding:12px 16px;border-bottom:1px solid rgba(255,255,255,.08);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
+              <div style="font-weight:700;font-size:13px;color:#fff;" id="ccg-compose-title">New Message</div>
+              <button class="ccg-hdr-btn" onclick="ccgEmailCancelCompose()">✕ Cancel</button>
+            </div>
+            <div style="flex:1;overflow-y:auto;padding:14px 16px;display:flex;flex-direction:column;gap:10px;">
+              <div><div class="ccg-fl">TO</div><input class="ccg-input" id="ccg-compose-to" placeholder="recipient@example.com"/></div>
+              <div><div class="ccg-fl">SUBJECT</div><input class="ccg-input" id="ccg-compose-subject" placeholder="Subject line…"/></div>
+              <div style="flex:1;display:flex;flex-direction:column;"><div class="ccg-fl">MESSAGE</div><textarea class="ccg-textarea" id="ccg-compose-body" style="flex:1;min-height:200px;" placeholder="Write your message…"></textarea></div>
+            </div>
+            <div style="padding:10px 16px;border-top:1px solid rgba(255,255,255,.08);display:flex;gap:8px;flex-shrink:0;">
+              <button class="ccg-btn" onclick="ccgEmailSend()">📤 Send</button>
+              <button class="ccg-hdr-btn" onclick="ccgEmailSaveDraft()">💾 Save Draft</button>
+              <span id="ccg-mail-send-status" style="font-size:11px;color:#38bdf8;align-self:center;"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div><!-- /email -->
+
+    <!-- ════ ZOOM ════ -->
+    <div class="ccg-pane" id="ccgpane-zoom">
+      <div class="ccg-zoom-wrap">
+        <div class="ccg-zoom-main">
+          <div>
+            <div class="ccg-fl">CC GULLEY · VIDEO MEETINGS</div>
+            <div class="ccg-label" style="font-size:16px;">Zoom Meeting Center</div>
+          </div>
+          <!-- Big action buttons -->
+          <div style="display:flex;gap:16px;flex-wrap:wrap;flex-shrink:0;">
+            <button class="ccg-zoom-big-btn" style="background:linear-gradient(135deg,#1d4ed8,#2563eb);flex:1;min-width:140px;" onclick="ccgStartMeeting()">
+              <span class="ccg-zoom-big-btn-icon">📹</span>
+              <span class="ccg-zoom-big-btn-label">Start Meeting</span>
+              <span class="ccg-zoom-big-btn-sub">Open Zoom & start now</span>
+            </button>
+            <button class="ccg-zoom-big-btn" style="background:linear-gradient(135deg,#0d9488,#14b8a6);flex:1;min-width:140px;" onclick="ccgJoinMeeting()">
+              <span class="ccg-zoom-big-btn-icon">🔗</span>
+              <span class="ccg-zoom-big-btn-label">Join Meeting</span>
+              <span class="ccg-zoom-big-btn-sub">Enter meeting ID or link</span>
+            </button>
+            <button class="ccg-zoom-big-btn" style="background:linear-gradient(135deg,#7c3aed,#a855f7);flex:1;min-width:140px;" onclick="ccgScheduleMeeting()">
+              <span class="ccg-zoom-big-btn-icon">📅</span>
+              <span class="ccg-zoom-big-btn-label">Schedule</span>
+              <span class="ccg-zoom-big-btn-sub">Set up a future meeting</span>
+            </button>
+          </div>
+          <!-- Join by ID -->
+          <div class="ccg-zoom-card" id="ccg-join-card" style="display:none;">
+            <div style="font-weight:700;font-size:13px;color:#fff;margin-bottom:4px;">Join a Meeting</div>
+            <div><div class="ccg-fl">MEETING ID OR LINK</div><input class="ccg-input" id="ccg-zoom-id" placeholder="Enter Zoom meeting ID or paste link…"/></div>
+            <div><div class="ccg-fl">PASSCODE (optional)</div><input class="ccg-input" id="ccg-zoom-pass" placeholder="Meeting passcode…"/></div>
+            <div style="display:flex;gap:8px;">
+              <button class="ccg-btn" onclick="ccgDoJoinMeeting()">🔗 Join Now</button>
+              <button class="ccg-hdr-btn" onclick="document.getElementById('ccg-join-card').style.display='none'">Cancel</button>
+            </div>
+          </div>
+          <!-- Embed Zoom web client note -->
+          <div class="ccg-zoom-card">
+            <div style="font-weight:700;font-size:13px;color:#fff;margin-bottom:6px;">📌 Meeting Quick Links</div>
+            <div style="display:flex;flex-direction:column;gap:8px;">
+              <a href="https://zoom.us/start/videomeeting" target="_blank" style="color:#38bdf8;font-size:12px;text-decoration:none;">🎥 Start a new Zoom video meeting →</a>
+              <a href="https://zoom.us/join" target="_blank" style="color:#38bdf8;font-size:12px;text-decoration:none;">🔗 Join a Zoom meeting by ID →</a>
+              <a href="https://zoom.us/meeting/schedule" target="_blank" style="color:#38bdf8;font-size:12px;text-decoration:none;">📅 Schedule a Zoom meeting →</a>
+              <a href="https://zoom.us/recording" target="_blank" style="color:#38bdf8;font-size:12px;text-decoration:none;">📼 View meeting recordings →</a>
+            </div>
+          </div>
+          <!-- Upcoming meetings placeholder -->
+          <div class="ccg-zoom-card">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+              <div style="font-weight:700;font-size:13px;color:#fff;">📅 Upcoming Meetings</div>
+              <button class="ccg-hdr-btn" style="font-size:10px;padding:3px 8px;" onclick="ccgLoadMeetings()">↺ Refresh</button>
+            </div>
+            <div id="ccg-meetings-list" style="font-size:12px;color:rgba(255,255,255,.4);">
+              <div style="text-align:center;padding:14px;color:rgba(255,255,255,.3);">Connect your Zoom account via API key to sync calendar meetings.</div>
+            </div>
+          </div>
+        </div>
+        <!-- Side: recent contacts -->
+        <div class="ccg-zoom-side">
+          <div style="padding:12px 14px;border-bottom:1px solid rgba(255,255,255,.09);font-weight:700;font-size:12px;color:#fff;flex-shrink:0;">👥 Team — Quick Call</div>
+          <div style="flex:1;overflow-y:auto;padding:10px 12px;scrollbar-width:thin;scrollbar-color:#38bdf8 transparent;display:flex;flex-direction:column;gap:6px;">
+            <div class="ccg-reporter" onclick="ccgCallTeam('mark_odom')" style="margin-bottom:0;">
+              <div class="ccg-rep-avatar" style="background:rgba(228,168,48,.2);color:#f5c842;font-size:11px;">MO</div>
+              <div><div class="ccg-rep-name">Mark Odom</div><div class="ccg-rep-role">CEO · Commander</div></div>
+              <button class="ccg-hdr-btn" style="font-size:9px;padding:3px 8px;margin-left:auto;" onclick="event.stopPropagation();ccgCallTeam('mark_odom')">📹 Call</button>
+            </div>
+            <div class="ccg-reporter" onclick="ccgCallTeam('alexander')" style="margin-bottom:0;">
+              <div class="ccg-rep-avatar" style="background:rgba(56,189,248,.2);color:#38bdf8;font-size:11px;">AW</div>
+              <div><div class="ccg-rep-name">Alexander Wright</div><div class="ccg-rep-role">VP Market Intelligence</div></div>
+              <button class="ccg-hdr-btn" style="font-size:9px;padding:3px 8px;margin-left:auto;" onclick="event.stopPropagation();ccgCallTeam('alexander')">📹 Call</button>
+            </div>
+            <div class="ccg-reporter" onclick="ccgCallTeam('naomi')" style="margin-bottom:0;">
+              <div class="ccg-rep-avatar" style="background:rgba(16,185,129,.2);color:#10b981;font-size:11px;">NK</div>
+              <div><div class="ccg-rep-name">Naomi Kensington</div><div class="ccg-rep-role">Head of Targeting</div></div>
+              <button class="ccg-hdr-btn" style="font-size:9px;padding:3px 8px;margin-left:auto;" onclick="event.stopPropagation();ccgCallTeam('naomi')">📹 Call</button>
+            </div>
+            <div class="ccg-reporter" onclick="ccgCallTeam('winston')" style="margin-bottom:0;">
+              <div class="ccg-rep-avatar" style="background:rgba(245,158,11,.2);color:#f59e0b;font-size:11px;">WC</div>
+              <div><div class="ccg-rep-name">Winston Carmichael</div><div class="ccg-rep-role">VP Carrier Retention</div></div>
+              <button class="ccg-hdr-btn" style="font-size:9px;padding:3px 8px;margin-left:auto;" onclick="event.stopPropagation();ccgCallTeam('winston')">📹 Call</button>
+            </div>
+            <div class="ccg-reporter" onclick="nav('bond')" style="margin-bottom:0;">
+              <div class="ccg-rep-avatar" style="background:rgba(245,200,66,.15);color:#f5c842;font-size:11px;font-style:italic;">JB</div>
+              <div><div class="ccg-rep-name" style="color:#f5c842;">James Bond</div><div class="ccg-rep-role">IEBC Consultant</div></div>
+              <button class="ccg-hdr-btn" style="font-size:9px;padding:3px 8px;margin-left:auto;color:#f5c842;border-color:rgba(245,200,66,.3);" onclick="event.stopPropagation();nav('bond')">Office</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div><!-- /zoom -->
+
+    <!-- ════ TV ════ -->
+    <div class="ccg-pane" id="ccgpane-tv">
+      <div class="ccg-tv-wrap">
+        <div class="ccg-tv-player" id="ccg-tv-player">
+          <iframe id="ccg-tv-frame" src="https://www.youtube.com/embed?listType=search&list=news+live+stream" allowfullscreen allow="autoplay; encrypted-media"></iframe>
+        </div>
+        <div class="ccg-tv-bar">
+          <span style="font-size:11px;color:rgba(255,255,255,.5);font-weight:700;margin-right:6px;">📺</span>
+          <button class="ccg-tv-ch-btn active" id="ccg-tv-news"  onclick="ccgTVChannel('news')">📰 News</button>
+          <button class="ccg-tv-ch-btn" id="ccg-tv-cnn"   onclick="ccgTVChannel('cnn')">CNN Live</button>
+          <button class="ccg-tv-ch-btn" id="ccg-tv-fox"   onclick="ccgTVChannel('fox')">Fox Business</button>
+          <button class="ccg-tv-ch-btn" id="ccg-tv-freight" onclick="ccgTVChannel('freight')">🚛 Freight</button>
+          <button class="ccg-tv-ch-btn" id="ccg-tv-music" onclick="ccgTVChannel('music')">🎵 Music</button>
+          <button class="ccg-tv-ch-btn" id="ccg-tv-relax" onclick="ccgTVChannel('relax')">🌿 Relax</button>
+          <div style="margin-left:auto;display:flex;align-items:center;gap:8px;">
+            <input id="ccg-tv-custom" class="ccg-input" style="width:260px;padding:5px 10px;font-size:11px;" placeholder="Paste YouTube URL or search…"/>
+            <button class="ccg-hdr-btn" onclick="ccgTVCustom()">▶ Go</button>
+          </div>
+        </div>
+      </div>
+    </div><!-- /tv -->
+
+  </div><!-- /body -->
+</div><!-- /ccg -->
+</div><!-- /page-ccg-office -->
+
+<script>
+// ═══════════════════════════════════════════════════════
+// CC GULLEY OFFICE — JavaScript
+// ═══════════════════════════════════════════════════════
+(function(){
+
+/* ── Tab switching ── */
+window.ccgTab = function(id){
+  document.querySelectorAll('.ccg-tab').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.ccg-pane').forEach(p=>p.classList.remove('active'));
+  const tb=document.getElementById('ccgtab-'+id);
+  const pn=document.getElementById('ccgpane-'+id);
+  if(tb)tb.classList.add('active');
+  if(pn)pn.classList.add('active');
+  if(id==='email')ccgLoadEmail();
+  if(id==='directives')ccgDirLoadActive();
+  if(id==='strategy')ccgLoadPlan();
+};
+
+/* ── Refresh All ── */
+window.ccgRefreshAll = function(){
+  ccgLoadOfficeData();
+  toast('CC Gulley Office refreshed');
+};
+
+async function ccgLoadOfficeData(){
+  try{
+    const mems=await API.agentBrain('cc_gulley').catch(()=>null);
+    const list=(mems?.memories)||[];
+    const pick=k=>(list.find(m=>m.memory_key===k)||{}).memory_value;
+    // Populate home feed with strategic intel summary
+    const strategic=pick('strategic_plan')||pick('30_60_90')||pick('strategy_plan');
+    const feed=document.getElementById('ccg-home-feed');
+    if(feed&&strategic){
+      feed.innerHTML=`<div class="ccg-feed-item sky"><div class="ccg-feed-from">🧭 CC Gulley — Strategic Plan</div><div class="ccg-feed-text">${String(strategic).slice(0,400)}</div></div>`;
+    }
+    // Load team intel
+    await Promise.all([ccgLoadAgentIntel('alexander'),ccgLoadAgentIntel('naomi'),ccgLoadAgentIntel('winston')]);
+    // Email unread count
+    ccgLoadEmailCount();
+  }catch(e){console.error('ccgLoadOfficeData',e);}
+}
+
+async function ccgLoadAgentIntel(agent){
+  try{
+    const mems=await API.agentBrain(agent).catch(()=>null);
+    const list=(mems?.memories)||[];
+    const pick=k=>(list.find(m=>m.memory_key===k)||{}).memory_value;
+    let summary='';
+    if(agent==='alexander')summary=pick('hot_states')||pick('market_intel')||pick('last_run_summary')||'No intel loaded yet.';
+    if(agent==='naomi')summary=pick('tier_a_list')||pick('targeting_intel')||pick('last_run_summary')||'No intel loaded yet.';
+    if(agent==='winston')summary=pick('at_risk_carriers')||pick('retention_intel')||pick('last_run_summary')||'No intel loaded yet.';
+    const el=document.getElementById(`ccg-${agent==='alexander'?'alex':agent}-summary`);
+    if(el)el.textContent=typeof summary==='object'?JSON.stringify(summary,null,2):String(summary).slice(0,500);
+    // Feed home panel
+    const feed=document.getElementById('ccg-home-feed');
+    if(feed&&summary&&summary!=='No intel loaded yet.'){
+      const colors={alexander:'sky',naomi:'teal',winston:'amber'};
+      const names={alexander:'Alexander Wright',naomi:'Naomi Kensington',winston:'Winston Carmichael'};
+      const item=document.createElement('div');
+      item.className=`ccg-feed-item ${colors[agent]||'sky'}`;
+      item.innerHTML=`<div class="ccg-feed-from">${names[agent]||agent}</div><div class="ccg-feed-text">${String(summary).slice(0,280)}</div>`;
+      feed.appendChild(item);
+    }
+  }catch(e){}
+}
+
+/* ── Run agent ── */
+window.ccgRunAgent = async function(slug,name){
+  toast(`Running ${name}…`);
+  try{
+    await API.post(`/api/agents/${slug}/run`,{});
+    toast(`${name} run complete`,'success');
+    await ccgLoadAgentIntel(slug==='cc_gulley'?'cc_gulley':slug);
+  }catch(e){toast(`${name} offline — check API`,'error');}
+};
+window.ccgRunAll = async function(){
+  toast('Running Strategy Unit…');
+  await Promise.all(['alexander','naomi','winston'].map(a=>API.post(`/api/agents/${a}/run`,{}).catch(()=>null)));
+  await ccgLoadOfficeData();
+  toast('Strategy Unit run complete','success');
+};
+
+/* ── Directive helpers ── */
+let _ccgDirAgent='alexander';
+window.ccgDirSelect=function(a){
+  _ccgDirAgent=a;
+  ['alexander','naomi','winston'].forEach(x=>{
+    document.getElementById(`ccg-dir-btn-${x}`)?.classList.toggle('active',x===a);
+    const f=document.getElementById(`ccg-dir-fields-${x}`);
+    if(f)f.style.display=x===a?'block':'none';
+  });
+};
+window.ccgSendDirective=function(agent){ccgTab('directives');ccgDirSelect(agent);};
+window.ccgDirSend=async function(){
+  const focus=document.getElementById('ccg-dir-focus')?.value.trim();
+  const instruction=document.getElementById('ccg-dir-instruction')?.value.trim();
+  if(!instruction&&!focus){toast('Enter a directive first','error');return;}
+  const payload={focus,instruction,markets:document.getElementById('ccg-dir-alex-markets')?.value,segments:document.getElementById('ccg-dir-naomi-segs')?.value,retention:document.getElementById('ccg-dir-winston-ret')?.value};
+  try{
+    await API.post('/api/memory/write',{agent:_ccgDirAgent,key:`directive_from_cc_gulley`,value:{...payload,issued_at:new Date().toISOString()}});
+    document.getElementById('ccg-dir-status').textContent='✓ Directive sent';
+    toast(`Directive sent to ${_ccgDirAgent}`,'success');
+    setTimeout(()=>{if(document.getElementById('ccg-dir-status'))document.getElementById('ccg-dir-status').textContent='';},3000);
+    ccgDirClear();ccgDirLoadActive();
+  }catch(e){toast('Directive failed — check API','error');}
+};
+window.ccgDirClear=function(){
+  ['ccg-dir-focus','ccg-dir-instruction','ccg-dir-alex-markets','ccg-dir-naomi-segs','ccg-dir-winston-ret'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+};
+window.ccgDirTemplate=function(t){
+  const templates={
+    expand:{focus:'Market Expansion — TX, FL, GA priority',instruction:'Immediately expand focus to TX, FL, and GA. These are our highest-density states. Alexander: update hot markets list. Naomi: push Tier A carriers in these states to Vance today. Winston: flag any TX/FL/GA carriers at risk of churning.'},
+    retention:{focus:'Retention Emergency — stop churn now',instruction:'URGENT: retention push in effect. Winston: compile full at-risk list, segment by days inactive. Naomi: deprioritize new acquisition, shift to re-engagement. Alexander: identify which markets are at highest risk of carrier loss.'},
+    segment:{focus:'Segment Shift — reefer priority',instruction:'Shift targeting to reefer and refrigerated carriers. Naomi: update Tier A criteria to weight reefer equipment. Alexander: identify top reefer markets. Winston: flag any reefer carriers currently inactive.'},
+    urgent:{focus:'URGENT REFOCUS — immediate action required',instruction:'All agents: stop current activity and await new directive. Stand by for updated priority markets and segment focus. This is a full strategy reset — confirm receipt on next run.'}
+  };
+  const tpl=templates[t];
+  if(!tpl)return;
+  const fi=document.getElementById('ccg-dir-focus');if(fi)fi.value=tpl.focus;
+  const ii=document.getElementById('ccg-dir-instruction');if(ii)ii.value=tpl.instruction;
+};
+window.ccgDirLoadActive=async function(){
+  const el=document.getElementById('ccg-dir-active');if(!el)return;
+  el.innerHTML='<div style="font-size:11px;color:rgba(255,255,255,.3);">Loading…</div>';
+  try{
+    const agents=['alexander','naomi','winston'];
+    let html='';
+    for(const a of agents){
+      const mems=await API.agentBrain(a).catch(()=>null);
+      const dir=(mems?.memories||[]).find(m=>m.memory_key==='directive_from_cc_gulley');
+      if(dir?.memory_value){
+        const v=typeof dir.memory_value==='string'?JSON.parse(dir.memory_value):dir.memory_value;
+        html+=`<div class="ccg-dir-card"><div class="ccg-dir-card-hd">📣 ${a.charAt(0).toUpperCase()+a.slice(1)} — Directive</div><div class="ccg-dir-card-body">${v.focus||''}<br/><span style="opacity:.6">${(v.instruction||'').slice(0,200)}</span></div><div class="ccg-dir-card-ts">${v.issued_at||''}</div></div>`;
+      }
+    }
+    el.innerHTML=html||'<div style="font-size:11px;color:rgba(255,255,255,.3);">No active directives</div>';
+  }catch(e){el.innerHTML='<div style="font-size:11px;color:rgba(255,255,255,.3);">Error loading directives</div>';}
+};
+
+/* ── Strategic Plan ── */
+window.ccgSavePlan=async function(){
+  const btn=document.getElementById('ccg-save-btn-plan');const st=document.getElementById('ccg-plan-status');
+  const plan={markets:document.getElementById('ccg-plan-markets')?.value,segments:document.getElementById('ccg-plan-segments')?.value,retention:document.getElementById('ccg-plan-retention')?.value,directive:document.getElementById('ccg-plan-directive')?.value,growth:document.getElementById('ccg-plan-growth')?.value,saved_at:new Date().toISOString()};
+  try{
+    await API.post('/api/memory/write',{agent:'cc_gulley',key:'strategic_plan',value:plan});
+    await API.post('/api/memory/write',{agent:'cc_gulley',key:'30_60_90',value:plan.directive});
+    if(st)st.textContent='✓ Plan saved';toast('Strategic plan saved','success');
+    setTimeout(()=>{if(st)st.textContent='';},3000);
+  }catch(e){if(st)st.textContent='Save failed';toast('Save failed — check API','error');}
+};
+window.ccgLoadPlan=async function(){
+  try{
+    const mems=await API.agentBrain('cc_gulley').catch(()=>null);
+    const list=(mems?.memories)||[];
+    const pick=k=>(list.find(m=>m.memory_key===k)||{}).memory_value;
+    const plan=pick('strategic_plan');
+    if(plan&&typeof plan==='object'){
+      const s=(id,v)=>{const el=document.getElementById(id);if(el&&v)el.value=v;};
+      s('ccg-plan-markets',plan.markets);s('ccg-plan-segments',plan.segments);
+      s('ccg-plan-retention',plan.retention);s('ccg-plan-directive',plan.directive);
+      s('ccg-plan-growth',plan.growth);
+    } else if(typeof plan==='string'){
+      const el=document.getElementById('ccg-plan-directive');if(el)el.value=plan;
+    }
+  }catch(e){}
+};
+
+/* ── Email ── */
+let _ccgEmails=[];let _ccgSelectedEmail=null;let _ccgComposing=false;
+async function ccgLoadEmailCount(){
+  try{
+    const r=await API.get('/api/mailboxes').catch(()=>null);
+    const boxes=(r?.mailboxes)||[];
+    const cece=boxes.find(b=>(b.email||b.address||'').includes('cece'));
+    if(cece){
+      const msgs=await API.get(`/api/mailboxes/${cece.id}/messages?folder=inbox&limit=5`).catch(()=>null);
+      const unread=(msgs?.messages||[]).filter(m=>!m.is_read).length;
+      const ct=document.getElementById('ccg-email-ct');const nb=document.getElementById('ccg-email-notif');
+      if(unread>0){if(ct){ct.style.display='inline';ct.textContent=unread;}if(nb)nb.style.display='inline';}
+      const kpi=document.getElementById('ccg-kpi-emails');if(kpi)kpi.textContent=unread||'0';
+    }
+  }catch(e){}
+}
+window.ccgLoadEmail=async function(){
+  const listEl=document.getElementById('ccg-mail-list');if(!listEl)return;
+  listEl.innerHTML='<div style="padding:20px;text-align:center;color:rgba(255,255,255,.3);font-size:11px;">Loading…</div>';
+  const folder=document.getElementById('ccg-mail-folder')?.value||'inbox';
+  try{
+    const r=await API.get('/api/mailboxes').catch(()=>null);
+    const boxes=(r?.mailboxes)||[];
+    const cece=boxes.find(b=>(b.email||b.address||'').includes('cece'))||boxes[0];
+    if(!cece){listEl.innerHTML='<div style="padding:20px;text-align:center;color:rgba(255,255,255,.3);font-size:11px;">Mailbox not found — add email passwords to Render</div>';return;}
+    const msgs=await API.get(`/api/mailboxes/${cece.id}/messages?folder=${folder}&limit=50`).catch(()=>null);
+    _ccgEmails=(msgs?.messages)||[];
+    if(!_ccgEmails.length){listEl.innerHTML='<div style="padding:20px;text-align:center;color:rgba(255,255,255,.3);font-size:11px;">No messages</div>';return;}
+    listEl.innerHTML=_ccgEmails.map((m,i)=>`
+      <div class="ccg-mail-item" onclick="ccgEmailOpen(${i})" id="ccg-mail-${i}">
+        <div style="display:flex;align-items:flex-start;gap:8px;">
+          ${!m.is_read?'<div class="ccg-mail-unread"></div>':'<div style="width:7px;"></div>'}
+          <div style="flex:1;min-width:0;">
+            <div class="ccg-mail-item-from">${m.from_name||m.from_email||'—'}</div>
+            <div class="ccg-mail-item-sub">${m.subject||'(no subject)'}</div>
+            <div class="ccg-mail-item-ts">${m.received_at?new Date(m.received_at).toLocaleString():''}</div>
+          </div>
+        </div>
+      </div>`).join('');
+  }catch(e){listEl.innerHTML=`<div style="padding:20px;text-align:center;color:rgba(255,255,255,.3);font-size:11px;">Error loading email: ${e.message}</div>`;}
+};
+window.ccgEmailOpen=function(i){
+  const m=_ccgEmails[i];if(!m)return;
+  _ccgSelectedEmail=m;
+  document.querySelectorAll('.ccg-mail-item').forEach(el=>el.classList.remove('selected'));
+  document.getElementById(`ccg-mail-${i}`)?.classList.add('selected');
+  document.getElementById('ccg-mail-view-area').style.display='flex';
+  document.getElementById('ccg-compose-area').style.display='none';
+  document.getElementById('ccg-mail-subject').textContent=m.subject||'(no subject)';
+  document.getElementById('ccg-mail-meta').textContent=`From: ${m.from_email||'—'} · ${m.received_at?new Date(m.received_at).toLocaleString():''}`;
+  document.getElementById('ccg-mail-body').innerHTML=m.body_html||`<pre style="white-space:pre-wrap;color:rgba(255,255,255,.75);">${m.body_text||'(no body)'}</pre>`;
+  const rb=document.getElementById('ccg-mail-reply-bar');if(rb)rb.style.display='flex';
+};
+window.ccgEmailCompose=function(){
+  document.getElementById('ccg-mail-view-area').style.display='none';
+  document.getElementById('ccg-compose-area').style.display='flex';
+  document.getElementById('ccg-compose-title').textContent='New Message';
+  document.getElementById('ccg-compose-to').value='';
+  document.getElementById('ccg-compose-subject').value='';
+  document.getElementById('ccg-compose-body').value='';
+};
+window.ccgEmailReply=function(){
+  if(!_ccgSelectedEmail)return;
+  document.getElementById('ccg-mail-view-area').style.display='none';
+  document.getElementById('ccg-compose-area').style.display='flex';
+  document.getElementById('ccg-compose-title').textContent='Reply';
+  document.getElementById('ccg-compose-to').value=_ccgSelectedEmail.from_email||'';
+  document.getElementById('ccg-compose-subject').value=`Re: ${_ccgSelectedEmail.subject||''}`;
+  document.getElementById('ccg-compose-body').value=`\n\n--- Original Message ---\n${_ccgSelectedEmail.body_text||''}`;
+};
+window.ccgEmailForward=function(){
+  if(!_ccgSelectedEmail)return;
+  document.getElementById('ccg-mail-view-area').style.display='none';
+  document.getElementById('ccg-compose-area').style.display='flex';
+  document.getElementById('ccg-compose-title').textContent='Forward';
+  document.getElementById('ccg-compose-to').value='';
+  document.getElementById('ccg-compose-subject').value=`Fwd: ${_ccgSelectedEmail.subject||''}`;
+  document.getElementById('ccg-compose-body').value=`\n\n--- Forwarded Message ---\n${_ccgSelectedEmail.body_text||''}`;
+};
+window.ccgEmailCancelCompose=function(){
+  document.getElementById('ccg-compose-area').style.display='none';
+  document.getElementById('ccg-mail-view-area').style.display='flex';
+};
+window.ccgEmailSend=async function(){
+  const to=document.getElementById('ccg-compose-to')?.value.trim();
+  const subject=document.getElementById('ccg-compose-subject')?.value.trim();
+  const body=document.getElementById('ccg-compose-body')?.value.trim();
+  if(!to||!body){toast('Fill in To and Message','error');return;}
+  const st=document.getElementById('ccg-mail-send-status');if(st)st.textContent='Sending…';
+  try{
+    await API.post('/api/email/send',{from:'cece@3lakeslogistics.com',to,subject,body});
+    toast('Email sent','success');if(st)st.textContent='✓ Sent';
+    ccgEmailCancelCompose();ccgLoadEmail();
+  }catch(e){toast('Send failed — check SMTP config','error');if(st)st.textContent='Failed';}
+};
+window.ccgEmailSaveDraft=function(){toast('Draft saved (coming soon)');};
+window.ccgEmailDelete=async function(){toast('Delete coming soon');};
+
+/* ── Zoom ── */
+window.ccgStartMeeting=function(){window.open('https://zoom.us/start/videomeeting','_blank');};
+window.ccgJoinMeeting=function(){
+  const c=document.getElementById('ccg-join-card');
+  if(c)c.style.display=c.style.display==='none'?'flex':'none';
+};
+window.ccgDoJoinMeeting=function(){
+  const id=document.getElementById('ccg-zoom-id')?.value.trim();
+  const pass=document.getElementById('ccg-zoom-pass')?.value.trim();
+  if(!id){toast('Enter a meeting ID','error');return;}
+  const base=id.startsWith('http')?id:`https://zoom.us/j/${id.replace(/\s/g,'')}`;
+  const url=pass?`${base}?pwd=${encodeURIComponent(pass)}`:base;
+  window.open(url,'_blank');
+};
+window.ccgScheduleMeeting=function(){window.open('https://zoom.us/meeting/schedule','_blank');};
+window.ccgCallTeam=function(agent){
+  toast(`Opening Zoom for ${agent} — starting meeting…`);
+  window.open('https://zoom.us/start/videomeeting','_blank');
+};
+window.ccgLoadMeetings=function(){toast('Connect Zoom API key to sync meetings');};
+
+/* ── TV ── */
+const _ccgChannels={
+  news:'https://www.youtube.com/embed/live_stream?channel=UCeY0bbntWzzVIaj2z3QigXg&autoplay=1',
+  cnn:'https://www.youtube.com/embed/hCE2TLCF6ds?autoplay=1',
+  fox:'https://www.youtube.com/embed/w2bJMoFQYvA?autoplay=1',
+  freight:'https://www.youtube.com/embed?listType=search&list=trucking+freight+industry+news',
+  music:'https://www.youtube.com/embed/jfKfPfyJRdk?autoplay=1',
+  relax:'https://www.youtube.com/embed/5qap5aO4i9A?autoplay=1'
+};
+window.ccgTVChannel=function(ch){
+  document.querySelectorAll('.ccg-tv-ch-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('ccg-tv-'+ch)?.classList.add('active');
+  const frame=document.getElementById('ccg-tv-frame');
+  if(frame&&_ccgChannels[ch])frame.src=_ccgChannels[ch];
+};
+window.ccgTVCustom=function(){
+  const val=document.getElementById('ccg-tv-custom')?.value.trim();if(!val)return;
+  const frame=document.getElementById('ccg-tv-frame');if(!frame)return;
+  if(val.includes('youtube.com/watch')){
+    const id=new URL(val).searchParams.get('v');
+    frame.src=`https://www.youtube.com/embed/${id}?autoplay=1`;
+  } else if(val.includes('youtu.be/')){
+    const id=val.split('youtu.be/')[1].split('?')[0];
+    frame.src=`https://www.youtube.com/embed/${id}?autoplay=1`;
+  } else {
+    frame.src=`https://www.youtube.com/embed?listType=search&list=${encodeURIComponent(val)}`;
+  }
+  document.querySelectorAll('.ccg-tv-ch-btn').forEach(b=>b.classList.remove('active'));
+};
+
+/* ── Auto-load when page activates ── */
+const _ccgOrigNav=window.nav;
+const _ccgLoaded={};
+const _origNavCcg=window.nav;
+// Hook nav calls to load CCG data on first visit
+document.addEventListener('DOMContentLoaded',()=>{
+  const origNav=window.nav;
+  if(origNav){
+    const wrapped=function(id){
+      origNav(id);
+      if(id==='ccg-office'&&!_ccgLoaded.home){
+        _ccgLoaded.home=true;
+        setTimeout(()=>{ccgLoadOfficeData();ccgLoadEmail();},300);
+      }
+    };
+    window.nav=wrapped;
+  }
+});
+
+})();
+</script>
 
 <style>
 /* ── Bond Office ──────────────────────────────────────────────────────────── */
