@@ -31,6 +31,16 @@ def run(payload: dict[str, Any]) -> dict[str, Any]:
         "call_id": "bland_call_id"
     }
     """
+    # ── carrier check_in branch (called from onboarding_scheduler) ───────────
+    if payload.get("task") == "check_in":
+        carrier_id = payload.get("carrier_id")
+        log_agent(
+            "vance_follow_up", "carrier_check_in",
+            payload={"carrier_id": carrier_id},
+            result="check_in_acknowledged",
+        )
+        return {"agent": "vance_follow_up", "status": "ok", "task": "check_in", "carrier_id": carrier_id}
+
     lead_id       = payload.get("lead_id", "")
     prospect_name = payload.get("prospect_name", "")
     prospect_email = payload.get("prospect_email", "")
