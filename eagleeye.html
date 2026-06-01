@@ -12324,17 +12324,53 @@ async function deactivateDriver(driverId) {
 <!-- ════════════════════════════════════════════════════════════════════ -->
 <style>
 .lf-wrap{padding:0;box-sizing:border-box;}
-.lf-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px;}
-.lf-hdr h2{font-size:20px;font-weight:700;margin:0;}
-.lf-kpis{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px;margin-bottom:20px;}
-.lf-kpi{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px;text-align:center;}
-.lf-kpi-val{font-size:26px;font-weight:900;color:var(--gold2);}
-.lf-kpi-lbl{font-size:11px;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);margin-top:3px;}
-.lf-actions{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;}
-.lf-btn{background:var(--gold2);color:#000;border:none;padding:8px 18px;border-radius:6px;font-weight:700;font-size:13px;cursor:pointer;}
-.lf-btn:hover{background:var(--gold1);}
-.lf-btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--border);padding:8px 14px;border-radius:6px;font-size:12px;cursor:pointer;}
-.lf-btn-ghost:hover{color:var(--text);border-color:var(--text);}
+
+/* ── Sticky tab bar — centered, never overlaps headers ── */
+.lf-tab-bar{
+  position:sticky;top:0;z-index:10;
+  background:var(--off);
+  padding:14px 0 0;
+  margin-bottom:20px;
+  border-bottom:2px solid var(--border);
+}
+.lf-tab-inner{
+  display:flex;justify-content:center;gap:4px;
+  flex-wrap:wrap;
+  padding-bottom:0;
+}
+.lf-tab{
+  display:inline-flex;align-items:center;gap:7px;
+  padding:9px 20px;
+  border:none;background:transparent;
+  font-size:13px;font-weight:600;font-family:var(--ff-b);
+  color:var(--muted);cursor:pointer;
+  border-radius:8px 8px 0 0;
+  border-bottom:2px solid transparent;
+  margin-bottom:-2px;
+  transition:all .18s;white-space:nowrap;
+}
+.lf-tab:hover{color:var(--navy);background:rgba(11,37,69,.04);}
+.lf-tab.active{color:var(--navy);border-bottom-color:var(--gold2);background:var(--white);}
+.lf-tab-badge{background:var(--red);color:#fff;font-size:9px;font-weight:700;padding:1px 5px;border-radius:8px;}
+
+.lf-hdr{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px;}
+.lf-hdr-left{min-width:0;}
+.lf-hdr h2{font-size:20px;font-weight:700;margin:0;display:flex;align-items:center;gap:10px;}
+.lf-hdr-sub{font-size:12px;color:var(--muted);margin-top:3px;}
+.lf-hdr-actions{display:flex;gap:8px;flex-shrink:0;flex-wrap:wrap;}
+
+.lf-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px;}
+.lf-kpi{background:var(--white);border:1px solid var(--border);border-radius:10px;padding:14px 16px;text-align:center;position:relative;overflow:hidden;}
+.lf-kpi::before{content:"";position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--gold),var(--gold2));}
+.lf-kpi-val{font-size:26px;font-weight:900;color:var(--navy);font-family:var(--ff-h);}
+.lf-kpi-lbl{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-top:4px;font-family:var(--ff-m);}
+
+.lf-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:16px;}
+.lf-actions-right{margin-left:auto;display:flex;gap:8px;}
+.lf-btn{background:var(--navy);color:var(--gold2);border:none;padding:8px 18px;border-radius:6px;font-weight:700;font-size:13px;cursor:pointer;transition:background .2s;}
+.lf-btn:hover{background:var(--navy2);}
+.lf-btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--border);padding:8px 14px;border-radius:6px;font-size:12px;cursor:pointer;transition:all .18s;}
+.lf-btn-ghost:hover{color:var(--navy);border-color:var(--navy);background:var(--off);}
 .lf-table-wrap{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;}
 .lf-table{width:100%;border-collapse:collapse;font-size:13px;}
 .lf-table th{text-align:left;padding:10px 14px;font-size:11px;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);border-bottom:1px solid var(--border);background:var(--card);}
@@ -12354,11 +12390,24 @@ async function deactivateDriver(driverId) {
 .lf-badge.flagged{background:rgba(239,68,68,.15);color:#ef4444;}
 .lf-empty{text-align:center;padding:40px;color:var(--muted);font-size:14px;}
 .lf-section-hdr{font-size:13px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin:20px 0 10px;}
-.lf-driver-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;margin-bottom:20px;}
-.lf-driver-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px;}
-.lf-driver-card-name{font-weight:700;font-size:15px;margin-bottom:4px;}
-.lf-driver-card-meta{font-size:12px;color:var(--muted);margin-bottom:10px;}
-.lf-driver-card-row{display:flex;justify-content:space-between;align-items:center;font-size:12px;margin-top:6px;}
+.lf-driver-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px;margin-bottom:20px;}
+.lf-driver-card{background:var(--white);border:1px solid var(--border);border-radius:12px;overflow:hidden;transition:box-shadow .2s,transform .2s;}
+.lf-driver-card:hover{box-shadow:0 4px 20px rgba(11,37,69,.1);transform:translateY(-2px);}
+.lf-driver-card-top{padding:14px 16px 12px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;gap:12px;}
+.lf-driver-avatar{width:42px;height:42px;border-radius:10px;background:var(--navy);display:flex;align-items:center;justify-content:center;font-family:var(--ff-h);font-size:16px;color:var(--gold2);font-weight:900;flex-shrink:0;text-transform:uppercase;}
+.lf-driver-card-name{font-weight:700;font-size:15px;color:var(--navy);margin-bottom:2px;}
+.lf-driver-card-meta{font-size:12px;color:var(--muted);line-height:1.5;}
+.lf-driver-card-body{padding:10px 16px 14px;}
+.lf-driver-card-row{display:flex;justify-content:space-between;align-items:center;font-size:12px;padding:5px 0;border-bottom:1px solid var(--slate);}
+.lf-driver-card-row:last-child{border-bottom:none;}
+.lf-driver-card-row .lbl{color:var(--muted);}
+.lf-driver-card-row .val{font-weight:600;color:var(--navy);text-align:right;max-width:60%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.lf-driver-svc-pills{display:flex;flex-wrap:wrap;gap:5px;margin-top:10px;padding-top:10px;border-top:1px solid var(--slate);}
+.lf-svc-pill{font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;font-family:var(--ff-m);letter-spacing:.5px;}
+.lf-svc-pill.nemt{background:rgba(5,150,105,.12);color:#059669;}
+.lf-svc-pill.executive{background:rgba(99,102,241,.12);color:#6366f1;}
+.lf-svc-pill.courier{background:rgba(245,158,11,.12);color:#d97706;}
+.lf-svc-pill.gig{background:rgba(59,130,246,.12);color:#2563eb;}
 
 /* Modal */
 .lf-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:900;display:flex;align-items:center;justify-content:center;padding:20px;}
@@ -12375,24 +12424,37 @@ async function deactivateDriver(driverId) {
 .lf-form-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:18px;}
 </style>
 
+<!-- ── SHARED LF TAB BAR (injected into each page) ── -->
+
 <!-- ── NEMT PAGE ── -->
 <div class="page" id="page-lf-nemt">
   <div class="lf-wrap">
+    <div class="lf-tab-bar">
+      <div class="lf-tab-inner">
+        <button class="lf-tab active" onclick="nav('lf-nemt')">🏥 NEMT</button>
+        <button class="lf-tab" onclick="nav('lf-executive')">🚗 Executive</button>
+        <button class="lf-tab" onclick="nav('lf-courier')">📦 Courier</button>
+        <button class="lf-tab" onclick="nav('lf-gig')">👥 Gig Fleet</button>
+      </div>
+    </div>
     <div class="lf-hdr">
-      <div><h2>🏥 NEMT — Medical Transport</h2><div style="font-size:12px;color:var(--muted);margin-top:2px;">Non-Emergency Medical Transport · Medicaid/Medicare</div></div>
-      <div style="display:flex;gap:8px;">
+      <div class="lf-hdr-left">
+        <h2>🏥 NEMT — Medical Transport</h2>
+        <div class="lf-hdr-sub">Non-Emergency Medical Transport · Medicaid / Medicare reimbursement</div>
+      </div>
+      <div class="lf-hdr-actions">
         <button class="lf-btn-ghost" onclick="lfRefresh('lf-nemt')">↻ Refresh</button>
         <button class="lf-btn" onclick="lfOpenTrip('nemt')">+ New Trip</button>
       </div>
     </div>
     <div class="lf-kpis" id="lf-nemt-kpis">
       <div class="lf-kpi"><div class="lf-kpi-val" id="lf-nemt-pending">—</div><div class="lf-kpi-lbl">Pending</div></div>
-      <div class="lf-kpi"><div class="lf-kpi-val" id="lf-nemt-today">—</div><div class="lf-kpi-lbl">Today</div></div>
+      <div class="lf-kpi"><div class="lf-kpi-val" id="lf-nemt-today">—</div><div class="lf-kpi-lbl">Today's Trips</div></div>
       <div class="lf-kpi"><div class="lf-kpi-val" id="lf-nemt-mtd">—</div><div class="lf-kpi-lbl">MTD Trips</div></div>
       <div class="lf-kpi"><div class="lf-kpi-val" id="lf-nemt-rev">—</div><div class="lf-kpi-lbl">MTD Revenue</div></div>
     </div>
     <div class="lf-actions">
-      <select id="lf-nemt-status-filter" onchange="lfLoadTrips('nemt')" style="padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:var(--card);color:var(--text);">
+      <select id="lf-nemt-status-filter" onchange="lfLoadTrips('nemt')" style="padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:var(--white);color:var(--text);">
         <option value="">All Statuses</option>
         <option value="pending">Pending</option>
         <option value="assigned">Assigned</option>
@@ -12403,8 +12465,8 @@ async function deactivateDriver(driverId) {
     </div>
     <div class="lf-table-wrap">
       <table class="lf-table">
-        <thead><tr><th>Patient</th><th>Pickup</th><th>Dropoff</th><th>Scheduled</th><th>Driver</th><th>Status</th><th>Rate</th><th></th></tr></thead>
-        <tbody id="lf-nemt-tbody"><tr><td colspan="8" class="lf-empty">Loading…</td></tr></tbody>
+        <thead><tr><th>Patient</th><th>Pickup Location</th><th>Dropoff Location</th><th>Scheduled</th><th>Driver</th><th>Mobility</th><th>Status</th><th>Rate</th><th></th></tr></thead>
+        <tbody id="lf-nemt-tbody"><tr><td colspan="9" class="lf-empty">Loading…</td></tr></tbody>
       </table>
     </div>
     <div class="lf-section-hdr" style="margin-top:28px;">NEMT Clients</div>
@@ -12413,8 +12475,8 @@ async function deactivateDriver(driverId) {
     </div>
     <div class="lf-table-wrap">
       <table class="lf-table">
-        <thead><tr><th>Name</th><th>Phone</th><th>Insurance</th><th>Mobility</th><th>Total Trips</th><th>Status</th></tr></thead>
-        <tbody id="lf-nemt-clients-tbody"><tr><td colspan="6" class="lf-empty">Loading…</td></tr></tbody>
+        <thead><tr><th>Name</th><th>Phone</th><th>Insurance Provider</th><th>Mobility Needs</th><th>Home City</th><th>Total Trips</th><th>Status</th></tr></thead>
+        <tbody id="lf-nemt-clients-tbody"><tr><td colspan="7" class="lf-empty">Loading…</td></tr></tbody>
       </table>
     </div>
   </div>
@@ -12423,21 +12485,32 @@ async function deactivateDriver(driverId) {
 <!-- ── EXECUTIVE PAGE ── -->
 <div class="page" id="page-lf-executive">
   <div class="lf-wrap">
+    <div class="lf-tab-bar">
+      <div class="lf-tab-inner">
+        <button class="lf-tab" onclick="nav('lf-nemt')">🏥 NEMT</button>
+        <button class="lf-tab active" onclick="nav('lf-executive')">🚗 Executive</button>
+        <button class="lf-tab" onclick="nav('lf-courier')">📦 Courier</button>
+        <button class="lf-tab" onclick="nav('lf-gig')">👥 Gig Fleet</button>
+      </div>
+    </div>
     <div class="lf-hdr">
-      <div><h2>🚗 Executive Transport</h2><div style="font-size:12px;color:var(--muted);margin-top:2px;">Corporate · Airport · VIP</div></div>
-      <div style="display:flex;gap:8px;">
+      <div class="lf-hdr-left">
+        <h2>🚗 Executive Transport</h2>
+        <div class="lf-hdr-sub">Corporate accounts · Airport transfers · VIP runs · Flight tracking</div>
+      </div>
+      <div class="lf-hdr-actions">
         <button class="lf-btn-ghost" onclick="lfRefresh('lf-executive')">↻ Refresh</button>
         <button class="lf-btn" onclick="lfOpenTrip('executive')">+ New Booking</button>
       </div>
     </div>
     <div class="lf-kpis">
       <div class="lf-kpi"><div class="lf-kpi-val" id="lf-exec-pending">—</div><div class="lf-kpi-lbl">Pending</div></div>
-      <div class="lf-kpi"><div class="lf-kpi-val" id="lf-exec-today">—</div><div class="lf-kpi-lbl">Today</div></div>
+      <div class="lf-kpi"><div class="lf-kpi-val" id="lf-exec-today">—</div><div class="lf-kpi-lbl">Today's Runs</div></div>
       <div class="lf-kpi"><div class="lf-kpi-val" id="lf-exec-mtd">—</div><div class="lf-kpi-lbl">MTD Trips</div></div>
       <div class="lf-kpi"><div class="lf-kpi-val" id="lf-exec-rev">—</div><div class="lf-kpi-lbl">MTD Revenue</div></div>
     </div>
     <div class="lf-actions">
-      <select id="lf-exec-status-filter" onchange="lfLoadTrips('executive')" style="padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:var(--card);color:var(--text);">
+      <select id="lf-exec-status-filter" onchange="lfLoadTrips('executive')" style="padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:var(--white);color:var(--text);">
         <option value="">All Statuses</option>
         <option value="pending">Pending</option>
         <option value="assigned">Assigned</option>
@@ -12448,8 +12521,8 @@ async function deactivateDriver(driverId) {
     </div>
     <div class="lf-table-wrap">
       <table class="lf-table">
-        <thead><tr><th>Client</th><th>Pickup</th><th>Dropoff</th><th>Scheduled</th><th>Vehicle</th><th>Flight #</th><th>Status</th><th>Rate</th><th></th></tr></thead>
-        <tbody id="lf-exec-tbody"><tr><td colspan="9" class="lf-empty">Loading…</td></tr></tbody>
+        <thead><tr><th>Client</th><th>Pickup Location</th><th>Dropoff Location</th><th>Scheduled</th><th>Vehicle Class</th><th>Flight #</th><th>Driver</th><th>Status</th><th>Rate</th><th></th></tr></thead>
+        <tbody id="lf-exec-tbody"><tr><td colspan="10" class="lf-empty">Loading…</td></tr></tbody>
       </table>
     </div>
     <div class="lf-section-hdr" style="margin-top:28px;">Corporate Accounts</div>
@@ -12458,8 +12531,8 @@ async function deactivateDriver(driverId) {
     </div>
     <div class="lf-table-wrap">
       <table class="lf-table">
-        <thead><tr><th>Company</th><th>Contact</th><th>Billing</th><th>Rate/mi</th><th>Airport Flat</th><th>Total Trips</th><th>Status</th></tr></thead>
-        <tbody id="lf-exec-accounts-tbody"><tr><td colspan="7" class="lf-empty">Loading…</td></tr></tbody>
+        <thead><tr><th>Company</th><th>Primary Contact</th><th>Billing City</th><th>Billing Type</th><th>Rate/mi</th><th>Airport Flat</th><th>Total Trips</th><th>Status</th></tr></thead>
+        <tbody id="lf-exec-accounts-tbody"><tr><td colspan="8" class="lf-empty">Loading…</td></tr></tbody>
       </table>
     </div>
   </div>
@@ -12468,21 +12541,32 @@ async function deactivateDriver(driverId) {
 <!-- ── COURIER PAGE ── -->
 <div class="page" id="page-lf-courier">
   <div class="lf-wrap">
+    <div class="lf-tab-bar">
+      <div class="lf-tab-inner">
+        <button class="lf-tab" onclick="nav('lf-nemt')">🏥 NEMT</button>
+        <button class="lf-tab" onclick="nav('lf-executive')">🚗 Executive</button>
+        <button class="lf-tab active" onclick="nav('lf-courier')">📦 Courier</button>
+        <button class="lf-tab" onclick="nav('lf-gig')">👥 Gig Fleet</button>
+      </div>
+    </div>
     <div class="lf-hdr">
-      <div><h2>📦 Courier & Last-Mile</h2><div style="font-size:12px;color:var(--muted);margin-top:2px;">Same-Day · Documents · Urban Delivery</div></div>
-      <div style="display:flex;gap:8px;">
+      <div class="lf-hdr-left">
+        <h2>📦 Courier & Last-Mile</h2>
+        <div class="lf-hdr-sub">Same-day delivery · Documents · Medical specimens · Urban last-mile</div>
+      </div>
+      <div class="lf-hdr-actions">
         <button class="lf-btn-ghost" onclick="lfRefresh('lf-courier')">↻ Refresh</button>
         <button class="lf-btn" onclick="lfOpenTrip('courier')">+ New Delivery</button>
       </div>
     </div>
     <div class="lf-kpis">
       <div class="lf-kpi"><div class="lf-kpi-val" id="lf-cour-pending">—</div><div class="lf-kpi-lbl">Pending</div></div>
-      <div class="lf-kpi"><div class="lf-kpi-val" id="lf-cour-today">—</div><div class="lf-kpi-lbl">Today</div></div>
+      <div class="lf-kpi"><div class="lf-kpi-val" id="lf-cour-today">—</div><div class="lf-kpi-lbl">Today's Deliveries</div></div>
       <div class="lf-kpi"><div class="lf-kpi-val" id="lf-cour-mtd">—</div><div class="lf-kpi-lbl">MTD Deliveries</div></div>
       <div class="lf-kpi"><div class="lf-kpi-val" id="lf-cour-rev">—</div><div class="lf-kpi-lbl">MTD Revenue</div></div>
     </div>
     <div class="lf-actions">
-      <select id="lf-cour-status-filter" onchange="lfLoadTrips('courier')" style="padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:var(--card);color:var(--text);">
+      <select id="lf-cour-status-filter" onchange="lfLoadTrips('courier')" style="padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:var(--white);color:var(--text);">
         <option value="">All Statuses</option>
         <option value="pending">Pending</option>
         <option value="assigned">Assigned</option>
@@ -12493,8 +12577,8 @@ async function deactivateDriver(driverId) {
     </div>
     <div class="lf-table-wrap">
       <table class="lf-table">
-        <thead><tr><th>Pickup</th><th>Dropoff</th><th>Scheduled</th><th>Packages</th><th>Weight</th><th>Driver</th><th>Status</th><th>Rate</th><th></th></tr></thead>
-        <tbody id="lf-cour-tbody"><tr><td colspan="9" class="lf-empty">Loading…</td></tr></tbody>
+        <thead><tr><th>Pickup Location</th><th>Dropoff Location</th><th>Scheduled</th><th>Pkgs</th><th>Weight</th><th>Driver</th><th>Type</th><th>Status</th><th>Rate</th><th></th></tr></thead>
+        <tbody id="lf-cour-tbody"><tr><td colspan="10" class="lf-empty">Loading…</td></tr></tbody>
       </table>
     </div>
   </div>
@@ -12503,9 +12587,20 @@ async function deactivateDriver(driverId) {
 <!-- ── GIG FLEET PAGE ── -->
 <div class="page" id="page-lf-gig">
   <div class="lf-wrap">
+    <div class="lf-tab-bar">
+      <div class="lf-tab-inner">
+        <button class="lf-tab" onclick="nav('lf-nemt')">🏥 NEMT</button>
+        <button class="lf-tab" onclick="nav('lf-executive')">🚗 Executive</button>
+        <button class="lf-tab" onclick="nav('lf-courier')">📦 Courier</button>
+        <button class="lf-tab active" onclick="nav('lf-gig')">👥 Gig Fleet</button>
+      </div>
+    </div>
     <div class="lf-hdr">
-      <div><h2>👥 Gig Fleet Management</h2><div style="font-size:12px;color:var(--muted);margin-top:2px;">Car & SUV Drivers · MVR · Background Checks</div></div>
-      <div style="display:flex;gap:8px;">
+      <div class="lf-hdr-left">
+        <h2>👥 Gig Fleet Management</h2>
+        <div class="lf-hdr-sub">Car & SUV drivers · MVR checks · Background screening · Per-service approvals</div>
+      </div>
+      <div class="lf-hdr-actions">
         <button class="lf-btn-ghost" onclick="lfRefresh('lf-gig')">↻ Refresh</button>
         <button class="lf-btn" onclick="lfOpenDriver()">+ Add Driver</button>
       </div>
@@ -12517,13 +12612,13 @@ async function deactivateDriver(driverId) {
       <div class="lf-kpi"><div class="lf-kpi-val" id="lf-gig-trips">—</div><div class="lf-kpi-lbl">Today's Trips</div></div>
     </div>
     <div class="lf-actions">
-      <select id="lf-gig-status-filter" onchange="lfLoadDrivers()" style="padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:var(--card);color:var(--text);">
+      <select id="lf-gig-status-filter" onchange="lfLoadDrivers()" style="padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:var(--white);color:var(--text);">
         <option value="">All Statuses</option>
         <option value="active">Active</option>
         <option value="inactive">Inactive</option>
         <option value="suspended">Suspended</option>
       </select>
-      <select id="lf-gig-type-filter" onchange="lfLoadDrivers()" style="padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:var(--card);color:var(--text);">
+      <select id="lf-gig-type-filter" onchange="lfLoadDrivers()" style="padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:var(--white);color:var(--text);">
         <option value="">All Vehicle Types</option>
         <option value="suv">SUV</option>
         <option value="sedan">Sedan</option>
@@ -12861,7 +12956,8 @@ async function lfFetch(path, method='GET', body=null){
 
 function lfFmt$(n){ return n!=null ? '$'+Number(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}) : '—'; }
 function lfFmtDate(s){ if(!s) return '—'; const d=new Date(s); return d.toLocaleDateString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}); }
-function lfBadge(s){ return `<span class="lf-badge ${s}">${s.replace('_',' ')}</span>`; }
+function lfBadge(s){ return `<span class="lf-badge ${s}">${(s||'').replace(/_/g,' ')}</span>`; }
+function lfShortAddr(addr){ if(!addr) return '—'; const p=addr.split(','); if(p.length>=2) return `<span title="${addr}">${p[0].trim()}<br><span style="font-size:11px;color:var(--muted)">${p.slice(1,3).map(x=>x.trim()).join(', ')}</span></span>`; return addr; }
 
 // ── KPIs ──────────────────────────────────────────────────────────────────────
 async function lfLoadKpis(type){
@@ -12908,39 +13004,43 @@ async function lfLoadTrips(type){
     const d = await lfFetch(url);
     const rows = d.items || [];
     if(!rows.length){ tbody.innerHTML='<tr><td colspan="10" class="lf-empty">No trips found</td></tr>'; return; }
+    const addrCell = (addr,maxW='160px') => `<td style="max-width:${maxW};white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${addr||''}">${lfShortAddr(addr)}</td>`;
     if(type==='nemt'){
       tbody.innerHTML = rows.map(r=>`<tr>
-        <td>${r.passenger_name||'—'}</td>
-        <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${r.pickup_address||''}">${r.pickup_address||'—'}</td>
-        <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${r.dropoff_address||''}">${r.dropoff_address||'—'}</td>
-        <td>${lfFmtDate(r.scheduled_at)}</td>
-        <td>${r.driver_id||'—'}</td>
+        <td><strong>${r.passenger_name||'—'}</strong></td>
+        ${addrCell(r.pickup_address,'180px')}
+        ${addrCell(r.dropoff_address,'180px')}
+        <td style="white-space:nowrap">${lfFmtDate(r.scheduled_at)}</td>
+        <td>${r.driver_name||r.driver_id||'Unassigned'}</td>
+        <td><span class="lf-badge" style="background:rgba(99,102,241,.12);color:#6366f1">${r.mobility_needs||'ambulatory'}</span></td>
         <td>${lfBadge(r.status)}</td>
-        <td>${lfFmt$(r.rate_total)}</td>
+        <td style="font-weight:600">${lfFmt$(r.rate_total)}</td>
         <td><button class="lf-btn-ghost" style="padding:4px 10px;font-size:11px" onclick="lfCancelTrip('${r.id}')">Cancel</button></td>
       </tr>`).join('');
     } else if(type==='executive'){
       tbody.innerHTML = rows.map(r=>`<tr>
-        <td>${r.passenger_name||'—'}</td>
-        <td style="max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.pickup_address||'—'}</td>
-        <td style="max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.dropoff_address||'—'}</td>
-        <td>${lfFmtDate(r.scheduled_at)}</td>
-        <td>${r.vehicle_class||'—'}</td>
-        <td>${r.flight_number||'—'}</td>
+        <td><strong>${r.passenger_name||'—'}</strong></td>
+        ${addrCell(r.pickup_address,'150px')}
+        ${addrCell(r.dropoff_address,'150px')}
+        <td style="white-space:nowrap">${lfFmtDate(r.scheduled_at)}</td>
+        <td><span class="lf-badge" style="background:rgba(99,102,241,.12);color:#6366f1">${(r.vehicle_class||'—').toUpperCase()}</span></td>
+        <td style="font-family:var(--ff-m);font-size:12px">${r.flight_number||'—'}</td>
+        <td>${r.driver_name||r.driver_id||'Unassigned'}</td>
         <td>${lfBadge(r.status)}</td>
-        <td>${lfFmt$(r.rate_total)}</td>
+        <td style="font-weight:600">${lfFmt$(r.rate_total)}</td>
         <td><button class="lf-btn-ghost" style="padding:4px 10px;font-size:11px" onclick="lfCancelTrip('${r.id}')">Cancel</button></td>
       </tr>`).join('');
     } else if(type==='courier'){
       tbody.innerHTML = rows.map(r=>`<tr>
-        <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.pickup_address||'—'}</td>
-        <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.dropoff_address||'—'}</td>
-        <td>${lfFmtDate(r.scheduled_at)}</td>
+        ${addrCell(r.pickup_address)}
+        ${addrCell(r.dropoff_address)}
+        <td style="white-space:nowrap">${lfFmtDate(r.scheduled_at)}</td>
         <td>${r.package_count||0}</td>
         <td>${r.package_weight_lbs!=null?r.package_weight_lbs+' lbs':'—'}</td>
-        <td>${r.driver_id||'—'}</td>
+        <td>${r.driver_name||r.driver_id||'Unassigned'}</td>
+        <td><span class="lf-badge" style="background:rgba(245,158,11,.12);color:#d97706">${r.delivery_type||'standard'}</span></td>
         <td>${lfBadge(r.status)}</td>
-        <td>${lfFmt$(r.rate_total)}</td>
+        <td style="font-weight:600">${lfFmt$(r.rate_total)}</td>
         <td><button class="lf-btn-ghost" style="padding:4px 10px;font-size:11px" onclick="lfCancelTrip('${r.id}')">Cancel</button></td>
       </tr>`).join('');
     }
@@ -13006,16 +13106,17 @@ async function lfLoadNemtClients(){
   try {
     const d = await lfFetch('/api/light-fleet/nemt/clients');
     const rows = d.items || [];
-    if(!rows.length){ tbody.innerHTML='<tr><td colspan="6" class="lf-empty">No clients yet</td></tr>'; return; }
+    if(!rows.length){ tbody.innerHTML='<tr><td colspan="7" class="lf-empty">No clients yet</td></tr>'; return; }
     tbody.innerHTML = rows.map(r=>`<tr>
-      <td>${r.name||'—'}</td>
+      <td><strong>${r.name||'—'}</strong></td>
       <td>${r.phone||'—'}</td>
-      <td>${r.insurance_provider||'—'} ${r.insurance_id?'#'+r.insurance_id:''}</td>
-      <td>${r.mobility_needs||'—'}</td>
+      <td>${r.insurance_provider||'—'}${r.insurance_id?' <span style="font-family:var(--ff-m);font-size:11px;color:var(--muted)">#'+r.insurance_id+'</span>':''}</td>
+      <td><span class="lf-badge" style="background:rgba(99,102,241,.12);color:#6366f1">${r.mobility_needs||'ambulatory'}</span></td>
+      <td>${[r.city,r.state].filter(Boolean).join(', ')||r.address?.split(',').slice(1,3).join(',')||'—'}</td>
       <td>${r.total_trips||0}</td>
       <td>${lfBadge(r.status||'active')}</td>
     </tr>`).join('');
-  } catch(e){ tbody.innerHTML='<tr><td colspan="6" class="lf-empty" style="color:var(--red)">Error</td></tr>'; }
+  } catch(e){ tbody.innerHTML='<tr><td colspan="7" class="lf-empty" style="color:var(--red)">Error</td></tr>'; }
 }
 
 function lfOpenNemtClient(){
@@ -13045,17 +13146,18 @@ async function lfLoadExecAccounts(){
   try {
     const d = await lfFetch('/api/light-fleet/executive/accounts');
     const rows = d.items || [];
-    if(!rows.length){ tbody.innerHTML='<tr><td colspan="7" class="lf-empty">No accounts yet</td></tr>'; return; }
+    if(!rows.length){ tbody.innerHTML='<tr><td colspan="8" class="lf-empty">No accounts yet</td></tr>'; return; }
     tbody.innerHTML = rows.map(r=>`<tr>
       <td><strong>${r.company_name||'—'}</strong></td>
       <td>${r.contact_name||'—'}<br><span style="font-size:11px;color:var(--muted)">${r.contact_phone||''}</span></td>
-      <td>${r.billing_type||'—'}</td>
+      <td>${[r.billing_city,r.billing_state].filter(Boolean).join(', ')||r.city||'—'}</td>
+      <td><span class="lf-badge" style="background:rgba(59,130,246,.12);color:#2563eb">${r.billing_type||'invoice'}</span></td>
       <td>${r.rate_per_mile!=null?'$'+r.rate_per_mile+'/mi':'—'}</td>
       <td>${r.flat_rate_airport!=null?lfFmt$(r.flat_rate_airport):'—'}</td>
       <td>${r.total_trips||0}</td>
       <td>${lfBadge(r.status||'active')}</td>
     </tr>`).join('');
-  } catch(e){ tbody.innerHTML='<tr><td colspan="7" class="lf-empty" style="color:var(--red)">Error</td></tr>'; }
+  } catch(e){ tbody.innerHTML='<tr><td colspan="8" class="lf-empty" style="color:var(--red)">Error</td></tr>'; }
 }
 
 function lfOpenExecAccount(){
@@ -13092,20 +13194,33 @@ async function lfLoadDrivers(){
     const d = await lfFetch(url);
     const drivers = d.items || [];
     if(!drivers.length){ grid.innerHTML='<div class="lf-empty" style="grid-column:1/-1">No drivers found</div>'; return; }
-    grid.innerHTML = drivers.map(dr=>`
-      <div class="lf-driver-card">
-        <div class="lf-driver-card-name">${dr.name||'—'}</div>
-        <div class="lf-driver-card-meta">${dr.phone||''} · ${(dr.vehicle_type||'').toUpperCase()} ${dr.vehicle_year||''} ${dr.vehicle_make||''}</div>
-        <div class="lf-driver-card-row"><span>Status</span>${lfBadge(dr.status||'active')}</div>
-        <div class="lf-driver-card-row"><span>MVR</span>${lfBadge(dr.mvr_status||'pending')}</div>
-        <div class="lf-driver-card-row"><span>Background</span>${lfBadge(dr.background_check_status||'pending')}</div>
-        <div class="lf-driver-card-row"><span>Trips</span><strong>${dr.total_trips||0}</strong></div>
-        ${dr.rating!=null?`<div class="lf-driver-card-row"><span>Rating</span><strong>⭐ ${dr.rating}</strong></div>`:''}
-        <div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap;">
-          ${(dr.approved_services||[]).map(s=>`<span class="lf-badge active" style="font-size:10px">${s}</span>`).join('')}
+    grid.innerHTML = drivers.map(dr=>{
+      const initials = (dr.name||'?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+      const svcs = Array.isArray(dr.approved_services) ? dr.approved_services : (dr.approved_services||'').toString().split(',').filter(Boolean);
+      const svcPills = svcs.length ? svcs.map(s=>`<span class="lf-svc-pill ${s.trim()}">${s.trim().toUpperCase()}</span>`).join('') : '<span style="font-size:11px;color:var(--muted)">None assigned</span>';
+      const insExp = dr.insurance_expiry ? new Date(dr.insurance_expiry).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '—';
+      const licExp = dr.license_expiry ? new Date(dr.license_expiry).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '—';
+      const city = [dr.city||dr.home_city, dr.license_state].filter(Boolean).join(', ') || '—';
+      return `<div class="lf-driver-card">
+        <div class="lf-driver-card-top">
+          <div class="lf-driver-avatar">${initials}</div>
+          <div style="min-width:0;flex:1">
+            <div class="lf-driver-card-name">${dr.name||'—'}</div>
+            <div class="lf-driver-card-meta">${dr.phone||'—'}<br>${city}<br>${dr.vehicle_year||''} ${dr.vehicle_make||''} ${(dr.vehicle_type||'').toUpperCase()}</div>
+          </div>
+          <div style="flex-shrink:0">${lfBadge(dr.status||'active')}</div>
         </div>
-      </div>
-    `).join('');
+        <div class="lf-driver-card-body">
+          <div class="lf-driver-card-row"><span class="lbl">MVR Check</span><span class="val">${lfBadge(dr.mvr_status||'pending')}</span></div>
+          <div class="lf-driver-card-row"><span class="lbl">Background</span><span class="val">${lfBadge(dr.background_check_status||'pending')}</span></div>
+          <div class="lf-driver-card-row"><span class="lbl">Plate</span><span class="val">${dr.license_plate||dr.plate||'—'}</span></div>
+          <div class="lf-driver-card-row"><span class="lbl">License Exp.</span><span class="val">${licExp}</span></div>
+          <div class="lf-driver-card-row"><span class="lbl">Insurance Exp.</span><span class="val">${insExp}</span></div>
+          <div class="lf-driver-card-row"><span class="lbl">Trips / Rating</span><span class="val">${dr.total_trips||0}${dr.rating!=null?' · ⭐'+dr.rating:''}</span></div>
+          <div class="lf-driver-svc-pills">${svcPills}</div>
+        </div>
+      </div>`;
+    }).join('');
   } catch(e){ console.error('lf drivers',e); grid.innerHTML='<div class="lf-empty" style="grid-column:1/-1;color:var(--red)">Error loading drivers</div>'; }
 }
 
