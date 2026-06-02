@@ -10281,31 +10281,28 @@ window.moRunAgent = function(agent,name){
 
 /* ── Mark email state ── */
 let _moEmails=[],_moSelectedEmail=null;
+function _moFmtFrom(m){return m.from_address||m.from_name||m.from_email||'—';}
 
 window.moLoadEmail = async function(){
   const listEl=document.getElementById('mo-mail-items');if(!listEl)return;
   listEl.innerHTML='<div style="padding:20px;text-align:center;color:rgba(255,255,255,.3);font-size:11px;">Loading…</div>';
   const folder=document.getElementById('mo-mail-folder')?.value||'inbox';
   try{
-    const r=await API.get('/api/mailboxes').catch(()=>null);
-    const boxes=(r?.mailboxes)||[];
-    const mark=boxes.find(b=>(b.email||b.address||'').toLowerCase().includes('mark'))||boxes[0];
-    if(!mark){listEl.innerHTML='<div style="padding:20px;text-align:center;color:rgba(255,255,255,.3);font-size:11px;">Mailbox not found — add email passwords to Render</div>';return;}
-    const msgs=await API.get(`/api/mailboxes/${mark.id}/messages?folder=${folder}&limit=50`).catch(()=>null);
-    _moEmails=(msgs?.messages)||[];
+    const dirFilter=folder==='sent'?'&direction=outbound':folder==='inbox'?'&direction=inbound':'';
+    const res=await API.get(`/api/mailboxes/mark/inbox?limit=50${dirFilter}`).catch(()=>null);
+    _moEmails=(res?.emails)||[];
     if(!_moEmails.length){listEl.innerHTML='<div style="padding:20px;text-align:center;color:rgba(255,255,255,.3);font-size:11px;">No messages</div>';return;}
     listEl.innerHTML=_moEmails.map((m,i)=>`
       <div class="mo-mail-item" onclick="moEmailOpen(${i})" id="mo-mail-${i}">
         <div style="display:flex;align-items:flex-start;gap:8px;">
           ${!m.is_read?'<div style="width:7px;height:7px;border-radius:50%;background:#f5c842;flex-shrink:0;margin-top:4px;box-shadow:0 0 6px #f5c842;"></div>':'<div style="width:7px;"></div>'}
           <div style="flex:1;min-width:0;">
-            <div class="mo-mail-item-from">${m.from_name||m.from_email||'—'}</div>
+            <div class="mo-mail-item-from">${_moFmtFrom(m)}</div>
             <div class="mo-mail-item-sub">${m.subject||'(no subject)'}</div>
-            <div class="mo-mail-item-ts">${m.received_at?new Date(m.received_at).toLocaleString():''}</div>
+            <div class="mo-mail-item-ts">${m.received_at?new Date(m.received_at).toLocaleString():m.sent_at?new Date(m.sent_at).toLocaleString():''}</div>
           </div>
         </div>
       </div>`).join('');
-    // update unread badge
     const unread=_moEmails.filter(m=>!m.is_read).length;
     const ct=document.getElementById('mo-email-ct');const nb=document.getElementById('mo-email-notif');
     if(unread>0){if(ct){ct.style.display='inline';ct.textContent=unread;}if(nb)nb.style.display='inline';}
@@ -10321,7 +10318,7 @@ window.moEmailOpen = function(i){
   document.getElementById('mo-mail-view-area').style.display='flex';
   document.getElementById('mo-compose-area').style.display='none';
   document.getElementById('mo-mail-subject').textContent=m.subject||'(no subject)';
-  document.getElementById('mo-mail-meta').textContent=`From: ${m.from_email||'—'} · ${m.received_at?new Date(m.received_at).toLocaleString():''}`;
+  document.getElementById('mo-mail-meta').textContent=`From: ${_moFmtFrom(m)} · ${m.received_at?new Date(m.received_at).toLocaleString():m.sent_at?new Date(m.sent_at).toLocaleString():''}`;
   document.getElementById('mo-mail-body-view').innerHTML=m.body_html||`<pre style="white-space:pre-wrap;color:rgba(255,255,255,.75);">${m.body_text||'(no body)'}</pre>`;
   const rb=document.getElementById('mo-mail-reply-bar');if(rb)rb.style.display='flex';
 };
@@ -10367,7 +10364,7 @@ window.moEmailSend = async function(){
   if(!to||!body){if(typeof toast!=='undefined')toast('Fill in To and Message','error');return;}
   const st=document.getElementById('mo-mail-send-status');if(st)st.textContent='Sending…';
   try{
-    await API.post('/api/email/send',{from:'mark@3lakeslogistics.com',to,subject,body});
+    await API.post('/api/mailboxes/compose',{from_mailbox:'mark',to:[to],subject,body_text:body});
     if(typeof toast!=='undefined')toast('Email sent','success');
     if(st)st.textContent='✓ Sent';
     moEmailCancelCompose();moLoadEmail();
@@ -10410,12 +10407,8 @@ window.moLoadOfficeData = function(){
 
 async function moLoadEmailCount(){
   try{
-    const r=await API.get('/api/mailboxes').catch(()=>null);
-    const boxes=(r?.mailboxes)||[];
-    const mark=boxes.find(b=>(b.email||b.address||'').toLowerCase().includes('mark'))||boxes[0];
-    if(!mark)return;
-    const msgs=await API.get(`/api/mailboxes/${mark.id}/messages?folder=inbox&limit=5`).catch(()=>null);
-    const unread=(msgs?.messages||[]).filter(m=>!m.is_read).length;
+    const res=await API.get('/api/mailboxes/mark/inbox?limit=20&direction=inbound').catch(()=>null);
+    const unread=(res?.emails||[]).filter(m=>!m.is_read).length;
     const ct=document.getElementById('mo-email-ct');const nb=document.getElementById('mo-email-notif');
     if(unread>0){if(ct){ct.style.display='inline';ct.textContent=unread;}if(nb)nb.style.display='inline';}
   }catch(e){}
@@ -11374,18 +11367,22 @@ window.ccgLoadPlan=async function(){
 
 /* ── Email ── */
 let _ccgEmails=[];let _ccgSelectedEmail=null;let _ccgComposing=false;
+
+function _ccgMailboxName(boxes){
+  return (boxes.find(b=>(b.address||'').includes('cece'))||boxes[0])?.name||'cece';
+}
+function _ccgFmtFrom(m){return m.from_address||m.from_name||m.from_email||'—';}
+
 async function ccgLoadEmailCount(){
   try{
     const r=await API.get('/api/mailboxes').catch(()=>null);
     const boxes=(r?.mailboxes)||[];
-    const cece=boxes.find(b=>(b.email||b.address||'').includes('cece'));
-    if(cece){
-      const msgs=await API.get(`/api/mailboxes/${cece.id}/messages?folder=inbox&limit=5`).catch(()=>null);
-      const unread=(msgs?.messages||[]).filter(m=>!m.is_read).length;
-      const ct=document.getElementById('ccg-email-ct');const nb=document.getElementById('ccg-email-notif');
-      if(unread>0){if(ct){ct.style.display='inline';ct.textContent=unread;}if(nb)nb.style.display='inline';}
-      const kpi=document.getElementById('ccg-kpi-emails');if(kpi)kpi.textContent=unread||'0';
-    }
+    const name=_ccgMailboxName(boxes);
+    const res=await API.get(`/api/mailboxes/${name}/inbox?limit=20`).catch(()=>null);
+    const unread=(res?.emails||[]).filter(m=>!m.is_read).length;
+    const ct=document.getElementById('ccg-email-ct');const nb=document.getElementById('ccg-email-notif');
+    if(unread>0){if(ct){ct.style.display='inline';ct.textContent=unread;}if(nb)nb.style.display='inline';}
+    const kpi=document.getElementById('ccg-kpi-emails');if(kpi)kpi.textContent=unread||'0';
   }catch(e){}
 }
 window.ccgLoadEmail=async function(){
@@ -11395,23 +11392,24 @@ window.ccgLoadEmail=async function(){
   try{
     const r=await API.get('/api/mailboxes').catch(()=>null);
     const boxes=(r?.mailboxes)||[];
-    const cece=boxes.find(b=>(b.email||b.address||'').includes('cece'))||boxes[0];
-    if(!cece){listEl.innerHTML='<div style="padding:20px;text-align:center;color:rgba(255,255,255,.3);font-size:11px;">Mailbox not found — add email passwords to Render</div>';return;}
-    const msgs=await API.get(`/api/mailboxes/${cece.id}/messages?folder=${folder}&limit=50`).catch(()=>null);
-    _ccgEmails=(msgs?.messages)||[];
+    const name=_ccgMailboxName(boxes);
+    if(!name){listEl.innerHTML='<div style="padding:20px;text-align:center;color:rgba(255,255,255,.3);font-size:11px;">Mailbox not found — add email passwords to Render</div>';return;}
+    const dirFilter=folder==='sent'?'&direction=outbound':folder==='inbox'?'&direction=inbound':'';
+    const res=await API.get(`/api/mailboxes/${name}/inbox?limit=50${dirFilter}`).catch(()=>null);
+    _ccgEmails=(res?.emails)||[];
     if(!_ccgEmails.length){listEl.innerHTML='<div style="padding:20px;text-align:center;color:rgba(255,255,255,.3);font-size:11px;">No messages</div>';return;}
     listEl.innerHTML=_ccgEmails.map((m,i)=>`
       <div class="ccg-mail-item" onclick="ccgEmailOpen(${i})" id="ccg-mail-${i}">
         <div style="display:flex;align-items:flex-start;gap:8px;">
           ${!m.is_read?'<div class="ccg-mail-unread"></div>':'<div style="width:7px;"></div>'}
           <div style="flex:1;min-width:0;">
-            <div class="ccg-mail-item-from">${m.from_name||m.from_email||'—'}</div>
+            <div class="ccg-mail-item-from">${_ccgFmtFrom(m)}</div>
             <div class="ccg-mail-item-sub">${m.subject||'(no subject)'}</div>
-            <div class="ccg-mail-item-ts">${m.received_at?new Date(m.received_at).toLocaleString():''}</div>
+            <div class="ccg-mail-item-ts">${m.received_at?new Date(m.received_at).toLocaleString():m.sent_at?new Date(m.sent_at).toLocaleString():''}</div>
           </div>
         </div>
       </div>`).join('');
-  }catch(e){listEl.innerHTML=`<div style="padding:20px;text-align:center;color:rgba(255,255,255,.3);font-size:11px;">Error loading email: ${e.message}</div>`;}
+  }catch(e){listEl.innerHTML=`<div style="padding:20px;text-align:center;color:rgba(255,255,255,.3);font-size:11px;">Error: ${e.message}</div>`;}
 };
 window.ccgEmailOpen=function(i){
   const m=_ccgEmails[i];if(!m)return;
@@ -11421,7 +11419,7 @@ window.ccgEmailOpen=function(i){
   document.getElementById('ccg-mail-view-area').style.display='flex';
   document.getElementById('ccg-compose-area').style.display='none';
   document.getElementById('ccg-mail-subject').textContent=m.subject||'(no subject)';
-  document.getElementById('ccg-mail-meta').textContent=`From: ${m.from_email||'—'} · ${m.received_at?new Date(m.received_at).toLocaleString():''}`;
+  document.getElementById('ccg-mail-meta').textContent=`From: ${_ccgFmtFrom(m)} · ${m.received_at?new Date(m.received_at).toLocaleString():m.sent_at?new Date(m.sent_at).toLocaleString():''}`;
   document.getElementById('ccg-mail-body').innerHTML=m.body_html||`<pre style="white-space:pre-wrap;color:rgba(255,255,255,.75);">${m.body_text||'(no body)'}</pre>`;
   const rb=document.getElementById('ccg-mail-reply-bar');if(rb)rb.style.display='flex';
 };
@@ -11438,7 +11436,7 @@ window.ccgEmailReply=function(){
   document.getElementById('ccg-mail-view-area').style.display='none';
   document.getElementById('ccg-compose-area').style.display='flex';
   document.getElementById('ccg-compose-title').textContent='Reply';
-  document.getElementById('ccg-compose-to').value=_ccgSelectedEmail.from_email||'';
+  document.getElementById('ccg-compose-to').value=_ccgFmtFrom(_ccgSelectedEmail);
   document.getElementById('ccg-compose-subject').value=`Re: ${_ccgSelectedEmail.subject||''}`;
   document.getElementById('ccg-compose-body').value=`\n\n--- Original Message ---\n${_ccgSelectedEmail.body_text||''}`;
 };
@@ -11462,7 +11460,7 @@ window.ccgEmailSend=async function(){
   if(!to||!body){toast('Fill in To and Message','error');return;}
   const st=document.getElementById('ccg-mail-send-status');if(st)st.textContent='Sending…';
   try{
-    await API.post('/api/email/send',{from:'cece@3lakeslogistics.com',to,subject,body});
+    await API.post('/api/mailboxes/compose',{from_mailbox:'cece',to:[to],subject,body_text:body});
     toast('Email sent','success');if(st)st.textContent='✓ Sent';
     ccgEmailCancelCompose();ccgLoadEmail();
   }catch(e){toast('Send failed — check SMTP config','error');if(st)st.textContent='Failed';}

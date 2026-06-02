@@ -90,9 +90,13 @@ def mailbox_inbox(
     limit: int = 100,
     offset: int = 0,
     unread_only: bool = False,
+    direction: str | None = None,
     _: str = Depends(require_bearer),
 ) -> dict:
-    """Return emails for a single mailbox sorted by received_at DESC."""
+    """Return emails for a single mailbox sorted by received_at DESC.
+
+    Optional ?direction=inbound|outbound to filter by folder (inbox vs sent).
+    """
     if name not in _VALID_MAILBOXES:
         raise HTTPException(400, f"Unknown mailbox '{name}'")
     sb = get_supabase()
@@ -102,6 +106,8 @@ def mailbox_inbox(
     ).eq("mailbox", name)
     if unread_only:
         q = q.eq("is_read", False)
+    if direction in ("inbound", "outbound"):
+        q = q.eq("direction", direction)
     result = q.order("received_at", desc=True).range(offset, offset + limit - 1).execute()
     unread = sb.table("mailbox_emails").select("id", count="exact").eq("mailbox", name).eq("is_read", False).execute()
     return {
