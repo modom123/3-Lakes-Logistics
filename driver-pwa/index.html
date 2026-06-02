@@ -87,9 +87,40 @@
       padding-bottom: calc(var(--safe-bot) + 68px);
       overflow-y: auto; -webkit-overflow-scrolling: touch;
     }
-    /* Messages view takes full height of #main without scrolling parent */
-    #main.view-messages-active { overflow-y: hidden; }
+    /* Messages + Loads views take full viewport height — no outer scroll */
+    #main.view-messages-active,
+    #main.view-loads-active { overflow-y: hidden; }
     .scroll-inner { padding: 12px 12px 20px; }
+
+    /* ── LOADS VIEW (full-height flex, like Messages) ── */
+    #view-loads {
+      display: none; flex-direction: column;
+      height: calc(100dvh - var(--safe-top) - 58px - var(--safe-bot) - 68px);
+      padding: 0;
+    }
+    #view-loads.active { display: flex; }
+    #loads-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 12px 8px; flex-shrink: 0;
+      border-bottom: 1px solid var(--border);
+    }
+    #available-loads-list {
+      flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch;
+      overscroll-behavior: contain; padding: 8px 12px;
+    }
+    #loads-history-footer {
+      flex-shrink: 0; border-top: 1px solid var(--border);
+    }
+    #loads-history-toggle {
+      width: 100%; background: none; border: none; padding: 10px 12px;
+      color: var(--muted); font-size: 12px; cursor: pointer;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    #loads-history-toggle:active { background: rgba(255,255,255,.04); }
+    #load-history-list {
+      max-height: 200px; overflow-y: auto; padding: 0 12px 8px;
+      display: none;
+    }
 
     /* ── BOTTOM NAV ── */
     #bottom-nav {
@@ -522,18 +553,18 @@
 
     <!-- ── LOADS VIEW ── -->
     <div class="view" id="view-loads">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+      <div id="loads-header">
         <div class="section-header" style="margin:0">Available Loads</div>
-        <button onclick="loadAvailableLoads()" style="background:none;border:none;color:var(--accent);font-size:13px;cursor:pointer;padding:4px 8px">↻ Refresh</button>
+        <button onclick="loadAvailableLoads()" style="background:none;border:none;color:var(--accent);font-size:13px;cursor:pointer;padding:4px 8px;font-weight:600">↻ Refresh</button>
       </div>
-      <div style="font-size:12px;color:var(--muted);margin-bottom:10px">Accept a load below — dispatch confirms and sends full details by SMS.</div>
       <div id="available-loads-list">
         <div class="empty-state"><div class="empty-icon">🚛</div><p>No loads available right now.<br>Check back soon or watch for an SMS offer.</p></div>
       </div>
-
-      <div class="section-header" style="margin-top:16px">Load History</div>
-      <div id="load-history-list">
-        <div style="text-align:center;padding:16px;color:var(--muted);font-size:13px">Loading history…</div>
+      <div id="loads-history-footer">
+        <button id="loads-history-toggle" onclick="toggleLoadHistory(this)">
+          <span>📋 Load History</span><span id="loads-hist-arrow">▾</span>
+        </button>
+        <div id="load-history-list"></div>
       </div>
     </div>
 
@@ -1382,15 +1413,25 @@ function showView(name) {
   const navEl = document.getElementById('nav-' + name);
   if (navEl) navEl.classList.add('active');
 
-  // Messages needs overflow:hidden on #main so its flex layout fills correctly
+  // Messages + Loads need overflow:hidden on #main so their flex layout fills correctly
   const mainEl = document.getElementById('main');
   mainEl.classList.toggle('view-messages-active', name === 'messages');
+  mainEl.classList.toggle('view-loads-active', name === 'loads');
 
-  if (name === 'loads')    { loadAvailableLoads(); loadLoadHistory(); }
+  if (name === 'loads')    { loadAvailableLoads(); }
   if (name === 'docs')     loadDocs();
   if (name === 'messages') { loadMessages(true); markRead(); }
   if (name === 'pay')      loadPayData();
   if (name === 'lf-trips') loadLfTrips();
+}
+
+function toggleLoadHistory(btn) {
+  const el  = document.getElementById('load-history-list');
+  const arr = document.getElementById('loads-hist-arrow');
+  const open = el.style.display !== 'none';
+  el.style.display = open ? 'none' : '';
+  if (arr) arr.textContent = open ? '▾' : '▴';
+  if (!open) loadLoadHistory();
 }
 
 // ── CURRENT LOAD ──────────────────────────────────────────────────────────────
