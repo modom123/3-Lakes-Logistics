@@ -240,6 +240,85 @@ def fire_email_campaign() -> None:
     _bg(_run)
 
 
+# ── North America Trading Co — NATCO Triggers ────────────────────────────────
+
+def fire_natco_trade_posted(load_id: str, broker_pay: float,
+                            carrier_pay: float | None, origin: str,
+                            equipment: str) -> None:
+    """Fire when a new NATCO trade is posted. Grace analyzes rate, Dominic finds carriers."""
+    def _run():
+        try:
+            from .agents.grace_park import run as grace_run  # noqa: PLC0415
+            from .agents.dominic_voss import run as dominic_run  # noqa: PLC0415
+            log.info("natco: trade_posted load_id=%s broker_pay=%.2f", load_id, broker_pay)
+            # Grace: rate analysis
+            grace_result = grace_run({
+                "scope": "analyze",
+                "broker_pay": broker_pay,
+                "carrier_pay": carrier_pay,
+                "equipment": equipment,
+            })
+            verdict = grace_result.get("analysis", {}).get("verdict", "?")
+            log.info("natco: grace verdict=%s load=%s", verdict, load_id)
+            # Dominic: find available carriers
+            dominic_result = dominic_run({
+                "scope": "match",
+                "origin": origin,
+                "equipment": equipment,
+                "load_id": load_id,
+            })
+            log.info("natco: dominic matched=%s load=%s", dominic_result.get("count"), load_id)
+        except Exception as exc:  # noqa: BLE001
+            log.error("natco: trade_posted failed: %s", exc)
+    _bg(_run)
+
+
+def fire_natco_covered(load_id: str, carrier_name: str, load_number: str) -> None:
+    """Fire when a NATCO load gets a carrier assigned. Triggers rate con."""
+    def _run():
+        try:
+            log.info("natco: covered load=%s carrier=%s", load_number, carrier_name)
+            # Nova sends rate confirmation email
+            from .agents.nova import run as nova_run  # noqa: PLC0415
+            nova_run({"action": "rate_con", "load_id": load_id, "carrier_name": carrier_name})
+        except Exception as exc:  # noqa: BLE001
+            log.error("natco: covered trigger failed: %s", exc)
+    _bg(_run)
+
+
+def fire_natco_delivered(load_id: str, broker_pay: float,
+                         carrier_pay: float, load_number: str) -> None:
+    """Fire when a NATCO load is delivered. Sofia logs P&L, creates invoice."""
+    def _run():
+        try:
+            spread = broker_pay - carrier_pay if carrier_pay else broker_pay
+            log.info("natco: delivered load=%s spread=%.2f", load_number, spread)
+            # Sofia: financial reconciliation
+            from .agents.sofia import run as sofia_run  # noqa: PLC0415
+            sofia_run({"action": "reconcile", "load_id": load_id})
+        except Exception as exc:  # noqa: BLE001
+            log.error("natco: delivered trigger failed: %s", exc)
+    _bg(_run)
+
+
+def fire_natco_morning_brief() -> None:
+    """Daily 07:00 cron — Rex Sterling generates trading desk brief."""
+    def _run():
+        try:
+            from .agents.rex_sterling import run as rex_run  # noqa: PLC0415
+            from .agents.grace_park import run as grace_run  # noqa: PLC0415
+            from .agents.dominic_voss import run as dominic_run  # noqa: PLC0415
+            log.info("natco: morning_brief starting")
+            rex_result = rex_run({"scope": "full"})
+            grace_run({"scope": "flag_thin"})
+            dominic_run({"scope": "coverage_report"})
+            health = rex_result.get("report", {}).get("desk_health", 0)
+            log.info("natco: morning_brief done health=%d", health)
+        except Exception as exc:  # noqa: BLE001
+            log.error("natco: morning_brief failed: %s", exc)
+    _bg(_run)
+
+
 def fire_social_post() -> None:
     """Run social poster weekly — posts to Facebook, Instagram, LinkedIn."""
     def _run():

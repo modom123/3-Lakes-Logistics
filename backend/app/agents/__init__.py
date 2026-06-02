@@ -1,5 +1,6 @@
-"""30 AI agent personas + 1 bridge courier. Each module is self-contained
-and callable through agent_router.dispatch(). See prompts.py for system prompts.
+"""30 AI agent personas + 1 bridge courier + 3 NATCO trading division agents.
+Each module is self-contained and callable through agent_router.dispatch().
+See prompts.py for system prompts.
 """
 from . import (
     alexander,       # DOT market intelligence (VP Market Intelligence)
@@ -8,7 +9,9 @@ from . import (
     beacon,          # executive summaries
     bond_courier,    # IEBC <-> Daytona message bridge
     cc_gulley,       # Chief Strategy Officer — 30/60/90-day strategic roadmap
+    dominic_voss,    # NATCO — Carrier Coverage Specialist
     echo,            # SMS driver support
+    grace_park,      # NATCO — Rate Analyst
     isabella,        # omnichannel outreach campaign builder
     james_bond,      # IEBC Consultant — tech audits, gap analysis, directives
     katerina,        # SLA / process automation auditor
@@ -20,6 +23,7 @@ from . import (
     penny,           # Stripe billing
     prompts,         # all 30 system prompts
     pulse,           # weekly fleet wellness
+    rex_sterling,    # NATCO — Head Trader
     router,          # agent_router
     scout,           # OCR for BOL/Rate Con
     settler,         # weekly driver payouts
@@ -35,8 +39,8 @@ from . import (
 
 __all__ = [
     "alexander", "atlas", "audit", "beacon", "bond_courier", "cc_gulley",
-    "echo", "isabella", "james_bond", "katerina", "mark_odom", "motive_webhook",
-    "naomi", "nova", "orbit", "penny", "prompts", "pulse", "router", "scout",
-    "settler", "shield", "signal", "sofia", "sonny", "technical_team",
-    "vance", "victoria", "winston",
+    "dominic_voss", "echo", "grace_park", "isabella", "james_bond", "katerina",
+    "mark_odom", "motive_webhook", "naomi", "nova", "orbit", "penny", "prompts",
+    "pulse", "rex_sterling", "router", "scout", "settler", "shield", "signal",
+    "sofia", "sonny", "technical_team", "vance", "victoria", "winston",
 ]

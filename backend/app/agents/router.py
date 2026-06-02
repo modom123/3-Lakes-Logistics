@@ -5,10 +5,10 @@ from typing import Any, Callable
 
 from . import (
     alexander, atlas, audit, beacon, bond_courier, cash, chloe_sinclair, diana_cole,
-    dr_james_nemt, echo, elena_ross, felix_grant, isabella, james_bond, kai, katerina,
-    lucas_sterling, maya, morgan_hayes, naomi, nova, orbit, outside_bond, penny, pulse,
-    rio, scout, settler, shield, signal, sofia, sonny, technical_team, vance, victor_nash,
-    victoria, winston,
+    dominic_voss, dr_james_nemt, echo, elena_ross, felix_grant, grace_park, isabella,
+    james_bond, kai, katerina, lucas_sterling, maya, morgan_hayes, naomi, nova, orbit,
+    outside_bond, penny, pulse, rex_sterling, rio, scout, settler, shield, signal, sofia,
+    sonny, technical_team, vance, victor_nash, victoria, winston,
 )
 
 _DISPATCH: dict[str, Callable[[dict[str, Any]], dict[str, Any]]] = {
@@ -51,6 +51,10 @@ _DISPATCH: dict[str, Callable[[dict[str, Any]], dict[str, Any]]] = {
     "victor_nash":    victor_nash.run,
     "felix_grant":    felix_grant.run,
     "morgan_hayes":   morgan_hayes.run,
+    # ── North America Trading Co ──
+    "rex_sterling":   rex_sterling.run,
+    "grace_park":     grace_park.run,
+    "dominic_voss":   dominic_voss.run,
 }
 
 

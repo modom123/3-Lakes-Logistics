@@ -86,6 +86,7 @@ def _start_scheduler(app: FastAPI) -> None:
             fire_sms_campaign,
             fire_email_campaign,
             fire_social_post,
+            fire_natco_morning_brief,
             fire_follow_up_reminders,
             fire_lf_compliance_sweep,
             fire_lf_nemt_billing_run,
@@ -113,6 +114,7 @@ def _start_scheduler(app: FastAPI) -> None:
         scheduler.add_job(fire_isabella, CronTrigger(hour=8, minute=0), id="isabella_daily", replace_existing=True)
         scheduler.add_job(fire_sofia, CronTrigger(hour=8, minute=15), id="sofia_daily", replace_existing=True)
         scheduler.add_job(fire_mark_odom, CronTrigger(hour=8, minute=30), id="mark_odom_daily", replace_existing=True)
+        scheduler.add_job(fire_natco_morning_brief, CronTrigger(hour=7, minute=45), id="natco_brief_daily", replace_existing=True)
         scheduler.add_job(fire_vance_batch, CronTrigger(hour=13, minute=0), id="vance_batch_daily", replace_existing=True)
         scheduler.add_job(fire_sms_campaign, CronTrigger(hour=14, minute=0), id="sms_outreach_daily", replace_existing=True)
         scheduler.add_job(fire_email_campaign, CronTrigger(hour=14, minute=30), id="email_outreach_daily", replace_existing=True)

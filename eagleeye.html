@@ -1547,6 +1547,61 @@ td.td-name{font-weight:600;color:var(--navy);}
         <div id="agent-log-list" class="scroll-box"><div class="loading"><div class="spin"></div>Loading…</div></div>
       </div>
 
+      <!-- ── NORTH AMERICA TRADING CO — DIVISION STAFF ── -->
+      <div class="card" style="margin-top:16px;border-top:3px solid var(--gold)">
+        <div class="card-hd">
+          <div>
+            <div class="card-title">📈 North America Trading Co — Division Staff</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:2px">Automated trading agents — manage open positions, rate analysis, carrier coverage, and daily P&amp;L brief</div>
+          </div>
+          <div style="display:flex;gap:8px">
+            <button class="btn-out" style="font-size:12px" onclick="natcoRunMorningBrief()">📋 Morning Brief</button>
+            <button class="btn-gold" style="font-size:12px" onclick="nav('natco')">Open Desk →</button>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:14px">
+          <!-- Rex Sterling -->
+          <div style="border:1px solid var(--border);border-radius:10px;padding:14px;border-top:3px solid var(--gold)">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+              <div style="width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,var(--navy),var(--navy3));color:var(--gold3);display:flex;align-items:center;justify-content:center;font-family:var(--ff-h);font-weight:800;font-size:14px;flex-shrink:0">RS</div>
+              <div><div style="font-weight:700;font-size:13px">Rex Sterling</div><div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px">Head Trader · NATCO</div></div>
+            </div>
+            <div style="font-size:11px;color:var(--muted);margin-bottom:10px">Monitors all open positions, generates daily trading brief, escalates stale loads. Runs every morning at 7:45 AM UTC.</div>
+            <div id="rex-brief-preview" style="font-size:11px;color:var(--text);background:var(--slate);border-radius:6px;padding:8px;min-height:32px;margin-bottom:8px">Loading last brief…</div>
+            <button class="btn-navy" style="width:100%;font-size:11px;padding:6px" onclick="runTradingAgent('rex_sterling','full')">▶ Run Rex Now</button>
+          </div>
+          <!-- Grace Park -->
+          <div style="border:1px solid var(--border);border-radius:10px;padding:14px;border-top:3px solid #2563eb">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+              <div style="width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#1e3a5f,#2563eb);color:#93c5fd;display:flex;align-items:center;justify-content:center;font-family:var(--ff-h);font-weight:800;font-size:14px;flex-shrink:0">GP</div>
+              <div><div style="font-weight:700;font-size:13px">Grace Park</div><div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px">Rate Analyst · NATCO</div></div>
+            </div>
+            <div style="font-size:11px;color:var(--muted);margin-bottom:10px">Calculates optimal carrier pay, flags thin spreads before coverage, tracks RPM benchmarks. Auto-fires on every new trade.</div>
+            <div id="grace-thin-preview" style="font-size:11px;color:var(--text);background:var(--slate);border-radius:6px;padding:8px;min-height:32px;margin-bottom:8px">Loading thin spread alerts…</div>
+            <button class="btn-navy" style="width:100%;font-size:11px;padding:6px" onclick="runTradingAgent('grace_park','flag_thin')">▶ Run Grace Now</button>
+          </div>
+          <!-- Dominic Voss -->
+          <div style="border:1px solid var(--border);border-radius:10px;padding:14px;border-top:3px solid #059669">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+              <div style="width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#064e3b,#059669);color:#6ee7b7;display:flex;align-items:center;justify-content:center;font-family:var(--ff-h);font-weight:800;font-size:14px;flex-shrink:0">DV</div>
+              <div><div style="font-weight:700;font-size:13px">Dominic Voss</div><div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px">Carrier Coverage · NATCO</div></div>
+            </div>
+            <div style="font-size:11px;color:var(--muted);margin-bottom:10px">Matches available carriers to open loads by equipment + location. Auto-fires outreach when a load goes uncovered. Escalates at 4h.</div>
+            <div id="dominic-coverage-preview" style="font-size:11px;color:var(--text);background:var(--slate);border-radius:6px;padding:8px;min-height:32px;margin-bottom:8px">Loading coverage report…</div>
+            <button class="btn-navy" style="width:100%;font-size:11px;padding:6px" onclick="runTradingAgent('dominic_voss','coverage_report')">▶ Run Dominic Now</button>
+          </div>
+        </div>
+        <!-- Automation flow diagram -->
+        <div style="background:var(--slate);border-radius:8px;padding:12px 16px;font-size:11px;color:var(--muted)">
+          <span style="font-weight:700;color:var(--navy)">Automation flow: </span>
+          New trade posted → <strong>Grace</strong> analyzes spread (Go/No-Go) →
+          <strong>Dominic</strong> matches available carriers → You assign carrier →
+          <strong>Nova</strong> sends rate confirmation →
+          Load delivered → <strong>Sofia</strong> reconciles P&amp;L → <strong>Atomic Ledger</strong> updated →
+          Every morning <strong>Rex</strong> briefs Exec Command.
+        </div>
+      </div>
+
       <!-- ── NEXUS ── -->
       <div class="card" style="margin-top:16px;border-top:3px solid #7c3aed">
         <div class="card-hd">
@@ -3638,6 +3693,7 @@ function nav(id){
   if(id==='lf-nemt'||id==='lf-executive'||id==='lf-courier'||id==='lf-gig') loadLightFleet(id);
   if(id==='execution'){loadExecutionDomains();loadExecutionSteps();}
   if(id==='email'&&typeof mailInit==='function'){mailInit();}
+  if(id==='agents') setTimeout(natcoLoadAgentPreviews, 800);
   if(id==='natco')natcoLoad();
   if(id==='natco-board')natcoBoardLoad();
   if(id==='natco-margin')natcoMarginInit();
@@ -15335,6 +15391,57 @@ function lfmapToggleAutoRefresh() {
      NORTH AMERICA TRADING CO — JAVASCRIPT
 ═══════════════════════════════════════════════════════════ -->
 <script>
+// ── Trading Division Agent Runners ──
+async function runTradingAgent(agentName, scope) {
+  toast('Running ' + agentName + '…');
+  try {
+    const res = await apiFetch('/api/agents/' + agentName + '/run', 'POST', { scope });
+    if(!res.ok) { toast('Agent error', 'error'); return; }
+    const data = await res.json();
+    natcoRefreshAgentPreviews(agentName, data);
+    toast(agentName + ' complete');
+  } catch(e) {
+    toast('Agent offline', 'error');
+  }
+}
+
+async function natcoRunMorningBrief() {
+  toast('Firing NATCO morning brief…');
+  await apiFetch('/api/triggers/natco/morning_brief', 'POST', {});
+  toast('Morning brief queued — Rex, Grace & Dominic are running');
+  setTimeout(() => natcoLoadAgentPreviews(), 5000);
+}
+
+function natcoRefreshAgentPreviews(agentName, data) {
+  if(agentName === 'rex_sterling') {
+    const brief = data?.report?.morning_brief || data?.brief || '';
+    const el = document.getElementById('rex-brief-preview');
+    if(el && brief) el.textContent = brief;
+  } else if(agentName === 'grace_park') {
+    const thin = data?.thin_spreads || [];
+    const el = document.getElementById('grace-thin-preview');
+    if(el) el.textContent = thin.length ? thin.length + ' thin/missing spread load(s): ' + thin.map(t=>t.load_number).join(', ') : 'All spreads healthy ✓';
+  } else if(agentName === 'dominic_voss') {
+    const cov = data?.coverage;
+    const el = document.getElementById('dominic-coverage-preview');
+    if(el && cov) el.textContent = `Open: ${cov.open_loads} | Available carriers: ${cov.available_carriers} | Ratio: ${cov.coverage_ratio}`;
+  }
+}
+
+async function natcoLoadAgentPreviews() {
+  try {
+    // Load from org memory via agents
+    const [rex, grace, dominic] = await Promise.allSettled([
+      apiFetch('/api/agents/rex_sterling/run', 'POST', { scope: 'brief' }),
+      apiFetch('/api/agents/grace_park/run', 'POST', { scope: 'flag_thin' }),
+      apiFetch('/api/agents/dominic_voss/run', 'POST', { scope: 'coverage_report' }),
+    ]);
+    if(rex.status === 'fulfilled' && rex.value.ok) natcoRefreshAgentPreviews('rex_sterling', await rex.value.json());
+    if(grace.status === 'fulfilled' && grace.value.ok) natcoRefreshAgentPreviews('grace_park', await grace.value.json());
+    if(dominic.status === 'fulfilled' && dominic.value.ok) natcoRefreshAgentPreviews('dominic_voss', await dominic.value.json());
+  } catch(e) {}
+}
+
 // ── NATCO State ──
 let natcoTrades = [];  // stored in Supabase loads table with source='NATCO'
 let natcoCarriers = [];
@@ -15760,6 +15867,15 @@ async function natcoSaveTrade() {
   closeModal('natco-new-trade-modal');
   ['nt-origin','nt-dest','nt-broker-pay','nt-carrier-pay','nt-miles','nt-broker','nt-commodity','nt-notes','nt-weight','nt-pickup'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   toast('Trade posted! ' + counter);
+  // Fire NATCO trigger — Rex + Grace + Dominic auto-activate
+  fireTrigger('natco/trade_posted', {
+    load_id: insRes?.item?.id || '',
+    load_number: counter,
+    broker_pay: brokerPay,
+    carrier_pay: carrierPay || null,
+    origin,
+    equipment: document.getElementById('nt-equip')?.value || 'Dry Van 53\'',
+  });
   await natcoLoad();
   await loadLoads();
 }
@@ -15825,7 +15941,12 @@ async function natcoQuickCover(id) {
     const ok = confirm('Assign ' + natcoSelectedCarrierName + ' to load ' + (t.load_number||id.slice(0,6)) + '?');
     if(!ok) return;
     const res = await apiFetch('/api/dashboard/loads/'+id, 'PATCH', { driver_name: natcoSelectedCarrierName, status: 'En Route' });
-    if(res.ok) { toast('Carrier assigned: '+natcoSelectedCarrierName); natcoSelectedCarrierId=null; natcoSelectedCarrierName=null; await natcoLoad(); }
+    if(res.ok) {
+      toast('Carrier assigned: '+natcoSelectedCarrierName);
+      // Fire NATCO covered trigger — Nova sends rate con, Sofia preps invoice
+      fireTrigger('natco/covered', { load_id: id, load_number: t.load_number||'', carrier_name: natcoSelectedCarrierName, broker_pay: Number(t.rate||t.rate_total||0), carrier_pay: Number(t.carrier_pay||0) });
+      natcoSelectedCarrierId=null; natcoSelectedCarrierName=null; await natcoLoad();
+    }
     else toast('Error assigning carrier','error');
   } else {
     toast('Select a carrier from the Carrier Match panel first, then click the assign button.', 'error');

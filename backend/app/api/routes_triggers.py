@@ -22,6 +22,10 @@ from ..triggers import (
     fire_analytics_update,
     fire_compliance_sweep,
     fire_dispatch,
+    fire_natco_covered,
+    fire_natco_delivered,
+    fire_natco_morning_brief,
+    fire_natco_trade_posted,
     fire_onboarding,
     fire_settlement,
     fire_transit,
@@ -49,6 +53,15 @@ class LoadTrigger(BaseModel):
 
 class ComplianceTrigger(BaseModel):
     carrier_id: str | None = None   # None = sweep all carriers
+
+class NatcoTradeTrigger(BaseModel):
+    load_id: str
+    load_number: str | None = None
+    broker_pay: float = 0
+    carrier_pay: float | None = None
+    origin: str = ""
+    equipment: str = "Dry Van 53'"
+    carrier_name: str | None = None
 
 
 # ── routes ────────────────────────────────────────────────────────────────────
@@ -100,6 +113,45 @@ def trigger_compliance(req: ComplianceTrigger, bg: BackgroundTasks) -> dict:
     log_agent("atlas", "trigger.compliance", carrier_id=req.carrier_id,
               result="queued")
     return {"ok": True, "domain": "compliance"}
+
+
+@router.post("/natco/trade_posted")
+def trigger_natco_trade_posted(req: NatcoTradeTrigger, bg: BackgroundTasks) -> dict:
+    """Fire when a new NATCO trade is posted — Grace analyzes rate, Dominic finds carriers."""
+    bg.add_task(fire_natco_trade_posted, req.load_id, req.broker_pay,
+                req.carrier_pay, req.origin, req.equipment)
+    log_agent("rex_sterling", "trigger.natco.trade_posted",
+              payload={"load_id": req.load_id, "broker_pay": req.broker_pay}, result="queued")
+    return {"ok": True, "domain": "natco.trade_posted", "load_id": req.load_id}
+
+
+@router.post("/natco/covered")
+def trigger_natco_covered(req: NatcoTradeTrigger, bg: BackgroundTasks) -> dict:
+    """Fire when a carrier is assigned to a NATCO load."""
+    bg.add_task(fire_natco_covered, req.load_id,
+                req.carrier_name or "", req.load_number or req.load_id)
+    log_agent("dominic_voss", "trigger.natco.covered",
+              payload={"load_id": req.load_id, "carrier": req.carrier_name}, result="queued")
+    return {"ok": True, "domain": "natco.covered", "load_id": req.load_id}
+
+
+@router.post("/natco/delivered")
+def trigger_natco_delivered(req: NatcoTradeTrigger, bg: BackgroundTasks) -> dict:
+    """Fire when a NATCO load is delivered — Sofia logs P&L, creates invoice."""
+    bg.add_task(fire_natco_delivered, req.load_id, req.broker_pay,
+                req.carrier_pay or 0, req.load_number or req.load_id)
+    log_agent("rex_sterling", "trigger.natco.delivered",
+              payload={"load_id": req.load_id, "spread": req.broker_pay - (req.carrier_pay or 0)},
+              result="queued")
+    return {"ok": True, "domain": "natco.delivered", "load_id": req.load_id}
+
+
+@router.post("/natco/morning_brief")
+def trigger_natco_morning_brief(bg: BackgroundTasks) -> dict:
+    """Manually fire the NATCO morning brief (also runs daily at 07:00 UTC)."""
+    bg.add_task(fire_natco_morning_brief)
+    log_agent("rex_sterling", "trigger.natco.morning_brief", result="queued")
+    return {"ok": True, "domain": "natco.morning_brief"}
 
 
 @router.post("/analytics")
