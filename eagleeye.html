@@ -126,7 +126,12 @@ body{font-family:var(--ff-b);color:var(--text);background:var(--off);display:fle
 }
 .btn-sync:hover{background:var(--navy2);box-shadow:0 4px 16px rgba(11,37,69,.28);}
 
-.content{flex:1;overflow-y:auto;padding:28px;background:var(--off);}
+.content{flex:1;overflow-y:auto;padding:16px 20px;background:var(--off);}
+/* Full-bleed pages — zero out content padding so they manage their own layout */
+.content:has(#page-email.active),
+.content:has(#page-fleet-map.active),
+.content:has(#page-cso.active),
+.content:has(#page-bond.active){padding:0;}
 .page{display:none;animation:pgIn .3s ease;}
 .page.active{display:block;}
 @keyframes pgIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
@@ -2167,8 +2172,8 @@ td.td-name{font-weight:600;color:var(--navy);}
 <div class="page" id="page-exec-command">
 <style>
 /* ── Executive Command Panel Styles ───────────────────────────── */
-.ec-wrap{max-width:1280px;margin:0 auto;padding:48px 40px 80px;}
-.ec-hero{background:linear-gradient(135deg,#0B2545 0%,#1B3E75 60%,#0B2545 100%);border-radius:18px;padding:36px 44px;margin-bottom:36px;display:flex;align-items:center;justify-content:space-between;gap:24px;flex-wrap:wrap;}
+.ec-wrap{padding:0 0 40px;}
+.ec-hero{background:linear-gradient(135deg,#0B2545 0%,#1B3E75 60%,#0B2545 100%);border-radius:18px;padding:28px 32px;margin-bottom:24px;display:flex;align-items:center;justify-content:space-between;gap:24px;flex-wrap:wrap;}
 .ec-hero-left .ec-badge{display:inline-flex;align-items:center;gap:8px;background:rgba(200,144,42,.18);border:1px solid rgba(200,144,42,.35);color:#F5C842;padding:5px 16px;border-radius:100px;font-size:10px;letter-spacing:2px;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:14px;}
 .ec-hero-left .ec-badge::before{content:"";width:6px;height:6px;border-radius:50%;background:#F5C842;animation:pulse 2s ease infinite;}
 .ec-hero-left h1{font-family:'Playfair Display',serif;font-size:clamp(28px,3.5vw,46px);color:#fff;font-weight:900;line-height:1.05;margin-bottom:8px;}
@@ -2180,7 +2185,7 @@ td.td-name{font-weight:600;color:var(--navy);}
 
 /* Master score cards */
 .ec-scores-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px;margin-bottom:36px;}
-.ec-score-card{border-radius:16px;padding:28px 30px;position:relative;overflow:hidden;}
+.ec-score-card{border-radius:14px;padding:18px 22px;position:relative;overflow:hidden;}
 .ec-score-card.growth{background:linear-gradient(135deg,#0B3B22 0%,#1A6B3C 100%);border:1px solid #2D9B59;}
 .ec-score-card.margin{background:linear-gradient(135deg,#1A2B4E 0%,#1B3E75 100%);border:1px solid #2D5FA0;}
 .ec-score-card.integrity{background:linear-gradient(135deg,#3B1A1A 0%,#7B1D1D 100%);border:1px solid #A03030;}
@@ -2202,7 +2207,7 @@ td.td-name{font-weight:600;color:var(--navy);}
 .ec-sec-hd .ec-count-badge{background:#0B2545;color:#F5C842;border-radius:20px;padding:4px 12px;font-size:11px;font-weight:700;font-family:'JetBrains Mono',monospace;}
 
 /* Org table */
-.ec-card{background:#fff;border-radius:16px;border:1px solid #DDE4EF;padding:28px;margin-bottom:30px;box-shadow:0 2px 20px rgba(11,37,69,.06);}
+.ec-card{background:#fff;border-radius:14px;border:1px solid #DDE4EF;padding:20px 22px;margin-bottom:18px;box-shadow:0 2px 16px rgba(11,37,69,.05);}
 .ec-table{width:100%;border-collapse:collapse;font-size:13px;}
 .ec-table th{background:#EEF2F8;padding:10px 14px;text-align:left;font-weight:700;font-size:11px;letter-spacing:.5px;text-transform:uppercase;color:#5A6A82;border-bottom:2px solid #DDE4EF;}
 .ec-table td{padding:11px 14px;border-bottom:1px solid #EEF2F8;vertical-align:middle;}
@@ -2290,7 +2295,8 @@ td.td-name{font-weight:600;color:var(--navy);}
   .tb-title{font-size:15px;}
   .btn-sync{padding:6px 10px;font-size:11px;}
 
-  .content{padding:14px 12px;}
+  .content{padding:10px 10px;}
+  .lf-tab-bar{margin:-10px -10px 12px;}
 
   .g4{grid-template-columns:repeat(2,1fr);gap:10px;}
   .g3{grid-template-columns:repeat(2,1fr);gap:10px;}
@@ -2349,7 +2355,7 @@ td.td-name{font-weight:600;color:var(--navy);}
 
 .fleet-cards { display: none; }
 @media(max-width:768px){
-  .ec-wrap{padding:24px 16px 60px;}
+  .ec-wrap{padding:0 0 32px;}
   .ec-hero{padding:24px 20px;}
   .ec-scores-row{grid-template-columns:1fr;}
   .ec-actions{flex-direction:column;}
@@ -6674,7 +6680,7 @@ async function loadTriggerStatus() {
      ═══════════════════════════════════════════════════════════════ -->
 <div class="page" id="page-email">
 <style>
-.mail-client{display:flex;height:calc(100vh - 56px);overflow:hidden;background:var(--bg)}
+.mail-client{display:flex;height:calc(100vh - 60px);overflow:hidden;background:var(--bg)}
 .mail-sidebar{width:220px;min-width:220px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto;flex-shrink:0}
 .mail-sidebar-top{padding:14px 12px 10px;border-bottom:1px solid var(--border)}
 .mail-mb-list{padding:8px 0}
@@ -12329,8 +12335,8 @@ async function deactivateDriver(driverId) {
 .lf-tab-bar{
   position:sticky;top:0;z-index:10;
   background:var(--off);
-  padding:14px 0 0;
-  margin-bottom:20px;
+  padding:10px 0 0;
+  margin:-16px -20px 16px;
   border-bottom:2px solid var(--border);
 }
 .lf-tab-inner{
@@ -12353,13 +12359,13 @@ async function deactivateDriver(driverId) {
 .lf-tab.active{color:var(--navy);border-bottom-color:var(--gold2);background:var(--white);}
 .lf-tab-badge{background:var(--red);color:#fff;font-size:9px;font-weight:700;padding:1px 5px;border-radius:8px;}
 
-.lf-hdr{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px;}
+.lf-hdr{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px;}
 .lf-hdr-left{min-width:0;}
 .lf-hdr h2{font-size:20px;font-weight:700;margin:0;display:flex;align-items:center;gap:10px;}
 .lf-hdr-sub{font-size:12px;color:var(--muted);margin-top:3px;}
 .lf-hdr-actions{display:flex;gap:8px;flex-shrink:0;flex-wrap:wrap;}
 
-.lf-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px;}
+.lf-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px;}
 .lf-kpi{background:var(--white);border:1px solid var(--border);border-radius:10px;padding:14px 16px;text-align:center;position:relative;overflow:hidden;}
 .lf-kpi::before{content:"";position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--gold),var(--gold2));}
 .lf-kpi-val{font-size:26px;font-weight:900;color:var(--navy);font-family:var(--ff-h);}
