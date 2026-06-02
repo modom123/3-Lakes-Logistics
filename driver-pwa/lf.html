@@ -796,8 +796,8 @@ async function loadLFHomeStats() {
 }
 
 // ── EARNINGS ─────────────────────────────────────────────────────────────────
-const PLAT_COLORS = { '3lakes':'#8b5cf6','curri':'#16a34a','roadie':'#b45309','amazon_flex':'#d97706','spark':'#0891b2','doordash':'#dc2626','goshare':'#7c3aed' };
-const PLAT_NAMES  = { '3lakes':'3 Lakes','curri':'Curri','roadie':'Roadie (UPS)','amazon_flex':'Amazon Flex','spark':'Spark Driver','doordash':'DoorDash Drive','goshare':'GoShare' };
+const PLAT_COLORS = { '3lakes':'#8b5cf6','curri':'#16a34a','roadie':'#b45309','modivcare':'#059669','veho':'#0891b2','axlehire':'#d97706','blacklane':'#1e1b4b','lugg':'#ea580c' };
+const PLAT_NAMES  = { '3lakes':'3 Lakes','curri':'Curri','roadie':'Roadie (UPS)','modivcare':'Modivcare','veho':'Veho','axlehire':'AxleHire','blacklane':'Blacklane','lugg':'Lugg' };
 
 function setEarnPeriod(p) {
   _earnPeriod = p;
@@ -829,7 +829,7 @@ function renderDemoEarnings() {
   document.getElementById('ded-dispatch').textContent  = '-$' + (gross * 0.15).toFixed(2);
   document.getElementById('pay-net').textContent       = '$' + net.toFixed(2);
   const platList = document.getElementById('earn-platform-list');
-  const demo = [['3lakes',420],['curri',180],['amazon_flex',140],['doordash',107.50]];
+  const demo = [['3lakes',420],['modivcare',210],['curri',145],['lugg',72.50]];
   platList.innerHTML = demo.map(([k,v]) => `
     <div class="plat-earn-card">
       <div style="display:flex;align-items:center;gap:10px">
