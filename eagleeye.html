@@ -9681,30 +9681,55 @@ if (typeof nav === 'function') {
     <!-- ════ EMAIL ════ -->
     <div class="mo-pane" id="mopane-email">
       <div class="mo-mail-wrap">
+        <!-- Left: message list -->
         <div class="mo-mail-list">
           <div class="mo-mail-list-hdr">
-            <span style="font-weight:700;font-size:12px;color:#fff;">📧 mark@3lakeslogistics.com</span>
-            <button class="mo-hdr-btn" onclick="moLoadEmail()">↺</button>
+            <div style="font-weight:700;font-size:12px;color:#fff;">📧 mark@3lakeslogistics.com</div>
+            <button class="mo-hdr-btn" style="font-size:10px;padding:3px 8px;" onclick="moLoadEmail()">↺</button>
+          </div>
+          <div style="padding:8px 12px;border-bottom:1px solid rgba(255,255,255,.07);display:flex;gap:6px;">
+            <button class="mo-hdr-btn" style="font-size:10px;padding:4px 8px;flex:1;" onclick="moEmailCompose()">✏️ Compose</button>
+            <select id="mo-mail-folder" onchange="moLoadEmail()" style="flex:1;padding:4px 8px;border:1px solid rgba(255,255,255,.12);border-radius:5px;background:rgba(255,255,255,.05);color:rgba(255,255,255,.7);font-size:10px;">
+              <option value="inbox">Inbox</option>
+              <option value="sent">Sent</option>
+              <option value="draft">Drafts</option>
+            </select>
           </div>
           <div class="mo-mail-items" id="mo-mail-items">
-            <div style="color:rgba(255,255,255,.3);font-size:11px;text-align:center;padding:20px;">Loading…</div>
+            <div style="padding:20px;text-align:center;color:rgba(255,255,255,.3);font-size:11px;">Loading emails…</div>
           </div>
         </div>
+        <!-- Right: email view + compose -->
         <div class="mo-mail-view">
-          <div class="mo-mail-view-hdr">
-            <div class="mo-mail-view-sub" id="mo-mail-view-sub">Select an email to read</div>
-            <div class="mo-mail-view-meta" id="mo-mail-view-meta"></div>
-          </div>
-          <div class="mo-mail-view-body" id="mo-mail-view-body" style="color:rgba(255,255,255,.3);font-size:12px;padding-top:40px;text-align:center;">No email selected</div>
-          <div class="mo-mail-compose">
-            <div style="display:flex;gap:8px;align-items:center;">
-              <input class="mo-input" id="mo-mail-to" placeholder="To:" style="flex:1;"/>
-              <input class="mo-input" id="mo-mail-subj" placeholder="Subject:" style="flex:1.4;"/>
+          <div id="mo-mail-view-area" style="flex:1;display:flex;flex-direction:column;overflow:hidden;">
+            <div class="mo-mail-view-hdr" style="flex-shrink:0;">
+              <div class="mo-mail-view-sub" id="mo-mail-subject" style="color:rgba(255,255,255,.5);">Select an email to read</div>
+              <div class="mo-mail-view-meta" id="mo-mail-meta"></div>
             </div>
-            <textarea class="mo-textarea" id="mo-mail-body" rows="3" placeholder="Write your email…" style="min-height:60px;"></textarea>
-            <div style="display:flex;gap:8px;">
-              <button class="mo-btn" onclick="moSendEmail()">Send →</button>
-              <span id="mo-mail-status" style="font-size:11px;color:#f5c842;align-self:center;"></span>
+            <div class="mo-mail-view-body" id="mo-mail-body-view">
+              <div style="color:rgba(255,255,255,.25);font-size:13px;padding:24px 0;text-align:center;">No message selected</div>
+            </div>
+            <div id="mo-mail-reply-bar" style="display:none;padding:10px 16px;border-top:1px solid rgba(255,255,255,.08);display:flex;gap:8px;flex-shrink:0;">
+              <button class="mo-btn" style="font-size:11px;padding:7px 14px;" onclick="moEmailReply()">↩ Reply</button>
+              <button class="mo-hdr-btn" onclick="moEmailForward()">↪ Forward</button>
+              <button class="mo-hdr-btn" style="color:#ef4444;border-color:rgba(239,68,68,.3);" onclick="moEmailDelete()">🗑 Delete</button>
+            </div>
+          </div>
+          <!-- Compose panel -->
+          <div id="mo-compose-area" style="display:none;flex:1;flex-direction:column;overflow:hidden;">
+            <div style="padding:12px 16px;border-bottom:1px solid rgba(255,255,255,.08);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
+              <div style="font-weight:700;font-size:13px;color:#fff;" id="mo-compose-title">New Message</div>
+              <button class="mo-hdr-btn" onclick="moEmailCancelCompose()">✕ Cancel</button>
+            </div>
+            <div style="flex:1;overflow-y:auto;padding:14px 16px;display:flex;flex-direction:column;gap:10px;">
+              <div><div class="mo-fl">TO</div><input class="mo-input" id="mo-compose-to" placeholder="recipient@example.com"/></div>
+              <div><div class="mo-fl">SUBJECT</div><input class="mo-input" id="mo-compose-subject" placeholder="Subject line…"/></div>
+              <div style="flex:1;display:flex;flex-direction:column;"><div class="mo-fl">MESSAGE</div><textarea class="mo-textarea" id="mo-compose-body" style="flex:1;min-height:200px;" placeholder="Write your message…"></textarea></div>
+            </div>
+            <div style="padding:10px 16px;border-top:1px solid rgba(255,255,255,.08);display:flex;gap:8px;flex-shrink:0;">
+              <button class="mo-btn" onclick="moEmailSend()">📤 Send</button>
+              <button class="mo-hdr-btn" onclick="moEmailSaveDraft()">💾 Save Draft</button>
+              <span id="mo-mail-send-status" style="font-size:11px;color:#f5c842;align-self:center;"></span>
             </div>
           </div>
         </div>
@@ -10254,38 +10279,106 @@ window.moRunAgent = function(agent,name){
   else alert('Connect backend to run '+name+' agent.');
 };
 
-window.moLoadEmail = function(){
-  const items=document.getElementById('mo-mail-items');if(!items)return;
-  if(typeof API==='undefined'){
-    items.innerHTML='<div style="color:rgba(255,255,255,.3);font-size:11px;text-align:center;padding:20px;">Email requires backend connection.<br>Use Email Center tab for full access.</div>';return;
+/* ── Mark email state ── */
+let _moEmails=[],_moSelectedEmail=null;
+
+window.moLoadEmail = async function(){
+  const listEl=document.getElementById('mo-mail-items');if(!listEl)return;
+  listEl.innerHTML='<div style="padding:20px;text-align:center;color:rgba(255,255,255,.3);font-size:11px;">Loading…</div>';
+  const folder=document.getElementById('mo-mail-folder')?.value||'inbox';
+  try{
+    const r=await API.get('/api/mailboxes').catch(()=>null);
+    const boxes=(r?.mailboxes)||[];
+    const mark=boxes.find(b=>(b.email||b.address||'').toLowerCase().includes('mark'))||boxes[0];
+    if(!mark){listEl.innerHTML='<div style="padding:20px;text-align:center;color:rgba(255,255,255,.3);font-size:11px;">Mailbox not found — add email passwords to Render</div>';return;}
+    const msgs=await API.get(`/api/mailboxes/${mark.id}/messages?folder=${folder}&limit=50`).catch(()=>null);
+    _moEmails=(msgs?.messages)||[];
+    if(!_moEmails.length){listEl.innerHTML='<div style="padding:20px;text-align:center;color:rgba(255,255,255,.3);font-size:11px;">No messages</div>';return;}
+    listEl.innerHTML=_moEmails.map((m,i)=>`
+      <div class="mo-mail-item" onclick="moEmailOpen(${i})" id="mo-mail-${i}">
+        <div style="display:flex;align-items:flex-start;gap:8px;">
+          ${!m.is_read?'<div style="width:7px;height:7px;border-radius:50%;background:#f5c842;flex-shrink:0;margin-top:4px;box-shadow:0 0 6px #f5c842;"></div>':'<div style="width:7px;"></div>'}
+          <div style="flex:1;min-width:0;">
+            <div class="mo-mail-item-from">${m.from_name||m.from_email||'—'}</div>
+            <div class="mo-mail-item-sub">${m.subject||'(no subject)'}</div>
+            <div class="mo-mail-item-ts">${m.received_at?new Date(m.received_at).toLocaleString():''}</div>
+          </div>
+        </div>
+      </div>`).join('');
+    // update unread badge
+    const unread=_moEmails.filter(m=>!m.is_read).length;
+    const ct=document.getElementById('mo-email-ct');const nb=document.getElementById('mo-email-notif');
+    if(unread>0){if(ct){ct.style.display='inline';ct.textContent=unread;}if(nb)nb.style.display='inline';}
+    else{if(ct)ct.style.display='none';if(nb)nb.style.display='none';}
+  }catch(e){listEl.innerHTML=`<div style="padding:20px;text-align:center;color:rgba(255,255,255,.3);font-size:11px;">Error: ${e.message}</div>`;}
+};
+
+window.moEmailOpen = function(i){
+  const m=_moEmails[i];if(!m)return;
+  _moSelectedEmail=m;
+  document.querySelectorAll('#page-mark-office .mo-mail-item').forEach(el=>el.classList.remove('selected'));
+  document.getElementById(`mo-mail-${i}`)?.classList.add('selected');
+  document.getElementById('mo-mail-view-area').style.display='flex';
+  document.getElementById('mo-compose-area').style.display='none';
+  document.getElementById('mo-mail-subject').textContent=m.subject||'(no subject)';
+  document.getElementById('mo-mail-meta').textContent=`From: ${m.from_email||'—'} · ${m.received_at?new Date(m.received_at).toLocaleString():''}`;
+  document.getElementById('mo-mail-body-view').innerHTML=m.body_html||`<pre style="white-space:pre-wrap;color:rgba(255,255,255,.75);">${m.body_text||'(no body)'}</pre>`;
+  const rb=document.getElementById('mo-mail-reply-bar');if(rb)rb.style.display='flex';
+};
+
+window.moEmailCompose = function(){
+  document.getElementById('mo-mail-view-area').style.display='none';
+  document.getElementById('mo-compose-area').style.display='flex';
+  document.getElementById('mo-compose-title').textContent='New Message';
+  document.getElementById('mo-compose-to').value='';
+  document.getElementById('mo-compose-subject').value='';
+  document.getElementById('mo-compose-body').value='';
+};
+
+window.moEmailReply = function(){
+  if(!_moSelectedEmail)return;
+  document.getElementById('mo-mail-view-area').style.display='none';
+  document.getElementById('mo-compose-area').style.display='flex';
+  document.getElementById('mo-compose-title').textContent='Reply';
+  document.getElementById('mo-compose-to').value=_moSelectedEmail.from_email||'';
+  document.getElementById('mo-compose-subject').value=`Re: ${_moSelectedEmail.subject||''}`;
+  document.getElementById('mo-compose-body').value=`\n\n--- Original Message ---\n${_moSelectedEmail.body_text||''}`;
+};
+
+window.moEmailForward = function(){
+  if(!_moSelectedEmail)return;
+  document.getElementById('mo-mail-view-area').style.display='none';
+  document.getElementById('mo-compose-area').style.display='flex';
+  document.getElementById('mo-compose-title').textContent='Forward';
+  document.getElementById('mo-compose-to').value='';
+  document.getElementById('mo-compose-subject').value=`Fwd: ${_moSelectedEmail.subject||''}`;
+  document.getElementById('mo-compose-body').value=`\n\n--- Forwarded Message ---\n${_moSelectedEmail.body_text||''}`;
+};
+
+window.moEmailCancelCompose = function(){
+  document.getElementById('mo-compose-area').style.display='none';
+  document.getElementById('mo-mail-view-area').style.display='flex';
+};
+
+window.moEmailSend = async function(){
+  const to=document.getElementById('mo-compose-to')?.value.trim();
+  const subject=document.getElementById('mo-compose-subject')?.value.trim();
+  const body=document.getElementById('mo-compose-body')?.value.trim();
+  if(!to||!body){if(typeof toast!=='undefined')toast('Fill in To and Message','error');return;}
+  const st=document.getElementById('mo-mail-send-status');if(st)st.textContent='Sending…';
+  try{
+    await API.post('/api/email/send',{from:'mark@3lakeslogistics.com',to,subject,body});
+    if(typeof toast!=='undefined')toast('Email sent','success');
+    if(st)st.textContent='✓ Sent';
+    moEmailCancelCompose();moLoadEmail();
+  }catch(e){
+    if(typeof toast!=='undefined')toast('Send failed — check SMTP config','error');
+    if(st)st.textContent='Failed';
   }
-  API.get('/api/email/list?account=mark').then(data=>{
-    const msgs=data?.messages||[];
-    if(!msgs.length){items.innerHTML='<div style="color:rgba(255,255,255,.3);font-size:11px;text-align:center;padding:20px;">Inbox empty.</div>';return;}
-    items.innerHTML=msgs.map(m=>`<div class="mo-mail-item" onclick="moOpenEmail(${JSON.stringify(m).replace(/"/g,'&quot;')})"><div class="mo-mail-item-from">${m.from||'Unknown'}</div><div class="mo-mail-item-sub">${m.subject||'(no subject)'}</div><div class="mo-mail-item-ts">${m.date||''}</div></div>`).join('');
-  }).catch(()=>{items.innerHTML='<div style="color:rgba(255,255,255,.3);font-size:11px;text-align:center;padding:20px;">Failed to load. Check connection.</div>';});
 };
 
-window.moOpenEmail = function(m){
-  document.querySelectorAll('#page-mark-office .mo-mail-item').forEach(e=>e.classList.remove('selected'));
-  const sub=document.getElementById('mo-mail-view-sub');const meta=document.getElementById('mo-mail-view-meta');const body=document.getElementById('mo-mail-view-body');
-  if(sub)sub.textContent=m.subject||'(no subject)';
-  if(meta)meta.textContent=`From: ${m.from||''} · ${m.date||''}`;
-  if(body)body.innerHTML=`<div style="white-space:pre-wrap;">${m.body||''}</div>`;
-  const to=document.getElementById('mo-mail-to');if(to)to.value=m.from||'';
-  const subj=document.getElementById('mo-mail-subj');if(subj)subj.value='Re: '+(m.subject||'');
-};
-
-window.moSendEmail = function(){
-  const to=(document.getElementById('mo-mail-to')?.value||'').trim();
-  const body=(document.getElementById('mo-mail-body')?.value||'').trim();
-  const sub=(document.getElementById('mo-mail-subj')?.value||'').trim();
-  const st=document.getElementById('mo-mail-status');
-  if(!to||!body){if(st)st.textContent='To and body required.';return;}
-  const send=ok=>{if(st){st.textContent=ok?'✓ Sent':'Offline — not sent';setTimeout(()=>{if(st)st.textContent='';},3000);}};
-  if(typeof API!=='undefined'){API.post('/api/email/send',{from:'mark@3lakeslogistics.com',to,subject:sub||'(no subject)',body}).then(()=>send(true)).catch(()=>send(false));}
-  else send(false);
-};
+window.moEmailSaveDraft = function(){if(typeof toast!=='undefined')toast('Draft saved (coming soon)');};
+window.moEmailDelete = async function(){if(typeof toast!=='undefined')toast('Delete coming soon');};
 
 window.moStartMeeting = function(){window.open('https://zoom.us/start/videomeeting','_blank');};
 window.moJoinMeeting = function(){
@@ -10312,8 +10405,21 @@ window.moTVCustom = function(){
 
 /* ── Initial load + seed sample todos ── */
 window.moLoadOfficeData = function(){
-  moTodoRender();moLoadDirectives();moRefreshAll();moLFRefresh();moTDRefresh();
+  moTodoRender();moLoadDirectives();moRefreshAll();moLFRefresh();moTDRefresh();moLoadEmailCount();
 };
+
+async function moLoadEmailCount(){
+  try{
+    const r=await API.get('/api/mailboxes').catch(()=>null);
+    const boxes=(r?.mailboxes)||[];
+    const mark=boxes.find(b=>(b.email||b.address||'').toLowerCase().includes('mark'))||boxes[0];
+    if(!mark)return;
+    const msgs=await API.get(`/api/mailboxes/${mark.id}/messages?folder=inbox&limit=5`).catch(()=>null);
+    const unread=(msgs?.messages||[]).filter(m=>!m.is_read).length;
+    const ct=document.getElementById('mo-email-ct');const nb=document.getElementById('mo-email-notif');
+    if(unread>0){if(ct){ct.style.display='inline';ct.textContent=unread;}if(nb)nb.style.display='inline';}
+  }catch(e){}
+}
 
 /* ── Light Fleet Reports ── */
 window.moLFRefresh = function(){
