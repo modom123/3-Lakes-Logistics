@@ -132,15 +132,27 @@ body{font-family:var(--ff-b);color:var(--text);background:var(--off);display:fle
   display:flex;flex-direction:column;
   flex:1;min-height:0;
   overflow-y:auto;
-  padding:16px 20px;
+  padding:0;
   animation:pgIn .3s ease;
 }
-/* Full-bleed pages: no padding, no outer scroll */
+/* Full-bleed pages: no scroll handled internally */
 #page-email.active,
 #page-fleet-map.active,
 #page-lf-map.active,
 #page-ccg-office.active,
 #page-bond.active{padding:0;overflow:hidden;}
+/* Fullpage LF/broker pages: no padding, scroll within page */
+.content.lf-fullpage .page.active{padding:0;overflow-y:auto;}
+/* Regular pages: header and common content rows get side breathing room */
+.page-hdr{padding:16px 20px 0;}
+.page.active > .g4,
+.page.active > .g3,
+.page.active > .g2,
+.page.active > .g2-wide,
+.page.active > .card,
+.page.active > .mc,
+.page.active > .rule,
+.page.active > .diag-box{padding-left:20px;padding-right:20px;}
 @keyframes pgIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
 
 /* ── LAYOUT GRIDS ── */
@@ -2779,7 +2791,7 @@ td.td-name{font-weight:600;color:var(--navy);}
 <div class="page" id="page-exec-command">
 <style>
 /* ── Executive Command Panel Styles ───────────────────────────── */
-.ec-wrap{max-width:1280px;margin:0 auto;padding:48px 40px 80px;}
+.ec-wrap{max-width:none;margin:0;padding:24px 20px 80px;}
 .ec-hero{background:linear-gradient(135deg,#0B2545 0%,#1B3E75 60%,#0B2545 100%);border-radius:18px;padding:36px 44px;margin-bottom:36px;display:flex;align-items:center;justify-content:space-between;gap:24px;flex-wrap:wrap;}
 .ec-hero-left .ec-badge{display:inline-flex;align-items:center;gap:8px;background:rgba(200,144,42,.18);border:1px solid rgba(200,144,42,.35);color:#F5C842;padding:5px 16px;border-radius:100px;font-size:10px;letter-spacing:2px;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:14px;}
 .ec-hero-left .ec-badge::before{content:"";width:6px;height:6px;border-radius:50%;background:#F5C842;animation:pulse 2s ease infinite;}
@@ -14036,11 +14048,16 @@ async function deactivateDriver(driverId) {
 .content.lf-fullpage .iebc-status-row{margin:16px 0;}
 .content.lf-fullpage .iebc-section{padding-left:0;padding-right:0;}
 .content.lf-fullpage .iebc-table-wrap{margin:0;}
-/* Broker / Trading pages full-bleed */
+/* Broker / Trading pages full-bleed: heroes edge-to-edge */
 .content.lf-fullpage .bd-hero,
 .content.lf-fullpage .td-hero,
 .content.lf-fullpage .drew-hero,
 .content.lf-fullpage .quinn-hero{border-radius:0;margin-bottom:0;padding-top:80px;}
+/* All content below broker/trading heroes gets 20px side margins */
+.content.lf-fullpage .td-hero ~ *,
+.content.lf-fullpage .bd-hero ~ *,
+.content.lf-fullpage .drew-hero ~ *,
+.content.lf-fullpage .quinn-hero ~ *{margin-left:20px;margin-right:20px;}
 /* Override inline padding on broker page wrapper divs */
 #page-broker-division > div[style],
 #page-trading-desk > div[style],
