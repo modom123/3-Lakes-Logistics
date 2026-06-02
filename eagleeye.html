@@ -9384,7 +9384,7 @@ if (typeof nav === 'function') {
     <button class="mo-tab"        id="motab-todo"       onclick="moTab('todo')">✅ Todo → CC Gulley <span id="mo-todo-badge" style="display:none;background:#f5c842;color:#000;font-size:9px;font-weight:800;border-radius:10px;padding:1px 6px;margin-left:2px;">0</span></button>
     <button class="mo-tab"        id="motab-directives" onclick="moTab('directives')">📣 Directives</button>
     <button class="mo-tab"        id="motab-docs"       onclick="moTab('docs')">📁 Documents</button>
-    <button class="mo-tab"        id="motab-email"      onclick="moTab('email')">📧 Email <span id="mo-email-ct" style="display:none;background:#f5c842;color:#000;font-size:9px;font-weight:800;border-radius:10px;padding:1px 6px;margin-left:2px;">0</span></button>
+    <button class="mo-tab"        id="motab-email"      onclick="nav('email');setTimeout(()=>mailSelectMB('mark'),300)">📧 Email <span id="mo-email-ct" style="display:none;background:#f5c842;color:#000;font-size:9px;font-weight:800;border-radius:10px;padding:1px 6px;margin-left:2px;">0</span></button>
     <button class="mo-tab"        id="motab-lf"         onclick="moTab('lf')">🚐 Light Fleet</button>
     <button class="mo-tab"        id="motab-trading"    onclick="moTab('trading')">📈 Trading Reports</button>
     <button class="mo-tab"        id="motab-zoom"       onclick="moTab('zoom')">📹 Zoom</button>
@@ -9435,7 +9435,7 @@ if (typeof nav === 'function') {
             <div class="mo-panel-hdr"><div class="mo-panel-title">⚡ Quick Actions</div></div>
             <div class="mo-panel-body" style="display:flex;flex-direction:column;gap:10px;">
               <button class="mo-hdr-btn" style="text-align:left;padding:10px 14px;font-size:12px;" onclick="moTab('todo')">✅ Open Todo List → CC Gulley</button>
-              <button class="mo-hdr-btn" style="text-align:left;padding:10px 14px;font-size:12px;" onclick="moTab('email')">📧 Open Email Inbox (mark@3lakeslogistics.com)</button>
+              <button class="mo-hdr-btn" style="text-align:left;padding:10px 14px;font-size:12px;" onclick="nav('email');setTimeout(()=>mailSelectMB('mark'),300)">📧 Open Email Inbox (mark@3lakeslogistics.com)</button>
               <button class="mo-hdr-btn" style="text-align:left;padding:10px 14px;font-size:12px;" onclick="moStartMeeting()">📹 Start Instant Zoom Meeting</button>
               <button class="mo-hdr-btn" style="text-align:left;padding:10px 14px;font-size:12px;" onclick="moTab('directives')">📣 Send Directive to Team</button>
               <button class="mo-hdr-btn" style="text-align:left;padding:10px 14px;font-size:12px;" onclick="nav('ccg-office')">🧭 Open CC Gulley Office</button>
@@ -10088,7 +10088,6 @@ window.moTab = function(id){
   if(tb)tb.classList.add('active');
   if(pn)pn.classList.add('active');
   if(id==='todo')moTodoRender();
-  if(id==='email')moLoadEmail();
   if(id==='directives')moLoadDirectives();
   if(id==='lf')moLFRefresh();
   if(id==='trading')moTDRefresh();
@@ -10659,7 +10658,7 @@ if(!moTodos().length){
     <button class="ccg-tab"        id="ccgtab-strategy"   onclick="ccgTab('strategy')">📊 Strategy</button>
     <button class="ccg-tab"        id="ccgtab-directives" onclick="ccgTab('directives')">📣 Directives <span id="ccg-dir-badge" style="display:none;background:#38bdf8;color:#000;font-size:9px;font-weight:800;border-radius:10px;padding:1px 6px;">NEW</span></button>
     <button class="ccg-tab"        id="ccgtab-docs"       onclick="ccgTab('docs')">📁 Documents</button>
-    <button class="ccg-tab"        id="ccgtab-email"      onclick="ccgTab('email')">📧 Email <span id="ccg-email-ct" style="display:none;background:#38bdf8;color:#000;font-size:9px;font-weight:800;border-radius:10px;padding:1px 6px;">0</span></button>
+    <button class="ccg-tab"        id="ccgtab-email"      onclick="nav('email');setTimeout(()=>mailSelectMB('cece'),300)">📧 Email <span id="ccg-email-ct" style="display:none;background:#38bdf8;color:#000;font-size:9px;font-weight:800;border-radius:10px;padding:1px 6px;">0</span></button>
     <button class="ccg-tab"        id="ccgtab-zoom"       onclick="ccgTab('zoom')">📹 Zoom</button>
     <button class="ccg-tab"        id="ccgtab-tv"         onclick="ccgTab('tv')">📺 Watch TV</button>
   </div>
@@ -10711,7 +10710,7 @@ if(!moTodos().length){
           <div class="ccg-panel" style="min-height:280px;">
             <div class="ccg-panel-hdr"><div class="ccg-panel-title">⚡ Quick Actions</div></div>
             <div class="ccg-panel-body" style="display:flex;flex-direction:column;gap:10px;">
-              <button class="ccg-hdr-btn" style="text-align:left;padding:10px 14px;font-size:12px;" onclick="ccgTab('email')">📧 Open Email Inbox (cece@3lakeslogistics.com)</button>
+              <button class="ccg-hdr-btn" style="text-align:left;padding:10px 14px;font-size:12px;" onclick="nav('email');setTimeout(()=>mailSelectMB('cece'),300)">📧 Open Email Inbox (cece@3lakeslogistics.com)</button>
               <button class="ccg-hdr-btn" style="text-align:left;padding:10px 14px;font-size:12px;" onclick="ccgStartMeeting()">📹 Start Instant Zoom Meeting</button>
               <button class="ccg-hdr-btn" style="text-align:left;padding:10px 14px;font-size:12px;" onclick="ccgTab('directives')">📣 Send Directive to Team</button>
               <button class="ccg-hdr-btn" style="text-align:left;padding:10px 14px;font-size:12px;" onclick="ccgRunAgent('cc_gulley','CC Gulley')">🧭 Run CC Gulley Strategy Agent</button>
@@ -11211,7 +11210,6 @@ window.ccgTab = function(id){
   const pn=document.getElementById('ccgpane-'+id);
   if(tb)tb.classList.add('active');
   if(pn)pn.classList.add('active');
-  if(id==='email')ccgLoadEmail();
   if(id==='directives')ccgDirLoadActive();
   if(id==='strategy')ccgLoadPlan();
 };
