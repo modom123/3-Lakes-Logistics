@@ -3672,7 +3672,7 @@ function nav(id){
   if(id==='reports')loadTeamReports();
   if(id==='exec-command'){const n=document.getElementById('exec-esc-notif');if(n)n.style.display='none';ecRefreshDashboard();}
   if(id==='mark-office'){if(typeof moLoadOfficeData==='function')moLoadOfficeData();}
-  if(id==='ccg-office'){if(typeof ccgLoadOfficeData==='function')ccgLoadOfficeData();if(typeof ccgLoadEmail==='function')ccgLoadEmail();}
+  if(id==='ccg-office'){if(typeof ccgLoadOfficeData==='function')ccgLoadOfficeData();}
   if(id==='compliance'||id==='insurance')renderCarrierCompliance();
   if(id==='clm')loadCLMList();
   if(id==='vault')loadVault();
@@ -9327,21 +9327,6 @@ if (typeof nav === 'function') {
 .mo-reporter:hover{border-color:rgba(245,200,66,.4);background:rgba(245,200,66,.06);}
 .mo-rep-name{font-weight:700;font-size:12px;color:#fff;margin-bottom:1px;}
 .mo-rep-role{font-size:10px;color:rgba(255,255,255,.5);margin-bottom:4px;}
-.mo-mail-wrap{display:flex;flex:1;min-height:0;overflow:hidden;}
-.mo-mail-list{width:320px;flex-shrink:0;border-right:1px solid rgba(255,255,255,.09);display:flex;flex-direction:column;overflow:hidden;}
-.mo-mail-list-hdr{padding:12px 14px;border-bottom:1px solid rgba(255,255,255,.09);flex-shrink:0;display:flex;align-items:center;justify-content:space-between;}
-.mo-mail-items{flex:1;overflow-y:auto;scrollbar-width:thin;scrollbar-color:#f5c842 transparent;}
-.mo-mail-item{padding:11px 14px;border-bottom:1px solid rgba(255,255,255,.06);cursor:pointer;transition:background .15s;}
-.mo-mail-item:hover,.mo-mail-item.selected{background:rgba(245,200,66,.08);}
-.mo-mail-item-from{font-weight:700;font-size:12px;color:#fff;margin-bottom:2px;}
-.mo-mail-item-sub{font-size:11px;color:rgba(255,255,255,.55);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.mo-mail-item-ts{font-size:9px;color:rgba(255,255,255,.3);margin-top:2px;font-family:var(--ff-m);}
-.mo-mail-view{flex:1;display:flex;flex-direction:column;overflow:hidden;}
-.mo-mail-view-hdr{padding:14px 20px;border-bottom:1px solid rgba(255,255,255,.09);flex-shrink:0;}
-.mo-mail-view-sub{font-weight:700;font-size:15px;color:#fff;margin-bottom:4px;}
-.mo-mail-view-meta{font-size:11px;color:rgba(255,255,255,.45);}
-.mo-mail-view-body{flex:1;overflow-y:auto;padding:16px 20px;font-size:13px;color:rgba(255,255,255,.75);line-height:1.7;scrollbar-width:thin;scrollbar-color:#f5c842 transparent;}
-.mo-mail-compose{border-top:1px solid rgba(255,255,255,.09);padding:12px 16px;display:flex;flex-direction:column;gap:8px;flex-shrink:0;background:rgba(255,255,255,.02);}
 .mo-tv-wrap{display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden;background:#000;}
 .mo-tv-player{flex:1;min-height:0;position:relative;}
 .mo-tv-player iframe{width:100%;height:100%;border:none;display:block;}
@@ -9350,11 +9335,9 @@ if (typeof nav === 'function') {
 .mo-tv-ch-btn:hover,.mo-tv-ch-btn.active{background:rgba(245,200,66,.18);border-color:#f5c842;color:#f5c842;}
 @media(max-width:768px){
   .mo-grid{grid-template-columns:1fr!important;}
-  .mo-mail-wrap{flex-direction:column;}
-  .mo-mail-list{width:100%;max-height:220px;border-right:none;border-bottom:1px solid rgba(255,255,255,.09);}
 }
 .mo{color:#fff;}
-.mo-rep-role,.mo-feed-text,.mo-kpi-l,.mo-mail-item-sub,.mo-mail-item-ts,.mo-mail-view-meta,.mo-dir-card-body,.mo-dir-card-ts,.mo-fl,.mo-status-lbl{color:rgba(255,255,255,.82)!important;}
+.mo-rep-role,.mo-feed-text,.mo-kpi-l,.mo-dir-card-body,.mo-dir-card-ts,.mo-fl,.mo-status-lbl{color:rgba(255,255,255,.82)!important;}
 .mo-input,.mo-textarea{color:#fff!important;}
 .mo-input::placeholder,.mo-textarea::placeholder{color:rgba(255,255,255,.5);}
 </style>
@@ -9677,64 +9660,6 @@ if (typeof nav === 'function') {
         </div>
       </div>
     </div><!-- /docs -->
-
-    <!-- ════ EMAIL ════ -->
-    <div class="mo-pane" id="mopane-email">
-      <div class="mo-mail-wrap">
-        <!-- Left: message list -->
-        <div class="mo-mail-list">
-          <div class="mo-mail-list-hdr">
-            <div style="font-weight:700;font-size:12px;color:#fff;">📧 mark@3lakeslogistics.com</div>
-            <button class="mo-hdr-btn" style="font-size:10px;padding:3px 8px;" onclick="moLoadEmail()">↺</button>
-          </div>
-          <div style="padding:8px 12px;border-bottom:1px solid rgba(255,255,255,.07);display:flex;gap:6px;">
-            <button class="mo-hdr-btn" style="font-size:10px;padding:4px 8px;flex:1;" onclick="moEmailCompose()">✏️ Compose</button>
-            <select id="mo-mail-folder" onchange="moLoadEmail()" style="flex:1;padding:4px 8px;border:1px solid rgba(255,255,255,.12);border-radius:5px;background:rgba(255,255,255,.05);color:rgba(255,255,255,.7);font-size:10px;">
-              <option value="inbox">Inbox</option>
-              <option value="sent">Sent</option>
-              <option value="draft">Drafts</option>
-            </select>
-          </div>
-          <div class="mo-mail-items" id="mo-mail-items">
-            <div style="padding:20px;text-align:center;color:rgba(255,255,255,.3);font-size:11px;">Loading emails…</div>
-          </div>
-        </div>
-        <!-- Right: email view + compose -->
-        <div class="mo-mail-view">
-          <div id="mo-mail-view-area" style="flex:1;display:flex;flex-direction:column;overflow:hidden;">
-            <div class="mo-mail-view-hdr" style="flex-shrink:0;">
-              <div class="mo-mail-view-sub" id="mo-mail-subject" style="color:rgba(255,255,255,.5);">Select an email to read</div>
-              <div class="mo-mail-view-meta" id="mo-mail-meta"></div>
-            </div>
-            <div class="mo-mail-view-body" id="mo-mail-body-view">
-              <div style="color:rgba(255,255,255,.25);font-size:13px;padding:24px 0;text-align:center;">No message selected</div>
-            </div>
-            <div id="mo-mail-reply-bar" style="display:none;padding:10px 16px;border-top:1px solid rgba(255,255,255,.08);display:flex;gap:8px;flex-shrink:0;">
-              <button class="mo-btn" style="font-size:11px;padding:7px 14px;" onclick="moEmailReply()">↩ Reply</button>
-              <button class="mo-hdr-btn" onclick="moEmailForward()">↪ Forward</button>
-              <button class="mo-hdr-btn" style="color:#ef4444;border-color:rgba(239,68,68,.3);" onclick="moEmailDelete()">🗑 Delete</button>
-            </div>
-          </div>
-          <!-- Compose panel -->
-          <div id="mo-compose-area" style="display:none;flex:1;flex-direction:column;overflow:hidden;">
-            <div style="padding:12px 16px;border-bottom:1px solid rgba(255,255,255,.08);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
-              <div style="font-weight:700;font-size:13px;color:#fff;" id="mo-compose-title">New Message</div>
-              <button class="mo-hdr-btn" onclick="moEmailCancelCompose()">✕ Cancel</button>
-            </div>
-            <div style="flex:1;overflow-y:auto;padding:14px 16px;display:flex;flex-direction:column;gap:10px;">
-              <div><div class="mo-fl">TO</div><input class="mo-input" id="mo-compose-to" placeholder="recipient@example.com"/></div>
-              <div><div class="mo-fl">SUBJECT</div><input class="mo-input" id="mo-compose-subject" placeholder="Subject line…"/></div>
-              <div style="flex:1;display:flex;flex-direction:column;"><div class="mo-fl">MESSAGE</div><textarea class="mo-textarea" id="mo-compose-body" style="flex:1;min-height:200px;" placeholder="Write your message…"></textarea></div>
-            </div>
-            <div style="padding:10px 16px;border-top:1px solid rgba(255,255,255,.08);display:flex;gap:8px;flex-shrink:0;">
-              <button class="mo-btn" onclick="moEmailSend()">📤 Send</button>
-              <button class="mo-hdr-btn" onclick="moEmailSaveDraft()">💾 Save Draft</button>
-              <span id="mo-mail-send-status" style="font-size:11px;color:#f5c842;align-self:center;"></span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div><!-- /email -->
 
     <!-- ════ ZOOM ════ -->
     <div class="mo-pane" id="mopane-zoom">
@@ -10278,104 +10203,6 @@ window.moRunAgent = function(agent,name){
   else alert('Connect backend to run '+name+' agent.');
 };
 
-/* ── Mark email state ── */
-let _moEmails=[],_moSelectedEmail=null;
-function _moFmtFrom(m){return m.from_address||m.from_name||m.from_email||'—';}
-
-window.moLoadEmail = async function(){
-  const listEl=document.getElementById('mo-mail-items');if(!listEl)return;
-  listEl.innerHTML='<div style="padding:20px;text-align:center;color:rgba(255,255,255,.3);font-size:11px;">Loading…</div>';
-  const folder=document.getElementById('mo-mail-folder')?.value||'inbox';
-  try{
-    const dirFilter=folder==='sent'?'&direction=outbound':folder==='inbox'?'&direction=inbound':'';
-    const res=await API.get(`/api/mailboxes/mark/inbox?limit=50${dirFilter}`).catch(()=>null);
-    _moEmails=(res?.emails)||[];
-    if(!_moEmails.length){listEl.innerHTML='<div style="padding:20px;text-align:center;color:rgba(255,255,255,.3);font-size:11px;">No messages</div>';return;}
-    listEl.innerHTML=_moEmails.map((m,i)=>`
-      <div class="mo-mail-item" onclick="moEmailOpen(${i})" id="mo-mail-${i}">
-        <div style="display:flex;align-items:flex-start;gap:8px;">
-          ${!m.is_read?'<div style="width:7px;height:7px;border-radius:50%;background:#f5c842;flex-shrink:0;margin-top:4px;box-shadow:0 0 6px #f5c842;"></div>':'<div style="width:7px;"></div>'}
-          <div style="flex:1;min-width:0;">
-            <div class="mo-mail-item-from">${_moFmtFrom(m)}</div>
-            <div class="mo-mail-item-sub">${m.subject||'(no subject)'}</div>
-            <div class="mo-mail-item-ts">${m.received_at?new Date(m.received_at).toLocaleString():m.sent_at?new Date(m.sent_at).toLocaleString():''}</div>
-          </div>
-        </div>
-      </div>`).join('');
-    const unread=_moEmails.filter(m=>!m.is_read).length;
-    const ct=document.getElementById('mo-email-ct');const nb=document.getElementById('mo-email-notif');
-    if(unread>0){if(ct){ct.style.display='inline';ct.textContent=unread;}if(nb)nb.style.display='inline';}
-    else{if(ct)ct.style.display='none';if(nb)nb.style.display='none';}
-  }catch(e){listEl.innerHTML=`<div style="padding:20px;text-align:center;color:rgba(255,255,255,.3);font-size:11px;">Error: ${e.message}</div>`;}
-};
-
-window.moEmailOpen = function(i){
-  const m=_moEmails[i];if(!m)return;
-  _moSelectedEmail=m;
-  document.querySelectorAll('#page-mark-office .mo-mail-item').forEach(el=>el.classList.remove('selected'));
-  document.getElementById(`mo-mail-${i}`)?.classList.add('selected');
-  document.getElementById('mo-mail-view-area').style.display='flex';
-  document.getElementById('mo-compose-area').style.display='none';
-  document.getElementById('mo-mail-subject').textContent=m.subject||'(no subject)';
-  document.getElementById('mo-mail-meta').textContent=`From: ${_moFmtFrom(m)} · ${m.received_at?new Date(m.received_at).toLocaleString():m.sent_at?new Date(m.sent_at).toLocaleString():''}`;
-  document.getElementById('mo-mail-body-view').innerHTML=m.body_html||`<pre style="white-space:pre-wrap;color:rgba(255,255,255,.75);">${m.body_text||'(no body)'}</pre>`;
-  const rb=document.getElementById('mo-mail-reply-bar');if(rb)rb.style.display='flex';
-};
-
-window.moEmailCompose = function(){
-  document.getElementById('mo-mail-view-area').style.display='none';
-  document.getElementById('mo-compose-area').style.display='flex';
-  document.getElementById('mo-compose-title').textContent='New Message';
-  document.getElementById('mo-compose-to').value='';
-  document.getElementById('mo-compose-subject').value='';
-  document.getElementById('mo-compose-body').value='';
-};
-
-window.moEmailReply = function(){
-  if(!_moSelectedEmail)return;
-  document.getElementById('mo-mail-view-area').style.display='none';
-  document.getElementById('mo-compose-area').style.display='flex';
-  document.getElementById('mo-compose-title').textContent='Reply';
-  document.getElementById('mo-compose-to').value=_moSelectedEmail.from_email||'';
-  document.getElementById('mo-compose-subject').value=`Re: ${_moSelectedEmail.subject||''}`;
-  document.getElementById('mo-compose-body').value=`\n\n--- Original Message ---\n${_moSelectedEmail.body_text||''}`;
-};
-
-window.moEmailForward = function(){
-  if(!_moSelectedEmail)return;
-  document.getElementById('mo-mail-view-area').style.display='none';
-  document.getElementById('mo-compose-area').style.display='flex';
-  document.getElementById('mo-compose-title').textContent='Forward';
-  document.getElementById('mo-compose-to').value='';
-  document.getElementById('mo-compose-subject').value=`Fwd: ${_moSelectedEmail.subject||''}`;
-  document.getElementById('mo-compose-body').value=`\n\n--- Forwarded Message ---\n${_moSelectedEmail.body_text||''}`;
-};
-
-window.moEmailCancelCompose = function(){
-  document.getElementById('mo-compose-area').style.display='none';
-  document.getElementById('mo-mail-view-area').style.display='flex';
-};
-
-window.moEmailSend = async function(){
-  const to=document.getElementById('mo-compose-to')?.value.trim();
-  const subject=document.getElementById('mo-compose-subject')?.value.trim();
-  const body=document.getElementById('mo-compose-body')?.value.trim();
-  if(!to||!body){if(typeof toast!=='undefined')toast('Fill in To and Message','error');return;}
-  const st=document.getElementById('mo-mail-send-status');if(st)st.textContent='Sending…';
-  try{
-    await API.post('/api/mailboxes/compose',{from_mailbox:'mark',to:[to],subject,body_text:body});
-    if(typeof toast!=='undefined')toast('Email sent','success');
-    if(st)st.textContent='✓ Sent';
-    moEmailCancelCompose();moLoadEmail();
-  }catch(e){
-    if(typeof toast!=='undefined')toast('Send failed — check SMTP config','error');
-    if(st)st.textContent='Failed';
-  }
-};
-
-window.moEmailSaveDraft = function(){if(typeof toast!=='undefined')toast('Draft saved (coming soon)');};
-window.moEmailDelete = async function(){if(typeof toast!=='undefined')toast('Delete coming soon');};
-
 window.moStartMeeting = function(){window.open('https://zoom.us/start/videomeeting','_blank');};
 window.moJoinMeeting = function(){
   const id=(document.getElementById('mo-zoom-id')?.value||'').trim();if(!id)return;
@@ -10406,10 +10233,11 @@ window.moLoadOfficeData = function(){
 
 async function moLoadEmailCount(){
   try{
-    const res=await API.get('/api/mailboxes/mark/inbox?limit=20&direction=inbound').catch(()=>null);
+    const res=await API.get('/api/mailboxes/mark/inbox?limit=20').catch(()=>null);
     const unread=(res?.emails||[]).filter(m=>!m.is_read).length;
     const ct=document.getElementById('mo-email-ct');const nb=document.getElementById('mo-email-notif');
     if(unread>0){if(ct){ct.style.display='inline';ct.textContent=unread;}if(nb)nb.style.display='inline';}
+    else{if(ct)ct.style.display='none';if(nb)nb.style.display='none';}
   }catch(e){}
 }
 
@@ -10566,23 +10394,6 @@ if(!moTodos().length){
 .ccg-btn.purple{background:linear-gradient(135deg,#7c3aed,#a855f7);}
 .ccg-btn.green{background:linear-gradient(135deg,#059669,#10b981);}
 .ccg-btn:hover{opacity:.88;}
-/* ── Email pane ── */
-.ccg-mail-wrap{display:flex;flex:1;min-height:0;overflow:hidden;}
-.ccg-mail-list{width:320px;flex-shrink:0;border-right:1px solid rgba(255,255,255,.09);display:flex;flex-direction:column;overflow:hidden;}
-.ccg-mail-list-hdr{padding:12px 14px;border-bottom:1px solid rgba(255,255,255,.09);flex-shrink:0;display:flex;align-items:center;justify-content:space-between;}
-.ccg-mail-items{flex:1;overflow-y:auto;scrollbar-width:thin;scrollbar-color:#38bdf8 transparent;}
-.ccg-mail-item{padding:11px 14px;border-bottom:1px solid rgba(255,255,255,.06);cursor:pointer;transition:background .15s;}
-.ccg-mail-item:hover,.ccg-mail-item.selected{background:rgba(56,189,248,.08);}
-.ccg-mail-item-from{font-weight:700;font-size:12px;color:#fff;margin-bottom:2px;}
-.ccg-mail-item-sub{font-size:11px;color:rgba(255,255,255,.55);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.ccg-mail-item-ts{font-size:9px;color:rgba(255,255,255,.3);margin-top:2px;font-family:var(--ff-m);}
-.ccg-mail-unread{width:7px;height:7px;border-radius:50%;background:#38bdf8;flex-shrink:0;margin-top:3px;}
-.ccg-mail-view{flex:1;display:flex;flex-direction:column;overflow:hidden;}
-.ccg-mail-view-hdr{padding:14px 20px;border-bottom:1px solid rgba(255,255,255,.09);flex-shrink:0;}
-.ccg-mail-view-sub{font-weight:700;font-size:15px;color:#fff;margin-bottom:4px;}
-.ccg-mail-view-meta{font-size:11px;color:rgba(255,255,255,.45);}
-.ccg-mail-view-body{flex:1;overflow-y:auto;padding:16px 20px;font-size:13px;color:rgba(255,255,255,.75);line-height:1.7;scrollbar-width:thin;scrollbar-color:#38bdf8 transparent;}
-.ccg-mail-compose{border-top:1px solid rgba(255,255,255,.09);padding:12px 16px;display:flex;flex-direction:column;gap:8px;flex-shrink:0;background:rgba(255,255,255,.02);}
 /* ── Zoom pane ── */
 .ccg-zoom-wrap{display:flex;flex:1;min-height:0;gap:0;overflow:hidden;}
 .ccg-zoom-main{flex:1;display:flex;flex-direction:column;padding:24px;gap:18px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:#38bdf8 transparent;}
@@ -10613,8 +10424,6 @@ if(!moTodos().length){
 .ccg-plan-side{width:280px;flex-shrink:0;border-left:1px solid rgba(255,255,255,.09);display:flex;flex-direction:column;overflow:hidden;}
 @media(max-width:768px){
   .ccg-grid,.ccg-grid-3{grid-template-columns:1fr!important;}
-  .ccg-mail-wrap{flex-direction:column;}
-  .ccg-mail-list{width:100%;max-height:220px;border-right:none;border-bottom:1px solid rgba(255,255,255,.09);}
   .ccg-zoom-wrap{flex-direction:column;}
   .ccg-zoom-side{width:100%;border-left:none;border-top:1px solid rgba(255,255,255,.09);max-height:200px;}
   .ccg-plan{flex-direction:column;}
@@ -10623,8 +10432,7 @@ if(!moTodos().length){
 /* ── Readability: boost all grey text to near-white ── */
 .ccg{color:#fff;}
 .ccg-rep-role,.ccg-rep-last,.ccg-feed-text,.ccg-feed-ts,.ccg-kpi-l,
-.ccg-mail-item-sub,.ccg-mail-item-ts,.ccg-mail-view-meta,.ccg-dir-card-body,
-.ccg-dir-card-ts,.ccg-fl,.ccg-zoom-big-btn-sub,.ccg-status-lbl{color:rgba(255,255,255,.82)!important;}
+.ccg-dir-card-body,.ccg-dir-card-ts,.ccg-fl,.ccg-zoom-big-btn-sub,.ccg-status-lbl{color:rgba(255,255,255,.82)!important;}
 .ccg-input,.ccg-textarea{color:#fff!important;}
 .ccg-input::placeholder,.ccg-textarea::placeholder{color:rgba(255,255,255,.5);}
 .ccg select{color:#fff!important;background:rgba(255,255,255,.08)!important;}
@@ -11021,64 +10829,6 @@ if(!moTodos().length){
       </div>
     </div><!-- /directives -->
 
-    <!-- ════ EMAIL ════ -->
-    <div class="ccg-pane" id="ccgpane-email">
-      <div class="ccg-mail-wrap">
-        <!-- Left: message list -->
-        <div class="ccg-mail-list">
-          <div class="ccg-mail-list-hdr">
-            <div style="font-weight:700;font-size:12px;color:#fff;">📧 cece@3lakeslogistics.com</div>
-            <button class="ccg-hdr-btn" style="font-size:10px;padding:3px 8px;" onclick="ccgLoadEmail()">↺</button>
-          </div>
-          <div style="padding:8px 12px;border-bottom:1px solid rgba(255,255,255,.07);display:flex;gap:6px;">
-            <button class="ccg-hdr-btn" style="font-size:10px;padding:4px 8px;flex:1;" onclick="ccgEmailCompose()">✏️ Compose</button>
-            <select id="ccg-mail-folder" onchange="ccgLoadEmail()" style="flex:1;padding:4px 8px;border:1px solid rgba(255,255,255,.12);border-radius:5px;background:rgba(255,255,255,.05);color:rgba(255,255,255,.7);font-size:10px;">
-              <option value="inbox">Inbox</option>
-              <option value="sent">Sent</option>
-              <option value="draft">Drafts</option>
-            </select>
-          </div>
-          <div class="ccg-mail-items" id="ccg-mail-list">
-            <div style="padding:20px;text-align:center;color:rgba(255,255,255,.3);font-size:11px;">Loading emails…</div>
-          </div>
-        </div>
-        <!-- Right: email view + compose -->
-        <div class="ccg-mail-view">
-          <div id="ccg-mail-view-area" style="flex:1;display:flex;flex-direction:column;overflow:hidden;">
-            <div class="ccg-mail-view-hdr" style="flex-shrink:0;">
-              <div class="ccg-mail-view-sub" id="ccg-mail-subject" style="color:rgba(255,255,255,.5);">Select an email to read</div>
-              <div class="ccg-mail-view-meta" id="ccg-mail-meta"></div>
-            </div>
-            <div class="ccg-mail-view-body" id="ccg-mail-body">
-              <div style="color:rgba(255,255,255,.25);font-size:13px;padding:24px 0;text-align:center;">No message selected</div>
-            </div>
-            <div id="ccg-mail-reply-bar" style="display:none;padding:10px 16px;border-top:1px solid rgba(255,255,255,.08);display:flex;gap:8px;flex-shrink:0;">
-              <button class="ccg-btn" style="font-size:11px;padding:7px 14px;" onclick="ccgEmailReply()">↩ Reply</button>
-              <button class="ccg-hdr-btn" onclick="ccgEmailForward()">↪ Forward</button>
-              <button class="ccg-hdr-btn" style="color:#ef4444;border-color:rgba(239,68,68,.3);" onclick="ccgEmailDelete()">🗑 Delete</button>
-            </div>
-          </div>
-          <!-- Compose panel (shown when composing) -->
-          <div id="ccg-compose-area" style="display:none;flex:1;display:flex;flex-direction:column;overflow:hidden;">
-            <div style="padding:12px 16px;border-bottom:1px solid rgba(255,255,255,.08);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
-              <div style="font-weight:700;font-size:13px;color:#fff;" id="ccg-compose-title">New Message</div>
-              <button class="ccg-hdr-btn" onclick="ccgEmailCancelCompose()">✕ Cancel</button>
-            </div>
-            <div style="flex:1;overflow-y:auto;padding:14px 16px;display:flex;flex-direction:column;gap:10px;">
-              <div><div class="ccg-fl">TO</div><input class="ccg-input" id="ccg-compose-to" placeholder="recipient@example.com"/></div>
-              <div><div class="ccg-fl">SUBJECT</div><input class="ccg-input" id="ccg-compose-subject" placeholder="Subject line…"/></div>
-              <div style="flex:1;display:flex;flex-direction:column;"><div class="ccg-fl">MESSAGE</div><textarea class="ccg-textarea" id="ccg-compose-body" style="flex:1;min-height:200px;" placeholder="Write your message…"></textarea></div>
-            </div>
-            <div style="padding:10px 16px;border-top:1px solid rgba(255,255,255,.08);display:flex;gap:8px;flex-shrink:0;">
-              <button class="ccg-btn" onclick="ccgEmailSend()">📤 Send</button>
-              <button class="ccg-hdr-btn" onclick="ccgEmailSaveDraft()">💾 Save Draft</button>
-              <span id="ccg-mail-send-status" style="font-size:11px;color:#38bdf8;align-self:center;"></span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div><!-- /email -->
-
     <!-- ════ ZOOM ════ -->
     <div class="ccg-pane" id="ccgpane-zoom">
       <div class="ccg-zoom-wrap">
@@ -11363,108 +11113,15 @@ window.ccgLoadPlan=async function(){
   }catch(e){}
 };
 
-/* ── Email ── */
-let _ccgEmails=[];let _ccgSelectedEmail=null;let _ccgComposing=false;
-
-function _ccgMailboxName(boxes){
-  return (boxes.find(b=>(b.address||'').includes('cece'))||boxes[0])?.name||'cece';
-}
-function _ccgFmtFrom(m){return m.from_address||m.from_name||m.from_email||'—';}
-
 async function ccgLoadEmailCount(){
   try{
-    const r=await API.get('/api/mailboxes').catch(()=>null);
-    const boxes=(r?.mailboxes)||[];
-    const name=_ccgMailboxName(boxes);
-    const res=await API.get(`/api/mailboxes/${name}/inbox?limit=20`).catch(()=>null);
+    const res=await API.get('/api/mailboxes/cece/inbox?limit=20').catch(()=>null);
     const unread=(res?.emails||[]).filter(m=>!m.is_read).length;
     const ct=document.getElementById('ccg-email-ct');const nb=document.getElementById('ccg-email-notif');
     if(unread>0){if(ct){ct.style.display='inline';ct.textContent=unread;}if(nb)nb.style.display='inline';}
     const kpi=document.getElementById('ccg-kpi-emails');if(kpi)kpi.textContent=unread||'0';
   }catch(e){}
 }
-window.ccgLoadEmail=async function(){
-  const listEl=document.getElementById('ccg-mail-list');if(!listEl)return;
-  listEl.innerHTML='<div style="padding:20px;text-align:center;color:rgba(255,255,255,.3);font-size:11px;">Loading…</div>';
-  const folder=document.getElementById('ccg-mail-folder')?.value||'inbox';
-  try{
-    const r=await API.get('/api/mailboxes').catch(()=>null);
-    const boxes=(r?.mailboxes)||[];
-    const name=_ccgMailboxName(boxes);
-    if(!name){listEl.innerHTML='<div style="padding:20px;text-align:center;color:rgba(255,255,255,.3);font-size:11px;">Mailbox not found — add email passwords to Render</div>';return;}
-    const dirFilter=folder==='sent'?'&direction=outbound':folder==='inbox'?'&direction=inbound':'';
-    const res=await API.get(`/api/mailboxes/${name}/inbox?limit=50${dirFilter}`).catch(()=>null);
-    _ccgEmails=(res?.emails)||[];
-    if(!_ccgEmails.length){listEl.innerHTML='<div style="padding:20px;text-align:center;color:rgba(255,255,255,.3);font-size:11px;">No messages</div>';return;}
-    listEl.innerHTML=_ccgEmails.map((m,i)=>`
-      <div class="ccg-mail-item" onclick="ccgEmailOpen(${i})" id="ccg-mail-${i}">
-        <div style="display:flex;align-items:flex-start;gap:8px;">
-          ${!m.is_read?'<div class="ccg-mail-unread"></div>':'<div style="width:7px;"></div>'}
-          <div style="flex:1;min-width:0;">
-            <div class="ccg-mail-item-from">${_ccgFmtFrom(m)}</div>
-            <div class="ccg-mail-item-sub">${m.subject||'(no subject)'}</div>
-            <div class="ccg-mail-item-ts">${m.received_at?new Date(m.received_at).toLocaleString():m.sent_at?new Date(m.sent_at).toLocaleString():''}</div>
-          </div>
-        </div>
-      </div>`).join('');
-  }catch(e){listEl.innerHTML=`<div style="padding:20px;text-align:center;color:rgba(255,255,255,.3);font-size:11px;">Error: ${e.message}</div>`;}
-};
-window.ccgEmailOpen=function(i){
-  const m=_ccgEmails[i];if(!m)return;
-  _ccgSelectedEmail=m;
-  document.querySelectorAll('.ccg-mail-item').forEach(el=>el.classList.remove('selected'));
-  document.getElementById(`ccg-mail-${i}`)?.classList.add('selected');
-  document.getElementById('ccg-mail-view-area').style.display='flex';
-  document.getElementById('ccg-compose-area').style.display='none';
-  document.getElementById('ccg-mail-subject').textContent=m.subject||'(no subject)';
-  document.getElementById('ccg-mail-meta').textContent=`From: ${_ccgFmtFrom(m)} · ${m.received_at?new Date(m.received_at).toLocaleString():m.sent_at?new Date(m.sent_at).toLocaleString():''}`;
-  document.getElementById('ccg-mail-body').innerHTML=m.body_html||`<pre style="white-space:pre-wrap;color:rgba(255,255,255,.75);">${m.body_text||'(no body)'}</pre>`;
-  const rb=document.getElementById('ccg-mail-reply-bar');if(rb)rb.style.display='flex';
-};
-window.ccgEmailCompose=function(){
-  document.getElementById('ccg-mail-view-area').style.display='none';
-  document.getElementById('ccg-compose-area').style.display='flex';
-  document.getElementById('ccg-compose-title').textContent='New Message';
-  document.getElementById('ccg-compose-to').value='';
-  document.getElementById('ccg-compose-subject').value='';
-  document.getElementById('ccg-compose-body').value='';
-};
-window.ccgEmailReply=function(){
-  if(!_ccgSelectedEmail)return;
-  document.getElementById('ccg-mail-view-area').style.display='none';
-  document.getElementById('ccg-compose-area').style.display='flex';
-  document.getElementById('ccg-compose-title').textContent='Reply';
-  document.getElementById('ccg-compose-to').value=_ccgFmtFrom(_ccgSelectedEmail);
-  document.getElementById('ccg-compose-subject').value=`Re: ${_ccgSelectedEmail.subject||''}`;
-  document.getElementById('ccg-compose-body').value=`\n\n--- Original Message ---\n${_ccgSelectedEmail.body_text||''}`;
-};
-window.ccgEmailForward=function(){
-  if(!_ccgSelectedEmail)return;
-  document.getElementById('ccg-mail-view-area').style.display='none';
-  document.getElementById('ccg-compose-area').style.display='flex';
-  document.getElementById('ccg-compose-title').textContent='Forward';
-  document.getElementById('ccg-compose-to').value='';
-  document.getElementById('ccg-compose-subject').value=`Fwd: ${_ccgSelectedEmail.subject||''}`;
-  document.getElementById('ccg-compose-body').value=`\n\n--- Forwarded Message ---\n${_ccgSelectedEmail.body_text||''}`;
-};
-window.ccgEmailCancelCompose=function(){
-  document.getElementById('ccg-compose-area').style.display='none';
-  document.getElementById('ccg-mail-view-area').style.display='flex';
-};
-window.ccgEmailSend=async function(){
-  const to=document.getElementById('ccg-compose-to')?.value.trim();
-  const subject=document.getElementById('ccg-compose-subject')?.value.trim();
-  const body=document.getElementById('ccg-compose-body')?.value.trim();
-  if(!to||!body){toast('Fill in To and Message','error');return;}
-  const st=document.getElementById('ccg-mail-send-status');if(st)st.textContent='Sending…';
-  try{
-    await API.post('/api/mailboxes/compose',{from_mailbox:'cece',to:[to],subject,body_text:body});
-    toast('Email sent','success');if(st)st.textContent='✓ Sent';
-    ccgEmailCancelCompose();ccgLoadEmail();
-  }catch(e){toast('Send failed — check SMTP config','error');if(st)st.textContent='Failed';}
-};
-window.ccgEmailSaveDraft=function(){toast('Draft saved (coming soon)');};
-window.ccgEmailDelete=async function(){toast('Delete coming soon');};
 
 /* ── Zoom ── */
 window.ccgStartMeeting=function(){window.open('https://zoom.us/start/videomeeting','_blank');};
