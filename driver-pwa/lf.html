@@ -481,16 +481,16 @@
       <div class="card">
         <div class="card-title">Quick Contacts</div>
         <div style="display:flex;flex-direction:column;gap:8px">
-          <a href="tel:+18005551234" style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:var(--bg);border:1px solid var(--border);border-radius:10px;text-decoration:none">
-            <div><div style="font-size:13px;font-weight:600;color:var(--text)">🚨 Roadside / Emergency</div><div style="font-size:11px;color:var(--muted)">24/7</div></div>
+          <a href="tel:+16614669932" style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:var(--bg);border:1px solid var(--border);border-radius:10px;text-decoration:none">
+            <div><div style="font-size:13px;font-weight:600;color:var(--text)">🚨 Roadside / Emergency</div><div style="font-size:11px;color:var(--muted)">24/7 · 661-466-9932</div></div>
             <div style="background:var(--red);color:#fff;padding:6px 12px;border-radius:8px;font-size:12px;font-weight:700">Call</div>
           </a>
-          <a href="tel:+18005550911" style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:var(--bg);border:1px solid var(--border);border-radius:10px;text-decoration:none">
-            <div><div style="font-size:13px;font-weight:600;color:var(--text)">📞 Dispatch</div><div style="font-size:11px;color:var(--muted)">Mon–Fri 6am–8pm CT</div></div>
+          <a href="tel:+16614669932" style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:var(--bg);border:1px solid var(--border);border-radius:10px;text-decoration:none">
+            <div><div style="font-size:13px;font-weight:600;color:var(--text)">📞 Dispatch</div><div style="font-size:11px;color:var(--muted)">Mon–Fri 6am–8pm CT · 661-466-9932</div></div>
             <div style="background:var(--accent);color:#fff;padding:6px 12px;border-radius:8px;font-size:12px;font-weight:700">Call</div>
           </a>
-          <a href="tel:+18005550100" style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:var(--bg);border:1px solid var(--border);border-radius:10px;text-decoration:none">
-            <div><div style="font-size:13px;font-weight:600;color:var(--text)">🏥 Insurance Claims</div><div style="font-size:11px;color:var(--muted)">Accidents / incidents</div></div>
+          <a href="tel:+16614669932" style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:var(--bg);border:1px solid var(--border);border-radius:10px;text-decoration:none">
+            <div><div style="font-size:13px;font-weight:600;color:var(--text)">🏥 Insurance Claims</div><div style="font-size:11px;color:var(--muted)">Accidents / incidents · 661-466-9932</div></div>
             <div style="background:var(--yellow);color:#0a0a1a;padding:6px 12px;border-radius:8px;font-size:12px;font-weight:700">Call</div>
           </a>
         </div>
@@ -887,8 +887,7 @@ async function loadComplianceStatus() {
   const lfId = localStorage.getItem('3ll_lf_driver_id');
   if (!lfId || DEMO_MODE) { renderDemoCompliance(); return; }
   try {
-    const res  = await fetch(_apiBase + '/api/light-fleet/driver-ping', { method: 'GET' }).catch(() => null);
-    const res2 = await fetch(_apiBase + '/api/light-fleet/' + lfId + '/compliance-status');
+    const res2 = await fetch(_apiBase + '/api/light-fleet/drivers/' + lfId + '/compliance-status');
     const comp = res2.ok ? await res2.json() : null;
     if (comp) renderCompliance(comp); else renderDemoCompliance();
   } catch(e) { renderDemoCompliance(); }

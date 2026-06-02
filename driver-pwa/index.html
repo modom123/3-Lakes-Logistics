@@ -869,16 +869,16 @@
       <div class="card">
         <div class="card-title">Emergency &amp; Quick Contacts</div>
         <div style="display:flex;flex-direction:column;gap:8px">
-          <a href="tel:+18005551234" style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:var(--surface);border:1px solid var(--border);border-radius:10px;text-decoration:none">
-            <div><div style="font-size:13px;font-weight:600;color:var(--text)">🚨 Breakdown / Roadside</div><div style="font-size:11px;color:var(--muted)">24/7 Emergency</div></div>
+          <a href="tel:+16614669932" style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:var(--surface);border:1px solid var(--border);border-radius:10px;text-decoration:none">
+            <div><div style="font-size:13px;font-weight:600;color:var(--text)">🚨 Breakdown / Roadside</div><div style="font-size:11px;color:var(--muted)">24/7 Emergency · 661-466-9932</div></div>
             <div style="background:var(--red);color:#fff;padding:6px 12px;border-radius:8px;font-size:12px;font-weight:700">Call</div>
           </a>
-          <a href="tel:+18005550911" style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:var(--surface);border:1px solid var(--border);border-radius:10px;text-decoration:none">
-            <div><div style="font-size:13px;font-weight:600;color:var(--text)">📞 Dispatch Office</div><div style="font-size:11px;color:var(--muted)">Mon–Fri 6am–8pm CT</div></div>
+          <a href="tel:+16614669932" style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:var(--surface);border:1px solid var(--border);border-radius:10px;text-decoration:none">
+            <div><div style="font-size:13px;font-weight:600;color:var(--text)">📞 Dispatch Office</div><div style="font-size:11px;color:var(--muted)">Mon–Fri 6am–8pm CT · 661-466-9932</div></div>
             <div style="background:var(--accent);color:#fff;padding:6px 12px;border-radius:8px;font-size:12px;font-weight:700">Call</div>
           </a>
-          <a href="tel:+18005550100" style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:var(--surface);border:1px solid var(--border);border-radius:10px;text-decoration:none">
-            <div><div style="font-size:13px;font-weight:600;color:var(--text)">🏥 Insurance Claims</div><div style="font-size:11px;color:var(--muted)">Report accidents / cargo claims</div></div>
+          <a href="tel:+16614669932" style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:var(--surface);border:1px solid var(--border);border-radius:10px;text-decoration:none">
+            <div><div style="font-size:13px;font-weight:600;color:var(--text)">🏥 Insurance Claims</div><div style="font-size:11px;color:var(--muted)">Report accidents · 661-466-9932</div></div>
             <div style="background:var(--yellow);color:#0a0f1e;padding:6px 12px;border-radius:8px;font-size:12px;font-weight:700">Call</div>
           </a>
         </div>
@@ -1031,9 +1031,9 @@ const DEMO_MESSAGES = [
 
 const DEMO_EARNINGS = { gross: 3200, dispatch_fee: 256, insurance: 45, fuel_advance: 0, net: 2899 };
 
-// ── API Failover — primary + backup ─────────────────────────────────────────
+// ── API ───────────────────────────────────────────────────────────────────────
 const API_PRIMARY = 'https://three-lakes-logistics-api.onrender.com';
-const API_BACKUP  = 'https://three-lakes-logistics-api.onrender.com';
+const API_BACKUP  = API_PRIMARY; // single endpoint — retry on transient errors
 let _apiBase = API_PRIMARY;
 
 // Used by lf trips and any window.API_BASE references
