@@ -140,6 +140,7 @@ body{font-family:var(--ff-b);color:var(--text);background:var(--off);display:fle
 #page-fleet-map.active,
 #page-lf-map.active,
 #page-ccg-office.active,
+#page-mark-office.active,
 #page-bond.active{padding:0;overflow:hidden;}
 /* Fullpage LF/broker pages: no padding, scroll within page */
 .content.lf-fullpage .page.active{padding:0;overflow-y:auto;}
@@ -748,6 +749,7 @@ td.td-name{font-weight:600;color:var(--navy);}
   <div class="sb-section">
     <div class="sb-label">Command</div>
     <div class="sb-item" onclick="nav('exec-command')"><span class="sb-icon">🎖️</span> Exec Command <span class="sb-badge" id="exec-esc-notif" style="display:none">●</span></div>
+    <div class="sb-item" onclick="nav('mark-office')"><span class="sb-icon">👑</span> Mark Odom Office <span class="sb-badge" id="mo-email-notif" style="display:none">●</span></div>
     <div class="sb-item" onclick="nav('ccg-office')"><span class="sb-icon">🧭</span> CC Gulley Office <span class="sb-badge" id="ccg-email-notif" style="display:none">●</span></div>
   </div>
 
@@ -3554,7 +3556,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 let allCarriers=[], allLoads=[], allInvoices=[], currentInvFilter='all', loadCounter=3849;
 
-const pageNames={dashboard:'Dashboard',dispatch:'Dispatch Board','fleet-map':'Fleet Map',carriers:'Carriers',drivers:'Drivers',loads:'Load Manager',invoices:'Invoices & Billing',compliance:'DOT Compliance',ifta:'IFTA / Permits',insurance:'Insurance',revenue:'Revenue Tracker',providers:'Compliance Providers',checklist:'Daily Checklist',notes:'Dispatcher Notes',reports:'Team Reports','exec-command':'Exec Command',agents:'AI Agents',founders:'Founders Program',crm:'Lead CRM',leads:'Lead Pipeline',execution:'Execution Engine',factoring:'Factoring',email:'Email Center',vault:'Document Vault',clm:'CLM Scanner',ledger:'Atomic Ledger',agreements:'Agreements','lf-map':'Light Fleet Live Map','lf-nemt':'NEMT — Medical Transport','lf-medical':'Medical Courier','lf-executive':'Executive Transport','lf-courier':'Courier & Last-Mile','lf-gig':'Gig Fleet Management','ccg-office':'CC Gulley Office','trading-desk':'Trading Desk','broker-division':'N. American Trading — Hub','broker-shippers':'Shipper Pipeline','broker-docs':'Docs & Invoices','trading-desk':'Trading Desk'};
+const pageNames={dashboard:'Dashboard',dispatch:'Dispatch Board','fleet-map':'Fleet Map',carriers:'Carriers',drivers:'Drivers',loads:'Load Manager',invoices:'Invoices & Billing',compliance:'DOT Compliance',ifta:'IFTA / Permits',insurance:'Insurance',revenue:'Revenue Tracker',providers:'Compliance Providers',checklist:'Daily Checklist',notes:'Dispatcher Notes',reports:'Team Reports','exec-command':'Exec Command',agents:'AI Agents',founders:'Founders Program',crm:'Lead CRM',leads:'Lead Pipeline',execution:'Execution Engine',factoring:'Factoring',email:'Email Center',vault:'Document Vault',clm:'CLM Scanner',ledger:'Atomic Ledger',agreements:'Agreements','lf-map':'Light Fleet Live Map','lf-nemt':'NEMT — Medical Transport','lf-medical':'Medical Courier','lf-executive':'Executive Transport','lf-courier':'Courier & Last-Mile','lf-gig':'Gig Fleet Management','mark-office':'Mark Odom — CEO Office','ccg-office':'CC Gulley Office','trading-desk':'Trading Desk','broker-division':'N. American Trading — Hub','broker-shippers':'Shipper Pipeline','broker-docs':'Docs & Invoices','trading-desk':'Trading Desk'};
 
 // ── 3 Lakes Logistics Backend API (FastAPI) ──
 const API_BASE = (window.__3LL_API_BASE || 'https://three-lakes-logistics-api.onrender.com').replace(/\/$/,'');
@@ -3653,7 +3655,7 @@ function nav(id){
   document.querySelector('.content').classList.toggle('lf-fullpage',_lfFullPages.includes(id));
   document.getElementById('main').classList.toggle('lf-fullpage',_lfFullPages.includes(id));
   // Fixed full-page overlays: always measure actual header stack
-  if(['bond','cso','fleet-map','ccg-office'].includes(id)){
+  if(['bond','cso','fleet-map','ccg-office','mark-office'].includes(id)){
     const top = _overlayTop();
     document.getElementById('page-'+id).style.top=top+'px';
     const content=document.querySelector('.content');
@@ -3669,6 +3671,7 @@ function nav(id){
   if(id==='notes')loadNotes();
   if(id==='reports')loadTeamReports();
   if(id==='exec-command'){const n=document.getElementById('exec-esc-notif');if(n)n.style.display='none';ecRefreshDashboard();}
+  if(id==='mark-office'){if(typeof moLoadOfficeData==='function')moLoadOfficeData();}
   if(id==='ccg-office'){if(typeof ccgLoadOfficeData==='function')ccgLoadOfficeData();if(typeof ccgLoadEmail==='function')ccgLoadEmail();}
   if(id==='compliance'||id==='insurance')renderCarrierCompliance();
   if(id==='clm')loadCLMList();
@@ -9240,6 +9243,794 @@ if (typeof nav === 'function') {
      CC GULLEY — PERSONAL OFFICE
      Full-page fixed overlay — Strategy, Team, Directives, Email, Zoom, TV
      ════════════════════════════════════════════════════════════════════════ -->
+<div class="page" id="page-mark-office">
+<style>
+#page-mark-office{animation:none;}
+#page-mark-office.active{position:fixed;top:60px;left:var(--sidebar-w);right:0;bottom:0;z-index:30;display:flex;flex-direction:column;overflow:hidden;background:var(--bg);}
+@media(max-width:768px){#page-mark-office.active{top:54px;left:0;}}
+.mo{display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden;background:#05030e;}
+.mo-hdr{display:flex;align-items:center;justify-content:space-between;padding:12px 24px;background:linear-gradient(135deg,#05030e 0%,#0d0720 100%);flex-shrink:0;border-bottom:2px solid rgba(245,200,66,.35);box-shadow:0 4px 20px rgba(0,0,0,.5);}
+.mo-hdr-left{display:flex;align-items:center;gap:14px;}
+.mo-avatar{width:46px;height:46px;border-radius:50%;background:linear-gradient(135deg,#92400e,#d97706);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:900;color:#fff;flex-shrink:0;box-shadow:0 0 16px rgba(245,200,66,.4);}
+.mo-name{font-size:17px;font-weight:900;color:#fff;letter-spacing:.2px;}
+.mo-role{font-size:10px;color:rgba(245,200,66,.8);letter-spacing:.5px;margin-top:1px;font-family:var(--ff-m);}
+.mo-hdr-right{display:flex;align-items:center;gap:8px;}
+.mo-status{display:flex;align-items:center;gap:6px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:20px;padding:4px 12px;}
+.mo-status-dot{width:7px;height:7px;border-radius:50%;background:#10b981;box-shadow:0 0 8px #10b981;flex-shrink:0;}
+.mo-status-lbl{font-size:9px;color:rgba(255,255,255,.6);letter-spacing:1px;font-family:var(--ff-m);text-transform:uppercase;}
+.mo-hdr-btn{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14);color:rgba(255,255,255,.8);padding:5px 14px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;font-family:var(--ff-b);}
+.mo-hdr-btn:hover{background:rgba(245,200,66,.2);border-color:rgba(245,200,66,.5);color:#f5c842;}
+.mo-tabs{display:flex;flex-wrap:nowrap;background:#040210;border-bottom:1px solid rgba(245,200,66,.18);flex-shrink:0;padding:0 20px;gap:2px;overflow-x:auto;scrollbar-width:none;}
+.mo-tabs::-webkit-scrollbar{display:none;}
+.mo-tab{background:transparent;border:none;border-bottom:2px solid transparent;padding:10px 16px;font-size:12px;font-weight:600;color:rgba(255,255,255,.4);cursor:pointer;transition:color .15s,border-color .15s;font-family:var(--ff-b);white-space:nowrap;display:flex;align-items:center;gap:6px;}
+.mo-tab:hover{color:rgba(255,255,255,.7);}
+.mo-tab.active{color:#f5c842;border-bottom-color:#f5c842;background:rgba(245,200,66,.06);}
+.mo-body{flex:1;min-height:0;overflow:hidden;display:flex;flex-direction:column;}
+.mo-pane{display:none;overflow:hidden;}
+.mo-pane.active{display:flex;flex-direction:column;flex:1;min-height:0;}
+.mo-room{display:flex;flex-direction:column;flex:1;min-height:0;overflow-y:auto;padding:18px 24px;gap:14px;scrollbar-width:thin;scrollbar-color:rgba(245,200,66,.4) transparent;}
+.mo-room::-webkit-scrollbar{width:5px;}
+.mo-room::-webkit-scrollbar-thumb{background:#f5c842;border-radius:3px;}
+.mo-kpi-strip{display:flex;gap:12px;flex-shrink:0;flex-wrap:wrap;}
+.mo-kpi{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.09);border-top:3px solid rgba(255,255,255,.1);border-radius:10px;padding:13px 16px;flex:1;min-width:110px;}
+.mo-kpi.gold{border-top-color:#f5c842;}.mo-kpi.amber{border-top-color:#f59e0b;}.mo-kpi.purple{border-top-color:#a855f7;}.mo-kpi.green{border-top-color:#10b981;}.mo-kpi.red{border-top-color:#ef4444;}
+.mo-kpi-n{font-size:26px;font-weight:900;color:#fff;line-height:1;}
+.mo-kpi-l{font-size:9px;color:rgba(255,255,255,.45);text-transform:uppercase;letter-spacing:.8px;margin-top:3px;font-family:var(--ff-m);}
+.mo-panel{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.09);border-radius:10px;display:flex;flex-direction:column;overflow:hidden;min-height:200px;}
+.mo-panel-hdr{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid rgba(255,255,255,.07);flex-shrink:0;}
+.mo-panel-title{font-weight:700;font-size:12px;color:#fff;display:flex;align-items:center;gap:6px;}
+.mo-panel-body{flex:1;overflow-y:auto;padding:12px 14px;scrollbar-width:thin;scrollbar-color:#f5c842 transparent;}
+.mo-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.mo-feed{flex:1;overflow-y:auto;padding:10px 14px;display:flex;flex-direction:column;gap:7px;scrollbar-width:thin;scrollbar-color:#f5c842 transparent;}
+.mo-feed-item{padding:8px 10px;border-radius:6px;border-left:3px solid rgba(255,255,255,.1);background:rgba(255,255,255,.03);}
+.mo-feed-item.gold{border-left-color:#f5c842;}.mo-feed-item.green{border-left-color:#10b981;}.mo-feed-item.amber{border-left-color:#f59e0b;}.mo-feed-item.red{border-left-color:#ef4444;}.mo-feed-item.purple{border-left-color:#a855f7;}
+.mo-feed-from{font-weight:700;font-size:10px;color:rgba(255,255,255,.7);margin-bottom:2px;}
+.mo-feed-text{font-size:11px;color:rgba(255,255,255,.55);line-height:1.5;}
+.mo-fl{font-size:9px;font-family:var(--ff-m);color:rgba(255,255,255,.45);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:5px;}
+.mo-label{font-weight:700;font-size:13px;color:#fff;margin-bottom:8px;}
+.mo-input{width:100%;padding:9px 12px;border:1.5px solid rgba(255,255,255,.12);border-radius:8px;font-size:12px;color:#fff;background:rgba(255,255,255,.05);outline:none;font-family:var(--ff-b);box-sizing:border-box;}
+.mo-input:focus{border-color:#f5c842;}
+.mo-select{width:100%;padding:9px 12px;border:1.5px solid rgba(255,255,255,.12);border-radius:8px;font-size:12px;color:#fff;background:rgba(30,10,5,.9);outline:none;font-family:var(--ff-b);box-sizing:border-box;}
+.mo-select:focus{border-color:#f5c842;}
+.mo-textarea{width:100%;min-height:80px;padding:10px 12px;border:1.5px solid rgba(255,255,255,.12);border-radius:8px;font-size:12px;color:#fff;background:rgba(255,255,255,.05);outline:none;resize:vertical;font-family:var(--ff-b);box-sizing:border-box;}
+.mo-textarea:focus{border-color:#f5c842;}
+.mo-btn{background:linear-gradient(135deg,#92400e,#d97706);color:#fff;border:none;padding:9px 22px;border-radius:7px;font-weight:800;font-size:12px;cursor:pointer;box-shadow:0 2px 10px rgba(245,158,11,.3);}
+.mo-btn.green{background:linear-gradient(135deg,#059669,#10b981);}
+.mo-btn.purple{background:linear-gradient(135deg,#7c3aed,#a855f7);}
+.mo-btn.sky{background:linear-gradient(135deg,#0369a1,#0284c7);}
+.mo-btn:hover{opacity:.88;}
+.mo-todo-item{display:flex;align-items:flex-start;gap:10px;padding:12px 14px;border-radius:8px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);margin-bottom:8px;transition:border-color .15s,background .15s;}
+.mo-todo-item:hover{border-color:rgba(245,200,66,.3);background:rgba(245,200,66,.04);}
+.mo-todo-item.done{opacity:.42;}
+.mo-todo-item.done .mo-todo-title{text-decoration:line-through;color:rgba(255,255,255,.4);}
+.mo-todo-cb{width:18px;height:18px;border-radius:4px;border:2px solid rgba(245,200,66,.5);background:transparent;cursor:pointer;flex-shrink:0;appearance:none;-webkit-appearance:none;margin-top:1px;}
+.mo-todo-cb:checked{background:#f5c842;border-color:#f5c842;}
+.mo-todo-title{font-weight:700;font-size:12px;color:#fff;margin-bottom:3px;}
+.mo-todo-desc{font-size:11px;color:rgba(255,255,255,.5);line-height:1.5;margin-bottom:5px;}
+.mo-todo-meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.mo-todo-due{font-size:9px;font-family:var(--ff-m);padding:2px 8px;border-radius:10px;font-weight:700;letter-spacing:.5px;}
+.mo-todo-due.urgent{background:rgba(239,68,68,.18);color:#ef4444;border:1px solid rgba(239,68,68,.3);}
+.mo-todo-due.soon{background:rgba(245,158,11,.18);color:#f59e0b;border:1px solid rgba(245,158,11,.3);}
+.mo-todo-due.ok{background:rgba(16,185,129,.12);color:#10b981;border:1px solid rgba(16,185,129,.2);}
+.mo-todo-pri{font-size:9px;font-family:var(--ff-m);padding:2px 8px;border-radius:10px;font-weight:700;letter-spacing:.5px;border:1px solid;}
+.mo-todo-pri.high{color:#ef4444;border-color:rgba(239,68,68,.35);background:rgba(239,68,68,.1);}
+.mo-todo-pri.med{color:#f59e0b;border-color:rgba(245,158,11,.35);background:rgba(245,158,11,.1);}
+.mo-todo-pri.low{color:#10b981;border-color:rgba(16,185,129,.35);background:rgba(16,185,129,.1);}
+.mo-todo-tag{font-size:9px;font-family:var(--ff-m);padding:2px 8px;border-radius:10px;font-weight:700;letter-spacing:.5px;background:rgba(245,200,66,.12);color:#f5c842;border:1px solid rgba(245,200,66,.25);}
+.mo-todo-del{margin-left:auto;background:transparent;border:none;color:rgba(255,255,255,.25);font-size:14px;cursor:pointer;padding:2px 4px;flex-shrink:0;line-height:1;}
+.mo-todo-del:hover{color:#ef4444;}
+.mo-dir-card{padding:10px 12px;border-radius:8px;border:1px solid rgba(255,255,255,.09);background:rgba(255,255,255,.03);border-left:3px solid #f5c842;margin-bottom:8px;}
+.mo-dir-card-hd{font-weight:700;font-size:11px;color:#fff;margin-bottom:3px;}
+.mo-dir-card-body{font-size:11px;color:rgba(255,255,255,.5);line-height:1.5;}
+.mo-dir-card-ts{font-size:9px;color:rgba(255,255,255,.3);margin-top:4px;font-family:var(--ff-m);}
+.mo-reporter{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border-radius:8px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);margin-bottom:8px;cursor:pointer;transition:border-color .15s;}
+.mo-reporter:hover{border-color:rgba(245,200,66,.4);background:rgba(245,200,66,.06);}
+.mo-rep-name{font-weight:700;font-size:12px;color:#fff;margin-bottom:1px;}
+.mo-rep-role{font-size:10px;color:rgba(255,255,255,.5);margin-bottom:4px;}
+.mo-mail-wrap{display:flex;flex:1;min-height:0;overflow:hidden;}
+.mo-mail-list{width:320px;flex-shrink:0;border-right:1px solid rgba(255,255,255,.09);display:flex;flex-direction:column;overflow:hidden;}
+.mo-mail-list-hdr{padding:12px 14px;border-bottom:1px solid rgba(255,255,255,.09);flex-shrink:0;display:flex;align-items:center;justify-content:space-between;}
+.mo-mail-items{flex:1;overflow-y:auto;scrollbar-width:thin;scrollbar-color:#f5c842 transparent;}
+.mo-mail-item{padding:11px 14px;border-bottom:1px solid rgba(255,255,255,.06);cursor:pointer;transition:background .15s;}
+.mo-mail-item:hover,.mo-mail-item.selected{background:rgba(245,200,66,.08);}
+.mo-mail-item-from{font-weight:700;font-size:12px;color:#fff;margin-bottom:2px;}
+.mo-mail-item-sub{font-size:11px;color:rgba(255,255,255,.55);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.mo-mail-item-ts{font-size:9px;color:rgba(255,255,255,.3);margin-top:2px;font-family:var(--ff-m);}
+.mo-mail-view{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+.mo-mail-view-hdr{padding:14px 20px;border-bottom:1px solid rgba(255,255,255,.09);flex-shrink:0;}
+.mo-mail-view-sub{font-weight:700;font-size:15px;color:#fff;margin-bottom:4px;}
+.mo-mail-view-meta{font-size:11px;color:rgba(255,255,255,.45);}
+.mo-mail-view-body{flex:1;overflow-y:auto;padding:16px 20px;font-size:13px;color:rgba(255,255,255,.75);line-height:1.7;scrollbar-width:thin;scrollbar-color:#f5c842 transparent;}
+.mo-mail-compose{border-top:1px solid rgba(255,255,255,.09);padding:12px 16px;display:flex;flex-direction:column;gap:8px;flex-shrink:0;background:rgba(255,255,255,.02);}
+.mo-tv-wrap{display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden;background:#000;}
+.mo-tv-player{flex:1;min-height:0;position:relative;}
+.mo-tv-player iframe{width:100%;height:100%;border:none;display:block;}
+.mo-tv-bar{display:flex;align-items:center;gap:8px;padding:8px 14px;background:rgba(5,3,14,.95);border-top:1px solid rgba(245,200,66,.15);flex-shrink:0;flex-wrap:wrap;}
+.mo-tv-ch-btn{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:6px;color:rgba(255,255,255,.75);font-size:11px;font-weight:600;padding:5px 12px;cursor:pointer;font-family:var(--ff-b);white-space:nowrap;}
+.mo-tv-ch-btn:hover,.mo-tv-ch-btn.active{background:rgba(245,200,66,.18);border-color:#f5c842;color:#f5c842;}
+@media(max-width:768px){
+  .mo-grid{grid-template-columns:1fr!important;}
+  .mo-mail-wrap{flex-direction:column;}
+  .mo-mail-list{width:100%;max-height:220px;border-right:none;border-bottom:1px solid rgba(255,255,255,.09);}
+}
+.mo{color:#fff;}
+.mo-rep-role,.mo-feed-text,.mo-kpi-l,.mo-mail-item-sub,.mo-mail-item-ts,.mo-mail-view-meta,.mo-dir-card-body,.mo-dir-card-ts,.mo-fl,.mo-status-lbl{color:rgba(255,255,255,.82)!important;}
+.mo-input,.mo-textarea{color:#fff!important;}
+.mo-input::placeholder,.mo-textarea::placeholder{color:rgba(255,255,255,.5);}
+</style>
+
+<div class="mo">
+
+  <!-- Header -->
+  <div class="mo-hdr">
+    <div class="mo-hdr-left">
+      <div class="mo-avatar">👑</div>
+      <div>
+        <div class="mo-name">Mark Odom — CEO Office</div>
+        <div class="mo-role">Chief Executive Officer · 3 Lakes Logistics · Commanding All Divisions</div>
+      </div>
+    </div>
+    <div class="mo-hdr-right">
+      <div class="mo-status"><div class="mo-status-dot"></div><span class="mo-status-lbl">live</span></div>
+      <button class="mo-hdr-btn" onclick="moRefreshAll()">↺ Refresh All</button>
+      <button class="mo-hdr-btn" onclick="moRunAgent('mark_odom','Mark Odom')">▶ Run MO Agent</button>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="mo-tabs">
+    <button class="mo-tab active" id="motab-home"       onclick="moTab('home')">🏛️ Office Home</button>
+    <button class="mo-tab"        id="motab-team"       onclick="moTab('team')">👥 My Team</button>
+    <button class="mo-tab"        id="motab-todo"       onclick="moTab('todo')">✅ Todo → CC Gulley <span id="mo-todo-badge" style="display:none;background:#f5c842;color:#000;font-size:9px;font-weight:800;border-radius:10px;padding:1px 6px;margin-left:2px;">0</span></button>
+    <button class="mo-tab"        id="motab-directives" onclick="moTab('directives')">📣 Directives</button>
+    <button class="mo-tab"        id="motab-docs"       onclick="moTab('docs')">📁 Documents</button>
+    <button class="mo-tab"        id="motab-email"      onclick="moTab('email')">📧 Email <span id="mo-email-ct" style="display:none;background:#f5c842;color:#000;font-size:9px;font-weight:800;border-radius:10px;padding:1px 6px;margin-left:2px;">0</span></button>
+    <button class="mo-tab"        id="motab-zoom"       onclick="moTab('zoom')">📹 Zoom</button>
+    <button class="mo-tab"        id="motab-tv"         onclick="moTab('tv')">📺 Watch TV</button>
+  </div>
+
+  <!-- Body -->
+  <div class="mo-body">
+
+    <!-- ════ HOME ════ -->
+    <div class="mo-pane active" id="mopane-home">
+      <div class="mo-room">
+
+        <!-- Welcome strip -->
+        <div style="background:linear-gradient(135deg,rgba(245,200,66,.12),rgba(168,85,247,.08));border:1px solid rgba(245,200,66,.2);border-radius:12px;padding:18px 22px;display:flex;align-items:center;gap:18px;flex-shrink:0;">
+          <div style="font-size:44px;">👑</div>
+          <div>
+            <div style="font-size:18px;font-weight:900;color:#fff;margin-bottom:3px;">Good morning, Mark</div>
+            <div style="font-size:12px;color:rgba(255,255,255,.55);line-height:1.6;">CEO Command Center — CC Gulley is running strategy. North American Trading is live. All divisions online and reporting to you.</div>
+          </div>
+          <div style="margin-left:auto;display:flex;flex-direction:column;gap:6px;flex-shrink:0;">
+            <button class="mo-btn" onclick="moTab('todo')">✅ Todo → CC Gulley</button>
+            <button class="mo-btn purple" onclick="moTab('directives')">📣 Send Directive</button>
+          </div>
+        </div>
+
+        <!-- KPI Strip -->
+        <div class="mo-kpi-strip">
+          <div class="mo-kpi gold"><div class="mo-kpi-n" id="mo-kpi-todos">—</div><div class="mo-kpi-l">Open Tasks to CC</div></div>
+          <div class="mo-kpi red"><div class="mo-kpi-n" id="mo-kpi-urgent">—</div><div class="mo-kpi-l">Urgent / Overdue</div></div>
+          <div class="mo-kpi amber"><div class="mo-kpi-n" id="mo-kpi-due-week">—</div><div class="mo-kpi-l">Due This Week</div></div>
+          <div class="mo-kpi green"><div class="mo-kpi-n" id="mo-kpi-done">—</div><div class="mo-kpi-l">Completed</div></div>
+          <div class="mo-kpi purple"><div class="mo-kpi-n" id="mo-kpi-directives">—</div><div class="mo-kpi-l">Active Directives</div></div>
+        </div>
+
+        <!-- 2-col: intel feed + quick actions -->
+        <div class="mo-grid">
+          <div class="mo-panel" style="min-height:280px;">
+            <div class="mo-panel-hdr">
+              <div class="mo-panel-title">📡 Executive Intel Feed</div>
+              <span id="mo-intel-ts" style="font-size:10px;color:rgba(245,200,66,.6);font-family:var(--ff-m);">—</span>
+            </div>
+            <div class="mo-feed" id="mo-home-feed">
+              <div style="color:rgba(255,255,255,.3);font-size:11px;text-align:center;padding:20px;">Click Refresh All to load executive intel</div>
+            </div>
+          </div>
+          <div class="mo-panel" style="min-height:280px;">
+            <div class="mo-panel-hdr"><div class="mo-panel-title">⚡ Quick Actions</div></div>
+            <div class="mo-panel-body" style="display:flex;flex-direction:column;gap:10px;">
+              <button class="mo-hdr-btn" style="text-align:left;padding:10px 14px;font-size:12px;" onclick="moTab('todo')">✅ Open Todo List → CC Gulley</button>
+              <button class="mo-hdr-btn" style="text-align:left;padding:10px 14px;font-size:12px;" onclick="moTab('email')">📧 Open Email Inbox (mark@3lakeslogistics.com)</button>
+              <button class="mo-hdr-btn" style="text-align:left;padding:10px 14px;font-size:12px;" onclick="moStartMeeting()">📹 Start Instant Zoom Meeting</button>
+              <button class="mo-hdr-btn" style="text-align:left;padding:10px 14px;font-size:12px;" onclick="moTab('directives')">📣 Send Directive to Team</button>
+              <button class="mo-hdr-btn" style="text-align:left;padding:10px 14px;font-size:12px;" onclick="nav('ccg-office')">🧭 Open CC Gulley Office</button>
+              <button class="mo-hdr-btn" style="text-align:left;padding:10px 14px;font-size:12px;" onclick="nav('exec-command')">🎖️ Exec Command Center</button>
+              <button class="mo-hdr-btn" style="text-align:left;padding:10px 14px;font-size:12px;" onclick="nav('trading-desk')">📈 North American Trading Desk</button>
+              <button class="mo-hdr-btn" style="text-align:left;padding:10px 14px;font-size:12px;" onclick="nav('bond')">🕵️ Bond Intel Office</button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div><!-- /home -->
+
+    <!-- ════ MY TEAM ════ -->
+    <div class="mo-pane" id="mopane-team">
+      <div class="mo-room">
+        <div style="flex-shrink:0;">
+          <div class="mo-fl">CEO DIRECT REPORTS — MARK ODOM</div>
+          <div class="mo-label" style="font-size:16px;">Leadership Team</div>
+          <div style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:4px;">All division heads report directly to Mark Odom. Issue directives, review intel, and manage team assignments from this panel.</div>
+        </div>
+        <div class="mo-grid">
+
+          <!-- CC Gulley -->
+          <div class="mo-panel">
+            <div class="mo-panel-hdr" style="background:rgba(56,189,248,.08);border-bottom-color:rgba(56,189,248,.2);">
+              <div class="mo-panel-title">
+                <div style="width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,#0369a1,#7c3aed);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;color:#fff;">CC</div>
+                CC Gulley — CSO / Strategy Unit
+              </div>
+              <button class="mo-hdr-btn" onclick="nav('ccg-office')">Open Office →</button>
+            </div>
+            <div class="mo-panel-body">
+              <div style="font-size:12px;color:rgba(255,255,255,.6);margin-bottom:10px;">Chief Strategy Officer. Commands Alexander Wright (market intel), Naomi Kensington (targeting), and Winston Carmichael (retention). Receives all CEO directives and todos.</div>
+              <div style="font-size:11px;color:rgba(255,255,255,.35);margin-bottom:8px;font-family:var(--ff-m);">PENDING TASKS FROM MARK</div>
+              <div id="mo-cc-pending" style="font-size:11px;color:rgba(255,255,255,.55);line-height:1.6;background:rgba(255,255,255,.03);border-radius:6px;padding:10px 12px;border:1px solid rgba(255,255,255,.07);">Open Todo tab to view tasks assigned to CC.</div>
+              <div style="display:flex;gap:8px;margin-top:10px;">
+                <button class="mo-hdr-btn" onclick="nav('ccg-office')">🧭 CC Office</button>
+                <button class="mo-hdr-btn" onclick="moTab('todo')">✅ View Todos</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- North American Trading -->
+          <div class="mo-panel">
+            <div class="mo-panel-hdr" style="background:rgba(245,158,11,.08);border-bottom-color:rgba(245,158,11,.2);">
+              <div class="mo-panel-title">
+                <div style="width:30px;height:30px;border-radius:50%;background:rgba(245,158,11,.2);color:#f59e0b;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;">TD</div>
+                North American Trading
+              </div>
+              <button class="mo-hdr-btn" onclick="nav('trading-desk')">Trading Desk →</button>
+            </div>
+            <div class="mo-panel-body">
+              <div style="font-size:12px;color:rgba(255,255,255,.6);margin-bottom:10px;">Rex (load board ops), Jordan (lane analysis), Casey (market intel). Handles all brokerage operations, load sourcing, carrier placement, and lane strategy.</div>
+              <div style="display:flex;gap:8px;margin-top:10px;">
+                <button class="mo-hdr-btn" onclick="nav('trading-desk')">📈 Trading Desk</button>
+                <button class="mo-hdr-btn" onclick="nav('broker-division')">🏦 Division Hub</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Operations -->
+          <div class="mo-panel">
+            <div class="mo-panel-hdr" style="background:rgba(16,185,129,.08);border-bottom-color:rgba(16,185,129,.2);">
+              <div class="mo-panel-title">
+                <div style="width:30px;height:30px;border-radius:50%;background:rgba(16,185,129,.2);color:#10b981;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;">OPS</div>
+                Operations — Dispatch &amp; Fleet
+              </div>
+              <button class="mo-hdr-btn" onclick="nav('dispatch')">Dispatch →</button>
+            </div>
+            <div class="mo-panel-body">
+              <div style="font-size:12px;color:rgba(255,255,255,.6);margin-bottom:10px;">Full fleet, dispatch board, carrier compliance, driver management, light fleet NEMT/Executive/Gig operations. All active loads tracked in real time.</div>
+              <div style="display:flex;gap:8px;margin-top:10px;">
+                <button class="mo-hdr-btn" onclick="nav('dispatch')">🚛 Dispatch</button>
+                <button class="mo-hdr-btn" onclick="nav('fleet-map')">🗺️ Fleet Map</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- James Bond -->
+          <div class="mo-panel">
+            <div class="mo-panel-hdr" style="background:rgba(245,200,66,.07);border-bottom-color:rgba(245,200,66,.25);">
+              <div class="mo-panel-title">
+                <div style="width:30px;height:30px;border-radius:50%;background:rgba(245,200,66,.15);color:#f5c842;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;font-style:italic;">JB</div>
+                <span style="color:#f5c842;">James Bond — IEBC Consultant</span>
+              </div>
+              <button class="mo-hdr-btn" onclick="nav('bond')">Bond Office →</button>
+            </div>
+            <div class="mo-panel-body">
+              <div style="font-size:12px;color:rgba(255,255,255,.6);margin-bottom:10px;">External IEBC consultant. Delivers tech gap analysis, system integration reports, and strategic intelligence directly to CEO level.</div>
+              <div style="margin-top:10px;">
+                <button class="mo-hdr-btn" style="color:#f5c842;border-color:rgba(245,200,66,.3);" onclick="nav('bond')">🕵️ Open Bond Office</button>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div><!-- /team -->
+
+    <!-- ════ TODO → CC GULLEY ════ -->
+    <div class="mo-pane" id="mopane-todo">
+      <div style="display:flex;flex:1;min-height:0;overflow:hidden;">
+
+        <!-- Left: todo list -->
+        <div style="flex:1;display:flex;flex-direction:column;overflow:hidden;border-right:1px solid rgba(255,255,255,.09);">
+          <div style="padding:14px 20px;border-bottom:1px solid rgba(255,255,255,.09);display:flex;align-items:center;gap:10px;flex-shrink:0;flex-wrap:wrap;background:rgba(245,200,66,.03);">
+            <div style="font-weight:900;font-size:14px;color:#f5c842;">✅ Mark Odom → CC Gulley</div>
+            <div style="font-size:11px;color:rgba(255,255,255,.4);margin-right:auto;">Direct task assignments &amp; follow-ups with due dates</div>
+            <button class="mo-btn" style="font-size:11px;padding:6px 16px;" onclick="moTodoNew()">+ New Task</button>
+            <select class="mo-select" id="mo-todo-filter" style="width:140px;padding:6px 10px;font-size:11px;" onchange="moTodoRender()">
+              <option value="all">All Tasks</option>
+              <option value="open">Open Only</option>
+              <option value="urgent">Urgent / Overdue</option>
+              <option value="done">Completed</option>
+            </select>
+          </div>
+          <div style="flex:1;overflow-y:auto;padding:14px 20px;scrollbar-width:thin;scrollbar-color:rgba(245,200,66,.4) transparent;" id="mo-todo-list">
+            <div style="color:rgba(255,255,255,.3);font-size:11px;text-align:center;padding:40px;">Loading tasks…</div>
+          </div>
+        </div>
+
+        <!-- Right: add/edit form -->
+        <div style="width:340px;flex-shrink:0;display:flex;flex-direction:column;overflow:hidden;">
+          <div style="padding:14px 18px;border-bottom:1px solid rgba(255,255,255,.09);flex-shrink:0;background:rgba(245,200,66,.03);">
+            <div style="font-weight:900;font-size:13px;color:#fff;" id="mo-todo-form-title">New Task for CC Gulley</div>
+          </div>
+          <div style="flex:1;overflow-y:auto;padding:16px 18px;display:flex;flex-direction:column;gap:12px;scrollbar-width:thin;scrollbar-color:rgba(245,200,66,.4) transparent;">
+            <input type="hidden" id="mo-todo-edit-id" value="">
+            <div><div class="mo-fl">TASK TITLE</div><input class="mo-input" id="mo-todo-inp-title" placeholder="e.g. Review Q3 carrier strategy"/></div>
+            <div><div class="mo-fl">DESCRIPTION / NOTES FOR CC</div><textarea class="mo-textarea" id="mo-todo-inp-desc" rows="3" placeholder="Full context for CC Gulley…"></textarea></div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+              <div><div class="mo-fl">DUE DATE</div><input class="mo-input" id="mo-todo-inp-due" type="date"/></div>
+              <div><div class="mo-fl">PRIORITY</div>
+                <select class="mo-select" id="mo-todo-inp-pri">
+                  <option value="high">🔴 High</option>
+                  <option value="med" selected>🟡 Medium</option>
+                  <option value="low">🟢 Low</option>
+                </select>
+              </div>
+            </div>
+            <div><div class="mo-fl">CATEGORY</div>
+              <select class="mo-select" id="mo-todo-inp-cat">
+                <option value="strategy">📊 Strategy</option>
+                <option value="operations">🚛 Operations</option>
+                <option value="finance">💰 Finance</option>
+                <option value="compliance">🛡️ Compliance</option>
+                <option value="trading">📈 Trading</option>
+                <option value="hr">👥 HR / Team</option>
+                <option value="other">📌 Other</option>
+              </select>
+            </div>
+            <div style="display:flex;gap:8px;padding-top:2px;">
+              <button class="mo-btn" style="flex:1;" onclick="moTodoSave()">💾 Save Task</button>
+              <button class="mo-hdr-btn" onclick="moTodoClear()">Clear</button>
+            </div>
+            <span id="mo-todo-save-status" style="font-size:11px;color:#f5c842;min-height:16px;text-align:center;"></span>
+
+            <!-- Broadcast to CC -->
+            <div style="background:rgba(56,189,248,.07);border:1px solid rgba(56,189,248,.2);border-radius:10px;padding:14px;margin-top:4px;">
+              <div style="font-weight:800;font-size:12px;color:#38bdf8;margin-bottom:6px;">📡 Send All Open Tasks to CC Gulley</div>
+              <div style="font-size:11px;color:rgba(255,255,255,.5);margin-bottom:10px;line-height:1.5;">Broadcasts the full open todo list as a CEO directive directly to CC Gulley's strategy memory.</div>
+              <button class="mo-hdr-btn" style="color:#38bdf8;border-color:rgba(56,189,248,.35);width:100%;text-align:center;padding:8px;" onclick="moTodoSendToCC()">📣 Broadcast to CC Gulley</button>
+              <span id="mo-todo-cc-status" style="font-size:10px;color:#38bdf8;display:block;margin-top:6px;min-height:14px;text-align:center;"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div><!-- /todo -->
+
+    <!-- ════ DIRECTIVES ════ -->
+    <div class="mo-pane" id="mopane-directives">
+      <div style="display:flex;flex:1;min-height:0;overflow:hidden;">
+        <div style="flex:1;display:flex;flex-direction:column;overflow-y:auto;padding:20px 24px;gap:18px;scrollbar-width:thin;scrollbar-color:#f5c842 transparent;">
+
+          <div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:18px 20px;display:flex;flex-direction:column;gap:12px;">
+            <div>
+              <div class="mo-fl">CEO DIRECTIVE — MARK ODOM</div>
+              <div class="mo-label" style="font-size:15px;">Issue Executive Directive</div>
+              <div style="font-size:11px;color:rgba(255,255,255,.5);">Directives flow to selected recipients' org memory and are actioned on next agent run.</div>
+            </div>
+            <div><div class="mo-fl">DIRECTIVE MESSAGE</div><textarea class="mo-textarea" id="mo-dir-msg" rows="5" placeholder="Write the full executive directive…"></textarea></div>
+            <div><div class="mo-fl">SUBJECT / TITLE</div><input class="mo-input" id="mo-dir-subject" placeholder="e.g. Q3 Focus Shift — TX/FL Markets"/></div>
+            <div>
+              <div class="mo-fl">ROUTE TO</div>
+              <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                <label style="display:flex;align-items:center;gap:7px;cursor:pointer;padding:8px 14px;background:rgba(56,189,248,.1);border:1px solid rgba(56,189,248,.25);border-radius:8px;font-size:12px;font-weight:600;">
+                  <input type="checkbox" id="mo-route-cc" checked style="accent-color:#38bdf8;width:14px;height:14px;"> 🧭 CC Gulley (CSO)
+                </label>
+                <label style="display:flex;align-items:center;gap:7px;cursor:pointer;padding:8px 14px;background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.25);border-radius:8px;font-size:12px;font-weight:600;">
+                  <input type="checkbox" id="mo-route-trading" style="accent-color:#f59e0b;width:14px;height:14px;"> 📈 Trading Desk
+                </label>
+                <label style="display:flex;align-items:center;gap:7px;cursor:pointer;padding:8px 14px;background:rgba(168,85,247,.1);border:1px solid rgba(168,85,247,.25);border-radius:8px;font-size:12px;font-weight:600;">
+                  <input type="checkbox" id="mo-route-all" style="accent-color:#a855f7;width:14px;height:14px;"> 🏢 All Divisions
+                </label>
+                <label style="display:flex;align-items:center;gap:7px;cursor:pointer;padding:8px 14px;background:rgba(245,200,66,.07);border:1px solid rgba(245,200,66,.2);border-radius:8px;font-size:12px;font-weight:600;">
+                  <input type="checkbox" id="mo-route-bond" style="accent-color:#f5c842;width:14px;height:14px;"> 🕵️ James Bond
+                </label>
+              </div>
+            </div>
+            <div style="display:flex;gap:10px;align-items:center;">
+              <button class="mo-btn" onclick="moBroadcast()">📡 Issue Directive</button>
+              <button class="mo-hdr-btn" onclick="document.getElementById('mo-dir-msg').value='';document.getElementById('mo-dir-subject').value='';">Clear</button>
+              <span id="mo-dir-status" style="font-size:11px;color:#f5c842;"></span>
+            </div>
+          </div>
+
+          <!-- Active directives log -->
+          <div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.09);border-radius:12px;padding:14px 18px;display:flex;flex-direction:column;gap:10px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;">
+              <div class="mo-label" style="font-size:14px;margin-bottom:0;">Active Directives Log</div>
+              <button class="mo-hdr-btn" onclick="moLoadDirectives()">↺ Refresh</button>
+            </div>
+            <div id="mo-directives-log" style="display:flex;flex-direction:column;gap:8px;min-height:60px;">
+              <div style="font-size:11px;color:rgba(255,255,255,.3);text-align:center;padding:16px;">Loading…</div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div><!-- /directives -->
+
+    <!-- ════ DOCUMENTS ════ -->
+    <div class="mo-pane" id="mopane-docs">
+      <div class="mo-room">
+        <div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.09);border-radius:12px;padding:18px 20px;display:flex;flex-direction:column;gap:14px;">
+          <div>
+            <div class="mo-fl">CEO VAULT — MARK ODOM</div>
+            <div class="mo-label" style="font-size:15px;">Executive Document Store</div>
+          </div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;">
+            <button class="mo-hdr-btn" style="font-size:12px;padding:10px 16px;" onclick="nav('vault')">📁 Full Document Vault</button>
+            <button class="mo-hdr-btn" style="font-size:12px;padding:10px 16px;" onclick="nav('clm')">🔍 CLM Scanner</button>
+            <button class="mo-hdr-btn" style="font-size:12px;padding:10px 16px;" onclick="nav('agreements')">📋 Agreements</button>
+            <button class="mo-hdr-btn" style="font-size:12px;padding:10px 16px;" onclick="nav('ledger')">📒 Atomic Ledger</button>
+            <button class="mo-hdr-btn" style="font-size:12px;padding:10px 16px;" onclick="nav('reports')">📊 Team Reports</button>
+          </div>
+          <div style="font-size:11px;color:rgba(255,255,255,.35);padding:12px;">Use the links above to navigate to the full document system.</div>
+        </div>
+      </div>
+    </div><!-- /docs -->
+
+    <!-- ════ EMAIL ════ -->
+    <div class="mo-pane" id="mopane-email">
+      <div class="mo-mail-wrap">
+        <div class="mo-mail-list">
+          <div class="mo-mail-list-hdr">
+            <span style="font-weight:700;font-size:12px;color:#fff;">📧 mark@3lakeslogistics.com</span>
+            <button class="mo-hdr-btn" onclick="moLoadEmail()">↺</button>
+          </div>
+          <div class="mo-mail-items" id="mo-mail-items">
+            <div style="color:rgba(255,255,255,.3);font-size:11px;text-align:center;padding:20px;">Loading…</div>
+          </div>
+        </div>
+        <div class="mo-mail-view">
+          <div class="mo-mail-view-hdr">
+            <div class="mo-mail-view-sub" id="mo-mail-view-sub">Select an email to read</div>
+            <div class="mo-mail-view-meta" id="mo-mail-view-meta"></div>
+          </div>
+          <div class="mo-mail-view-body" id="mo-mail-view-body" style="color:rgba(255,255,255,.3);font-size:12px;padding-top:40px;text-align:center;">No email selected</div>
+          <div class="mo-mail-compose">
+            <div style="display:flex;gap:8px;align-items:center;">
+              <input class="mo-input" id="mo-mail-to" placeholder="To:" style="flex:1;"/>
+              <input class="mo-input" id="mo-mail-subj" placeholder="Subject:" style="flex:1.4;"/>
+            </div>
+            <textarea class="mo-textarea" id="mo-mail-body" rows="3" placeholder="Write your email…" style="min-height:60px;"></textarea>
+            <div style="display:flex;gap:8px;">
+              <button class="mo-btn" onclick="moSendEmail()">Send →</button>
+              <span id="mo-mail-status" style="font-size:11px;color:#f5c842;align-self:center;"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div><!-- /email -->
+
+    <!-- ════ ZOOM ════ -->
+    <div class="mo-pane" id="mopane-zoom">
+      <div class="mo-room">
+        <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:24px 28px;display:flex;flex-direction:column;gap:16px;">
+          <div>
+            <div class="mo-fl">CEO ZOOM — MARK ODOM</div>
+            <div class="mo-label" style="font-size:16px;">Video Meetings</div>
+          </div>
+          <div style="display:flex;gap:12px;flex-wrap:wrap;">
+            <button class="mo-btn" onclick="moStartMeeting()" style="padding:16px 28px;font-size:14px;">📹 Start Instant Meeting</button>
+            <button class="mo-hdr-btn" style="padding:14px 22px;font-size:12px;" onclick="moJoinMeeting()">🔗 Join by Meeting ID</button>
+          </div>
+          <div style="display:flex;gap:10px;align-items:center;max-width:420px;">
+            <input class="mo-input" id="mo-zoom-id" placeholder="Meeting ID or Link…" style="flex:1;"/>
+            <button class="mo-hdr-btn" onclick="moJoinMeeting()">Join</button>
+          </div>
+          <div style="font-size:11px;color:rgba(255,255,255,.35);line-height:1.6;">CEO Zoom — instant meetings open in a new tab. Meeting links can be shared with any participant.</div>
+        </div>
+      </div>
+    </div><!-- /zoom -->
+
+    <!-- ════ WATCH TV ════ -->
+    <div class="mo-pane" id="mopane-tv">
+      <div class="mo-tv-wrap">
+        <div class="mo-tv-player">
+          <iframe id="mo-tv-frame" src="https://www.youtube.com/embed/jfKfPfyJRdk?autoplay=0&rel=0" allowfullscreen allow="autoplay"></iframe>
+        </div>
+        <div class="mo-tv-bar">
+          <button class="mo-tv-ch-btn active" id="mo-tv-cnbc" onclick="moTVChannel('cnbc')">📺 CNBC</button>
+          <button class="mo-tv-ch-btn" id="mo-tv-fox" onclick="moTVChannel('fox')">🦊 Fox Business</button>
+          <button class="mo-tv-ch-btn" id="mo-tv-bloomberg" onclick="moTVChannel('bloomberg')">📊 Bloomberg</button>
+          <button class="mo-tv-ch-btn" id="mo-tv-freight" onclick="moTVChannel('freight')">🚛 FreightWaves</button>
+          <button class="mo-tv-ch-btn" id="mo-tv-music" onclick="moTVChannel('music')">🎵 Music</button>
+          <div style="margin-left:auto;display:flex;align-items:center;gap:8px;">
+            <input id="mo-tv-custom" class="mo-input" style="width:260px;padding:5px 10px;font-size:11px;" placeholder="Paste YouTube URL…"/>
+            <button class="mo-hdr-btn" onclick="moTVCustom()">▶ Go</button>
+          </div>
+        </div>
+      </div>
+    </div><!-- /tv -->
+
+  </div><!-- /body -->
+</div><!-- /mo -->
+</div><!-- /page-mark-office -->
+
+<script>
+// ═══════════════════════════════════════════════════════
+// MARK ODOM CEO OFFICE — JavaScript
+// ═══════════════════════════════════════════════════════
+(function(){
+
+window.moTab = function(id){
+  document.querySelectorAll('#page-mark-office .mo-tab').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('#page-mark-office .mo-pane').forEach(p=>p.classList.remove('active'));
+  const tb=document.getElementById('motab-'+id);
+  const pn=document.getElementById('mopane-'+id);
+  if(tb)tb.classList.add('active');
+  if(pn)pn.classList.add('active');
+  if(id==='todo')moTodoRender();
+  if(id==='email')moLoadEmail();
+  if(id==='directives')moLoadDirectives();
+};
+
+/* ── Todo: localStorage persistence ── */
+function moTodos(){return JSON.parse(localStorage.getItem('mo_todos')||'[]');}
+function moTodosSave(t){localStorage.setItem('mo_todos',JSON.stringify(t));}
+
+function moDueCls(due){
+  if(!due)return'ok';
+  const diff=(new Date(due).setHours(0,0,0,0)-new Date().setHours(0,0,0,0))/86400000;
+  return diff<=0?'urgent':diff<=3?'soon':'ok';
+}
+function moDueLbl(due){
+  if(!due)return'No due date';
+  const diff=Math.round((new Date(due).setHours(0,0,0,0)-new Date().setHours(0,0,0,0))/86400000);
+  if(diff<0)return'Overdue '+Math.abs(diff)+'d';
+  if(diff===0)return'Due Today';
+  if(diff===1)return'Due Tomorrow';
+  return'In '+diff+'d';
+}
+const _catIcon={strategy:'📊',operations:'🚛',finance:'💰',compliance:'🛡️',trading:'📈',hr:'👥',other:'📌'};
+const _priCls={high:'high',med:'med',low:'low'};
+const _priLbl={high:'HIGH',med:'MED',low:'LOW'};
+
+window.moTodoRender = function(){
+  const todos=moTodos();
+  const filter=document.getElementById('mo-todo-filter')?.value||'all';
+  const list=document.getElementById('mo-todo-list');
+  if(!list)return;
+  const open=todos.filter(t=>!t.done);
+  const urgent=open.filter(t=>moDueCls(t.due)==='urgent');
+  const dueWeek=open.filter(t=>{
+    if(!t.due)return false;
+    return(new Date(t.due).setHours(0,0,0,0)-new Date().setHours(0,0,0,0))/86400000<=7;
+  });
+  const done=todos.filter(t=>t.done);
+  const $=n=>document.getElementById(n);
+  if($('mo-kpi-todos'))$('mo-kpi-todos').textContent=open.length;
+  if($('mo-kpi-urgent'))$('mo-kpi-urgent').textContent=urgent.length;
+  if($('mo-kpi-due-week'))$('mo-kpi-due-week').textContent=dueWeek.length;
+  if($('mo-kpi-done'))$('mo-kpi-done').textContent=done.length;
+  const badge=$('mo-todo-badge');
+  if(badge){badge.textContent=open.length;badge.style.display=open.length?'':'none';}
+  const cc=$('mo-cc-pending');
+  if(cc){
+    if(!open.length){cc.textContent='No open tasks for CC Gulley.';}
+    else{cc.innerHTML=open.slice(0,3).map(t=>`<div style="margin-bottom:4px;">• ${t.title}${t.due?` <span style="color:#f59e0b;font-size:10px;">(${moDueLbl(t.due)})</span>`:''}</div>`).join('')+(open.length>3?`<div style="color:rgba(255,255,255,.35);font-size:10px;margin-top:2px;">+${open.length-3} more open</div>`:'');}
+  }
+  let rows=filter==='open'?open:filter==='urgent'?urgent:filter==='done'?done:todos;
+  rows=rows.slice().sort((a,b)=>{
+    if(a.done!==b.done)return a.done?1:-1;
+    if(!a.due&&!b.due)return 0;
+    if(!a.due)return 1;if(!b.due)return-1;
+    return new Date(a.due)-new Date(b.due);
+  });
+  if(!rows.length){list.innerHTML='<div style="color:rgba(255,255,255,.3);font-size:11px;text-align:center;padding:40px;">No tasks found. Add one using the form →</div>';return;}
+  list.innerHTML=rows.map(t=>`<div class="mo-todo-item${t.done?' done':''}" id="mo-row-${t.id}">
+    <input type="checkbox" class="mo-todo-cb" ${t.done?'checked':''} onchange="moTodoToggle('${t.id}')">
+    <div style="flex:1;min-width:0;">
+      <div class="mo-todo-title">${t.title}</div>
+      ${t.desc?`<div class="mo-todo-desc">${t.desc}</div>`:''}
+      <div class="mo-todo-meta">
+        ${t.due?`<span class="mo-todo-due ${moDueCls(t.due)}">${moDueLbl(t.due)} · ${t.due}</span>`:''}
+        <span class="mo-todo-pri ${_priCls[t.pri]||'med'}">${_priLbl[t.pri]||'MED'}</span>
+        <span class="mo-todo-tag">${_catIcon[t.cat]||'📌'} ${t.cat||'other'}</span>
+      </div>
+    </div>
+    <div style="display:flex;gap:4px;flex-shrink:0;">
+      <button class="mo-hdr-btn" style="font-size:10px;padding:3px 8px;" onclick="moTodoEdit('${t.id}')">✏️</button>
+      <button class="mo-todo-del" onclick="moTodoDel('${t.id}')" title="Delete">✕</button>
+    </div>
+  </div>`).join('');
+};
+
+window.moTodoNew = function(){
+  document.getElementById('mo-todo-edit-id').value='';
+  ['mo-todo-inp-title','mo-todo-inp-desc','mo-todo-inp-due'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
+  const pri=document.getElementById('mo-todo-inp-pri');if(pri)pri.value='med';
+  const cat=document.getElementById('mo-todo-inp-cat');if(cat)cat.value='strategy';
+  document.getElementById('mo-todo-form-title').textContent='New Task for CC Gulley';
+  document.getElementById('mo-todo-save-status').textContent='';
+  document.getElementById('mo-todo-inp-title').focus();
+};
+
+window.moTodoEdit = function(id){
+  const t=moTodos().find(x=>x.id===id);if(!t)return;
+  document.getElementById('mo-todo-edit-id').value=id;
+  document.getElementById('mo-todo-inp-title').value=t.title;
+  document.getElementById('mo-todo-inp-desc').value=t.desc||'';
+  document.getElementById('mo-todo-inp-due').value=t.due||'';
+  document.getElementById('mo-todo-inp-pri').value=t.pri||'med';
+  document.getElementById('mo-todo-inp-cat').value=t.cat||'strategy';
+  document.getElementById('mo-todo-form-title').textContent='Edit Task';
+  document.getElementById('mo-todo-save-status').textContent='';
+};
+
+window.moTodoSave = function(){
+  const title=(document.getElementById('mo-todo-inp-title')?.value||'').trim();
+  const status=document.getElementById('mo-todo-save-status');
+  if(!title){if(status)status.textContent='Title is required.';return;}
+  const todos=moTodos();
+  const editId=document.getElementById('mo-todo-edit-id').value;
+  const data={title,desc:(document.getElementById('mo-todo-inp-desc')?.value||'').trim(),due:document.getElementById('mo-todo-inp-due')?.value||'',pri:document.getElementById('mo-todo-inp-pri')?.value||'med',cat:document.getElementById('mo-todo-inp-cat')?.value||'strategy',done:false,created:new Date().toISOString()};
+  if(editId){const i=todos.findIndex(x=>x.id===editId);if(i>=0){const done=todos[i].done;todos[i]={...data,id:editId,done};}}
+  else{todos.unshift({...data,id:'todo_'+Date.now()});}
+  moTodosSave(todos);moTodoRender();moTodoClear();
+  if(status){status.textContent=editId?'Task updated!':'Task added!';setTimeout(()=>{if(status)status.textContent='';},2000);}
+};
+
+window.moTodoClear = function(){
+  document.getElementById('mo-todo-edit-id').value='';
+  ['mo-todo-inp-title','mo-todo-inp-desc','mo-todo-inp-due'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
+  const pri=document.getElementById('mo-todo-inp-pri');if(pri)pri.value='med';
+  const cat=document.getElementById('mo-todo-inp-cat');if(cat)cat.value='strategy';
+  document.getElementById('mo-todo-form-title').textContent='New Task for CC Gulley';
+};
+
+window.moTodoToggle = function(id){
+  const todos=moTodos();const t=todos.find(x=>x.id===id);if(t)t.done=!t.done;
+  moTodosSave(todos);moTodoRender();
+};
+
+window.moTodoDel = function(id){
+  moTodosSave(moTodos().filter(x=>x.id!==id));moTodoRender();
+};
+
+window.moTodoSendToCC = function(){
+  const open=moTodos().filter(t=>!t.done);
+  const st=document.getElementById('mo-todo-cc-status');
+  if(!open.length){if(st)st.textContent='No open tasks to send.';return;}
+  const msg='CEO TASK DIRECTIVE — MARK ODOM → CC GULLEY\n\n'+open.map((t,i)=>`${i+1}. [${(t.pri||'med').toUpperCase()}] ${t.title}${t.due?' (Due: '+t.due+')':''}${t.desc?'\n   Notes: '+t.desc:''}`).join('\n\n');
+  const doSend=()=>{if(st){st.textContent='✓ '+open.length+' tasks sent to CC Gulley';setTimeout(()=>{if(st)st.textContent='';},3500);}};
+  if(typeof API!=='undefined'){
+    API.post('/api/agents/directive',{agent:'cc_gulley',subject:'CEO Task List — Mark Odom',message:msg}).then(doSend).catch(doSend);
+  } else {doSend();}
+};
+
+/* ── Directives ── */
+window.moLoadDirectives = function(){
+  const log=document.getElementById('mo-directives-log');if(!log)return;
+  const sample=[
+    {ts:'Today',sub:'Q3 Market Pivot — TX/FL Focus',to:'CC Gulley',body:'Shift all carrier acquisition to TX and FL corridors for Q3.'},
+    {ts:'Yesterday',sub:'Compliance Review Deadline',to:'All Divisions',body:'All DOT compliance reviews must be completed and filed by end of month.'},
+    {ts:'Jun 1',sub:'Trading Desk Performance Review',to:'North American Trading',body:'Weekly load board report required. Rex to prepare load mix analysis.'},
+  ];
+  const n=document.getElementById('mo-kpi-directives');if(n)n.textContent=sample.length;
+  log.innerHTML=sample.map(d=>`<div class="mo-dir-card"><div class="mo-dir-card-hd">${d.sub} <span style="color:rgba(255,255,255,.35);font-weight:400;margin-left:6px;">→ ${d.to}</span></div><div class="mo-dir-card-body">${d.body}</div><div class="mo-dir-card-ts">${d.ts}</div></div>`).join('');
+};
+
+window.moBroadcast = function(){
+  const msg=(document.getElementById('mo-dir-msg')?.value||'').trim();
+  const sub=(document.getElementById('mo-dir-subject')?.value||'').trim();
+  const st=document.getElementById('mo-dir-status');
+  if(!msg){if(st)st.textContent='Message required.';return;}
+  const targets=[];
+  if(document.getElementById('mo-route-cc')?.checked)targets.push('cc_gulley');
+  if(document.getElementById('mo-route-trading')?.checked)targets.push('trading_desk');
+  if(document.getElementById('mo-route-all')?.checked)targets.push('all');
+  if(document.getElementById('mo-route-bond')?.checked)targets.push('james_bond');
+  const done=()=>{if(st){st.textContent='✓ Directive issued';setTimeout(()=>{if(st)st.textContent='';},3000);}moLoadDirectives();};
+  if(typeof API!=='undefined'&&targets.length){Promise.all(targets.map(t=>API.post('/api/agents/directive',{agent:t,subject:sub||'CEO Directive',message:msg}).catch(()=>null))).then(done);}
+  else{done();}
+};
+
+/* ── Refresh all ── */
+window.moRefreshAll = function(){
+  const ts=document.getElementById('mo-intel-ts');if(ts)ts.textContent=new Date().toLocaleTimeString();
+  const feed=document.getElementById('mo-home-feed');
+  const open=moTodos().filter(t=>!t.done);
+  const urgent=open.filter(t=>moDueCls(t.due)==='urgent');
+  if(feed){
+    feed.innerHTML=[
+      {cls:'gold',from:'Todo Summary',text:`${open.length} open tasks for CC Gulley${urgent.length?`. ${urgent.length} overdue or due today.`:'.'}` },
+      {cls:'green',from:'CC Gulley — Strategy',text:'Strategy unit active. Alexander scanning markets, Naomi targeting Tier A carriers, Winston monitoring retention.'},
+      {cls:'amber',from:'North American Trading',text:'Trading Desk live. Rex: active load board. Jordan: lane analysis current. Casey: market intel ready.'},
+      {cls:'purple',from:'Operations',text:'Dispatch board and fleet tracker online. DOT compliance monitor active.'},
+      {cls:'green',from:'James Bond — IEBC',text:'System integration health: normal. No critical alerts. Intel channel active.'},
+    ].map(f=>`<div class="mo-feed-item ${f.cls}"><div class="mo-feed-from">${f.from}</div><div class="mo-feed-text">${f.text}</div></div>`).join('');
+  }
+  moTodoRender();moLoadDirectives();
+};
+
+window.moRunAgent = function(agent,name){
+  if(typeof ecRunAgent==='function')ecRunAgent(agent,name);
+  else alert('Connect backend to run '+name+' agent.');
+};
+
+window.moLoadEmail = function(){
+  const items=document.getElementById('mo-mail-items');if(!items)return;
+  if(typeof API==='undefined'){
+    items.innerHTML='<div style="color:rgba(255,255,255,.3);font-size:11px;text-align:center;padding:20px;">Email requires backend connection.<br>Use Email Center tab for full access.</div>';return;
+  }
+  API.get('/api/email/list?account=mark').then(data=>{
+    const msgs=data?.messages||[];
+    if(!msgs.length){items.innerHTML='<div style="color:rgba(255,255,255,.3);font-size:11px;text-align:center;padding:20px;">Inbox empty.</div>';return;}
+    items.innerHTML=msgs.map(m=>`<div class="mo-mail-item" onclick="moOpenEmail(${JSON.stringify(m).replace(/"/g,'&quot;')})"><div class="mo-mail-item-from">${m.from||'Unknown'}</div><div class="mo-mail-item-sub">${m.subject||'(no subject)'}</div><div class="mo-mail-item-ts">${m.date||''}</div></div>`).join('');
+  }).catch(()=>{items.innerHTML='<div style="color:rgba(255,255,255,.3);font-size:11px;text-align:center;padding:20px;">Failed to load. Check connection.</div>';});
+};
+
+window.moOpenEmail = function(m){
+  document.querySelectorAll('#page-mark-office .mo-mail-item').forEach(e=>e.classList.remove('selected'));
+  const sub=document.getElementById('mo-mail-view-sub');const meta=document.getElementById('mo-mail-view-meta');const body=document.getElementById('mo-mail-view-body');
+  if(sub)sub.textContent=m.subject||'(no subject)';
+  if(meta)meta.textContent=`From: ${m.from||''} · ${m.date||''}`;
+  if(body)body.innerHTML=`<div style="white-space:pre-wrap;">${m.body||''}</div>`;
+  const to=document.getElementById('mo-mail-to');if(to)to.value=m.from||'';
+  const subj=document.getElementById('mo-mail-subj');if(subj)subj.value='Re: '+(m.subject||'');
+};
+
+window.moSendEmail = function(){
+  const to=(document.getElementById('mo-mail-to')?.value||'').trim();
+  const body=(document.getElementById('mo-mail-body')?.value||'').trim();
+  const sub=(document.getElementById('mo-mail-subj')?.value||'').trim();
+  const st=document.getElementById('mo-mail-status');
+  if(!to||!body){if(st)st.textContent='To and body required.';return;}
+  const send=ok=>{if(st){st.textContent=ok?'✓ Sent':'Offline — not sent';setTimeout(()=>{if(st)st.textContent='';},3000);}};
+  if(typeof API!=='undefined'){API.post('/api/email/send',{from:'mark@3lakeslogistics.com',to,subject:sub||'(no subject)',body}).then(()=>send(true)).catch(()=>send(false));}
+  else send(false);
+};
+
+window.moStartMeeting = function(){window.open('https://zoom.us/start/videomeeting','_blank');};
+window.moJoinMeeting = function(){
+  const id=(document.getElementById('mo-zoom-id')?.value||'').trim();if(!id)return;
+  window.open(id.startsWith('http')?id:'https://zoom.us/j/'+id.replace(/\D/g,''),'_blank');
+};
+
+/* TV channels */
+const _moTV={cnbc:'jfKfPfyJRdk',fox:'5ksCRTqw9dM',bloomberg:'dp8PhLsUcFE',freight:'B3P7JTM0T1w',music:'jfKfPfyJRdk'};
+window.moTVChannel = function(ch){
+  document.querySelectorAll('#page-mark-office .mo-tv-ch-btn').forEach(b=>b.classList.remove('active'));
+  const btn=document.getElementById('mo-tv-'+ch);if(btn)btn.classList.add('active');
+  const fr=document.getElementById('mo-tv-frame');
+  if(fr)fr.src=`https://www.youtube.com/embed/${_moTV[ch]||_moTV.cnbc}?autoplay=1&rel=0`;
+};
+window.moTVCustom = function(){
+  const val=(document.getElementById('mo-tv-custom')?.value||'').trim();if(!val)return;
+  let vid='';
+  const m=val.match(/(?:v=|youtu\.be\/)([A-Za-z0-9_-]{11})/);
+  if(m)vid=m[1];
+  const fr=document.getElementById('mo-tv-frame');
+  if(fr)fr.src=`https://www.youtube.com/embed/${vid||'jfKfPfyJRdk'}?autoplay=1&rel=0`;
+};
+
+/* ── Initial load + seed sample todos ── */
+window.moLoadOfficeData = function(){
+  moTodoRender();moLoadDirectives();moRefreshAll();
+};
+
+if(!moTodos().length){
+  const d=n=>new Date(Date.now()+n*86400000).toISOString().slice(0,10);
+  moTodosSave([
+    {id:'seed1',title:'Review Q3 carrier acquisition strategy with CC',desc:'CC to present updated Tier A carrier target list and hot market analysis. Review Alexander and Naomi outputs together.',due:d(1),pri:'high',cat:'strategy',done:false,created:new Date().toISOString()},
+    {id:'seed2',title:'Approve North American Trading load mix report',desc:'Rex to present weekly load board performance. Approve lane strategy adjustments for TX/FL corridors.',due:d(0),pri:'high',cat:'trading',done:false,created:new Date().toISOString()},
+    {id:'seed3',title:'DOT compliance file review — end of month',desc:'All carrier compliance reviews must be complete. CC to ensure Winston has flagged at-risk carriers.',due:d(7),pri:'med',cat:'compliance',done:false,created:new Date().toISOString()},
+    {id:'seed4',title:'Light Fleet expansion — Lugg segment KPI review',desc:'CC to pull gig fleet KPIs and present retention summary. Review Lugg onboarding numbers.',due:d(7),pri:'med',cat:'operations',done:false,created:new Date().toISOString()},
+    {id:'seed5',title:'Request James Bond IEBC Q2 integration report',desc:'Ask Bond to deliver full tech gap analysis and system health report for Q2 close.',due:d(10),pri:'low',cat:'other',done:false,created:new Date().toISOString()},
+  ]);
+}
+
+})();
+</script>
+
 <div class="page" id="page-ccg-office">
 <style>
 #page-ccg-office{animation:none;}
