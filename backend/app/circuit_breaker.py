@@ -116,7 +116,7 @@ breakers = {
     "stripe":    CircuitBreaker("stripe",    failure_threshold=3, timeout=60),
     "supabase":  CircuitBreaker("supabase",  failure_threshold=5, timeout=30),
     "twilio":    CircuitBreaker("twilio",    failure_threshold=5, timeout=60),
-    "vapi":      CircuitBreaker("vapi",      failure_threshold=3, timeout=120),
+    "bland":     CircuitBreaker("bland",     failure_threshold=3, timeout=120),
     "firebase":  CircuitBreaker("firebase",  failure_threshold=5, timeout=60),
     "dat":       CircuitBreaker("dat",       failure_threshold=3, timeout=300),
     "truckstop": CircuitBreaker("truckstop", failure_threshold=3, timeout=300),

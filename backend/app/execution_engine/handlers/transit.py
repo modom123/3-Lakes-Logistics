@@ -236,7 +236,7 @@ def h68_atlas_checkcall_1(carrier_id, contract_id, payload):
     if not phone:
         return {"called": False, "reason": "no_phone"}
     s = get_settings()
-    if s.vapi_api_key:
+    if s.bland_ai_api_key:
         result = vance.start_outbound_call(
             str(carrier_id) if carrier_id else "",
             phone,
@@ -244,7 +244,7 @@ def h68_atlas_checkcall_1(carrier_id, contract_id, payload):
              "load_number": payload.get("load_number")},
         )
         return {"called": result.get("status") == "started", "check_call": 1, **result}
-    return {"called": False, "check_call": 1, "note": "vapi_not_configured",
+    return {"called": False, "check_call": 1, "note": "bland_not_configured",
             "would_call": phone, "load_id": payload.get("load_id")}
 
 
@@ -255,7 +255,7 @@ def h69_atlas_checkcall_2(carrier_id, contract_id, payload):
     if not phone:
         return {"called": False, "reason": "no_phone"}
     s = get_settings()
-    if s.vapi_api_key:
+    if s.bland_ai_api_key:
         result = vance.start_outbound_call(
             str(carrier_id) if carrier_id else "",
             phone,
@@ -264,7 +264,7 @@ def h69_atlas_checkcall_2(carrier_id, contract_id, payload):
              "eta": payload.get("eta")},
         )
         return {"called": result.get("status") == "started", "check_call": 2, **result}
-    return {"called": False, "check_call": 2, "note": "vapi_not_configured",
+    return {"called": False, "check_call": 2, "note": "bland_not_configured",
             "would_call": phone}
 
 
@@ -329,7 +329,7 @@ def h72_atlas_checkcall_3(carrier_id, contract_id, payload):
     if not phone:
         return {"called": False, "reason": "no_phone"}
     s = get_settings()
-    if s.vapi_api_key:
+    if s.bland_ai_api_key:
         result = vance.start_outbound_call(
             str(carrier_id) if carrier_id else "",
             phone,
@@ -337,7 +337,7 @@ def h72_atlas_checkcall_3(carrier_id, contract_id, payload):
              "eta": payload.get("eta")},
         )
         return {"called": result.get("status") == "started", "check_call": 3, **result}
-    return {"called": False, "check_call": 3, "note": "vapi_not_configured",
+    return {"called": False, "check_call": 3, "note": "bland_not_configured",
             "would_call": phone}
 
 

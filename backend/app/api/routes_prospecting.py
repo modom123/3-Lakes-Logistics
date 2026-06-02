@@ -172,8 +172,7 @@ def run_pipeline(
         "call_results": call_results,
         "min_score_used": min_score,
         "bland_configured": bool(s.bland_ai_api_key),
-        "vapi_configured": bool(s.vapi_api_key and s.vapi_assistant_id_vance),
-        "fmcsa_configured": bool(s.fmcsa_webkey),
+"fmcsa_configured": bool(s.fmcsa_webkey),
     }
 
 

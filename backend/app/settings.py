@@ -27,13 +27,7 @@ class Settings(BaseSettings):
     twilio_auth_token: str = ""
     twilio_from_number: str = ""
 
-    vapi_api_key: str = ""
-    vapi_assistant_id_vance: str = ""
-    vapi_phone_number_id: str = ""
-
-    # Bland AI — outbound prospecting calls (Vance agent)
-    # Much cheaper than Vapi (~$0.06/min base + Claude LLM)
-    # Better for high-volume calling (1000+ calls/month)
+    # Bland AI — outbound voice calls (Vance agent — check calls, prospecting, onboarding)
     bland_ai_api_key: str = ""
     bland_ai_webhook_secret: str = ""
     bland_ai_org_id: str = ""

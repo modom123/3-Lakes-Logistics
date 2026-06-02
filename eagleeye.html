@@ -1664,7 +1664,7 @@ td.td-name{font-weight:600;color:var(--navy);}
             </select>
           </div>
           <div class="lm-fg">
-            <div class="lm-label">Auto-Call (Vapi)</div>
+            <div class="lm-label">Auto-Call (Bland AI)</div>
             <select class="lm-sel" id="lm-autocall">
               <option value="false" selected>Off — queue only</option>
               <option value="true">On — Vance dials 8+ leads</option>
@@ -7279,7 +7279,7 @@ async function launchLeadMachine() {
       `Source: ${data.source}`,
       `Min score: ${data.min_score_used}`,
       data.fmcsa_configured ? '✅ FMCSA live' : '⚠ FMCSA key not set — used demo data',
-      data.bland_configured ? '✅ Bland AI ready' : (data.vapi_configured ? '✅ Vapi ready' : '⚠ Bland AI not configured — set BLAND_AI_API_KEY in Render'),
+      data.bland_configured ? '✅ Bland AI ready' : '⚠ Bland AI not configured — set BLAND_AI_API_KEY in Render',
     ].join('  ·  ');
     document.getElementById('lm-r-detail').textContent = detail;
     resultEl.classList.add('show');
