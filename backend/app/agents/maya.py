@@ -129,6 +129,9 @@ def process_intake(payload: dict[str, Any]) -> dict[str, Any]:
     license_state  = str(payload.get("license_state") or "").strip().upper()
     dob            = str(payload.get("dob") or "").strip()  # YYYY-MM-DD
 
+    # Platforms driver wants to register on (collected from intake form)
+    platforms_opted_in: list[str] = payload.get("platforms_opted_in") or []
+
     # Hard blocks — no API call needed
     if has_insurance == "no":
         log_agent(_NAME, "deny_insurance", payload={"name": name})
@@ -170,6 +173,7 @@ def process_intake(payload: dict[str, Any]) -> dict[str, Any]:
                 "status": "inactive",        # activated after MVR clears
                 "mvr_status": "pending",
                 "background_check_status": "pending",
+                "platforms_opted_in": platforms_opted_in,
             }).execute()
             driver_id = (result.data[0] or {}).get("id") if result.data else None
         except Exception as e:  # noqa: BLE001
@@ -260,15 +264,21 @@ def approve_driver(
     verified_outputs: dict | None = None,
 ) -> dict[str, Any]:
     """
-    Called by the Stripe Identity webhook after a verified session.
-    Activates the driver, stores verified license data, sends welcome SMS.
+    Called after identity/MVR verification clears.
+    Activates the driver, stores verified license data, sends welcome SMS, and registers on opted-in platforms.
     """
     sb = _db()
     if not sb:
         return {"approved": False, "error": "db_unavailable"}
 
     try:
-        r = sb.table("light_vehicle_drivers").select("name,phone,email").eq("id", driver_id).maybe_single().execute()
+        r = (
+            sb.table("light_vehicle_drivers")
+            .select("name,phone,email,vehicle_type,platforms_opted_in")
+            .eq("id", driver_id)
+            .maybe_single()
+            .execute()
+        )
         driver = r.data or {}
     except Exception as e:  # noqa: BLE001
         return {"approved": False, "error": str(e)}
@@ -278,6 +288,7 @@ def approve_driver(
         "mvr_status": "clear",
         "mvr_checked_at": _now(),
         "onboarded_at": _now(),
+        "activated_at": _now(),
     }
 
     # Store verified license data extracted by Stripe
@@ -298,9 +309,24 @@ def approve_driver(
     if phone:
         _send_sms(phone, _WELCOME_SMS)
 
+    # Register driver on every platform they opted into at signup
+    platforms_opted_in: list[str] = driver.get("platforms_opted_in") or []
+    platform_result: dict = {}
+    if platforms_opted_in:
+        try:
+            from . import platform_registrar
+            platform_result = platform_registrar.register_for_platforms(
+                driver_id=driver_id,
+                driver=driver,
+                platforms=platforms_opted_in,
+            )
+        except Exception as e:  # noqa: BLE001
+            log_agent(_NAME, "platform_registration_error", error=str(e)[:200])
+
     mem.remember(
         _NAME, "last_approval",
-        {"driver_id": driver_id, "name": driver.get("name"), "session_id": session_id},
+        {"driver_id": driver_id, "name": driver.get("name"), "session_id": session_id,
+         "platforms": platform_result.get("registered", [])},
         confidence=0.95,
         summary=f"Driver approved via Stripe Identity: {driver.get('name')}",
     )
@@ -311,6 +337,8 @@ def approve_driver(
         "driver_id": driver_id,
         "driver_name": driver.get("name"),
         "sms_sent": bool(phone),
+        "platforms_registered": platform_result.get("registered", []),
+        "platforms_failed": platform_result.get("failed", []),
     }
 
 

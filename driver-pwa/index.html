@@ -288,6 +288,44 @@
     /* Scrollable horizontally so it never overflows viewport */
     .loads-table-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow-x: auto; overflow-y: hidden; margin-bottom: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); -webkit-overflow-scrolling: touch; }
     .loads-table { width: 100%; min-width: 300px; border-collapse: collapse; font-size: 13px; }
+
+    /* ── PERIOD TABS ── */
+    .period-tab { flex: 1; padding: 8px 4px; border: none; background: none; border-radius: 7px; font-size: 13px; font-weight: 600; color: var(--muted); cursor: pointer; transition: all .15s; }
+    .period-tab.active { background: var(--accent); color: #fff; }
+
+    /* ── PLATFORM EARN CARD ── */
+    .plat-earn-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
+    .plat-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+
+    /* ── TREND BARS ── */
+    .trend-row { display: flex; align-items: flex-end; gap: 6px; height: 60px; margin-bottom: 10px; }
+    .trend-bar-wrap { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; height: 100%; justify-content: flex-end; }
+    .trend-bar { width: 100%; border-radius: 4px 4px 0 0; background: var(--accent); min-height: 4px; transition: height .3s; }
+    .trend-label { font-size: 9px; color: var(--muted); text-align: center; }
+    .trend-val { font-size: 10px; font-weight: 700; color: var(--text); }
+
+    /* ── COMPLIANCE CARD ── */
+    .comp-row { display: flex; justify-content: space-between; align-items: center; padding: 9px 0; border-bottom: 1px solid var(--border); }
+    .comp-row:last-child { border-bottom: none; }
+    .comp-label { font-size: 12px; color: var(--muted); }
+    .comp-ok { color: #22c55e; font-size: 12px; font-weight: 600; }
+    .comp-warn { color: #f59e0b; font-size: 12px; font-weight: 600; }
+    .comp-crit { color: #ef4444; font-size: 12px; font-weight: 600; }
+
+    /* ── INSTANT PAY MODAL ── */
+    #instant-pay-modal { display: none; position: fixed; inset: 0; z-index: 300; background: rgba(0,0,0,.75); align-items: flex-end; justify-content: center; }
+    #instant-pay-modal.open { display: flex; }
+    .ipm-sheet { background: var(--surface); border-radius: 20px 20px 0 0; width: 100%; max-width: 480px; padding: 24px 20px calc(24px + var(--safe-bot)); border-top: 1px solid var(--border); }
+
+    /* ── EARN HERO ── */
+    .earn-hero { background: linear-gradient(135deg,#1e3a8a,#2563eb); border-radius: 16px; padding: 20px; margin-bottom: 10px; text-align: center; }
+    .earn-hero-total { font-size: 44px; font-weight: 800; color: #fff; line-height: 1; }
+    .earn-hero-sub { font-size: 13px; color: rgba(255,255,255,.7); margin-top: 5px; }
+
+    /* ── COMPLIANCE BANNER ── */
+    .comp-banner { border-radius: 10px; padding: 12px 14px; margin-bottom: 10px; display: flex; align-items: center; gap: 10px; font-size: 13px; }
+    .comp-banner-warn { background: rgba(245,158,11,.12); border: 1px solid rgba(245,158,11,.3); color: #b45309; }
+    .comp-banner-crit { background: rgba(239,68,68,.1); border: 1px solid rgba(239,68,68,.25); color: #dc2626; }
     .loads-table th {
       text-align: left; font-size: 10px; font-weight: 700; color: var(--muted);
       text-transform: uppercase; letter-spacing: .6px;
@@ -416,6 +454,7 @@
         </button>
       </div>
 
+      <div id="hos-section">
       <div class="section-header">HOS — Hours of Service</div>
       <div class="hos-row">
         <div class="hos-card">
@@ -434,17 +473,39 @@
           <div class="hos-bar"><div class="hos-fill" id="hos-cycle-bar" style="width:98%;background:var(--yellow)"></div></div>
         </div>
       </div>
+      </div><!-- /hos-section -->
 
       <div class="section-header">Today's Summary</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
         <div class="card">
-          <div class="card-title">Miles Today</div>
+          <div class="card-title" id="home-stat1-label">Miles Today</div>
           <div class="card-value" id="miles-today">—</div>
         </div>
         <div class="card">
-          <div class="card-title">Est. Pay</div>
+          <div class="card-title" id="home-stat2-label">Est. Pay</div>
           <div class="card-value" style="color:var(--green)" id="est-pay">—</div>
         </div>
+      </div>
+
+      <!-- LF today summary — shown for light fleet drivers -->
+      <div id="lf-home-summary" style="display:none">
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px">
+          <div class="card" style="text-align:center">
+            <div class="card-title" style="font-size:10px">Trips Today</div>
+            <div class="card-value" id="lf-home-trips">—</div>
+          </div>
+          <div class="card" style="text-align:center">
+            <div class="card-title" style="font-size:10px">Earned Today</div>
+            <div class="card-value" style="color:var(--green)" id="lf-home-earned">—</div>
+          </div>
+          <div class="card" style="text-align:center">
+            <div class="card-title" style="font-size:10px">Platforms</div>
+            <div class="card-value" id="lf-home-platforms">—</div>
+          </div>
+        </div>
+        <button onclick="showView('lf-trips')" class="btn btn-primary" style="width:100%;margin-bottom:10px">
+          🚗 View My Trips →
+        </button>
       </div>
     </div>
 
@@ -465,54 +526,67 @@
       </div>
     </div>
 
-    <!-- ── PAY VIEW ── -->
+    <!-- ── EARN VIEW ── -->
     <div class="view" id="view-pay">
-      <div class="section-header">This Week</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
-        <div class="card">
-          <div class="card-title">Gross Pay</div>
-          <div class="card-value" style="color:var(--green)" id="pay-week-gross">—</div>
-        </div>
-        <div class="card">
-          <div class="card-title">Miles</div>
-          <div class="card-value" id="pay-week-miles">—</div>
-        </div>
-        <div class="card">
-          <div class="card-title">Loads</div>
-          <div class="card-value" id="pay-week-loads">—</div>
-        </div>
-        <div class="card">
-          <div class="card-title">RPM Avg</div>
-          <div class="card-value" id="pay-week-rpm">—</div>
-        </div>
+      <!-- compliance alert banner (shown if expiry approaching) -->
+      <div id="earn-comp-banner" style="display:none"></div>
+
+      <!-- period selector -->
+      <div style="display:flex;gap:4px;margin-bottom:10px;background:var(--card);border-radius:10px;padding:3px">
+        <button class="period-tab active" id="period-week"  onclick="setEarnPeriod('week')">Week</button>
+        <button class="period-tab"        id="period-month" onclick="setEarnPeriod('month')">Month</button>
+        <button class="period-tab"        id="period-ytd"   onclick="setEarnPeriod('ytd')">YTD</button>
       </div>
 
-      <div class="section-header">Deductions This Week</div>
+      <!-- hero total -->
+      <div class="earn-hero">
+        <div style="font-size:11px;color:rgba(255,255,255,.65);text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px">Total Earnings — <span id="earn-period-label">This Week</span></div>
+        <div class="earn-hero-total" id="earn-total">—</div>
+        <div class="earn-hero-sub"><span id="earn-trips">—</span> trips &nbsp;·&nbsp; <span id="earn-net-label">Net <span id="earn-net">—</span></span></div>
+        <button onclick="showInstantPay()" style="margin-top:14px;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);color:#fff;border-radius:9px;padding:9px 20px;font-size:13px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:6px">
+          ⚡ Instant Pay <span style="font-size:11px;opacity:.7">(1.5% fee)</span>
+        </button>
+      </div>
+
+      <!-- platform breakdown -->
+      <div class="section-header" style="display:flex;justify-content:space-between;align-items:center">
+        By Platform
+        <span style="font-size:10px;font-weight:400;color:var(--muted);text-transform:none;letter-spacing:0">All platforms combined</span>
+      </div>
+      <div id="earn-platform-list">
+        <div style="text-align:center;padding:16px;color:var(--muted);font-size:13px">Loading…</div>
+      </div>
+
+      <!-- 4-week trend -->
+      <div class="section-header">Last 4 Weeks</div>
+      <div id="earn-trend" style="display:flex;gap:6px;height:72px;align-items:flex-end;margin-bottom:8px;padding:0 2px">
+        <div style="text-align:center;color:var(--muted);font-size:12px;width:100%;padding-top:20px">Loading trend…</div>
+      </div>
+
+      <!-- net breakdown -->
+      <div class="section-header">This Period Breakdown</div>
       <div class="card" id="deductions-card">
-        <div class="cdl-row"><div class="cdl-label">Dispatch Fee (8%)</div><div class="cdl-value" id="ded-dispatch" style="color:var(--red)">—</div></div>
-        <div class="cdl-row"><div class="cdl-label">Fuel Advance</div><div class="cdl-value" id="ded-fuel" style="color:var(--red)">—</div></div>
-        <div class="cdl-row"><div class="cdl-label">Insurance</div><div class="cdl-value" id="ded-insurance" style="color:var(--red)">—</div></div>
-        <div class="cdl-row" style="border-top:1px solid var(--border);padding-top:10px;margin-top:6px">
+        <div class="cdl-row"><div class="cdl-label">Gross Earnings</div><div class="cdl-value" style="color:var(--green)" id="pay-week-gross">—</div></div>
+        <div class="cdl-row"><div class="cdl-label">Dispatch Fee</div><div class="cdl-value" id="ded-dispatch" style="color:var(--red)">—</div></div>
+        <div class="cdl-row"><div class="cdl-label">Fuel Advance</div><div class="cdl-value" id="ded-fuel">—</div></div>
+        <div class="cdl-row"><div class="cdl-label">Insurance</div><div class="cdl-value" id="ded-insurance">—</div></div>
+        <div class="cdl-row" style="border-top:1px solid var(--border);padding-top:10px;margin-top:4px">
           <div class="cdl-label" style="font-weight:700;color:var(--text)">Net Pay</div>
           <div class="cdl-value" id="pay-net" style="color:var(--green);font-size:18px;font-weight:700">—</div>
         </div>
       </div>
 
+      <!-- hidden compat fields -->
+      <div style="display:none">
+        <span id="pay-week-miles"></span><span id="pay-week-loads"></span>
+        <span id="pay-week-rpm"></span><span id="pay-ytd-gross"></span>
+        <span id="pay-ytd-miles"></span>
+      </div>
+
+      <!-- settlement history -->
       <div class="section-header">Settlement History</div>
       <div id="settlement-list">
         <div style="text-align:center;padding:16px;color:var(--muted);font-size:13px">Loading settlements…</div>
-      </div>
-
-      <div class="section-header">Year To Date</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
-        <div class="card">
-          <div class="card-title">YTD Gross</div>
-          <div class="card-value" style="color:var(--green)" id="pay-ytd-gross">—</div>
-        </div>
-        <div class="card">
-          <div class="card-title">YTD Miles</div>
-          <div class="card-value" id="pay-ytd-miles">—</div>
-        </div>
       </div>
     </div>
 
@@ -629,7 +703,7 @@
 
     <div class="view" id="view-profile">
       <div class="section-header">Driver Profile</div>
-      <div class="card">
+      <div class="card" id="profile-cdl-card">
         <div class="card-title">CDL Status</div>
         <div class="cdl-row">
           <div class="cdl-label">CDL Number</div>
@@ -657,6 +731,32 @@
         </div>
       </div>
 
+      <!-- Compliance Status Card -->
+      <div class="card" id="comp-card">
+        <div class="card-title" style="display:flex;justify-content:space-between;align-items:center">
+          Compliance Status
+          <span id="comp-overall-badge" style="font-size:10px;padding:2px 9px;border-radius:20px;font-weight:700;background:#d1fae5;color:#065f46">✓ All Clear</span>
+        </div>
+        <div class="comp-row">
+          <div class="comp-label">Driver's License</div>
+          <div id="comp-license" class="comp-ok">Checking…</div>
+        </div>
+        <div class="comp-row">
+          <div class="comp-label">Vehicle Insurance</div>
+          <div id="comp-insurance" class="comp-ok">Checking…</div>
+        </div>
+        <div class="comp-row">
+          <div class="comp-label">Background Check</div>
+          <div id="comp-background" class="comp-ok">Checking…</div>
+        </div>
+        <div class="comp-row" style="border:none;flex-wrap:wrap;gap:6px">
+          <div class="comp-label" style="width:100%;margin-bottom:4px">Active Platforms</div>
+          <div id="comp-platforms" style="display:flex;flex-wrap:wrap;gap:5px;width:100%">
+            <span style="font-size:11px;color:var(--muted)">Loading…</span>
+          </div>
+        </div>
+      </div>
+
       <div class="card">
         <div class="card-title">Performance</div>
         <div class="cdl-row">
@@ -677,7 +777,7 @@
         </div>
       </div>
 
-      <div class="card">
+      <div class="card" id="profile-equipment-card">
         <div class="card-title">Equipment</div>
         <div class="cdl-row">
           <div class="cdl-label">Truck #</div>
@@ -698,7 +798,7 @@
         <button class="btn btn-save" onclick="saveEquipment()" style="margin-top:10px">💾 Save Equipment</button>
       </div>
 
-      <div class="card">
+      <div class="card" id="profile-carrier-card">
         <div class="card-title">Carrier Info</div>
         <div class="cdl-row">
           <div class="cdl-label">Company</div>
@@ -816,6 +916,34 @@
 .issue-type-btn:active,.issue-type-btn.selected{border-color:#ef4444;color:#f1f5f9;background:#1f1515}
 </style>
 
+<!-- INSTANT PAY MODAL -->
+<div id="instant-pay-modal">
+  <div class="ipm-sheet">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
+      <div style="font-size:17px;font-weight:700">⚡ Instant Pay</div>
+      <button onclick="closeInstantPay()" style="background:none;border:none;color:var(--muted);font-size:22px;cursor:pointer;padding:0 4px;line-height:1">✕</button>
+    </div>
+    <div style="background:var(--card);border-radius:12px;padding:16px;margin-bottom:16px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <div style="font-size:13px;color:var(--muted)">Available balance</div>
+        <div style="font-size:18px;font-weight:700;color:var(--green)" id="ipm-balance">—</div>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <div style="font-size:13px;color:var(--muted)">Instant pay fee (1.5%)</div>
+        <div style="font-size:14px;font-weight:600;color:var(--red)" id="ipm-fee">—</div>
+      </div>
+      <div style="height:1px;background:var(--border);margin-bottom:10px"></div>
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div style="font-size:14px;font-weight:700">You receive</div>
+        <div style="font-size:22px;font-weight:800;color:var(--accent)" id="ipm-net">—</div>
+      </div>
+    </div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:16px;line-height:1.6">Funds arrive in your bank account within 30 minutes. Standard ACH (free) pays in 1-2 business days.</div>
+    <button onclick="submitInstantPay()" id="ipm-submit-btn" style="width:100%;padding:15px;background:var(--accent);color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer">⚡ Get Paid Now</button>
+    <button onclick="closeInstantPay()" style="width:100%;padding:12px;background:none;border:none;color:var(--muted);font-size:13px;cursor:pointer;margin-top:6px">Use free standard ACH instead</button>
+  </div>
+</div>
+
 <!-- TOAST -->
 <div id="toast"></div>
 
@@ -866,6 +994,48 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 const TOKEN     = localStorage.getItem('3ll_token')       || '';
 const DRIVER_ID = localStorage.getItem('3ll_driver_id')   || 'DRV-001';
 const MY_PHONE  = localStorage.getItem('3ll_phone')        || '';
+
+// Fleet type detection — set at login, drives UI adaptation
+const IS_LF    = !!localStorage.getItem('3ll_lf_driver_id');
+const IS_TRUCK = !!(localStorage.getItem('3ll_driver_code') || localStorage.getItem('3ll_truck'));
+// 'light' | 'truck' | 'both' — if neither key is set, default to truck (legacy)
+const DRIVER_MODE = (IS_LF && IS_TRUCK) ? 'both' : IS_LF ? 'light' : 'truck';
+
+// ── DRIVER MODE SETUP ──────────────────────────────────────────────────────────
+function setupDriverMode() {
+  const hide = id => { const el = document.getElementById(id); if (el) el.style.display = 'none'; };
+  const show = id => { const el = document.getElementById(id); if (el) el.style.display = ''; };
+
+  if (DRIVER_MODE === 'light') {
+    // Light fleet only — strip truck-only UI
+    hide('nav-loads');           // truck load board nav tab
+    hide('hos-section');         // HOS countdown cards
+    hide('profile-cdl-card');    // CDL Status card
+    hide('profile-equipment-card'); // Truck/Trailer/Fuel card
+    hide('profile-carrier-card'); // Company/MC/ELD card
+    show('lf-home-summary');     // LF quick stats on home
+    // Rename home stats
+    const s1 = document.getElementById('home-stat1-label');
+    const s2 = document.getElementById('home-stat2-label');
+    if (s1) s1.textContent = 'Trips Today';
+    if (s2) s2.textContent = 'Earned Today';
+    // Performance labels in profile
+    const perfLoadsLbl = document.getElementById('perf-loads');
+    const perfMilesLbl = document.getElementById('perf-miles');
+    if (perfLoadsLbl) perfLoadsLbl.closest('.cdl-row')?.querySelector('.cdl-label') &&
+      (perfLoadsLbl.closest('.cdl-row').querySelector('.cdl-label').textContent = 'Trips This Month');
+    if (perfMilesLbl) perfMilesLbl.closest('.cdl-row')?.querySelector('.cdl-label') &&
+      (perfMilesLbl.closest('.cdl-row').querySelector('.cdl-label').textContent = 'Platforms Active');
+    // Default landing view
+    showView('lf-trips');
+  } else if (DRIVER_MODE === 'truck') {
+    // Truck only — strip light-fleet-only UI
+    hide('nav-lf-trips');        // My Trips nav tab
+    hide('comp-card');           // LF compliance card in profile
+    hide('lf-home-summary');     // LF quick stats
+  }
+  // DRIVER_MODE === 'both' — show everything, no changes needed
+}
 
 // Supabase Realtime client
 let supabaseClient = null;
@@ -975,8 +1145,10 @@ function updateConnectionStatus() {
 
 document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('driver-name').textContent = localStorage.getItem('3ll_driver_name') || 'Driver';
+  setupDriverMode();
   loadCurrentLoad();
   loadProfile();
+  if (DRIVER_MODE !== 'truck') loadLFHomeStats();
   if (DEMO_MODE) {
     document.getElementById('miles-today').textContent = '2,015';
     document.getElementById('est-pay').textContent     = '$2,304';
@@ -2054,6 +2226,19 @@ async function sendDriverLocation() {
         }
         console.debug('Location fallback (Supabase direct):', apiErr.message);
       }
+
+      // Light Fleet GPS ping — posts to Eagle Eye LF Map
+      const lfDriverId = localStorage.getItem('3ll_lf_driver_id');
+      if (lfDriverId && !DEMO_MODE) {
+        try {
+          await apiFetch('/api/light-fleet/driver-ping', 'POST', {
+            driver_id: lfDriverId,
+            lat: latitude,
+            lng: longitude,
+            trip_id: _lfActiveTrip?.id || null,
+          });
+        } catch (err) { console.debug('LF ping error:', err); }
+      }
     },
     () => {}
   );
@@ -2284,6 +2469,38 @@ function lfNavigateTrip() {
   window.open('https://maps.google.com/?q=' + addr, '_blank');
 }
 
+async function loadLFHomeStats() {
+  if (DRIVER_MODE === 'truck') return;
+  try {
+    const driverLfId = localStorage.getItem('3ll_lf_driver_id');
+    if (!driverLfId && !DEMO_MODE) return;
+
+    if (DEMO_MODE) {
+      document.getElementById('lf-home-trips').textContent   = '4';
+      document.getElementById('lf-home-earned').textContent  = '$187';
+      document.getElementById('lf-home-platforms').textContent = '3';
+      document.getElementById('miles-today').textContent = '4';
+      document.getElementById('est-pay').textContent     = '$187';
+      return;
+    }
+
+    const res  = await apiFetch(`/api/light-fleet/drivers/${driverLfId}/earnings?period=week`);
+    const data = res.ok ? await res.json() : null;
+    if (!data) return;
+
+    const trips   = data.summary?.trips || 0;
+    const gross   = data.summary?.gross || 0;
+    const platCount = Object.keys(data.breakdown || {}).length;
+
+    document.getElementById('lf-home-trips').textContent    = trips;
+    document.getElementById('lf-home-earned').textContent   = '$' + gross.toFixed(0);
+    document.getElementById('lf-home-platforms').textContent = platCount || '—';
+    // also update the generic home stats
+    document.getElementById('miles-today').textContent = trips;
+    document.getElementById('est-pay').textContent     = '$' + gross.toFixed(0);
+  } catch(e) { /* silent */ }
+}
+
 // ── THEME TOGGLE ──────────────────────────────────────────────────────────────
 function applyTheme(light) {
   document.body.classList.toggle('light-mode', light);
@@ -2302,6 +2519,262 @@ function toggleTheme() {
 (function() {
   applyTheme(localStorage.getItem('3ll_theme') === 'light');
 })();
+
+// ── EARN / PLATFORM EARNINGS ──────────────────────────────────────────────────
+let _earnPeriod = 'week';
+const PLAT_COLORS = {
+  '3lakes':'#3b82f6','internal':'#3b82f6','curri':'#16a34a','roadie':'#b45309',
+  'amazon_flex':'#d97706','spark':'#0891b2','doordash':'#dc2626','goshare':'#7c3aed',
+};
+const PLAT_NAMES = {
+  '3lakes':'3 Lakes','internal':'3 Lakes','curri':'Curri','roadie':'Roadie (UPS)',
+  'amazon_flex':'Amazon Flex','spark':'Spark Driver','doordash':'DoorDash Drive','goshare':'GoShare',
+};
+
+function setEarnPeriod(p) {
+  _earnPeriod = p;
+  document.querySelectorAll('.period-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('period-' + p).classList.add('active');
+  const labels = { week:'This Week', month:'This Month', ytd:'Year to Date' };
+  document.getElementById('earn-period-label').textContent = labels[p] || p;
+  loadEarningsView();
+}
+
+async function loadEarningsView() {
+  const driverLfId = localStorage.getItem('3ll_lf_driver_id');
+
+  if (DEMO_MODE || !driverLfId) {
+    // Demo data
+    const demo = {
+      week: { gross: 648, net: 551, trips: 7, breakdown: [
+        { platform:'3lakes', trips:3, gross:380, net:323, color:'#3b82f6' },
+        { platform:'curri',  trips:2, gross:168, net:143, color:'#16a34a' },
+        { platform:'roadie', trips:2, gross:100, net:85,  color:'#b45309' },
+      ], trend: [
+        { label:'Wk 1', gross:520, net:442 }, { label:'Wk 2', gross:710, net:604 },
+        { label:'Wk 3', gross:490, net:417 }, { label:'Wk 4', gross:648, net:551 },
+      ]},
+    };
+    const d = demo[_earnPeriod] || demo.week;
+    renderEarnings(d);
+    return;
+  }
+
+  try {
+    const token = localStorage.getItem('3ll_token') || '';
+    const res = await fetch(
+      `${window.API_BASE || ''}/api/light-fleet/drivers/${driverLfId}/earnings?period=${_earnPeriod}`,
+      { headers: { 'Authorization': 'Bearer ' + token } }
+    );
+    if (!res.ok) throw new Error('fetch failed');
+    const data = await res.json();
+    renderEarnings({
+      gross: data.summary?.gross || 0,
+      net:   data.summary?.net || 0,
+      trips: data.summary?.trips || 0,
+      breakdown: data.breakdown || [],
+      trend: data.trend || [],
+    });
+  } catch(e) {
+    // fall back to legacy load-based pay data
+    loadPayData();
+  }
+}
+
+function renderEarnings(d) {
+  document.getElementById('earn-total').textContent = d.gross ? '$' + d.gross.toLocaleString() : '—';
+  document.getElementById('earn-trips').textContent = (d.trips || '—') + ' trips';
+  document.getElementById('earn-net').textContent   = d.net   ? '$' + d.net.toLocaleString()   : '—';
+  document.getElementById('pay-week-gross').textContent = d.gross ? '$' + d.gross.toLocaleString() : '—';
+
+  // Platform breakdown
+  const platEl = document.getElementById('earn-platform-list');
+  if (d.breakdown && d.breakdown.length) {
+    platEl.innerHTML = d.breakdown.map(p => `
+      <div class="plat-earn-card">
+        <div style="display:flex;align-items:center;gap:10px">
+          <div class="plat-dot" style="background:${p.color || PLAT_COLORS[p.platform] || '#64748b'}"></div>
+          <div>
+            <div style="font-size:13px;font-weight:600">${PLAT_NAMES[p.platform] || p.platform}</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:1px">${p.trips} trip${p.trips===1?'':'s'}</div>
+          </div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:15px;font-weight:700;color:var(--green)">$${(p.gross||0).toLocaleString()}</div>
+          <div style="font-size:10px;color:var(--muted)">net $${(p.net||0).toLocaleString()}</div>
+        </div>
+      </div>`).join('');
+  } else {
+    platEl.innerHTML = '<div style="text-align:center;padding:16px;color:var(--muted);font-size:13px">No trips this period yet.</div>';
+  }
+
+  // Trend bars
+  const trendEl = document.getElementById('earn-trend');
+  if (d.trend && d.trend.length) {
+    const max = Math.max(...d.trend.map(w => w.gross || 0), 1);
+    trendEl.innerHTML = d.trend.map(w => {
+      const pct = Math.max(8, Math.round(((w.gross||0) / max) * 100));
+      return `
+        <div class="trend-bar-wrap">
+          <div class="trend-val">${w.gross ? '$' + Math.round(w.gross) : ''}</div>
+          <div class="trend-bar" style="height:${pct}%;"></div>
+          <div class="trend-label">${w.label || ''}</div>
+        </div>`;
+    }).join('');
+  }
+
+  // Instant pay balance
+  document.getElementById('ipm-balance').textContent = d.net ? '$' + d.net.toLocaleString() : '$0';
+  const fee = Math.round((d.net || 0) * 0.015 * 100) / 100;
+  const net = Math.round(((d.net || 0) - fee) * 100) / 100;
+  document.getElementById('ipm-fee').textContent = fee ? '-$' + fee.toFixed(2) : '$0';
+  document.getElementById('ipm-net').textContent = net ? '$' + net.toFixed(2) : '$0';
+}
+
+// ── COMPLIANCE ────────────────────────────────────────────────────────────────
+async function loadComplianceStatus() {
+  const driverLfId = localStorage.getItem('3ll_lf_driver_id');
+  if (!driverLfId) return;
+
+  const DEMO_COMP = {
+    license: { days_remaining: 245, alert_level: 'ok' },
+    insurance: { days_remaining: 28, alert_level: 'warning' },
+    background: { status: 'clear', alert_level: 'ok' },
+    platforms_eligible: ['curri', 'roadie', 'amazon_flex'],
+    platforms_ineligible: [],
+    overall_level: 'warning',
+  };
+
+  const comp = DEMO_MODE ? DEMO_COMP : await fetchCompliance(driverLfId);
+  renderCompliance(comp);
+}
+
+async function fetchCompliance(driverLfId) {
+  try {
+    const res = await fetch(`${window.API_BASE || ''}/api/light-fleet/drivers/${driverLfId}/compliance-status`);
+    if (!res.ok) throw new Error();
+    return await res.json();
+  } catch(e) { return null; }
+}
+
+function renderCompliance(c) {
+  if (!c) return;
+
+  // License
+  const licEl = document.getElementById('comp-license');
+  if (licEl) {
+    const d = c.license?.days_remaining;
+    if (d === undefined || d === null) { licEl.className = 'comp-ok'; licEl.textContent = '—'; }
+    else if (d < 0) { licEl.className = 'comp-crit'; licEl.textContent = '✗ Expired'; }
+    else if (d < 30) { licEl.className = 'comp-crit'; licEl.textContent = `⚠ ${d}d left`; }
+    else if (d < 60) { licEl.className = 'comp-warn'; licEl.textContent = `⚠ ${d}d left`; }
+    else             { licEl.className = 'comp-ok';   licEl.textContent = `✓ ${d}d left`; }
+  }
+
+  // Insurance
+  const insEl = document.getElementById('comp-insurance');
+  if (insEl) {
+    const d = c.insurance?.days_remaining;
+    if (d === undefined || d === null) { insEl.className = 'comp-ok'; insEl.textContent = '—'; }
+    else if (d < 0) { insEl.className = 'comp-crit'; insEl.textContent = '✗ Expired'; }
+    else if (d < 14) { insEl.className = 'comp-crit'; insEl.textContent = `⚠ ${d}d left`; }
+    else if (d < 30) { insEl.className = 'comp-warn'; insEl.textContent = `⚠ ${d}d left`; }
+    else             { insEl.className = 'comp-ok';   insEl.textContent = `✓ ${d}d left`; }
+  }
+
+  // Background
+  const bgEl = document.getElementById('comp-background');
+  if (bgEl) {
+    const s = c.background?.status || c.background_check_status;
+    if (s === 'clear')   { bgEl.className = 'comp-ok';   bgEl.textContent = '✓ Clear'; }
+    else if (s === 'flagged') { bgEl.className = 'comp-crit'; bgEl.textContent = '✗ Flagged'; }
+    else                { bgEl.className = 'comp-warn';  bgEl.textContent = '⏳ Pending'; }
+  }
+
+  // Platform badges
+  const platEl = document.getElementById('comp-platforms');
+  if (platEl) {
+    const eligible   = c.platforms_eligible || [];
+    const ineligible = c.platforms_ineligible || [];
+    let html = '';
+    eligible.forEach(p => { html += `<span style="font-size:10px;background:#dcfce7;color:#15803d;padding:2px 8px;border-radius:20px;font-weight:600">${PLAT_NAMES[p]||p}</span>`; });
+    ineligible.forEach(p => { html += `<span style="font-size:10px;background:#fee2e2;color:#dc2626;padding:2px 8px;border-radius:20px;font-weight:600">${PLAT_NAMES[p]||p} ✗</span>`; });
+    if (!html) html = '<span style="font-size:11px;color:var(--muted)">No platforms registered</span>';
+    platEl.innerHTML = html;
+  }
+
+  // Overall badge
+  const badge = document.getElementById('comp-overall-badge');
+  if (badge) {
+    if (c.overall_level === 'expired' || c.overall_level === 'critical') {
+      badge.style.background = '#fee2e2'; badge.style.color = '#dc2626';
+      badge.textContent = '✗ Action Needed';
+    } else if (c.overall_level === 'warning') {
+      badge.style.background = '#fef9c3'; badge.style.color = '#92400e';
+      badge.textContent = '⚠ Renew Soon';
+    } else {
+      badge.style.background = '#d1fae5'; badge.style.color = '#065f46';
+      badge.textContent = '✓ All Clear';
+    }
+  }
+
+  // Earn view compliance banner
+  const banner = document.getElementById('earn-comp-banner');
+  if (banner) {
+    if (c.overall_level === 'warning' || c.overall_level === 'critical' || c.overall_level === 'expired') {
+      const items = [];
+      if ((c.license?.days_remaining ?? 999) < 60) items.push('license');
+      if ((c.insurance?.days_remaining ?? 999) < 30) items.push('insurance');
+      if (items.length) {
+        banner.className = `comp-banner ${c.overall_level === 'warning' ? 'comp-banner-warn' : 'comp-banner-crit'}`;
+        banner.innerHTML = `${c.overall_level === 'warning' ? '⚠️' : '🚨'} Your ${items.join(' & ')} expires soon — renew to stay active on all platforms.`;
+        banner.style.display = 'flex';
+      }
+    }
+  }
+}
+
+// ── INSTANT PAY ───────────────────────────────────────────────────────────────
+function showInstantPay() {
+  document.getElementById('instant-pay-modal').classList.add('open');
+}
+function closeInstantPay() {
+  document.getElementById('instant-pay-modal').classList.remove('open');
+}
+async function submitInstantPay() {
+  const driverLfId = localStorage.getItem('3ll_lf_driver_id');
+  const rawNet = parseFloat((document.getElementById('ipm-balance').textContent || '0').replace(/[$,]/g,'')) || 0;
+  if (!rawNet) { showToast('No balance available'); return; }
+
+  if (DEMO_MODE) { closeInstantPay(); showToast('⚡ Instant pay requested — demo mode'); return; }
+
+  const btn = document.getElementById('ipm-submit-btn');
+  btn.textContent = 'Processing…'; btn.disabled = true;
+  try {
+    const token = localStorage.getItem('3ll_token') || '';
+    const res = await fetch(`${window.API_BASE || ''}/api/light-fleet/drivers/${driverLfId}/instant-pay`, {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ amount: rawNet }),
+    });
+    if (res.ok) {
+      closeInstantPay();
+      showToast('⚡ Instant pay requested! Funds arrive in ~30 min.');
+    } else {
+      showToast('Could not process — try again');
+    }
+  } catch(e) { showToast('Network error — try again'); }
+  finally { btn.textContent = '⚡ Get Paid Now'; btn.disabled = false; }
+}
+
+// Hook compliance + earnings into showView
+const _origShowView = showView;
+function showView(name) {
+  _origShowView(name);
+  if (name === 'pay') { loadEarningsView(); loadComplianceStatus(); }
+  if (name === 'profile') { loadComplianceStatus(); }
+  if (name === 'home' && DRIVER_MODE !== 'truck') { loadLFHomeStats(); }
+}
 </script>
 </body>
 </html>

@@ -106,6 +106,10 @@
     </form>
   </div>
 
+  <div style="margin-top:16px;text-align:center">
+    <a href="./login-lf.html" style="display:inline-block;font-size:13px;color:#94a3b8;text-decoration:none;padding:10px 16px;border:1px solid #2d3748;border-radius:10px;">🚗 Light Fleet / Gig Driver? Sign in here</a>
+  </div>
+
   <div class="contact-hint">
     No account? Contact your dispatcher to get set up.<br>
     <a href="mailto:info@3lakeslogistics.com" style="color:#3b82f6">info@3lakeslogistics.com</a>
@@ -182,9 +186,12 @@ async function handleLogin(event) {
     localStorage.setItem('3ll_driver_name', driverName);
     localStorage.setItem('3ll_phone',       normalizedPhone);
     localStorage.setItem('3ll_expires_at',  new Date(Date.now() + 86400000 * 30).toISOString());
-    localStorage.setItem('3ll_driver_code', driverCode);
+    localStorage.setItem('3ll_driver_code',  driverCode);
+    localStorage.setItem('3ll_driver_mode',  'truck');
     if (data.carrier_id) localStorage.setItem('3ll_carrier_id', String(data.carrier_id));
     if (data.truck_number) localStorage.setItem('3ll_truck', data.truck_number);
+    // Clear any leftover LF keys from a previous session
+    localStorage.removeItem('3ll_lf_driver_id');
 
     // Also get a proper API session token for protected REST endpoints
     const API_BASE = 'https://three-lakes-logistics-api.onrender.com';
@@ -200,7 +207,6 @@ async function handleLogin(event) {
         localStorage.setItem('3ll_api_token', apiData.token);
         if (apiData.carrier_id) localStorage.setItem('3ll_carrier_id', String(apiData.carrier_id));
       } else {
-        // API login failed — use a fallback token so the app still loads
         localStorage.setItem('3ll_token', 'sb-' + driverCode);
       }
     } catch {

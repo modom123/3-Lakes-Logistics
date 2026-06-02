@@ -567,3 +567,148 @@ def driver_intake(payload: dict) -> dict:
         "verification_url": result.get("verification_url"),
         "message": result.get("message", "Check your phone for next steps."),
     }
+
+
+@public_router.get("/drivers/{driver_id}/compliance-status")
+def public_driver_compliance(driver_id: str) -> dict:
+    """
+    Public compliance status for a light fleet driver by their driver_id.
+    No auth required — drivers access via their own ID.
+    """
+    from ..agents import compliance_autopilot
+    return compliance_autopilot.get_compliance_status(driver_id)
+
+
+# ===========================================================================
+# DRIVER EARNINGS, COMPLIANCE & INSTANT PAY
+# ===========================================================================
+
+@router.get("/drivers/{driver_id}/earnings")
+def get_driver_earnings(driver_id: str, period: str = "week") -> dict:
+    """Get aggregated earnings for a light fleet driver across all platforms."""
+    from ..agents import earnings_aggregator
+    return {
+        "driver_id": driver_id,
+        "period": period,
+        "summary": earnings_aggregator.get_earnings(driver_id, period),
+        "breakdown": earnings_aggregator.get_platform_breakdown(driver_id, period),
+        "trend": earnings_aggregator.get_weekly_trend(driver_id),
+    }
+
+
+@router.get("/drivers/{driver_id}/compliance")
+def get_driver_compliance(driver_id: str) -> dict:
+    """Get compliance status for a light fleet driver."""
+    from ..agents import compliance_autopilot
+    return compliance_autopilot.get_compliance_status(driver_id)
+
+
+@router.post("/drivers/{driver_id}/instant-pay")
+def request_instant_pay(driver_id: str, payload: dict) -> dict:
+    """
+    Request instant/same-day payout for a driver's pending earnings.
+    Deducts a 1.5% instant pay fee.
+    Body: { "amount": float }
+    """
+    amount = float(payload.get("amount", 0))
+    if amount <= 0:
+        raise HTTPException(status_code=422, detail="amount must be positive")
+    fee = round(amount * 0.015, 2)
+    net = round(amount - fee, 2)
+    # Log to atomic_ledger
+    sb = get_supabase()
+    sb.table("atomic_ledger").insert({
+        "event_type": "instant_pay_requested",
+        "event_source": "light_fleet.instant_pay",
+        "logistics_payload": {"driver_id": driver_id},
+        "financial_payload": {"gross": amount, "fee": fee, "net": net},
+        "compliance_payload": {},
+        "created_at": _now_iso(),
+    }).execute()
+    return {"ok": True, "driver_id": driver_id, "gross": amount, "fee": fee, "net": net, "status": "processing"}
+
+
+# ===========================================================================
+# LIVE GPS — Light Fleet Map
+# ===========================================================================
+
+@public_router.post("/driver-ping")
+def driver_ping(payload: dict) -> dict:
+    """
+    Driver PWA posts GPS location. Updates last_lat/last_lng/last_ping_at on
+    the driver record so Eagle Eye can show real-time positions on the LF Map.
+    Body: { "driver_id": str, "lat": float, "lng": float, "trip_id": str|null }
+    """
+    driver_id = payload.get("driver_id")
+    lat = payload.get("lat")
+    lng = payload.get("lng")
+    trip_id = payload.get("trip_id")
+
+    if not driver_id or lat is None or lng is None:
+        raise HTTPException(status_code=422, detail="driver_id, lat, lng required")
+
+    sb = get_supabase()
+    sb.table("light_vehicle_drivers").update({
+        "last_lat": float(lat),
+        "last_lng": float(lng),
+        "last_ping_at": _now_iso(),
+    }).eq("id", driver_id).execute()
+
+    if trip_id:
+        sb.table("light_vehicle_trips").update({
+            "current_lat": float(lat),
+            "current_lng": float(lng),
+        }).eq("id", trip_id).execute()
+
+    return {"ok": True}
+
+
+@router.get("/live-locations")
+def live_locations() -> dict:
+    """
+    Return active light fleet trips joined with driver GPS location.
+    Used by Eagle Eye Light Fleet Map to place car markers on the map.
+    """
+    sb = get_supabase()
+    trips_res = sb.table("light_vehicle_trips").select(
+        "id,trip_type,status,pickup_address,dropoff_address,"
+        "driver_id,passenger_name,rate_total,current_lat,current_lng"
+    ).in_("status", ["assigned", "en_route", "arrived", "in_progress"]).execute()
+
+    trips = trips_res.data or []
+    driver_ids = list({t["driver_id"] for t in trips if t.get("driver_id")})
+
+    drivers_by_id: dict = {}
+    if driver_ids:
+        drv_res = sb.table("light_vehicle_drivers").select(
+            "id,full_name,vehicle_type,vehicle_plate,last_lat,last_lng,last_ping_at"
+        ).in_("id", driver_ids).execute()
+        for d in (drv_res.data or []):
+            drivers_by_id[d["id"]] = d
+
+    items = []
+    for t in trips:
+        drv = drivers_by_id.get(t.get("driver_id") or "", {})
+        # Prefer trip-level position (fresher), fall back to driver last-ping
+        lat = t.get("current_lat") or drv.get("last_lat")
+        lng = t.get("current_lng") or drv.get("last_lng")
+        if lat is None or lng is None:
+            continue
+        items.append({
+            "trip_id": t["id"],
+            "trip_type": t.get("trip_type", "gig"),
+            "status": t.get("status"),
+            "pickup_address": t.get("pickup_address"),
+            "dropoff_address": t.get("dropoff_address"),
+            "passenger_name": t.get("passenger_name"),
+            "rate_total": t.get("rate_total"),
+            "driver_id": drv.get("id"),
+            "driver_name": drv.get("full_name"),
+            "vehicle_type": drv.get("vehicle_type"),
+            "vehicle_plate": drv.get("vehicle_plate"),
+            "last_ping_at": drv.get("last_ping_at"),
+            "lat": lat,
+            "lng": lng,
+        })
+
+    return {"items": items, "total": len(items)}

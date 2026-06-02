@@ -662,6 +662,42 @@ button,a,[onclick]{cursor:pointer;}
   .f-leg{flex-wrap:wrap;justify-content:center;}
 }
 
+/* ── LIGHT FLEET PRICING CARD — RESPONSIVE ── */
+@media(max-width:560px){
+  #lf-plans-anchor { padding: 60px 20px !important; }
+  #lf-plans-anchor > div > div[style*="padding:56px"] { padding: 36px 24px !important; }
+  #lf-plans-anchor > div > div > div[style*="grid-template-columns:1fr 1fr"] {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* ── LIGHT FLEET INTAKE FORM — RESPONSIVE ── */
+@media(max-width:560px){
+  /* collapse all 2-col grids in the intake form to 1 col */
+  #page-lf-intake .scroll-inner > form > div > div[style*="grid-template-columns:1fr 1fr"],
+  #page-lf-intake form div[style*="grid-template-columns:1fr 1fr"] {
+    grid-template-columns: 1fr !important;
+  }
+  /* vehicle info — collapse 4-col to 2-col */
+  #page-lf-intake div[style*="grid-template-columns:1fr 1fr 1fr 1fr"] {
+    grid-template-columns: 1fr 1fr !important;
+  }
+  /* platform cards — always 1 col on small phones */
+  #page-lf-intake div[style*="grid-template-columns:1fr 1fr"][id="platform-grid"],
+  #page-lf-intake [id^="plat-"] { display: flex !important; }
+}
+@media(max-width:500px){
+  /* Platform sign-up grid: collapse to 1 col */
+  #page-lf-intake div[style*="display:grid"][style*="gap:10px"] {
+    grid-template-columns: 1fr !important;
+  }
+  /* Driver license row: stack vertically */
+  #page-lf-intake div[style*="grid-template-columns:1fr 100px 140px"] {
+    grid-template-columns: 1fr !important;
+  }
+  #page-lf-intake { padding: 32px 16px 60px !important; }
+}
+
 /* ── ONBOARDING FORM MOBILE ── */
 @media(max-width:480px){
   .ob-steps{gap:4px;}
@@ -691,6 +727,7 @@ button,a,[onclick]{cursor:pointer;}
     <button class="nav-a" id="nl-about" onclick="showPage('about')">About</button>
     <button class="nav-a" id="nl-services" onclick="showPage('services')">Services</button>
     <button class="nav-a" id="nl-light-fleet" onclick="showPage('light-fleet')">Light Fleet <span style="background:linear-gradient(135deg,#6366f1,#3b82f6);color:#fff;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;margin-left:4px;vertical-align:middle;">NEW</span></button>
+    <button class="nav-a" id="nl-biz-portal" onclick="showPage('biz-portal')">For Businesses</button>
     <button class="nav-a" id="nl-pricing" onclick="showPage('services');setTimeout(()=>{const el=document.getElementById('plans-anchor');if(el)el.scrollIntoView({behavior:'smooth',block:'start'});},120)">Pricing</button>
     <button class="nav-a" id="nl-loads" onclick="showPage('loads')" style="position:relative">Load Board<span id="nav-loads-badge" style="display:none;position:absolute;top:2px;right:-4px;background:#22c55e;color:#fff;border-radius:99px;font-size:9px;font-weight:700;padding:1px 5px;"></span></button>
     <button class="nav-a" id="nl-contact" onclick="showPage('contact')">Contact</button>
@@ -705,6 +742,7 @@ button,a,[onclick]{cursor:pointer;}
   <div class="mob-a" onclick="showPage('about');toggleMob()">About</div>
   <div class="mob-a" onclick="showPage('services');toggleMob()">Services</div>
   <div class="mob-a" onclick="showPage('light-fleet');toggleMob()">🚗 Light Fleet <span style="background:linear-gradient(135deg,#6366f1,#3b82f6);color:#fff;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;margin-left:4px;">NEW</span></div>
+  <div class="mob-a" onclick="showPage('biz-portal');toggleMob()">🏢 For Businesses</div>
   <div class="mob-a" onclick="showPage('services');toggleMob();setTimeout(()=>{const el=document.getElementById('plans-anchor');if(el)el.scrollIntoView({behavior:'smooth',block:'start'});},160)">Pricing</div>
   <div class="mob-a" onclick="showPage('loads');toggleMob()">Load Board</div>
   <div class="mob-a" onclick="showPage('contact');toggleMob()">Contact</div>
@@ -2411,7 +2449,7 @@ document.getElementById('calendarOverlay')?.addEventListener('click', function(e
               <div class="lf-card-box-hd" style="color:#3b82f6;">How We Find Your Loads</div>
               <div class="lf-card-box-p">You supply the vehicles and drivers. We supply contracts from all 4 segments above, match trips to your drivers by location and service type, and handle all billing and payouts.</div>
             </div>
-            <div class="lf-card-pill" style="color:#3b82f6;background:rgba(59,130,246,.1);">$99–199/mo + per-trip % · Scale fast</div>
+            <div style="font-family:var(--ff-m);font-size:11px;color:#3b82f6;background:rgba(59,130,246,.1);padding:4px 12px;border-radius:20px;display:inline-block;">15% per completed trip · No monthly fee · Scale fast</div>
             <button onclick="lfStartSignup('gig_fleet','Gig Fleet Management','#3b82f6')" class="lf-card-btn" style="background:linear-gradient(135deg,#3b82f6,#1d4ed8);">Sign Up for Gig Fleet →</button>
           </div>
         </div>
@@ -2516,74 +2554,69 @@ document.getElementById('calendarOverlay')?.addEventListener('click', function(e
 
   <!-- ── PROGRAM TIERS ── -->
   <div id="lf-plans-anchor" style="padding:88px 60px;background:var(--off);">
-    <div style="max-width:1100px;margin:0 auto;">
+    <div style="max-width:860px;margin:0 auto;">
       <div class="rev" style="text-align:center;margin-bottom:52px;">
-        <span class="chip">Choose Your Program</span>
-        <h2 class="sh" style="text-align:center;">Simple Rates.<br/>No Hidden Fees.</h2>
+        <span class="chip">Pricing</span>
+        <h2 class="sh" style="text-align:center;">One Rate.<br/>No Surprises.</h2>
         <div class="rule" style="margin:18px auto;"></div>
-        <p class="sp" style="max-width:540px;margin:0 auto;">Start on Starter and pay as you earn. Upgrade to Pro when your volume justifies the flat rate — most operators break even in week 1.</p>
+        <p class="sp" style="max-width:520px;margin:0 auto;">We only make money when you make money. No monthly subscription, no hidden fees — just a straightforward split on every completed trip.</p>
       </div>
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:24px;">
 
-        <div class="rev" style="background:var(--white);border:1px solid var(--border);border-radius:18px;padding:36px 32px;transition:box-shadow .25s;">
-          <div style="font-family:var(--ff-m);font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:10px;">Starter</div>
-          <div style="font-family:var(--ff-h);font-size:48px;font-weight:900;color:var(--navy);line-height:1;margin-bottom:4px;">15%</div>
-          <div style="font-size:14px;color:var(--muted);margin-bottom:6px;">per completed trip</div>
-          <div style="font-size:12px;color:var(--muted);margin-bottom:26px;padding-bottom:26px;border-bottom:1px solid var(--border);">No monthly fee · pay as you earn</div>
-          <ul style="list-style:none;padding:0;display:flex;flex-direction:column;gap:11px;margin-bottom:28px;font-size:13px;">
-            <li style="display:flex;align-items:center;gap:9px;color:var(--text);">✅ All 5 service segments</li>
-            <li style="display:flex;align-items:center;gap:9px;color:var(--text);">✅ Mobile driver app</li>
-            <li style="display:flex;align-items:center;gap:9px;color:var(--text);">✅ GPS tracking &amp; POD</li>
-            <li style="display:flex;align-items:center;gap:9px;color:var(--text);">✅ Automated trip records</li>
-            <li style="display:flex;align-items:center;gap:9px;color:var(--text);">✅ Automated driver payout</li>
-            <li style="display:flex;align-items:center;gap:9px;color:var(--muted);opacity:.6;">⬜ Priority dispatch queue</li>
-            <li style="display:flex;align-items:center;gap:9px;color:var(--muted);opacity:.6;">⬜ Corporate account billing</li>
-            <li style="display:flex;align-items:center;gap:9px;color:var(--muted);opacity:.6;">⬜ Dedicated account manager</li>
-          </ul>
-          <div style="font-size:11px;color:#059669;font-weight:600;margin-bottom:14px;text-align:center;">No monthly fee — pay only when you earn 🏆</div>
-          <button onclick="showPage('lf-intake')" style="width:100%;padding:14px;border-radius:9px;font-size:14px;font-weight:700;cursor:pointer;border:1.5px solid var(--border);background:transparent;color:var(--navy);transition:all .2s;" onmouseover="this.style.background='var(--slate)'" onmouseout="this.style.background='transparent'">Apply as a Driver →</button>
+      <!-- Single pricing card -->
+      <div class="rev" style="background:var(--navy);border-radius:24px;padding:56px 52px;text-align:center;position:relative;overflow:hidden;max-width:580px;margin:0 auto 32px;">
+        <div style="position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,var(--gold),var(--gold3));"></div>
+        <div style="font-family:var(--ff-m);font-size:11px;letter-spacing:2.5px;text-transform:uppercase;color:var(--gold2);margin-bottom:18px;">Light Fleet — All Drivers</div>
+        <div style="display:flex;align-items:flex-start;justify-content:center;gap:4px;margin-bottom:8px;">
+          <span style="font-family:var(--ff-h);font-size:28px;font-weight:900;color:var(--gold2);margin-top:14px;">15</span>
+          <span style="font-family:var(--ff-h);font-size:96px;font-weight:900;color:var(--white);line-height:1;">%</span>
         </div>
-
-        <div class="rev" style="background:var(--navy);border:2px solid var(--gold2);border-radius:18px;padding:36px 32px;position:relative;transition:box-shadow .25s;">
-          <div style="position:absolute;top:-14px;left:50%;transform:translateX(-50%);background:var(--gold2);color:var(--navy);font-family:var(--ff-m);font-size:10px;font-weight:800;padding:4px 18px;border-radius:20px;letter-spacing:1px;white-space:nowrap;">MOST POPULAR</div>
-          <div style="font-family:var(--ff-m);font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--gold2);margin-bottom:10px;">Pro Fleet</div>
-          <div style="font-family:var(--ff-h);font-size:48px;font-weight:900;color:var(--white);line-height:1;margin-bottom:4px;">$199</div>
-          <div style="font-size:14px;color:rgba(255,255,255,.5);margin-bottom:6px;">/month + 5% per trip</div>
-          <div style="font-size:12px;color:rgba(255,255,255,.4);margin-bottom:26px;padding-bottom:26px;border-bottom:1px solid rgba(255,255,255,.1);">Unlimited drivers · all 5 segments</div>
-          <ul style="list-style:none;padding:0;display:flex;flex-direction:column;gap:11px;margin-bottom:28px;font-size:13px;color:rgba(255,255,255,.85);">
-            <li>✅ All 5 service segments</li>
-            <li>✅ Mobile driver app</li>
-            <li>✅ GPS tracking &amp; POD</li>
-            <li>✅ Full automated record keeping</li>
-            <li>✅ Automated driver payout</li>
-            <li>✅ Priority dispatch queue</li>
-            <li>✅ Corporate account billing</li>
-            <li>✅ NEMT insurance auth tracking</li>
-            <li>✅ Dedicated account manager</li>
-          </ul>
-          <button class="btn-gold" onclick="showPage('lf-intake')" style="width:100%;padding:14px;border-radius:9px;font-size:14px;font-weight:700;cursor:pointer;border:none;">Claim Your Spot →</button>
+        <div style="font-size:16px;color:rgba(255,255,255,.55);margin-bottom:6px;">per completed trip</div>
+        <div style="font-size:13px;color:rgba(255,255,255,.35);margin-bottom:40px;padding-bottom:40px;border-bottom:1px solid rgba(255,255,255,.08);">No monthly fee &nbsp;·&nbsp; No signup cost &nbsp;·&nbsp; No contracts</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;text-align:left;margin-bottom:36px;">
+          <div style="display:flex;align-items:flex-start;gap:10px;font-size:13px;color:rgba(255,255,255,.8);">
+            <span style="color:var(--gold2);font-size:15px;flex-shrink:0;">✓</span>All 5 service segments
+          </div>
+          <div style="display:flex;align-items:flex-start;gap:10px;font-size:13px;color:rgba(255,255,255,.8);">
+            <span style="color:var(--gold2);font-size:15px;flex-shrink:0;">✓</span>Mobile driver app (iOS &amp; Android)
+          </div>
+          <div style="display:flex;align-items:flex-start;gap:10px;font-size:13px;color:rgba(255,255,255,.8);">
+            <span style="color:var(--gold2);font-size:15px;flex-shrink:0;">✓</span>Universal gig platform sign-up
+          </div>
+          <div style="display:flex;align-items:flex-start;gap:10px;font-size:13px;color:rgba(255,255,255,.8);">
+            <span style="color:var(--gold2);font-size:15px;flex-shrink:0;">✓</span>One background check, all platforms
+          </div>
+          <div style="display:flex;align-items:flex-start;gap:10px;font-size:13px;color:rgba(255,255,255,.8);">
+            <span style="color:var(--gold2);font-size:15px;flex-shrink:0;">✓</span>GPS tracking &amp; proof of delivery
+          </div>
+          <div style="display:flex;align-items:flex-start;gap:10px;font-size:13px;color:rgba(255,255,255,.8);">
+            <span style="color:var(--gold2);font-size:15px;flex-shrink:0;">✓</span>Unified earnings dashboard
+          </div>
+          <div style="display:flex;align-items:flex-start;gap:10px;font-size:13px;color:rgba(255,255,255,.8);">
+            <span style="color:var(--gold2);font-size:15px;flex-shrink:0;">✓</span>Compliance autopilot &amp; alerts
+          </div>
+          <div style="display:flex;align-items:flex-start;gap:10px;font-size:13px;color:rgba(255,255,255,.8);">
+            <span style="color:var(--gold2);font-size:15px;flex-shrink:0;">✓</span>Instant pay (same-day transfer)
+          </div>
+          <div style="display:flex;align-items:flex-start;gap:10px;font-size:13px;color:rgba(255,255,255,.8);">
+            <span style="color:var(--gold2);font-size:15px;flex-shrink:0;">✓</span>Automated driver payout
+          </div>
+          <div style="display:flex;align-items:flex-start;gap:10px;font-size:13px;color:rgba(255,255,255,.8);">
+            <span style="color:var(--gold2);font-size:15px;flex-shrink:0;">✓</span>Priority dispatch queue
+          </div>
+          <div style="display:flex;align-items:flex-start;gap:10px;font-size:13px;color:rgba(255,255,255,.8);">
+            <span style="color:var(--gold2);font-size:15px;flex-shrink:0;">✓</span>Corporate account billing
+          </div>
+          <div style="display:flex;align-items:flex-start;gap:10px;font-size:13px;color:rgba(255,255,255,.8);">
+            <span style="color:var(--gold2);font-size:15px;flex-shrink:0;">✓</span>Dedicated account manager
+          </div>
         </div>
-
-        <div class="rev" style="background:var(--white);border:1px solid var(--border);border-radius:18px;padding:36px 32px;transition:box-shadow .25s;">
-          <div style="font-family:var(--ff-m);font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:10px;">Trucking Add-On</div>
-          <div style="font-family:var(--ff-h);font-size:48px;font-weight:900;color:var(--navy);line-height:1;margin-bottom:4px;">$99</div>
-          <div style="font-size:14px;color:var(--muted);margin-bottom:6px;">/month + 5% per trip</div>
-          <div style="font-size:12px;color:var(--muted);margin-bottom:26px;padding-bottom:26px;border-bottom:1px solid var(--border);">Requires active 3 Lakes trucking plan</div>
-          <ul style="list-style:none;padding:0;display:flex;flex-direction:column;gap:11px;margin-bottom:28px;font-size:13px;color:var(--text);">
-            <li>✅ All 5 service segments</li>
-            <li>✅ Same Eagle Eye dashboard</li>
-            <li>✅ Unified truck + car fleet view</li>
-            <li>✅ One payout system for all drivers</li>
-            <li>✅ Corporate account billing</li>
-            <li>✅ NEMT insurance auth tracking</li>
-            <li>✅ Priority dispatch queue</li>
-            <li>✅ Dedicated account manager</li>
-          </ul>
-          <button onclick="showPage('onboard')" style="width:100%;padding:14px;border-radius:9px;font-size:14px;font-weight:700;cursor:pointer;background:var(--navy);color:var(--gold2);border:none;transition:all .2s;" onmouseover="this.style.background='var(--navy2)'" onmouseout="this.style.background='var(--navy)'">Add to My Trucking Plan →</button>
-        </div>
-
+        <button class="btn-gold" onclick="showPage('lf-intake')" style="width:100%;padding:16px;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;border:none;">Apply Now — Free to Join →</button>
       </div>
-      <p style="text-align:center;font-size:12px;color:var(--muted);margin-top:20px;">Break-even on Pro vs Starter: ~$1,400/month in trip revenue (roughly 12 trips/day at $25 avg). Most NEMT operators hit this in week 1.</p>
+
+      <!-- Bottom reassurance line -->
+      <div style="text-align:center;">
+        <p style="font-size:13px;color:var(--muted);line-height:1.8;">You keep <strong style="color:var(--navy);">85% of every trip</strong>. We earn our 15% by finding your loads, managing dispatch, and handling all billing — so you never have to chase a payment.</p>
+      </div>
     </div>
   </div>
 
@@ -2610,6 +2643,178 @@ document.getElementById('calendarOverlay')?.addEventListener('click', function(e
 <!-- END LIGHT FLEET PAGE -->
 
 <!-- ════════════════════════════════════════════════════════ -->
+<!-- FOR BUSINESSES — Direct Dispatch Accounts Portal         -->
+<!-- ════════════════════════════════════════════════════════ -->
+<div class="page" id="page-biz-portal">
+  <div style="max-width:760px;margin:0 auto;padding:60px 24px 80px;">
+    <button onclick="showPage('light-fleet')" style="background:none;border:none;color:var(--muted);font-size:13px;cursor:pointer;margin-bottom:28px;display:flex;align-items:center;gap:6px;padding:0;">← Back to Light Fleet</button>
+
+    <div style="text-align:center;margin-bottom:40px;">
+      <span class="chip">Business Accounts</span>
+      <h1 class="sh" style="margin-top:12px;">Dedicated Drivers.<br/>Your Brand. Our Fleet.</h1>
+      <div class="rule" style="margin:16px auto;"></div>
+      <p class="sp" style="margin:0 auto;">Skip the gig-app lottery. Get a vetted, insured driver assigned to your business — on-call, on-brand, and tracked in real time through our dispatch console.</p>
+    </div>
+
+    <!-- Value props -->
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:36px;">
+      <div style="background:var(--off);border:1px solid var(--border);border-radius:12px;padding:18px;text-align:center;">
+        <div style="font-size:28px;margin-bottom:8px;">🏥</div>
+        <div style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:4px;">Medical &amp; Clinic</div>
+        <div style="font-size:12px;color:var(--muted);line-height:1.5;">Lab specimen runs, pharmacy delivery, patient NEMT. HIPAA-aware, recurring schedules.</div>
+      </div>
+      <div style="background:var(--off);border:1px solid var(--border);border-radius:12px;padding:18px;text-align:center;">
+        <div style="font-size:28px;margin-bottom:8px;">🏢</div>
+        <div style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:4px;">Corporate &amp; Executive</div>
+        <div style="font-size:12px;color:var(--muted);line-height:1.5;">Airport transfers, client pickup, event transport. Invoice billing, dedicated vehicles.</div>
+      </div>
+      <div style="background:var(--off);border:1px solid var(--border);border-radius:12px;padding:18px;text-align:center;">
+        <div style="font-size:28px;margin-bottom:8px;">📦</div>
+        <div style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:4px;">Retail &amp; Last-Mile</div>
+        <div style="font-size:12px;color:var(--muted);line-height:1.5;">Same-day orders, local courier, white-glove delivery. Your branding, our driver.</div>
+      </div>
+    </div>
+
+    <!-- Success state -->
+    <div id="biz-success" style="display:none;background:rgba(5,150,105,.06);border:2px solid #10b981;border-radius:18px;padding:40px;text-align:center;margin-bottom:28px;">
+      <div style="font-size:52px;margin-bottom:14px;">✅</div>
+      <div style="font-family:var(--ff-h);font-size:26px;color:var(--navy);font-weight:800;margin-bottom:8px;">Request Received!</div>
+      <p style="color:var(--muted);font-size:15px;max-width:440px;margin:0 auto 16px;">Our team will contact you within 4 business hours to discuss your account, drivers needed, and service agreement. Ready sooner? Call 661-466-9932.</p>
+    </div>
+
+    <!-- Error -->
+    <div id="biz-error" style="display:none;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);border-radius:8px;padding:12px 16px;font-size:13px;color:#dc2626;margin-bottom:16px;"></div>
+
+    <!-- Form -->
+    <form id="biz-form" onsubmit="bizSubmit(event)" style="display:flex;flex-direction:column;gap:20px;">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+        <div>
+          <label style="font-size:13px;font-weight:600;color:var(--navy);display:block;margin-bottom:6px;">Company Name *</label>
+          <input name="company_name" required type="text" placeholder="Acme Medical Group" style="width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;font-family:var(--ff-b);outline:none;transition:border .2s;" onfocus="this.style.borderColor='var(--navy)'" onblur="this.style.borderColor='var(--border)'"/>
+        </div>
+        <div>
+          <label style="font-size:13px;font-weight:600;color:var(--navy);display:block;margin-bottom:6px;">Contact Name *</label>
+          <input name="contact_name" required type="text" placeholder="Sarah Johnson" style="width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;font-family:var(--ff-b);outline:none;transition:border .2s;" onfocus="this.style.borderColor='var(--navy)'" onblur="this.style.borderColor='var(--border)'"/>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+        <div>
+          <label style="font-size:13px;font-weight:600;color:var(--navy);display:block;margin-bottom:6px;">Phone *</label>
+          <input name="contact_phone" required type="tel" placeholder="(555) 000-0000" style="width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;font-family:var(--ff-b);outline:none;transition:border .2s;" onfocus="this.style.borderColor='var(--navy)'" onblur="this.style.borderColor='var(--border)'"/>
+        </div>
+        <div>
+          <label style="font-size:13px;font-weight:600;color:var(--navy);display:block;margin-bottom:6px;">Email *</label>
+          <input name="contact_email" required type="email" placeholder="sarah@acmemedical.com" style="width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;font-family:var(--ff-b);outline:none;transition:border .2s;" onfocus="this.style.borderColor='var(--navy)'" onblur="this.style.borderColor='var(--border)'"/>
+        </div>
+      </div>
+      <div>
+        <label style="font-size:13px;font-weight:600;color:var(--navy);display:block;margin-bottom:6px;">Business Type *</label>
+        <select name="business_type" required style="width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;font-family:var(--ff-b);outline:none;background:white;">
+          <option value="">Select your business type…</option>
+          <option value="medical_clinic">Medical Clinic / Hospital</option>
+          <option value="pharmacy">Pharmacy / Lab</option>
+          <option value="corporate">Corporate / Law Firm / Finance</option>
+          <option value="hotel">Hotel / Hospitality</option>
+          <option value="retail">Retail / E-Commerce</option>
+          <option value="restaurant">Restaurant / Food Service</option>
+          <option value="real_estate">Real Estate</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+      <div>
+        <label style="font-size:13px;font-weight:600;color:var(--navy);display:block;margin-bottom:10px;">Services Needed * <span style="font-weight:400;color:var(--muted);">(select all that apply)</span></label>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          <label style="display:flex;align-items:center;gap:10px;padding:11px 14px;border:1.5px solid var(--border);border-radius:8px;cursor:pointer;font-size:13px;transition:border .2s;" onmouseover="this.style.borderColor='var(--navy)'" onmouseout="this.style.borderColor='var(--border)'"><input type="checkbox" name="biz_services" value="nemt" style="width:16px;height:16px;accent-color:var(--navy);"/> 🏥 NEMT / Patient Transport</label>
+          <label style="display:flex;align-items:center;gap:10px;padding:11px 14px;border:1.5px solid var(--border);border-radius:8px;cursor:pointer;font-size:13px;transition:border .2s;" onmouseover="this.style.borderColor='var(--navy)'" onmouseout="this.style.borderColor='var(--border)'"><input type="checkbox" name="biz_services" value="medical_courier" style="width:16px;height:16px;accent-color:var(--navy);"/> 🧪 Medical Courier (lab/pharma)</label>
+          <label style="display:flex;align-items:center;gap:10px;padding:11px 14px;border:1.5px solid var(--border);border-radius:8px;cursor:pointer;font-size:13px;transition:border .2s;" onmouseover="this.style.borderColor='var(--navy)'" onmouseout="this.style.borderColor='var(--border)'"><input type="checkbox" name="biz_services" value="executive" style="width:16px;height:16px;accent-color:var(--navy);"/> 🚗 Executive &amp; Airport Transfers</label>
+          <label style="display:flex;align-items:center;gap:10px;padding:11px 14px;border:1.5px solid var(--border);border-radius:8px;cursor:pointer;font-size:13px;transition:border .2s;" onmouseover="this.style.borderColor='var(--navy)'" onmouseout="this.style.borderColor='var(--border)'"><input type="checkbox" name="biz_services" value="courier" style="width:16px;height:16px;accent-color:var(--navy);"/> 📦 Same-Day Delivery / Courier</label>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+        <div>
+          <label style="font-size:13px;font-weight:600;color:var(--navy);display:block;margin-bottom:6px;">City &amp; State *</label>
+          <input name="location" required type="text" placeholder="Chicago, IL" style="width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;font-family:var(--ff-b);outline:none;transition:border .2s;" onfocus="this.style.borderColor='var(--navy)'" onblur="this.style.borderColor='var(--border)'"/>
+        </div>
+        <div>
+          <label style="font-size:13px;font-weight:600;color:var(--navy);display:block;margin-bottom:6px;">Billing Preference</label>
+          <select name="billing_type" style="width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;font-family:var(--ff-b);outline:none;background:white;">
+            <option value="invoice">Invoice (Net-30)</option>
+            <option value="card">Credit Card</option>
+            <option value="account">Account Credit</option>
+          </select>
+        </div>
+      </div>
+      <div>
+        <label style="font-size:13px;font-weight:600;color:var(--navy);display:block;margin-bottom:6px;">Estimated Weekly Trips <span style="font-weight:400;color:var(--muted);">(helps us staff correctly)</span></label>
+        <select name="weekly_trips" style="width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;font-family:var(--ff-b);outline:none;background:white;">
+          <option value="">Select…</option>
+          <option value="1-5">1–5 trips/week</option>
+          <option value="6-20">6–20 trips/week</option>
+          <option value="21-50">21–50 trips/week</option>
+          <option value="50+">50+ trips/week</option>
+        </select>
+      </div>
+      <div>
+        <label style="font-size:13px;font-weight:600;color:var(--navy);display:block;margin-bottom:6px;">Notes <span style="font-weight:400;color:var(--muted);">(optional)</span></label>
+        <textarea name="notes" rows="3" placeholder="Describe your typical trips, any special requirements, recurring schedule, or questions…" style="width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;font-family:var(--ff-b);outline:none;resize:vertical;transition:border .2s;" onfocus="this.style.borderColor='var(--navy)'" onblur="this.style.borderColor='var(--border)'"></textarea>
+      </div>
+      <button type="submit" id="biz-submit-btn" class="btn-gold" style="padding:16px;font-size:15px;font-weight:700;border:none;border-radius:10px;cursor:pointer;width:100%;">Request a Business Account →</button>
+      <p style="text-align:center;font-size:12px;color:var(--muted);">A 3 Lakes account manager will follow up within 4 business hours. No commitment required.</p>
+    </form>
+  </div>
+</div>
+
+<script>
+async function bizSubmit(e) {
+  e.preventDefault();
+  const btn = document.getElementById('biz-submit-btn');
+  const errEl = document.getElementById('biz-error');
+  const form = document.getElementById('biz-form');
+  errEl.style.display = 'none';
+  btn.textContent = 'Submitting…'; btn.disabled = true;
+  const fd = new FormData(form);
+  const services = [...form.querySelectorAll('[name="biz_services"]:checked')].map(c => c.value);
+  const payload = {
+    company_name:  fd.get('company_name'),
+    contact_name:  fd.get('contact_name'),
+    contact_phone: fd.get('contact_phone'),
+    contact_email: fd.get('contact_email'),
+    billing_type:  fd.get('billing_type') || 'invoice',
+    status: 'active',
+    notes: [
+      fd.get('business_type') ? 'Type: ' + fd.get('business_type') : '',
+      services.length ? 'Services: ' + services.join(', ') : '',
+      fd.get('weekly_trips') ? 'Weekly trips: ' + fd.get('weekly_trips') : '',
+      fd.get('notes') || '',
+      'Location: ' + (fd.get('location') || ''),
+    ].filter(Boolean).join(' | '),
+  };
+  try {
+    const API = (window.__3LL_API_BASE || 'https://three-lakes-logistics-api.onrender.com').replace(/\/$/, '');
+    const r = await fetch(API + '/api/light-fleet/executive/accounts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer taiOFL40cCr5V0pH89hUks8jXVPlOkm2WxKvd3f6BoE' },
+      body: JSON.stringify(payload),
+    });
+    if (r.ok) {
+      form.style.display = 'none';
+      document.getElementById('biz-success').style.display = 'block';
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else {
+      const msg = await r.text();
+      errEl.textContent = 'Could not submit: ' + msg;
+      errEl.style.display = 'block';
+      btn.textContent = 'Request a Business Account →'; btn.disabled = false;
+    }
+  } catch (err) {
+    errEl.textContent = 'Network error — please try again or call 661-466-9932.';
+    errEl.style.display = 'block';
+    btn.textContent = 'Request a Business Account →'; btn.disabled = false;
+  }
+}
+</script>
+
+<!-- ════════════════════════════════════════════════════════ -->
 <!-- LIGHT FLEET DRIVER INTAKE PAGE                          -->
 <!-- ════════════════════════════════════════════════════════ -->
 <div class="page" id="page-lf-intake">
@@ -2631,9 +2836,9 @@ document.getElementById('calendarOverlay')?.addEventListener('click', function(e
       <div style="font-size:52px;margin-bottom:14px;">✅</div>
       <div style="font-family:var(--ff-h);font-size:26px;color:var(--navy);font-weight:800;margin-bottom:8px;">Application Submitted!</div>
       <p style="color:var(--muted);font-size:15px;max-width:440px;margin:0 auto 16px;">We're running your official driving record check now. You'll receive a text message with your result — usually within a few hours.</p>
-      <div style="background:rgba(30,41,59,.04);border-radius:10px;padding:16px 20px;max-width:380px;margin:0 auto 20px;text-align:left;">
+      <div style="background:rgba(30,41,59,.04);border-radius:10px;padding:16px 20px;max-width:420px;margin:0 auto 20px;text-align:left;">
         <div style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:10px;">What happens next:</div>
-        <div style="font-size:13px;color:var(--muted);line-height:1.8;">✔ Driving record check runs automatically<br>✔ Text sent when approved (usually same day)<br>✔ Download the app + get your first trip</div>
+        <div style="font-size:13px;color:var(--muted);line-height:1.8;">✔ Driving record check runs automatically<br>✔ Text sent when approved (usually same day)<br>✔ Download the app + get your first trip<br id="lf-success-plat-line" style="display:none"/><span id="lf-success-plat-msg" style="display:none;"></span></div>
       </div>
       <p style="font-size:12px;color:var(--muted);">Questions? Call or text 661-466-9932</p>
     </div>
@@ -2695,7 +2900,66 @@ document.getElementById('calendarOverlay')?.addEventListener('click', function(e
         </div>
         <p style="font-size:11px;color:var(--muted);margin-top:6px;">Required to run your driving record check. Kept private and secure.</p>
       </div>
-      <div class="lf-form-row">
+      <!-- Universal Platform Sign-Up -->
+      <div style="background:linear-gradient(135deg,rgba(99,102,241,.06),rgba(59,130,246,.04));border:1.5px solid rgba(99,102,241,.2);border-radius:14px;padding:20px 20px 16px;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;">
+          <span style="font-size:18px;">🚀</span>
+          <label style="font-size:14px;font-weight:700;color:var(--navy);margin:0;">Sign Up for More Platforms <span style="font-weight:400;color:var(--muted);font-size:12px;">(optional)</span></label>
+        </div>
+        <p style="font-size:12px;color:var(--muted);margin:0 0 14px;line-height:1.6;">One background check covers all of them. Check the box and we'll register you — or send you a direct link with everything pre-filled.</p>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          <label id="plat-curri" style="display:flex;gap:12px;padding:12px 14px;border:1.5px solid var(--border);border-radius:10px;cursor:pointer;background:#fff;transition:border .15s,box-shadow .15s;" onmouseover="this.style.borderColor='#6366f1';this.style.boxShadow='0 0 0 3px rgba(99,102,241,.1)'" onmouseout="lfPlatHover(this)">
+            <input type="checkbox" name="platforms" value="curri" style="width:16px;height:16px;accent-color:#6366f1;margin-top:2px;flex-shrink:0;" onchange="lfPlatCheck(this)"/>
+            <div>
+              <div style="font-size:13px;font-weight:700;color:var(--navy);display:flex;align-items:center;gap:6px;flex-wrap:wrap;">📦 Curri <span style="font-size:10px;font-weight:600;background:#dcfce7;color:#16a34a;padding:1px 7px;border-radius:20px;">Dispatched by 3 Lakes</span></div>
+              <div style="font-size:11px;color:var(--muted);margin-top:2px;line-height:1.5;">B2B same-day delivery — retail, restaurant, industrial. Jobs dispatched through our carrier account.</div>
+              <div style="font-size:11px;font-weight:700;color:#6366f1;margin-top:4px;">$25–$45/hr est.</div>
+            </div>
+          </label>
+          <label id="plat-roadie" style="display:flex;gap:12px;padding:12px 14px;border:1.5px solid var(--border);border-radius:10px;cursor:pointer;background:#fff;transition:border .15s,box-shadow .15s;" onmouseover="this.style.borderColor='#6366f1';this.style.boxShadow='0 0 0 3px rgba(99,102,241,.1)'" onmouseout="lfPlatHover(this)">
+            <input type="checkbox" name="platforms" value="roadie" style="width:16px;height:16px;accent-color:#6366f1;margin-top:2px;flex-shrink:0;" onchange="lfPlatCheck(this)"/>
+            <div>
+              <div style="font-size:13px;font-weight:700;color:var(--navy);display:flex;align-items:center;gap:6px;flex-wrap:wrap;">🚚 Roadie (UPS) <span style="font-size:10px;font-weight:600;background:#dcfce7;color:#16a34a;padding:1px 7px;border-radius:20px;">Dispatched by 3 Lakes</span></div>
+              <div style="font-size:11px;color:var(--muted);margin-top:2px;line-height:1.5;">UPS-backed same-day + scheduled gigs. High volume in metro areas.</div>
+              <div style="font-size:11px;font-weight:700;color:#6366f1;margin-top:4px;">$20–$40/hr est.</div>
+            </div>
+          </label>
+          <label id="plat-amazon_flex" style="display:flex;gap:12px;padding:12px 14px;border:1.5px solid var(--border);border-radius:10px;cursor:pointer;background:#fff;transition:border .15s,box-shadow .15s;" onmouseover="this.style.borderColor='#6366f1';this.style.boxShadow='0 0 0 3px rgba(99,102,241,.1)'" onmouseout="lfPlatHover(this)">
+            <input type="checkbox" name="platforms" value="amazon_flex" style="width:16px;height:16px;accent-color:#6366f1;margin-top:2px;flex-shrink:0;" onchange="lfPlatCheck(this)"/>
+            <div>
+              <div style="font-size:13px;font-weight:700;color:var(--navy);display:flex;align-items:center;gap:6px;flex-wrap:wrap;">📬 Amazon Flex <span style="font-size:10px;font-weight:600;background:#fef9c3;color:#92400e;padding:1px 7px;border-radius:20px;">We send you the link</span></div>
+              <div style="font-size:11px;color:var(--muted);margin-top:2px;line-height:1.5;">Amazon package delivery — pick your own 2–4 hr blocks. High demand year-round.</div>
+              <div style="font-size:11px;font-weight:700;color:#6366f1;margin-top:4px;">$18–$25/hr est.</div>
+            </div>
+          </label>
+          <label id="plat-spark" style="display:flex;gap:12px;padding:12px 14px;border:1.5px solid var(--border);border-radius:10px;cursor:pointer;background:#fff;transition:border .15s,box-shadow .15s;" onmouseover="this.style.borderColor='#6366f1';this.style.boxShadow='0 0 0 3px rgba(99,102,241,.1)'" onmouseout="lfPlatHover(this)">
+            <input type="checkbox" name="platforms" value="spark" style="width:16px;height:16px;accent-color:#6366f1;margin-top:2px;flex-shrink:0;" onchange="lfPlatCheck(this)"/>
+            <div>
+              <div style="font-size:13px;font-weight:700;color:var(--navy);display:flex;align-items:center;gap:6px;flex-wrap:wrap;">🛒 Spark Driver <span style="font-size:10px;font-weight:600;background:#fef9c3;color:#92400e;padding:1px 7px;border-radius:20px;">We send you the link</span></div>
+              <div style="font-size:11px;color:var(--muted);margin-top:2px;line-height:1.5;">Walmart grocery + retail delivery. Flexible hours, weekly pay.</div>
+              <div style="font-size:11px;font-weight:700;color:#6366f1;margin-top:4px;">$15–$22/hr est.</div>
+            </div>
+          </label>
+          <label id="plat-doordash" style="display:flex;gap:12px;padding:12px 14px;border:1.5px solid var(--border);border-radius:10px;cursor:pointer;background:#fff;transition:border .15s,box-shadow .15s;" onmouseover="this.style.borderColor='#6366f1';this.style.boxShadow='0 0 0 3px rgba(99,102,241,.1)'" onmouseout="lfPlatHover(this)">
+            <input type="checkbox" name="platforms" value="doordash" style="width:16px;height:16px;accent-color:#6366f1;margin-top:2px;flex-shrink:0;" onchange="lfPlatCheck(this)"/>
+            <div>
+              <div style="font-size:13px;font-weight:700;color:var(--navy);display:flex;align-items:center;gap:6px;flex-wrap:wrap;">🍔 DoorDash Drive <span style="font-size:10px;font-weight:600;background:#fef9c3;color:#92400e;padding:1px 7px;border-radius:20px;">We send you the link</span></div>
+              <div style="font-size:11px;color:var(--muted);margin-top:2px;line-height:1.5;">Food + retail delivery. High order volume in any city, any time of day.</div>
+              <div style="font-size:11px;font-weight:700;color:#6366f1;margin-top:4px;">$15–$25/hr est.</div>
+            </div>
+          </label>
+          <label id="plat-goshare" style="display:flex;gap:12px;padding:12px 14px;border:1.5px solid var(--border);border-radius:10px;cursor:pointer;background:#fff;transition:border .15s,box-shadow .15s;" onmouseover="this.style.borderColor='#6366f1';this.style.boxShadow='0 0 0 3px rgba(99,102,241,.1)'" onmouseout="lfPlatHover(this)">
+            <input type="checkbox" name="platforms" value="goshare" style="width:16px;height:16px;accent-color:#6366f1;margin-top:2px;flex-shrink:0;" onchange="lfPlatCheck(this)"/>
+            <div>
+              <div style="font-size:13px;font-weight:700;color:var(--navy);display:flex;align-items:center;gap:6px;flex-wrap:wrap;">📐 GoShare <span style="font-size:10px;font-weight:600;background:#fef9c3;color:#92400e;padding:1px 7px;border-radius:20px;">We send you the link</span></div>
+              <div style="font-size:11px;color:var(--muted);margin-top:2px;line-height:1.5;">B2B + residential delivery — furniture, appliances, oversized items. Higher payouts per job.</div>
+              <div style="font-size:11px;font-weight:700;color:#6366f1;margin-top:4px;">$20–$35/hr est.</div>
+            </div>
+          </label>
+        </div>
+        <p style="font-size:11px;color:var(--muted);margin:12px 0 0;line-height:1.6;">✔ One Checkr background check covers every platform above — we handle submission automatically upon approval.</p>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
         <div>
           <label class="lf-form-label" style="margin-bottom:8px;">Clean driving record? *</label>
           <div style="display:flex;gap:12px;">
@@ -2748,6 +3012,29 @@ function lfStartSignup(type, label, color) {
   window.scrollTo({top:0,behavior:'smooth'});
 }
 
+// Toggle platform card highlight when checkbox changes
+function lfPlatCheck(cb) {
+  const card = cb.closest('label');
+  if (cb.checked) {
+    card.style.borderColor = '#6366f1';
+    card.style.background = 'rgba(99,102,241,.06)';
+    card.style.boxShadow = '0 0 0 3px rgba(99,102,241,.12)';
+  } else {
+    card.style.borderColor = 'var(--border)';
+    card.style.background = '#fff';
+    card.style.boxShadow = 'none';
+  }
+}
+
+// Restore hover state when not checked
+function lfPlatHover(card) {
+  const cb = card.querySelector('input[type="checkbox"]');
+  if (!cb || !cb.checked) {
+    card.style.borderColor = 'var(--border)';
+    card.style.boxShadow = 'none';
+  }
+}
+
 async function lfSubmitIntake(e){
   e.preventDefault();
   const btn = document.getElementById('lf-intake-btn');
@@ -2764,6 +3051,7 @@ async function lfSubmitIntake(e){
 
   btn.textContent = 'Submitting…'; btn.disabled = true;
   const services = [...form.querySelectorAll('[name="services"]:checked')].map(c=>c.value);
+  const platforms = [...form.querySelectorAll('[name="platforms"]:checked')].map(c=>c.value);
   const payload = {
     name: fd.get('name'), phone: fd.get('phone'), email: fd.get('email'),
     location: fd.get('location'),
@@ -2772,6 +3060,7 @@ async function lfSubmitIntake(e){
     vehicle_year: fd.get('vehicle_year'), vehicle_make: fd.get('vehicle_make'),
     vehicle_model: fd.get('vehicle_model'), vehicle_type: fd.get('vehicle_type'),
     approved_services: services,
+    platforms_opted_in: platforms,
     clean_record: fd.get('clean_record'), has_insurance: fd.get('has_insurance'),
     referral_source: fd.get('referral_source'), notes: fd.get('notes') || ''
   };
@@ -2784,9 +3073,21 @@ async function lfSubmitIntake(e){
       const res = await r.json();
       form.style.display='none';
       // If Stripe Identity verification URL returned, redirect driver to complete it
-      if(res.verification_url){
+      if (res.verification_url) {
         window.location.href = res.verification_url;
       } else {
+        // Show platform confirmation in success box if driver opted into any
+        if (platforms.length > 0) {
+          const names = {'curri':'Curri','roadie':'Roadie','amazon_flex':'Amazon Flex','spark':'Spark Driver','doordash':'DoorDash Drive','goshare':'GoShare'};
+          const platList = platforms.map(p=>names[p]||p).join(', ');
+          const line = document.getElementById('lf-success-plat-line');
+          const msg = document.getElementById('lf-success-plat-msg');
+          if (line && msg) {
+            line.style.display = '';
+            msg.style.display = '';
+            msg.textContent = '✔ Platform sign-ups sent: '+platList;
+          }
+        }
         document.getElementById('lf-intake-success').style.display='block';
         window.scrollTo({top:0,behavior:'smooth'});
       }

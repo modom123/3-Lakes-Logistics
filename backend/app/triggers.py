@@ -16,8 +16,12 @@ Trigger map
   daily 07:00 UTC cron      →  fire_victoria()    — strategic snapshot
   daily 07:15 UTC cron      →  fire_naomi()       — lead scoring
   daily 07:30 UTC cron      →  fire_winston()     — carrier health + churn signals
+  daily 07:45 UTC cron      →  fire_onboarding_bond_audit() — Bond onboarding pipeline audit
   daily 08:00 UTC cron      →  fire_isabella()    — campaign builder (leads + re-engagement)
   daily 08:15 UTC cron      →  fire_sofia()       — financial reconciliation
+  daily 09:00 UTC cron      →  fire_partial_submission_reminders() — incomplete carrier reminders
+  daily 06:45 UTC cron      →  fire_insurance_expiry_alerts() — insurance expiry 30/7 day alerts
+  hourly cron               →  fire_scheduled_tasks() — polls scheduled_tasks for due work
   vault doc uploaded/classified → fire_vault_scan(doc_id)
 """
 from __future__ import annotations
@@ -331,6 +335,79 @@ def fire_lf_compliance_sweep() -> None:
 def fire_lf_nemt_billing_run() -> None:
     """Weekly batch — queue all completed NEMT trips for Medicaid/Medicare billing."""
     _bg(_run_domain_safe, "lf_settlement", None, None, "lf_nemt_billing_weekly")
+
+
+def fire_scheduled_tasks() -> None:
+    """Hourly job — polls scheduled_tasks table for due pending tasks and executes them."""
+    def _run():
+        try:
+            from .execution_engine.handlers.onboarding_scheduler import execute_due_tasks  # noqa: PLC0415
+            result = execute_due_tasks()
+            log.info(
+                "fire_scheduled_tasks executed=%s failed=%s skipped=%s",
+                result.get("executed"), result.get("failed"), result.get("skipped"),
+            )
+        except Exception as exc:  # noqa: BLE001
+            log.error("fire_scheduled_tasks failed: %s", exc)
+    _bg(_run)
+
+
+def fire_partial_submission_reminders() -> None:
+    """Daily 09:00 job — sweeps for incomplete carriers and sends 24h/72h reminders."""
+    def _run():
+        try:
+            from .execution_engine.handlers.onboarding_scheduler import send_partial_submission_reminders  # noqa: PLC0415
+            result = send_partial_submission_reminders()
+            log.info(
+                "fire_partial_submission_reminders reminders_sent=%s errors=%s",
+                result.get("reminders_sent"), result.get("errors"),
+            )
+        except Exception as exc:  # noqa: BLE001
+            log.error("fire_partial_submission_reminders failed: %s", exc)
+    _bg(_run)
+
+
+def fire_onboarding_bond_audit() -> None:
+    """Daily 07:45 job — triggers Bond to audit the onboarding pipeline specifically."""
+    def _run():
+        try:
+            from .agents.james_bond import run as bond_run  # noqa: PLC0415
+            log.info("fire_onboarding_bond_audit starting")
+            result = bond_run({"scope": "onboarding", "top_n": 5, "remediate": True})
+            log.info(
+                "fire_onboarding_bond_audit done gaps=%s directives=%s",
+                len(result.get("tech_gaps", [])), len(result.get("directives", [])),
+            )
+        except Exception as exc:  # noqa: BLE001
+            log.error("fire_onboarding_bond_audit failed: %s", exc)
+    _bg(_run)
+
+
+def fire_insurance_expiry_alerts() -> None:
+    """Daily 06:45 job — fires insurance alerts for carriers expiring in 30/7 days."""
+    def _run():
+        try:
+            from .execution_engine.handlers.onboarding_scheduler import send_insurance_expiry_alerts  # noqa: PLC0415
+            result = send_insurance_expiry_alerts()
+            log.info(
+                "fire_insurance_expiry_alerts alerts_sent=%s",
+                result.get("alerts_sent"),
+            )
+        except Exception as exc:  # noqa: BLE001
+            log.error("fire_insurance_expiry_alerts failed: %s", exc)
+    _bg(_run)
+
+
+def fire_stall_reminders() -> None:
+    """Daily job — sends one reminder email when a carrier stops progressing mid-onboarding."""
+    def _run():
+        try:
+            from .execution_engine.handlers.onboarding_scheduler import send_stall_reminders  # noqa: PLC0415
+            result = send_stall_reminders()
+            log.info("fire_stall_reminders sent=%s errors=%s", result.get("sent"), result.get("errors"))
+        except Exception as exc:  # noqa: BLE001
+            log.error("fire_stall_reminders failed: %s", exc)
+    _bg(_run)
 
 
 def fire_vault_scan(doc_id: str) -> None:
