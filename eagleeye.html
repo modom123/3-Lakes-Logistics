@@ -760,6 +760,13 @@ td.td-name{font-weight:600;color:var(--navy);}
   </div>
 
   <div class="sb-section">
+    <div class="sb-label">Trading</div>
+    <div class="sb-item" onclick="nav('natco')"><span class="sb-icon">📈</span> NA Trading Co <span class="sb-badge" id="natco-notif" style="display:none;background:#C8902A;color:#fff">●</span></div>
+    <div class="sb-item" onclick="nav('natco-board')"><span class="sb-icon">🔲</span> Trade Board</div>
+    <div class="sb-item" onclick="nav('natco-margin')"><span class="sb-icon">💹</span> Margin Calc</div>
+  </div>
+
+  <div class="sb-section">
     <div class="sb-label">Consulting</div>
     <div class="sb-item" onclick="nav('bond')"><span class="sb-icon">🕵️</span> Bond Office <span class="sb-badge" id="bond-notif" style="display:none">0</span></div>
   </div>
@@ -3507,7 +3514,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 let allCarriers=[], allLoads=[], allInvoices=[], currentInvFilter='all', loadCounter=3849;
 
-const pageNames={dashboard:'Dashboard',dispatch:'Dispatch Board','fleet-map':'Fleet Map',carriers:'Carriers',drivers:'Drivers',loads:'Load Manager',invoices:'Invoices & Billing',compliance:'DOT Compliance',ifta:'IFTA / Permits',insurance:'Insurance',revenue:'Revenue Tracker',providers:'Compliance Providers',checklist:'Daily Checklist',notes:'Dispatcher Notes',reports:'Team Reports','exec-command':'Exec Command',agents:'AI Agents',founders:'Founders Program',crm:'Lead CRM',leads:'Lead Pipeline',execution:'Execution Engine',factoring:'Factoring',email:'Email Center',vault:'Document Vault',clm:'CLM Scanner',ledger:'Atomic Ledger',agreements:'Agreements','lf-map':'Light Fleet Live Map','lf-nemt':'NEMT — Medical Transport','lf-executive':'Executive Transport','lf-courier':'Courier & Last-Mile','lf-gig':'Gig Fleet Management','ccg-office':'CC Gulley Office'};
+const pageNames={dashboard:'Dashboard',dispatch:'Dispatch Board','fleet-map':'Fleet Map',carriers:'Carriers',drivers:'Drivers',loads:'Load Manager',invoices:'Invoices & Billing',compliance:'DOT Compliance',ifta:'IFTA / Permits',insurance:'Insurance',revenue:'Revenue Tracker',providers:'Compliance Providers',checklist:'Daily Checklist',notes:'Dispatcher Notes',reports:'Team Reports','exec-command':'Exec Command',agents:'AI Agents',founders:'Founders Program',crm:'Lead CRM',leads:'Lead Pipeline',execution:'Execution Engine',factoring:'Factoring',email:'Email Center',vault:'Document Vault',clm:'CLM Scanner',ledger:'Atomic Ledger',agreements:'Agreements','lf-map':'Light Fleet Live Map','lf-nemt':'NEMT — Medical Transport','lf-executive':'Executive Transport','lf-courier':'Courier & Last-Mile','lf-gig':'Gig Fleet Management','ccg-office':'CC Gulley Office',natco:'North America Trading Co — Command',  'natco-board':'North America Trading Co — Trade Board','natco-margin':'North America Trading Co — Margin Calculator'};
 
 // ── 3 Lakes Logistics Backend API (FastAPI) ──
 const API_BASE = (window.__3LL_API_BASE || 'https://three-lakes-logistics-api.onrender.com').replace(/\/$/,'');
@@ -3631,6 +3638,9 @@ function nav(id){
   if(id==='lf-nemt'||id==='lf-executive'||id==='lf-courier'||id==='lf-gig') loadLightFleet(id);
   if(id==='execution'){loadExecutionDomains();loadExecutionSteps();}
   if(id==='email'&&typeof mailInit==='function'){mailInit();}
+  if(id==='natco')natcoLoad();
+  if(id==='natco-board')natcoBoardLoad();
+  if(id==='natco-margin')natcoMarginInit();
 }
 
 function openModal(id){
@@ -15027,6 +15037,812 @@ function lfmapToggleAutoRefresh() {
   clearInterval(_lfmapRefreshTimer);
   if (document.getElementById('lfmap-auto-refresh')?.checked) {
     _lfmapRefreshTimer = setInterval(lfMapRefresh, 30000);
+  }
+}
+</script>
+
+<!-- ═══════════════════════════════════════════════════════════
+     NORTH AMERICA TRADING CO — PAGE HTML
+═══════════════════════════════════════════════════════════ -->
+
+<!-- NATCO COMMAND PAGE -->
+<div class="page" id="page-natco">
+<style>
+.natco-hero{background:linear-gradient(135deg,var(--navy) 0%,var(--navy3) 60%,#1a4a8a 100%);border-radius:14px;padding:28px 32px;margin-bottom:20px;position:relative;overflow:hidden;}
+.natco-hero::before{content:'';position:absolute;top:-40px;right:-40px;width:200px;height:200px;background:radial-gradient(circle,rgba(200,144,42,.18) 0%,transparent 70%);}
+.natco-hero-title{font-family:var(--ff-h);font-size:26px;font-weight:900;color:#fff;letter-spacing:.5px;margin-bottom:4px;}
+.natco-hero-sub{font-size:13px;color:rgba(255,255,255,.6);letter-spacing:1.5px;text-transform:uppercase;}
+.natco-hero-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:20px;}
+.natco-kpi{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:14px 16px;}
+.natco-kpi-label{font-size:10px;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;}
+.natco-kpi-val{font-family:var(--ff-h);font-size:22px;font-weight:800;color:#fff;}
+.natco-kpi-val.gold{color:var(--gold3);}
+.natco-kpi-val.green{color:#34d399;}
+.natco-kpi-val.blue{color:#93c5fd;}
+.natco-kpi-sub{font-size:10px;color:rgba(255,255,255,.4);margin-top:2px;}
+.natco-grid{display:grid;grid-template-columns:1fr 340px;gap:16px;align-items:start;}
+.natco-trade-row{display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:8px;border:1px solid var(--border);background:var(--surface);margin-bottom:8px;transition:box-shadow .15s;}
+.natco-trade-row:hover{box-shadow:var(--shadow);}
+.natco-trade-badge{font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;white-space:nowrap;}
+.natco-badge-open{background:#dbeafe;color:#1e40af;}
+.natco-badge-covered{background:#dcfce7;color:#166534;}
+.natco-badge-pending{background:#fef3c7;color:#92400e;}
+.natco-badge-dead{background:#fee2e2;color:#991b1b;}
+.spread-pill{font-family:var(--ff-m);font-size:12px;font-weight:700;padding:3px 10px;border-radius:20px;}
+.spread-pos{background:#d1fae5;color:#065f46;}
+.spread-neg{background:#fee2e2;color:#991b1b;}
+.carrier-match-card{border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:8px;cursor:pointer;transition:border-color .15s,box-shadow .15s;}
+.carrier-match-card:hover{border-color:var(--gold);box-shadow:0 2px 12px rgba(200,144,42,.15);}
+.carrier-match-card.selected{border-color:var(--gold);background:rgba(200,144,42,.05);}
+@media(max-width:900px){.natco-grid{grid-template-columns:1fr;}.natco-hero-kpis{grid-template-columns:repeat(2,1fr);}}
+</style>
+
+  <div class="page-hdr">
+    <div class="page-hdr-l"><div class="chip">Live</div><h2>North America Trading Co</h2></div>
+    <div class="page-hdr-acts">
+      <button class="btn-out" onclick="natcoLoad()">↻ Refresh</button>
+      <button class="btn-gold" onclick="openModal('natco-new-trade-modal')">+ New Trade</button>
+    </div>
+  </div>
+
+  <!-- Hero KPIs -->
+  <div class="natco-hero">
+    <div class="natco-hero-title">North America Trading Co.</div>
+    <div class="natco-hero-sub">Load Trading Desk · 3 Lakes Logistics</div>
+    <div class="natco-hero-kpis">
+      <div class="natco-kpi"><div class="natco-kpi-label">Open Positions</div><div class="natco-kpi-val blue" id="natco-kpi-open">—</div><div class="natco-kpi-sub">Loads needing coverage</div></div>
+      <div class="natco-kpi"><div class="natco-kpi-label">Covered Today</div><div class="natco-kpi-val green" id="natco-kpi-covered">—</div><div class="natco-kpi-sub">Carriers assigned</div></div>
+      <div class="natco-kpi"><div class="natco-kpi-label">Gross Revenue (MTD)</div><div class="natco-kpi-val gold" id="natco-kpi-gross">—</div><div class="natco-kpi-sub">Broker pay MTD</div></div>
+      <div class="natco-kpi"><div class="natco-kpi-label">Net Margin (MTD)</div><div class="natco-kpi-val gold" id="natco-kpi-margin">—</div><div class="natco-kpi-sub">After carrier pay</div></div>
+    </div>
+  </div>
+
+  <div class="natco-grid">
+    <!-- LEFT: Active Trades Table -->
+    <div>
+      <div class="card">
+        <div class="card-hd">
+          <div class="card-title">Active Trades</div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <input id="natco-search" class="form-input" style="width:160px;font-size:12px" placeholder="Search…" oninput="natcoRenderTrades()">
+            <select id="natco-filter" class="fsel" style="font-size:12px;padding:5px 8px" onchange="natcoRenderTrades()">
+              <option value="">All</option>
+              <option value="Open">Open</option>
+              <option value="Covered">Covered</option>
+              <option value="Pending">Pending RC</option>
+              <option value="Dead">Dead</option>
+            </select>
+          </div>
+        </div>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Load #</th><th>Route</th><th>Broker Pay</th><th>Carrier Pay</th><th>Spread</th><th>Equip</th><th>Pickup</th><th>Status</th><th>Actions</th></tr></thead>
+            <tbody id="natco-trades-table"><tr><td colspan="9"><div class="loading"><div class="spin"></div>Loading trades…</div></td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: Quick Actions -->
+    <div>
+      <!-- Carrier Match Panel -->
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-hd"><div class="card-title">Carrier Match</div><span class="card-chip" id="natco-match-count">0 available</span></div>
+        <div style="margin-bottom:10px">
+          <input id="natco-match-origin" class="fi" placeholder="Origin city (e.g. Detroit, MI)" style="margin-bottom:6px" oninput="natcoMatchCarriers()">
+          <select id="natco-match-equip" class="fsel" style="font-size:12px" onchange="natcoMatchCarriers()">
+            <option value="">Any equipment</option>
+            <option>Dry Van 53'</option><option>Dry Van 48'</option>
+            <option>Reefer</option><option>Flatbed</option>
+            <option>Step Deck</option><option>Cargo Van</option>
+            <option>26 Foot Box Truck</option>
+          </select>
+        </div>
+        <div id="natco-match-list" style="max-height:300px;overflow-y:auto">
+          <div style="text-align:center;padding:20px;color:var(--muted);font-size:12px">Enter origin city to find available carriers</div>
+        </div>
+      </div>
+
+      <!-- Today's P&L -->
+      <div class="card">
+        <div class="card-hd"><div class="card-title">Today's P&amp;L</div><span class="card-chip" id="natco-date-chip"></span></div>
+        <div id="natco-pnl-list" style="padding:4px 0">
+          <div style="text-align:center;padding:20px;color:var(--muted);font-size:12px">Loading…</div>
+        </div>
+        <div style="border-top:1px solid var(--border);padding:12px 0 4px;display:flex;justify-content:space-between;align-items:center">
+          <span style="font-size:12px;color:var(--muted)">Net Today</span>
+          <span class="spread-pill spread-pos" id="natco-today-net">$0</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- NATCO TRADE BOARD PAGE -->
+<div class="page" id="page-natco-board">
+  <div class="page-hdr">
+    <div class="page-hdr-l"><div class="chip">Board</div><h2>North America Trading Co — Trade Board</h2></div>
+    <div class="page-hdr-acts">
+      <button class="btn-gold" onclick="openModal('natco-new-trade-modal')">+ Post Load</button>
+    </div>
+  </div>
+
+  <!-- Board KPIs -->
+  <div class="g4" style="margin-bottom:16px">
+    <div class="mc"><div class="mc-label">Open Loads</div><div class="mc-val blue" id="board-open">—</div><div class="mc-sub">Needs carrier</div></div>
+    <div class="mc"><div class="mc-label">Best Spread Today</div><div class="mc-val gold" id="board-best-spread">—</div><div class="mc-sub">Highest margin load</div></div>
+    <div class="mc"><div class="mc-label">Avg RPM</div><div class="mc-val green" id="board-avg-rpm">—</div><div class="mc-sub">Broker pay per mile</div></div>
+    <div class="mc"><div class="mc-label">Total Exposure</div><div class="mc-val orange" id="board-exposure">—</div><div class="mc-sub">Uncovered broker pay</div></div>
+  </div>
+
+  <!-- Kanban-style board -->
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px" id="natco-kanban">
+    <div>
+      <div style="font-family:var(--ff-h);font-size:13px;font-weight:800;color:var(--navy);margin-bottom:10px;padding:6px 10px;background:#dbeafe;border-radius:6px;text-align:center">🔵 OPEN</div>
+      <div id="natco-col-open"></div>
+    </div>
+    <div>
+      <div style="font-family:var(--ff-h);font-size:13px;font-weight:800;color:var(--navy);margin-bottom:10px;padding:6px 10px;background:#fef3c7;border-radius:6px;text-align:center">🟡 PENDING RC</div>
+      <div id="natco-col-pending"></div>
+    </div>
+    <div>
+      <div style="font-family:var(--ff-h);font-size:13px;font-weight:800;color:var(--navy);margin-bottom:10px;padding:6px 10px;background:#dcfce7;border-radius:6px;text-align:center">🟢 COVERED</div>
+      <div id="natco-col-covered"></div>
+    </div>
+    <div>
+      <div style="font-family:var(--ff-h);font-size:13px;font-weight:800;color:var(--navy);margin-bottom:10px;padding:6px 10px;background:#fee2e2;border-radius:6px;text-align:center">🔴 DEAD</div>
+      <div id="natco-col-dead"></div>
+    </div>
+  </div>
+</div>
+
+<!-- NATCO MARGIN CALCULATOR PAGE -->
+<div class="page" id="page-natco-margin">
+  <div class="page-hdr">
+    <div class="page-hdr-l"><div class="chip">Tools</div><h2>North America Trading Co — Margin Calculator</h2></div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;max-width:1100px">
+    <!-- Calculator -->
+    <div class="card">
+      <div class="card-hd"><div class="card-title">Load Margin Calculator</div><span class="card-chip">Real-time</span></div>
+      <div style="display:flex;flex-direction:column;gap:14px;padding:4px 0">
+        <div class="fg"><label class="fl">Broker Pays You (Gross Rate)</label><input class="fi" type="number" id="mc-broker-pay" placeholder="3200" oninput="natcoCalcMargin()"></div>
+        <div class="fg"><label class="fl">You Pay Carrier</label><input class="fi" type="number" id="mc-carrier-pay" placeholder="2600" oninput="natcoCalcMargin()"></div>
+        <div class="fg"><label class="fl">Miles (for RPM)</label><input class="fi" type="number" id="mc-miles" placeholder="850" oninput="natcoCalcMargin()"></div>
+        <div class="fg"><label class="fl">Equipment Type</label>
+          <select class="fsel" id="mc-equip-type" onchange="natcoCalcMargin()">
+            <option>Dry Van 53'</option><option>Reefer</option><option>Flatbed</option>
+            <option>Step Deck</option><option>Cargo Van</option><option>26 Foot Box Truck</option>
+          </select>
+        </div>
+        <div class="fg"><label class="fl">Pickup Date</label><input class="fi" type="date" id="mc-pickup-date" oninput="natcoCalcMargin()"></div>
+        <div class="fg"><label class="fl">Origin → Destination</label><input class="fi" id="mc-route" placeholder="Detroit, MI → Atlanta, GA" oninput="natcoCalcMargin()"></div>
+        <div class="fg"><label class="fl">Broker / Shipper Name</label><input class="fi" id="mc-broker-name" placeholder="e.g. Echo Logistics, Coyote…"></div>
+      </div>
+    </div>
+
+    <!-- Live Results -->
+    <div>
+      <div class="card" id="natco-margin-result" style="margin-bottom:16px;border-top:3px solid var(--gold)">
+        <div class="card-hd"><div class="card-title">Margin Analysis</div></div>
+        <div id="natco-margin-display" style="padding:8px 0">
+          <div style="text-align:center;padding:30px;color:var(--muted);font-size:13px">Enter rates above to see analysis</div>
+        </div>
+      </div>
+
+      <!-- Go / No-Go -->
+      <div class="card" id="natco-gng-card" style="display:none">
+        <div class="card-hd"><div class="card-title">Go / No-Go</div></div>
+        <div id="natco-gng-display"></div>
+        <div style="display:flex;gap:8px;margin-top:12px">
+          <button class="btn-gold" id="natco-book-btn" onclick="natcoBookFromCalc()" style="flex:1">Book This Load →</button>
+          <button class="btn-out" onclick="natcoResetCalc()" style="flex:0 0 auto">Reset</button>
+        </div>
+      </div>
+
+      <!-- Market Benchmarks -->
+      <div class="card" style="margin-top:16px">
+        <div class="card-hd"><div class="card-title">Market Benchmarks</div><span class="card-chip">Reference</span></div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:10px">Typical broker spread targets by equipment</div>
+        <table style="width:100%;font-size:12px;border-collapse:collapse">
+          <thead><tr style="border-bottom:1px solid var(--border)"><th style="text-align:left;padding:5px 4px;font-weight:600">Equipment</th><th style="text-align:right;padding:5px 4px;font-weight:600">Min Spread</th><th style="text-align:right;padding:5px 4px;font-weight:600">Target</th><th style="text-align:right;padding:5px 4px;font-weight:600">Great</th></tr></thead>
+          <tbody>
+            <tr style="border-bottom:1px solid var(--border)"><td style="padding:5px 4px">Dry Van 53'</td><td style="text-align:right;color:var(--orange)">$200</td><td style="text-align:right;color:var(--gold)">$350–500</td><td style="text-align:right;color:var(--green)">$500+</td></tr>
+            <tr style="border-bottom:1px solid var(--border)"><td style="padding:5px 4px">Reefer</td><td style="text-align:right;color:var(--orange)">$250</td><td style="text-align:right;color:var(--gold)">$400–600</td><td style="text-align:right;color:var(--green)">$600+</td></tr>
+            <tr style="border-bottom:1px solid var(--border)"><td style="padding:5px 4px">Flatbed</td><td style="text-align:right;color:var(--orange)">$200</td><td style="text-align:right;color:var(--gold)">$300–450</td><td style="text-align:right;color:var(--green)">$450+</td></tr>
+            <tr style="border-bottom:1px solid var(--border)"><td style="padding:5px 4px">Cargo Van</td><td style="text-align:right;color:var(--orange)">$50</td><td style="text-align:right;color:var(--gold)">$100–200</td><td style="text-align:right;color:var(--green)">$200+</td></tr>
+            <tr><td style="padding:5px 4px">Box Truck 26'</td><td style="text-align:right;color:var(--orange)">$100</td><td style="text-align:right;color:var(--gold)">$150–300</td><td style="text-align:right;color:var(--green)">$300+</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ NEW TRADE MODAL ═══════════════ -->
+<div class="modal-overlay" id="natco-new-trade-modal">
+  <div class="modal" style="max-width:680px">
+    <div class="modal-hd">
+      <div><div class="modal-title">Post New Trade</div><div class="modal-sub">North America Trading Co · Load intake</div></div>
+      <button class="modal-close" onclick="closeModal('natco-new-trade-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <div class="fg"><label class="fl">Origin <span>*</span></label><input class="fi" id="nt-origin" placeholder="Detroit, MI"></div>
+        <div class="fg"><label class="fl">Destination <span>*</span></label><input class="fi" id="nt-dest" placeholder="Atlanta, GA"></div>
+      </div>
+      <div class="form-row-3">
+        <div class="fg"><label class="fl">Miles</label><input class="fi" type="number" id="nt-miles" placeholder="847" oninput="natcoCalcNewTrade()"></div>
+        <div class="fg"><label class="fl">Broker Pays You ($) <span>*</span></label><input class="fi" type="number" id="nt-broker-pay" placeholder="3200" oninput="natcoCalcNewTrade()"></div>
+        <div class="fg"><label class="fl">Carrier Pay ($) <span>*</span></label><input class="fi" type="number" id="nt-carrier-pay" placeholder="2600" oninput="natcoCalcNewTrade()"></div>
+      </div>
+      <div id="nt-margin-preview" style="background:var(--slate);border-radius:8px;padding:10px 14px;font-size:13px;margin:4px 0 8px;min-height:36px;color:var(--muted)">Enter rates to see margin preview</div>
+      <div class="form-row">
+        <div class="fg"><label class="fl">Equipment <span>*</span></label>
+          <select class="fsel" id="nt-equip">
+            <option>Dry Van 53'</option><option>Dry Van 48'</option><option>Reefer</option>
+            <option>Flatbed</option><option>Step Deck</option><option>Cargo Van</option>
+            <option>26 Foot Box Truck</option><option>Tanker / Hazmat</option>
+          </select>
+        </div>
+        <div class="fg"><label class="fl">Weight (lbs)</label><input class="fi" type="number" id="nt-weight" placeholder="42000"></div>
+      </div>
+      <div class="form-row">
+        <div class="fg"><label class="fl">Pickup Date <span>*</span></label><input class="fi" type="date" id="nt-pickup"></div>
+        <div class="fg"><label class="fl">Broker / Shipper <span>*</span></label><input class="fi" id="nt-broker" placeholder="e.g. Echo Logistics"></div>
+      </div>
+      <div class="form-row">
+        <div class="fg"><label class="fl">Commodity</label><input class="fi" id="nt-commodity" placeholder="General Freight"></div>
+        <div class="fg"><label class="fl">Assigned Carrier</label>
+          <select class="fsel" id="nt-carrier-select"><option value="">Unassigned (Open)</option></select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="fg"><label class="fl">Broker Contact Email</label><input class="fi" type="email" id="nt-broker-email" placeholder="broker@company.com"></div>
+        <div class="fg"><label class="fl">Status</label>
+          <select class="fsel" id="nt-status">
+            <option value="Open">Open — Needs carrier</option>
+            <option value="Pending">Pending RC — Rate con sent</option>
+            <option value="Covered">Covered — Carrier assigned</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row-1">
+        <div class="fg"><label class="fl">Notes</label><textarea class="fta" id="nt-notes" placeholder="Special instructions, references, etc." style="min-height:56px"></textarea></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-out" onclick="closeModal('natco-new-trade-modal')">Cancel</button>
+      <button class="btn-navy" id="nt-save-btn" onclick="natcoSaveTrade()">Post Trade →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ TRADE DETAIL MODAL ═══════════════ -->
+<div class="modal-overlay" id="natco-detail-modal">
+  <div class="modal" style="max-width:620px">
+    <div class="modal-hd">
+      <div><div class="modal-title" id="natco-detail-title">Trade Detail</div><div class="modal-sub">North America Trading Co</div></div>
+      <button class="modal-close" onclick="closeModal('natco-detail-modal')">✕</button>
+    </div>
+    <div class="modal-body" id="natco-detail-body"></div>
+    <div class="modal-footer" id="natco-detail-footer"></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     NORTH AMERICA TRADING CO — JAVASCRIPT
+═══════════════════════════════════════════════════════════ -->
+<script>
+// ── NATCO State ──
+let natcoTrades = [];  // stored in Supabase loads table with source='NATCO'
+let natcoCarriers = [];
+
+// ── Load trades from Supabase (reuses allLoads filtered by notes prefix or source) ──
+async function natcoLoad() {
+  // Reuse existing allLoads — trades tagged with notes containing [NATCO]
+  // or load via dedicated API call
+  try {
+    const res = await apiFetch('/api/dashboard/loads?limit=500');
+    if (res.ok) {
+      const data = await res.json();
+      natcoTrades = (data.loads || data || []).filter(l =>
+        (l.notes && l.notes.includes('[NATCO]')) ||
+        (l.load_number && l.load_number.startsWith('NT-'))
+      );
+    }
+  } catch(e) {
+    // fallback: filter from allLoads
+    natcoTrades = (allLoads || []).filter(l =>
+      (l.notes && l.notes.includes('[NATCO]')) ||
+      (l.load_number && l.load_number.startsWith('NT-'))
+    );
+  }
+  natcoCarriers = allCarriers || [];
+  natcoRenderKPIs();
+  natcoRenderTrades();
+  natcoRenderPnL();
+  const chip = document.getElementById('natco-date-chip');
+  if(chip) chip.textContent = new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+}
+
+function natcoRenderKPIs() {
+  const open = natcoTrades.filter(t => t.status === 'Open' || t.status === 'Booked').length;
+  const today = new Date().toDateString();
+  const covered = natcoTrades.filter(t => {
+    const d = t.updated_at || t.created_at;
+    return d && new Date(d).toDateString() === today && (t.status === 'Covered' || t.status === 'En Route' || t.status === 'Delivered');
+  }).length;
+
+  let gross = 0, net = 0;
+  const now = new Date();
+  natcoTrades.forEach(t => {
+    const d = new Date(t.created_at || t.pickup_date || 0);
+    if(d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()) {
+      const brokerPay = t.rate || t.rate_total || 0;
+      const carrierPay = t.carrier_pay || 0;
+      gross += brokerPay;
+      net += (brokerPay - carrierPay);
+    }
+  });
+
+  setText('natco-kpi-open', open);
+  setText('natco-kpi-covered', covered);
+  setText('natco-kpi-gross', '$' + gross.toLocaleString());
+  setText('natco-kpi-margin', '$' + net.toLocaleString());
+
+  // badge
+  const badge = document.getElementById('natco-notif');
+  if(badge) { badge.textContent = open; badge.style.display = open > 0 ? '' : 'none'; }
+}
+
+function natcoRenderTrades() {
+  const tbody = document.getElementById('natco-trades-table');
+  if(!tbody) return;
+  const q = (document.getElementById('natco-search')?.value || '').toLowerCase();
+  const filter = document.getElementById('natco-filter')?.value || '';
+
+  let trades = natcoTrades;
+  if(filter) trades = trades.filter(t => t.status === filter || (filter === 'Covered' && (t.status === 'En Route' || t.status === 'Delivered')));
+  if(q) trades = trades.filter(t =>
+    (t.load_number||'').toLowerCase().includes(q) ||
+    (t.origin||'').toLowerCase().includes(q) ||
+    (t.destination||'').toLowerCase().includes(q) ||
+    (t.notes||'').toLowerCase().includes(q)
+  );
+
+  if(!trades.length) {
+    tbody.innerHTML = '<tr><td colspan="9"><div class="empty-state"><div class="ei">📈</div><p>No trades found. Post your first load to start trading.</p></div></td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = trades.map(t => {
+    const brokerPay = Number(t.rate || t.rate_total || 0);
+    const carrierPay = Number(t.carrier_pay || 0);
+    const spread = brokerPay - carrierPay;
+    const miles = Number(t.miles || 0);
+    const rpm = miles ? (brokerPay / miles).toFixed(2) : '—';
+    const pickup = t.pickup_date ? new Date(t.pickup_date).toLocaleDateString('en-US',{month:'short',day:'numeric'}) : '—';
+    const statusMap = { Open:'natco-badge-open', Covered:'natco-badge-covered', Pending:'natco-badge-pending', Dead:'natco-badge-dead', 'En Route':'natco-badge-covered', Delivered:'natco-badge-covered', Booked:'natco-badge-open' };
+    const badgeCls = statusMap[t.status] || 'natco-badge-open';
+    const spreadCls = spread > 0 ? 'spread-pos' : 'spread-neg';
+    const route = esc((t.origin||'?') + ' → ' + (t.destination||'?'));
+    return `<tr>
+      <td class="t-mono" style="font-size:11px;font-weight:700">${esc(t.load_number||'#'+t.id.slice(0,6))}</td>
+      <td style="font-size:12px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${route}</td>
+      <td style="font-weight:700;color:var(--gold)">$${brokerPay.toLocaleString()}</td>
+      <td style="color:var(--muted)">${carrierPay ? '$'+carrierPay.toLocaleString() : '<span style="color:var(--orange);font-style:italic">TBD</span>'}</td>
+      <td><span class="spread-pill ${spreadCls}">${carrierPay ? (spread>=0?'+':'')+' $'+spread.toLocaleString() : '—'}</span></td>
+      <td style="font-size:11px;color:var(--muted)">${esc(t.equipment_type||'—')}</td>
+      <td style="font-size:12px;color:var(--muted)">${pickup}</td>
+      <td><span class="natco-trade-badge ${badgeCls}">${esc(t.status||'Open')}</span></td>
+      <td><div style="display:flex;gap:4px">
+        <button class="btn-out" style="font-size:10px;padding:3px 7px" onclick="natcoOpenDetail('${t.id}')">Detail</button>
+        <button class="btn-navy-sm" onclick="natcoQuickCover('${t.id}')" title="Assign carrier & send RC">🚛</button>
+        <button class="btn-navy-sm" onclick="natcoSendRC('${t.id}')" title="Send Rate Confirmation">📧</button>
+        <button class="btn-out" style="font-size:10px;padding:3px 7px;color:var(--red)" onclick="natcoMarkDead('${t.id}')">✕</button>
+      </div></td>
+    </tr>`;
+  }).join('');
+
+  // also update board
+  natcoBoardRender();
+}
+
+function natcoRenderPnL() {
+  const list = document.getElementById('natco-pnl-list');
+  if(!list) return;
+  const today = new Date().toDateString();
+  const todayTrades = natcoTrades.filter(t => {
+    const d = t.updated_at || t.created_at;
+    return d && new Date(d).toDateString() === today;
+  });
+
+  if(!todayTrades.length) {
+    list.innerHTML = '<div style="text-align:center;padding:16px;color:var(--muted);font-size:12px">No trades updated today</div>';
+    setText('natco-today-net', '$0');
+    return;
+  }
+
+  let totalNet = 0;
+  list.innerHTML = todayTrades.map(t => {
+    const brokerPay = Number(t.rate || t.rate_total || 0);
+    const carrierPay = Number(t.carrier_pay || 0);
+    const net = brokerPay - carrierPay;
+    totalNet += net;
+    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border);font-size:12px">
+      <div>
+        <div style="font-weight:600">${esc(t.load_number||'#'+t.id.slice(0,6))}</div>
+        <div style="color:var(--muted);font-size:11px">${esc((t.origin||'?')+' → '+(t.destination||'?'))}</div>
+      </div>
+      <span class="spread-pill ${net>=0?'spread-pos':'spread-neg'}">${net>=0?'+':''}$${net.toLocaleString()}</span>
+    </div>`;
+  }).join('');
+
+  const netEl = document.getElementById('natco-today-net');
+  if(netEl) { netEl.textContent = (totalNet>=0?'+':'')+'$'+totalNet.toLocaleString(); netEl.className = 'spread-pill '+(totalNet>=0?'spread-pos':'spread-neg'); }
+}
+
+// ── Carrier Match ──
+function natcoMatchCarriers() {
+  const origin = (document.getElementById('natco-match-origin')?.value || '').toLowerCase().trim();
+  const equip = document.getElementById('natco-match-equip')?.value || '';
+  const list = document.getElementById('natco-match-list');
+  const countEl = document.getElementById('natco-match-count');
+  if(!list) return;
+
+  const activeLoads = new Set((allLoads||[]).filter(l=>['En Route','Booked','Check Due'].includes(l.status)).map(l=>l.driver_name).filter(Boolean));
+  let carriers = (allCarriers||[]).filter(c => c.status === 'active' && !activeLoads.has(c.company_name));
+  if(equip) carriers = carriers.filter(c => !c.equipment_type || c.equipment_type === equip || c.equipment_type === 'Any');
+
+  if(countEl) countEl.textContent = carriers.length + ' available';
+
+  if(!carriers.length) {
+    list.innerHTML = '<div style="text-align:center;padding:16px;color:var(--muted);font-size:12px">No available carriers' + (equip?' for '+equip:'') + '</div>';
+    return;
+  }
+
+  list.innerHTML = carriers.slice(0,12).map(c => `
+    <div class="carrier-match-card" onclick="natcoSelectCarrier('${c.id}','${esc(c.company_name||'')}')">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <div style="font-weight:700;font-size:13px">${esc(c.company_name||'Unknown')}</div>
+          <div style="font-size:11px;color:var(--muted)">${esc(c.equipment_type||'—')} · ${c.home_city||'Location unknown'}</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:11px;color:var(--green);font-weight:600">Available</div>
+          ${c.phone?`<a href="tel:${c.phone}" style="font-size:11px;color:var(--blue)" onclick="event.stopPropagation()">${c.phone}</a>`:''}
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+let natcoSelectedCarrierId = null;
+let natcoSelectedCarrierName = null;
+function natcoSelectCarrier(id, name) {
+  natcoSelectedCarrierId = id;
+  natcoSelectedCarrierName = name;
+  document.querySelectorAll('.carrier-match-card').forEach(c => c.classList.remove('selected'));
+  event.currentTarget.classList.add('selected');
+  toast('Carrier selected: ' + name + ' — now choose a trade to assign them to.');
+}
+
+// ── Board (kanban) ──
+function natcoBoardLoad() {
+  if(!natcoTrades.length) natcoLoad().then(() => natcoBoardRender());
+  else natcoBoardRender();
+}
+
+function natcoBoardRender() {
+  const cols = { Open: [], Pending: [], Covered: [], Dead: [] };
+  natcoTrades.forEach(t => {
+    const s = t.status === 'En Route' || t.status === 'Delivered' || t.status === 'Booked' ? 'Covered'
+            : t.status === 'Completed' ? 'Covered'
+            : cols[t.status] !== undefined ? t.status : 'Open';
+    cols[s].push(t);
+  });
+
+  let open=0, bestSpread=0, totalRpm=0, rpmCount=0, exposure=0;
+
+  ['Open','Pending','Covered','Dead'].forEach(col => {
+    const el = document.getElementById('natco-col-'+col.toLowerCase());
+    if(!el) return;
+    if(!cols[col].length) { el.innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted);font-size:11px;border:1px dashed var(--border);border-radius:8px">Empty</div>'; return; }
+    el.innerHTML = cols[col].map(t => {
+      const brokerPay = Number(t.rate||t.rate_total||0);
+      const carrierPay = Number(t.carrier_pay||0);
+      const spread = brokerPay - carrierPay;
+      const pickup = t.pickup_date ? new Date(t.pickup_date).toLocaleDateString('en-US',{month:'short',day:'numeric'}) : '—';
+      if(col==='Open') { open++; exposure+=brokerPay; }
+      if(carrierPay && spread > bestSpread) bestSpread = spread;
+      const miles = Number(t.miles||0);
+      if(miles && brokerPay) { totalRpm += brokerPay/miles; rpmCount++; }
+      return `<div class="natco-trade-row" onclick="natcoOpenDetail('${t.id}')">
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:700;font-size:12px;font-family:var(--ff-m)">${esc(t.load_number||'#'+t.id.slice(0,6))}</div>
+          <div style="font-size:11px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc((t.origin||'?')+' → '+(t.destination||'?'))}</div>
+          <div style="font-size:11px;color:var(--muted)">${pickup} · ${esc(t.equipment_type||'—')}</div>
+        </div>
+        <div style="text-align:right;flex-shrink:0">
+          <div style="font-weight:800;font-size:13px;color:var(--gold)">$${brokerPay.toLocaleString()}</div>
+          ${carrierPay ? `<span class="spread-pill ${spread>=0?'spread-pos':'spread-neg'}" style="font-size:10px">${spread>=0?'+':''}$${spread.toLocaleString()}</span>` : '<span style="font-size:10px;color:var(--orange)">No carrier pay</span>'}
+        </div>
+      </div>`;
+    }).join('');
+  });
+
+  setText('board-open', open);
+  setText('board-best-spread', bestSpread ? '$'+bestSpread.toLocaleString() : '—');
+  setText('board-avg-rpm', rpmCount ? '$'+(totalRpm/rpmCount).toFixed(2) : '—');
+  setText('board-exposure', exposure ? '$'+exposure.toLocaleString() : '$0');
+}
+
+// ── Margin Calculator ──
+function natcoMarginInit() {
+  natcoCalcMargin();
+}
+
+function natcoCalcMargin() {
+  const brokerPay = Number(document.getElementById('mc-broker-pay')?.value || 0);
+  const carrierPay = Number(document.getElementById('mc-carrier-pay')?.value || 0);
+  const miles = Number(document.getElementById('mc-miles')?.value || 0);
+  const display = document.getElementById('natco-margin-display');
+  const gngCard = document.getElementById('natco-gng-card');
+  const gngDisplay = document.getElementById('natco-gng-display');
+  if(!display) return;
+
+  if(!brokerPay || !carrierPay) {
+    display.innerHTML = '<div style="text-align:center;padding:30px;color:var(--muted);font-size:13px">Enter both rates above to see analysis</div>';
+    if(gngCard) gngCard.style.display = 'none';
+    return;
+  }
+
+  const spread = brokerPay - carrierPay;
+  const marginPct = ((spread / brokerPay) * 100).toFixed(1);
+  const brokerRPM = miles ? (brokerPay / miles).toFixed(2) : null;
+  const carrierRPM = miles ? (carrierPay / miles).toFixed(2) : null;
+  const spreadRPM = miles ? (spread / miles).toFixed(2) : null;
+  const spreadCls = spread > 0 ? 'spread-pos' : 'spread-neg';
+
+  display.innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
+      <div style="background:var(--slate);border-radius:8px;padding:12px;text-align:center">
+        <div style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:4px">Broker Pays You</div>
+        <div style="font-family:var(--ff-h);font-size:24px;font-weight:800;color:var(--gold)">$${brokerPay.toLocaleString()}</div>
+        ${brokerRPM?`<div style="font-size:11px;color:var(--muted)">$${brokerRPM}/mi</div>`:''}
+      </div>
+      <div style="background:var(--slate);border-radius:8px;padding:12px;text-align:center">
+        <div style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:4px">You Pay Carrier</div>
+        <div style="font-family:var(--ff-h);font-size:24px;font-weight:800;color:var(--navy)">$${carrierPay.toLocaleString()}</div>
+        ${carrierRPM?`<div style="font-size:11px;color:var(--muted)">$${carrierRPM}/mi</div>`:''}
+      </div>
+    </div>
+    <div style="background:${spread>=0?'#d1fae5':'#fee2e2'};border-radius:10px;padding:16px;text-align:center;margin-bottom:12px">
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:${spread>=0?'#065f46':'#991b1b'};margin-bottom:4px">Your Spread (Gross Profit)</div>
+      <div style="font-family:var(--ff-h);font-size:32px;font-weight:900;color:${spread>=0?'#059669':'#dc2626'}">${spread>=0?'+':''}$${spread.toLocaleString()}</div>
+      <div style="font-size:13px;color:${spread>=0?'#065f46':'#991b1b'}">${marginPct}% margin${spreadRPM?' · $'+spreadRPM+'/mi spread':''}</div>
+    </div>
+    ${miles?`<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;font-size:11px;text-align:center">
+      <div style="background:var(--slate);border-radius:6px;padding:8px"><div style="color:var(--muted)">Miles</div><div style="font-weight:700">${miles.toLocaleString()}</div></div>
+      <div style="background:var(--slate);border-radius:6px;padding:8px"><div style="color:var(--muted)">Broker RPM</div><div style="font-weight:700;color:var(--gold)">$${brokerRPM}</div></div>
+      <div style="background:var(--slate);border-radius:6px;padding:8px"><div style="color:var(--muted)">Carrier RPM</div><div style="font-weight:700">$${carrierRPM}</div></div>
+    </div>`:''}
+  `;
+
+  if(gngCard) {
+    gngCard.style.display = '';
+    const equip = document.getElementById('mc-equip-type')?.value || '';
+    const thresholds = {'Dry Van 53\'':200,'Reefer':250,'Flatbed':200,'Cargo Van':50,'26 Foot Box Truck':100};
+    const minSpread = thresholds[equip] || 200;
+    let gng, color, icon;
+    if(spread >= minSpread * 2.5) { gng='STRONG GO'; color='#059669'; icon='🟢'; }
+    else if(spread >= minSpread * 1.5) { gng='GO'; color='#16a34a'; icon='✅'; }
+    else if(spread >= minSpread) { gng='MARGINAL'; color='#d97706'; icon='🟡'; }
+    else { gng='NO-GO'; color='#dc2626'; icon='🔴'; }
+    gngDisplay.innerHTML = `<div style="text-align:center;padding:12px">
+      <div style="font-size:32px;margin-bottom:4px">${icon}</div>
+      <div style="font-family:var(--ff-h);font-size:22px;font-weight:900;color:${color}">${gng}</div>
+      <div style="font-size:12px;color:var(--muted);margin-top:4px">Min spread for ${equip||'this equipment'}: $${minSpread} · Your spread: $${spread.toLocaleString()}</div>
+    </div>`;
+  }
+}
+
+function natcoResetCalc() {
+  ['mc-broker-pay','mc-carrier-pay','mc-miles','mc-route','mc-broker-name','mc-pickup-date'].forEach(id => { const el=document.getElementById(id); if(el)el.value=''; });
+  natcoCalcMargin();
+}
+
+function natcoBookFromCalc() {
+  const brokerPay = document.getElementById('mc-broker-pay')?.value;
+  const carrierPay = document.getElementById('mc-carrier-pay')?.value;
+  const miles = document.getElementById('mc-miles')?.value;
+  const route = document.getElementById('mc-route')?.value || '';
+  const broker = document.getElementById('mc-broker-name')?.value;
+  const pickup = document.getElementById('mc-pickup-date')?.value;
+  const equip = document.getElementById('mc-equip-type')?.value;
+  const [origin, dest] = route.split('→').map(s=>s.trim());
+
+  // Pre-fill new trade modal
+  openModal('natco-new-trade-modal');
+  setTimeout(()=>{
+    if(origin) document.getElementById('nt-origin').value = origin;
+    if(dest) document.getElementById('nt-dest').value = dest;
+    if(brokerPay) document.getElementById('nt-broker-pay').value = brokerPay;
+    if(carrierPay) document.getElementById('nt-carrier-pay').value = carrierPay;
+    if(miles) document.getElementById('nt-miles').value = miles;
+    if(broker) document.getElementById('nt-broker').value = broker;
+    if(pickup) document.getElementById('nt-pickup').value = pickup;
+    const equipSel = document.getElementById('nt-equip');
+    if(equip && equipSel) equipSel.value = equip;
+    natcoCalcNewTrade();
+  }, 50);
+}
+
+// ── New Trade Form ──
+function natcoCalcNewTrade() {
+  const brokerPay = Number(document.getElementById('nt-broker-pay')?.value || 0);
+  const carrierPay = Number(document.getElementById('nt-carrier-pay')?.value || 0);
+  const miles = Number(document.getElementById('nt-miles')?.value || 0);
+  const prev = document.getElementById('nt-margin-preview');
+  if(!prev) return;
+  if(brokerPay && carrierPay) {
+    const spread = brokerPay - carrierPay;
+    const pct = ((spread/brokerPay)*100).toFixed(1);
+    const rpm = miles ? ' · RPM $'+(brokerPay/miles).toFixed(2) : '';
+    const cls = spread > 0 ? 'color:var(--green)' : 'color:var(--red)';
+    prev.innerHTML = `Broker Pay: <strong style="color:var(--gold)">$${brokerPay.toLocaleString()}</strong> &nbsp;·&nbsp; Carrier Pay: <strong>$${carrierPay.toLocaleString()}</strong> &nbsp;·&nbsp; Spread: <strong style="${cls}">${spread>=0?'+':''}$${spread.toLocaleString()} (${pct}%)</strong>${rpm}`;
+  } else if(brokerPay) {
+    const rpm = miles ? ' · RPM $'+(brokerPay/miles).toFixed(2) : '';
+    prev.innerHTML = `Broker Pay: <strong style="color:var(--gold)">$${brokerPay.toLocaleString()}</strong>${rpm} &nbsp;·&nbsp; <span style="color:var(--muted)">Enter carrier pay for margin</span>`;
+  } else {
+    prev.innerHTML = '<span style="color:var(--muted)">Enter rates to see margin preview</span>';
+  }
+}
+
+// Populate carrier select when modal opens
+const _origOpenModal = window.openModal;
+window.openModal = function(id) {
+  _origOpenModal(id);
+  if(id === 'natco-new-trade-modal') {
+    const sel = document.getElementById('nt-carrier-select');
+    if(sel) {
+      sel.innerHTML = '<option value="">Unassigned (Open)</option>';
+      (allCarriers||[]).filter(c=>c.status==='active').forEach(c => {
+        sel.innerHTML += `<option value="${c.id}">${esc(c.company_name||'Unknown')}</option>`;
+      });
+    }
+    natcoCalcNewTrade();
+  }
+};
+
+async function natcoSaveTrade() {
+  const btn = document.getElementById('nt-save-btn');
+  const origin = document.getElementById('nt-origin').value.trim();
+  const dest = document.getElementById('nt-dest').value.trim();
+  const brokerPay = Number(document.getElementById('nt-broker-pay').value);
+  const carrierPay = Number(document.getElementById('nt-carrier-pay')?.value || 0);
+  const broker = document.getElementById('nt-broker').value.trim();
+  if(!origin || !dest || !brokerPay || !broker) { toast('Origin, destination, broker pay, and broker name are required', 'error'); return; }
+
+  btn.disabled = true; btn.textContent = 'Posting…';
+
+  const miles = Number(document.getElementById('nt-miles')?.value || 0) || null;
+  const rpm = miles ? parseFloat((brokerPay/miles).toFixed(2)) : null;
+  const status = document.getElementById('nt-status').value;
+  const carrierId = document.getElementById('nt-carrier-select')?.value || null;
+  const carrierName = carrierId ? (allCarriers||[]).find(c=>c.id===carrierId)?.company_name || '' : '';
+
+  // Tag load as NATCO so we can filter it later
+  const notes = '[NATCO] ' + (document.getElementById('nt-notes')?.value.trim() || '') +
+    (broker ? ' | Broker: '+broker : '') +
+    (carrierPay ? ' | CarrierPay: '+carrierPay : '');
+
+  const counter = 'NT-' + String(Date.now()).slice(-6);
+
+  const res = await apiFetch('/api/dashboard/loads', 'POST', {
+    load_number: counter,
+    driver_name: carrierName || null,
+    origin, destination: dest, miles, rate: brokerPay,
+    carrier_pay: carrierPay || null,
+    dispatch_pct: 0, dispatch_fee: 0, rpm,
+    status: status === 'Covered' && carrierName ? 'En Route' : (status === 'Open' ? 'Booked' : status),
+    pickup_date: document.getElementById('nt-pickup')?.value || null,
+    commodity: document.getElementById('nt-commodity')?.value.trim() || null,
+    equipment_type: document.getElementById('nt-equip')?.value || null,
+    weight_lbs: parseInt(document.getElementById('nt-weight')?.value) || null,
+    notes
+  });
+
+  btn.disabled = false; btn.textContent = 'Post Trade →';
+  if(!res.ok) { toast('Error saving trade', 'error'); return; }
+
+  closeModal('natco-new-trade-modal');
+  ['nt-origin','nt-dest','nt-broker-pay','nt-carrier-pay','nt-miles','nt-broker','nt-commodity','nt-notes','nt-weight','nt-pickup'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  toast('Trade posted! ' + counter);
+  await natcoLoad();
+  await loadLoads();
+}
+
+// ── Trade Detail ──
+function natcoOpenDetail(id) {
+  const t = natcoTrades.find(x => x.id === id);
+  if(!t) return;
+  const brokerPay = Number(t.rate||t.rate_total||0);
+  const carrierPay = Number(t.carrier_pay||0);
+  const spread = brokerPay - carrierPay;
+  const miles = Number(t.miles||0);
+  const pickup = t.pickup_date ? new Date(t.pickup_date).toLocaleDateString('en-US',{weekday:'short',month:'long',day:'numeric'}) : '—';
+
+  document.getElementById('natco-detail-title').textContent = (t.load_number||'Trade') + ' — Detail';
+  document.getElementById('natco-detail-body').innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
+      <div><div style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:2px">Route</div><div style="font-weight:700">${esc((t.origin||'?')+' → '+(t.destination||'?'))}</div></div>
+      <div><div style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:2px">Pickup</div><div style="font-weight:600">${pickup}</div></div>
+      <div><div style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:2px">Equipment</div><div>${esc(t.equipment_type||'—')}</div></div>
+      <div><div style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:2px">Miles</div><div>${miles ? miles.toLocaleString()+' mi' : '—'}</div></div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px">
+      <div style="background:var(--slate);border-radius:8px;padding:12px;text-align:center">
+        <div style="font-size:10px;color:var(--muted);margin-bottom:2px">Broker Pays</div>
+        <div style="font-family:var(--ff-h);font-size:20px;font-weight:800;color:var(--gold)">$${brokerPay.toLocaleString()}</div>
+        ${miles?`<div style="font-size:10px;color:var(--muted)">$${(brokerPay/miles).toFixed(2)}/mi</div>`:''}
+      </div>
+      <div style="background:var(--slate);border-radius:8px;padding:12px;text-align:center">
+        <div style="font-size:10px;color:var(--muted);margin-bottom:2px">Carrier Pay</div>
+        <div style="font-family:var(--ff-h);font-size:20px;font-weight:800;color:var(--navy)">${carrierPay?'$'+carrierPay.toLocaleString():'<span style="color:var(--orange);font-size:14px">TBD</span>'}</div>
+        ${miles&&carrierPay?`<div style="font-size:10px;color:var(--muted)">$${(carrierPay/miles).toFixed(2)}/mi</div>`:''}
+      </div>
+      <div style="background:${spread>=0?'#d1fae5':'#fee2e2'};border-radius:8px;padding:12px;text-align:center">
+        <div style="font-size:10px;color:${spread>=0?'#065f46':'#991b1b'};margin-bottom:2px">Spread</div>
+        <div style="font-family:var(--ff-h);font-size:20px;font-weight:800;color:${spread>=0?'#059669':'#dc2626'}">${carrierPay?(spread>=0?'+':'')+'$'+spread.toLocaleString():'—'}</div>
+        ${carrierPay?`<div style="font-size:10px;color:${spread>=0?'#065f46':'#991b1b'}">${((spread/brokerPay)*100).toFixed(1)}% margin</div>`:''}
+      </div>
+    </div>
+    <div style="font-size:12px;color:var(--muted);border-top:1px solid var(--border);padding-top:10px">${esc(t.notes||'')}</div>
+  `;
+  document.getElementById('natco-detail-footer').innerHTML = `
+    <button class="btn-out" onclick="closeModal('natco-detail-modal')">Close</button>
+    <button class="btn-out" onclick="natcoMarkDead('${t.id}');closeModal('natco-detail-modal')" style="color:var(--red)">Mark Dead</button>
+    <button class="btn-navy" onclick="natcoSendRC('${t.id}')">📧 Send Rate Con</button>
+    <button class="btn-gold" onclick="natcoQuickCover('${t.id}')">🚛 Assign Carrier</button>
+  `;
+  openModal('natco-detail-modal');
+}
+
+async function natcoMarkDead(id) {
+  if(!confirm('Mark this trade as Dead?')) return;
+  const res = await apiFetch('/api/dashboard/loads/'+id, 'PATCH', { status: 'Completed', notes: (natcoTrades.find(t=>t.id===id)?.notes||'') + ' [DEAD]' });
+  if(res.ok) { toast('Trade marked dead'); await natcoLoad(); }
+  else toast('Error updating trade', 'error');
+}
+
+async function natcoQuickCover(id) {
+  const t = natcoTrades.find(x=>x.id===id);
+  if(!t) return;
+  // Use selected carrier from match panel, or prompt
+  if(natcoSelectedCarrierId) {
+    const ok = confirm('Assign ' + natcoSelectedCarrierName + ' to load ' + (t.load_number||id.slice(0,6)) + '?');
+    if(!ok) return;
+    const res = await apiFetch('/api/dashboard/loads/'+id, 'PATCH', { driver_name: natcoSelectedCarrierName, status: 'En Route' });
+    if(res.ok) { toast('Carrier assigned: '+natcoSelectedCarrierName); natcoSelectedCarrierId=null; natcoSelectedCarrierName=null; await natcoLoad(); }
+    else toast('Error assigning carrier','error');
+  } else {
+    toast('Select a carrier from the Carrier Match panel first, then click the assign button.', 'error');
+    nav('natco');
+    setTimeout(()=>document.getElementById('natco-match-origin')?.focus(), 200);
+  }
+}
+
+async function natcoSendRC(id) {
+  const t = natcoTrades.find(x=>x.id===id);
+  if(!t) return;
+  // Reuse existing sendRateCon if available
+  if(typeof sendRateCon === 'function') {
+    sendRateCon(id);
+  } else {
+    toast('Opening rate confirmation for ' + (t.load_number||id.slice(0,6)) + '…');
+    nav('agreements');
   }
 }
 </script>
