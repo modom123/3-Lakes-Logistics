@@ -774,8 +774,11 @@ td.td-name{font-weight:600;color:var(--navy);}
   </div>
 
   <div class="sb-section">
-    <div class="sb-label">Trading Desk</div>
+    <div class="sb-label">Broker Division</div>
+    <div class="sb-item" onclick="nav('broker-division')"><span class="sb-icon">🏦</span> Division Hub <span class="sb-badge" id="bd-alert-badge" style="display:none;background:#ef4444;color:#fff">!</span></div>
     <div class="sb-item" onclick="nav('trading-desk')"><span class="sb-icon">📈</span> Trading Desk <span class="sb-badge" id="td-open-badge" style="display:none;background:#f59e0b;color:#000">0</span></div>
+    <div class="sb-item" onclick="nav('broker-shippers')"><span class="sb-icon">🏭</span> Shippers <span class="sb-badge" id="bd-shipper-badge" style="display:none;background:#22c55e;color:#000">0</span></div>
+    <div class="sb-item" onclick="nav('broker-docs')"><span class="sb-icon">📄</span> Docs & Invoices <span class="sb-badge" id="bd-docs-badge" style="display:none;background:#f59e0b;color:#000">0</span></div>
   </div>
 
   <div class="sb-section">
@@ -3512,7 +3515,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 let allCarriers=[], allLoads=[], allInvoices=[], currentInvFilter='all', loadCounter=3849;
 
-const pageNames={dashboard:'Dashboard',dispatch:'Dispatch Board','fleet-map':'Fleet Map',carriers:'Carriers',drivers:'Drivers',loads:'Load Manager',invoices:'Invoices & Billing',compliance:'DOT Compliance',ifta:'IFTA / Permits',insurance:'Insurance',revenue:'Revenue Tracker',providers:'Compliance Providers',checklist:'Daily Checklist',notes:'Dispatcher Notes',reports:'Team Reports','exec-command':'Exec Command',agents:'AI Agents',founders:'Founders Program',crm:'Lead CRM',leads:'Lead Pipeline',execution:'Execution Engine',factoring:'Factoring',email:'Email Center',vault:'Document Vault',clm:'CLM Scanner',ledger:'Atomic Ledger',agreements:'Agreements','lf-map':'Light Fleet Live Map','lf-nemt':'NEMT — Medical Transport','lf-executive':'Executive Transport','lf-courier':'Courier & Last-Mile','lf-gig':'Gig Fleet Management','ccg-office':'CC Gulley Office','trading-desk':'Trading Desk'};
+const pageNames={dashboard:'Dashboard',dispatch:'Dispatch Board','fleet-map':'Fleet Map',carriers:'Carriers',drivers:'Drivers',loads:'Load Manager',invoices:'Invoices & Billing',compliance:'DOT Compliance',ifta:'IFTA / Permits',insurance:'Insurance',revenue:'Revenue Tracker',providers:'Compliance Providers',checklist:'Daily Checklist',notes:'Dispatcher Notes',reports:'Team Reports','exec-command':'Exec Command',agents:'AI Agents',founders:'Founders Program',crm:'Lead CRM',leads:'Lead Pipeline',execution:'Execution Engine',factoring:'Factoring',email:'Email Center',vault:'Document Vault',clm:'CLM Scanner',ledger:'Atomic Ledger',agreements:'Agreements','lf-map':'Light Fleet Live Map','lf-nemt':'NEMT — Medical Transport','lf-executive':'Executive Transport','lf-courier':'Courier & Last-Mile','lf-gig':'Gig Fleet Management','ccg-office':'CC Gulley Office','trading-desk':'Trading Desk','broker-division':'Broker Division — Hub','broker-shippers':'Shipper Pipeline','broker-docs':'Docs & Invoices'};
 
 // ── 3 Lakes Logistics Backend API (FastAPI) ──
 const API_BASE = (window.__3LL_API_BASE || 'https://three-lakes-logistics-api.onrender.com').replace(/\/$/,'');
@@ -3634,6 +3637,9 @@ function nav(id){
   if(id==='agreements')loadAgreements();
   if(id==='factoring'){loadFactoring();loadFactoringStats();}
   if(id==='trading-desk'){tdLoadDashboard();}
+  if(id==='broker-division'){bdLoadHub();}
+  if(id==='broker-shippers'){bdLoadShippers();}
+  if(id==='broker-docs'){bdLoadDocs();}
   if(id==='fleet-map')initFleetMap();
   if(id==='lf-map')initLFMap();
   if(id==='drivers')loadDrivers();
@@ -15043,11 +15049,462 @@ function lfmapFitAll() {
   _lfmap.fitBounds(L.latLngBounds(pts), { padding: [48, 48] });
 }
 
+// ── BROKER DIVISION PAGES ────────────────────────────────────────────────────
+
 function lfmapToggleAutoRefresh() {
   clearInterval(_lfmapRefreshTimer);
   if (document.getElementById('lfmap-auto-refresh')?.checked) {
     _lfmapRefreshTimer = setInterval(lfMapRefresh, 30000);
   }
+}
+</script>
+
+<!-- ═══════════════════════════════════════════════════════════════════════
+     BROKER DIVISION — HUB
+════════════════════════════════════════════════════════════════════════ -->
+<div class="page" id="page-broker-division">
+<style>
+.bd-hero{background:linear-gradient(135deg,#0f172a 0%,#1e1b4b 50%,#312e81 100%);border-radius:16px;padding:28px 32px;margin-bottom:24px;position:relative;overflow:hidden;}
+.bd-hero::before{content:'';position:absolute;top:-80px;right:-80px;width:280px;height:280px;border-radius:50%;background:rgba(99,102,241,.08);pointer-events:none;}
+.bd-hero-title{font-size:22px;font-weight:800;color:#fff;margin-bottom:4px;}
+.bd-hero-sub{font-size:13px;color:rgba(255,255,255,.6);}
+.bd-kpi-row{display:flex;gap:14px;margin-top:20px;flex-wrap:wrap;}
+.bd-kpi{background:rgba(0,0,0,.25);border-radius:10px;padding:12px 18px;min-width:130px;}
+.bd-kpi-n{font-size:22px;font-weight:800;color:#a5b4fc;}
+.bd-kpi-l{font-size:10px;color:rgba(255,255,255,.45);text-transform:uppercase;letter-spacing:.8px;margin-top:2px;}
+.bd-team-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:24px;}
+@media(max-width:1100px){.bd-team-grid{grid-template-columns:repeat(3,1fr);}}
+@media(max-width:680px){.bd-team-grid{grid-template-columns:1fr 1fr;}}
+.bd-member{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center;cursor:pointer;transition:border-color .15s;}
+.bd-member:hover{border-color:#6366f1;}
+.bd-member-icon{font-size:26px;margin-bottom:6px;}
+.bd-member-name{font-size:13px;font-weight:700;margin-bottom:2px;}
+.bd-member-role{font-size:10px;color:var(--muted);}
+.bd-section-hd{font-size:13px;font-weight:700;color:var(--text);margin:20px 0 12px;display:flex;align-items:center;gap:8px;}
+.bd-out{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:16px;}
+.bd-out pre{font-size:11px;color:var(--text);white-space:pre-wrap;word-break:break-word;max-height:300px;overflow-y:auto;margin:0;}
+</style>
+<div style="padding:0 0 40px;">
+  <div class="bd-hero">
+    <div class="bd-hero-title">🏦 Broker Division</div>
+    <div class="bd-hero-sub">5-agent team · Load sourcing → Shipper development → Coverage → Docs → Settlement</div>
+    <div class="bd-kpi-row">
+      <div class="bd-kpi"><div class="bd-kpi-n" id="bd-ytd-margin">—</div><div class="bd-kpi-l">YTD Margin</div></div>
+      <div class="bd-kpi"><div class="bd-kpi-n" id="bd-month-margin">—</div><div class="bd-kpi-l">This Month</div></div>
+      <div class="bd-kpi"><div class="bd-kpi-n" id="bd-open-pos">—</div><div class="bd-kpi-l">Open Positions</div></div>
+      <div class="bd-kpi"><div class="bd-kpi-n" id="bd-active-shippers">—</div><div class="bd-kpi-l">Active Shippers</div></div>
+      <div class="bd-kpi"><div class="bd-kpi-n" id="bd-total-ar">—</div><div class="bd-kpi-l">Accounts Rec.</div></div>
+      <div class="bd-kpi"><div class="bd-kpi-n" id="bd-pending-docs">—</div><div class="bd-kpi-l">Docs Pending</div></div>
+    </div>
+  </div>
+
+  <!-- Team -->
+  <div class="bd-section-hd">👥 Division Team</div>
+  <div class="bd-team-grid">
+    <div class="bd-member" onclick="nav('trading-desk')">
+      <div class="bd-member-icon">🎯</div>
+      <div class="bd-member-name">Rex Morgan</div>
+      <div class="bd-member-role">Senior Desk Trader</div>
+    </div>
+    <div class="bd-member" onclick="nav('trading-desk')">
+      <div class="bd-member-icon">🔍</div>
+      <div class="bd-member-name">Jordan Cross</div>
+      <div class="bd-member-role">Load Acquisition</div>
+    </div>
+    <div class="bd-member" onclick="nav('trading-desk')">
+      <div class="bd-member-icon">📞</div>
+      <div class="bd-member-name">Casey Lane</div>
+      <div class="bd-member-role">Carrier Coverage</div>
+    </div>
+    <div class="bd-member" onclick="nav('broker-shippers')">
+      <div class="bd-member-icon">🏭</div>
+      <div class="bd-member-name">Drew Calloway</div>
+      <div class="bd-member-role">Shipper Development</div>
+    </div>
+    <div class="bd-member" onclick="nav('broker-docs')">
+      <div class="bd-member-icon">📄</div>
+      <div class="bd-member-name">Quinn Mercer</div>
+      <div class="bd-member-role">Broker Ops & Docs</div>
+    </div>
+  </div>
+
+  <!-- Load Flow -->
+  <div class="bd-section-hd">🔄 Load Flow</div>
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px;margin-bottom:20px;overflow-x:auto;">
+    <div style="display:flex;align-items:center;gap:8px;min-width:600px;font-size:12px;font-weight:600;">
+      <div style="background:rgba(99,102,241,.15);color:#a5b4fc;padding:8px 14px;border-radius:8px;text-align:center;">🏭 Drew<br><span style="font-size:10px;font-weight:400;color:var(--muted)">Wins shipper account</span></div>
+      <div style="color:var(--muted)">→</div>
+      <div style="background:rgba(59,130,246,.12);color:#93c5fd;padding:8px 14px;border-radius:8px;text-align:center;">🔍 Jordan<br><span style="font-size:10px;font-weight:400;color:var(--muted)">Sources &amp; posts load</span></div>
+      <div style="color:var(--muted)">→</div>
+      <div style="background:rgba(34,197,94,.1);color:#4ade80;padding:8px 14px;border-radius:8px;text-align:center;">🎯 Rex<br><span style="font-size:10px;font-weight:400;color:var(--muted)">Scores margin</span></div>
+      <div style="color:var(--muted)">→</div>
+      <div style="background:rgba(168,85,247,.1);color:#d8b4fe;padding:8px 14px;border-radius:8px;text-align:center;">📞 Casey<br><span style="font-size:10px;font-weight:400;color:var(--muted)">Covers with carrier</span></div>
+      <div style="color:var(--muted)">→</div>
+      <div style="background:rgba(245,158,11,.1);color:#fbbf24;padding:8px 14px;border-radius:8px;text-align:center;">📄 Quinn<br><span style="font-size:10px;font-weight:400;color:var(--muted)">RC → Invoice → Factor</span></div>
+      <div style="color:var(--muted)">→</div>
+      <div style="background:rgba(34,197,94,.15);color:#4ade80;padding:8px 14px;border-radius:8px;text-align:center;">💰 Settled<br><span style="font-size:10px;font-weight:400;color:var(--muted)">Margin in pocket</span></div>
+    </div>
+  </div>
+
+  <!-- Quick Actions -->
+  <div class="bd-section-hd">⚡ Quick Actions</div>
+  <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px;">
+    <button class="btn-gold" onclick="bdRunQuinn('division_summary')">📊 Division Summary</button>
+    <button class="btn-navy" onclick="bdRunRex('book_status')">📈 Book Status</button>
+    <button class="btn-navy" onclick="bdRunDrew('pipeline')">🏭 Shipper Pipeline</button>
+    <button class="btn-navy" onclick="bdRunQuinn('docs_queue')">📄 Docs Queue</button>
+    <button class="btn-navy" onclick="bdRunRex('daily_pnl')">💰 Monthly P&L</button>
+  </div>
+
+  <div class="bd-out" id="bd-output" style="display:none">
+    <div style="font-size:11px;font-weight:700;color:var(--muted);margin-bottom:8px;" id="bd-output-title"></div>
+    <pre id="bd-output-body"></pre>
+  </div>
+</div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════
+     BROKER DIVISION — SHIPPERS (Drew)
+════════════════════════════════════════════════════════════════════════ -->
+<div class="page" id="page-broker-shippers">
+<style>
+.drew-hero{background:linear-gradient(135deg,#1a2e1a 0%,#14532d 100%);border-radius:16px;padding:24px 28px;margin-bottom:20px;}
+.drew-hero-title{font-size:18px;font-weight:800;color:#fff;margin-bottom:4px;}
+.drew-hero-sub{font-size:12px;color:rgba(255,255,255,.55);}
+.shipper-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px;display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:8px;}
+.shipper-name{font-size:13px;font-weight:700;}
+.shipper-meta{font-size:11px;color:var(--muted);margin-top:2px;}
+.shipper-status{font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;white-space:nowrap;}
+.s-prospect{background:rgba(99,102,241,.15);color:#a5b4fc;}
+.s-contacted{background:rgba(245,158,11,.12);color:#fbbf24;}
+.s-active{background:rgba(34,197,94,.12);color:#4ade80;}
+.s-lost{background:rgba(148,163,184,.1);color:var(--muted);}
+</style>
+<div style="padding:0 0 40px;">
+  <div class="drew-hero">
+    <div class="drew-hero-title">🏭 Drew Calloway — Shipper Development</div>
+    <div class="drew-hero-sub">Bland AI outbound calls · Direct shipper accounts · The revenue engine</div>
+  </div>
+
+  <!-- Actions -->
+  <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px;">
+    <button class="btn-gold" onclick="bdShowAddShipper()">➕ Add Shipper</button>
+    <button class="btn-navy" onclick="bdRunDrew('prospect')">📞 Prospect Batch (Bland AI)</button>
+    <button class="btn-navy" onclick="bdLoadShippers()">🔄 Refresh</button>
+  </div>
+
+  <!-- Add Shipper Form -->
+  <div id="bd-add-shipper-form" style="display:none;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:20px;">
+    <div style="font-size:13px;font-weight:700;margin-bottom:14px;">➕ Add Shipper Account</div>
+    <div class="td-form" style="margin-bottom:14px;">
+      <div><label class="td-inp-label">Company Name *</label><input class="td-inp" id="sh-company" placeholder="Acme Manufacturing Co."></div>
+      <div><label class="td-inp-label">Contact Name</label><input class="td-inp" id="sh-contact" placeholder="Jane Smith"></div>
+      <div><label class="td-inp-label">Phone</label><input class="td-inp" id="sh-phone" placeholder="(312) 555-0100"></div>
+      <div><label class="td-inp-label">Email</label><input class="td-inp" id="sh-email" placeholder="jane@acme.com"></div>
+      <div><label class="td-inp-label">City</label><input class="td-inp" id="sh-city" placeholder="Chicago"></div>
+      <div><label class="td-inp-label">State</label><input class="td-inp" id="sh-state" placeholder="IL" maxlength="2"></div>
+      <div><label class="td-inp-label">Primary Commodity</label><input class="td-inp" id="sh-commodity" placeholder="Electronics"></div>
+      <div><label class="td-inp-label">Est. Loads/Week</label><input class="td-inp" id="sh-loads" type="number" placeholder="10"></div>
+      <div><label class="td-inp-label">Avg Load Value ($)</label><input class="td-inp" id="sh-value" type="number" placeholder="2500"></div>
+      <div><label class="td-inp-label">Notes</label><input class="td-inp" id="sh-notes" placeholder="Warm intro from..."></div>
+    </div>
+    <button class="btn-gold" onclick="bdAddShipper()">Add to Pipeline →</button>
+  </div>
+
+  <!-- Call One Shipper -->
+  <div id="bd-call-shipper-form" style="display:none;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:20px;">
+    <div style="font-size:13px;font-weight:700;margin-bottom:14px;">📞 Drew — Call a Shipper (Bland AI)</div>
+    <div class="td-form" style="margin-bottom:14px;">
+      <div><label class="td-inp-label">Shipper ID (or leave blank + enter details)</label><input class="td-inp" id="csh-id" placeholder="uuid"></div>
+      <div><label class="td-inp-label">Company Name</label><input class="td-inp" id="csh-company" placeholder="Acme Manufacturing"></div>
+      <div><label class="td-inp-label">Phone *</label><input class="td-inp" id="csh-phone" placeholder="(312) 555-0100"></div>
+      <div><label class="td-inp-label">Contact Name</label><input class="td-inp" id="csh-contact" placeholder="Jane Smith"></div>
+    </div>
+    <button class="btn-gold" onclick="bdCallShipper()">📞 Dial Now (Bland AI) →</button>
+  </div>
+
+  <!-- Shipper Pipeline -->
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+      <div style="font-size:13px;font-weight:700;">Shipper Pipeline <span id="bd-shipper-count" style="font-size:11px;font-weight:400;color:var(--muted)"></span></div>
+      <div style="display:flex;gap:6px;">
+        <button class="btn-navy" style="font-size:10px;padding:4px 10px;" onclick="bdShowCallShipper()">📞 Call Shipper</button>
+      </div>
+    </div>
+    <div id="bd-shipper-list"><div style="color:var(--muted);font-size:12px;text-align:center;padding:20px;">Loading shippers…</div></div>
+  </div>
+
+  <div class="bd-out" id="bd-drew-output" style="display:none;margin-top:16px;">
+    <div style="font-size:11px;font-weight:700;color:var(--muted);margin-bottom:8px;" id="bd-drew-title"></div>
+    <pre id="bd-drew-body"></pre>
+  </div>
+</div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════
+     BROKER DIVISION — DOCS & INVOICES (Quinn)
+════════════════════════════════════════════════════════════════════════ -->
+<div class="page" id="page-broker-docs">
+<style>
+.quinn-hero{background:linear-gradient(135deg,#1c1a2e 0%,#2d1b69 100%);border-radius:16px;padding:24px 28px;margin-bottom:20px;}
+.quinn-hero-title{font-size:18px;font-weight:800;color:#fff;margin-bottom:4px;}
+.doc-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;gap:12px;}
+.doc-num{font-size:12px;font-weight:700;font-family:monospace;}
+.doc-meta{font-size:11px;color:var(--muted);margin-top:2px;}
+.doc-badge{font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;}
+.doc-pending{background:rgba(245,158,11,.12);color:#fbbf24;}
+.doc-sent{background:rgba(99,102,241,.12);color:#a5b4fc;}
+.doc-paid{background:rgba(34,197,94,.12);color:#4ade80;}
+.doc-factored{background:rgba(168,85,247,.12);color:#d8b4fe;}
+.doc-overdue{background:rgba(239,68,68,.12);color:#f87171;}
+</style>
+<div style="padding:0 0 40px;">
+  <div class="quinn-hero">
+    <div class="quinn-hero-title">📄 Quinn Mercer — Broker Ops & Documentation</div>
+    <div style="font-size:12px;color:rgba(255,255,255,.55);">Rate Confirmations · Freight Invoices · Factoring · Accounts Receivable</div>
+  </div>
+
+  <!-- Quick Actions -->
+  <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px;">
+    <button class="btn-gold" onclick="bdShowRCForm()">📋 Generate RC</button>
+    <button class="btn-gold" onclick="bdShowInvForm()">🧾 Generate Invoice</button>
+    <button class="btn-navy" onclick="bdShowFactorForm()">💸 Submit to Factoring</button>
+    <button class="btn-navy" onclick="bdLoadDocs()">🔄 Refresh Queue</button>
+  </div>
+
+  <!-- Generate RC Form -->
+  <div id="bd-rc-form" style="display:none;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:16px;">
+    <div style="font-size:13px;font-weight:700;margin-bottom:14px;">📋 Quinn — Generate Rate Confirmation</div>
+    <div class="td-form" style="margin-bottom:14px;">
+      <div><label class="td-inp-label">Load ID *</label><input class="td-inp" id="rc-loadid" placeholder="brokered_loads uuid"></div>
+    </div>
+    <button class="btn-gold" onclick="bdGenerateRC()">Generate RC →</button>
+  </div>
+
+  <!-- Generate Invoice Form -->
+  <div id="bd-inv-form" style="display:none;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:16px;">
+    <div style="font-size:13px;font-weight:700;margin-bottom:14px;">🧾 Quinn — Generate Freight Invoice</div>
+    <div class="td-form" style="margin-bottom:14px;">
+      <div><label class="td-inp-label">Load ID *</label><input class="td-inp" id="inv-loadid" placeholder="brokered_loads uuid"></div>
+      <div><label class="td-inp-label">Fuel Surcharge ($)</label><input class="td-inp" id="inv-fuel" type="number" placeholder="0"></div>
+      <div><label class="td-inp-label">Other Charges ($)</label><input class="td-inp" id="inv-other" type="number" placeholder="0"></div>
+      <div><label class="td-inp-label">Net Days</label><input class="td-inp" id="inv-days" type="number" placeholder="30"></div>
+    </div>
+    <button class="btn-gold" onclick="bdGenerateInvoice()">Generate Invoice →</button>
+  </div>
+
+  <!-- Factor Form -->
+  <div id="bd-factor-form" style="display:none;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:16px;">
+    <div style="font-size:13px;font-weight:700;margin-bottom:14px;">💸 Quinn — Submit Invoice to Factoring</div>
+    <div class="td-form" style="margin-bottom:14px;">
+      <div><label class="td-inp-label">Invoice ID *</label><input class="td-inp" id="fac-invid" placeholder="broker_invoices uuid"></div>
+      <div><label class="td-inp-label">Factor Fee % (default 2.5%)</label><input class="td-inp" id="fac-fee" type="number" step="0.1" placeholder="2.5"></div>
+    </div>
+    <button class="btn-gold" onclick="bdSubmitFactoring()">Submit →</button>
+  </div>
+
+  <!-- Docs Queue -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;">
+      <div style="font-size:13px;font-weight:700;margin-bottom:12px;">📋 Rate Confirmations <span id="bd-rc-count" style="font-size:11px;font-weight:400;color:var(--muted)"></span></div>
+      <div id="bd-rc-list"><div style="color:var(--muted);font-size:12px;text-align:center;padding:16px;">Loading…</div></div>
+    </div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;">
+      <div style="font-size:13px;font-weight:700;margin-bottom:12px;">🧾 Invoices <span id="bd-inv-count" style="font-size:11px;font-weight:400;color:var(--muted)"></span></div>
+      <div id="bd-inv-list"><div style="color:var(--muted);font-size:12px;text-align:center;padding:16px;">Loading…</div></div>
+    </div>
+  </div>
+
+  <div class="bd-out" id="bd-quinn-output" style="display:none;margin-top:16px;">
+    <div style="font-size:11px;font-weight:700;color:var(--muted);margin-bottom:8px;" id="bd-quinn-title"></div>
+    <pre id="bd-quinn-body"></pre>
+  </div>
+</div>
+</div>
+
+<script>
+// ── BROKER DIVISION JS ───────────────────────────────────────────────────────
+
+async function bdAgentCall(agent, payload) {
+  const token = localStorage.getItem('3ll_token') || '';
+  const r = await fetch('/api/agents/' + agent + '/run', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+    body: JSON.stringify(payload),
+  });
+  if (!r.ok) throw new Error(r.status + ' ' + r.statusText);
+  return r.json();
+}
+
+function bdShow(outId, titleId, bodyId, title, data) {
+  document.getElementById(outId).style.display = 'block';
+  document.getElementById(titleId).textContent = title;
+  document.getElementById(bodyId).textContent = JSON.stringify(data, null, 2);
+}
+
+async function bdRunQuinn(action, payload={}) {
+  try {
+    const data = await bdAgentCall('quinn', { action, ...payload });
+    if (action === 'division_summary') {
+      const fmt = n => n != null ? (n >= 1000 ? '$' + Number(n).toLocaleString() : n) : '—';
+      document.getElementById('bd-ytd-margin').textContent     = data.ytd_gross_margin != null ? '$' + Number(data.ytd_gross_margin).toLocaleString() : '—';
+      document.getElementById('bd-month-margin').textContent   = data.month_gross_margin != null ? '$' + Number(data.month_gross_margin).toLocaleString() : '—';
+      document.getElementById('bd-open-pos').textContent       = data.open_positions ?? '—';
+      document.getElementById('bd-active-shippers').textContent = data.active_shippers ?? '—';
+      document.getElementById('bd-total-ar').textContent       = data.total_ar != null ? '$' + Number(data.total_ar).toLocaleString() : '—';
+    }
+    if (action === 'docs_queue') {
+      const pending = (data.pending_rcs || 0) + (data.unpaid_invoices || 0);
+      document.getElementById('bd-pending-docs').textContent = pending;
+      const b = document.getElementById('bd-docs-badge');
+      if (pending > 0) { b.textContent = pending; b.style.display = 'inline'; }
+    }
+    bdShow('bd-output', 'bd-output-title', 'bd-output-body', 'Quinn — ' + action, data);
+  } catch(e) { bdShow('bd-output', 'bd-output-title', 'bd-output-body', 'Quinn error', { error: e.message }); }
+}
+
+async function bdRunRex(action, payload={}) {
+  try {
+    const data = await bdAgentCall('rex', { action, ...payload });
+    bdShow('bd-output', 'bd-output-title', 'bd-output-body', 'Rex — ' + action, data);
+  } catch(e) { bdShow('bd-output', 'bd-output-title', 'bd-output-body', 'Rex error', { error: e.message }); }
+}
+
+async function bdRunDrew(action, payload={}) {
+  try {
+    const data = await bdAgentCall('drew', { action, ...payload });
+    if (action === 'pipeline') {
+      bdRenderShippers(data.all_shippers || []);
+      const b = document.getElementById('bd-shipper-badge');
+      if (data.active_accounts > 0) { b.textContent = data.active_accounts; b.style.display = 'inline'; }
+    }
+    bdShow('bd-drew-output', 'bd-drew-title', 'bd-drew-body', 'Drew — ' + action, data);
+  } catch(e) { bdShow('bd-drew-output', 'bd-drew-title', 'bd-drew-body', 'Drew error', { error: e.message }); }
+}
+
+async function bdLoadHub() {
+  bdRunQuinn('division_summary');
+  bdRunQuinn('docs_queue');
+}
+
+async function bdLoadShippers() {
+  try {
+    const data = await bdAgentCall('drew', { action: 'pipeline' });
+    bdRenderShippers(data.all_shippers || []);
+    document.getElementById('bd-shipper-count').textContent = '(' + (data.total_shippers || 0) + ' total)';
+  } catch(e) {}
+}
+
+function bdRenderShippers(rows) {
+  const el = document.getElementById('bd-shipper-list');
+  if (!rows.length) { el.innerHTML = '<div style="color:var(--muted);font-size:12px;text-align:center;padding:16px;">No shippers yet — add one or run Drew to prospect.</div>'; return; }
+  const cls = { prospect:'s-prospect', contacted:'s-contacted', active:'s-active', lost:'s-lost' };
+  el.innerHTML = rows.map(s => `
+    <div class="shipper-card">
+      <div>
+        <div class="shipper-name">${s.company_name}</div>
+        <div class="shipper-meta">${[s.address_city, s.address_state].filter(Boolean).join(', ')} · ${s.primary_commodity || 'General Freight'} · ${s.avg_loads_per_week ? s.avg_loads_per_week + ' loads/wk' : '?'}</div>
+      </div>
+      <div style="text-align:right;flex-shrink:0;">
+        <span class="shipper-status ${cls[s.status]||'s-prospect'}">${s.status}</span>
+        ${s.total_revenue ? `<div style="font-size:11px;color:var(--green);margin-top:4px;">$${Number(s.total_revenue).toLocaleString()} brokered</div>` : ''}
+      </div>
+    </div>`).join('');
+}
+
+async function bdLoadDocs() {
+  try {
+    const data = await bdAgentCall('quinn', { action: 'docs_queue' });
+    document.getElementById('bd-rc-count').textContent = '(' + (data.pending_rcs || 0) + ')';
+    document.getElementById('bd-inv-count').textContent = '(' + (data.unpaid_invoices || 0) + ')';
+    const rcCls = { pending:'doc-pending', sent:'doc-sent' };
+    const invCls = { draft:'doc-pending', sent:'doc-sent', paid:'doc-paid', factored:'doc-factored', overdue:'doc-overdue' };
+    const rcEl = document.getElementById('bd-rc-list');
+    const invEl = document.getElementById('bd-inv-list');
+    rcEl.innerHTML = (data.rcs || []).length ? (data.rcs || []).map(r => `
+      <div class="doc-card">
+        <div><div class="doc-num">${r.rc_number}</div><div class="doc-meta">${r.carrier_name || '—'} · $${Number(r.agreed_rate||0).toFixed(0)} · pickup ${r.pickup_date||'?'}</div></div>
+        <span class="doc-badge ${rcCls[r.status]||'doc-pending'}">${r.status}</span>
+      </div>`).join('') : '<div style="color:var(--muted);font-size:12px;padding:10px;">No pending RCs</div>';
+    invEl.innerHTML = (data.invoices || []).length ? (data.invoices || []).map(i => `
+      <div class="doc-card">
+        <div><div class="doc-num">${i.invoice_number}</div><div class="doc-meta">$${Number(i.total_due||0).toFixed(0)} · due ${i.due_date||'?'}</div></div>
+        <span class="doc-badge ${invCls[i.status]||'doc-pending'}">${i.status}</span>
+      </div>`).join('') : '<div style="color:var(--muted);font-size:12px;padding:10px;">No pending invoices</div>';
+  } catch(e) {}
+}
+
+function bdShowAddShipper()  { document.getElementById('bd-add-shipper-form').style.display = document.getElementById('bd-add-shipper-form').style.display === 'none' ? 'block' : 'none'; }
+function bdShowCallShipper() { document.getElementById('bd-call-shipper-form').style.display = document.getElementById('bd-call-shipper-form').style.display === 'none' ? 'block' : 'none'; }
+function bdShowRCForm()      { document.getElementById('bd-rc-form').style.display   = document.getElementById('bd-rc-form').style.display   === 'none' ? 'block' : 'none'; }
+function bdShowInvForm()     { document.getElementById('bd-inv-form').style.display  = document.getElementById('bd-inv-form').style.display  === 'none' ? 'block' : 'none'; }
+function bdShowFactorForm()  { document.getElementById('bd-factor-form').style.display = document.getElementById('bd-factor-form').style.display === 'none' ? 'block' : 'none'; }
+
+async function bdAddShipper() {
+  const g = id => document.getElementById(id).value.trim();
+  const payload = {
+    action: 'add_shipper',
+    company_name: g('sh-company'), contact_name: g('sh-contact'),
+    phone: g('sh-phone'), email: g('sh-email'),
+    address_city: g('sh-city'), address_state: g('sh-state'),
+    primary_commodity: g('sh-commodity'),
+    avg_loads_per_week: Number(g('sh-loads')) || undefined,
+    avg_load_value: Number(g('sh-value')) || undefined,
+    notes: g('sh-notes'),
+  };
+  try {
+    const data = await bdAgentCall('drew', payload);
+    bdShow('bd-drew-output', 'bd-drew-title', 'bd-drew-body', 'Drew — Shipper Added', data);
+    bdLoadShippers();
+  } catch(e) { bdShow('bd-drew-output', 'bd-drew-title', 'bd-drew-body', 'Drew error', { error: e.message }); }
+}
+
+async function bdCallShipper() {
+  const g = id => document.getElementById(id).value.trim();
+  const payload = {
+    action: 'call_shipper',
+    shipper_id: g('csh-id') || undefined,
+    company_name: g('csh-company'), phone: g('csh-phone'), contact_name: g('csh-contact'),
+  };
+  try {
+    const data = await bdAgentCall('drew', payload);
+    bdShow('bd-drew-output', 'bd-drew-title', 'bd-drew-body', 'Drew — Call Result', data);
+  } catch(e) { bdShow('bd-drew-output', 'bd-drew-title', 'bd-drew-body', 'Drew error', { error: e.message }); }
+}
+
+async function bdGenerateRC() {
+  const payload = { action: 'generate_rc', load_id: document.getElementById('rc-loadid').value.trim() };
+  try {
+    const data = await bdAgentCall('quinn', payload);
+    bdShow('bd-quinn-output', 'bd-quinn-title', 'bd-quinn-body', 'Quinn — Rate Confirmation', data);
+    bdLoadDocs();
+  } catch(e) { bdShow('bd-quinn-output', 'bd-quinn-title', 'bd-quinn-body', 'Quinn error', { error: e.message }); }
+}
+
+async function bdGenerateInvoice() {
+  const g = id => document.getElementById(id).value.trim();
+  const payload = {
+    action: 'generate_invoice',
+    load_id: g('inv-loadid'),
+    fuel_surcharge: Number(g('inv-fuel')) || 0,
+    other_charges: Number(g('inv-other')) || 0,
+    net_days: Number(g('inv-days')) || 30,
+  };
+  try {
+    const data = await bdAgentCall('quinn', payload);
+    bdShow('bd-quinn-output', 'bd-quinn-title', 'bd-quinn-body', 'Quinn — Invoice Generated', data);
+    bdLoadDocs();
+  } catch(e) { bdShow('bd-quinn-output', 'bd-quinn-title', 'bd-quinn-body', 'Quinn error', { error: e.message }); }
+}
+
+async function bdSubmitFactoring() {
+  const g = id => document.getElementById(id).value.trim();
+  const payload = { action: 'submit_factoring', invoice_id: g('fac-invid'), fee_pct: Number(g('fac-fee')) || 2.5 };
+  try {
+    const data = await bdAgentCall('quinn', payload);
+    bdShow('bd-quinn-output', 'bd-quinn-title', 'bd-quinn-body', 'Quinn — Factored', data);
+    bdLoadDocs();
+  } catch(e) { bdShow('bd-quinn-output', 'bd-quinn-title', 'bd-quinn-body', 'Quinn error', { error: e.message }); }
 }
 </script>
 
