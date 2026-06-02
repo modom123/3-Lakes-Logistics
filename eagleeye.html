@@ -1027,8 +1027,8 @@ td.td-name{font-weight:600;color:var(--navy);}
     <div class="page" id="page-lf-map">
 <style>
 #page-lf-map{animation:none;}
-#page-lf-map.active{position:fixed;top:93px;left:var(--sidebar-w);right:0;bottom:0;z-index:30;display:flex;flex-direction:column;overflow:hidden;background:var(--bg);}
-@media(max-width:768px){#page-lf-map.active{top:87px;left:0;}}
+#page-lf-map.active{position:fixed;top:60px;left:var(--sidebar-w);right:0;bottom:0;z-index:30;display:flex;flex-direction:column;overflow:hidden;background:var(--bg);}
+@media(max-width:768px){#page-lf-map.active{top:60px;left:0;}}
 #lfmap-toolbar{display:flex;align-items:center;gap:10px;padding:10px 16px;background:var(--surface);border-bottom:2px solid #8b5cf6;flex-shrink:0;flex-wrap:wrap;}
 #lfmap-body{display:flex;flex:1;min-height:0;}
 #lfmap-map{flex:1;min-height:0;}
@@ -13981,7 +13981,7 @@ async function deactivateDriver(driverId) {
 /* Service accent colors */
 :root{--lf-nemt:#3b82f6;--lf-exec:#f59e0b;--lf-cour:#8b5cf6;--lf-gig:#22c55e;}
 .lf-hero{border-radius:12px;padding:22px 24px;margin-bottom:22px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;position:relative;overflow:hidden;}
-/* Full-page LF layout — hero bleeds to edges, topbar title hidden */
+/* Full-page LF layout — hero bleeds edge-to-edge, ticker + topbar hidden */
 .content.lf-fullpage{padding:0;}
 .content.lf-fullpage .lf-wrap{padding:0 0 80px;max-width:none;}
 .content.lf-fullpage .lf-hero{border-radius:0;margin-bottom:0;padding:28px 32px;}
@@ -13990,7 +13990,15 @@ async function deactivateDriver(driverId) {
 .content.lf-fullpage .lf-table-wrap{margin:0 32px 20px;}
 .content.lf-fullpage .lf-section-rule{margin:24px 32px 16px;}
 .content.lf-fullpage .lf-section-hdr{margin-left:32px;margin-right:32px;}
-#main.lf-fullpage .tb-title{visibility:hidden;}
+/* Eliminate gold ticker + white topbar; float a transparent control bar on top */
+#main.lf-fullpage .ticker-strip{display:none;}
+#main.lf-fullpage .topbar{position:absolute;top:0;left:0;right:0;background:transparent!important;border-bottom:none!important;box-shadow:none!important;z-index:20;}
+#main.lf-fullpage .topbar .tb-title{display:none;}
+#main.lf-fullpage .topbar .tb-date{color:rgba(255,255,255,.55);}
+#main.lf-fullpage .topbar .tb-live{color:rgba(74,222,128,.9);}
+#main.lf-fullpage .topbar .tb-live::before{background:rgba(74,222,128,.9);}
+/* IEBC banner top padding absorbs the 60px floating topbar */
+.content.lf-fullpage .iebc-banner{padding-top:80px;}
 .lf-hero::before{content:'';position:absolute;inset:0;opacity:.07;border-radius:12px;}
 .lf-hero-nemt{background:linear-gradient(135deg,rgba(59,130,246,.18) 0%,rgba(59,130,246,.06) 100%);border:1px solid rgba(59,130,246,.3);}
 .lf-hero-nemt .lf-hero-icon{color:#3b82f6;}
