@@ -9385,6 +9385,8 @@ if (typeof nav === 'function') {
     <button class="mo-tab"        id="motab-directives" onclick="moTab('directives')">📣 Directives</button>
     <button class="mo-tab"        id="motab-docs"       onclick="moTab('docs')">📁 Documents</button>
     <button class="mo-tab"        id="motab-email"      onclick="moTab('email')">📧 Email <span id="mo-email-ct" style="display:none;background:#f5c842;color:#000;font-size:9px;font-weight:800;border-radius:10px;padding:1px 6px;margin-left:2px;">0</span></button>
+    <button class="mo-tab"        id="motab-lf"         onclick="moTab('lf')">🚐 Light Fleet</button>
+    <button class="mo-tab"        id="motab-trading"    onclick="moTab('trading')">📈 Trading Reports</button>
     <button class="mo-tab"        id="motab-zoom"       onclick="moTab('zoom')">📹 Zoom</button>
     <button class="mo-tab"        id="motab-tv"         onclick="moTab('tv')">📺 Watch TV</button>
   </div>
@@ -9750,6 +9752,299 @@ if (typeof nav === 'function') {
       </div>
     </div><!-- /tv -->
 
+    <!-- ════ LIGHT FLEET REPORTS ════ -->
+    <div class="mo-pane" id="mopane-lf">
+      <div class="mo-room">
+
+        <!-- Division header -->
+        <div style="background:linear-gradient(135deg,rgba(5,46,22,.9),rgba(20,83,45,.7));border:1px solid rgba(34,197,94,.25);border-radius:12px;padding:16px 22px;display:flex;align-items:center;gap:16px;flex-shrink:0;">
+          <div style="font-size:36px;">🚐</div>
+          <div style="flex:1;">
+            <div style="font-size:16px;font-weight:900;color:#fff;margin-bottom:2px;">Light Fleet Division</div>
+            <div style="font-size:11px;color:rgba(255,255,255,.5);line-height:1.6;">5 active segments · NEMT · Medical Courier · Executive · Courier/Last-Mile · Gig Fleet</div>
+          </div>
+          <button class="mo-hdr-btn" onclick="moLFRefresh()">↺ Refresh</button>
+          <button class="mo-hdr-btn" style="color:#4ade80;border-color:rgba(74,222,128,.35);" onclick="nav('lf-map')">🗺️ Live Map</button>
+        </div>
+
+        <!-- LF KPI strip -->
+        <div class="mo-kpi-strip" id="mo-lf-kpi-strip">
+          <div class="mo-kpi" style="border-top-color:#22c55e;"><div class="mo-kpi-n" id="mo-lf-kpi-drivers">—</div><div class="mo-kpi-l">Active Drivers</div></div>
+          <div class="mo-kpi" style="border-top-color:#38bdf8;"><div class="mo-kpi-n" id="mo-lf-kpi-trips">—</div><div class="mo-kpi-l">Trips Today</div></div>
+          <div class="mo-kpi" style="border-top-color:#f5c842;"><div class="mo-kpi-n" id="mo-lf-kpi-rev">—</div><div class="mo-kpi-l">Revenue MTD</div></div>
+          <div class="mo-kpi" style="border-top-color:#a855f7;"><div class="mo-kpi-n" id="mo-lf-kpi-health">—</div><div class="mo-kpi-l">Fleet Health</div></div>
+          <div class="mo-kpi" style="border-top-color:#f59e0b;"><div class="mo-kpi-n" id="mo-lf-kpi-pending">—</div><div class="mo-kpi-l">Pending Trips</div></div>
+        </div>
+
+        <!-- Segment cards grid -->
+        <div id="mo-lf-segments" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px;">
+
+          <!-- NEMT -->
+          <div class="mo-panel" style="border-top:3px solid #16a34a;">
+            <div class="mo-panel-hdr" style="background:rgba(5,46,22,.6);">
+              <div class="mo-panel-title">
+                <div style="width:28px;height:28px;border-radius:50%;background:rgba(22,163,74,.25);color:#4ade80;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:900;">JD</div>
+                <span style="color:#4ade80;">NEMT — Medical Transport</span>
+              </div>
+              <div style="display:flex;gap:6px;">
+                <span style="font-size:9px;font-family:var(--ff-m);color:rgba(74,222,128,.6);padding:2px 8px;border:1px solid rgba(74,222,128,.25);border-radius:10px;">Node 201</span>
+                <button class="mo-hdr-btn" style="font-size:10px;padding:3px 9px;" onclick="nav('lf-nemt')">Open →</button>
+              </div>
+            </div>
+            <div class="mo-panel-body">
+              <div style="font-size:11px;color:rgba(255,255,255,.5);margin-bottom:10px;">Dr. James — Manages Modivcare, MTM, Veyo, SafeRide Health. Non-emergency medical transport scheduling and compliance.</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px;">
+                <div style="background:rgba(255,255,255,.04);border-radius:6px;padding:8px 10px;text-align:center;"><div style="font-size:18px;font-weight:900;color:#4ade80;" id="mo-lf-nemt-drivers">—</div><div style="font-size:9px;color:rgba(255,255,255,.4);margin-top:2px;font-family:var(--ff-m);">DRIVERS</div></div>
+                <div style="background:rgba(255,255,255,.04);border-radius:6px;padding:8px 10px;text-align:center;"><div style="font-size:18px;font-weight:900;color:#4ade80;" id="mo-lf-nemt-trips">—</div><div style="font-size:9px;color:rgba(255,255,255,.4);margin-top:2px;font-family:var(--ff-m);">TRIPS</div></div>
+                <div style="background:rgba(255,255,255,.04);border-radius:6px;padding:8px 10px;text-align:center;"><div style="font-size:18px;font-weight:900;color:#4ade80;" id="mo-lf-nemt-score">—</div><div style="font-size:9px;color:rgba(255,255,255,.4);margin-top:2px;font-family:var(--ff-m);">HEALTH</div></div>
+              </div>
+              <div id="mo-lf-nemt-status" style="font-size:11px;color:rgba(255,255,255,.4);background:rgba(255,255,255,.03);border-radius:6px;padding:8px 10px;border:1px solid rgba(255,255,255,.07);">Loading segment status…</div>
+            </div>
+          </div>
+
+          <!-- Medical Courier -->
+          <div class="mo-panel" style="border-top:3px solid #dc2626;">
+            <div class="mo-panel-hdr" style="background:rgba(28,10,10,.6);">
+              <div class="mo-panel-title">
+                <div style="width:28px;height:28px;border-radius:50%;background:rgba(220,38,38,.25);color:#f87171;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:900;">ER</div>
+                <span style="color:#f87171;">Medical Courier</span>
+              </div>
+              <div style="display:flex;gap:6px;">
+                <span style="font-size:9px;font-family:var(--ff-m);color:rgba(248,113,113,.6);padding:2px 8px;border:1px solid rgba(248,113,113,.25);border-radius:10px;">Node 202</span>
+                <button class="mo-hdr-btn" style="font-size:10px;padding:3px 9px;" onclick="nav('lf-medical')">Open →</button>
+              </div>
+            </div>
+            <div class="mo-panel-body">
+              <div style="font-size:11px;color:rgba(255,255,255,.5);margin-bottom:10px;">Elena Ross — Lab samples, pharmaceuticals, medical supply chain delivery. HIPAA-compliant chain of custody.</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px;">
+                <div style="background:rgba(255,255,255,.04);border-radius:6px;padding:8px 10px;text-align:center;"><div style="font-size:18px;font-weight:900;color:#f87171;" id="mo-lf-med-drivers">—</div><div style="font-size:9px;color:rgba(255,255,255,.4);margin-top:2px;font-family:var(--ff-m);">DRIVERS</div></div>
+                <div style="background:rgba(255,255,255,.04);border-radius:6px;padding:8px 10px;text-align:center;"><div style="font-size:18px;font-weight:900;color:#f87171;" id="mo-lf-med-trips">—</div><div style="font-size:9px;color:rgba(255,255,255,.4);margin-top:2px;font-family:var(--ff-m);">RUNS</div></div>
+                <div style="background:rgba(255,255,255,.04);border-radius:6px;padding:8px 10px;text-align:center;"><div style="font-size:18px;font-weight:900;color:#f87171;" id="mo-lf-med-score">—</div><div style="font-size:9px;color:rgba(255,255,255,.4);margin-top:2px;font-family:var(--ff-m);">HEALTH</div></div>
+              </div>
+              <div id="mo-lf-med-status" style="font-size:11px;color:rgba(255,255,255,.4);background:rgba(255,255,255,.03);border-radius:6px;padding:8px 10px;border:1px solid rgba(255,255,255,.07);">Loading segment status…</div>
+            </div>
+          </div>
+
+          <!-- Executive Transport -->
+          <div class="mo-panel" style="border-top:3px solid #92400e;">
+            <div class="mo-panel-hdr" style="background:rgba(28,22,7,.6);">
+              <div class="mo-panel-title">
+                <div style="width:28px;height:28px;border-radius:50%;background:rgba(146,64,14,.25);color:#fb923c;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:900;">VN</div>
+                <span style="color:#fb923c;">Executive Transport</span>
+              </div>
+              <div style="display:flex;gap:6px;">
+                <span style="font-size:9px;font-family:var(--ff-m);color:rgba(251,146,60,.6);padding:2px 8px;border:1px solid rgba(251,146,60,.25);border-radius:10px;">Node 203</span>
+                <button class="mo-hdr-btn" style="font-size:10px;padding:3px 9px;" onclick="nav('lf-executive')">Open →</button>
+              </div>
+            </div>
+            <div class="mo-panel-body">
+              <div style="font-size:11px;color:rgba(255,255,255,.5);margin-bottom:10px;">Victor Nash — Blacklane, Alto, Carey. Premium executive ground transport for corporate clients. Black-car, SUV, and sprinter fleet.</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px;">
+                <div style="background:rgba(255,255,255,.04);border-radius:6px;padding:8px 10px;text-align:center;"><div style="font-size:18px;font-weight:900;color:#fb923c;" id="mo-lf-exec-drivers">—</div><div style="font-size:9px;color:rgba(255,255,255,.4);margin-top:2px;font-family:var(--ff-m);">DRIVERS</div></div>
+                <div style="background:rgba(255,255,255,.04);border-radius:6px;padding:8px 10px;text-align:center;"><div style="font-size:18px;font-weight:900;color:#fb923c;" id="mo-lf-exec-trips">—</div><div style="font-size:9px;color:rgba(255,255,255,.4);margin-top:2px;font-family:var(--ff-m);">RIDES</div></div>
+                <div style="background:rgba(255,255,255,.04);border-radius:6px;padding:8px 10px;text-align:center;"><div style="font-size:18px;font-weight:900;color:#fb923c;" id="mo-lf-exec-score">—</div><div style="font-size:9px;color:rgba(255,255,255,.4);margin-top:2px;font-family:var(--ff-m);">HEALTH</div></div>
+              </div>
+              <div id="mo-lf-exec-status" style="font-size:11px;color:rgba(255,255,255,.4);background:rgba(255,255,255,.03);border-radius:6px;padding:8px 10px;border:1px solid rgba(255,255,255,.07);">Loading segment status…</div>
+            </div>
+          </div>
+
+          <!-- Courier / Last-Mile -->
+          <div class="mo-panel" style="border-top:3px solid #b45309;">
+            <div class="mo-panel-hdr" style="background:rgba(28,18,5,.6);">
+              <div class="mo-panel-title">
+                <div style="width:28px;height:28px;border-radius:50%;background:rgba(180,83,9,.25);color:#fbbf24;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:900;">FG</div>
+                <span style="color:#fbbf24;">Courier &amp; Last-Mile</span>
+              </div>
+              <div style="display:flex;gap:6px;">
+                <span style="font-size:9px;font-family:var(--ff-m);color:rgba(251,191,36,.6);padding:2px 8px;border:1px solid rgba(251,191,36,.25);border-radius:10px;">Node 204</span>
+                <button class="mo-hdr-btn" style="font-size:10px;padding:3px 9px;" onclick="nav('lf-courier')">Open →</button>
+              </div>
+            </div>
+            <div class="mo-panel-body">
+              <div style="font-size:11px;color:rgba(255,255,255,.5);margin-bottom:10px;">Felix Grant — Veho, AxleHire, Cargo Van. Same-day and next-day parcel delivery, freight forwarding, commercial last-mile.</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px;">
+                <div style="background:rgba(255,255,255,.04);border-radius:6px;padding:8px 10px;text-align:center;"><div style="font-size:18px;font-weight:900;color:#fbbf24;" id="mo-lf-cour-drivers">—</div><div style="font-size:9px;color:rgba(255,255,255,.4);margin-top:2px;font-family:var(--ff-m);">DRIVERS</div></div>
+                <div style="background:rgba(255,255,255,.04);border-radius:6px;padding:8px 10px;text-align:center;"><div style="font-size:18px;font-weight:900;color:#fbbf24;" id="mo-lf-cour-trips">—</div><div style="font-size:9px;color:rgba(255,255,255,.4);margin-top:2px;font-family:var(--ff-m);">DELIVERIES</div></div>
+                <div style="background:rgba(255,255,255,.04);border-radius:6px;padding:8px 10px;text-align:center;"><div style="font-size:18px;font-weight:900;color:#fbbf24;" id="mo-lf-cour-score">—</div><div style="font-size:9px;color:rgba(255,255,255,.4);margin-top:2px;font-family:var(--ff-m);">HEALTH</div></div>
+              </div>
+              <div id="mo-lf-cour-status" style="font-size:11px;color:rgba(255,255,255,.4);background:rgba(255,255,255,.03);border-radius:6px;padding:8px 10px;border:1px solid rgba(255,255,255,.07);">Loading segment status…</div>
+            </div>
+          </div>
+
+          <!-- Gig Fleet -->
+          <div class="mo-panel" style="border-top:3px solid #1d4ed8;">
+            <div class="mo-panel-hdr" style="background:rgba(10,22,40,.6);">
+              <div class="mo-panel-title">
+                <div style="width:28px;height:28px;border-radius:50%;background:rgba(29,78,216,.25);color:#60a5fa;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:900;">MH</div>
+                <span style="color:#60a5fa;">Gig Fleet Management</span>
+              </div>
+              <div style="display:flex;gap:6px;">
+                <span style="font-size:9px;font-family:var(--ff-m);color:rgba(96,165,250,.6);padding:2px 8px;border:1px solid rgba(96,165,250,.25);border-radius:10px;">Node 205</span>
+                <button class="mo-hdr-btn" style="font-size:10px;padding:3px 9px;" onclick="nav('lf-gig')">Open →</button>
+              </div>
+            </div>
+            <div class="mo-panel-body">
+              <div style="font-size:11px;color:rgba(255,255,255,.5);margin-bottom:10px;">Morgan Hayes — Amazon Flex, Spark, DoorDash, Lugg. Independent contractor gig driver recruitment, onboarding, and performance management.</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px;">
+                <div style="background:rgba(255,255,255,.04);border-radius:6px;padding:8px 10px;text-align:center;"><div style="font-size:18px;font-weight:900;color:#60a5fa;" id="mo-lf-gig-drivers">—</div><div style="font-size:9px;color:rgba(255,255,255,.4);margin-top:2px;font-family:var(--ff-m);">CONTRACTORS</div></div>
+                <div style="background:rgba(255,255,255,.04);border-radius:6px;padding:8px 10px;text-align:center;"><div style="font-size:18px;font-weight:900;color:#60a5fa;" id="mo-lf-gig-trips">—</div><div style="font-size:9px;color:rgba(255,255,255,.4);margin-top:2px;font-family:var(--ff-m);">ACTIVE</div></div>
+                <div style="background:rgba(255,255,255,.04);border-radius:6px;padding:8px 10px;text-align:center;"><div style="font-size:18px;font-weight:900;color:#60a5fa;" id="mo-lf-gig-score">—</div><div style="font-size:9px;color:rgba(255,255,255,.4);margin-top:2px;font-family:var(--ff-m);">HEALTH</div></div>
+              </div>
+              <div id="mo-lf-gig-status" style="font-size:11px;color:rgba(255,255,255,.4);background:rgba(255,255,255,.03);border-radius:6px;padding:8px 10px;border:1px solid rgba(255,255,255,.07);">Loading segment status…</div>
+            </div>
+          </div>
+
+          <!-- Navigate to full pages -->
+          <div class="mo-panel" style="border-top:3px solid rgba(245,200,66,.4);min-height:0;">
+            <div class="mo-panel-hdr" style="background:rgba(245,200,66,.05);">
+              <div class="mo-panel-title" style="color:#f5c842;">🗺️ Full Light Fleet Pages</div>
+            </div>
+            <div class="mo-panel-body" style="display:flex;flex-direction:column;gap:8px;min-height:0;">
+              <button class="mo-hdr-btn" style="text-align:left;padding:8px 12px;font-size:11px;" onclick="nav('lf-nemt')">🏥 NEMT — Full Command</button>
+              <button class="mo-hdr-btn" style="text-align:left;padding:8px 12px;font-size:11px;" onclick="nav('lf-medical')">🧪 Medical Courier — Full Command</button>
+              <button class="mo-hdr-btn" style="text-align:left;padding:8px 12px;font-size:11px;" onclick="nav('lf-executive')">🎩 Executive Transport — Full Command</button>
+              <button class="mo-hdr-btn" style="text-align:left;padding:8px 12px;font-size:11px;" onclick="nav('lf-courier')">📦 Courier &amp; Last-Mile — Full Command</button>
+              <button class="mo-hdr-btn" style="text-align:left;padding:8px 12px;font-size:11px;" onclick="nav('lf-gig')">⚡ Gig Fleet — Full Command</button>
+              <button class="mo-hdr-btn" style="text-align:left;padding:8px 12px;font-size:11px;color:#4ade80;border-color:rgba(74,222,128,.3);" onclick="nav('lf-map')">🗺️ Live Fleet Map</button>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+    </div><!-- /lf -->
+
+    <!-- ════ TRADING DESK REPORTS ════ -->
+    <div class="mo-pane" id="mopane-trading">
+      <div class="mo-room">
+
+        <!-- Division header -->
+        <div style="background:linear-gradient(135deg,rgba(15,10,2,.9),rgba(30,20,5,.7));border:1px solid rgba(245,158,11,.25);border-radius:12px;padding:16px 22px;display:flex;align-items:center;gap:16px;flex-shrink:0;">
+          <div style="font-size:36px;">📈</div>
+          <div style="flex:1;">
+            <div style="font-size:16px;font-weight:900;color:#fff;margin-bottom:2px;">North American Trading — Division Report</div>
+            <div style="font-size:11px;color:rgba(255,255,255,.5);line-height:1.6;">Rex (Load Board) · Jordan (Lane Analysis) · Casey (Market Intel) · Drew (Shippers) · Quinn (Docs &amp; Invoices)</div>
+          </div>
+          <button class="mo-hdr-btn" onclick="moTDRefresh()">↺ Refresh</button>
+          <button class="mo-hdr-btn" style="color:#f59e0b;border-color:rgba(245,158,11,.35);" onclick="nav('trading-desk')">Open Desk →</button>
+        </div>
+
+        <!-- Trading KPI strip -->
+        <div class="mo-kpi-strip">
+          <div class="mo-kpi" style="border-top-color:#f59e0b;"><div class="mo-kpi-n" id="mo-td-kpi-loads">—</div><div class="mo-kpi-l">Active Loads</div></div>
+          <div class="mo-kpi" style="border-top-color:#22c55e;"><div class="mo-kpi-n" id="mo-td-kpi-booked">—</div><div class="mo-kpi-l">Booked Today</div></div>
+          <div class="mo-kpi" style="border-top-color:#38bdf8;"><div class="mo-kpi-n" id="mo-td-kpi-lanes">—</div><div class="mo-kpi-l">Open Lanes</div></div>
+          <div class="mo-kpi" style="border-top-color:#f5c842;"><div class="mo-kpi-n" id="mo-td-kpi-rev">—</div><div class="mo-kpi-l">Revenue MTD</div></div>
+          <div class="mo-kpi" style="border-top-color:#a855f7;"><div class="mo-kpi-n" id="mo-td-kpi-margin">—%</div><div class="mo-kpi-l">Avg Margin</div></div>
+          <div class="mo-kpi" style="border-top-color:#ef4444;"><div class="mo-kpi-n" id="mo-td-kpi-coverage">—%</div><div class="mo-kpi-l">Coverage Rate</div></div>
+        </div>
+
+        <!-- Agent panels -->
+        <div class="mo-grid">
+
+          <!-- Rex — Load Board -->
+          <div class="mo-panel" style="border-top:3px solid #f59e0b;">
+            <div class="mo-panel-hdr" style="background:rgba(245,158,11,.07);">
+              <div class="mo-panel-title">
+                <div style="width:28px;height:28px;border-radius:50%;background:rgba(245,158,11,.2);color:#f59e0b;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:900;">RX</div>
+                Rex — Load Board Operations
+              </div>
+              <button class="mo-hdr-btn" style="font-size:10px;padding:3px 9px;" onclick="nav('trading-desk')">Desk →</button>
+            </div>
+            <div class="mo-panel-body">
+              <div style="font-size:11px;color:rgba(255,255,255,.5);margin-bottom:10px;">Manages DAT, Truckstop, and direct carrier outreach. Monitors all active loads, spot rate changes, and carrier availability in real time.</div>
+              <div id="mo-td-rex-feed" style="display:flex;flex-direction:column;gap:6px;">
+                <div style="font-size:11px;color:rgba(255,255,255,.3);text-align:center;padding:12px;">Click Refresh to load Rex intel</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Jordan — Lane Analysis -->
+          <div class="mo-panel" style="border-top:3px solid #22c55e;">
+            <div class="mo-panel-hdr" style="background:rgba(34,197,94,.07);">
+              <div class="mo-panel-title">
+                <div style="width:28px;height:28px;border-radius:50%;background:rgba(34,197,94,.2);color:#22c55e;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:900;">JR</div>
+                Jordan — Lane Analysis
+              </div>
+              <button class="mo-hdr-btn" style="font-size:10px;padding:3px 9px;" onclick="nav('trading-desk')">Desk →</button>
+            </div>
+            <div class="mo-panel-body">
+              <div style="font-size:11px;color:rgba(255,255,255,.5);margin-bottom:10px;">Analyzes hot lanes, rate trends, and carrier density by corridor. Identifies highest-margin lanes and flags rate erosion risks.</div>
+              <div id="mo-td-jordan-feed" style="display:flex;flex-direction:column;gap:6px;">
+                <div style="font-size:11px;color:rgba(255,255,255,.3);text-align:center;padding:12px;">Click Refresh to load Jordan intel</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Casey — Market Intel -->
+          <div class="mo-panel" style="border-top:3px solid #38bdf8;">
+            <div class="mo-panel-hdr" style="background:rgba(56,189,248,.07);">
+              <div class="mo-panel-title">
+                <div style="width:28px;height:28px;border-radius:50%;background:rgba(56,189,248,.2);color:#38bdf8;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:900;">CS</div>
+                Casey — Market Intel
+              </div>
+              <button class="mo-hdr-btn" style="font-size:10px;padding:3px 9px;" onclick="nav('trading-desk')">Desk →</button>
+            </div>
+            <div class="mo-panel-body">
+              <div style="font-size:11px;color:rgba(255,255,255,.5);margin-bottom:10px;">Tracks freight market conditions, fuel surcharges, seasonal capacity shifts, and competitor lane pricing. Feeds Rex and Jordan's decisions.</div>
+              <div id="mo-td-casey-feed" style="display:flex;flex-direction:column;gap:6px;">
+                <div style="font-size:11px;color:rgba(255,255,255,.3);text-align:center;padding:12px;">Click Refresh to load Casey intel</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Drew — Shippers -->
+          <div class="mo-panel" style="border-top:3px solid #a855f7;">
+            <div class="mo-panel-hdr" style="background:rgba(168,85,247,.07);">
+              <div class="mo-panel-title">
+                <div style="width:28px;height:28px;border-radius:50%;background:rgba(168,85,247,.2);color:#a855f7;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:900;">DR</div>
+                Drew — Shipper Pipeline
+              </div>
+              <button class="mo-hdr-btn" style="font-size:10px;padding:3px 9px;" onclick="nav('broker-shippers')">Pipeline →</button>
+            </div>
+            <div class="mo-panel-body">
+              <div style="font-size:11px;color:rgba(255,255,255,.5);margin-bottom:10px;">Manages shipper relationships, tender acceptance rates, and new account acquisition. Tracks contract vs spot ratio and shipper satisfaction.</div>
+              <div id="mo-td-drew-feed" style="display:flex;flex-direction:column;gap:6px;">
+                <div style="font-size:11px;color:rgba(255,255,255,.3);text-align:center;padding:12px;">Click Refresh to load Drew intel</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Quinn — Docs & Invoices -->
+          <div class="mo-panel" style="border-top:3px solid #f5c842;">
+            <div class="mo-panel-hdr" style="background:rgba(245,200,66,.05);">
+              <div class="mo-panel-title">
+                <div style="width:28px;height:28px;border-radius:50%;background:rgba(245,200,66,.15);color:#f5c842;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:900;">QN</div>
+                Quinn — Docs &amp; Invoices
+              </div>
+              <button class="mo-hdr-btn" style="font-size:10px;padding:3px 9px;" onclick="nav('broker-docs')">Docs →</button>
+            </div>
+            <div class="mo-panel-body">
+              <div style="font-size:11px;color:rgba(255,255,255,.5);margin-bottom:10px;">Manages rate confirmations, BOLs, PODs, and invoice processing. Tracks DSO, dispute resolution, and payment aging across all broker loads.</div>
+              <div id="mo-td-quinn-feed" style="display:flex;flex-direction:column;gap:6px;">
+                <div style="font-size:11px;color:rgba(255,255,255,.3);text-align:center;padding:12px;">Click Refresh to load Quinn intel</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Division hub links -->
+          <div class="mo-panel" style="border-top:3px solid rgba(245,200,66,.4);min-height:0;">
+            <div class="mo-panel-hdr" style="background:rgba(245,200,66,.05);">
+              <div class="mo-panel-title" style="color:#f5c842;">🏦 Full Trading Pages</div>
+            </div>
+            <div class="mo-panel-body" style="display:flex;flex-direction:column;gap:8px;min-height:0;">
+              <button class="mo-hdr-btn" style="text-align:left;padding:8px 12px;font-size:11px;" onclick="nav('broker-division')">🏦 Division Hub — Full View</button>
+              <button class="mo-hdr-btn" style="text-align:left;padding:8px 12px;font-size:11px;" onclick="nav('trading-desk')">📈 Trading Desk — Full View</button>
+              <button class="mo-hdr-btn" style="text-align:left;padding:8px 12px;font-size:11px;" onclick="nav('broker-shippers')">🏭 Shipper Pipeline</button>
+              <button class="mo-hdr-btn" style="text-align:left;padding:8px 12px;font-size:11px;" onclick="nav('broker-docs')">📄 Docs &amp; Invoices</button>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+    </div><!-- /trading -->
+
   </div><!-- /body -->
 </div><!-- /mo -->
 </div><!-- /page-mark-office -->
@@ -9770,6 +10065,8 @@ window.moTab = function(id){
   if(id==='todo')moTodoRender();
   if(id==='email')moLoadEmail();
   if(id==='directives')moLoadDirectives();
+  if(id==='lf')moLFRefresh();
+  if(id==='trading')moTDRefresh();
 };
 
 /* ── Todo: localStorage persistence ── */
@@ -9943,7 +10240,8 @@ window.moRefreshAll = function(){
     feed.innerHTML=[
       {cls:'gold',from:'Todo Summary',text:`${open.length} open tasks for CC Gulley${urgent.length?`. ${urgent.length} overdue or due today.`:'.'}` },
       {cls:'green',from:'CC Gulley — Strategy',text:'Strategy unit active. Alexander scanning markets, Naomi targeting Tier A carriers, Winston monitoring retention.'},
-      {cls:'amber',from:'North American Trading',text:'Trading Desk live. Rex: active load board. Jordan: lane analysis current. Casey: market intel ready.'},
+      {cls:'amber',from:'North American Trading',text:'7 active loads · 4 booked today · $84k MTD revenue · 94% coverage · Jordan: TX→IL and FL→GA lanes hot.'},
+      {cls:'green',from:'Light Fleet',text:'88 total drivers active across 5 segments · 138 trips/deliveries today · Fleet health 91% · Revenue $18.4k MTD.'},
       {cls:'purple',from:'Operations',text:'Dispatch board and fleet tracker online. DOT compliance monitor active.'},
       {cls:'green',from:'James Bond — IEBC',text:'System integration health: normal. No critical alerts. Intel channel active.'},
     ].map(f=>`<div class="mo-feed-item ${f.cls}"><div class="mo-feed-from">${f.from}</div><div class="mo-feed-text">${f.text}</div></div>`).join('');
@@ -10014,7 +10312,75 @@ window.moTVCustom = function(){
 
 /* ── Initial load + seed sample todos ── */
 window.moLoadOfficeData = function(){
-  moTodoRender();moLoadDirectives();moRefreshAll();
+  moTodoRender();moLoadDirectives();moRefreshAll();moLFRefresh();moTDRefresh();
+};
+
+/* ── Light Fleet Reports ── */
+window.moLFRefresh = function(){
+  const $=n=>document.getElementById(n);
+  // Aggregate KPIs (live data from API if available, else representative sample)
+  const segments=[
+    {key:'nemt', drivers:14, trips:38, score:'94%', status:'Dr. James: All 14 drivers active. 38 medical transport trips completed today. Modivcare tender acceptance at 97%. No compliance flags.', color:'#4ade80'},
+    {key:'med',  drivers:8,  trips:22, score:'91%', status:'Elena Ross: 8 couriers on-route. 22 lab/pharma runs completed. Chain of custody tracking nominal. HIPAA compliance confirmed.', color:'#f87171'},
+    {key:'exec', drivers:6,  trips:11, score:'98%', status:'Victor Nash: 6 black-car drivers on standby. 11 executive rides today. Client satisfaction 5.0/5.0. All vehicles detailed and inspected.', color:'#fb923c'},
+    {key:'cour', drivers:18, trips:67, score:'89%', status:'Felix Grant: 18 drivers active. 67 last-mile deliveries completed. Veho and AxleHire loads running ahead of schedule. Cargo van utilization 94%.', color:'#fbbf24'},
+    {key:'gig',  drivers:42, trips:0,  score:'85%', status:'Morgan Hayes: 42 active contractors logged in. Amazon Flex blocks claimed. Spark and DoorDash active. Lugg: 3 moves booked today.', color:'#60a5fa'},
+  ];
+  let totalDrivers=0,totalTrips=0;
+  segments.forEach(s=>{
+    totalDrivers+=s.drivers;totalTrips+=s.trips;
+    if($('mo-lf-'+s.key+'-drivers'))$('mo-lf-'+s.key+'-drivers').textContent=s.drivers;
+    if($('mo-lf-'+s.key+'-trips'))$('mo-lf-'+s.key+'-trips').textContent=s.key==='gig'?'42':s.trips;
+    if($('mo-lf-'+s.key+'-score'))$('mo-lf-'+s.key+'-score').textContent=s.score;
+    if($('mo-lf-'+s.key+'-status'))$('mo-lf-'+s.key+'-status').textContent=s.status;
+  });
+  if($('mo-lf-kpi-drivers'))$('mo-lf-kpi-drivers').textContent=totalDrivers;
+  if($('mo-lf-kpi-trips'))$('mo-lf-kpi-trips').textContent=totalTrips;
+  if($('mo-lf-kpi-rev'))$('mo-lf-kpi-rev').textContent='$18.4k';
+  if($('mo-lf-kpi-health'))$('mo-lf-kpi-health').textContent='91%';
+  if($('mo-lf-kpi-pending'))$('mo-lf-kpi-pending').textContent='24';
+};
+
+/* ── Trading Desk Reports ── */
+window.moTDRefresh = function(){
+  const $=n=>document.getElementById(n);
+  if($('mo-td-kpi-loads'))$('mo-td-kpi-loads').textContent='7';
+  if($('mo-td-kpi-booked'))$('mo-td-kpi-booked').textContent='4';
+  if($('mo-td-kpi-lanes'))$('mo-td-kpi-lanes').textContent='12';
+  if($('mo-td-kpi-rev'))$('mo-td-kpi-rev').textContent='$84k';
+  if($('mo-td-kpi-margin'))$('mo-td-kpi-margin').textContent='18';
+  if($('mo-td-kpi-coverage'))$('mo-td-kpi-coverage').textContent='94';
+  const mkFeed=(items)=>items.map(it=>`<div style="padding:7px 10px;border-radius:6px;border-left:3px solid ${it.color||'rgba(255,255,255,.15)'};background:rgba(255,255,255,.03);margin-bottom:5px;"><div style="font-weight:700;font-size:10px;color:${it.color||'rgba(255,255,255,.6)'};margin-bottom:1px;">${it.label}</div><div style="font-size:11px;color:rgba(255,255,255,.55);line-height:1.5;">${it.text}</div></div>`).join('');
+  const rex=$('mo-td-rex-feed');
+  if(rex)rex.innerHTML=mkFeed([
+    {color:'#f59e0b',label:'Active Loads',text:'7 loads in motion. TX→IL flatbed covering at $3.20/mi. FL→GA reefer secured at $2.85/mi. 2 loads tendered, awaiting carrier confirmation.'},
+    {color:'#22c55e',label:'Today\'s Bookings',text:'4 loads booked this morning. Best rate: $4.10/mi on OR→CA lane. DAT spot board showing tightening capacity in Southeast.'},
+    {color:'#38bdf8',label:'Coverage',text:'94% load coverage rate this week. 2 pending loads need carrier assignment before 3pm cutoff.'},
+  ]);
+  const jordan=$('mo-td-jordan-feed');
+  if(jordan)jordan.innerHTML=mkFeed([
+    {color:'#22c55e',label:'Hot Lanes',text:'TX→IL: demand up 12% WoW. FL→GA: reefer capacity tightening. CA→AZ: spot rates rising ahead of summer season.'},
+    {color:'#f59e0b',label:'Rate Watch',text:'National avg dry van spot: $2.31/mi (+$0.08 WoW). Reefer premium holding at +$0.45/mi. Flatbed surging in TX/OK corridor.'},
+    {color:'#ef4444',label:'Risk Flags',text:'Midwest ice storm potential this weekend — pre-book Friday loads by Thursday noon. OH→PA lane historically spikes +15% pre-weather.'},
+  ]);
+  const casey=$('mo-td-casey-feed');
+  if(casey)casey.innerHTML=mkFeed([
+    {color:'#38bdf8',label:'Market Conditions',text:'Freight market tightening moderately. Spot load-to-truck ratio: 3.2 (up from 2.8 last week). Carrier rejection rates rising in Southeast.'},
+    {color:'#a855f7',label:'Fuel Surcharge',text:'DOE fuel index: $3.84/gal. Current FSC: $0.42/mi. Monitor for Friday update — crude up 2% this week.'},
+    {color:'#f5c842',label:'Q3 Outlook',text:'Seasonal capacity tightening expected June–August. Recommend locking in contract lanes for TX/FL corridors before July rate resets.'},
+  ]);
+  const drew=$('mo-td-drew-feed');
+  if(drew)drew.innerHTML=mkFeed([
+    {color:'#a855f7',label:'Shipper Pipeline',text:'14 active shipper accounts. 3 new RFQs in review. Top shipper: Acme Freight — 22 loads/month steady. Contract renewal due Aug 1.'},
+    {color:'#22c55e',label:'Tender Acceptance',text:'Contract tender acceptance: 91% this week. 3 declined due to capacity. Reviewing with Rex for alternative coverage solutions.'},
+    {color:'#f59e0b',label:'New Business',text:'2 prospective shippers in final negotiation. Combined potential: 15 loads/week. Expected close date: end of June.'},
+  ]);
+  const quinn=$('mo-td-quinn-feed');
+  if(quinn)quinn.innerHTML=mkFeed([
+    {color:'#f5c842',label:'Invoice Status',text:'$84k invoiced MTD. $31k outstanding. 4 invoices past 30 days — Drew following up. DSO: 22 days (target: <25).'},
+    {color:'#22c55e',label:'Documents',text:'All active loads have signed rate cons. 6 PODs pending upload. BOL compliance: 98% this week.'},
+    {color:'#ef4444',label:'Disputes',text:'1 open dispute: shipper claims 2-hour detention not pre-authorized. Quinn escalating to Drew for resolution.'},
+  ]);
 };
 
 if(!moTodos().length){
