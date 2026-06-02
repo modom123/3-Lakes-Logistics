@@ -9340,6 +9340,56 @@ if (typeof nav === 'function') {
 .mo-rep-role,.mo-feed-text,.mo-kpi-l,.mo-dir-card-body,.mo-dir-card-ts,.mo-fl,.mo-status-lbl{color:rgba(255,255,255,.82)!important;}
 .mo-input,.mo-textarea{color:#fff!important;}
 .mo-input::placeholder,.mo-textarea::placeholder{color:rgba(255,255,255,.5);}
+/* ── Office CRM (shared) ── */
+.oc-wrap{display:flex;flex:1;min-height:0;overflow:hidden;}
+.oc-left{width:290px;flex-shrink:0;border-right:1px solid rgba(255,255,255,.1);display:flex;flex-direction:column;overflow:hidden;}
+.oc-right{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0;}
+.oc-subtabs{display:flex;border-bottom:1px solid rgba(255,255,255,.1);flex-shrink:0;}
+.oc-subtab{flex:1;padding:9px 6px;font-size:11px;font-weight:700;text-align:center;cursor:pointer;color:rgba(255,255,255,.38);border:none;background:none;border-bottom:2px solid transparent;transition:.15s;font-family:var(--ff-b);}
+.oc-subtab.active{color:var(--oc-a,#f5c842);border-bottom-color:var(--oc-a,#f5c842);}
+.oc-search-bar{padding:8px 10px;border-bottom:1px solid rgba(255,255,255,.07);flex-shrink:0;display:flex;gap:6px;align-items:center;}
+.oc-search{flex:1;padding:5px 9px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:6px;color:#fff;font-size:11px;outline:none;}
+.oc-search::placeholder{color:rgba(255,255,255,.35);}
+.oc-list{flex:1;overflow-y:auto;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.15) transparent;}
+.oc-item{padding:10px 12px;border-bottom:1px solid rgba(255,255,255,.06);cursor:pointer;transition:background .12s;display:flex;align-items:flex-start;gap:8px;}
+.oc-item:hover,.oc-item.active{background:rgba(255,255,255,.07);}
+.oc-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-top:4px;}
+.oc-dot.hot{background:#ef4444;box-shadow:0 0 5px #ef4444;}
+.oc-dot.warm{background:#f59e0b;}
+.oc-dot.cold{background:#38bdf8;}
+.oc-dot.none{background:rgba(255,255,255,.25);}
+.oc-item-body{flex:1;min-width:0;}
+.oc-item-name{font-size:12px;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.oc-item-co{font-size:10px;color:rgba(255,255,255,.5);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.oc-item-meta{font-size:9px;color:rgba(255,255,255,.28);margin-top:2px;font-family:var(--ff-m);}
+.oc-tag{display:inline-block;font-size:9px;font-weight:700;padding:1px 5px;border-radius:3px;background:rgba(255,255,255,.1);color:rgba(255,255,255,.6);margin-left:4px;}
+.oc-empty{padding:32px 16px;text-align:center;color:rgba(255,255,255,.3);font-size:12px;line-height:1.6;}
+.oc-detail-empty{display:flex;align-items:center;justify-content:center;flex-direction:column;height:100%;color:rgba(255,255,255,.3);gap:8px;}
+.oc-detail-hdr{padding:14px 22px;border-bottom:1px solid rgba(255,255,255,.09);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;gap:10px;}
+.oc-detail-name{font-size:16px;font-weight:800;color:#fff;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.oc-detail-body{flex:1;overflow-y:auto;padding:18px 22px;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.15) transparent;}
+.oc-fl{font-size:9px;font-weight:800;letter-spacing:.08em;color:rgba(255,255,255,.4);margin-bottom:4px;}
+.oc-inp{width:100%;padding:7px 10px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14);border-radius:6px;color:#fff;font-size:12px;outline:none;box-sizing:border-box;font-family:var(--ff-b);}
+.oc-inp:focus{border-color:var(--oc-a,#f5c842);}
+.oc-inp::placeholder{color:rgba(255,255,255,.35);}
+select.oc-inp option{background:#1a1a2e;color:#fff;}
+.oc-ta{resize:vertical;min-height:80px;}
+.oc-row{margin-bottom:14px;}
+.oc-2col{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.oc-actions{display:flex;gap:8px;margin-top:18px;flex-wrap:wrap;padding-top:14px;border-top:1px solid rgba(255,255,255,.08);}
+.oc-view-field{margin-bottom:12px;}
+.oc-view-label{font-size:9px;font-weight:800;letter-spacing:.08em;color:rgba(255,255,255,.38);margin-bottom:3px;}
+.oc-view-val{font-size:13px;color:rgba(255,255,255,.85);}
+.oc-lead-item{padding:10px 12px;border-bottom:1px solid rgba(255,255,255,.06);cursor:pointer;transition:background .12s;}
+.oc-lead-item:hover,.oc-lead-item.active{background:rgba(255,255,255,.07);}
+.oc-lead-name{font-size:12px;font-weight:700;color:#fff;}
+.oc-lead-meta{font-size:10px;color:rgba(255,255,255,.45);margin-top:2px;}
+@media(max-width:768px){.oc-left{width:100%;}.oc-right{display:none;}.oc-wrap{flex-direction:column;}}
+.oc-btn{padding:6px 14px;font-size:12px;font-weight:700;border-radius:6px;border:none;cursor:pointer;background:var(--oc-a,#f5c842);color:#000;font-family:var(--ff-b);white-space:nowrap;}
+.oc-btn:hover{opacity:.86;}
+.oc-btn-out{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.2);color:rgba(255,255,255,.8);border-radius:6px;padding:6px 14px;font-size:12px;font-weight:600;cursor:pointer;font-family:var(--ff-b);white-space:nowrap;}
+.oc-btn-out:hover{background:rgba(255,255,255,.14);}
+.oc-btn-danger{background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.35);color:#ef4444;border-radius:6px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer;font-family:var(--ff-b);}
 </style>
 
 <div class="mo">
@@ -9367,6 +9417,7 @@ if (typeof nav === 'function') {
     <button class="mo-tab"        id="motab-todo"       onclick="moTab('todo')">✅ Todo → CC Gulley <span id="mo-todo-badge" style="display:none;background:#f5c842;color:#000;font-size:9px;font-weight:800;border-radius:10px;padding:1px 6px;margin-left:2px;">0</span></button>
     <button class="mo-tab"        id="motab-directives" onclick="moTab('directives')">📣 Directives</button>
     <button class="mo-tab"        id="motab-docs"       onclick="moTab('docs')">📁 Documents</button>
+    <button class="mo-tab"        id="motab-crm"        onclick="moTab('crm')">📇 My CRM</button>
     <button class="mo-tab"        id="motab-email"      onclick="nav('email');setTimeout(()=>mailSelectMB('mark'),300)">📧 Email <span id="mo-email-ct" style="display:none;background:#f5c842;color:#000;font-size:9px;font-weight:800;border-radius:10px;padding:1px 6px;margin-left:2px;">0</span></button>
     <button class="mo-tab"        id="motab-lf"         onclick="moTab('lf')">🚐 Light Fleet</button>
     <button class="mo-tab"        id="motab-trading"    onclick="moTab('trading')">📈 Trading Reports</button>
@@ -9418,6 +9469,7 @@ if (typeof nav === 'function') {
             <div class="mo-panel-hdr"><div class="mo-panel-title">⚡ Quick Actions</div></div>
             <div class="mo-panel-body" style="display:flex;flex-direction:column;gap:10px;">
               <button class="mo-hdr-btn" style="text-align:left;padding:10px 14px;font-size:12px;" onclick="moTab('todo')">✅ Open Todo List → CC Gulley</button>
+              <button class="mo-hdr-btn" style="text-align:left;padding:10px 14px;font-size:12px;" onclick="moTab('crm')">📇 My CRM — Contacts &amp; Leads</button>
               <button class="mo-hdr-btn" style="text-align:left;padding:10px 14px;font-size:12px;" onclick="nav('email');setTimeout(()=>mailSelectMB('mark'),300)">📧 Open Email Inbox (mark@3lakeslogistics.com)</button>
               <button class="mo-hdr-btn" style="text-align:left;padding:10px 14px;font-size:12px;" onclick="moStartMeeting()">📹 Start Instant Zoom Meeting</button>
               <button class="mo-hdr-btn" style="text-align:left;padding:10px 14px;font-size:12px;" onclick="moTab('directives')">📣 Send Directive to Team</button>
@@ -9995,6 +10047,34 @@ if (typeof nav === 'function') {
       </div>
     </div><!-- /trading -->
 
+    <!-- ════ CRM ════ -->
+    <div class="mo-pane" id="mopane-crm" style="--oc-a:#f5c842">
+      <div class="oc-wrap">
+        <!-- Left: list -->
+        <div class="oc-left">
+          <div class="oc-subtabs">
+            <button class="oc-subtab active" id="mo-crm-st-contacts" onclick="ocSubTab('mark','contacts')">📇 My Contacts</button>
+            <button class="oc-subtab"        id="mo-crm-st-leads"    onclick="ocSubTab('mark','leads')">🎯 CRM Leads</button>
+          </div>
+          <div class="oc-search-bar">
+            <input class="oc-search" id="mo-crm-search" placeholder="🔍 Search…" oninput="ocFilter('mark')">
+            <button class="mo-btn" id="mo-crm-new-btn" style="padding:5px 12px;font-size:11px;flex-shrink:0;" onclick="ocNew('mark')">+ New</button>
+          </div>
+          <div class="oc-list" id="mo-crm-list">
+            <div class="oc-empty">No contacts yet.<br>Click <b>+ New</b> to add one.</div>
+          </div>
+        </div>
+        <!-- Right: detail / form -->
+        <div class="oc-right">
+          <div class="oc-detail-empty" id="mo-crm-empty">
+            <div style="font-size:38px">📇</div>
+            <div style="font-size:13px">Select a contact or click + New</div>
+          </div>
+          <div id="mo-crm-detail" style="display:none;flex-direction:column;height:100%;overflow:hidden;"></div>
+        </div>
+      </div>
+    </div><!-- /crm -->
+
   </div><!-- /body -->
 </div><!-- /mo -->
 </div><!-- /page-mark-office -->
@@ -10013,6 +10093,7 @@ window.moTab = function(id){
   if(tb)tb.classList.add('active');
   if(pn)pn.classList.add('active');
   if(id==='todo')moTodoRender();
+  if(id==='crm')ocInit('mark');
   if(id==='directives')moLoadDirectives();
   if(id==='lf')moLFRefresh();
   if(id==='trading')moTDRefresh();
@@ -10466,6 +10547,7 @@ if(!moTodos().length){
     <button class="ccg-tab"        id="ccgtab-strategy"   onclick="ccgTab('strategy')">📊 Strategy</button>
     <button class="ccg-tab"        id="ccgtab-directives" onclick="ccgTab('directives')">📣 Directives <span id="ccg-dir-badge" style="display:none;background:#38bdf8;color:#000;font-size:9px;font-weight:800;border-radius:10px;padding:1px 6px;">NEW</span></button>
     <button class="ccg-tab"        id="ccgtab-docs"       onclick="ccgTab('docs')">📁 Documents</button>
+    <button class="ccg-tab"        id="ccgtab-crm"        onclick="ccgTab('crm')">📇 My CRM</button>
     <button class="ccg-tab"        id="ccgtab-email"      onclick="nav('email');setTimeout(()=>mailSelectMB('cece'),300)">📧 Email <span id="ccg-email-ct" style="display:none;background:#38bdf8;color:#000;font-size:9px;font-weight:800;border-radius:10px;padding:1px 6px;">0</span></button>
     <button class="ccg-tab"        id="ccgtab-zoom"       onclick="ccgTab('zoom')">📹 Zoom</button>
     <button class="ccg-tab"        id="ccgtab-tv"         onclick="ccgTab('tv')">📺 Watch TV</button>
@@ -10518,6 +10600,7 @@ if(!moTodos().length){
           <div class="ccg-panel" style="min-height:280px;">
             <div class="ccg-panel-hdr"><div class="ccg-panel-title">⚡ Quick Actions</div></div>
             <div class="ccg-panel-body" style="display:flex;flex-direction:column;gap:10px;">
+              <button class="ccg-hdr-btn" style="text-align:left;padding:10px 14px;font-size:12px;" onclick="ccgTab('crm')">📇 My CRM — Contacts &amp; Leads</button>
               <button class="ccg-hdr-btn" style="text-align:left;padding:10px 14px;font-size:12px;" onclick="nav('email');setTimeout(()=>mailSelectMB('cece'),300)">📧 Open Email Inbox (cece@3lakeslogistics.com)</button>
               <button class="ccg-hdr-btn" style="text-align:left;padding:10px 14px;font-size:12px;" onclick="ccgStartMeeting()">📹 Start Instant Zoom Meeting</button>
               <button class="ccg-hdr-btn" style="text-align:left;padding:10px 14px;font-size:12px;" onclick="ccgTab('directives')">📣 Send Directive to Team</button>
@@ -10942,6 +11025,32 @@ if(!moTodos().length){
       </div>
     </div><!-- /tv -->
 
+    <!-- ════ CRM ════ -->
+    <div class="ccg-pane" id="ccgpane-crm" style="--oc-a:#38bdf8">
+      <div class="oc-wrap">
+        <div class="oc-left">
+          <div class="oc-subtabs">
+            <button class="oc-subtab active" id="cece-crm-st-contacts" onclick="ocSubTab('cece','contacts')">📇 My Contacts</button>
+            <button class="oc-subtab"        id="cece-crm-st-leads"    onclick="ocSubTab('cece','leads')">🎯 CRM Leads</button>
+          </div>
+          <div class="oc-search-bar">
+            <input class="oc-search" id="cece-crm-search" placeholder="🔍 Search…" oninput="ocFilter('cece')">
+            <button class="ccg-btn" id="cece-crm-new-btn" style="padding:5px 12px;font-size:11px;flex-shrink:0;" onclick="ocNew('cece')">+ New</button>
+          </div>
+          <div class="oc-list" id="cece-crm-list">
+            <div class="oc-empty">No contacts yet.<br>Click <b>+ New</b> to add one.</div>
+          </div>
+        </div>
+        <div class="oc-right">
+          <div class="oc-detail-empty" id="cece-crm-empty">
+            <div style="font-size:38px">📇</div>
+            <div style="font-size:13px">Select a contact or click + New</div>
+          </div>
+          <div id="cece-crm-detail" style="display:none;flex-direction:column;height:100%;overflow:hidden;"></div>
+        </div>
+      </div>
+    </div><!-- /crm -->
+
   </div><!-- /body -->
 </div><!-- /ccg -->
 </div><!-- /page-ccg-office -->
@@ -10960,6 +11069,7 @@ window.ccgTab = function(id){
   const pn=document.getElementById('ccgpane-'+id);
   if(tb)tb.classList.add('active');
   if(pn)pn.classList.add('active');
+  if(id==='crm')ocInit('cece');
   if(id==='directives')ccgDirLoadActive();
   if(id==='strategy')ccgLoadPlan();
 };
@@ -11334,6 +11444,328 @@ window.ccgDeleteDoc = async function(id, name){
 };
 
 /* auto-load is wired directly in nav() */
+
+})();
+</script>
+
+<script>
+// ═══════════════════════════════════════════════════════
+// OFFICE CRM — shared for Mark Odom (mark) + CC Gulley (cece)
+// Personal contacts stored in localStorage per owner.
+// CRM Leads sub-tab reads from /api/leads (main pipeline).
+// ═══════════════════════════════════════════════════════
+(function(){
+
+const OC_TYPES = ['Broker','Carrier','Customer','Shipper','Vendor','Investor','Personal'];
+const OC_PRI   = ['hot','warm','cold','none'];
+
+// owner→prefix mapping: mark→'mo', cece→'cece'
+function pfx(owner){ return owner==='mark'?'mo':'cece'; }
+function el(owner, s){ return document.getElementById(`${pfx(owner)}-crm-${s}`); }
+
+function ocContacts(owner){ try{return JSON.parse(localStorage.getItem(`oc_${owner}`)||'[]');}catch(e){return[];} }
+function ocSaveAll(owner,arr){ localStorage.setItem(`oc_${owner}`,JSON.stringify(arr)); }
+
+// per-owner state
+const _oc = {};
+function st(owner){
+  if(!_oc[owner]) _oc[owner]={tab:'contacts',editingId:null,isNew:false,leads:[],leadsLoaded:false,search:''};
+  return _oc[owner];
+}
+
+window.ocInit = function(owner){
+  st(owner).tab = 'contacts';
+  el(owner,'st-contacts')?.classList.add('active');
+  el(owner,'st-leads')?.classList.remove('active');
+  el(owner,'new-btn') && (el(owner,'new-btn').style.display='');
+  ocRenderList(owner);
+  ocShowEmpty(owner);
+};
+
+window.ocSubTab = function(owner, tab){
+  st(owner).tab = tab;
+  st(owner).editingId = null;
+  st(owner).isNew = false;
+  el(owner,'st-contacts')?.classList.toggle('active', tab==='contacts');
+  el(owner,'st-leads')?.classList.toggle('active', tab==='leads');
+  const nb = el(owner,'new-btn');
+  if(nb) nb.style.display = tab==='contacts'?'':'none';
+  if(tab==='contacts') ocRenderList(owner);
+  else ocLoadLeads(owner);
+  ocShowEmpty(owner);
+};
+
+window.ocFilter = function(owner){
+  st(owner).search = el(owner,'search')?.value.toLowerCase()||'';
+  if(st(owner).tab==='contacts') ocRenderList(owner);
+  else ocRenderLeads(owner);
+};
+
+function ocShowEmpty(owner){
+  const empty = el(owner,'empty');
+  const detail = el(owner,'detail');
+  if(empty) empty.style.display = 'flex';
+  if(detail){ detail.style.display='none'; detail.innerHTML=''; }
+}
+
+// ── Contact list ──────────────────────────────────────
+window.ocRenderList = function(owner){
+  const listEl = el(owner,'list');
+  if(!listEl) return;
+  const q = st(owner).search;
+  let contacts = ocContacts(owner).filter(c=>{
+    if(!q) return true;
+    return (c.name+c.company+c.email+c.phone+c.type).toLowerCase().includes(q);
+  });
+  contacts.sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+  if(!contacts.length){
+    listEl.innerHTML = `<div class="oc-empty">${q?'No matches for "'+q+'"':'No contacts yet.<br>Click <b>+ New</b> to add one.'}</div>`;
+    return;
+  }
+  const cur = st(owner).editingId;
+  listEl.innerHTML = contacts.map(c=>`
+    <div class="oc-item${c.id===cur?' active':''}" onclick="ocOpen('${owner}','${c.id}')">
+      <div class="oc-dot ${c.priority||'none'}"></div>
+      <div class="oc-item-body">
+        <div class="oc-item-name">${esc(c.name)}<span class="oc-tag">${c.type||''}</span></div>
+        <div class="oc-item-co">${esc(c.company||'')}</div>
+        <div class="oc-item-meta">${c.last_contacted?'Last: '+new Date(c.last_contacted).toLocaleDateString():c.phone||c.email||''}</div>
+      </div>
+    </div>`).join('');
+};
+
+// ── Open contact detail (view mode) ──────────────────
+window.ocOpen = function(owner, id){
+  const c = ocContacts(owner).find(x=>x.id===id);
+  if(!c) return;
+  st(owner).editingId = id;
+  st(owner).isNew = false;
+  ocRenderList(owner);
+  el(owner,'empty').style.display='none';
+  const det = el(owner,'detail');
+  det.style.display='flex';
+  const lc = c.last_contacted ? new Date(c.last_contacted).toLocaleDateString() : '—';
+  det.innerHTML = `
+    <div class="oc-detail-hdr">
+      <div>
+        <div class="oc-detail-name">${esc(c.name)}</div>
+        <div style="font-size:11px;color:rgba(255,255,255,.4);margin-top:2px;">${esc(c.company||'')}${c.type?` · ${c.type}`:''}</div>
+      </div>
+      <div style="display:flex;gap:6px;flex-shrink:0;">
+        <button class="oc-btn-out" onclick="ocEdit('${owner}','${id}')">✏️ Edit</button>
+        <button class="oc-btn-out" onclick="ocTouchContact('${owner}','${id}')" title="Mark as contacted today">📞 Touched</button>
+        <button class="oc-btn-danger" onclick="ocDelete('${owner}','${id}')">🗑</button>
+      </div>
+    </div>
+    <div class="oc-detail-body">
+      <div class="oc-2col">
+        ${vf('Phone',c.phone?`<a href="tel:${c.phone}" style="color:var(--oc-a,#f5c842)">${esc(c.phone)}</a>`:'')}
+        ${vf('Email',c.email?`<a href="mailto:${c.email}" style="color:var(--oc-a,#f5c842)">${esc(c.email)}</a>`:'')}
+      </div>
+      <div class="oc-2col">
+        ${vf('Priority','<span class="oc-dot '+(c.priority||'none')+'" style="display:inline-block;margin-right:5px;vertical-align:middle;"></span>'+(c.priority||'None'))}
+        ${vf('Last Contacted', lc)}
+      </div>
+      ${c.linkedin?vf('LinkedIn',`<a href="${c.linkedin}" target="_blank" style="color:var(--oc-a,#f5c842)">View Profile</a>`):''}
+      ${vf('Notes',`<div style="font-size:12px;color:rgba(255,255,255,.75);white-space:pre-wrap;line-height:1.6;">${esc(c.notes||'—')}</div>`)}
+    </div>`;
+};
+
+function vf(label, val){
+  return `<div class="oc-view-field"><div class="oc-view-label">${label}</div><div class="oc-view-val">${val||'—'}</div></div>`;
+}
+
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+// ── Touch (mark contacted today) ─────────────────────
+window.ocTouchContact = function(owner, id){
+  const arr = ocContacts(owner);
+  const c = arr.find(x=>x.id===id);
+  if(!c) return;
+  c.last_contacted = new Date().toISOString();
+  ocSaveAll(owner, arr);
+  ocOpen(owner, id);
+  if(typeof toast!=='undefined') toast('Marked as contacted today');
+};
+
+// ── Edit form ─────────────────────────────────────────
+window.ocEdit = function(owner, id){
+  const c = ocContacts(owner).find(x=>x.id===id)||{};
+  st(owner).editingId = id;
+  st(owner).isNew = false;
+  ocRenderForm(owner, c, false);
+};
+
+window.ocNew = function(owner){
+  st(owner).editingId = null;
+  st(owner).isNew = true;
+  ocRenderList(owner);
+  el(owner,'empty').style.display='none';
+  const det = el(owner,'detail');
+  det.style.display='flex';
+  ocRenderForm(owner, {}, true);
+};
+
+function ocRenderForm(owner, c, isNew){
+  const det = el(owner,'detail');
+  const typeOpts = OC_TYPES.map(t=>`<option value="${t}"${c.type===t?' selected':''}>${t}</option>`).join('');
+  const priOpts = OC_PRI.map(p=>`<option value="${p}"${(c.priority||'none')===p?' selected':''}>${p.charAt(0).toUpperCase()+p.slice(1)}</option>`).join('');
+  det.innerHTML = `
+    <div class="oc-detail-hdr">
+      <div class="oc-detail-name">${isNew?'New Contact':esc(c.name||'Edit Contact')}</div>
+      <div style="display:flex;gap:6px;">
+        <button class="oc-btn" onclick="ocSaveContact('${owner}')">💾 Save</button>
+        <button class="oc-btn-out" onclick="ocCancelForm('${owner}','${c.id||'')}')"}>✕ Cancel</button>
+      </div>
+    </div>
+    <div class="oc-detail-body">
+      <div class="oc-2col">
+        <div class="oc-row"><div class="oc-fl">FULL NAME *</div><input class="oc-inp" id="oc-f-name" value="${esc(c.name||'')}" placeholder="Jane Smith"></div>
+        <div class="oc-row"><div class="oc-fl">COMPANY</div><input class="oc-inp" id="oc-f-company" value="${esc(c.company||'')}" placeholder="Acme Freight"></div>
+      </div>
+      <div class="oc-2col">
+        <div class="oc-row"><div class="oc-fl">PHONE</div><input class="oc-inp" id="oc-f-phone" type="tel" value="${esc(c.phone||'')}" placeholder="555-867-5309"></div>
+        <div class="oc-row"><div class="oc-fl">EMAIL</div><input class="oc-inp" id="oc-f-email" type="email" value="${esc(c.email||'')}" placeholder="jane@company.com"></div>
+      </div>
+      <div class="oc-2col">
+        <div class="oc-row"><div class="oc-fl">TYPE</div><select class="oc-inp" id="oc-f-type">${typeOpts}</select></div>
+        <div class="oc-row"><div class="oc-fl">PRIORITY</div><select class="oc-inp" id="oc-f-pri">${priOpts}</select></div>
+      </div>
+      <div class="oc-row"><div class="oc-fl">LINKEDIN</div><input class="oc-inp" id="oc-f-linkedin" value="${esc(c.linkedin||'')}" placeholder="https://linkedin.com/in/…"></div>
+      <div class="oc-row"><div class="oc-fl">LAST CONTACTED</div><input class="oc-inp" id="oc-f-lc" type="date" value="${c.last_contacted?c.last_contacted.slice(0,10):''}"></div>
+      <div class="oc-row"><div class="oc-fl">NOTES</div><textarea class="oc-inp oc-ta" id="oc-f-notes" placeholder="Anything worth remembering…">${esc(c.notes||'')}</textarea></div>
+    </div>`;
+}
+
+window.ocSaveContact = function(owner){
+  const name = document.getElementById('oc-f-name')?.value.trim();
+  if(!name){ if(typeof toast!=='undefined') toast('Name is required','error'); return; }
+  const arr = ocContacts(owner);
+  const s = st(owner);
+  const isNew = s.isNew || !s.editingId;
+  let c = isNew ? {id: Date.now().toString(36)+Math.random().toString(36).slice(2), created: new Date().toISOString()} : arr.find(x=>x.id===s.editingId)||{};
+  c.name     = name;
+  c.company  = document.getElementById('oc-f-company')?.value.trim()||'';
+  c.phone    = document.getElementById('oc-f-phone')?.value.trim()||'';
+  c.email    = document.getElementById('oc-f-email')?.value.trim()||'';
+  c.type     = document.getElementById('oc-f-type')?.value||'';
+  c.priority = document.getElementById('oc-f-pri')?.value||'none';
+  c.linkedin = document.getElementById('oc-f-linkedin')?.value.trim()||'';
+  c.last_contacted = document.getElementById('oc-f-lc')?.value||null;
+  c.notes    = document.getElementById('oc-f-notes')?.value||'';
+  if(isNew){ arr.push(c); s.isNew=false; }
+  ocSaveAll(owner, arr);
+  s.editingId = c.id;
+  ocRenderList(owner);
+  ocOpen(owner, c.id);
+  if(typeof toast!=='undefined') toast('Contact saved');
+};
+
+window.ocCancelForm = function(owner, id){
+  if(id && id!=='undefined'){ ocOpen(owner, id); }
+  else { ocShowEmpty(owner); ocRenderList(owner); }
+};
+
+window.ocDelete = function(owner, id){
+  if(!id || !confirm('Delete this contact?')) return;
+  const arr = ocContacts(owner).filter(c=>c.id!==id);
+  ocSaveAll(owner, arr);
+  st(owner).editingId = null;
+  ocRenderList(owner);
+  ocShowEmpty(owner);
+  if(typeof toast!=='undefined') toast('Contact deleted');
+};
+
+// ── CRM Leads sub-tab ─────────────────────────────────
+window.ocLoadLeads = async function(owner){
+  const listEl = el(owner,'list');
+  if(!listEl) return;
+  listEl.innerHTML = '<div class="oc-empty">Loading CRM leads…</div>';
+  try{
+    const r = await API.get('/api/leads?limit=200').catch(()=>null);
+    st(owner).leads = (r?.items)||[];
+    st(owner).leadsLoaded = true;
+    ocRenderLeads(owner);
+  }catch(e){
+    listEl.innerHTML = `<div class="oc-empty">Error loading leads</div>`;
+  }
+};
+
+window.ocRenderLeads = function(owner){
+  const listEl = el(owner,'list');
+  if(!listEl) return;
+  const q = st(owner).search;
+  let leads = st(owner).leads||[];
+  if(q) leads = leads.filter(l=>(l.business_name+l.company_name+l.contact_name+l.status||'').toLowerCase().includes(q));
+  if(!leads.length){
+    listEl.innerHTML=`<div class="oc-empty">${q?'No matches':'No CRM leads yet'}</div>`;
+    return;
+  }
+  listEl.innerHTML = leads.map(l=>`
+    <div class="oc-lead-item" onclick="ocOpenLead('${owner}','${l.id}')">
+      <div class="oc-lead-name">${esc(l.business_name||l.company_name||'Unknown')}</div>
+      <div class="oc-lead-meta">${esc(l.contact_name||'')}${l.status?` · ${l.status}`:''}</div>
+    </div>`).join('');
+};
+
+window.ocOpenLead = function(owner, id){
+  const l = (st(owner).leads||[]).find(x=>String(x.id)===String(id));
+  if(!l) return;
+  el(owner,'empty').style.display='none';
+  const det = el(owner,'detail');
+  det.style.display='flex';
+  const name = l.business_name||l.company_name||'Unknown';
+  det.innerHTML = `
+    <div class="oc-detail-hdr">
+      <div>
+        <div class="oc-detail-name">${esc(name)}</div>
+        <div style="font-size:11px;color:rgba(255,255,255,.4);margin-top:2px;">CRM Lead · ${esc(l.status||'')}</div>
+      </div>
+      <button class="oc-btn" style="font-size:11px;flex-shrink:0;" onclick="ocPullLead('${owner}','${l.id}')">📥 Save to My Contacts</button>
+    </div>
+    <div class="oc-detail-body">
+      <div class="oc-2col">
+        ${vf('Contact',esc(l.contact_name||'—'))}
+        ${vf('Status',esc(l.status||'—'))}
+      </div>
+      <div class="oc-2col">
+        ${vf('Phone',l.contact_phone?`<a href="tel:${l.contact_phone}" style="color:var(--oc-a,#f5c842)">${esc(l.contact_phone)}</a>`:'—')}
+        ${vf('Email',l.contact_email?`<a href="mailto:${l.contact_email}" style="color:var(--oc-a,#f5c842)">${esc(l.contact_email)}</a>`:'—')}
+      </div>
+      ${vf('DOT / MC',`${l.dot_number||'—'} / ${l.mc_number||'—'}`)}
+      ${vf('Source',esc(l.source||'—'))}
+      ${l.notes?vf('Notes',`<div style="font-size:12px;color:rgba(255,255,255,.75);white-space:pre-wrap;">${esc(l.notes)}</div>`):''}
+      <div style="margin-top:14px;">
+        <button class="oc-btn-out" onclick="nav('crm')">↗ Open in Main CRM</button>
+      </div>
+    </div>`;
+};
+
+window.ocPullLead = function(owner, id){
+  const l = (st(owner).leads||[]).find(x=>String(x.id)===String(id));
+  if(!l) return;
+  const arr = ocContacts(owner);
+  const name = l.business_name||l.company_name||'Unknown';
+  const existing = arr.find(c=>c.name===name && c.company===name);
+  if(existing){ if(typeof toast!=='undefined') toast('Already in My Contacts'); return; }
+  const c = {
+    id: Date.now().toString(36)+Math.random().toString(36).slice(2),
+    created: new Date().toISOString(),
+    name: l.contact_name||name,
+    company: name,
+    phone: l.contact_phone||'',
+    email: l.contact_email||'',
+    type: 'Carrier',
+    priority: 'none',
+    notes: `Pulled from CRM (lead ID: ${l.id})\nStatus: ${l.status||''}\nDOT: ${l.dot_number||'—'} MC: ${l.mc_number||'—'}`,
+    last_contacted: null,
+  };
+  arr.push(c);
+  ocSaveAll(owner, arr);
+  if(typeof toast!=='undefined') toast(`"${c.name}" added to My Contacts`);
+  ocSubTab(owner,'contacts');
+  setTimeout(()=>ocOpen(owner,c.id),50);
+};
 
 })();
 </script>
