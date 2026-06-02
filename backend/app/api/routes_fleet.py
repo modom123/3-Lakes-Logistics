@@ -83,20 +83,37 @@ def set_status(fleet_id: str, new_status: str) -> dict:
 # ── Public endpoints (no auth) — used by carrier-facing website ───────────────
 
 @public_router.get("/public/loads")
-def public_loads(limit: int = 20) -> dict:
+def public_loads(limit: int = 50) -> dict:
     """Return loads marked post_to_website=true. No auth required."""
     try:
+        # Status values used by Eagle Eye (mixed case) and legacy lowercase
+        active_statuses = [
+            "Booked", "booked",
+            "Open", "open",
+            "available", "Available",
+            "En Route", "en_route",
+        ]
         res = (
             get_supabase()
             .table("loads")
-            .select("load_number,origin,destination,origin_city,origin_state,dest_city,dest_state,rate_total,miles,rate_per_mile,pickup_at,equipment_type,weight")
+            .select(
+                "load_number,origin,destination,origin_city,origin_state,"
+                "dest_city,dest_state,rate_total,rate,miles,rate_per_mile,"
+                "pickup_at,pickup_date,equipment_type,weight,weight_lbs,commodity"
+            )
             .eq("post_to_website", True)
-            .in_("status", ["booked", "open", "available"])
+            .in_("status", active_statuses)
             .order("created_at", desc=True)
             .limit(limit)
             .execute()
         )
-        return {"loads": res.data or [], "count": len(res.data or [])}
+        # Normalise: merge rate/rate_total so website always has a rate field
+        loads = []
+        for l in (res.data or []):
+            l["rate_total"] = l.get("rate_total") or l.get("rate") or 0
+            l["pickup_at"] = l.get("pickup_at") or l.get("pickup_date")
+            loads.append(l)
+        return {"loads": loads, "count": len(loads)}
     except Exception:
         return {"loads": [], "count": 0}
 

@@ -15367,6 +15367,10 @@ function lfmapToggleAutoRefresh() {
       <div class="form-row-1">
         <div class="fg"><label class="fl">Notes</label><textarea class="fta" id="nt-notes" placeholder="Special instructions, references, etc." style="min-height:56px"></textarea></div>
       </div>
+      <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--border);margin-top:4px">
+        <input type="checkbox" id="nt-post-website" style="width:16px;height:16px;accent-color:var(--gold);cursor:pointer" checked>
+        <label for="nt-post-website" style="font-size:13px;cursor:pointer;color:var(--text)">Post this load on the public carrier website load board (visible to all carriers)</label>
+      </div>
     </div>
     <div class="modal-footer">
       <button class="btn-out" onclick="closeModal('natco-new-trade-modal')">Cancel</button>
@@ -15847,6 +15851,7 @@ async function natcoSaveTrade() {
 
   const counter = 'NT-' + String(Date.now()).slice(-6);
 
+  const postToWeb = document.getElementById('nt-post-website')?.checked ?? true;
   const res = await apiFetch('/api/dashboard/loads', 'POST', {
     load_number: counter,
     driver_name: carrierName || null,
@@ -15858,6 +15863,7 @@ async function natcoSaveTrade() {
     commodity: document.getElementById('nt-commodity')?.value.trim() || null,
     equipment_type: document.getElementById('nt-equip')?.value || null,
     weight_lbs: parseInt(document.getElementById('nt-weight')?.value) || null,
+    post_to_website: postToWeb,
     notes
   });
 
