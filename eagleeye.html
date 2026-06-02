@@ -126,9 +126,21 @@ body{font-family:var(--ff-b);color:var(--text);background:var(--off);display:fle
 }
 .btn-sync:hover{background:var(--navy2);box-shadow:0 4px 16px rgba(11,37,69,.28);}
 
-.content{flex:1;overflow-y:auto;padding:28px;background:var(--off);}
-.page{display:none;animation:pgIn .3s ease;}
-.page.active{display:block;}
+.content{flex:1;overflow:hidden;padding:0;background:var(--off);display:flex;flex-direction:column;}
+.page{display:none;}
+.page.active{
+  display:flex;flex-direction:column;
+  flex:1;min-height:0;
+  overflow-y:auto;
+  padding:16px 20px;
+  animation:pgIn .3s ease;
+}
+/* Full-bleed pages: no padding, no outer scroll */
+#page-email.active,
+#page-fleet-map.active,
+#page-lf-map.active,
+#page-ccg-office.active,
+#page-bond.active{padding:0;overflow:hidden;}
 @keyframes pgIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
 
 /* ── LAYOUT GRIDS ── */
@@ -657,6 +669,20 @@ td.td-name{font-weight:600;color:var(--navy);}
   font-family:'Inter',sans-serif;transition:color .15s;
 }
 .sb-logout:hover{color:#C9A84C;}
+
+/* ── Global full-page layout helpers ── */
+/* CRM views fill available height — no viewport calc needed */
+#crm-view-list,#crm-view-kanban,#crm-view-outreach{height:auto!important;flex:1;min-height:0;}
+#page-crm.active{overflow:hidden;}
+#page-crm.active > .page-hdr{flex-shrink:0;}
+/* LF tab bar escapes page padding to be edge-to-edge */
+.lf-tab-bar{margin:-16px -20px 16px;}
+/* Mobile overrides */
+@media(max-width:768px){
+  .page.active{padding:10px;}
+  #page-email.active,#page-fleet-map.active,#page-lf-map.active,#page-ccg-office.active,#page-bond.active{padding:0;}
+  .lf-tab-bar{margin:-10px -10px 12px;}
+}
 </style>
 </head>
 <body>
@@ -976,8 +1002,8 @@ td.td-name{font-weight:600;color:var(--navy);}
     <div class="page" id="page-fleet-map">
 <style>
 #page-fleet-map{animation:none;}
-#page-fleet-map.active{position:fixed;top:93px;left:var(--sidebar-w);right:0;bottom:0;z-index:30;display:flex;flex-direction:column;overflow:hidden;background:var(--bg);}
-@media(max-width:768px){#page-fleet-map.active{top:87px;left:0;}}
+#page-fleet-map.active{position:fixed;top:60px;left:var(--sidebar-w);right:0;bottom:0;z-index:30;display:flex;flex-direction:column;overflow:hidden;background:var(--bg);}
+@media(max-width:768px){#page-fleet-map.active{top:54px;left:0;}}
 #fmap-toolbar{display:flex;align-items:center;gap:10px;padding:10px 16px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;flex-wrap:wrap;}
 #fmap-body{display:flex;flex:1;min-height:0;}
 #fmap-map{flex:1;min-height:0;}
@@ -1028,7 +1054,7 @@ td.td-name{font-weight:600;color:var(--navy);}
 <style>
 #page-lf-map{animation:none;}
 #page-lf-map.active{position:fixed;top:60px;left:var(--sidebar-w);right:0;bottom:0;z-index:30;display:flex;flex-direction:column;overflow:hidden;background:var(--bg);}
-@media(max-width:768px){#page-lf-map.active{top:60px;left:0;}}
+@media(max-width:768px){#page-lf-map.active{top:54px;left:0;}}
 #lfmap-toolbar{display:flex;align-items:center;gap:10px;padding:10px 16px;background:var(--surface);border-bottom:2px solid #8b5cf6;flex-shrink:0;flex-wrap:wrap;}
 #lfmap-body{display:flex;flex:1;min-height:0;}
 #lfmap-map{flex:1;min-height:0;}
@@ -7603,7 +7629,7 @@ async function loadTriggerStatus() {
      ═══════════════════════════════════════════════════════════════ -->
 <div class="page" id="page-email">
 <style>
-.mail-client{display:flex;height:calc(100vh - 56px);overflow:hidden;background:var(--bg)}
+.mail-client{display:flex;flex:1;min-height:0;overflow:hidden;background:var(--bg)}
 .mail-sidebar{width:220px;min-width:220px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto;flex-shrink:0}
 .mail-sidebar-top{padding:14px 12px 10px;border-bottom:1px solid var(--border)}
 .mail-mb-list{padding:8px 0}
@@ -9205,8 +9231,8 @@ if (typeof nav === 'function') {
 <div class="page" id="page-ccg-office">
 <style>
 #page-ccg-office{animation:none;}
-#page-ccg-office.active{position:fixed;top:93px;left:var(--sidebar-w);right:0;bottom:0;z-index:30;display:flex;flex-direction:column;overflow:hidden;background:var(--bg);}
-@media(max-width:768px){#page-ccg-office.active{top:87px;left:0;}}
+#page-ccg-office.active{position:fixed;top:60px;left:var(--sidebar-w);right:0;bottom:0;z-index:30;display:flex;flex-direction:column;overflow:hidden;background:var(--bg);}
+@media(max-width:768px){#page-ccg-office.active{top:54px;left:0;}}
 /* ── CCG Office shell ── */
 .ccg{display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden;--ccg-sky:#38bdf8;--ccg-teal:#14b8a6;--ccg-purple:#a855f7;--ccg-green:#10b981;background:#050f1c;}
 .ccg-hdr{display:flex;align-items:center;justify-content:space-between;padding:12px 24px;background:linear-gradient(135deg,#030c17 0%,#051525 100%);flex-shrink:0;border-bottom:2px solid rgba(56,189,248,.35);box-shadow:0 4px 20px rgba(0,0,0,.5);}
@@ -10390,8 +10416,8 @@ window.ccgDeleteDoc = async function(id, name){
 /* ── Bond Office ──────────────────────────────────────────────────────────── */
 /* Suppress the pgIn slide-in animation — Bond is a fixed full-page overlay */
 #page-bond{animation:none;}
-#page-bond.active{position:fixed;top:93px;left:var(--sidebar-w);right:0;bottom:0;z-index:30;display:flex;flex-direction:column;overflow:hidden;background:var(--bg);}
-@media(max-width:768px){#page-bond.active{top:87px;left:0;}}
+#page-bond.active{position:fixed;top:60px;left:var(--sidebar-w);right:0;bottom:0;z-index:30;display:flex;flex-direction:column;overflow:hidden;background:var(--bg);}
+@media(max-width:768px){#page-bond.active{top:54px;left:0;}}
 .bo-wrap{display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden;background:var(--bg);}
 .bo-header{display:flex;align-items:center;justify-content:space-between;padding:14px 24px;background:var(--navy);flex-shrink:0;border-bottom:2px solid rgba(228,168,48,.3);}
 .bo-header-left{display:flex;align-items:center;gap:14px;}
@@ -12003,7 +12029,7 @@ setInterval(bondGlobalPoll, 180000);
 <!-- ═══════════════════════════ TEST SUITE PAGE ═══════════════════════════ -->
 <div class="page" id="page-tests">
 <style>
-.ts-wrap{padding:24px 28px;height:calc(100vh - 116px);overflow-y:auto;box-sizing:border-box;}
+.ts-wrap{padding:16px 20px;flex:1;min-height:0;overflow-y:auto;box-sizing:border-box;}
 .ts-topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px;}
 .ts-title{font-family:var(--ff-p);font-size:22px;font-weight:700;color:var(--gold2);}
 .ts-subtitle{font-size:12px;color:var(--muted);margin-top:2px;}
@@ -13946,8 +13972,14 @@ async function deactivateDriver(driverId) {
 <!-- LIGHT FLEET — 4 SERVICE PAGES                                       -->
 <!-- ════════════════════════════════════════════════════════════════════ -->
 <style>
-.lf-wrap{max-width:1280px;margin:0 auto;padding:28px 32px 80px;box-sizing:border-box;overflow-y:auto;}
-.lf-hdr{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:20px;}
+.lf-wrap{padding:0;box-sizing:border-box;}
+/* ── LF Tab Bar ── */
+.lf-tabs{position:sticky;top:0;z-index:10;background:var(--off);border-bottom:2px solid var(--border);padding:10px 20px 0;margin:-16px -20px 18px;display:flex;gap:4px;flex-wrap:wrap;}
+.lf-tab{display:inline-flex;align-items:center;gap:7px;padding:9px 18px;border:none;background:transparent;font-size:13px;font-weight:600;font-family:var(--ff-b);color:var(--muted);cursor:pointer;border-radius:8px 8px 0 0;border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .18s;white-space:nowrap;}
+.lf-tab:hover{color:var(--navy);background:rgba(11,37,69,.04);}
+.lf-tab.active{color:var(--navy);border-bottom-color:var(--gold2);background:var(--white);}
+@media(max-width:768px){.lf-tabs{padding:8px 10px 0;margin:-10px -10px 14px;}}
+.lf-hdr{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:16px;}
 .lf-hdr h2{font-size:clamp(18px,2.5vw,26px);margin:0;font-weight:700;}
 .lf-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:14px;margin-bottom:20px;}
 .lf-kpi{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px 18px;text-align:center;}
@@ -13977,7 +14009,7 @@ async function deactivateDriver(driverId) {
 .lf-badge.flagged{background:rgba(239,68,68,.15);color:#ef4444;}
 .lf-empty{text-align:center;padding:40px;color:var(--muted);font-size:14px;}
 .lf-section-hdr{font-size:13px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid var(--border);padding-bottom:8px;margin:28px 0 16px;}
-@media(max-width:768px){.lf-wrap{padding:16px 14px 60px;}}
+@media(max-width:768px){.lf-wrap{padding:0;}}
 /* Service accent colors */
 :root{--lf-nemt:#3b82f6;--lf-exec:#f59e0b;--lf-cour:#8b5cf6;--lf-gig:#22c55e;}
 .lf-hero{border-radius:12px;padding:22px 24px;margin-bottom:22px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;position:relative;overflow:hidden;}
