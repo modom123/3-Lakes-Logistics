@@ -14050,39 +14050,137 @@ async function deactivateDriver(driverId) {
 .lf-form-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:18px;}
 </style>
 
+<style>
+/* ── IEBC SEGMENT PAGES ── */
+.iebc-banner{padding:28px 32px 24px;position:relative;overflow:hidden;}
+.iebc-banner::after{content:'';position:absolute;top:-80px;right:-80px;width:260px;height:260px;border-radius:50%;background:rgba(255,255,255,.04);pointer-events:none;}
+.iebc-banner-row{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;}
+.iebc-node-chip{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700;color:rgba(255,255,255,.8);letter-spacing:.8px;margin-bottom:8px;}
+.iebc-expert-name{font-size:20px;font-weight:800;color:#fff;margin-bottom:2px;}
+.iebc-expert-title{font-size:12px;color:rgba(255,255,255,.55);}
+.iebc-expert-icon{font-size:36px;margin-right:14px;flex-shrink:0;}
+.iebc-run-btn{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);color:#fff;font-size:12px;font-weight:700;padding:8px 16px;border-radius:8px;cursor:pointer;transition:background .15s;white-space:nowrap;}
+.iebc-run-btn:hover{background:rgba(255,255,255,.25);}
+.iebc-last-run{font-size:10px;color:rgba(255,255,255,.4);margin-top:4px;}
+
+.iebc-intel-row{display:grid;grid-template-columns:100px 1fr 1fr;gap:0;margin:0 32px 0;border-bottom:1px solid var(--border);}
+@media(max-width:768px){.iebc-intel-row{grid-template-columns:1fr;margin:0 16px 0;}}
+.iebc-health-block{padding:20px 20px 20px 0;border-right:1px solid var(--border);display:flex;flex-direction:column;align-items:center;justify-content:center;}
+.iebc-health-score{font-size:42px;font-weight:900;line-height:1;}
+.iebc-health-lbl{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-top:4px;}
+.iebc-summary-block{padding:20px;border-right:1px solid var(--border);}
+.iebc-summary-hd{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;margin-bottom:8px;}
+.iebc-summary-text{font-size:13px;color:var(--text);line-height:1.6;}
+.iebc-flags-block{padding:20px;}
+.iebc-flag{display:flex;align-items:flex-start;gap:8px;margin-bottom:8px;font-size:12px;}
+.iebc-flag-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;margin-top:4px;}
+.iebc-flag-crit{background:#ef4444;}
+.iebc-flag-high{background:#f97316;}
+.iebc-flag-med{background:#eab308;}
+.iebc-flag-low{background:#6b7280;}
+.iebc-actions-list{margin-top:8px;}
+.iebc-action-item{font-size:11px;color:var(--muted);padding:3px 0;border-bottom:1px solid rgba(255,255,255,.04);line-height:1.4;}
+.iebc-action-item::before{content:'→ ';color:var(--accent);}
+
+.iebc-status-row{display:flex;gap:10px;flex-wrap:wrap;margin:16px 32px;}
+.iebc-status-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 16px;min-width:140px;flex:1;}
+.iebc-status-card-name{font-size:11px;font-weight:700;color:var(--text);margin-bottom:4px;}
+.iebc-status-pill{display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:600;padding:2px 8px;border-radius:20px;}
+.iebc-status-active{background:rgba(34,197,94,.12);color:#4ade80;}
+.iebc-status-issue{background:rgba(245,158,11,.12);color:#fbbf24;}
+.iebc-status-down{background:rgba(239,68,68,.12);color:#f87171;}
+.iebc-status-dot{width:5px;height:5px;border-radius:50%;}
+
+.iebc-kpis{display:flex;gap:0;margin:0 32px;border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-top:20px;}
+.iebc-kpi{flex:1;padding:16px 20px;border-right:1px solid var(--border);background:var(--surface);}
+.iebc-kpi:last-child{border-right:none;}
+.iebc-kpi-val{font-size:22px;font-weight:800;}
+.iebc-kpi-lbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-top:2px;}
+@media(max-width:600px){.iebc-kpis{flex-wrap:wrap;}.iebc-kpi{flex:calc(50% - 1px);}}
+
+.iebc-section{margin:20px 32px 0;}
+.iebc-section-hd{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px;display:flex;align-items:center;gap:8px;}
+.iebc-section-hd::after{content:'';flex:1;height:1px;background:var(--border);}
+.iebc-table-wrap{margin:0 32px 20px;overflow-x:auto;}
+</style>
+
 <!-- ── NEMT PAGE ── -->
 <div class="page" id="page-lf-nemt">
   <div class="lf-wrap">
-    <div class="lf-hero lf-hero-nemt">
-      <div class="lf-hero-left">
-        <div class="lf-hero-icon">🏥</div>
-        <div>
-          <div class="lf-hero-title">NEMT — Medical Transport</div>
-          <div class="lf-hero-sub">Non-Emergency Medical Transport &nbsp;·&nbsp; Medicaid / Medicare Billing &nbsp;·&nbsp; Wheelchair & Stretcher Equipped</div>
+    <!-- IEBC Expert Banner -->
+    <div class="iebc-banner" style="background:linear-gradient(135deg,#052e16,#14532d);">
+      <div class="iebc-banner-row">
+        <div style="display:flex;align-items:flex-start;">
+          <div class="iebc-expert-icon">🏥</div>
+          <div>
+            <div class="iebc-node-chip">NODE 201 &nbsp;·&nbsp; IEBC</div>
+            <div class="iebc-expert-name">Dr. James</div>
+            <div class="iebc-expert-title">NEMT Segment Manager &nbsp;·&nbsp; Compliance &amp; Broker Relations</div>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">
+          <button class="iebc-run-btn" id="iebc-btn-nemt" onclick="lfRunExpert('dr_james','nemt')">▶ Run Report</button>
+          <div class="iebc-last-run" id="iebc-ts-nemt">Last run: —</div>
         </div>
       </div>
-      <div class="lf-hero-actions">
-        <button class="lf-btn-ghost" onclick="lfRefresh('lf-nemt')">↻ Refresh</button>
-        <button class="lf-btn" style="background:var(--lf-nemt);color:#fff;" onclick="lfOpenTrip('nemt')">+ New Trip</button>
+    </div>
+    <!-- Intelligence Row -->
+    <div class="iebc-intel-row">
+      <div class="iebc-health-block">
+        <div class="iebc-health-score" id="iebc-health-nemt" style="color:#4ade80;">—</div>
+        <div class="iebc-health-lbl">Health</div>
+      </div>
+      <div class="iebc-summary-block">
+        <div class="iebc-summary-hd">Ops Summary</div>
+        <div class="iebc-summary-text" id="iebc-summary-nemt">Run a report to see Dr. James's latest compliance &amp; ops analysis.</div>
+        <div class="iebc-actions-list" id="iebc-actions-nemt"></div>
+      </div>
+      <div class="iebc-flags-block">
+        <div class="iebc-summary-hd">Compliance Flags</div>
+        <div id="iebc-flags-nemt"><div style="font-size:12px;color:var(--muted);">No report run yet</div></div>
       </div>
     </div>
-    <div class="lf-kpis" id="lf-nemt-kpis">
-      <div class="lf-kpi lf-kpi-nemt"><div class="lf-kpi-val" id="lf-nemt-pending">—</div><div class="lf-kpi-lbl">Pending Trips</div></div>
-      <div class="lf-kpi lf-kpi-nemt"><div class="lf-kpi-val" id="lf-nemt-today">—</div><div class="lf-kpi-lbl">Today's Trips</div></div>
-      <div class="lf-kpi lf-kpi-nemt"><div class="lf-kpi-val" id="lf-nemt-mtd">—</div><div class="lf-kpi-lbl">MTD Trips</div></div>
-      <div class="lf-kpi lf-kpi-nemt"><div class="lf-kpi-val" id="lf-nemt-rev">—</div><div class="lf-kpi-lbl">MTD Revenue</div></div>
+    <!-- KPI Bar -->
+    <div class="iebc-kpis">
+      <div class="iebc-kpi"><div class="iebc-kpi-val" id="lf-nemt-pending" style="color:#10b981;">—</div><div class="iebc-kpi-lbl">Pending Trips</div></div>
+      <div class="iebc-kpi"><div class="iebc-kpi-val" id="lf-nemt-today" style="color:#10b981;">—</div><div class="iebc-kpi-lbl">Today's Trips</div></div>
+      <div class="iebc-kpi"><div class="iebc-kpi-val" id="lf-nemt-mtd" style="color:#10b981;">—</div><div class="iebc-kpi-lbl">MTD Trips</div></div>
+      <div class="iebc-kpi"><div class="iebc-kpi-val" id="lf-nemt-rev" style="color:#10b981;">—</div><div class="iebc-kpi-lbl">MTD Revenue</div></div>
     </div>
-    <div class="lf-actions">
-      <select id="lf-nemt-status-filter" onchange="lfLoadTrips('nemt')" style="padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:var(--card);color:var(--text);">
-        <option value="">All Statuses</option>
-        <option value="pending">Pending</option>
-        <option value="assigned">Assigned</option>
-        <option value="in_progress">In Progress</option>
-        <option value="completed">Completed</option>
-        <option value="cancelled">Cancelled</option>
-      </select>
+    <!-- Broker Status -->
+    <div class="iebc-section">
+      <div class="iebc-section-hd">Broker Status</div>
     </div>
-    <div class="lf-table-wrap">
+    <div class="iebc-status-row">
+      <div class="iebc-status-card">
+        <div class="iebc-status-card-name">MTM</div>
+        <div id="iebc-broker-mtm"><span class="iebc-status-pill iebc-status-active"><span class="iebc-status-dot" style="background:currentColor"></span>active</span></div>
+      </div>
+      <div class="iebc-status-card">
+        <div class="iebc-status-card-name">Modivcare</div>
+        <div id="iebc-broker-modivcare"><span class="iebc-status-pill iebc-status-active"><span class="iebc-status-dot" style="background:currentColor"></span>active</span></div>
+      </div>
+      <div class="iebc-status-card">
+        <div class="iebc-status-card-name">Southeastrans</div>
+        <div id="iebc-broker-southeastrans"><span class="iebc-status-pill iebc-status-active"><span class="iebc-status-dot" style="background:currentColor"></span>active</span></div>
+      </div>
+    </div>
+    <!-- Operations Table -->
+    <div class="iebc-section">
+      <div class="iebc-section-hd">Trip Queue</div>
+    </div>
+    <div class="iebc-table-wrap">
+      <div class="lf-actions" style="margin:0 0 10px;">
+        <select id="lf-nemt-status-filter" onchange="lfLoadTrips('nemt')" style="padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:var(--card);color:var(--text);">
+          <option value="">All Statuses</option>
+          <option value="pending">Pending</option>
+          <option value="assigned">Assigned</option>
+          <option value="in_progress">In Progress</option>
+          <option value="completed">Completed</option>
+          <option value="cancelled">Cancelled</option>
+        </select>
+        <button class="lf-btn" style="background:#10b981;color:#fff;" onclick="lfOpenTrip('nemt')">+ New Trip</button>
+      </div>
       <table class="lf-table lf-table-nemt">
         <thead><tr><th>Patient</th><th>Pickup</th><th>Dropoff</th><th>Scheduled</th><th>Driver</th><th>Status</th><th>Rate</th><th></th></tr></thead>
         <tbody id="lf-nemt-tbody">
@@ -14090,8 +14188,10 @@ async function deactivateDriver(driverId) {
         </tbody>
       </table>
     </div>
-    <div class="lf-section-rule"><div class="lf-section-rule-label">NEMT Clients</div><div class="lf-section-rule-line"></div><button class="lf-btn" style="background:var(--lf-nemt);color:#fff;flex-shrink:0;" onclick="lfOpenNemtClient()">+ Add Client</button></div>
-    <div class="lf-table-wrap">
+    <div class="iebc-section">
+      <div class="iebc-section-hd">NEMT Clients</div>
+    </div>
+    <div class="iebc-table-wrap">
       <table class="lf-table lf-table-nemt">
         <thead><tr><th>Name</th><th>Phone</th><th>Insurance</th><th>Mobility</th><th>Total Trips</th><th>Status</th></tr></thead>
         <tbody id="lf-nemt-clients-tbody">
@@ -14102,39 +14202,165 @@ async function deactivateDriver(driverId) {
   </div>
 </div>
 
+<!-- ── MEDICAL COURIER PAGE ── -->
+<div class="page" id="page-lf-medical">
+  <div class="lf-wrap">
+    <!-- IEBC Expert Banner -->
+    <div class="iebc-banner" style="background:linear-gradient(135deg,#1c0a0a,#450a0a);">
+      <div class="iebc-banner-row">
+        <div style="display:flex;align-items:flex-start;">
+          <div class="iebc-expert-icon">🧪</div>
+          <div>
+            <div class="iebc-node-chip">NODE 202 &nbsp;·&nbsp; IEBC</div>
+            <div class="iebc-expert-name">Elena Ross</div>
+            <div class="iebc-expert-title">Medical Courier Segment Manager &nbsp;·&nbsp; SLA &amp; Chain of Custody</div>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">
+          <button class="iebc-run-btn" id="iebc-btn-medical" onclick="lfRunExpert('elena_ross','medical')">▶ Run Report</button>
+          <div class="iebc-last-run" id="iebc-ts-medical">Last run: —</div>
+        </div>
+      </div>
+    </div>
+    <!-- Intelligence Row -->
+    <div class="iebc-intel-row">
+      <div class="iebc-health-block">
+        <div class="iebc-health-score" id="iebc-health-medical" style="color:#ef4444;">—</div>
+        <div class="iebc-health-lbl">Health</div>
+      </div>
+      <div class="iebc-summary-block">
+        <div class="iebc-summary-hd">Ops Summary</div>
+        <div class="iebc-summary-text" id="iebc-summary-medical">Run a report to see Elena Ross's latest SLA compliance &amp; chain-of-custody analysis.</div>
+        <div class="iebc-actions-list" id="iebc-actions-medical"></div>
+      </div>
+      <div class="iebc-flags-block">
+        <div class="iebc-summary-hd">SLA Alerts</div>
+        <div id="iebc-flags-medical"><div style="font-size:12px;color:var(--muted);">No report run yet</div></div>
+      </div>
+    </div>
+    <!-- KPI Bar -->
+    <div class="iebc-kpis">
+      <div class="iebc-kpi"><div class="iebc-kpi-val" id="lf-med-active" style="color:#ef4444;">—</div><div class="iebc-kpi-lbl">Active Pickups</div></div>
+      <div class="iebc-kpi"><div class="iebc-kpi-val" id="lf-med-sla" style="color:#ef4444;">—</div><div class="iebc-kpi-lbl">SLA Compliance %</div></div>
+      <div class="iebc-kpi"><div class="iebc-kpi-val" id="lf-med-contracts" style="color:#ef4444;">—</div><div class="iebc-kpi-lbl">Hospital Contracts</div></div>
+      <div class="iebc-kpi"><div class="iebc-kpi-val" id="lf-med-rev" style="color:#ef4444;">—</div><div class="iebc-kpi-lbl">MTD Revenue</div></div>
+    </div>
+    <!-- Contract Health -->
+    <div class="iebc-section">
+      <div class="iebc-section-hd">Contract Health — Hospital &amp; Lab Partners</div>
+    </div>
+    <div class="iebc-status-row">
+      <div class="iebc-status-card">
+        <div class="iebc-status-card-name">General Hospital Network</div>
+        <div id="iebc-contract-ghn"><span class="iebc-status-pill iebc-status-active"><span class="iebc-status-dot" style="background:currentColor"></span>active</span></div>
+        <div style="font-size:10px;color:var(--muted);margin-top:4px;">Pickup SLA: 15 min</div>
+      </div>
+      <div class="iebc-status-card">
+        <div class="iebc-status-card-name">LabCorp Logistics</div>
+        <div id="iebc-contract-labcorp"><span class="iebc-status-pill iebc-status-active"><span class="iebc-status-dot" style="background:currentColor"></span>active</span></div>
+        <div style="font-size:10px;color:var(--muted);margin-top:4px;">Temp cargo: 2–8°C</div>
+      </div>
+      <div class="iebc-status-card">
+        <div class="iebc-status-card-name">Regional Oncology Clinic</div>
+        <div id="iebc-contract-onco"><span class="iebc-status-pill iebc-status-issue"><span class="iebc-status-dot" style="background:currentColor"></span>review</span></div>
+        <div style="font-size:10px;color:var(--muted);margin-top:4px;">Chain of custody audit</div>
+      </div>
+    </div>
+    <!-- Operations Table -->
+    <div class="iebc-section">
+      <div class="iebc-section-hd">Active Pickups</div>
+    </div>
+    <div class="iebc-table-wrap">
+      <table class="lf-table" style="--lf-color:#ef4444;">
+        <thead><tr><th>Order ID</th><th>Origin</th><th>Destination</th><th>Cargo Type</th><th>Pickup SLA</th><th>Driver</th><th>Temp</th><th>Status</th></tr></thead>
+        <tbody id="lf-med-tbody">
+          <tr><td colspan="8"><div class="lf-empty-state"><div class="lf-empty-state-icon">🧪</div><div class="lf-empty-state-msg">No active medical courier pickups</div><div class="lf-empty-state-sub">Assign a medical courier run to begin SLA tracking</div></div></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
 <!-- ── EXECUTIVE PAGE ── -->
 <div class="page" id="page-lf-executive">
   <div class="lf-wrap">
-    <div class="lf-hero lf-hero-exec">
-      <div class="lf-hero-left">
-        <div class="lf-hero-icon">🚗</div>
-        <div>
-          <div class="lf-hero-title">Executive Transport</div>
-          <div class="lf-hero-sub">Corporate Accounts &nbsp;·&nbsp; Airport Transfers &nbsp;·&nbsp; VIP & Black Car Service</div>
+    <!-- IEBC Expert Banner -->
+    <div class="iebc-banner" style="background:linear-gradient(135deg,#1c1607,#451a03);">
+      <div class="iebc-banner-row">
+        <div style="display:flex;align-items:flex-start;">
+          <div class="iebc-expert-icon">🚗</div>
+          <div>
+            <div class="iebc-node-chip">NODE 203 &nbsp;·&nbsp; IEBC</div>
+            <div class="iebc-expert-name">Victor Nash</div>
+            <div class="iebc-expert-title">Executive &amp; Black Car Segment Manager &nbsp;·&nbsp; Corporate Accounts</div>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">
+          <button class="iebc-run-btn" id="iebc-btn-executive" onclick="lfRunExpert('victor_nash','executive')">▶ Run Report</button>
+          <div class="iebc-last-run" id="iebc-ts-executive">Last run: —</div>
         </div>
       </div>
-      <div class="lf-hero-actions">
-        <button class="lf-btn-ghost" onclick="lfRefresh('lf-executive')">↻ Refresh</button>
-        <button class="lf-btn" style="background:var(--lf-exec);color:#000;" onclick="lfOpenTrip('executive')">+ New Booking</button>
+    </div>
+    <!-- Intelligence Row -->
+    <div class="iebc-intel-row">
+      <div class="iebc-health-block">
+        <div class="iebc-health-score" id="iebc-health-executive" style="color:#eab308;">—</div>
+        <div class="iebc-health-lbl">Health</div>
+      </div>
+      <div class="iebc-summary-block">
+        <div class="iebc-summary-hd">Ops Summary</div>
+        <div class="iebc-summary-text" id="iebc-summary-executive">Run a report to see Victor Nash's latest on-time performance &amp; corporate account analysis.</div>
+        <div class="iebc-actions-list" id="iebc-actions-executive"></div>
+      </div>
+      <div class="iebc-flags-block">
+        <div class="iebc-summary-hd">Performance Flags</div>
+        <div id="iebc-flags-executive"><div style="font-size:12px;color:var(--muted);">No report run yet</div></div>
       </div>
     </div>
-    <div class="lf-kpis">
-      <div class="lf-kpi lf-kpi-exec"><div class="lf-kpi-val" id="lf-exec-pending">—</div><div class="lf-kpi-lbl">Pending</div></div>
-      <div class="lf-kpi lf-kpi-exec"><div class="lf-kpi-val" id="lf-exec-today">—</div><div class="lf-kpi-lbl">Today</div></div>
-      <div class="lf-kpi lf-kpi-exec"><div class="lf-kpi-val" id="lf-exec-mtd">—</div><div class="lf-kpi-lbl">MTD Trips</div></div>
-      <div class="lf-kpi lf-kpi-exec"><div class="lf-kpi-val" id="lf-exec-rev">—</div><div class="lf-kpi-lbl">MTD Revenue</div></div>
+    <!-- KPI Bar -->
+    <div class="iebc-kpis">
+      <div class="iebc-kpi"><div class="iebc-kpi-val" id="lf-exec-pending" style="color:#eab308;">—</div><div class="iebc-kpi-lbl">Active Bookings</div></div>
+      <div class="iebc-kpi"><div class="iebc-kpi-val" id="lf-exec-ontime" style="color:#eab308;">—</div><div class="iebc-kpi-lbl">On-Time %</div></div>
+      <div class="iebc-kpi"><div class="iebc-kpi-val" id="lf-exec-rating" style="color:#eab308;">—</div><div class="iebc-kpi-lbl">Avg Rating</div></div>
+      <div class="iebc-kpi"><div class="iebc-kpi-val" id="lf-exec-rev" style="color:#eab308;">—</div><div class="iebc-kpi-lbl">MTD Revenue</div></div>
     </div>
-    <div class="lf-actions">
-      <select id="lf-exec-status-filter" onchange="lfLoadTrips('executive')" style="padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:var(--card);color:var(--text);">
-        <option value="">All Statuses</option>
-        <option value="pending">Pending</option>
-        <option value="assigned">Assigned</option>
-        <option value="in_progress">In Progress</option>
-        <option value="completed">Completed</option>
-        <option value="cancelled">Cancelled</option>
-      </select>
+    <!-- Corporate Accounts -->
+    <div class="iebc-section">
+      <div class="iebc-section-hd">Corporate Account Health</div>
     </div>
-    <div class="lf-table-wrap">
+    <div class="iebc-status-row">
+      <div class="iebc-status-card">
+        <div class="iebc-status-card-name">Meridian Financial Group</div>
+        <div><span class="iebc-status-pill iebc-status-active"><span class="iebc-status-dot" style="background:currentColor"></span>active</span></div>
+        <div style="font-size:10px;color:var(--muted);margin-top:4px;">Monthly trips: —</div>
+      </div>
+      <div class="iebc-status-card">
+        <div class="iebc-status-card-name">Summit Law Partners</div>
+        <div><span class="iebc-status-pill iebc-status-active"><span class="iebc-status-dot" style="background:currentColor"></span>active</span></div>
+        <div style="font-size:10px;color:var(--muted);margin-top:4px;">Monthly trips: —</div>
+      </div>
+      <div class="iebc-status-card">
+        <div class="iebc-status-card-name">Delta Consult LLC</div>
+        <div><span class="iebc-status-pill iebc-status-issue"><span class="iebc-status-dot" style="background:currentColor"></span>at-risk</span></div>
+        <div style="font-size:10px;color:var(--muted);margin-top:4px;">Monthly trips: —</div>
+      </div>
+    </div>
+    <!-- Operations Table -->
+    <div class="iebc-section">
+      <div class="iebc-section-hd">Booking Queue</div>
+    </div>
+    <div class="iebc-table-wrap">
+      <div class="lf-actions" style="margin:0 0 10px;">
+        <select id="lf-exec-status-filter" onchange="lfLoadTrips('executive')" style="padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:var(--card);color:var(--text);">
+          <option value="">All Statuses</option>
+          <option value="pending">Pending</option>
+          <option value="assigned">Assigned</option>
+          <option value="in_progress">In Progress</option>
+          <option value="completed">Completed</option>
+          <option value="cancelled">Cancelled</option>
+        </select>
+        <button class="lf-btn" style="background:#eab308;color:#000;" onclick="lfOpenTrip('executive')">+ New Booking</button>
+      </div>
       <table class="lf-table lf-table-exec">
         <thead><tr><th>Client</th><th>Pickup</th><th>Dropoff</th><th>Scheduled</th><th>Vehicle</th><th>Flight #</th><th>Status</th><th>Rate</th><th></th></tr></thead>
         <tbody id="lf-exec-tbody">
@@ -14142,8 +14368,10 @@ async function deactivateDriver(driverId) {
         </tbody>
       </table>
     </div>
-    <div class="lf-section-rule"><div class="lf-section-rule-label">Corporate Accounts</div><div class="lf-section-rule-line"></div><button class="lf-btn" style="background:var(--lf-exec);color:#000;flex-shrink:0;" onclick="lfOpenExecAccount()">+ Add Account</button></div>
-    <div class="lf-table-wrap">
+    <div class="iebc-section">
+      <div class="iebc-section-hd">Corporate Accounts</div>
+    </div>
+    <div class="iebc-table-wrap">
       <table class="lf-table lf-table-exec">
         <thead><tr><th>Company</th><th>Contact</th><th>Billing</th><th>Rate/mi</th><th>Airport Flat</th><th>Total Trips</th><th>Status</th></tr></thead>
         <tbody id="lf-exec-accounts-tbody">
@@ -14157,36 +14385,78 @@ async function deactivateDriver(driverId) {
 <!-- ── COURIER PAGE ── -->
 <div class="page" id="page-lf-courier">
   <div class="lf-wrap">
-    <div class="lf-hero lf-hero-cour">
-      <div class="lf-hero-left">
-        <div class="lf-hero-icon">📦</div>
-        <div>
-          <div class="lf-hero-title">Courier & Last-Mile</div>
-          <div class="lf-hero-sub">Same-Day Delivery &nbsp;·&nbsp; Documents &nbsp;·&nbsp; Urban & Metro Routes</div>
+    <!-- IEBC Expert Banner -->
+    <div class="iebc-banner" style="background:linear-gradient(135deg,#1c1205,#451a03);">
+      <div class="iebc-banner-row">
+        <div style="display:flex;align-items:flex-start;">
+          <div class="iebc-expert-icon">📦</div>
+          <div>
+            <div class="iebc-node-chip">NODE 204 &nbsp;·&nbsp; IEBC</div>
+            <div class="iebc-expert-name">Felix Grant</div>
+            <div class="iebc-expert-title">Same-Day Courier Segment Manager &nbsp;·&nbsp; Curri &amp; Roadie Pipeline</div>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">
+          <button class="iebc-run-btn" id="iebc-btn-courier" onclick="lfRunExpert('felix_grant','courier')">▶ Run Report</button>
+          <div class="iebc-last-run" id="iebc-ts-courier">Last run: —</div>
         </div>
       </div>
-      <div class="lf-hero-actions">
-        <button class="lf-btn-ghost" onclick="lfRefresh('lf-courier')">↻ Refresh</button>
-        <button class="lf-btn" style="background:var(--lf-cour);color:#fff;" onclick="lfOpenTrip('courier')">+ New Delivery</button>
+    </div>
+    <!-- Intelligence Row -->
+    <div class="iebc-intel-row">
+      <div class="iebc-health-block">
+        <div class="iebc-health-score" id="iebc-health-courier" style="color:#f59e0b;">—</div>
+        <div class="iebc-health-lbl">Health</div>
+      </div>
+      <div class="iebc-summary-block">
+        <div class="iebc-summary-hd">Ops Summary</div>
+        <div class="iebc-summary-text" id="iebc-summary-courier">Run a report to see Felix Grant's latest pipeline &amp; platform connectivity analysis.</div>
+        <div class="iebc-actions-list" id="iebc-actions-courier"></div>
+      </div>
+      <div class="iebc-flags-block">
+        <div class="iebc-summary-hd">Pipeline Flags</div>
+        <div id="iebc-flags-courier"><div style="font-size:12px;color:var(--muted);">No report run yet</div></div>
       </div>
     </div>
-    <div class="lf-kpis">
-      <div class="lf-kpi lf-kpi-cour"><div class="lf-kpi-val" id="lf-cour-pending">—</div><div class="lf-kpi-lbl">Pending</div></div>
-      <div class="lf-kpi lf-kpi-cour"><div class="lf-kpi-val" id="lf-cour-today">—</div><div class="lf-kpi-lbl">Today</div></div>
-      <div class="lf-kpi lf-kpi-cour"><div class="lf-kpi-val" id="lf-cour-mtd">—</div><div class="lf-kpi-lbl">MTD Deliveries</div></div>
-      <div class="lf-kpi lf-kpi-cour"><div class="lf-kpi-val" id="lf-cour-rev">—</div><div class="lf-kpi-lbl">MTD Revenue</div></div>
+    <!-- KPI Bar -->
+    <div class="iebc-kpis">
+      <div class="iebc-kpi"><div class="iebc-kpi-val" id="lf-cour-pending" style="color:#f59e0b;">—</div><div class="iebc-kpi-lbl">Pipeline Loads</div></div>
+      <div class="iebc-kpi"><div class="iebc-kpi-val" id="lf-cour-accept" style="color:#f59e0b;">—</div><div class="iebc-kpi-lbl">Acceptance Rate</div></div>
+      <div class="iebc-kpi"><div class="iebc-kpi-val" id="lf-cour-complete" style="color:#f59e0b;">—</div><div class="iebc-kpi-lbl">Completion Rate</div></div>
+      <div class="iebc-kpi"><div class="iebc-kpi-val" id="lf-cour-rev" style="color:#f59e0b;">—</div><div class="iebc-kpi-lbl">MTD Revenue</div></div>
     </div>
-    <div class="lf-actions">
-      <select id="lf-cour-status-filter" onchange="lfLoadTrips('courier')" style="padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:var(--card);color:var(--text);">
-        <option value="">All Statuses</option>
-        <option value="pending">Pending</option>
-        <option value="assigned">Assigned</option>
-        <option value="in_progress">In Progress</option>
-        <option value="completed">Completed</option>
-        <option value="cancelled">Cancelled</option>
-      </select>
+    <!-- Platform Status -->
+    <div class="iebc-section">
+      <div class="iebc-section-hd">Platform Status</div>
     </div>
-    <div class="lf-table-wrap">
+    <div class="iebc-status-row">
+      <div class="iebc-status-card">
+        <div class="iebc-status-card-name">Curri</div>
+        <div id="iebc-plat-curri"><span class="iebc-status-pill iebc-status-active"><span class="iebc-status-dot" style="background:currentColor"></span>healthy</span></div>
+        <div style="font-size:10px;color:var(--muted);margin-top:4px;">API connection OK</div>
+      </div>
+      <div class="iebc-status-card">
+        <div class="iebc-status-card-name">Roadie</div>
+        <div id="iebc-plat-roadie"><span class="iebc-status-pill iebc-status-active"><span class="iebc-status-dot" style="background:currentColor"></span>healthy</span></div>
+        <div style="font-size:10px;color:var(--muted);margin-top:4px;">API connection OK</div>
+      </div>
+    </div>
+    <!-- Operations Table -->
+    <div class="iebc-section">
+      <div class="iebc-section-hd">Delivery Queue</div>
+    </div>
+    <div class="iebc-table-wrap">
+      <div class="lf-actions" style="margin:0 0 10px;">
+        <select id="lf-cour-status-filter" onchange="lfLoadTrips('courier')" style="padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:var(--card);color:var(--text);">
+          <option value="">All Statuses</option>
+          <option value="pending">Pending</option>
+          <option value="assigned">Assigned</option>
+          <option value="in_progress">In Progress</option>
+          <option value="completed">Completed</option>
+          <option value="cancelled">Cancelled</option>
+        </select>
+        <button class="lf-btn" style="background:#f59e0b;color:#fff;" onclick="lfOpenTrip('courier')">+ New Delivery</button>
+      </div>
       <table class="lf-table lf-table-cour">
         <thead><tr><th>Pickup</th><th>Dropoff</th><th>Scheduled</th><th>Packages</th><th>Weight</th><th>Driver</th><th>Status</th><th>Rate</th><th></th></tr></thead>
         <tbody id="lf-cour-tbody">
@@ -14200,42 +14470,80 @@ async function deactivateDriver(driverId) {
 <!-- ── GIG FLEET PAGE ── -->
 <div class="page" id="page-lf-gig">
   <div class="lf-wrap">
-    <div class="lf-hero lf-hero-gig">
-      <div class="lf-hero-left">
-        <div class="lf-hero-icon">👥</div>
-        <div>
-          <div class="lf-hero-title">Gig Fleet Management</div>
-          <div class="lf-hero-sub">Car & SUV Drivers &nbsp;·&nbsp; MVR & Background Screening &nbsp;·&nbsp; Driver Activation</div>
+    <!-- IEBC Expert Banner -->
+    <div class="iebc-banner" style="background:linear-gradient(135deg,#0a1628,#1e3a5f);">
+      <div class="iebc-banner-row">
+        <div style="display:flex;align-items:flex-start;">
+          <div class="iebc-expert-icon">👥</div>
+          <div>
+            <div class="iebc-node-chip">NODE 205 &nbsp;·&nbsp; IEBC</div>
+            <div class="iebc-expert-name">Morgan Hayes</div>
+            <div class="iebc-expert-title">Gig Fleet Segment Manager &nbsp;·&nbsp; Driver Utilization &amp; Activation</div>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">
+          <button class="iebc-run-btn" id="iebc-btn-gig" onclick="lfRunExpert('morgan_hayes','gig')">▶ Run Report</button>
+          <div class="iebc-last-run" id="iebc-ts-gig">Last run: —</div>
         </div>
       </div>
-      <div class="lf-hero-actions">
-        <button class="lf-btn-ghost" onclick="lfRefresh('lf-gig')">↻ Refresh</button>
-        <button class="lf-btn" style="background:var(--lf-gig);color:#000;" onclick="lfOpenDriver()">+ Add Driver</button>
+    </div>
+    <!-- Intelligence Row -->
+    <div class="iebc-intel-row">
+      <div class="iebc-health-block">
+        <div class="iebc-health-score" id="iebc-health-gig" style="color:#3b82f6;">—</div>
+        <div class="iebc-health-lbl">Health</div>
+      </div>
+      <div class="iebc-summary-block">
+        <div class="iebc-summary-hd">Ops Summary</div>
+        <div class="iebc-summary-text" id="iebc-summary-gig">Run a report to see Morgan Hayes's latest driver utilization &amp; earnings analysis.</div>
+        <div class="iebc-actions-list" id="iebc-actions-gig"></div>
+      </div>
+      <div class="iebc-flags-block">
+        <div class="iebc-summary-hd">Driver Alerts</div>
+        <div id="iebc-flags-gig"><div style="font-size:12px;color:var(--muted);">No report run yet</div></div>
       </div>
     </div>
-    <div class="lf-kpis">
-      <div class="lf-kpi lf-kpi-gig"><div class="lf-kpi-val" id="lf-gig-total">—</div><div class="lf-kpi-lbl">Total Drivers</div></div>
-      <div class="lf-kpi lf-kpi-gig"><div class="lf-kpi-val" id="lf-gig-active">—</div><div class="lf-kpi-lbl">Active</div></div>
-      <div class="lf-kpi lf-kpi-gig"><div class="lf-kpi-val" id="lf-gig-clear">—</div><div class="lf-kpi-lbl">MVR Clear</div></div>
-      <div class="lf-kpi lf-kpi-gig"><div class="lf-kpi-val" id="lf-gig-trips">—</div><div class="lf-kpi-lbl">Today's Trips</div></div>
+    <!-- KPI Bar -->
+    <div class="iebc-kpis">
+      <div class="iebc-kpi"><div class="iebc-kpi-val" id="lf-gig-total" style="color:#3b82f6;">—</div><div class="iebc-kpi-lbl">Total Drivers</div></div>
+      <div class="iebc-kpi"><div class="iebc-kpi-val" id="lf-gig-active" style="color:#3b82f6;">—</div><div class="iebc-kpi-lbl">Active</div></div>
+      <div class="iebc-kpi"><div class="iebc-kpi-val" id="lf-gig-earnings" style="color:#3b82f6;">—</div><div class="iebc-kpi-lbl">Avg Earnings/Driver</div></div>
+      <div class="iebc-kpi"><div class="iebc-kpi-val" id="lf-gig-util" style="color:#3b82f6;">—</div><div class="iebc-kpi-lbl">Utilization %</div></div>
     </div>
-    <div class="lf-actions">
-      <select id="lf-gig-status-filter" onchange="lfLoadDrivers()" style="padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:var(--card);color:var(--text);">
-        <option value="">All Statuses</option>
-        <option value="active">Active</option>
-        <option value="inactive">Inactive</option>
-        <option value="suspended">Suspended</option>
-      </select>
-      <select id="lf-gig-type-filter" onchange="lfLoadDrivers()" style="padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:var(--card);color:var(--text);">
-        <option value="">All Vehicle Types</option>
-        <option value="suv">SUV</option>
-        <option value="sedan">Sedan</option>
-        <option value="cargo_van">Cargo Van</option>
-        <option value="luxury">Luxury</option>
-      </select>
+    <!-- Driver Utilization Section -->
+    <div class="iebc-section">
+      <div class="iebc-section-hd">Driver Utilization</div>
     </div>
-    <div class="lf-driver-grid" id="lf-gig-driver-grid">
-      <div style="grid-column:1/-1"><div class="lf-empty-state"><div class="lf-empty-state-icon">👥</div><div class="lf-empty-state-msg">No drivers on file</div><div class="lf-empty-state-sub">Add gig drivers to start assigning trips</div></div></div>
+    <div class="iebc-status-row" id="lf-gig-util-cards">
+      <div class="iebc-status-card" style="min-width:180px;">
+        <div class="iebc-status-card-name" style="color:var(--muted);">Awaiting data</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:4px;">Run report to populate driver utilization cards</div>
+      </div>
+    </div>
+    <!-- Driver Grid -->
+    <div class="iebc-section">
+      <div class="iebc-section-hd">Driver Roster</div>
+    </div>
+    <div style="margin:0 32px 20px;">
+      <div class="lf-actions" style="margin:0 0 10px;">
+        <select id="lf-gig-status-filter" onchange="lfLoadDrivers()" style="padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:var(--card);color:var(--text);">
+          <option value="">All Statuses</option>
+          <option value="active">Active</option>
+          <option value="inactive">Inactive</option>
+          <option value="suspended">Suspended</option>
+        </select>
+        <select id="lf-gig-type-filter" onchange="lfLoadDrivers()" style="padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:var(--card);color:var(--text);">
+          <option value="">All Vehicle Types</option>
+          <option value="suv">SUV</option>
+          <option value="sedan">Sedan</option>
+          <option value="cargo_van">Cargo Van</option>
+          <option value="luxury">Luxury</option>
+        </select>
+        <button class="lf-btn" style="background:#3b82f6;color:#fff;" onclick="lfOpenDriver()">+ Add Driver</button>
+      </div>
+      <div class="lf-driver-grid" id="lf-gig-driver-grid">
+        <div style="grid-column:1/-1"><div class="lf-empty-state"><div class="lf-empty-state-icon">👥</div><div class="lf-empty-state-msg">No drivers on file</div><div class="lf-empty-state-sub">Add gig drivers to start assigning trips</div></div></div>
+      </div>
     </div>
   </div>
 </div>
