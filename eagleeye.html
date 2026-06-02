@@ -59,8 +59,8 @@ body{font-family:var(--ff-b);color:var(--text);background:var(--off);display:fle
 
 .sb-section{padding:10px 0;border-bottom:1px solid rgba(255,255,255,.05);}
 .sb-label{
-  font-family:var(--ff-m);font-size:9px;font-weight:500;
-  color:rgba(255,255,255,.25);letter-spacing:2.5px;text-transform:uppercase;
+  font-family:var(--ff-m);font-size:9px;font-weight:700;
+  color:var(--gold2);letter-spacing:2.5px;text-transform:uppercase;
   padding:0 20px 7px;
 }
 .sb-item{
@@ -714,6 +714,14 @@ td.td-name{font-weight:600;color:var(--navy);}
   </div>
 
   <div class="sb-section">
+    <div class="sb-label">North American Trading</div>
+    <div class="sb-item" onclick="nav('broker-division')"><span class="sb-icon">🏦</span> Division Hub <span class="sb-badge" id="bd-alert-badge" style="display:none;background:#ef4444;color:#fff">!</span></div>
+    <div class="sb-item" onclick="nav('trading-desk')"><span class="sb-icon">📈</span> Trading Desk <span class="sb-badge" id="td-open-badge" style="display:none;background:#f59e0b;color:#000">0</span></div>
+    <div class="sb-item" onclick="nav('broker-shippers')"><span class="sb-icon">🏭</span> Shippers <span class="sb-badge" id="bd-shipper-badge" style="display:none;background:#22c55e;color:#000">0</span></div>
+    <div class="sb-item" onclick="nav('broker-docs')"><span class="sb-icon">📄</span> Docs &amp; Invoices <span class="sb-badge" id="bd-docs-badge" style="display:none;background:#f59e0b;color:#000">0</span></div>
+  </div>
+
+  <div class="sb-section">
     <div class="sb-label">Main</div>
     <div class="sb-item active" onclick="nav('dashboard')"><span class="sb-icon">📊</span> Dashboard</div>
     <div class="sb-item" onclick="nav('dispatch')"><span class="sb-icon">🚛</span> Dispatch Board</div>
@@ -772,14 +780,6 @@ td.td-name{font-weight:600;color:var(--navy);}
     <div class="sb-item" onclick="nav('lf-executive')"><span class="sb-icon">🚗</span> Executive</div>
     <div class="sb-item" onclick="nav('lf-courier')"><span class="sb-icon">📦</span> Courier</div>
     <div class="sb-item" onclick="nav('lf-gig')"><span class="sb-icon">👥</span> Gig Fleet</div>
-  </div>
-
-  <div class="sb-section">
-    <div class="sb-label">Broker Division</div>
-    <div class="sb-item" onclick="nav('broker-division')"><span class="sb-icon">🏦</span> Division Hub <span class="sb-badge" id="bd-alert-badge" style="display:none;background:#ef4444;color:#fff">!</span></div>
-    <div class="sb-item" onclick="nav('trading-desk')"><span class="sb-icon">📈</span> Trading Desk <span class="sb-badge" id="td-open-badge" style="display:none;background:#f59e0b;color:#000">0</span></div>
-    <div class="sb-item" onclick="nav('broker-shippers')"><span class="sb-icon">🏭</span> Shippers <span class="sb-badge" id="bd-shipper-badge" style="display:none;background:#22c55e;color:#000">0</span></div>
-    <div class="sb-item" onclick="nav('broker-docs')"><span class="sb-icon">📄</span> Docs & Invoices <span class="sb-badge" id="bd-docs-badge" style="display:none;background:#f59e0b;color:#000">0</span></div>
   </div>
 
   <div class="sb-section">
@@ -3516,7 +3516,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 let allCarriers=[], allLoads=[], allInvoices=[], currentInvFilter='all', loadCounter=3849;
 
-const pageNames={dashboard:'Dashboard',dispatch:'Dispatch Board','fleet-map':'Fleet Map',carriers:'Carriers',drivers:'Drivers',loads:'Load Manager',invoices:'Invoices & Billing',compliance:'DOT Compliance',ifta:'IFTA / Permits',insurance:'Insurance',revenue:'Revenue Tracker',providers:'Compliance Providers',checklist:'Daily Checklist',notes:'Dispatcher Notes',reports:'Team Reports','exec-command':'Exec Command',agents:'AI Agents',founders:'Founders Program',crm:'Lead CRM',leads:'Lead Pipeline',execution:'Execution Engine',factoring:'Factoring',email:'Email Center',vault:'Document Vault',clm:'CLM Scanner',ledger:'Atomic Ledger',agreements:'Agreements','lf-map':'Light Fleet Live Map','lf-nemt':'NEMT — Medical Transport','lf-medical':'Medical Courier','lf-executive':'Executive Transport','lf-courier':'Courier & Last-Mile','lf-gig':'Gig Fleet Management','ccg-office':'CC Gulley Office','trading-desk':'Trading Desk','broker-division':'Broker Division — Hub','broker-shippers':'Shipper Pipeline','broker-docs':'Docs & Invoices'};
+const pageNames={dashboard:'Dashboard',dispatch:'Dispatch Board','fleet-map':'Fleet Map',carriers:'Carriers',drivers:'Drivers',loads:'Load Manager',invoices:'Invoices & Billing',compliance:'DOT Compliance',ifta:'IFTA / Permits',insurance:'Insurance',revenue:'Revenue Tracker',providers:'Compliance Providers',checklist:'Daily Checklist',notes:'Dispatcher Notes',reports:'Team Reports','exec-command':'Exec Command',agents:'AI Agents',founders:'Founders Program',crm:'Lead CRM',leads:'Lead Pipeline',execution:'Execution Engine',factoring:'Factoring',email:'Email Center',vault:'Document Vault',clm:'CLM Scanner',ledger:'Atomic Ledger',agreements:'Agreements','lf-map':'Light Fleet Live Map','lf-nemt':'NEMT — Medical Transport','lf-medical':'Medical Courier','lf-executive':'Executive Transport','lf-courier':'Courier & Last-Mile','lf-gig':'Gig Fleet Management','ccg-office':'CC Gulley Office','trading-desk':'Trading Desk','broker-division':'N. American Trading — Hub','broker-shippers':'Shipper Pipeline','broker-docs':'Docs & Invoices','trading-desk':'Trading Desk'};
 
 // ── 3 Lakes Logistics Backend API (FastAPI) ──
 const API_BASE = (window.__3LL_API_BASE || 'https://three-lakes-logistics-api.onrender.com').replace(/\/$/,'');
@@ -3611,7 +3611,7 @@ function nav(id){
   document.querySelectorAll('.sb-item').forEach(n=>{if(n.getAttribute('onclick')?.includes("'"+id+"'"))n.classList.add('active');});
   document.getElementById('page-title').textContent=pageNames[id]||id;
   // LF pages use full-page layout — hero acts as page header, topbar title hidden
-  const _lfFullPages=['lf-nemt','lf-medical','lf-executive','lf-courier','lf-gig','lf-map'];
+  const _lfFullPages=['lf-nemt','lf-medical','lf-executive','lf-courier','lf-gig','lf-map','broker-division','trading-desk','broker-shippers','broker-docs'];
   document.querySelector('.content').classList.toggle('lf-fullpage',_lfFullPages.includes(id));
   document.getElementById('main').classList.toggle('lf-fullpage',_lfFullPages.includes(id));
   // Fixed full-page overlays: always measure actual header stack
@@ -13981,9 +13981,9 @@ async function deactivateDriver(driverId) {
 /* Service accent colors */
 :root{--lf-nemt:#3b82f6;--lf-exec:#f59e0b;--lf-cour:#8b5cf6;--lf-gig:#22c55e;}
 .lf-hero{border-radius:12px;padding:22px 24px;margin-bottom:22px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;position:relative;overflow:hidden;}
-/* Full-page LF layout — hero bleeds edge-to-edge, ticker + topbar hidden */
+/* Full-page layout — hero bleeds edge-to-edge, ticker + topbar hidden */
 .content.lf-fullpage{padding:0;}
-.content.lf-fullpage .lf-wrap{padding:0 0 80px;max-width:none;}
+.content.lf-fullpage .lf-wrap{padding:0 0 80px;max-width:none;margin:0;}
 .content.lf-fullpage .lf-hero{border-radius:0;margin-bottom:0;padding:28px 32px;}
 .content.lf-fullpage .lf-kpis{margin:20px 32px 0;}
 .content.lf-fullpage .lf-actions{margin:16px 32px 0;}
@@ -13997,8 +13997,23 @@ async function deactivateDriver(driverId) {
 #main.lf-fullpage .topbar .tb-date{color:rgba(255,255,255,.55);}
 #main.lf-fullpage .topbar .tb-live{color:rgba(74,222,128,.9);}
 #main.lf-fullpage .topbar .tb-live::before{background:rgba(74,222,128,.9);}
-/* IEBC banner top padding absorbs the 60px floating topbar */
+/* IEBC banner top padding absorbs the 60px floating topbar; kill side margins on sub-sections */
 .content.lf-fullpage .iebc-banner{padding-top:80px;}
+.content.lf-fullpage .iebc-intel-row{margin:0;}
+.content.lf-fullpage .iebc-kpis{margin:0;margin-top:20px;}
+.content.lf-fullpage .iebc-status-row{margin:16px 0;}
+.content.lf-fullpage .iebc-section{padding-left:0;padding-right:0;}
+.content.lf-fullpage .iebc-table-wrap{margin:0;}
+/* Broker / Trading pages full-bleed */
+.content.lf-fullpage .bd-hero,
+.content.lf-fullpage .td-hero,
+.content.lf-fullpage .drew-hero,
+.content.lf-fullpage .quinn-hero{border-radius:0;margin-bottom:0;padding-top:80px;}
+/* Override inline padding on broker page wrapper divs */
+#page-broker-division > div[style],
+#page-trading-desk > div[style],
+#page-broker-shippers > div[style],
+#page-broker-docs > div[style]{padding:0!important;}
 .lf-hero::before{content:'';position:absolute;inset:0;opacity:.07;border-radius:12px;}
 .lf-hero-nemt{background:linear-gradient(135deg,rgba(59,130,246,.18) 0%,rgba(59,130,246,.06) 100%);border:1px solid rgba(59,130,246,.3);}
 .lf-hero-nemt .lf-hero-icon{color:#3b82f6;}
@@ -15486,7 +15501,7 @@ function lfRenderExpertReport(segment, d) {
 </style>
 <div style="padding:0 0 40px;">
   <div class="bd-hero">
-    <div class="bd-hero-title">🏦 Broker Division</div>
+    <div class="bd-hero-title">📈 North American Trading</div>
     <div class="bd-hero-sub">5-agent team · Load sourcing → Shipper development → Coverage → Docs → Settlement</div>
     <div class="bd-kpi-row">
       <div class="bd-kpi"><div class="bd-kpi-n" id="bd-ytd-margin">—</div><div class="bd-kpi-l">YTD Margin</div></div>
