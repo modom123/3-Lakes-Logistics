@@ -19,6 +19,7 @@ class Settings(BaseSettings):
 
     stripe_secret_key: str = ""
     stripe_webhook_secret: str = ""
+    stripe_identity_webhook_secret: str = ""   # separate secret for Identity webhook endpoint
     stripe_price_founders: str = ""
     stripe_price_pro: str = ""
 
@@ -144,6 +145,20 @@ class Settings(BaseSettings):
     arrive_client_secret: str = ""
     echo_global_api_key: str = ""
     cargo_chief_api_key: str = ""
+
+    # --- Light Fleet Platform API Keys ---
+    # Curri — B2B same-day carrier (carriers.curri.com)
+    curri_api_key: str = ""
+    curri_webhook_secret: str = ""
+
+    # Roadie — UPS same-day delivery (driver.roadie.com / connect.roadie.com)
+    roadie_api_key: str = ""
+    roadie_webhook_secret: str = ""
+
+    # Checkr — MVR + background check screening (checkr.com)
+    # Free account, ~$15/MVR check. Used by Uber, Lyft, DoorDash.
+    checkr_api_key: str = ""
+    checkr_webhook_secret: str = ""
 
     @property
     def cors_list(self) -> list[str]:

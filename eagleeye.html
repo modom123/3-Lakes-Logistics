@@ -126,9 +126,20 @@ body{font-family:var(--ff-b);color:var(--text);background:var(--off);display:fle
 }
 .btn-sync:hover{background:var(--navy2);box-shadow:0 4px 16px rgba(11,37,69,.28);}
 
-.content{flex:1;overflow-y:auto;padding:28px;background:var(--off);}
-.page{display:none;animation:pgIn .3s ease;}
-.page.active{display:block;}
+.content{flex:1;overflow:hidden;padding:0;background:var(--off);display:flex;flex-direction:column;}
+.page{display:none;}
+.page.active{
+  display:flex;flex-direction:column;
+  flex:1;min-height:0;
+  overflow-y:auto;
+  padding:16px 20px;
+  animation:pgIn .3s ease;
+}
+/* Full-bleed pages: no padding, no scroll (manage their own) */
+#page-email.active,
+#page-fleet-map.active,
+#page-cso.active,
+#page-bond.active{padding:0;overflow:hidden;}
 @keyframes pgIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
 
 /* ── LAYOUT GRIDS ── */
@@ -657,6 +668,14 @@ td.td-name{font-weight:600;color:var(--navy);}
   font-family:'Inter',sans-serif;transition:color .15s;
 }
 .sb-logout:hover{color:#C9A84C;}
+/* ── Full-page layout fixes ── */
+/* CRM views: fill available page height */
+#crm-view-list,#crm-view-kanban,#crm-view-outreach{height:auto!important;flex:1;min-height:0;}
+/* Page-level flex: make page-hdr shrink, content fills rest */
+#page-crm.active{overflow:hidden;}
+#page-crm.active > .page-hdr{flex-shrink:0;}
+/* LF tab bar: escape page padding edge-to-edge */
+.lf-tab-bar{margin:-16px -20px 16px;}
 </style>
 </head>
 <body>
@@ -753,6 +772,15 @@ td.td-name{font-weight:600;color:var(--navy);}
   <div class="sb-section">
     <div class="sb-label">Consulting</div>
     <div class="sb-item" onclick="nav('bond')"><span class="sb-icon">🕵️</span> Bond Office <span class="sb-badge" id="bond-notif" style="display:none">0</span></div>
+    <div class="sb-item" onclick="nav('cso')"><span class="sb-icon">🧭</span> CSO Office <span class="sb-badge" id="cso-notif" style="display:none">●</span></div>
+  </div>
+
+  <div class="sb-section">
+    <div class="sb-label">Light Fleet</div>
+    <div class="sb-item" onclick="nav('lf-nemt')"><span class="sb-icon">🏥</span> NEMT</div>
+    <div class="sb-item" onclick="nav('lf-executive')"><span class="sb-icon">🚗</span> Executive</div>
+    <div class="sb-item" onclick="nav('lf-courier')"><span class="sb-icon">📦</span> Courier</div>
+    <div class="sb-item" onclick="nav('lf-gig')"><span class="sb-icon">👥</span> Gig Fleet</div>
   </div>
 
   <div class="sb-section">
@@ -949,8 +977,8 @@ td.td-name{font-weight:600;color:var(--navy);}
     <div class="page" id="page-fleet-map">
 <style>
 #page-fleet-map{animation:none;}
-#page-fleet-map.active{position:fixed;top:93px;left:var(--sidebar-w);right:0;bottom:0;z-index:30;display:flex;flex-direction:column;overflow:hidden;background:var(--bg);}
-@media(max-width:768px){#page-fleet-map.active{top:87px;left:0;}}
+#page-fleet-map.active{position:fixed;top:60px;left:var(--sidebar-w);right:0;bottom:0;z-index:30;display:flex;flex-direction:column;overflow:hidden;background:var(--bg);}
+@media(max-width:768px){#page-fleet-map.active{top:54px;left:0;}}
 #fmap-toolbar{display:flex;align-items:center;gap:10px;padding:10px 16px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;flex-wrap:wrap;}
 #fmap-body{display:flex;flex:1;min-height:0;}
 #fmap-map{flex:1;min-height:0;}
@@ -2074,13 +2102,19 @@ td.td-name{font-weight:600;color:var(--navy);}
             <option value="clm">CLM</option>
             <option value="compliance">Compliance</option>
             <option value="analytics">Analytics</option>
+            <optgroup label="── Light Fleet ──">
+            <option value="lf_onboarding">LF Onboarding</option>
+            <option value="lf_dispatch">LF Dispatch</option>
+            <option value="lf_transit">LF Transit</option>
+            <option value="lf_settlement">LF Settlement</option>
+            </optgroup>
           </select>
           <button class="btn-out" onclick="loadExecutionSteps();loadTriggerStatus()">Refresh</button>
         </div>
       </div>
 
       <div class="g4" style="margin-bottom:16px">
-        <div class="mc"><div class="mc-label">Total Steps</div><div class="mc-val blue">200</div></div>
+        <div class="mc"><div class="mc-label">Total Steps</div><div class="mc-val blue">270</div></div>
         <div class="mc"><div class="mc-label">Complete</div><div class="mc-val green" id="exec-complete">—</div></div>
         <div class="mc"><div class="mc-label">Running</div><div class="mc-val orange" id="exec-running">—</div></div>
         <div class="mc"><div class="mc-label">Failed</div><div class="mc-val red" id="exec-failed">—</div></div>
@@ -2111,7 +2145,32 @@ td.td-name{font-weight:600;color:var(--navy);}
       </div>
 
       <!-- Domain Cards -->
-      <div id="exec-domains" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;margin-bottom:16px"></div>
+      <div id="exec-domains" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;margin-bottom:16px">
+        <div class="card" style="border-left:3px solid #8b5cf6">
+          <div style="font-size:10px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);margin-bottom:4px">🚗 LF Onboarding</div>
+          <div style="font-size:26px;font-weight:900;color:#8b5cf6">20</div>
+          <div style="font-size:11px;color:var(--muted)">Steps 201–220</div>
+          <div style="font-size:10px;color:var(--muted);margin-top:4px">Car/SUV driver intake, MVR, background check, service assignment, app activation</div>
+        </div>
+        <div class="card" style="border-left:3px solid #3b82f6">
+          <div style="font-size:10px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);margin-bottom:4px">📍 LF Dispatch</div>
+          <div style="font-size:26px;font-weight:900;color:#3b82f6">20</div>
+          <div style="font-size:11px;color:var(--muted)">Steps 221–240</div>
+          <div style="font-size:10px;color:var(--muted);margin-top:4px">Trip creation, driver matching, rate calculation, assignment, GPS start, notifications</div>
+        </div>
+        <div class="card" style="border-left:3px solid #10b981">
+          <div style="font-size:10px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);margin-bottom:4px">🛣 LF Transit</div>
+          <div style="font-size:26px;font-weight:900;color:#10b981">15</div>
+          <div style="font-size:11px;color:var(--muted)">Steps 241–255</div>
+          <div style="font-size:10px;color:var(--muted);margin-top:4px">En route tracking, ETA updates, flight monitoring, mobility assist, POD capture</div>
+        </div>
+        <div class="card" style="border-left:3px solid #f59e0b">
+          <div style="font-size:10px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);margin-bottom:4px">💵 LF Settlement</div>
+          <div style="font-size:26px;font-weight:900;color:#f59e0b">15</div>
+          <div style="font-size:11px;color:var(--muted)">Steps 256–270</div>
+          <div style="font-size:10px;color:var(--muted);margin-top:4px">Rate confirmation, platform fee, driver payout, NEMT billing queue, invoice, ledger</div>
+        </div>
+      </div>
 
       <!-- Step Log -->
       <div class="card">
@@ -2127,8 +2186,8 @@ td.td-name{font-weight:600;color:var(--navy);}
 <div class="page" id="page-exec-command">
 <style>
 /* ── Executive Command Panel Styles ───────────────────────────── */
-.ec-wrap{max-width:1280px;margin:0 auto;padding:48px 40px 80px;}
-.ec-hero{background:linear-gradient(135deg,#0B2545 0%,#1B3E75 60%,#0B2545 100%);border-radius:18px;padding:36px 44px;margin-bottom:36px;display:flex;align-items:center;justify-content:space-between;gap:24px;flex-wrap:wrap;}
+.ec-wrap{padding:0 0 40px;}
+.ec-hero{background:linear-gradient(135deg,#0B2545 0%,#1B3E75 60%,#0B2545 100%);border-radius:18px;padding:28px 32px;margin-bottom:24px;display:flex;align-items:center;justify-content:space-between;gap:24px;flex-wrap:wrap;}
 .ec-hero-left .ec-badge{display:inline-flex;align-items:center;gap:8px;background:rgba(200,144,42,.18);border:1px solid rgba(200,144,42,.35);color:#F5C842;padding:5px 16px;border-radius:100px;font-size:10px;letter-spacing:2px;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:14px;}
 .ec-hero-left .ec-badge::before{content:"";width:6px;height:6px;border-radius:50%;background:#F5C842;animation:pulse 2s ease infinite;}
 .ec-hero-left h1{font-family:'Playfair Display',serif;font-size:clamp(28px,3.5vw,46px);color:#fff;font-weight:900;line-height:1.05;margin-bottom:8px;}
@@ -2140,7 +2199,7 @@ td.td-name{font-weight:600;color:var(--navy);}
 
 /* Master score cards */
 .ec-scores-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px;margin-bottom:36px;}
-.ec-score-card{border-radius:16px;padding:28px 30px;position:relative;overflow:hidden;}
+.ec-score-card{border-radius:14px;padding:18px 22px;position:relative;overflow:hidden;}
 .ec-score-card.growth{background:linear-gradient(135deg,#0B3B22 0%,#1A6B3C 100%);border:1px solid #2D9B59;}
 .ec-score-card.margin{background:linear-gradient(135deg,#1A2B4E 0%,#1B3E75 100%);border:1px solid #2D5FA0;}
 .ec-score-card.integrity{background:linear-gradient(135deg,#3B1A1A 0%,#7B1D1D 100%);border:1px solid #A03030;}
@@ -2162,7 +2221,7 @@ td.td-name{font-weight:600;color:var(--navy);}
 .ec-sec-hd .ec-count-badge{background:#0B2545;color:#F5C842;border-radius:20px;padding:4px 12px;font-size:11px;font-weight:700;font-family:'JetBrains Mono',monospace;}
 
 /* Org table */
-.ec-card{background:#fff;border-radius:16px;border:1px solid #DDE4EF;padding:28px;margin-bottom:30px;box-shadow:0 2px 20px rgba(11,37,69,.06);}
+.ec-card{background:#fff;border-radius:14px;border:1px solid #DDE4EF;padding:20px 22px;margin-bottom:18px;box-shadow:0 2px 16px rgba(11,37,69,.05);}
 .ec-table{width:100%;border-collapse:collapse;font-size:13px;}
 .ec-table th{background:#EEF2F8;padding:10px 14px;text-align:left;font-weight:700;font-size:11px;letter-spacing:.5px;text-transform:uppercase;color:#5A6A82;border-bottom:2px solid #DDE4EF;}
 .ec-table td{padding:11px 14px;border-bottom:1px solid #EEF2F8;vertical-align:middle;}
@@ -2250,7 +2309,9 @@ td.td-name{font-weight:600;color:var(--navy);}
   .tb-title{font-size:15px;}
   .btn-sync{padding:6px 10px;font-size:11px;}
 
-  .content{padding:14px 12px;}
+  .page.active{padding:10px;}
+  #page-email.active,#page-fleet-map.active,#page-cso.active,#page-bond.active{padding:0;}
+  .lf-tab-bar{margin:-10px -10px 12px;}
 
   .g4{grid-template-columns:repeat(2,1fr);gap:10px;}
   .g3{grid-template-columns:repeat(2,1fr);gap:10px;}
@@ -2309,7 +2370,7 @@ td.td-name{font-weight:600;color:var(--navy);}
 
 .fleet-cards { display: none; }
 @media(max-width:768px){
-  .ec-wrap{padding:24px 16px 60px;}
+  .ec-wrap{padding:0 0 32px;}
   .ec-hero{padding:24px 20px;}
   .ec-scores-row{grid-template-columns:1fr;}
   .ec-actions{flex-direction:column;}
@@ -2331,10 +2392,10 @@ td.td-name{font-weight:600;color:var(--navy);}
           <div style="font-size:12px;color:#5A6A82;">AI Infrastructure Founder · 30+ Years · $100M+ Portfolio Management · IEBC Architect</div>
         </div>
       </div>
-      <p>27-executive org structure — 9 cabinet + 16 expansion + James Bond, Lucas Sterling &amp; Chloe Sinclair (IEBC Consultants). KPI engine, 3-tier triage, contingency plans, daily State of the Fleet brief by Dr. Evelyn Sterling.</p>
+      <p>33-executive org structure — 9 cabinet + 16 expansion + James Bond, Lucas Sterling &amp; Chloe Sinclair (IEBC Consultants) + Light Fleet Division (Diana Cole + 5 segment managers). CC Gulley (CSO · Human) leads the Strategy Unit: Alexander Wright (Market Intel), Naomi Kensington (Targeting), and Winston Carmichael (Retention) all report to her. KPI engine, 3-tier triage, contingency plans, daily State of the Fleet brief by Dr. Evelyn Sterling.</p>
     </div>
     <div class="ec-hero-stats">
-      <div class="ec-stat"><div class="ec-stat-n">28</div><div class="ec-stat-l">Executives</div></div>
+      <div class="ec-stat"><div class="ec-stat-n">34</div><div class="ec-stat-l">Executives</div></div>
       <div class="ec-stat"><div class="ec-stat-n">9</div><div class="ec-stat-l">Cabinet</div></div>
       <div class="ec-stat"><div class="ec-stat-n">5</div><div class="ec-stat-l">Contingencies</div></div>
       <div class="ec-stat"><div class="ec-stat-n">200</div><div class="ec-stat-l">Auto Steps</div></div>
@@ -2419,9 +2480,9 @@ td.td-name{font-weight:600;color:var(--navy);}
     </div>
   </div>
 
-  <!-- Org Chart — All 25 Executives -->
+  <!-- Org Chart — All 34 Executives -->
   <div class="ec-card">
-    <div class="ec-sec-hd"><h2>Org Chart — 28 Executives</h2><span class="ec-count-badge">IEBC Workforce</span></div>
+    <div class="ec-sec-hd"><h2>Org Chart — 34 Executives</h2><span class="ec-count-badge">IEBC Workforce</span></div>
     <table class="ec-table" id="ec-org-table">
       <thead>
         <tr>
@@ -2862,7 +2923,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 let allCarriers=[], allLoads=[], allInvoices=[], currentInvFilter='all', loadCounter=3849;
 
-const pageNames={dashboard:'Dashboard',dispatch:'Dispatch Board','fleet-map':'Fleet Map',carriers:'Carriers',drivers:'Drivers',loads:'Load Manager',invoices:'Invoices & Billing',compliance:'DOT Compliance',ifta:'IFTA / Permits',insurance:'Insurance',revenue:'Revenue Tracker',providers:'Compliance Providers',checklist:'Daily Checklist',notes:'Dispatcher Notes',reports:'Team Reports','exec-command':'Exec Command',agents:'AI Agents',founders:'Founders Program',crm:'Lead CRM',leads:'Lead Pipeline',execution:'Execution Engine',email:'Email Center',vault:'Document Vault',clm:'CLM Scanner',ledger:'Atomic Ledger',agreements:'Agreements'};
+const pageNames={dashboard:'Dashboard',dispatch:'Dispatch Board','fleet-map':'Fleet Map',carriers:'Carriers',drivers:'Drivers',loads:'Load Manager',invoices:'Invoices & Billing',compliance:'DOT Compliance',ifta:'IFTA / Permits',insurance:'Insurance',revenue:'Revenue Tracker',providers:'Compliance Providers',checklist:'Daily Checklist',notes:'Dispatcher Notes',reports:'Team Reports','exec-command':'Exec Command',agents:'AI Agents',founders:'Founders Program',crm:'Lead CRM',leads:'Lead Pipeline',execution:'Execution Engine',email:'Email Center',vault:'Document Vault',clm:'CLM Scanner',ledger:'Atomic Ledger',agreements:'Agreements','lf-nemt':'NEMT — Medical Transport','lf-executive':'Executive Transport','lf-courier':'Courier & Last-Mile','lf-gig':'Gig Fleet Management',cso:'CSO Office — CC Gulley'};
 
 // ── 3 Lakes Logistics Backend API (FastAPI) ──
 const API_BASE = (window.__3LL_API_BASE || 'https://three-lakes-logistics-api.onrender.com').replace(/\/$/,'');
@@ -2939,6 +3000,13 @@ function toggleSidebar(){
   ov.classList.toggle('active',open);
 }
 
+function _overlayTop(){
+  // Measure actual rendered header stack so fixed overlays never overlap it
+  const ticker  = document.querySelector('.ticker-strip');
+  const topbar  = document.querySelector('.topbar');
+  return (ticker ? ticker.offsetHeight : 0) + (topbar ? topbar.offsetHeight : 0);
+}
+
 function nav(id){
   if(window.innerWidth<769){
     document.getElementById('sidebar')?.classList.remove('sb-open');
@@ -2949,14 +3017,14 @@ function nav(id){
   document.getElementById('page-'+id).classList.add('active');
   document.querySelectorAll('.sb-item').forEach(n=>{if(n.getAttribute('onclick')?.includes("'"+id+"'"))n.classList.add('active');});
   document.getElementById('page-title').textContent=pageNames[id]||id;
-  if(id==='bond'){
-    const ticker=document.querySelector('.ticker-strip');
-    const topbar=document.querySelector('.topbar');
-    const top=(ticker?ticker.offsetHeight:0)+(topbar?topbar.offsetHeight:0);
-    document.getElementById('page-bond').style.top=top+'px';
+  // Fixed full-page overlays: always measure actual header stack
+  if(['bond','cso','fleet-map'].includes(id)){
+    const top = _overlayTop();
+    document.getElementById('page-'+id).style.top=top+'px';
     const content=document.querySelector('.content');
     if(content) content.scrollTop=0;
   }
+  if(id==='cso'){ csoTab('strategy'); csoLoadStrategy(); csoLoadPlan(); csoDirLoadActive(); }
   if(id==='carriers'){const n=document.getElementById('carrier-notif');if(n)n.style.display='none';}
   if(id==='invoices'){const n=document.getElementById('invoice-notif');if(n)n.style.display='none';renderInvoices();}
   if(id==='notes')loadNotes();
@@ -2969,6 +3037,7 @@ function nav(id){
   if(id==='fleet-map')initFleetMap();
   if(id==='drivers')loadDrivers();
   if(id==='ledger')loadLedger();
+  if(id==='lf-nemt'||id==='lf-executive'||id==='lf-courier'||id==='lf-gig') loadLightFleet(id);
   if(id==='execution'){loadExecutionDomains();loadExecutionSteps();}
   if(id==='email'&&typeof mailInit==='function'){mailInit();}
 }
@@ -4317,7 +4386,18 @@ async function ecLoadExecutives(){
     if(!all.length){tbody.innerHTML='<tr><td colspan="6" class="ec-empty">No executive data found — check API.</td></tr>';return;}
     const bondRow='<tr style="background:#0d0d1a;border-left:3px solid #f5c842;"><td><div class="ec-name-cell"><div class="ec-avatar" style="background:#1C1C2E;color:#f5c842;font-style:italic">JB</div><span class="ec-title-text" style="color:#f5c842">James Bond<span class="ec-cabinet-badge" style="background:#1C1C2E;color:#f5c842;border:1px solid #f5c842">IEBC</span></span></div></td><td style="font-size:12px;color:#aaa;font-style:italic">IEBC Consultant</td><td><span class="ec-dept-pill" style="background:rgba(245,200,66,.15);color:#f5c842">consulting</span></td><td style="font-size:12px;color:#aaa">Mark Odom (CEO)</td><td style="font-size:12px;font-weight:600;color:#f5c842">Integration Health Score</td><td style="font-family:var(--ff-m);font-size:11px;color:#aaa">All 11 domains green</td></tr>'+
       '<tr style="background:#001a12;border-left:3px solid #06b6d4;"><td><div class="ec-name-cell"><div class="ec-avatar" style="background:#012a1a;color:#06b6d4;font-style:italic">LS</div><span class="ec-title-text" style="color:#06b6d4">Lucas Sterling<span class="ec-cabinet-badge" style="background:#012a1a;color:#06b6d4;border:1px solid #06b6d4">IEBC</span></span></div></td><td style="font-size:12px;color:#aaa;font-style:italic">UI Developer · Node 101</td><td><span class="ec-dept-pill" style="background:rgba(6,182,212,.15);color:#06b6d4">ui/ux</span></td><td style="font-size:12px;color:#aaa">Mark Odom (CEO)</td><td style="font-size:12px;font-weight:600;color:#06b6d4">Eagle Eye UI Health Score</td><td style="font-family:var(--ff-m);font-size:11px;color:#aaa">≥ 90 / no critical issues</td></tr>'+
-      '<tr style="background:#150022;border-left:3px solid #a855f7;"><td><div class="ec-name-cell"><div class="ec-avatar" style="background:#1e0033;color:#a855f7;font-style:italic">CS</div><span class="ec-title-text" style="color:#a855f7">Chloe Sinclair<span class="ec-cabinet-badge" style="background:#1e0033;color:#a855f7;border:1px solid #a855f7">IEBC</span></span></div></td><td style="font-size:12px;color:#aaa;font-style:italic">QA Engineer · Node 128</td><td><span class="ec-dept-pill" style="background:rgba(168,85,247,.15);color:#a855f7">quality</span></td><td style="font-size:12px;color:#aaa">Lucas Sterling</td><td style="font-size:12px;font-weight:600;color:#a855f7">Viewport QA Clearance</td><td style="font-family:var(--ff-m);font-size:11px;color:#aaa">PASS — zero critical issues</td></tr>';
+      '<tr style="background:#150022;border-left:3px solid #a855f7;"><td><div class="ec-name-cell"><div class="ec-avatar" style="background:#1e0033;color:#a855f7;font-style:italic">CS</div><span class="ec-title-text" style="color:#a855f7">Chloe Sinclair<span class="ec-cabinet-badge" style="background:#1e0033;color:#a855f7;border:1px solid #a855f7">IEBC</span></span></div></td><td style="font-size:12px;color:#aaa;font-style:italic">QA Engineer · Node 128</td><td><span class="ec-dept-pill" style="background:rgba(168,85,247,.15);color:#a855f7">quality</span></td><td style="font-size:12px;color:#aaa">Lucas Sterling</td><td style="font-size:12px;font-weight:600;color:#a855f7">Viewport QA Clearance</td><td style="font-family:var(--ff-m);font-size:11px;color:#aaa">PASS — zero critical issues</td></tr>'+
+      '<tr style="background:#0a0d14;border-left:4px solid #0ea5e9;"><td colspan="6" style="padding:8px 14px;font-family:var(--ff-m);font-size:10px;letter-spacing:2px;color:#38bdf8;text-transform:uppercase;background:#060d18;">🧭 CSO Strategy Unit — CC Gulley Direct Reports</td></tr>'+
+      '<tr style="background:#060d18;border-left:3px solid #38bdf8;"><td><div class="ec-name-cell"><div class="ec-avatar" style="background:#06172e;color:#38bdf8">AW</div><span class="ec-title-text" style="color:#38bdf8">Alexander Wright</span></div></td><td style="font-size:12px;color:#aaa;font-style:italic">VP Market Intelligence</td><td><span class="ec-dept-pill" style="background:rgba(56,189,248,.15);color:#38bdf8">strategy</span></td><td style="font-size:12px;color:#aaa">CC Gulley (CSO)</td><td style="font-size:12px;font-weight:600;color:#38bdf8">Hot States Coverage</td><td style="font-family:var(--ff-m);font-size:11px;color:#aaa">Top 5 markets identified daily</td></tr>'+
+      '<tr style="background:#060d18;border-left:3px solid #38bdf8;"><td><div class="ec-name-cell"><div class="ec-avatar" style="background:#06172e;color:#38bdf8">NK</div><span class="ec-title-text" style="color:#38bdf8">Naomi Kensington</span></div></td><td style="font-size:12px;color:#aaa;font-style:italic">Head of Predictive Targeting</td><td><span class="ec-dept-pill" style="background:rgba(56,189,248,.15);color:#38bdf8">strategy</span></td><td style="font-size:12px;color:#aaa">CC Gulley (CSO)</td><td style="font-size:12px;font-weight:600;color:#38bdf8">Tier A Lead Count</td><td style="font-family:var(--ff-m);font-size:11px;color:#aaa">≥ 10 Tier A targets per run</td></tr>'+
+      '<tr style="background:#060d18;border-left:3px solid #38bdf8;"><td><div class="ec-name-cell"><div class="ec-avatar" style="background:#06172e;color:#38bdf8">WC</div><span class="ec-title-text" style="color:#38bdf8">Winston Carmichael</span></div></td><td style="font-size:12px;color:#aaa;font-style:italic">VP Carrier Retention</td><td><span class="ec-dept-pill" style="background:rgba(56,189,248,.15);color:#38bdf8">strategy</span></td><td style="font-size:12px;color:#aaa">CC Gulley (CSO)</td><td style="font-size:12px;font-weight:600;color:#38bdf8">Retention Rate %</td><td style="font-family:var(--ff-m);font-size:11px;color:#aaa">≥ 85% carrier retention</td></tr>'+
+      '<tr style="background:#0a0a1a;border-left:4px solid #6366f1;"><td colspan="6" style="padding:8px 14px;font-family:var(--ff-m);font-size:10px;letter-spacing:2px;color:#6366f1;text-transform:uppercase;background:#0d0d20;">🚗 Light Fleet Division</td></tr>'+
+      '<tr style="background:#0e0e22;border-left:3px solid #6366f1;"><td><div class="ec-name-cell"><div class="ec-avatar" style="background:#1a1a3a;color:#6366f1">DC</div><span class="ec-title-text" style="color:#6366f1">Diana Cole<span class="ec-cabinet-badge" style="background:#1a1a3a;color:#6366f1;border:1px solid #6366f1">IEBC · Node 200</span></span></div></td><td style="font-size:12px;color:#aaa;font-style:italic">Light Fleet Division President</td><td><span class="ec-dept-pill" style="background:rgba(99,102,241,.15);color:#6366f1">light-fleet</span></td><td style="font-size:12px;color:#aaa">Mark Odom (CEO)</td><td style="font-size:12px;font-weight:600;color:#6366f1">Division P&amp;L Score</td><td style="font-family:var(--ff-m);font-size:11px;color:#aaa">≥ 75 all segments</td></tr>'+
+      '<tr style="background:#0e0e22;border-left:3px solid #10b981;"><td><div class="ec-name-cell"><div class="ec-avatar" style="background:#012a1a;color:#10b981">JN</div><span class="ec-title-text" style="color:#10b981">Dr. James NEMT<span class="ec-cabinet-badge" style="background:#012a1a;color:#10b981;border:1px solid #10b981">Node 201</span></span></div></td><td style="font-size:12px;color:#aaa;font-style:italic">NEMT Segment Manager</td><td><span class="ec-dept-pill" style="background:rgba(16,185,129,.15);color:#10b981">nemt</span></td><td style="font-size:12px;color:#aaa">Diana Cole</td><td style="font-size:12px;font-weight:600;color:#10b981">NEMT Billing Run</td><td style="font-family:var(--ff-m);font-size:11px;color:#aaa">Zero auth denials</td></tr>'+
+      '<tr style="background:#0e0e22;border-left:3px solid #ef4444;"><td><div class="ec-name-cell"><div class="ec-avatar" style="background:#2a0101;color:#ef4444">ER</div><span class="ec-title-text" style="color:#ef4444">Elena Ross<span class="ec-cabinet-badge" style="background:#2a0101;color:#ef4444;border:1px solid #ef4444">Node 202</span></span></div></td><td style="font-size:12px;color:#aaa;font-style:italic">Medical Courier Segment Manager</td><td><span class="ec-dept-pill" style="background:rgba(239,68,68,.15);color:#ef4444">medical-courier</span></td><td style="font-size:12px;color:#aaa">Diana Cole</td><td style="font-size:12px;font-weight:600;color:#ef4444">SLA Compliance</td><td style="font-family:var(--ff-m);font-size:11px;color:#aaa">100% on-time delivery</td></tr>'+
+      '<tr style="background:#0e0e22;border-left:3px solid #f59e0b;"><td><div class="ec-name-cell"><div class="ec-avatar" style="background:#1a1200;color:#f59e0b">VN</div><span class="ec-title-text" style="color:#f59e0b">Victor Nash<span class="ec-cabinet-badge" style="background:#1a1200;color:#f59e0b;border:1px solid #f59e0b">Node 203</span></span></div></td><td style="font-size:12px;color:#aaa;font-style:italic">Executive &amp; Black Car Manager</td><td><span class="ec-dept-pill" style="background:rgba(245,158,11,.15);color:#f59e0b">executive</span></td><td style="font-size:12px;color:#aaa">Diana Cole</td><td style="font-size:12px;font-weight:600;color:#f59e0b">On-Time %</td><td style="font-family:var(--ff-m);font-size:11px;color:#aaa">≥ 95% on-time · rating ≥ 4.5</td></tr>'+
+      '<tr style="background:#0e0e22;border-left:3px solid #06b6d4;"><td><div class="ec-name-cell"><div class="ec-avatar" style="background:#011a22;color:#06b6d4">FG</div><span class="ec-title-text" style="color:#06b6d4">Felix Grant<span class="ec-cabinet-badge" style="background:#011a22;color:#06b6d4;border:1px solid #06b6d4">Node 204</span></span></div></td><td style="font-size:12px;color:#aaa;font-style:italic">Same-Day Courier Manager</td><td><span class="ec-dept-pill" style="background:rgba(6,182,212,.15);color:#06b6d4">courier</span></td><td style="font-size:12px;color:#aaa">Diana Cole</td><td style="font-size:12px;font-weight:600;color:#06b6d4">Load Acceptance Rate</td><td style="font-family:var(--ff-m);font-size:11px;color:#aaa">≥ 70% Curri + Roadie</td></tr>'+
+      '<tr style="background:#0e0e22;border-left:3px solid #8b5cf6;"><td><div class="ec-name-cell"><div class="ec-avatar" style="background:#160033;color:#8b5cf6">MH</div><span class="ec-title-text" style="color:#8b5cf6">Morgan Hayes<span class="ec-cabinet-badge" style="background:#160033;color:#8b5cf6;border:1px solid #8b5cf6">Node 205</span></span></div></td><td style="font-size:12px;color:#aaa;font-style:italic">Gig Fleet Manager</td><td><span class="ec-dept-pill" style="background:rgba(139,92,246,.15);color:#8b5cf6">gig-fleet</span></td><td style="font-size:12px;color:#aaa">Diana Cole</td><td style="font-size:12px;font-weight:600;color:#8b5cf6">Fleet Utilization %</td><td style="font-family:var(--ff-m);font-size:11px;color:#aaa">≥ 40% weekly utilization</td></tr>';
     tbody.innerHTML=bondRow+all.map(ex=>{
       const isCmd=!ex.reports_to;
       const isCab=ex.reports_to==='commander';
@@ -6061,7 +6141,7 @@ async function loadExecutionDomains(){
   try{
     const res=await apiFetch('/api/execution/domains');
     const data=await res.json();
-    const colors={onboarding:'var(--blue)',dispatch:'var(--green)',transit:'var(--orange)',settlement:'var(--gold)',clm:'var(--blue)',compliance:'var(--red)',analytics:'var(--green)'};
+    const colors={onboarding:'var(--blue)',dispatch:'var(--green)',transit:'var(--orange)',settlement:'var(--gold)',clm:'var(--blue)',compliance:'var(--red)',analytics:'var(--green)',lf_onboarding:'#8b5cf6',lf_dispatch:'#3b82f6',lf_transit:'#10b981',lf_settlement:'#f59e0b'};
     document.getElementById('exec-domains').innerHTML=data.map(d=>`
       <div class="card" style="cursor:pointer;transition:box-shadow .15s" onmouseover="this.style.boxShadow='var(--shadow-lg)'" onmouseout="this.style.boxShadow=''" onclick="document.getElementById('exec-domain-filter').value='${d.domain}';loadExecutionSteps()">
         <div style="font-size:10px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);margin-bottom:4px">${d.domain}</div>
@@ -6615,7 +6695,7 @@ async function loadTriggerStatus() {
      ═══════════════════════════════════════════════════════════════ -->
 <div class="page" id="page-email">
 <style>
-.mail-client{display:flex;height:calc(100vh - 56px);overflow:hidden;background:var(--bg)}
+.mail-client{display:flex;flex:1;min-height:0;overflow:hidden;background:var(--bg)}
 .mail-sidebar{width:220px;min-width:220px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto;flex-shrink:0}
 .mail-sidebar-top{padding:14px 12px 10px;border-bottom:1px solid var(--border)}
 .mail-mb-list{padding:8px 0}
@@ -8210,12 +8290,517 @@ if (typeof nav === 'function') {
 
 <!-- BOND OFFICE PAGE -->
 <div class="page" id="page-bond">
+
+<!-- ════════════════════════════════════════════════════════════════════════
+     CC GULLEY — CSO OFFICE
+     Full-page fixed overlay — same pattern as Bond Office
+     ════════════════════════════════════════════════════════════════════════ -->
+<div class="page" id="page-cso">
+<style>
+#page-cso{animation:none;}
+#page-cso.active{position:fixed;top:60px;left:var(--sidebar-w);right:0;bottom:0;z-index:30;display:flex;flex-direction:column;overflow:hidden;background:var(--bg);}
+@media(max-width:768px){#page-cso.active{top:54px;left:0;}}
+.cso-wrap{display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden;background:#05101e;--text:#fff;--muted:rgba(255,255,255,.6);--border:rgba(255,255,255,.13);--surface:rgba(255,255,255,.05);--bg:#05101e;}
+.cso-header{display:flex;align-items:center;justify-content:space-between;padding:14px 24px;background:linear-gradient(135deg,#03213d 0%,#041a30 100%);flex-shrink:0;border-bottom:2px solid rgba(14,165,233,.5);box-shadow:0 4px 24px rgba(0,0,0,.45);}
+.cso-badge{width:44px;height:44px;border-radius:10px;background:rgba(14,165,233,.15);border:1.5px solid rgba(14,165,233,.5);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;box-shadow:0 0 14px rgba(14,165,233,.2);}
+.cso-title{font-family:var(--ff-h);font-size:18px;font-weight:900;color:#fff;letter-spacing:.3px;}
+.cso-sub{font-size:10px;color:rgba(56,189,248,.8);letter-spacing:.5px;margin-top:1px;font-family:var(--ff-m);}
+.cso-conn{display:flex;align-items:center;gap:6px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:20px;padding:4px 12px;}
+.cso-conn-dot{width:7px;height:7px;border-radius:50%;background:var(--muted);flex-shrink:0;}
+.cso-conn-dot.live{background:#38bdf8;box-shadow:0 0 10px #38bdf8;}
+.cso-conn-label{font-family:var(--ff-m);font-size:9px;color:rgba(255,255,255,.6);letter-spacing:1px;text-transform:uppercase;}
+.cso-hdr-btn{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);color:rgba(255,255,255,.8);padding:5px 14px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;transition:background .15s;font-family:var(--ff-b);}
+.cso-hdr-btn:hover{background:rgba(14,165,233,.2);border-color:rgba(56,189,248,.5);color:#38bdf8;}
+.cso-tabs{display:flex;flex-wrap:nowrap;background:#030e1c;border-bottom:1px solid rgba(14,165,233,.2);flex-shrink:0;padding:0 20px;gap:2px;overflow-x:auto;scrollbar-width:none;-ms-overflow-style:none;}
+.cso-tabs::-webkit-scrollbar{display:none;}
+.cso-tab{background:transparent;border:none;border-bottom:2px solid transparent;padding:10px 18px;font-size:12px;font-weight:600;color:rgba(255,255,255,.45);cursor:pointer;transition:color .15s,border-color .15s;font-family:var(--ff-b);white-space:nowrap;display:flex;align-items:center;gap:6px;}
+.cso-tab:hover{color:rgba(255,255,255,.7);}
+.cso-tab.active{color:#38bdf8;border-bottom-color:#38bdf8;background:rgba(14,165,233,.07);}
+.cso-body{flex:1;min-height:0;overflow:hidden;position:relative;display:flex;flex-direction:column;}
+.cso-pane{display:none;overflow:hidden;}
+.cso-pane.active{display:flex;flex-direction:column;flex:1;min-height:0;}
+/* Strategy Room */
+.cso-room{display:flex;flex-direction:column;flex:1;min-height:0;overflow-y:auto;padding:18px 24px;gap:14px;scrollbar-width:thin;scrollbar-color:rgba(56,189,248,.4) transparent;}
+.cso-kpi-strip{display:flex;gap:12px;flex-shrink:0;flex-wrap:wrap;}
+.cso-kpi{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-top:3px solid rgba(255,255,255,.1);border-radius:10px;padding:14px 18px;flex:1;min-width:110px;display:flex;flex-direction:column;gap:3px;}
+.cso-kpi.sky{border-top-color:#38bdf8;}.cso-kpi.green{border-top-color:#10b981;}.cso-kpi.warn{border-top-color:#f59e0b;}.cso-kpi.red{border-top-color:#ef4444;}
+.cso-kpi-n{font-size:26px;font-weight:900;line-height:1;font-variant-numeric:tabular-nums;color:#fff;}
+.cso-kpi-l{font-family:var(--ff-m);font-size:9px;text-transform:uppercase;letter-spacing:.8px;color:rgba(255,255,255,.5);margin-top:2px;}
+.cso-kpi-sub{font-size:10px;color:rgba(255,255,255,.4);}
+.cso-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;min-height:300px;}
+.cso-grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;min-height:300px;}
+.cso-panel{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.1);border-radius:10px;display:flex;flex-direction:column;overflow:hidden;min-height:240px;max-height:480px;}
+.cso-panel-hdr{display:flex;align-items:center;justify-content:space-between;padding:11px 15px;border-bottom:1px solid rgba(255,255,255,.08);flex-shrink:0;}
+.cso-panel-title{font-weight:700;font-size:12px;color:#fff;display:flex;align-items:center;gap:7px;}
+.cso-panel-badge{font-family:var(--ff-m);font-size:8px;letter-spacing:.8px;padding:2px 8px;border-radius:10px;border:1px solid;}
+.cso-panel-body{flex:1;overflow-y:auto;padding:12px 14px;scrollbar-width:thin;scrollbar-color:#38bdf8 transparent;}
+.cso-panel-body::-webkit-scrollbar{width:4px;}
+.cso-panel-body::-webkit-scrollbar-thumb{background:#38bdf8;border-radius:3px;}
+/* Reporter cards */
+.cso-reporter{display:flex;gap:10px;align-items:flex-start;padding:10px 11px;border-radius:8px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);margin-bottom:9px;transition:border-color .15s,background .15s;cursor:pointer;}
+.cso-reporter:hover{border-color:rgba(56,189,248,.4);background:rgba(14,165,233,.06);}
+.cso-reporter:last-child{margin-bottom:0;}
+.cso-rep-avatar{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;flex-shrink:0;}
+.cso-rep-name{font-weight:700;font-size:12px;color:#fff;margin-bottom:1px;}
+.cso-rep-role{font-size:10px;color:rgba(255,255,255,.5);margin-bottom:4px;}
+.cso-rep-last{font-size:10px;color:rgba(255,255,255,.4);line-height:1.45;}
+.cso-rep-kpi{font-family:var(--ff-m);font-size:9px;font-weight:700;padding:2px 8px;border-radius:10px;display:inline-flex;align-items:center;gap:4px;margin-top:4px;}
+/* Feed items */
+.cso-feed{flex:1;overflow-y:auto;padding:10px 14px;display:flex;flex-direction:column;gap:8px;scrollbar-width:thin;scrollbar-color:#38bdf8 transparent;}
+.cso-feed::-webkit-scrollbar{width:4px;}
+.cso-feed::-webkit-scrollbar-thumb{background:#38bdf8;border-radius:3px;}
+.cso-feed-item{padding:9px 11px;border-radius:7px;border-left:3px solid rgba(255,255,255,.1);background:rgba(255,255,255,.03);transition:border-color .15s;}
+.cso-feed-item.sky{border-left-color:#38bdf8;}.cso-feed-item.green{border-left-color:#10b981;}.cso-feed-item.amber{border-left-color:#f59e0b;}.cso-feed-item.red{border-left-color:#ef4444;}.cso-feed-item.purple{border-left-color:#a855f7;}
+.cso-feed-from{font-weight:700;font-size:10px;color:rgba(255,255,255,.7);margin-bottom:2px;display:flex;align-items:center;gap:5px;}
+.cso-feed-text{font-size:11px;color:rgba(255,255,255,.55);line-height:1.5;}
+.cso-feed-ts{font-family:var(--ff-m);font-size:9px;color:rgba(255,255,255,.3);margin-top:3px;}
+/* Strategic Plan tab */
+.cso-plan{display:flex;flex:1;min-height:0;overflow:hidden;gap:0;}
+.cso-plan-main{flex:1;display:flex;flex-direction:column;padding:20px 24px;gap:14px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:#38bdf8 transparent;}
+.cso-plan-main::-webkit-scrollbar{width:5px;}
+.cso-plan-main::-webkit-scrollbar-thumb{background:#38bdf8;border-radius:3px;}
+.cso-plan-side{width:300px;flex-shrink:0;border-left:1px solid rgba(255,255,255,.1);display:flex;flex-direction:column;overflow:hidden;}
+.cso-fl{font-family:var(--ff-m);font-size:9px;color:rgba(255,255,255,.45);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:5px;}
+.cso-label{font-weight:700;font-size:13px;color:#fff;margin-bottom:4px;}
+.cso-textarea{width:100%;min-height:110px;padding:11px 13px;border:1.5px solid rgba(255,255,255,.12);border-radius:8px;font-family:var(--ff-b);font-size:12px;color:#fff;background:rgba(255,255,255,.05);resize:vertical;outline:none;transition:border-color .15s;line-height:1.6;}
+.cso-textarea:focus{border-color:#38bdf8;box-shadow:0 0 0 2px rgba(14,165,233,.12);}
+.cso-input{width:100%;padding:9px 12px;border:1.5px solid rgba(255,255,255,.12);border-radius:8px;font-family:var(--ff-b);font-size:12px;color:#fff;background:rgba(255,255,255,.05);outline:none;transition:border-color .15s;}
+.cso-input:focus{border-color:#38bdf8;}
+.cso-save-btn{background:linear-gradient(135deg,#0369a1,#0284c7);color:#fff;border:none;padding:11px 28px;border-radius:7px;font-weight:800;font-size:13px;cursor:pointer;letter-spacing:.3px;transition:opacity .15s;box-shadow:0 2px 12px rgba(14,165,233,.3);}
+.cso-save-btn:hover{opacity:.88;}
+.cso-save-btn:disabled{opacity:.4;cursor:not-allowed;}
+.cso-plan-hist{flex:1;overflow-y:auto;padding:14px 16px;display:flex;flex-direction:column;gap:7px;scrollbar-width:thin;scrollbar-color:#38bdf8 transparent;}
+.cso-hist-item{font-size:10px;line-height:1.5;border-left:2px solid rgba(56,189,248,.3);padding:4px 8px;color:rgba(255,255,255,.45);}
+.cso-hist-item strong{color:#fff;}
+/* Directives tab */
+.cso-dir-agent-btn{background:rgba(255,255,255,.04);border:1.5px solid rgba(255,255,255,.12);border-radius:10px;padding:12px 18px;color:rgba(255,255,255,.7);font-size:12px;font-weight:700;cursor:pointer;transition:all .15s;text-align:center;line-height:1.6;min-width:110px;font-family:var(--ff-b);}
+.cso-dir-agent-btn:hover{border-color:rgba(56,189,248,.5);color:#38bdf8;background:rgba(14,165,233,.08);}
+.cso-dir-agent-btn.active{border-color:#38bdf8;color:#38bdf8;background:rgba(14,165,233,.12);box-shadow:0 0 12px rgba(14,165,233,.2);}
+.cso-dir-card{border-radius:8px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.03);padding:10px 12px;border-left:3px solid #38bdf8;}
+.cso-dir-card.naomi{border-left-color:#10b981;}.cso-dir-card.winston{border-left-color:#f59e0b;}
+.cso-dir-card-hd{font-weight:700;font-size:11px;color:#fff;margin-bottom:3px;display:flex;align-items:center;gap:6px;}
+.cso-dir-card-to{font-family:var(--ff-m);font-size:9px;color:#38bdf8;letter-spacing:.5px;}
+.cso-dir-card-body{font-size:11px;color:rgba(255,255,255,.55);line-height:1.5;margin-top:4px;}
+.cso-dir-card-ts{font-family:var(--ff-m);font-size:9px;color:rgba(255,255,255,.3);margin-top:5px;}
+.cso-dir-card-clear{background:none;border:1px solid rgba(255,255,255,.15);border-radius:4px;color:rgba(255,255,255,.4);font-size:9px;padding:2px 7px;cursor:pointer;float:right;font-family:var(--ff-b);}
+.cso-dir-card-clear:hover{border-color:#ef4444;color:#ef4444;}
+/* Reporting tab */
+.cso-reporting{display:flex;flex-direction:column;flex:1;min-height:0;overflow-y:auto;padding:18px 24px;gap:14px;scrollbar-width:thin;scrollbar-color:rgba(56,189,248,.4) transparent;}
+@media(max-width:768px){
+  .cso-grid,.cso-grid-3{grid-template-columns:1fr;}
+  .cso-plan{flex-direction:column;}
+  .cso-plan-side{width:100%;border-left:none;border-top:1px solid rgba(255,255,255,.1);max-height:240px;flex-shrink:0;}
+  .cso-room{padding:12px 14px;}
+  .cso-tab{padding:8px 12px;font-size:11px;}
+  .cso-panel{max-height:360px;}
+  .cso-kpi-strip{flex-wrap:wrap;}
+  .cso-kpi{min-width:80px;}
+  .cso-dir-agent-btn{min-width:80px;padding:10px 12px;font-size:11px;}
+}
+</style>
+
+<div class="cso-wrap">
+
+  <!-- Header -->
+  <div class="cso-header">
+    <div style="display:flex;align-items:center;gap:14px;">
+      <div class="cso-badge">🧭</div>
+      <div>
+        <div class="cso-title">CSO Office</div>
+        <div class="cso-sub">CC Gulley · Chief Strategy Officer · Human · Reports to Mark Odom (CEO)</div>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;">
+      <div class="cso-conn">
+        <div class="cso-conn-dot live" id="cso-conn-dot"></div>
+        <span class="cso-conn-label" id="cso-conn-label">live</span>
+      </div>
+      <button class="cso-hdr-btn" onclick="csoRefresh()">↺ Refresh All</button>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="cso-tabs">
+    <button class="cso-tab active" id="csotab-strategy" onclick="csoTab('strategy')">📊 Strategy Room</button>
+    <button class="cso-tab" id="csotab-intel" onclick="csoTab('intel')">📡 Intel Feed</button>
+    <button class="cso-tab" id="csotab-plan" onclick="csoTab('plan')">📋 Strategic Plan</button>
+    <button class="cso-tab" id="csotab-directives" onclick="csoTab('directives')">📣 Directives <span id="cso-dir-badge" style="display:none;background:#38bdf8;color:#000;font-size:9px;font-weight:800;border-radius:10px;padding:1px 6px;font-family:var(--ff-m);">NEW</span></button>
+    <button class="cso-tab" id="csotab-reporting" onclick="csoTab('reporting')">📈 Reporting Up</button>
+  </div>
+
+  <!-- Body -->
+  <div class="cso-body">
+
+    <!-- ════ STRATEGY ROOM ════ -->
+    <div class="cso-pane active" id="csopane-strategy">
+      <div class="cso-room">
+
+        <!-- KPI Strip -->
+        <div class="cso-kpi-strip">
+          <div class="cso-kpi sky">
+            <div class="cso-kpi-n" id="cso-kpi-tier-a">—</div>
+            <div class="cso-kpi-l">Tier A Targets</div>
+            <div class="cso-kpi-sub" id="cso-kpi-tier-a-sub">Naomi · this run</div>
+          </div>
+          <div class="cso-kpi green">
+            <div class="cso-kpi-n" id="cso-kpi-hot-states">—</div>
+            <div class="cso-kpi-l">Hot Markets</div>
+            <div class="cso-kpi-sub" id="cso-kpi-hot-sub">Alexander · top states</div>
+          </div>
+          <div class="cso-kpi warn">
+            <div class="cso-kpi-n" id="cso-kpi-at-risk">—</div>
+            <div class="cso-kpi-l">At-Risk Carriers</div>
+            <div class="cso-kpi-sub" id="cso-kpi-risk-sub">Winston · retention</div>
+          </div>
+          <div class="cso-kpi green">
+            <div class="cso-kpi-n" id="cso-kpi-retention">—%</div>
+            <div class="cso-kpi-l">Retention Rate</div>
+            <div class="cso-kpi-sub">Winston · fleet health</div>
+          </div>
+          <div class="cso-kpi sky">
+            <div class="cso-kpi-n" id="cso-kpi-top-market">—</div>
+            <div class="cso-kpi-l">Top Market</div>
+            <div class="cso-kpi-sub">Alexander · by carrier volume</div>
+          </div>
+          <div class="cso-kpi sky">
+            <div class="cso-kpi-n" id="cso-kpi-bond-alerts">—</div>
+            <div class="cso-kpi-l">Bond Alerts</div>
+            <div class="cso-kpi-sub">James Bond · intel channel</div>
+          </div>
+        </div>
+
+        <!-- 2-col: direct reports + bond intel -->
+        <div class="cso-grid">
+
+          <!-- Direct Reports -->
+          <div class="cso-panel">
+            <div class="cso-panel-hdr">
+              <div class="cso-panel-title">👥 Strategy Unit — Direct Reports</div>
+              <button class="cso-hdr-btn" style="font-size:10px;padding:4px 10px;" onclick="csoRunAll()">Run All →</button>
+            </div>
+            <div class="cso-panel-body">
+              <!-- Alexander -->
+              <div class="cso-reporter" onclick="nav('agents')">
+                <div class="cso-rep-avatar" style="background:rgba(56,189,248,.15);color:#38bdf8;">AW</div>
+                <div style="flex:1;min-width:0;">
+                  <div class="cso-rep-name">Alexander Wright</div>
+                  <div class="cso-rep-role">VP Market Intelligence</div>
+                  <div class="cso-rep-last" id="cso-alex-last">Loading market intel…</div>
+                  <div class="cso-rep-kpi" style="background:rgba(56,189,248,.12);color:#38bdf8;" id="cso-alex-kpi">Hot States: —</div>
+                </div>
+                <button class="cso-hdr-btn" style="font-size:10px;padding:4px 10px;flex-shrink:0;" onclick="event.stopPropagation();csoRunAgent('alexander','Alexander Wright')">Run</button>
+              </div>
+              <!-- Naomi -->
+              <div class="cso-reporter" onclick="nav('agents')">
+                <div class="cso-rep-avatar" style="background:rgba(56,189,248,.15);color:#38bdf8;">NK</div>
+                <div style="flex:1;min-width:0;">
+                  <div class="cso-rep-name">Naomi Kensington</div>
+                  <div class="cso-rep-role">Head of Predictive Targeting</div>
+                  <div class="cso-rep-last" id="cso-naomi-last">Loading targeting intel…</div>
+                  <div class="cso-rep-kpi" style="background:rgba(56,189,248,.12);color:#38bdf8;" id="cso-naomi-kpi">Tier A: —</div>
+                </div>
+                <button class="cso-hdr-btn" style="font-size:10px;padding:4px 10px;flex-shrink:0;" onclick="event.stopPropagation();csoRunAgent('naomi','Naomi Kensington')">Run</button>
+              </div>
+              <!-- Winston -->
+              <div class="cso-reporter" onclick="nav('agents')">
+                <div class="cso-rep-avatar" style="background:rgba(56,189,248,.15);color:#38bdf8;">WC</div>
+                <div style="flex:1;min-width:0;">
+                  <div class="cso-rep-name">Winston Carmichael</div>
+                  <div class="cso-rep-role">VP Carrier Retention</div>
+                  <div class="cso-rep-last" id="cso-winston-last">Loading retention intel…</div>
+                  <div class="cso-rep-kpi" style="background:rgba(56,189,248,.12);color:#38bdf8;" id="cso-winston-kpi">Retention: —%</div>
+                </div>
+                <button class="cso-hdr-btn" style="font-size:10px;padding:4px 10px;flex-shrink:0;" onclick="event.stopPropagation();csoRunAgent('winston','Winston Carmichael')">Run</button>
+              </div>
+              <!-- James Bond -->
+              <div class="cso-reporter" onclick="nav('bond')">
+                <div class="cso-rep-avatar" style="background:rgba(245,200,66,.12);color:#f5c842;font-style:italic;">JB</div>
+                <div style="flex:1;min-width:0;">
+                  <div class="cso-rep-name" style="color:#f5c842;">James Bond</div>
+                  <div class="cso-rep-role">IEBC Consultant — Intel Channel</div>
+                  <div class="cso-rep-last" id="cso-bond-last">Loading Bond intel…</div>
+                  <div class="cso-rep-kpi" style="background:rgba(245,200,66,.12);color:#f5c842;" id="cso-bond-kpi">Channel: —</div>
+                </div>
+                <button class="cso-hdr-btn" style="font-size:10px;padding:4px 10px;flex-shrink:0;" onclick="event.stopPropagation();nav('bond')">Office →</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Live Strategy Intel Feed -->
+          <div class="cso-panel">
+            <div class="cso-panel-hdr">
+              <div class="cso-panel-title">📡 Live Strategy Intel</div>
+              <span style="font-size:10px;color:rgba(56,189,248,.6);font-family:var(--ff-m);" id="cso-feed-ts">—</span>
+            </div>
+            <div class="cso-feed" id="cso-intel-feed">
+              <div style="color:rgba(255,255,255,.3);font-size:11px;text-align:center;padding:20px;">Click Refresh All to load intel from all direct reports</div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div><!-- /strategy -->
+
+    <!-- ════ INTEL FEED ════ -->
+    <div class="cso-pane" id="csopane-intel">
+      <div class="cso-room">
+        <div class="cso-grid-3">
+
+          <!-- Alexander intel -->
+          <div class="cso-panel">
+            <div class="cso-panel-hdr">
+              <div class="cso-panel-title"><span style="color:#38bdf8;">AW</span> Alexander — Market Intel</div>
+              <button class="cso-hdr-btn" style="font-size:10px;padding:4px 10px;" onclick="csoRunAgent('alexander','Alexander Wright')">Run</button>
+            </div>
+            <div class="cso-feed" id="cso-alex-feed">
+              <div style="color:rgba(255,255,255,.3);font-size:11px;text-align:center;padding:20px;">Run Alexander to load market intel</div>
+            </div>
+          </div>
+
+          <!-- Naomi intel -->
+          <div class="cso-panel">
+            <div class="cso-panel-hdr">
+              <div class="cso-panel-title"><span style="color:#38bdf8;">NK</span> Naomi — Targeting Intel</div>
+              <button class="cso-hdr-btn" style="font-size:10px;padding:4px 10px;" onclick="csoRunAgent('naomi','Naomi Kensington')">Run</button>
+            </div>
+            <div class="cso-feed" id="cso-naomi-feed">
+              <div style="color:rgba(255,255,255,.3);font-size:11px;text-align:center;padding:20px;">Run Naomi to load targeting intel</div>
+            </div>
+          </div>
+
+          <!-- Winston intel -->
+          <div class="cso-panel">
+            <div class="cso-panel-hdr">
+              <div class="cso-panel-title"><span style="color:#38bdf8;">WC</span> Winston — Retention Intel</div>
+              <button class="cso-hdr-btn" style="font-size:10px;padding:4px 10px;" onclick="csoRunAgent('winston','Winston Carmichael')">Run</button>
+            </div>
+            <div class="cso-feed" id="cso-winston-feed">
+              <div style="color:rgba(255,255,255,.3);font-size:11px;text-align:center;padding:20px;">Run Winston to load retention intel</div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div><!-- /intel -->
+
+    <!-- ════ STRATEGIC PLAN ════ -->
+    <div class="cso-pane" id="csopane-plan">
+      <div class="cso-plan">
+        <div class="cso-plan-main">
+          <div>
+            <div class="cso-fl">CC GULLEY · STRATEGIC PLAN</div>
+            <div class="cso-label">Current Strategic Directive</div>
+            <div style="font-size:11px;color:rgba(255,255,255,.45);margin-bottom:12px;">This plan is read by Alexander, Naomi, and Winston at the start of every run. Set priority markets, target segments, and retention focus.</div>
+          </div>
+
+          <div>
+            <div class="cso-fl">PRIORITY MARKETS</div>
+            <input class="cso-input" id="cso-plan-markets" placeholder="e.g. TX, FL, GA, OH (comma-separated states to prioritize)"/>
+          </div>
+          <div>
+            <div class="cso-fl">TARGET SEGMENTS</div>
+            <input class="cso-input" id="cso-plan-segments" placeholder="e.g. dry-van, reefer, flatbed, LTL"/>
+          </div>
+          <div>
+            <div class="cso-fl">RETENTION PRIORITY</div>
+            <input class="cso-input" id="cso-plan-retention" placeholder="e.g. Never-loaded carriers first, then 14-day inactive fleet"/>
+          </div>
+          <div>
+            <div class="cso-fl">STRATEGIC DIRECTIVE (30/60/90 DAY)</div>
+            <textarea class="cso-textarea" id="cso-plan-directive" rows="5" placeholder="Write CC Gulley's strategic narrative here. This flows to Alexander, Naomi, and Winston on each run. E.g.: Q2 focus on TX and FL — highest carrier density and demand. Push Tier A prospects to Vance daily. Winston to prioritize never-loaded carriers for re-engagement campaign."></textarea>
+          </div>
+          <div>
+            <div class="cso-fl">GROWTH TARGET</div>
+            <input class="cso-input" id="cso-plan-growth" placeholder="e.g. 50 new carriers onboarded by end of quarter"/>
+          </div>
+
+          <div style="display:flex;gap:10px;align-items:center;">
+            <button class="cso-save-btn" id="cso-save-btn" onclick="csoSavePlan()">💾 Save Strategic Plan</button>
+            <button class="cso-hdr-btn" onclick="csoLoadPlan()">↺ Load Current</button>
+            <span id="cso-save-status" style="font-size:11px;color:#38bdf8;"></span>
+          </div>
+        </div>
+
+        <!-- Side: history -->
+        <div class="cso-plan-side">
+          <div style="padding:14px 16px;border-bottom:1px solid rgba(255,255,255,.08);font-weight:700;font-size:12px;color:#fff;flex-shrink:0;">📜 Recent Plans</div>
+          <div class="cso-plan-hist" id="cso-plan-hist">
+            <div style="color:rgba(255,255,255,.3);font-size:11px;padding:10px 0;">No plan history yet</div>
+          </div>
+        </div>
+      </div>
+    </div><!-- /plan -->
+
+    <!-- ════ REPORTING UP ════ -->
+    <div class="cso-pane" id="csopane-reporting">
+      <div class="cso-reporting">
+        <div style="flex-shrink:0;">
+          <div class="cso-fl">CC GULLEY REPORTS TO</div>
+          <div style="font-weight:700;font-size:16px;color:#fff;margin-bottom:4px;">Mark Odom — CEO &amp; Commander</div>
+          <div style="font-size:11px;color:rgba(255,255,255,.45);">Strategy Unit summary for Commander review. Mark Odom's morning brief includes CC Gulley's strategic plan and Alexander's market intel.</div>
+        </div>
+
+        <div class="cso-grid">
+          <!-- Summary for Commander -->
+          <div class="cso-panel">
+            <div class="cso-panel-hdr">
+              <div class="cso-panel-title">📋 Commander Brief — CSO Section</div>
+              <button class="cso-hdr-btn" style="font-size:10px;padding:4px 10px;" onclick="csoGenerateBrief()">Generate →</button>
+            </div>
+            <div class="cso-panel-body" id="cso-commander-brief" style="font-size:12px;line-height:1.7;color:rgba(255,255,255,.75);white-space:pre-wrap;">
+Click "Generate" to produce CC Gulley's summary for Mark Odom's morning Commander brief.
+
+This brief consolidates:
+  • Alexander's market intelligence (hot states, carrier density)
+  • Naomi's targeting output (Tier A/B lead counts, hot markets)
+  • Winston's retention report (at-risk carriers, retention rate)
+  • Current strategic plan and 30/60/90 day priorities
+            </div>
+          </div>
+
+          <!-- Bond intel flowing to CC Gulley -->
+          <div class="cso-panel">
+            <div class="cso-panel-hdr">
+              <div class="cso-panel-title">🕵️ James Bond — Intel to CSO</div>
+              <button class="cso-hdr-btn" style="font-size:10px;padding:4px 10px;" onclick="nav('bond')">Bond Office →</button>
+            </div>
+            <div class="cso-feed" id="cso-bond-feed">
+              <div style="color:rgba(255,255,255,.3);font-size:11px;text-align:center;padding:20px;">James Bond routes integration health alerts and directive reports to CC Gulley. Open Bond Office to view full channel.</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- KPI summary card for upward reporting -->
+        <div class="cso-panel" style="flex-shrink:0;">
+          <div class="cso-panel-hdr">
+            <div class="cso-panel-title">📊 Strategy Unit KPIs — Upward Report</div>
+            <span id="cso-report-ts" style="font-size:10px;color:rgba(255,255,255,.35);font-family:var(--ff-m);">—</span>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:0;">
+            <div style="padding:14px 18px;border-right:1px solid rgba(255,255,255,.08);">
+              <div style="font-family:var(--ff-h);font-size:22px;color:#38bdf8;font-weight:900;" id="cso-rpt-tier-a">—</div>
+              <div style="font-family:var(--ff-m);font-size:9px;text-transform:uppercase;letter-spacing:.8px;color:rgba(255,255,255,.4);margin-top:3px;">Tier A Targets</div>
+            </div>
+            <div style="padding:14px 18px;border-right:1px solid rgba(255,255,255,.08);">
+              <div style="font-family:var(--ff-h);font-size:22px;color:#10b981;font-weight:900;" id="cso-rpt-retention">—%</div>
+              <div style="font-family:var(--ff-m);font-size:9px;text-transform:uppercase;letter-spacing:.8px;color:rgba(255,255,255,.4);margin-top:3px;">Retention Rate</div>
+            </div>
+            <div style="padding:14px 18px;border-right:1px solid rgba(255,255,255,.08);">
+              <div style="font-family:var(--ff-h);font-size:22px;color:#f59e0b;font-weight:900;" id="cso-rpt-at-risk">—</div>
+              <div style="font-family:var(--ff-m);font-size:9px;text-transform:uppercase;letter-spacing:.8px;color:rgba(255,255,255,.4);margin-top:3px;">At-Risk Carriers</div>
+            </div>
+            <div style="padding:14px 18px;border-right:1px solid rgba(255,255,255,.08);">
+              <div style="font-family:var(--ff-h);font-size:22px;color:#38bdf8;font-weight:900;" id="cso-rpt-top-state">—</div>
+              <div style="font-family:var(--ff-m);font-size:9px;text-transform:uppercase;letter-spacing:.8px;color:rgba(255,255,255,.4);margin-top:3px;">Top Market</div>
+            </div>
+            <div style="padding:14px 18px;">
+              <div style="font-family:var(--ff-h);font-size:22px;color:#38bdf8;font-weight:900;" id="cso-rpt-tier-b">—</div>
+              <div style="font-family:var(--ff-m);font-size:9px;text-transform:uppercase;letter-spacing:.8px;color:rgba(255,255,255,.4);margin-top:3px;">Tier B Pipeline</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div><!-- /reporting -->
+
+    <!-- ════ DIRECTIVES ════ -->
+    <div class="cso-pane" id="csopane-directives">
+      <div class="cso-plan" style="gap:0;">
+
+        <!-- Compose panel (left) -->
+        <div class="cso-plan-main" style="max-width:540px;overflow-y:auto;">
+          <div>
+            <div class="cso-fl">CC GULLEY · DIRECT ORDERS</div>
+            <div class="cso-label" style="font-size:16px;">Send a Directive to a Direct Report</div>
+            <div style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:16px;">Your directive is written to org memory and applied the next time that agent runs. Use this to redirect focus, adjust priorities, or give specific instructions.</div>
+          </div>
+
+          <!-- Target agent selector -->
+          <div>
+            <div class="cso-fl">SEND TO</div>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;">
+              <button id="dir-btn-alexander" class="cso-dir-agent-btn active" onclick="csoDirSelect('alexander')">
+                <span style="font-size:18px;">🗺️</span><br/>Alexander Wright<br/><span style="font-size:9px;opacity:.6;">Market Intel</span>
+              </button>
+              <button id="dir-btn-naomi" class="cso-dir-agent-btn" onclick="csoDirSelect('naomi')">
+                <span style="font-size:18px;">🎯</span><br/>Naomi Kensington<br/><span style="font-size:9px;opacity:.6;">Targeting</span>
+              </button>
+              <button id="dir-btn-winston" class="cso-dir-agent-btn" onclick="csoDirSelect('winston')">
+                <span style="font-size:18px;">🛡️</span><br/>Winston Carmichael<br/><span style="font-size:9px;opacity:.6;">Retention</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Focus (short) -->
+          <div>
+            <div class="cso-fl">FOCUS / SUBJECT</div>
+            <input class="cso-input" id="dir-focus" placeholder="e.g. Shift focus to TX and FL immediately"/>
+          </div>
+
+          <!-- Agent-specific override fields, shown based on selection -->
+          <div id="dir-fields-alexander">
+            <div class="cso-fl">PRIORITY MARKETS (overrides plan)</div>
+            <input class="cso-input" id="dir-alex-markets" placeholder="e.g. TX, FL, GA — comma-separated states"/>
+          </div>
+          <div id="dir-fields-naomi" style="display:none;">
+            <div class="cso-fl">TARGET SEGMENTS (overrides plan)</div>
+            <input class="cso-input" id="dir-naomi-segments" placeholder="e.g. dry-van, reefer, flatbed"/>
+            <div class="cso-fl" style="margin-top:10px;">PRIORITY MARKETS (overrides plan)</div>
+            <input class="cso-input" id="dir-naomi-markets" placeholder="e.g. TX, FL, GA"/>
+          </div>
+          <div id="dir-fields-winston" style="display:none;">
+            <div class="cso-fl">RETENTION PRIORITY (overrides plan)</div>
+            <input class="cso-input" id="dir-winston-retention" placeholder="e.g. Never-loaded carriers first · escalate to Vance in 48h"/>
+          </div>
+
+          <!-- Full instruction -->
+          <div>
+            <div class="cso-fl">FULL INSTRUCTION</div>
+            <textarea class="cso-textarea" id="dir-instruction" rows="5" placeholder="Write your full directive here. This is stored to org memory and shown to the agent on their next run. Be specific — include timelines, thresholds, and what you expect back."></textarea>
+          </div>
+
+          <!-- Quick templates -->
+          <div>
+            <div class="cso-fl">QUICK TEMPLATES</div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+              <button class="cso-hdr-btn" onclick="csoDirTemplate('expand')">📈 Market Expansion</button>
+              <button class="cso-hdr-btn" onclick="csoDirTemplate('retention')">🔒 Retention Push</button>
+              <button class="cso-hdr-btn" onclick="csoDirTemplate('segment')">🎯 Segment Shift</button>
+              <button class="cso-hdr-btn" onclick="csoDirTemplate('urgent')">⚡ Urgent Refocus</button>
+            </div>
+          </div>
+
+          <div style="display:flex;gap:10px;align-items:center;margin-top:4px;">
+            <button class="cso-save-btn" id="cso-dir-send-btn" onclick="csoDirSend()">📣 Send Directive</button>
+            <button class="cso-hdr-btn" onclick="csoDirClear()">Clear</button>
+            <span id="cso-dir-status" style="font-size:11px;color:#38bdf8;"></span>
+          </div>
+        </div>
+
+        <!-- Active directives side panel -->
+        <div class="cso-plan-side" style="width:340px;">
+          <div style="padding:14px 16px;border-bottom:1px solid rgba(255,255,255,.08);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
+            <div style="font-weight:700;font-size:12px;color:#fff;">📋 Active Directives</div>
+            <button class="cso-hdr-btn" style="font-size:10px;padding:3px 8px;" onclick="csoDirLoadActive()">↺</button>
+          </div>
+          <div style="flex:1;overflow-y:auto;padding:12px 14px;display:flex;flex-direction:column;gap:8px;scrollbar-width:thin;scrollbar-color:#38bdf8 transparent;" id="cso-dir-active">
+            <div style="color:rgba(255,255,255,.3);font-size:11px;">Loading active directives…</div>
+          </div>
+        </div>
+
+      </div>
+    </div><!-- /directives -->
+
+  </div><!-- /body -->
+</div><!-- /cso-wrap -->
+</div><!-- /page-cso -->
+
 <style>
 /* ── Bond Office ──────────────────────────────────────────────────────────── */
 /* Suppress the pgIn slide-in animation — Bond is a fixed full-page overlay */
 #page-bond{animation:none;}
-#page-bond.active{position:fixed;top:93px;left:var(--sidebar-w);right:0;bottom:0;z-index:30;display:flex;flex-direction:column;overflow:hidden;background:var(--bg);}
-@media(max-width:768px){#page-bond.active{top:87px;left:0;}}
+#page-bond.active{position:fixed;top:60px;left:var(--sidebar-w);right:0;bottom:0;z-index:30;display:flex;flex-direction:column;overflow:hidden;background:var(--bg);}
+@media(max-width:768px){#page-bond.active{top:54px;left:0;}}
 .bo-wrap{display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden;background:var(--bg);}
 .bo-header{display:flex;align-items:center;justify-content:space-between;padding:14px 24px;background:var(--navy);flex-shrink:0;border-bottom:2px solid rgba(228,168,48,.3);}
 .bo-header-left{display:flex;align-items:center;gap:14px;}
@@ -8231,7 +8816,8 @@ if (typeof nav === 'function') {
 .bo-hdr-btn{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);color:rgba(255,255,255,.8);padding:5px 14px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;transition:background .15s;font-family:var(--ff-b);}
 .bo-hdr-btn:hover{background:rgba(228,168,48,.2);border-color:rgba(228,168,48,.4);color:var(--gold2);}
 /* Tab strip */
-.bo-tabs{display:flex;background:var(--navy2);border-bottom:1px solid rgba(228,168,48,.15);flex-shrink:0;padding:0 20px;gap:2px;overflow-x:auto;}
+.bo-tabs{display:flex;flex-wrap:nowrap;background:var(--navy2);border-bottom:1px solid rgba(228,168,48,.15);flex-shrink:0;padding:0 20px;gap:2px;overflow-x:auto;scrollbar-width:none;-ms-overflow-style:none;}
+.bo-tabs::-webkit-scrollbar{display:none;}
 .bo-tab{background:transparent;border:none;border-bottom:2px solid transparent;padding:10px 18px;font-size:12px;font-weight:600;color:rgba(255,255,255,.45);cursor:pointer;letter-spacing:.3px;transition:color .15s,border-color .15s;font-family:var(--ff-b);white-space:nowrap;display:flex;align-items:center;gap:6px;}
 .bo-tab:hover{color:rgba(255,255,255,.7);}
 .bo-tab.active{color:var(--gold2);border-bottom-color:var(--gold2);}
@@ -8242,7 +8828,7 @@ if (typeof nav === 'function') {
 .bo-pane.active{display:flex;flex-direction:column;flex:1;min-height:0;}
 
 /* ── Situation Room ───────────────────────────────────────────────────────── */
-.bo-sitroom{display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden;padding:20px 24px;gap:16px;}
+.bo-sitroom{display:flex;flex-direction:column;flex:1;min-height:0;overflow-y:auto;padding:20px 24px;gap:16px;scrollbar-width:thin;scrollbar-color:rgba(228,168,48,.4) transparent;}
 .bo-kpi-strip{display:flex;gap:12px;flex-shrink:0;flex-wrap:wrap;}
 .bo-kpi{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 18px;flex:1;min-width:110px;display:flex;flex-direction:column;gap:3px;}
 .bo-kpi-n{font-size:28px;font-weight:900;line-height:1;color:var(--text);}
@@ -8252,8 +8838,8 @@ if (typeof nav === 'function') {
 .bo-kpi.warn .bo-kpi-n{color:var(--orange);}
 .bo-kpi.crit .bo-kpi-n{color:var(--red);}
 .bo-kpi.gold .bo-kpi-n{color:var(--gold2);}
-.bo-sit-grid{flex:1;display:grid;grid-template-columns:1fr 380px;gap:16px;min-height:0;overflow:hidden;}
-.bo-intel-panel,.bo-brief-panel{background:var(--surface);border:1px solid var(--border);border-radius:10px;display:flex;flex-direction:column;overflow:hidden;}
+.bo-sit-grid{display:grid;grid-template-columns:1fr 380px;gap:16px;min-height:320px;}
+.bo-intel-panel,.bo-brief-panel{background:var(--surface);border:1px solid var(--border);border-radius:10px;display:flex;flex-direction:column;overflow:hidden;min-height:260px;max-height:520px;}
 .bo-panel-hdr{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--border);flex-shrink:0;}
 .bo-panel-title{font-weight:700;font-size:13px;color:var(--text);display:flex;align-items:center;gap:7px;}
 .bo-panel-action{font-size:11px;font-weight:600;color:var(--gold2);cursor:pointer;background:none;border:none;padding:0;font-family:var(--ff-b);}
@@ -8337,14 +8923,14 @@ if (typeof nav === 'function') {
 .bo-hist-item strong{color:var(--text);}
 
 /* ── Audit Report ─────────────────────────────────────────────────────────── */
-.bo-audit{display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden;padding:20px 24px;gap:14px;}
+.bo-audit{display:flex;flex-direction:column;flex:1;min-height:0;overflow-y:auto;padding:20px 24px;gap:14px;scrollbar-width:thin;scrollbar-color:rgba(228,168,48,.4) transparent;}
 .bo-audit-bar{display:flex;align-items:center;gap:12px;flex-shrink:0;flex-wrap:wrap;}
 .bo-audit-run-btn{background:var(--gold2);color:#000;border:none;padding:9px 22px;border-radius:6px;font-weight:800;font-size:12px;cursor:pointer;letter-spacing:.4px;}
 .bo-audit-run-btn:hover{background:var(--gold3);}
 .bo-audit-run-btn:disabled{opacity:.5;cursor:not-allowed;}
 .bo-audit-ts{font-family:var(--ff-m);font-size:10px;color:var(--muted);}
-.bo-audit-grid{flex:1;display:grid;grid-template-columns:1fr 340px;gap:16px;min-height:0;overflow:hidden;}
-.bo-audit-main,.bo-audit-side{background:var(--surface);border:1px solid var(--border);border-radius:10px;display:flex;flex-direction:column;overflow:hidden;}
+.bo-audit-grid{display:grid;grid-template-columns:1fr 340px;gap:16px;min-height:320px;}
+.bo-audit-main,.bo-audit-side{background:var(--surface);border:1px solid var(--border);border-radius:10px;display:flex;flex-direction:column;overflow:hidden;min-height:260px;max-height:520px;}
 .bo-audit-body{flex:1;overflow-y:auto;padding:14px 16px;scrollbar-width:thin;scrollbar-color:var(--gold2) var(--surface);}
 .bo-audit-body::-webkit-scrollbar{width:4px;}
 .bo-audit-body::-webkit-scrollbar-thumb{background:var(--gold2);border-radius:3px;}
@@ -9291,6 +9877,477 @@ window.bondRenderThread= boRenderThread;
 setInterval(()=>{ if(document.getElementById('page-bond')?.classList.contains('active')){ boLoadThread(); boLoadStatus(); } }, 30000);
 setInterval(()=>{ if(document.getElementById('page-bond')?.classList.contains('active')) boLoadSitRoom(); }, 120000);
 
+// ── CC Gulley CSO Office ──────────────────────────────────────────────────────
+const csoAPI = {
+  get: p => apiFetch(p,'GET'),
+  post: (p,b) => apiFetch(p,'POST',b),
+};
+
+function csoTab(id){
+  document.querySelectorAll('.cso-tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.cso-pane').forEach(p=>p.classList.remove('active'));
+  document.getElementById('csotab-'+id)?.classList.add('active');
+  document.getElementById('csopane-'+id)?.classList.add('active');
+  if(id==='strategy') csoLoadStrategy();
+  if(id==='intel') csoLoadIntelTab();
+  if(id==='plan') csoLoadPlan();
+  if(id==='directives') csoDirLoadActive();
+  if(id==='reporting') csoLoadReporting();
+}
+
+function csoRefresh(){
+  const active = document.querySelector('.cso-pane.active')?.id?.replace('csopane-','');
+  if(active==='strategy') csoLoadStrategy();
+  else if(active==='intel') csoLoadIntelTab();
+  else if(active==='reporting') csoLoadReporting();
+  else csoLoadStrategy();
+}
+
+function _csoSet(id,v){ const el=document.getElementById(id); if(el) el.textContent=v; }
+function _csoHtml(id,h){ const el=document.getElementById(id); if(el) el.innerHTML=h; }
+
+async function csoLoadStrategy(){
+  // Pull from org memory endpoints
+  try{
+    const [alexMem, naomiMem, winstonMem] = await Promise.allSettled([
+      csoAPI.get('/api/memory/alexander/hot_states'),
+      csoAPI.get('/api/memory/naomi/tier_a_targets'),
+      csoAPI.get('/api/memory/winston/churn_signals'),
+    ]);
+
+    let tierA='—', hotCount='—', topState='—', atRisk='—', retention='—%';
+    let alexSummary='No data — run Alexander', naomiSummary='No data — run Naomi', winstonSummary='No data — run Winston';
+    let alexKpi='Hot States: —', naomiKpi='Tier A: —', winstonKpi='Retention: —%';
+    const feedItems = [];
+
+    if(alexMem.status==='fulfilled'&&alexMem.value){
+      const d=alexMem.value;
+      const states=d.value||d;
+      const stateList=Object.keys(states||{});
+      hotCount=stateList.length;
+      topState=stateList[0]||'—';
+      alexSummary=`Top market: ${topState} · ${stateList.length} hot states identified`;
+      alexKpi=`Hot States: ${stateList.slice(0,3).join(', ')||'—'}`;
+      feedItems.push({color:'sky',from:'Alexander Wright',text:`Top market: ${topState}. Hot states: ${stateList.slice(0,5).join(', ')}.`,ts:'market intel'});
+    }
+    if(naomiMem.status==='fulfilled'&&naomiMem.value){
+      const d=naomiMem.value;
+      const targets=(d.value||d)?.targets||[];
+      const count=(d.value||d)?.count||targets.length;
+      tierA=count;
+      naomiSummary=`${count} Tier A targets ready for Vance call queue`;
+      naomiKpi=`Tier A: ${count} targets`;
+      feedItems.push({color:'sky',from:'Naomi Kensington',text:`${count} Tier A targets scored and queued. Hot market alignment active.`,ts:'targeting'});
+    }
+    if(winstonMem.status==='fulfilled'&&winstonMem.value){
+      const d=winstonMem.value;
+      const v=d.value||d;
+      atRisk=v.at_risk_count??'—';
+      retention=(v.retention_rate_pct!=null?v.retention_rate_pct+'%':'—%');
+      const names=(v.at_risk_names||[]).slice(0,3).join(', ')||'none';
+      winstonSummary=`${atRisk} at-risk carriers · retention ${retention} · top at-risk: ${names}`;
+      winstonKpi=`Retention: ${retention}`;
+      const col = parseFloat(v.retention_rate_pct)>=85?'green':'warn';
+      feedItems.push({color:col,from:'Winston Carmichael',text:`${atRisk} carriers at risk. Retention rate: ${retention}. Top: ${names}.`,ts:'retention'});
+    }
+
+    // Bond intel from memory
+    try{
+      const bondSnap = await csoAPI.get('/api/bond/api-snapshot');
+      const pending = bondSnap?.bond_channel?.pending_directives??0;
+      _csoSet('cso-kpi-bond-alerts', pending);
+      _csoSet('cso-bond-kpi','Channel: '+pending+' pending');
+      _csoSet('cso-bond-last','Integration health checked · '+pending+' pending directives');
+      if(pending>0) feedItems.push({color:'purple',from:'James Bond',text:`${pending} pending directive(s) in Bond channel awaiting CSO review.`,ts:'bond intel'});
+      else feedItems.push({color:'sky',from:'James Bond',text:'All Bond channels clear. No pending directives.',ts:'bond intel'});
+    }catch(e){
+      _csoSet('cso-bond-last','Bond office offline');
+      _csoSet('cso-bond-kpi','Channel: offline');
+    }
+
+    // Update KPIs
+    _csoSet('cso-kpi-tier-a', tierA);
+    _csoSet('cso-kpi-hot-states', hotCount);
+    _csoSet('cso-kpi-at-risk', atRisk);
+    _csoSet('cso-kpi-retention', retention);
+    _csoSet('cso-kpi-top-market', topState);
+    _csoSet('cso-alex-last', alexSummary);
+    _csoSet('cso-alex-kpi', alexKpi);
+    _csoSet('cso-naomi-last', naomiSummary);
+    _csoSet('cso-naomi-kpi', naomiKpi);
+    _csoSet('cso-winston-last', winstonSummary);
+    _csoSet('cso-winston-kpi', winstonKpi);
+
+    // Feed
+    if(feedItems.length){
+      const now = new Date().toLocaleTimeString();
+      _csoSet('cso-feed-ts', now);
+      _csoHtml('cso-intel-feed', feedItems.map(i=>`
+        <div class="cso-feed-item ${i.color}">
+          <div class="cso-feed-from"><span style="font-size:9px;">●</span>${i.from}</div>
+          <div class="cso-feed-text">${i.text}</div>
+          <div class="cso-feed-ts">${i.ts} · ${now}</div>
+        </div>`).join(''));
+    }
+  }catch(e){ console.warn('[CSO] strategy load error',e); }
+}
+
+async function csoLoadIntelTab(){
+  // Alexander detail
+  try{
+    const d = await csoAPI.get('/api/memory/alexander/hot_states');
+    const states = d?.value||d||{};
+    const entries = Object.entries(states);
+    if(entries.length){
+      _csoHtml('cso-alex-feed', entries.map(([st,cnt])=>`
+        <div class="cso-feed-item sky">
+          <div class="cso-feed-from">${st}</div>
+          <div class="cso-feed-text">${cnt} authorized carriers in sample</div>
+        </div>`).join(''));
+    } else {
+      _csoHtml('cso-alex-feed','<div style="color:rgba(255,255,255,.3);font-size:11px;text-align:center;padding:20px;">Run Alexander to load market intel</div>');
+    }
+  }catch(e){}
+
+  // Naomi detail
+  try{
+    const d = await csoAPI.get('/api/memory/naomi/tier_a_targets');
+    const v = d?.value||d||{};
+    const targets = v.targets||[];
+    if(targets.length){
+      _csoHtml('cso-naomi-feed', targets.slice(0,8).map(t=>`
+        <div class="cso-feed-item sky">
+          <div class="cso-feed-from">${t.name||t.carrier_name||'Prospect'} ${t.state?'· '+t.state:''}</div>
+          <div class="cso-feed-text">Score: ${t.score??'—'} · Fleet: ${t.fleet_size??'—'} trucks ${t.tier?' · '+t.tier:''}</div>
+        </div>`).join(''));
+    } else {
+      _csoHtml('cso-naomi-feed','<div style="color:rgba(255,255,255,.3);font-size:11px;text-align:center;padding:20px;">Run Naomi to load targeting intel</div>');
+    }
+  }catch(e){}
+
+  // Winston detail
+  try{
+    const d = await csoAPI.get('/api/memory/winston/churn_signals');
+    const v = d?.value||d||{};
+    const atRisk = v.at_risk_count??'—';
+    const retention = v.retention_rate_pct??'—';
+    const high = v.high_priority||[];
+    let html = `<div class="cso-feed-item ${parseFloat(retention)>=85?'green':'amber'}">
+      <div class="cso-feed-from">Summary</div>
+      <div class="cso-feed-text">${atRisk} at-risk carriers · ${retention}% retention rate · ${v.never_loaded_count??0} never loaded</div>
+    </div>`;
+    html += high.map(c=>`<div class="cso-feed-item red">
+      <div class="cso-feed-from">${c.name||c.carrier_id||'Carrier'}</div>
+      <div class="cso-feed-text">${c.risk_reason||'High priority at-risk'}</div>
+    </div>`).join('');
+    _csoHtml('cso-winston-feed', html||'<div style="color:rgba(255,255,255,.3);font-size:11px;text-align:center;padding:20px;">Run Winston to load retention intel</div>');
+  }catch(e){}
+}
+
+async function csoRunAgent(agent, name){
+  const btn = event?.target;
+  if(btn){ btn.disabled=true; btn.textContent='Running…'; }
+  try{
+    const result = await csoAPI.post(`/api/agents/${agent}/run`,{});
+    // Refresh whichever panel is showing
+    const active = document.querySelector('.cso-pane.active')?.id?.replace('csopane-','');
+    if(active==='strategy') await csoLoadStrategy();
+    if(active==='intel') await csoLoadIntelTab();
+    if(active==='reporting') await csoLoadReporting();
+    if(btn){ btn.disabled=false; btn.textContent='Run'; }
+  }catch(e){
+    if(btn){ btn.disabled=false; btn.textContent='Run'; }
+    console.warn('[CSO] runAgent error',e);
+  }
+}
+
+async function csoRunAll(){
+  document.querySelectorAll('.cso-reporter button').forEach(b=>{b.disabled=true;b.textContent='…';});
+  try{
+    await Promise.allSettled([
+      csoAPI.post('/api/agents/alexander/run',{}),
+      csoAPI.post('/api/agents/naomi/run',{}),
+      csoAPI.post('/api/agents/winston/run',{}),
+    ]);
+    await csoLoadStrategy();
+  }catch(e){}
+  document.querySelectorAll('.cso-reporter button').forEach(b=>{b.disabled=false;b.textContent='Run';});
+}
+
+async function csoLoadPlan(){
+  try{
+    const d = await csoAPI.get('/api/memory/cc_gulley/strategic_plan');
+    const v = d?.value||d||{};
+    if(v.priority_markets) document.getElementById('cso-plan-markets').value = (Array.isArray(v.priority_markets)?v.priority_markets.join(', '):v.priority_markets)||'';
+    if(v.target_segments)  document.getElementById('cso-plan-segments').value = (Array.isArray(v.target_segments)?v.target_segments.join(', '):v.target_segments)||'';
+    if(v.retention_priority) document.getElementById('cso-plan-retention').value = v.retention_priority||'';
+    if(v.directive) document.getElementById('cso-plan-directive').value = v.directive||'';
+    if(v.growth_target) document.getElementById('cso-plan-growth').value = v.growth_target||'';
+  }catch(e){}
+}
+
+async function csoSavePlan(){
+  const btn = document.getElementById('cso-save-btn');
+  const status = document.getElementById('cso-save-status');
+  btn.disabled=true; btn.textContent='Saving…'; status.textContent='';
+  const markets = document.getElementById('cso-plan-markets').value.split(',').map(s=>s.trim()).filter(Boolean);
+  const segments = document.getElementById('cso-plan-segments').value.split(',').map(s=>s.trim()).filter(Boolean);
+  const plan = {
+    priority_markets: markets,
+    target_segments: segments,
+    retention_priority: document.getElementById('cso-plan-retention').value.trim(),
+    directive: document.getElementById('cso-plan-directive').value.trim(),
+    growth_target: document.getElementById('cso-plan-growth').value.trim(),
+    updated_at: new Date().toISOString(),
+  };
+  try{
+    await csoAPI.post('/api/memory/store',{agent:'cc_gulley',key:'strategic_plan',value:plan,confidence:0.95,summary:`CSO Plan: markets=${markets.slice(0,3).join(',')} segments=${segments.slice(0,2).join(',')}`});
+    status.textContent='✓ Saved — Alexander, Naomi & Winston will use this on next run';
+    status.style.color='#10b981';
+    // Add to history
+    const hist = document.getElementById('cso-plan-hist');
+    if(hist){
+      const item = document.createElement('div');
+      item.className='cso-hist-item';
+      item.innerHTML=`<strong>${new Date().toLocaleString()}</strong><br>Markets: ${markets.slice(0,3).join(', ')||'—'} · Segments: ${segments.slice(0,2).join(', ')||'—'}`;
+      hist.prepend(item);
+    }
+  }catch(e){
+    status.textContent='✗ Save failed — API offline';
+    status.style.color='#ef4444';
+  }
+  btn.disabled=false; btn.textContent='💾 Save Strategic Plan';
+}
+
+async function csoLoadReporting(){
+  await csoLoadStrategy(); // reuse same data
+  // Mirror KPIs to reporting tab
+  _csoSet('cso-rpt-tier-a', document.getElementById('cso-kpi-tier-a')?.textContent||'—');
+  _csoSet('cso-rpt-retention', document.getElementById('cso-kpi-retention')?.textContent||'—%');
+  _csoSet('cso-rpt-at-risk', document.getElementById('cso-kpi-at-risk')?.textContent||'—');
+  _csoSet('cso-rpt-top-state', document.getElementById('cso-kpi-top-market')?.textContent||'—');
+  _csoSet('cso-report-ts', new Date().toLocaleString());
+  try{
+    const d = await csoAPI.get('/api/memory/naomi/tier_b_targets');
+    const v=d?.value||d||{};
+    _csoSet('cso-rpt-tier-b', v.count??'—');
+  }catch(e){}
+  // Bond intel for reporting tab
+  try{
+    const d = await csoAPI.get('/api/memory/org/market_intel');
+    const v=d?.value||d||{};
+    const ts = new Date().toLocaleTimeString();
+    _csoHtml('cso-bond-feed',`
+      <div class="cso-feed-item purple">
+        <div class="cso-feed-from">James Bond — Market Context</div>
+        <div class="cso-feed-text">Top state: ${v.top_state||'—'} · Hot states tracked: ${Object.keys(v.hot_states||{}).length}</div>
+        <div class="cso-feed-ts">via Alexander → Bond channel · ${ts}</div>
+      </div>
+      <div class="cso-feed-item sky" style="margin-top:0;">
+        <div class="cso-feed-from">Directive</div>
+        <div class="cso-feed-text">Bond monitors all integration health and routes critical alerts to CC Gulley before they hit Mark Odom. Open Bond Office for full channel history.</div>
+      </div>`);
+  }catch(e){}
+}
+
+async function csoGenerateBrief(){
+  const btn=event.target; btn.disabled=true; btn.textContent='Generating…';
+  const el=document.getElementById('cso-commander-brief');
+  el.textContent='Pulling intel from Strategy Unit…';
+  try{
+    const [alexMem,naomiMem,winstonMem,planMem] = await Promise.allSettled([
+      csoAPI.get('/api/memory/alexander/hot_states'),
+      csoAPI.get('/api/memory/naomi/tier_a_targets'),
+      csoAPI.get('/api/memory/winston/churn_signals'),
+      csoAPI.get('/api/memory/cc_gulley/strategic_plan'),
+    ]);
+    const alexStates = Object.keys(alexMem.value?.value||alexMem.value||{});
+    const naomiData  = naomiMem.value?.value||naomiMem.value||{};
+    const winstonData= winstonMem.value?.value||winstonMem.value||{};
+    const plan       = planMem.value?.value||planMem.value||{};
+    const now = new Date().toLocaleString();
+    el.textContent = [
+      `CSO BRIEF — CC Gulley → Mark Odom (CEO)`,
+      `Generated: ${now}`,
+      ``,
+      `MARKET INTELLIGENCE (Alexander Wright)`,
+      `  Hot states identified: ${alexStates.slice(0,5).join(', ')||'Run Alexander'}`,
+      `  Top market by carrier volume: ${alexStates[0]||'—'}`,
+      ``,
+      `TARGETING PIPELINE (Naomi Kensington)`,
+      `  Tier A targets ready: ${naomiData.count??'—'}`,
+      `  Top prospects queued for Vance call list`,
+      ``,
+      `CARRIER RETENTION (Winston Carmichael)`,
+      `  At-risk carriers: ${winstonData.at_risk_count??'—'}`,
+      `  Never-loaded: ${winstonData.never_loaded_count??'—'}`,
+      `  Fleet retention rate: ${winstonData.retention_rate_pct??'—'}%`,
+      ``,
+      `STRATEGIC PLAN (CC Gulley)`,
+      `  Priority markets: ${(plan.priority_markets||[]).join(', ')||'Not set'}`,
+      `  Target segments: ${(plan.target_segments||[]).join(', ')||'Not set'}`,
+      `  Growth target: ${plan.growth_target||'Not set'}`,
+      `  Directive: ${plan.directive||'No directive saved yet'}`,
+      ``,
+      `STATUS: Strategy Unit operational — all 3 agents reporting to CSO`,
+    ].join('\n');
+  }catch(e){ el.textContent='Error generating brief — check API connection'; }
+  btn.disabled=false; btn.textContent='Generate →';
+}
+
+// Auto-load when navigating to CSO page
+(function(){
+  const _origNav = window.nav;
+  if(typeof _origNav==='function'){
+    window.nav = function(id){
+      _origNav(id);
+      if(id==='cso'){
+        setTimeout(()=>{ csoLoadStrategy(); csoLoadPlan(); }, 80);
+      }
+    };
+  }
+})();
+setInterval(()=>{ if(document.getElementById('page-cso')?.classList.contains('active')) csoLoadStrategy(); }, 120000);
+
+// ── CSO Directives ────────────────────────────────────────────────────────────
+let _csoDirTarget = 'alexander';
+
+function csoDirSelect(agent){
+  _csoDirTarget = agent;
+  ['alexander','naomi','winston'].forEach(a=>{
+    document.getElementById('dir-btn-'+a)?.classList.toggle('active', a===agent);
+    const f=document.getElementById('dir-fields-'+a);
+    if(f) f.style.display=(a===agent?'block':'none');
+  });
+}
+
+function csoDirTemplate(type){
+  const focus = document.getElementById('dir-focus');
+  const instr = document.getElementById('dir-instruction');
+  const mkts  = document.getElementById('dir-alex-markets');
+  const nmkts = document.getElementById('dir-naomi-markets');
+  const segs  = document.getElementById('dir-naomi-segments');
+  const ret   = document.getElementById('dir-winston-retention');
+  if(type==='expand'){
+    focus.value='Expand coverage into new high-density markets immediately';
+    instr.value='Shift primary analysis to markets we have not fully penetrated. Identify states where carrier density is high but our active carrier count is low — these are our biggest opportunity gaps. Report top 3 underserved markets with specific carrier count estimates.';
+    if(mkts) mkts.value='TX, FL, OH, NC, GA';
+    csoDirSelect('alexander');
+  } else if(type==='retention'){
+    csoDirSelect('winston');
+    focus.value='Emergency retention push — prioritize never-loaded carriers';
+    instr.value='Flag every carrier who has been active for 30+ days with zero completed loads. Escalate the top 20 to Vance immediately for personal outreach. Set retention priority: never-loaded first, then 14-day-inactive fleet. Report back count and names within next run.';
+    if(ret) ret.value='Never-loaded carriers first — escalate top 20 to Vance within 24h';
+  } else if(type==='segment'){
+    csoDirSelect('naomi');
+    focus.value='Shift targeting to reefer and flatbed specialists';
+    instr.value='De-prioritize dry-van prospects for this cycle. Focus Tier A scoring on reefer and flatbed carriers in TX, FL, and Midwest. Corporate accounts and NEMT brokers need specialty carriers — score and surface the top 15 flatbed/reefer carriers for Vance call queue.';
+    if(segs) segs.value='reefer, flatbed';
+    if(nmkts) nmkts.value='TX, FL, IL, OH';
+  } else if(type==='urgent'){
+    focus.value='URGENT — immediate refocus required';
+    instr.value='PRIORITY CHANGE: Stand down from current run parameters. The Commander has flagged an urgent need — reassign all capacity to the directive below. Report back within this run with updated numbers. This supersedes the existing strategic plan for this cycle.';
+  }
+}
+
+async function csoDirSend(){
+  const btn = document.getElementById('cso-dir-send-btn');
+  const status = document.getElementById('cso-dir-status');
+  const focus = document.getElementById('dir-focus').value.trim();
+  const instruction = document.getElementById('dir-instruction').value.trim();
+  if(!instruction){ status.textContent='✗ Write an instruction first'; status.style.color='#ef4444'; return; }
+  btn.disabled=true; btn.textContent='Sending…';
+  status.textContent=''; status.style.color='#38bdf8';
+
+  // Build agent-specific payload
+  const value = { instruction, focus, sent_at: new Date().toISOString(), from: 'CC Gulley (CSO)' };
+  if(_csoDirTarget==='alexander'){
+    const mkts = document.getElementById('dir-alex-markets').value.trim();
+    if(mkts) value.priority_markets = mkts.split(',').map(s=>s.trim()).filter(Boolean);
+  } else if(_csoDirTarget==='naomi'){
+    const segs = document.getElementById('dir-naomi-segments').value.trim();
+    const mkts = document.getElementById('dir-naomi-markets').value.trim();
+    if(segs) value.target_segments = segs.split(',').map(s=>s.trim()).filter(Boolean);
+    if(mkts) value.priority_markets = mkts.split(',').map(s=>s.trim()).filter(Boolean);
+  } else if(_csoDirTarget==='winston'){
+    const ret = document.getElementById('dir-winston-retention').value.trim();
+    if(ret) value.retention_priority = ret;
+  }
+
+  try{
+    await csoAPI.post('/api/memory/store',{
+      agent: 'cc_gulley',
+      key: 'directive_to_'+_csoDirTarget,
+      value,
+      confidence: 0.98,
+      summary: `CSO directive to ${_csoDirTarget}: ${focus||instruction.slice(0,60)}`,
+    });
+    status.textContent=`✓ Directive sent to ${_csoDirTarget} — active on next run`;
+    status.style.color='#10b981';
+    // Flash badge
+    const badge=document.getElementById('cso-dir-badge');
+    if(badge){badge.style.display='inline';setTimeout(()=>badge.style.display='none',4000);}
+    csoDirLoadActive();
+    csoDirClear();
+  }catch(e){
+    status.textContent='✗ Failed — API offline';
+    status.style.color='#ef4444';
+  }
+  btn.disabled=false; btn.textContent='📣 Send Directive';
+}
+
+async function csoDirLoadActive(){
+  const el = document.getElementById('cso-dir-active');
+  if(!el) return;
+  const agents = [
+    {key:'directive_to_alexander', label:'Alexander Wright', color:'alexander', icon:'🗺️'},
+    {key:'directive_to_naomi',     label:'Naomi Kensington', color:'naomi',     icon:'🎯'},
+    {key:'directive_to_winston',   label:'Winston Carmichael', color:'winston', icon:'🛡️'},
+  ];
+  const cards = [];
+  for(const a of agents){
+    try{
+      const d = await csoAPI.get('/api/memory/cc_gulley/'+a.key);
+      const v = d?.value || d;
+      if(v && v.instruction){
+        cards.push(`
+          <div class="cso-dir-card ${a.color}">
+            <div class="cso-dir-card-hd">
+              ${a.icon} <span>${a.label}</span>
+              <button class="cso-dir-card-clear" onclick="csoDirClear('${a.key}')">✕ Clear</button>
+            </div>
+            <div class="cso-dir-card-to">TO: ${a.label.toUpperCase()}</div>
+            <div class="cso-dir-card-body">${v.focus ? '<strong>'+v.focus+'</strong><br>' : ''}${v.instruction}</div>
+            <div class="cso-dir-card-ts">Sent ${v.sent_at ? new Date(v.sent_at).toLocaleString() : '—'}</div>
+          </div>`);
+      }
+    }catch(e){}
+  }
+  el.innerHTML = cards.length
+    ? cards.join('')
+    : '<div style="color:rgba(255,255,255,.3);font-size:11px;text-align:center;padding:20px 0;">No active directives<br/>Send one to appear here</div>';
+}
+
+async function csoDirClear(key){
+  if(key){
+    // Clear a specific directive from org memory by overwriting with empty
+    try{
+      await csoAPI.post('/api/memory/store',{
+        agent:'cc_gulley', key, value:{}, confidence:0.5, summary:'Directive cleared by CSO'
+      });
+      csoDirLoadActive();
+    }catch(e){}
+    return;
+  }
+  // Clear compose form
+  ['dir-focus','dir-instruction','dir-alex-markets','dir-naomi-markets','dir-naomi-segments','dir-winston-retention'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.value='';
+  });
+  document.getElementById('cso-dir-status').textContent='';
+}
+
+// ── End CSO Office ────────────────────────────────────────────────────────────
+
 // ── Global Bond status poller — runs everywhere, updates topbar chip ──────────
 let _bondGlobalPrev = 0;
 
@@ -9344,7 +10401,7 @@ setInterval(bondGlobalPoll, 180000);
 <!-- ═══════════════════════════ TEST SUITE PAGE ═══════════════════════════ -->
 <div class="page" id="page-tests">
 <style>
-.ts-wrap{padding:24px 28px;height:calc(100vh - 116px);overflow-y:auto;box-sizing:border-box;}
+.ts-wrap{padding:16px 20px;flex:1;min-height:0;overflow-y:auto;box-sizing:border-box;}
 .ts-topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px;}
 .ts-title{font-family:var(--ff-p);font-size:22px;font-weight:700;color:var(--gold2);}
 .ts-subtitle{font-size:12px;color:var(--muted);margin-top:2px;}
@@ -11282,6 +12339,943 @@ async function deactivateDriver(driverId) {
     <div style="padding:20px" id="load-detail-body"></div>
   </div>
 </div>
+
+<!-- ════════════════════════════════════════════════════════════════════ -->
+<!-- LIGHT FLEET — 4 SERVICE PAGES                                       -->
+<!-- ════════════════════════════════════════════════════════════════════ -->
+<style>
+.lf-wrap{padding:0;box-sizing:border-box;}
+
+/* ── Sticky tab bar — centered, never overlaps headers ── */
+.lf-tab-bar{
+  position:sticky;top:0;z-index:10;
+  background:var(--off);
+  padding:10px 0 0;
+  margin:-16px -20px 16px;
+  border-bottom:2px solid var(--border);
+}
+.lf-tab-inner{
+  display:flex;justify-content:center;gap:4px;
+  flex-wrap:wrap;
+  padding-bottom:0;
+}
+.lf-tab{
+  display:inline-flex;align-items:center;gap:7px;
+  padding:9px 20px;
+  border:none;background:transparent;
+  font-size:13px;font-weight:600;font-family:var(--ff-b);
+  color:var(--muted);cursor:pointer;
+  border-radius:8px 8px 0 0;
+  border-bottom:2px solid transparent;
+  margin-bottom:-2px;
+  transition:all .18s;white-space:nowrap;
+}
+.lf-tab:hover{color:var(--navy);background:rgba(11,37,69,.04);}
+.lf-tab.active{color:var(--navy);border-bottom-color:var(--gold2);background:var(--white);}
+.lf-tab-badge{background:var(--red);color:#fff;font-size:9px;font-weight:700;padding:1px 5px;border-radius:8px;}
+
+.lf-hdr{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px;}
+.lf-hdr-left{min-width:0;}
+.lf-hdr h2{font-size:20px;font-weight:700;margin:0;display:flex;align-items:center;gap:10px;}
+.lf-hdr-sub{font-size:12px;color:var(--muted);margin-top:3px;}
+.lf-hdr-actions{display:flex;gap:8px;flex-shrink:0;flex-wrap:wrap;}
+
+.lf-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px;}
+.lf-kpi{background:var(--white);border:1px solid var(--border);border-radius:10px;padding:14px 16px;text-align:center;position:relative;overflow:hidden;}
+.lf-kpi::before{content:"";position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--gold),var(--gold2));}
+.lf-kpi-val{font-size:26px;font-weight:900;color:var(--navy);font-family:var(--ff-h);}
+.lf-kpi-lbl{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-top:4px;font-family:var(--ff-m);}
+
+.lf-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:16px;}
+.lf-actions-right{margin-left:auto;display:flex;gap:8px;}
+.lf-btn{background:var(--navy);color:var(--gold2);border:none;padding:8px 18px;border-radius:6px;font-weight:700;font-size:13px;cursor:pointer;transition:background .2s;}
+.lf-btn:hover{background:var(--navy2);}
+.lf-btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--border);padding:8px 14px;border-radius:6px;font-size:12px;cursor:pointer;transition:all .18s;}
+.lf-btn-ghost:hover{color:var(--navy);border-color:var(--navy);background:var(--off);}
+.lf-table-wrap{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;}
+.lf-table{width:100%;border-collapse:collapse;font-size:13px;}
+.lf-table th{text-align:left;padding:10px 14px;font-size:11px;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);border-bottom:1px solid var(--border);background:var(--card);}
+.lf-table td{padding:10px 14px;border-bottom:1px solid var(--border);vertical-align:middle;}
+.lf-table tr:last-child td{border-bottom:none;}
+.lf-table tr:hover td{background:rgba(255,255,255,.03);}
+.lf-badge{display:inline-block;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:600;letter-spacing:.3px;}
+.lf-badge.pending{background:rgba(245,158,11,.15);color:#f59e0b;}
+.lf-badge.assigned{background:rgba(59,130,246,.15);color:#3b82f6;}
+.lf-badge.in_progress{background:rgba(139,92,246,.15);color:#8b5cf6;}
+.lf-badge.completed{background:rgba(34,197,94,.15);color:#22c55e;}
+.lf-badge.cancelled{background:rgba(239,68,68,.15);color:#ef4444;}
+.lf-badge.active{background:rgba(34,197,94,.15);color:#22c55e;}
+.lf-badge.inactive{background:rgba(148,163,184,.15);color:#94a3b8;}
+.lf-badge.suspended{background:rgba(239,68,68,.15);color:#ef4444;}
+.lf-badge.clear{background:rgba(34,197,94,.15);color:#22c55e;}
+.lf-badge.flagged{background:rgba(239,68,68,.15);color:#ef4444;}
+.lf-empty{text-align:center;padding:40px;color:var(--muted);font-size:14px;}
+.lf-section-hdr{font-size:13px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin:20px 0 10px;}
+.lf-driver-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px;margin-bottom:20px;}
+.lf-driver-card{background:var(--white);border:1px solid var(--border);border-radius:12px;overflow:hidden;transition:box-shadow .2s,transform .2s;}
+.lf-driver-card:hover{box-shadow:0 4px 20px rgba(11,37,69,.1);transform:translateY(-2px);}
+.lf-driver-card-top{padding:14px 16px 12px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;gap:12px;}
+.lf-driver-avatar{width:42px;height:42px;border-radius:10px;background:var(--navy);display:flex;align-items:center;justify-content:center;font-family:var(--ff-h);font-size:16px;color:var(--gold2);font-weight:900;flex-shrink:0;text-transform:uppercase;}
+.lf-driver-card-name{font-weight:700;font-size:15px;color:var(--navy);margin-bottom:2px;}
+.lf-driver-card-meta{font-size:12px;color:var(--muted);line-height:1.5;}
+.lf-driver-card-body{padding:10px 16px 14px;}
+.lf-driver-card-row{display:flex;justify-content:space-between;align-items:center;font-size:12px;padding:5px 0;border-bottom:1px solid var(--slate);}
+.lf-driver-card-row:last-child{border-bottom:none;}
+.lf-driver-card-row .lbl{color:var(--muted);}
+.lf-driver-card-row .val{font-weight:600;color:var(--navy);text-align:right;max-width:60%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.lf-driver-svc-pills{display:flex;flex-wrap:wrap;gap:5px;margin-top:10px;padding-top:10px;border-top:1px solid var(--slate);}
+.lf-svc-pill{font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;font-family:var(--ff-m);letter-spacing:.5px;}
+.lf-svc-pill.nemt{background:rgba(5,150,105,.12);color:#059669;}
+.lf-svc-pill.executive{background:rgba(99,102,241,.12);color:#6366f1;}
+.lf-svc-pill.courier{background:rgba(245,158,11,.12);color:#d97706;}
+.lf-svc-pill.gig{background:rgba(59,130,246,.12);color:#2563eb;}
+
+/* Modal */
+.lf-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:900;display:flex;align-items:center;justify-content:center;padding:20px;}
+.lf-modal{background:var(--surface);border:1px solid var(--border);border-radius:12px;max-width:520px;width:100%;max-height:85vh;overflow-y:auto;}
+.lf-modal-hd{display:flex;align-items:center;justify-content:space-between;padding:18px 20px;border-bottom:1px solid var(--border);}
+.lf-modal-title{font-size:16px;font-weight:700;}
+.lf-modal-close{background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;padding:4px;}
+.lf-modal-body{padding:20px;}
+.lf-form-row{margin-bottom:14px;}
+.lf-form-label{display:block;font-size:12px;font-weight:600;color:var(--muted);margin-bottom:5px;text-transform:uppercase;letter-spacing:.5px;}
+.lf-form-input{width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:6px;background:var(--card);color:var(--text);font-size:13px;}
+.lf-form-input:focus{outline:none;border-color:var(--gold2);}
+.lf-form-row-2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.lf-form-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:18px;}
+</style>
+
+<!-- ── SHARED LF TAB BAR (injected into each page) ── -->
+
+<!-- ── NEMT PAGE ── -->
+<div class="page" id="page-lf-nemt">
+  <div class="lf-wrap">
+    <div class="lf-tab-bar">
+      <div class="lf-tab-inner">
+        <button class="lf-tab active" onclick="nav('lf-nemt')">🏥 NEMT</button>
+        <button class="lf-tab" onclick="nav('lf-executive')">🚗 Executive</button>
+        <button class="lf-tab" onclick="nav('lf-courier')">📦 Courier</button>
+        <button class="lf-tab" onclick="nav('lf-gig')">👥 Gig Fleet</button>
+      </div>
+    </div>
+    <div class="lf-hdr">
+      <div class="lf-hdr-left">
+        <h2>🏥 NEMT — Medical Transport</h2>
+        <div class="lf-hdr-sub">Non-Emergency Medical Transport · Medicaid / Medicare reimbursement</div>
+      </div>
+      <div class="lf-hdr-actions">
+        <button class="lf-btn-ghost" onclick="lfRefresh('lf-nemt')">↻ Refresh</button>
+        <button class="lf-btn" onclick="lfOpenTrip('nemt')">+ New Trip</button>
+      </div>
+    </div>
+    <div class="lf-kpis" id="lf-nemt-kpis">
+      <div class="lf-kpi"><div class="lf-kpi-val" id="lf-nemt-pending">—</div><div class="lf-kpi-lbl">Pending</div></div>
+      <div class="lf-kpi"><div class="lf-kpi-val" id="lf-nemt-today">—</div><div class="lf-kpi-lbl">Today's Trips</div></div>
+      <div class="lf-kpi"><div class="lf-kpi-val" id="lf-nemt-mtd">—</div><div class="lf-kpi-lbl">MTD Trips</div></div>
+      <div class="lf-kpi"><div class="lf-kpi-val" id="lf-nemt-rev">—</div><div class="lf-kpi-lbl">MTD Revenue</div></div>
+    </div>
+    <div class="lf-actions">
+      <select id="lf-nemt-status-filter" onchange="lfLoadTrips('nemt')" style="padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:var(--white);color:var(--text);">
+        <option value="">All Statuses</option>
+        <option value="pending">Pending</option>
+        <option value="assigned">Assigned</option>
+        <option value="in_progress">In Progress</option>
+        <option value="completed">Completed</option>
+        <option value="cancelled">Cancelled</option>
+      </select>
+    </div>
+    <div class="lf-table-wrap">
+      <table class="lf-table">
+        <thead><tr><th>Patient</th><th>Pickup Location</th><th>Dropoff Location</th><th>Scheduled</th><th>Driver</th><th>Mobility</th><th>Status</th><th>Rate</th><th></th></tr></thead>
+        <tbody id="lf-nemt-tbody"><tr><td colspan="9" class="lf-empty">Loading…</td></tr></tbody>
+      </table>
+    </div>
+    <div class="lf-section-hdr" style="margin-top:28px;">NEMT Clients</div>
+    <div style="display:flex;gap:8px;margin-bottom:12px;">
+      <button class="lf-btn" onclick="lfOpenNemtClient()">+ Add Client</button>
+    </div>
+    <div class="lf-table-wrap">
+      <table class="lf-table">
+        <thead><tr><th>Name</th><th>Phone</th><th>Insurance Provider</th><th>Mobility Needs</th><th>Home City</th><th>Total Trips</th><th>Status</th></tr></thead>
+        <tbody id="lf-nemt-clients-tbody"><tr><td colspan="7" class="lf-empty">Loading…</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ── EXECUTIVE PAGE ── -->
+<div class="page" id="page-lf-executive">
+  <div class="lf-wrap">
+    <div class="lf-tab-bar">
+      <div class="lf-tab-inner">
+        <button class="lf-tab" onclick="nav('lf-nemt')">🏥 NEMT</button>
+        <button class="lf-tab active" onclick="nav('lf-executive')">🚗 Executive</button>
+        <button class="lf-tab" onclick="nav('lf-courier')">📦 Courier</button>
+        <button class="lf-tab" onclick="nav('lf-gig')">👥 Gig Fleet</button>
+      </div>
+    </div>
+    <div class="lf-hdr">
+      <div class="lf-hdr-left">
+        <h2>🚗 Executive Transport</h2>
+        <div class="lf-hdr-sub">Corporate accounts · Airport transfers · VIP runs · Flight tracking</div>
+      </div>
+      <div class="lf-hdr-actions">
+        <button class="lf-btn-ghost" onclick="lfRefresh('lf-executive')">↻ Refresh</button>
+        <button class="lf-btn" onclick="lfOpenTrip('executive')">+ New Booking</button>
+      </div>
+    </div>
+    <div class="lf-kpis">
+      <div class="lf-kpi"><div class="lf-kpi-val" id="lf-exec-pending">—</div><div class="lf-kpi-lbl">Pending</div></div>
+      <div class="lf-kpi"><div class="lf-kpi-val" id="lf-exec-today">—</div><div class="lf-kpi-lbl">Today's Runs</div></div>
+      <div class="lf-kpi"><div class="lf-kpi-val" id="lf-exec-mtd">—</div><div class="lf-kpi-lbl">MTD Trips</div></div>
+      <div class="lf-kpi"><div class="lf-kpi-val" id="lf-exec-rev">—</div><div class="lf-kpi-lbl">MTD Revenue</div></div>
+    </div>
+    <div class="lf-actions">
+      <select id="lf-exec-status-filter" onchange="lfLoadTrips('executive')" style="padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:var(--white);color:var(--text);">
+        <option value="">All Statuses</option>
+        <option value="pending">Pending</option>
+        <option value="assigned">Assigned</option>
+        <option value="in_progress">In Progress</option>
+        <option value="completed">Completed</option>
+        <option value="cancelled">Cancelled</option>
+      </select>
+    </div>
+    <div class="lf-table-wrap">
+      <table class="lf-table">
+        <thead><tr><th>Client</th><th>Pickup Location</th><th>Dropoff Location</th><th>Scheduled</th><th>Vehicle Class</th><th>Flight #</th><th>Driver</th><th>Status</th><th>Rate</th><th></th></tr></thead>
+        <tbody id="lf-exec-tbody"><tr><td colspan="10" class="lf-empty">Loading…</td></tr></tbody>
+      </table>
+    </div>
+    <div class="lf-section-hdr" style="margin-top:28px;">Corporate Accounts</div>
+    <div style="display:flex;gap:8px;margin-bottom:12px;">
+      <button class="lf-btn" onclick="lfOpenExecAccount()">+ Add Account</button>
+    </div>
+    <div class="lf-table-wrap">
+      <table class="lf-table">
+        <thead><tr><th>Company</th><th>Primary Contact</th><th>Billing City</th><th>Billing Type</th><th>Rate/mi</th><th>Airport Flat</th><th>Total Trips</th><th>Status</th></tr></thead>
+        <tbody id="lf-exec-accounts-tbody"><tr><td colspan="8" class="lf-empty">Loading…</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ── COURIER PAGE ── -->
+<div class="page" id="page-lf-courier">
+  <div class="lf-wrap">
+    <div class="lf-tab-bar">
+      <div class="lf-tab-inner">
+        <button class="lf-tab" onclick="nav('lf-nemt')">🏥 NEMT</button>
+        <button class="lf-tab" onclick="nav('lf-executive')">🚗 Executive</button>
+        <button class="lf-tab active" onclick="nav('lf-courier')">📦 Courier</button>
+        <button class="lf-tab" onclick="nav('lf-gig')">👥 Gig Fleet</button>
+      </div>
+    </div>
+    <div class="lf-hdr">
+      <div class="lf-hdr-left">
+        <h2>📦 Courier & Last-Mile</h2>
+        <div class="lf-hdr-sub">Same-day delivery · Documents · Medical specimens · Urban last-mile</div>
+      </div>
+      <div class="lf-hdr-actions">
+        <button class="lf-btn-ghost" onclick="lfRefresh('lf-courier')">↻ Refresh</button>
+        <button class="lf-btn" onclick="lfOpenTrip('courier')">+ New Delivery</button>
+      </div>
+    </div>
+    <div class="lf-kpis">
+      <div class="lf-kpi"><div class="lf-kpi-val" id="lf-cour-pending">—</div><div class="lf-kpi-lbl">Pending</div></div>
+      <div class="lf-kpi"><div class="lf-kpi-val" id="lf-cour-today">—</div><div class="lf-kpi-lbl">Today's Deliveries</div></div>
+      <div class="lf-kpi"><div class="lf-kpi-val" id="lf-cour-mtd">—</div><div class="lf-kpi-lbl">MTD Deliveries</div></div>
+      <div class="lf-kpi"><div class="lf-kpi-val" id="lf-cour-rev">—</div><div class="lf-kpi-lbl">MTD Revenue</div></div>
+    </div>
+    <div class="lf-actions">
+      <select id="lf-cour-status-filter" onchange="lfLoadTrips('courier')" style="padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:var(--white);color:var(--text);">
+        <option value="">All Statuses</option>
+        <option value="pending">Pending</option>
+        <option value="assigned">Assigned</option>
+        <option value="in_progress">In Progress</option>
+        <option value="completed">Completed</option>
+        <option value="cancelled">Cancelled</option>
+      </select>
+    </div>
+    <div class="lf-table-wrap">
+      <table class="lf-table">
+        <thead><tr><th>Pickup Location</th><th>Dropoff Location</th><th>Scheduled</th><th>Pkgs</th><th>Weight</th><th>Driver</th><th>Type</th><th>Status</th><th>Rate</th><th></th></tr></thead>
+        <tbody id="lf-cour-tbody"><tr><td colspan="10" class="lf-empty">Loading…</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ── GIG FLEET PAGE ── -->
+<div class="page" id="page-lf-gig">
+  <div class="lf-wrap">
+    <div class="lf-tab-bar">
+      <div class="lf-tab-inner">
+        <button class="lf-tab" onclick="nav('lf-nemt')">🏥 NEMT</button>
+        <button class="lf-tab" onclick="nav('lf-executive')">🚗 Executive</button>
+        <button class="lf-tab" onclick="nav('lf-courier')">📦 Courier</button>
+        <button class="lf-tab active" onclick="nav('lf-gig')">👥 Gig Fleet</button>
+      </div>
+    </div>
+    <div class="lf-hdr">
+      <div class="lf-hdr-left">
+        <h2>👥 Gig Fleet Management</h2>
+        <div class="lf-hdr-sub">Car & SUV drivers · MVR checks · Background screening · Per-service approvals</div>
+      </div>
+      <div class="lf-hdr-actions">
+        <button class="lf-btn-ghost" onclick="lfRefresh('lf-gig')">↻ Refresh</button>
+        <button class="lf-btn" onclick="lfOpenDriver()">+ Add Driver</button>
+      </div>
+    </div>
+    <div class="lf-kpis">
+      <div class="lf-kpi"><div class="lf-kpi-val" id="lf-gig-total">—</div><div class="lf-kpi-lbl">Total Drivers</div></div>
+      <div class="lf-kpi"><div class="lf-kpi-val" id="lf-gig-active">—</div><div class="lf-kpi-lbl">Active</div></div>
+      <div class="lf-kpi"><div class="lf-kpi-val" id="lf-gig-clear">—</div><div class="lf-kpi-lbl">MVR Clear</div></div>
+      <div class="lf-kpi"><div class="lf-kpi-val" id="lf-gig-trips">—</div><div class="lf-kpi-lbl">Today's Trips</div></div>
+    </div>
+    <div class="lf-actions">
+      <select id="lf-gig-status-filter" onchange="lfLoadDrivers()" style="padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:var(--white);color:var(--text);">
+        <option value="">All Statuses</option>
+        <option value="active">Active</option>
+        <option value="inactive">Inactive</option>
+        <option value="suspended">Suspended</option>
+      </select>
+      <select id="lf-gig-type-filter" onchange="lfLoadDrivers()" style="padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:var(--white);color:var(--text);">
+        <option value="">All Vehicle Types</option>
+        <option value="suv">SUV</option>
+        <option value="sedan">Sedan</option>
+        <option value="cargo_van">Cargo Van</option>
+        <option value="luxury">Luxury</option>
+      </select>
+    </div>
+    <div class="lf-driver-grid" id="lf-gig-driver-grid">
+      <div class="lf-empty" style="grid-column:1/-1">Loading…</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── LIGHT FLEET MODALS ── -->
+
+<!-- New Trip Modal -->
+<div class="lf-modal-overlay" id="lf-trip-modal" style="display:none" onclick="if(event.target===this)lfCloseModal('lf-trip-modal')">
+  <div class="lf-modal">
+    <div class="lf-modal-hd">
+      <span class="lf-modal-title" id="lf-trip-modal-title">New Trip</span>
+      <button class="lf-modal-close" onclick="lfCloseModal('lf-trip-modal')">✕</button>
+    </div>
+    <div class="lf-modal-body">
+      <input type="hidden" id="lf-trip-type">
+      <div class="lf-form-row">
+        <label class="lf-form-label">Passenger / Client Name</label>
+        <input class="lf-form-input" id="lf-trip-passenger" placeholder="Full name">
+      </div>
+      <div class="lf-form-row">
+        <label class="lf-form-label">Phone</label>
+        <input class="lf-form-input" id="lf-trip-phone" placeholder="(555) 000-0000">
+      </div>
+      <div class="lf-form-row">
+        <label class="lf-form-label">Pickup Address</label>
+        <input class="lf-form-input" id="lf-trip-pickup" placeholder="123 Main St, City, State">
+      </div>
+      <div class="lf-form-row">
+        <label class="lf-form-label">Dropoff Address</label>
+        <input class="lf-form-input" id="lf-trip-dropoff" placeholder="456 Oak Ave, City, State">
+      </div>
+      <div class="lf-form-row-2">
+        <div class="lf-form-row">
+          <label class="lf-form-label">Scheduled Date/Time</label>
+          <input class="lf-form-input" id="lf-trip-scheduled" type="datetime-local">
+        </div>
+        <div class="lf-form-row">
+          <label class="lf-form-label">Rate ($)</label>
+          <input class="lf-form-input" id="lf-trip-rate" type="number" placeholder="0.00" step="0.01">
+        </div>
+      </div>
+      <!-- NEMT fields -->
+      <div id="lf-nemt-fields" style="display:none">
+        <div class="lf-form-row">
+          <label class="lf-form-label">Mobility Needs</label>
+          <select class="lf-form-input" id="lf-trip-mobility">
+            <option value="ambulatory">Ambulatory</option>
+            <option value="wheelchair">Wheelchair</option>
+            <option value="stretcher">Stretcher</option>
+          </select>
+        </div>
+        <div class="lf-form-row-2">
+          <div class="lf-form-row">
+            <label class="lf-form-label">Insurance Auth #</label>
+            <input class="lf-form-input" id="lf-trip-auth" placeholder="Auth number">
+          </div>
+          <div class="lf-form-row">
+            <label class="lf-form-label">Insurance Provider</label>
+            <input class="lf-form-input" id="lf-trip-insurer" placeholder="Medicaid / Medicare">
+          </div>
+        </div>
+      </div>
+      <!-- Executive fields -->
+      <div id="lf-exec-fields" style="display:none">
+        <div class="lf-form-row-2">
+          <div class="lf-form-row">
+            <label class="lf-form-label">Flight #</label>
+            <input class="lf-form-input" id="lf-trip-flight" placeholder="AA1234">
+          </div>
+          <div class="lf-form-row">
+            <label class="lf-form-label">Vehicle Class</label>
+            <select class="lf-form-input" id="lf-trip-vclass">
+              <option value="suv">SUV</option>
+              <option value="sedan">Sedan</option>
+              <option value="luxury">Luxury</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <!-- Courier fields -->
+      <div id="lf-cour-fields" style="display:none">
+        <div class="lf-form-row-2">
+          <div class="lf-form-row">
+            <label class="lf-form-label">Package Count</label>
+            <input class="lf-form-input" id="lf-trip-pkgs" type="number" placeholder="1" min="1">
+          </div>
+          <div class="lf-form-row">
+            <label class="lf-form-label">Total Weight (lbs)</label>
+            <input class="lf-form-input" id="lf-trip-weight" type="number" placeholder="0" step="0.1">
+          </div>
+        </div>
+      </div>
+      <div class="lf-form-row">
+        <label class="lf-form-label">Notes</label>
+        <textarea class="lf-form-input" id="lf-trip-notes" rows="2" placeholder="Special instructions…"></textarea>
+      </div>
+      <div class="lf-form-actions">
+        <button class="lf-btn-ghost" onclick="lfCloseModal('lf-trip-modal')">Cancel</button>
+        <button class="lf-btn" onclick="lfSaveTrip()">Create Trip</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- New Driver Modal -->
+<div class="lf-modal-overlay" id="lf-driver-modal" style="display:none" onclick="if(event.target===this)lfCloseModal('lf-driver-modal')">
+  <div class="lf-modal">
+    <div class="lf-modal-hd">
+      <span class="lf-modal-title">Add Light Fleet Driver</span>
+      <button class="lf-modal-close" onclick="lfCloseModal('lf-driver-modal')">✕</button>
+    </div>
+    <div class="lf-modal-body">
+      <div class="lf-form-row-2">
+        <div class="lf-form-row">
+          <label class="lf-form-label">Full Name</label>
+          <input class="lf-form-input" id="lf-drv-name" placeholder="Name">
+        </div>
+        <div class="lf-form-row">
+          <label class="lf-form-label">Phone</label>
+          <input class="lf-form-input" id="lf-drv-phone" placeholder="(555) 000-0000">
+        </div>
+      </div>
+      <div class="lf-form-row">
+        <label class="lf-form-label">Email</label>
+        <input class="lf-form-input" id="lf-drv-email" type="email" placeholder="driver@email.com">
+      </div>
+      <div class="lf-form-row-2">
+        <div class="lf-form-row">
+          <label class="lf-form-label">License Number</label>
+          <input class="lf-form-input" id="lf-drv-lic" placeholder="License #">
+        </div>
+        <div class="lf-form-row">
+          <label class="lf-form-label">License State</label>
+          <input class="lf-form-input" id="lf-drv-licstate" placeholder="TX">
+        </div>
+      </div>
+      <div class="lf-form-row">
+        <label class="lf-form-label">License Expires</label>
+        <input class="lf-form-input" id="lf-drv-licexp" type="date">
+      </div>
+      <div class="lf-form-row">
+        <label class="lf-form-label">Vehicle Type</label>
+        <select class="lf-form-input" id="lf-drv-vtype">
+          <option value="suv">SUV</option>
+          <option value="sedan">Sedan</option>
+          <option value="cargo_van">Cargo Van</option>
+          <option value="luxury">Luxury</option>
+        </select>
+      </div>
+      <div class="lf-form-row-2">
+        <div class="lf-form-row">
+          <label class="lf-form-label">Vehicle Year</label>
+          <input class="lf-form-input" id="lf-drv-vyear" type="number" placeholder="2022">
+        </div>
+        <div class="lf-form-row">
+          <label class="lf-form-label">Make / Model</label>
+          <input class="lf-form-input" id="lf-drv-vmake" placeholder="Toyota Camry">
+        </div>
+      </div>
+      <div class="lf-form-row-2">
+        <div class="lf-form-row">
+          <label class="lf-form-label">Plate</label>
+          <input class="lf-form-input" id="lf-drv-plate" placeholder="ABC1234">
+        </div>
+        <div class="lf-form-row">
+          <label class="lf-form-label">Insurance Expires</label>
+          <input class="lf-form-input" id="lf-drv-insexp" type="date">
+        </div>
+      </div>
+      <div class="lf-form-row">
+        <label class="lf-form-label">Approved Services</label>
+        <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:4px;">
+          <label style="font-size:13px;display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" value="nemt" class="lf-svc-check"> NEMT</label>
+          <label style="font-size:13px;display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" value="executive" class="lf-svc-check"> Executive</label>
+          <label style="font-size:13px;display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" value="courier" class="lf-svc-check"> Courier</label>
+          <label style="font-size:13px;display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" value="gig" class="lf-svc-check"> Gig</label>
+        </div>
+      </div>
+      <div class="lf-form-actions">
+        <button class="lf-btn-ghost" onclick="lfCloseModal('lf-driver-modal')">Cancel</button>
+        <button class="lf-btn" onclick="lfSaveDriver()">Add Driver</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- New NEMT Client Modal -->
+<div class="lf-modal-overlay" id="lf-nemt-client-modal" style="display:none" onclick="if(event.target===this)lfCloseModal('lf-nemt-client-modal')">
+  <div class="lf-modal">
+    <div class="lf-modal-hd">
+      <span class="lf-modal-title">Add NEMT Client</span>
+      <button class="lf-modal-close" onclick="lfCloseModal('lf-nemt-client-modal')">✕</button>
+    </div>
+    <div class="lf-modal-body">
+      <div class="lf-form-row-2">
+        <div class="lf-form-row">
+          <label class="lf-form-label">Full Name</label>
+          <input class="lf-form-input" id="lf-nc-name" placeholder="Patient name">
+        </div>
+        <div class="lf-form-row">
+          <label class="lf-form-label">Date of Birth</label>
+          <input class="lf-form-input" id="lf-nc-dob" type="date">
+        </div>
+      </div>
+      <div class="lf-form-row">
+        <label class="lf-form-label">Phone</label>
+        <input class="lf-form-input" id="lf-nc-phone" placeholder="(555) 000-0000">
+      </div>
+      <div class="lf-form-row">
+        <label class="lf-form-label">Address</label>
+        <input class="lf-form-input" id="lf-nc-address" placeholder="Home address">
+      </div>
+      <div class="lf-form-row-2">
+        <div class="lf-form-row">
+          <label class="lf-form-label">Insurance Provider</label>
+          <input class="lf-form-input" id="lf-nc-insurer" placeholder="Medicaid">
+        </div>
+        <div class="lf-form-row">
+          <label class="lf-form-label">Insurance ID</label>
+          <input class="lf-form-input" id="lf-nc-insid" placeholder="ID #">
+        </div>
+      </div>
+      <div class="lf-form-row">
+        <label class="lf-form-label">Mobility Needs</label>
+        <select class="lf-form-input" id="lf-nc-mobility">
+          <option value="ambulatory">Ambulatory</option>
+          <option value="wheelchair">Wheelchair</option>
+          <option value="stretcher">Stretcher</option>
+        </select>
+      </div>
+      <div class="lf-form-row">
+        <label class="lf-form-label">Notes</label>
+        <textarea class="lf-form-input" id="lf-nc-notes" rows="2" placeholder="Medical notes, special needs…"></textarea>
+      </div>
+      <div class="lf-form-actions">
+        <button class="lf-btn-ghost" onclick="lfCloseModal('lf-nemt-client-modal')">Cancel</button>
+        <button class="lf-btn" onclick="lfSaveNemtClient()">Add Client</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- New Executive Account Modal -->
+<div class="lf-modal-overlay" id="lf-exec-acct-modal" style="display:none" onclick="if(event.target===this)lfCloseModal('lf-exec-acct-modal')">
+  <div class="lf-modal">
+    <div class="lf-modal-hd">
+      <span class="lf-modal-title">Add Corporate Account</span>
+      <button class="lf-modal-close" onclick="lfCloseModal('lf-exec-acct-modal')">✕</button>
+    </div>
+    <div class="lf-modal-body">
+      <div class="lf-form-row">
+        <label class="lf-form-label">Company Name</label>
+        <input class="lf-form-input" id="lf-ea-company" placeholder="ACME Corp">
+      </div>
+      <div class="lf-form-row-2">
+        <div class="lf-form-row">
+          <label class="lf-form-label">Contact Name</label>
+          <input class="lf-form-input" id="lf-ea-contact" placeholder="Jane Doe">
+        </div>
+        <div class="lf-form-row">
+          <label class="lf-form-label">Contact Phone</label>
+          <input class="lf-form-input" id="lf-ea-phone" placeholder="(555) 000-0000">
+        </div>
+      </div>
+      <div class="lf-form-row">
+        <label class="lf-form-label">Contact Email</label>
+        <input class="lf-form-input" id="lf-ea-email" type="email" placeholder="contact@company.com">
+      </div>
+      <div class="lf-form-row-2">
+        <div class="lf-form-row">
+          <label class="lf-form-label">Rate per Mile ($)</label>
+          <input class="lf-form-input" id="lf-ea-rpm" type="number" placeholder="3.50" step="0.01">
+        </div>
+        <div class="lf-form-row">
+          <label class="lf-form-label">Airport Flat Rate ($)</label>
+          <input class="lf-form-input" id="lf-ea-airport" type="number" placeholder="85.00" step="0.01">
+        </div>
+      </div>
+      <div class="lf-form-row-2">
+        <div class="lf-form-row">
+          <label class="lf-form-label">Billing Type</label>
+          <select class="lf-form-input" id="lf-ea-billing">
+            <option value="invoice">Invoice</option>
+            <option value="card">Card</option>
+            <option value="account">Account</option>
+          </select>
+        </div>
+        <div class="lf-form-row">
+          <label class="lf-form-label">Contract Expires</label>
+          <input class="lf-form-input" id="lf-ea-expires" type="date">
+        </div>
+      </div>
+      <div class="lf-form-actions">
+        <button class="lf-btn-ghost" onclick="lfCloseModal('lf-exec-acct-modal')">Cancel</button>
+        <button class="lf-btn" onclick="lfSaveExecAccount()">Add Account</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── LIGHT FLEET JS ────────────────────────────────────────────────────────────
+const LF_API = (typeof API_BASE !== 'undefined' ? API_BASE : (window.__3LL_API_BASE || 'https://three-lakes-logistics-api.onrender.com').replace(/\/$/,''));
+
+function lfOpenModal(id){ document.getElementById(id).style.display='flex'; }
+function lfCloseModal(id){ document.getElementById(id).style.display='none'; }
+
+function lfRefresh(pageId){
+  if(pageId==='lf-nemt'){ lfLoadKpis('nemt'); lfLoadTrips('nemt'); lfLoadNemtClients(); }
+  if(pageId==='lf-executive'){ lfLoadKpis('executive'); lfLoadTrips('executive'); lfLoadExecAccounts(); }
+  if(pageId==='lf-courier'){ lfLoadKpis('courier'); lfLoadTrips('courier'); }
+  if(pageId==='lf-gig'){ lfLoadGigKpis(); lfLoadDrivers(); }
+}
+
+function loadLightFleet(id){ lfRefresh(id); }
+
+async function lfFetch(path, method='GET', body=null){
+  const token = localStorage.getItem('3ll_admin_token') || localStorage.getItem('3ll_token') || '';
+  const opts = { method, headers: {'Authorization':'Bearer '+token,'Content-Type':'application/json'} };
+  if(body) opts.body = JSON.stringify(body);
+  const r = await fetch(LF_API+path, opts);
+  if(!r.ok) throw new Error(await r.text());
+  if(r.status===204) return null;
+  return r.json();
+}
+
+function lfFmt$(n){ return n!=null ? '$'+Number(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}) : '—'; }
+function lfFmtDate(s){ if(!s) return '—'; const d=new Date(s); return d.toLocaleDateString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}); }
+function lfBadge(s){ return `<span class="lf-badge ${s}">${(s||'').replace(/_/g,' ')}</span>`; }
+function lfShortAddr(addr){ if(!addr) return '—'; const p=addr.split(','); if(p.length>=2) return `<span title="${addr}">${p[0].trim()}<br><span style="font-size:11px;color:var(--muted)">${p.slice(1,3).map(x=>x.trim()).join(', ')}</span></span>`; return addr; }
+
+// ── KPIs ──────────────────────────────────────────────────────────────────────
+async function lfLoadKpis(type){
+  try {
+    const d = await lfFetch('/api/light-fleet/kpis');
+    const t = d.by_type?.[type] || {};
+    if(type==='nemt'){
+      document.getElementById('lf-nemt-pending').textContent = t.pending ?? '0';
+      document.getElementById('lf-nemt-today').textContent   = t.today   ?? '0';
+      document.getElementById('lf-nemt-mtd').textContent     = t.mtd     ?? '0';
+      document.getElementById('lf-nemt-rev').textContent     = lfFmt$(t.mtd_revenue);
+    } else if(type==='executive'){
+      document.getElementById('lf-exec-pending').textContent = t.pending ?? '0';
+      document.getElementById('lf-exec-today').textContent   = t.today   ?? '0';
+      document.getElementById('lf-exec-mtd').textContent     = t.mtd     ?? '0';
+      document.getElementById('lf-exec-rev').textContent     = lfFmt$(t.mtd_revenue);
+    } else if(type==='courier'){
+      document.getElementById('lf-cour-pending').textContent = t.pending ?? '0';
+      document.getElementById('lf-cour-today').textContent   = t.today   ?? '0';
+      document.getElementById('lf-cour-mtd').textContent     = t.mtd     ?? '0';
+      document.getElementById('lf-cour-rev').textContent     = lfFmt$(t.mtd_revenue);
+    }
+  } catch(e){ console.error('lf kpis',e); }
+}
+
+async function lfLoadGigKpis(){
+  try {
+    const d = await lfFetch('/api/light-fleet/kpis');
+    document.getElementById('lf-gig-total').textContent = d.drivers?.total ?? '0';
+    document.getElementById('lf-gig-active').textContent = d.drivers?.active ?? '0';
+    document.getElementById('lf-gig-clear').textContent  = d.drivers?.mvr_clear ?? '0';
+    document.getElementById('lf-gig-trips').textContent  = d.today_total ?? '0';
+  } catch(e){ console.error('lf gig kpis',e); }
+}
+
+// ── TRIPS ─────────────────────────────────────────────────────────────────────
+async function lfLoadTrips(type){
+  const statusFilter = document.getElementById('lf-'+typeKey(type)+'-status-filter')?.value || '';
+  const tbody = document.getElementById('lf-'+typeKey(type)+'-tbody');
+  tbody.innerHTML = '<tr><td colspan="10" class="lf-empty">Loading…</td></tr>';
+  try {
+    let url = '/api/light-fleet/trips?trip_type='+type+'&limit=200';
+    if(statusFilter) url += '&status='+statusFilter;
+    const d = await lfFetch(url);
+    const rows = d.items || [];
+    if(!rows.length){ tbody.innerHTML='<tr><td colspan="10" class="lf-empty">No trips found</td></tr>'; return; }
+    const addrCell = (addr,maxW='160px') => `<td style="max-width:${maxW};white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${addr||''}">${lfShortAddr(addr)}</td>`;
+    if(type==='nemt'){
+      tbody.innerHTML = rows.map(r=>`<tr>
+        <td><strong>${r.passenger_name||'—'}</strong></td>
+        ${addrCell(r.pickup_address,'180px')}
+        ${addrCell(r.dropoff_address,'180px')}
+        <td style="white-space:nowrap">${lfFmtDate(r.scheduled_at)}</td>
+        <td>${r.driver_name||r.driver_id||'Unassigned'}</td>
+        <td><span class="lf-badge" style="background:rgba(99,102,241,.12);color:#6366f1">${r.mobility_needs||'ambulatory'}</span></td>
+        <td>${lfBadge(r.status)}</td>
+        <td style="font-weight:600">${lfFmt$(r.rate_total)}</td>
+        <td><button class="lf-btn-ghost" style="padding:4px 10px;font-size:11px" onclick="lfCancelTrip('${r.id}')">Cancel</button></td>
+      </tr>`).join('');
+    } else if(type==='executive'){
+      tbody.innerHTML = rows.map(r=>`<tr>
+        <td><strong>${r.passenger_name||'—'}</strong></td>
+        ${addrCell(r.pickup_address,'150px')}
+        ${addrCell(r.dropoff_address,'150px')}
+        <td style="white-space:nowrap">${lfFmtDate(r.scheduled_at)}</td>
+        <td><span class="lf-badge" style="background:rgba(99,102,241,.12);color:#6366f1">${(r.vehicle_class||'—').toUpperCase()}</span></td>
+        <td style="font-family:var(--ff-m);font-size:12px">${r.flight_number||'—'}</td>
+        <td>${r.driver_name||r.driver_id||'Unassigned'}</td>
+        <td>${lfBadge(r.status)}</td>
+        <td style="font-weight:600">${lfFmt$(r.rate_total)}</td>
+        <td><button class="lf-btn-ghost" style="padding:4px 10px;font-size:11px" onclick="lfCancelTrip('${r.id}')">Cancel</button></td>
+      </tr>`).join('');
+    } else if(type==='courier'){
+      tbody.innerHTML = rows.map(r=>`<tr>
+        ${addrCell(r.pickup_address)}
+        ${addrCell(r.dropoff_address)}
+        <td style="white-space:nowrap">${lfFmtDate(r.scheduled_at)}</td>
+        <td>${r.package_count||0}</td>
+        <td>${r.package_weight_lbs!=null?r.package_weight_lbs+' lbs':'—'}</td>
+        <td>${r.driver_name||r.driver_id||'Unassigned'}</td>
+        <td><span class="lf-badge" style="background:rgba(245,158,11,.12);color:#d97706">${r.delivery_type||'standard'}</span></td>
+        <td>${lfBadge(r.status)}</td>
+        <td style="font-weight:600">${lfFmt$(r.rate_total)}</td>
+        <td><button class="lf-btn-ghost" style="padding:4px 10px;font-size:11px" onclick="lfCancelTrip('${r.id}')">Cancel</button></td>
+      </tr>`).join('');
+    }
+  } catch(e){ console.error('lf trips',e); tbody.innerHTML='<tr><td colspan="10" class="lf-empty" style="color:var(--red)">Error loading trips</td></tr>'; }
+}
+
+function typeKey(type){ return type==='executive'?'exec':type==='courier'?'cour':type; }
+
+async function lfCancelTrip(id){
+  if(!confirm('Cancel this trip?')) return;
+  try { await lfFetch('/api/light-fleet/trips/'+id, 'PATCH', {status:'cancelled'}); lfRefresh(document.querySelector('.page.active')?.id?.replace('page-','')); } catch(e){ alert('Error: '+e.message); }
+}
+
+// ── OPEN TRIP MODAL ───────────────────────────────────────────────────────────
+function lfOpenTrip(type){
+  document.getElementById('lf-trip-type').value = type;
+  document.getElementById('lf-trip-modal-title').textContent = {nemt:'New NEMT Trip',executive:'New Executive Booking',courier:'New Courier Delivery',gig:'New Trip'}[type]||'New Trip';
+  ['lf-trip-passenger','lf-trip-phone','lf-trip-pickup','lf-trip-dropoff','lf-trip-notes','lf-trip-flight','lf-trip-auth','lf-trip-insurer'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+  ['lf-trip-rate','lf-trip-pkgs','lf-trip-weight'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+  document.getElementById('lf-trip-scheduled').value = '';
+  document.getElementById('lf-nemt-fields').style.display = type==='nemt' ? '' : 'none';
+  document.getElementById('lf-exec-fields').style.display = type==='executive' ? '' : 'none';
+  document.getElementById('lf-cour-fields').style.display = type==='courier' ? '' : 'none';
+  lfOpenModal('lf-trip-modal');
+}
+
+async function lfSaveTrip(){
+  const type = document.getElementById('lf-trip-type').value;
+  const payload = {
+    trip_type: type,
+    passenger_name: document.getElementById('lf-trip-passenger').value.trim(),
+    passenger_phone: document.getElementById('lf-trip-phone').value.trim(),
+    pickup_address:  document.getElementById('lf-trip-pickup').value.trim(),
+    dropoff_address: document.getElementById('lf-trip-dropoff').value.trim(),
+    scheduled_at:    document.getElementById('lf-trip-scheduled').value || null,
+    rate_total:      parseFloat(document.getElementById('lf-trip-rate').value) || null,
+    notes:           document.getElementById('lf-trip-notes').value.trim() || null,
+  };
+  if(!payload.pickup_address || !payload.dropoff_address){ alert('Pickup and dropoff are required.'); return; }
+  if(type==='nemt'){
+    payload.mobility_needs = document.getElementById('lf-trip-mobility').value;
+    payload.insurance_auth_number = document.getElementById('lf-trip-auth').value.trim()||null;
+    payload.insurance_provider = document.getElementById('lf-trip-insurer').value.trim()||null;
+  }
+  if(type==='executive'){
+    payload.flight_number = document.getElementById('lf-trip-flight').value.trim()||null;
+    payload.vehicle_class = document.getElementById('lf-trip-vclass').value;
+  }
+  if(type==='courier'){
+    payload.package_count = parseInt(document.getElementById('lf-trip-pkgs').value)||0;
+    payload.package_weight_lbs = parseFloat(document.getElementById('lf-trip-weight').value)||null;
+  }
+  try {
+    await lfFetch('/api/light-fleet/trips', 'POST', payload);
+    lfCloseModal('lf-trip-modal');
+    lfRefresh('lf-'+type);
+  } catch(e){ alert('Error saving trip: '+e.message); }
+}
+
+// ── NEMT CLIENTS ──────────────────────────────────────────────────────────────
+async function lfLoadNemtClients(){
+  const tbody = document.getElementById('lf-nemt-clients-tbody');
+  try {
+    const d = await lfFetch('/api/light-fleet/nemt/clients');
+    const rows = d.items || [];
+    if(!rows.length){ tbody.innerHTML='<tr><td colspan="7" class="lf-empty">No clients yet</td></tr>'; return; }
+    tbody.innerHTML = rows.map(r=>`<tr>
+      <td><strong>${r.name||'—'}</strong></td>
+      <td>${r.phone||'—'}</td>
+      <td>${r.insurance_provider||'—'}${r.insurance_id?' <span style="font-family:var(--ff-m);font-size:11px;color:var(--muted)">#'+r.insurance_id+'</span>':''}</td>
+      <td><span class="lf-badge" style="background:rgba(99,102,241,.12);color:#6366f1">${r.mobility_needs||'ambulatory'}</span></td>
+      <td>${[r.city,r.state].filter(Boolean).join(', ')||r.address?.split(',').slice(1,3).join(',')||'—'}</td>
+      <td>${r.total_trips||0}</td>
+      <td>${lfBadge(r.status||'active')}</td>
+    </tr>`).join('');
+  } catch(e){ tbody.innerHTML='<tr><td colspan="7" class="lf-empty" style="color:var(--red)">Error</td></tr>'; }
+}
+
+function lfOpenNemtClient(){
+  ['lf-nc-name','lf-nc-phone','lf-nc-address','lf-nc-insurer','lf-nc-insid','lf-nc-notes'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+  document.getElementById('lf-nc-dob').value='';
+  lfOpenModal('lf-nemt-client-modal');
+}
+
+async function lfSaveNemtClient(){
+  const payload = {
+    name: document.getElementById('lf-nc-name').value.trim(),
+    dob: document.getElementById('lf-nc-dob').value||null,
+    phone: document.getElementById('lf-nc-phone').value.trim()||null,
+    address: document.getElementById('lf-nc-address').value.trim()||null,
+    insurance_provider: document.getElementById('lf-nc-insurer').value.trim()||null,
+    insurance_id: document.getElementById('lf-nc-insid').value.trim()||null,
+    mobility_needs: document.getElementById('lf-nc-mobility').value,
+    notes: document.getElementById('lf-nc-notes').value.trim()||null,
+  };
+  if(!payload.name){ alert('Name is required.'); return; }
+  try { await lfFetch('/api/light-fleet/nemt/clients','POST',payload); lfCloseModal('lf-nemt-client-modal'); lfLoadNemtClients(); } catch(e){ alert('Error: '+e.message); }
+}
+
+// ── EXECUTIVE ACCOUNTS ────────────────────────────────────────────────────────
+async function lfLoadExecAccounts(){
+  const tbody = document.getElementById('lf-exec-accounts-tbody');
+  try {
+    const d = await lfFetch('/api/light-fleet/executive/accounts');
+    const rows = d.items || [];
+    if(!rows.length){ tbody.innerHTML='<tr><td colspan="8" class="lf-empty">No accounts yet</td></tr>'; return; }
+    tbody.innerHTML = rows.map(r=>`<tr>
+      <td><strong>${r.company_name||'—'}</strong></td>
+      <td>${r.contact_name||'—'}<br><span style="font-size:11px;color:var(--muted)">${r.contact_phone||''}</span></td>
+      <td>${[r.billing_city,r.billing_state].filter(Boolean).join(', ')||r.city||'—'}</td>
+      <td><span class="lf-badge" style="background:rgba(59,130,246,.12);color:#2563eb">${r.billing_type||'invoice'}</span></td>
+      <td>${r.rate_per_mile!=null?'$'+r.rate_per_mile+'/mi':'—'}</td>
+      <td>${r.flat_rate_airport!=null?lfFmt$(r.flat_rate_airport):'—'}</td>
+      <td>${r.total_trips||0}</td>
+      <td>${lfBadge(r.status||'active')}</td>
+    </tr>`).join('');
+  } catch(e){ tbody.innerHTML='<tr><td colspan="8" class="lf-empty" style="color:var(--red)">Error</td></tr>'; }
+}
+
+function lfOpenExecAccount(){
+  ['lf-ea-company','lf-ea-contact','lf-ea-phone','lf-ea-email','lf-ea-rpm','lf-ea-airport'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+  document.getElementById('lf-ea-expires').value='';
+  lfOpenModal('lf-exec-acct-modal');
+}
+
+async function lfSaveExecAccount(){
+  const payload = {
+    company_name: document.getElementById('lf-ea-company').value.trim(),
+    contact_name: document.getElementById('lf-ea-contact').value.trim()||null,
+    contact_phone: document.getElementById('lf-ea-phone').value.trim()||null,
+    contact_email: document.getElementById('lf-ea-email').value.trim()||null,
+    rate_per_mile: parseFloat(document.getElementById('lf-ea-rpm').value)||null,
+    flat_rate_airport: parseFloat(document.getElementById('lf-ea-airport').value)||null,
+    billing_type: document.getElementById('lf-ea-billing').value,
+    contract_expires: document.getElementById('lf-ea-expires').value||null,
+  };
+  if(!payload.company_name){ alert('Company name is required.'); return; }
+  try { await lfFetch('/api/light-fleet/executive/accounts','POST',payload); lfCloseModal('lf-exec-acct-modal'); lfLoadExecAccounts(); } catch(e){ alert('Error: '+e.message); }
+}
+
+// ── GIG DRIVERS ───────────────────────────────────────────────────────────────
+async function lfLoadDrivers(){
+  const status = document.getElementById('lf-gig-status-filter')?.value||'';
+  const vtype  = document.getElementById('lf-gig-type-filter')?.value||'';
+  const grid   = document.getElementById('lf-gig-driver-grid');
+  grid.innerHTML = '<div class="lf-empty" style="grid-column:1/-1">Loading…</div>';
+  try {
+    let url = '/api/light-fleet/drivers?limit=200';
+    if(status) url += '&status='+status;
+    if(vtype)  url += '&vehicle_type='+vtype;
+    const d = await lfFetch(url);
+    const drivers = d.items || [];
+    if(!drivers.length){ grid.innerHTML='<div class="lf-empty" style="grid-column:1/-1">No drivers found</div>'; return; }
+    grid.innerHTML = drivers.map(dr=>{
+      const initials = (dr.name||'?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+      const svcs = Array.isArray(dr.approved_services) ? dr.approved_services : (dr.approved_services||'').toString().split(',').filter(Boolean);
+      const svcPills = svcs.length ? svcs.map(s=>`<span class="lf-svc-pill ${s.trim()}">${s.trim().toUpperCase()}</span>`).join('') : '<span style="font-size:11px;color:var(--muted)">None assigned</span>';
+      const insExp = dr.insurance_expiry ? new Date(dr.insurance_expiry).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '—';
+      const licExp = dr.license_expiry ? new Date(dr.license_expiry).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '—';
+      const city = [dr.city||dr.home_city, dr.license_state].filter(Boolean).join(', ') || '—';
+      return `<div class="lf-driver-card">
+        <div class="lf-driver-card-top">
+          <div class="lf-driver-avatar">${initials}</div>
+          <div style="min-width:0;flex:1">
+            <div class="lf-driver-card-name">${dr.name||'—'}</div>
+            <div class="lf-driver-card-meta">${dr.phone||'—'}<br>${city}<br>${dr.vehicle_year||''} ${dr.vehicle_make||''} ${(dr.vehicle_type||'').toUpperCase()}</div>
+          </div>
+          <div style="flex-shrink:0">${lfBadge(dr.status||'active')}</div>
+        </div>
+        <div class="lf-driver-card-body">
+          <div class="lf-driver-card-row"><span class="lbl">MVR Check</span><span class="val">${lfBadge(dr.mvr_status||'pending')}</span></div>
+          <div class="lf-driver-card-row"><span class="lbl">Background</span><span class="val">${lfBadge(dr.background_check_status||'pending')}</span></div>
+          <div class="lf-driver-card-row"><span class="lbl">Plate</span><span class="val">${dr.license_plate||dr.plate||'—'}</span></div>
+          <div class="lf-driver-card-row"><span class="lbl">License Exp.</span><span class="val">${licExp}</span></div>
+          <div class="lf-driver-card-row"><span class="lbl">Insurance Exp.</span><span class="val">${insExp}</span></div>
+          <div class="lf-driver-card-row"><span class="lbl">Trips / Rating</span><span class="val">${dr.total_trips||0}${dr.rating!=null?' · ⭐'+dr.rating:''}</span></div>
+          <div class="lf-driver-svc-pills">${svcPills}</div>
+        </div>
+      </div>`;
+    }).join('');
+  } catch(e){ console.error('lf drivers',e); grid.innerHTML='<div class="lf-empty" style="grid-column:1/-1;color:var(--red)">Error loading drivers</div>'; }
+}
+
+function lfOpenDriver(){
+  ['lf-drv-name','lf-drv-phone','lf-drv-email','lf-drv-lic','lf-drv-licstate','lf-drv-vmake','lf-drv-plate'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+  ['lf-drv-licexp','lf-drv-insexp'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+  document.getElementById('lf-drv-vyear').value='';
+  document.querySelectorAll('.lf-svc-check').forEach(c=>c.checked=false);
+  lfOpenModal('lf-driver-modal');
+}
+
+async function lfSaveDriver(){
+  const services = [...document.querySelectorAll('.lf-svc-check:checked')].map(c=>c.value);
+  const makeModel = document.getElementById('lf-drv-vmake').value.trim();
+  const [vm, ...vmod] = makeModel.split(' ');
+  const payload = {
+    name: document.getElementById('lf-drv-name').value.trim(),
+    phone: document.getElementById('lf-drv-phone').value.trim()||null,
+    email: document.getElementById('lf-drv-email').value.trim()||null,
+    license_number: document.getElementById('lf-drv-lic').value.trim()||null,
+    license_state: document.getElementById('lf-drv-licstate').value.trim()||null,
+    license_expires: document.getElementById('lf-drv-licexp').value||null,
+    vehicle_type: document.getElementById('lf-drv-vtype').value,
+    vehicle_year: parseInt(document.getElementById('lf-drv-vyear').value)||null,
+    vehicle_make: vm||null,
+    vehicle_model: vmod.join(' ')||null,
+    vehicle_plate: document.getElementById('lf-drv-plate').value.trim()||null,
+    vehicle_insurance_expires: document.getElementById('lf-drv-insexp').value||null,
+    approved_services: services,
+  };
+  if(!payload.name){ alert('Name is required.'); return; }
+  try { await lfFetch('/api/light-fleet/drivers','POST',payload); lfCloseModal('lf-driver-modal'); lfLoadDrivers(); lfLoadGigKpis(); } catch(e){ alert('Error: '+e.message); }
+}
+</script>
 
 </body>
 </html>

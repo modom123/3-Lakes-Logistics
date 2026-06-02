@@ -13,6 +13,42 @@ from ..supabase_client import get_supabase
 from . import revenue_brain as rb
 
 
+def _ledger_financial_summary() -> dict[str, Any]:
+    """Pull recent settlement totals directly from the atomic ledger."""
+    try:
+        sb = get_supabase()
+        rows = (
+            sb.table("atomic_ledger")
+            .select("financial_payload,event_type,created_at")
+            .in_("event_type", ["lf_trip_settled", "settlement.posted"])
+            .order("created_at", desc=True)
+            .limit(500)
+            .execute()
+            .data or []
+        )
+        lf_revenue = sum(
+            float(r["financial_payload"].get("rate_total") or 0)
+            for r in rows if r["event_type"] == "lf_trip_settled"
+        )
+        lf_platform_fees = sum(
+            float(r["financial_payload"].get("platform_fee") or 0)
+            for r in rows if r["event_type"] == "lf_trip_settled"
+        )
+        trucking_revenue = sum(
+            float(r["financial_payload"].get("rate_total") or 0)
+            for r in rows if r["event_type"] == "settlement.posted"
+        )
+        return {
+            "ledger_lf_revenue": round(lf_revenue, 2),
+            "ledger_lf_platform_fees": round(lf_platform_fees, 2),
+            "ledger_trucking_revenue": round(trucking_revenue, 2),
+            "ledger_total_revenue": round(lf_revenue + trucking_revenue, 2),
+            "ledger_events_sampled": len(rows),
+        }
+    except Exception:
+        return {}
+
+
 def reconcile(limit: int = 200) -> dict[str, Any]:
     sb = get_supabase()
 
@@ -63,6 +99,7 @@ def reconcile(limit: int = 200) -> dict[str, Any]:
 
 def run(payload: dict[str, Any]) -> dict[str, Any]:
     result = reconcile(limit=int(payload.get("limit", 200)))
+    result["atomic_ledger"] = _ledger_financial_summary()
     log_agent(
         "sofia", "reconcile",
         payload={},

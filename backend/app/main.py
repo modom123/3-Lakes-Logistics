@@ -30,6 +30,11 @@ from .api import (
     revenue_brain_router,
     mailboxes_router,
     agreements_router,
+    light_fleet_router,
+    lf_public_router,
+    lf_webhooks_router,
+    checkr_webhook_router,
+    stripe_identity_webhook_router,
     driver_auth_router,
     driver_router,
     email_router,
@@ -80,6 +85,8 @@ def _start_scheduler(app: FastAPI) -> None:
             fire_email_campaign,
             fire_social_post,
             fire_follow_up_reminders,
+            fire_lf_compliance_sweep,
+            fire_lf_nemt_billing_run,
         )
         from .agents.memory import prune_interactions
         from .email.imap_poller import poll_all as poll_all_mailboxes
@@ -103,6 +110,8 @@ def _start_scheduler(app: FastAPI) -> None:
         scheduler.add_job(fire_sms_campaign, CronTrigger(hour=14, minute=0), id="sms_outreach_daily", replace_existing=True)
         scheduler.add_job(fire_email_campaign, CronTrigger(hour=14, minute=30), id="email_outreach_daily", replace_existing=True)
         scheduler.add_job(fire_social_post, CronTrigger(day_of_week="mon", hour=13, minute=0), id="social_post_weekly", replace_existing=True)
+        scheduler.add_job(fire_lf_compliance_sweep, CronTrigger(hour=6, minute=15), id="lf_compliance_daily", replace_existing=True)
+        scheduler.add_job(fire_lf_nemt_billing_run, CronTrigger(day_of_week="mon", hour=9, minute=0), id="lf_nemt_billing_weekly", replace_existing=True)
 
         scheduler.start()
         app.state.scheduler = scheduler
@@ -177,6 +186,11 @@ def create_app() -> FastAPI:
     app.include_router(adobe_intake_router,    prefix="/api",              tags=["adobe"])
     app.include_router(mailboxes_router,       prefix="/api",              tags=["mailboxes"])
     app.include_router(agreements_router,      prefix="/api/agreements",   tags=["agreements"])
+    app.include_router(light_fleet_router,     prefix="/api/light-fleet",  tags=["light-fleet"])
+    app.include_router(lf_public_router,       prefix="/api/light-fleet",  tags=["light-fleet-public"])
+    app.include_router(lf_webhooks_router,     prefix="/api",              tags=["lf-webhooks"])
+    app.include_router(checkr_webhook_router,          prefix="/api", tags=["checkr-webhook"])
+    app.include_router(stripe_identity_webhook_router, prefix="/api", tags=["stripe-identity-webhook"])
     app.include_router(studio_router,          prefix="/api",              tags=["studio"])
     app.include_router(health_router,                                      tags=["health"])
 
