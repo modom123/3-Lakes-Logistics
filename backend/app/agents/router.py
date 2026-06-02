@@ -4,10 +4,10 @@ from __future__ import annotations
 from typing import Any, Callable
 
 from . import (
-    alexander, atlas, audit, beacon, bond_courier, cash, chloe_sinclair, diana_cole,
-    dr_james_nemt, echo, elena_ross, felix_grant, isabella, james_bond, kai, katerina,
+    alexander, atlas, audit, beacon, bond_courier, casey, cash, chloe_sinclair, diana_cole,
+    dr_james_nemt, echo, elena_ross, felix_grant, isabella, james_bond, jordan, kai, katerina,
     lucas_sterling, maya, morgan_hayes, naomi, nova, orbit, outside_bond, penny, pulse,
-    rio, scout, settler, shield, signal, sofia, sonny, technical_team, vance, victor_nash,
+    rex, rio, scout, settler, shield, signal, sofia, sonny, technical_team, vance, victor_nash,
     victoria, winston,
 )
 
@@ -51,6 +51,10 @@ _DISPATCH: dict[str, Callable[[dict[str, Any]], dict[str, Any]]] = {
     "victor_nash":    victor_nash.run,
     "felix_grant":    felix_grant.run,
     "morgan_hayes":   morgan_hayes.run,
+    # ── Trading Desk ──
+    "rex":            rex.run,
+    "jordan":         jordan.run,
+    "casey":          casey.run,
 }
 
 

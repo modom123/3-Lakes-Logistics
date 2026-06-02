@@ -774,6 +774,11 @@ td.td-name{font-weight:600;color:var(--navy);}
   </div>
 
   <div class="sb-section">
+    <div class="sb-label">Trading Desk</div>
+    <div class="sb-item" onclick="nav('trading-desk')"><span class="sb-icon">📈</span> Trading Desk <span class="sb-badge" id="td-open-badge" style="display:none;background:#f59e0b;color:#000">0</span></div>
+  </div>
+
+  <div class="sb-section">
     <div class="sb-label">Dev</div>
     <div class="sb-item" onclick="nav('tests')"><span class="sb-icon">🧪</span> Test Suite</div>
   </div>
@@ -3507,7 +3512,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 let allCarriers=[], allLoads=[], allInvoices=[], currentInvFilter='all', loadCounter=3849;
 
-const pageNames={dashboard:'Dashboard',dispatch:'Dispatch Board','fleet-map':'Fleet Map',carriers:'Carriers',drivers:'Drivers',loads:'Load Manager',invoices:'Invoices & Billing',compliance:'DOT Compliance',ifta:'IFTA / Permits',insurance:'Insurance',revenue:'Revenue Tracker',providers:'Compliance Providers',checklist:'Daily Checklist',notes:'Dispatcher Notes',reports:'Team Reports','exec-command':'Exec Command',agents:'AI Agents',founders:'Founders Program',crm:'Lead CRM',leads:'Lead Pipeline',execution:'Execution Engine',factoring:'Factoring',email:'Email Center',vault:'Document Vault',clm:'CLM Scanner',ledger:'Atomic Ledger',agreements:'Agreements','lf-map':'Light Fleet Live Map','lf-nemt':'NEMT — Medical Transport','lf-executive':'Executive Transport','lf-courier':'Courier & Last-Mile','lf-gig':'Gig Fleet Management','ccg-office':'CC Gulley Office'};
+const pageNames={dashboard:'Dashboard',dispatch:'Dispatch Board','fleet-map':'Fleet Map',carriers:'Carriers',drivers:'Drivers',loads:'Load Manager',invoices:'Invoices & Billing',compliance:'DOT Compliance',ifta:'IFTA / Permits',insurance:'Insurance',revenue:'Revenue Tracker',providers:'Compliance Providers',checklist:'Daily Checklist',notes:'Dispatcher Notes',reports:'Team Reports','exec-command':'Exec Command',agents:'AI Agents',founders:'Founders Program',crm:'Lead CRM',leads:'Lead Pipeline',execution:'Execution Engine',factoring:'Factoring',email:'Email Center',vault:'Document Vault',clm:'CLM Scanner',ledger:'Atomic Ledger',agreements:'Agreements','lf-map':'Light Fleet Live Map','lf-nemt':'NEMT — Medical Transport','lf-executive':'Executive Transport','lf-courier':'Courier & Last-Mile','lf-gig':'Gig Fleet Management','ccg-office':'CC Gulley Office','trading-desk':'Trading Desk'};
 
 // ── 3 Lakes Logistics Backend API (FastAPI) ──
 const API_BASE = (window.__3LL_API_BASE || 'https://three-lakes-logistics-api.onrender.com').replace(/\/$/,'');
@@ -3628,6 +3633,7 @@ function nav(id){
   if(id==='vault')loadVault();
   if(id==='agreements')loadAgreements();
   if(id==='factoring'){loadFactoring();loadFactoringStats();}
+  if(id==='trading-desk'){tdLoadDashboard();}
   if(id==='fleet-map')initFleetMap();
   if(id==='lf-map')initLFMap();
   if(id==='drivers')loadDrivers();
@@ -15045,5 +15051,375 @@ function lfmapToggleAutoRefresh() {
 }
 </script>
 
-</body>
+<!-- ═══════════════════════════════════════════════════════════════════════
+     TRADING DESK PAGE
+════════════════════════════════════════════════════════════════════════ -->
+<div class="page" id="page-trading-desk">
+<style>
+.td-hero{background:linear-gradient(135deg,#1e3a2f 0%,#14532d 50%,#166534 100%);border-radius:16px;padding:28px 32px;margin-bottom:24px;position:relative;overflow:hidden;}
+.td-hero::before{content:'';position:absolute;top:-60px;right:-60px;width:220px;height:220px;border-radius:50%;background:rgba(34,197,94,.08);pointer-events:none;}
+.td-hero-title{font-size:22px;font-weight:800;color:#fff;margin-bottom:4px;}
+.td-hero-sub{font-size:13px;color:rgba(255,255,255,.65);}
+.td-stat-row{display:flex;gap:16px;margin-top:20px;flex-wrap:wrap;}
+.td-stat{background:rgba(0,0,0,.2);border-radius:10px;padding:12px 16px;min-width:120px;}
+.td-stat-n{font-size:22px;font-weight:800;color:#4ade80;}
+.td-stat-l{font-size:10px;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.8px;margin-top:2px;}
+.td-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:24px;}
+@media(max-width:900px){.td-grid{grid-template-columns:1fr 1fr;}}
+@media(max-width:600px){.td-grid{grid-template-columns:1fr;}}
+.td-agent-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px;}
+.td-agent-name{font-size:15px;font-weight:700;margin-bottom:2px;}
+.td-agent-role{font-size:11px;color:var(--muted);margin-bottom:14px;}
+.td-agent-btn{width:100%;padding:9px 0;font-size:12px;font-weight:700;border:none;border-radius:8px;cursor:pointer;margin-top:6px;transition:opacity .15s;}
+.td-agent-btn:active{opacity:.8;}
+.td-panel{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px;margin-bottom:20px;}
+.td-panel-hd{font-size:13px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:8px;}
+.td-table{width:100%;border-collapse:collapse;font-size:12px;}
+.td-table th{text-align:left;color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.6px;padding:6px 10px;border-bottom:1px solid var(--border);}
+.td-table td{padding:8px 10px;border-bottom:1px solid rgba(255,255,255,.04);vertical-align:middle;}
+.td-table tr:last-child td{border-bottom:none;}
+.td-pill{display:inline-block;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;}
+.td-sourced{background:rgba(99,102,241,.15);color:#a5b4fc;}
+.td-covered{background:rgba(34,197,94,.12);color:#4ade80;}
+.td-dispatched{background:rgba(245,158,11,.12);color:#fbbf24;}
+.td-settled{background:rgba(148,163,184,.1);color:var(--muted);}
+.td-form{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+@media(max-width:600px){.td-form{grid-template-columns:1fr;}}
+.td-inp{width:100%;padding:9px 12px;font-size:13px;background:var(--bg);border:1.5px solid var(--border);border-radius:8px;color:var(--text);}
+.td-inp:focus{outline:none;border-color:#22c55e;box-shadow:0 0 0 3px rgba(34,197,94,.12);}
+.td-inp-label{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;margin-bottom:5px;display:block;}
+</style>
+
+<div style="padding:0 0 40px;">
+  <!-- Hero -->
+  <div class="td-hero">
+    <div class="td-hero-title">📈 Trading Desk</div>
+    <div class="td-hero-sub">Rex · Jordan · Casey — Brokered load book, live margin tracking</div>
+    <div class="td-stat-row">
+      <div class="td-stat"><div class="td-stat-n" id="td-open-loads">—</div><div class="td-stat-l">Open Positions</div></div>
+      <div class="td-stat"><div class="td-stat-n" id="td-uncovered">—</div><div class="td-stat-l">Need Coverage</div></div>
+      <div class="td-stat"><div class="td-stat-n" id="td-today-margin">—</div><div class="td-stat-l">Today's Margin</div></div>
+      <div class="td-stat"><div class="td-stat-n" id="td-today-settled">—</div><div class="td-stat-l">Settled Today</div></div>
+    </div>
+  </div>
+
+  <!-- 3 Trader Cards -->
+  <div class="td-grid">
+
+    <!-- Rex -->
+    <div class="td-agent-card">
+      <div style="font-size:28px;margin-bottom:8px;">🎯</div>
+      <div class="td-agent-name">Rex Morgan</div>
+      <div class="td-agent-role">Senior Desk Trader · Book Manager</div>
+      <p style="font-size:12px;color:var(--muted);line-height:1.5;margin-bottom:14px;">Scores load opportunities, tracks P&L, manages open positions. Every load goes through Rex before Jordan posts it.</p>
+      <div>
+        <button class="td-agent-btn" style="background:#166534;color:#4ade80;" onclick="tdRunRex('book_status')">📊 Book Status</button>
+        <button class="td-agent-btn" style="background:var(--card);color:var(--text);" onclick="tdShowScoreForm()">🎯 Score a Load</button>
+        <button class="td-agent-btn" style="background:var(--card);color:var(--text);" onclick="tdRunRex('daily_pnl')">💰 Daily P&L</button>
+      </div>
+    </div>
+
+    <!-- Jordan -->
+    <div class="td-agent-card">
+      <div style="font-size:28px;margin-bottom:8px;">🔍</div>
+      <div class="td-agent-name">Jordan Cross</div>
+      <div class="td-agent-role">Load Acquisition Trader</div>
+      <p style="font-size:12px;color:var(--muted);line-height:1.5;margin-bottom:14px;">Sources loads from DAT, Truckstop, and direct shippers. Evaluates lanes for margin potential and posts confirmed positions.</p>
+      <div>
+        <button class="td-agent-btn" style="background:#1e3a5f;color:#93c5fd;" onclick="tdShowSourceForm()">🔍 Source Loads</button>
+        <button class="td-agent-btn" style="background:var(--card);color:var(--text);" onclick="tdShowPostForm()">➕ Post a Load</button>
+        <button class="td-agent-btn" style="background:var(--card);color:var(--text);" onclick="tdRunJordan('open_positions')">📋 Open Positions</button>
+      </div>
+    </div>
+
+    <!-- Casey -->
+    <div class="td-agent-card">
+      <div style="font-size:28px;margin-bottom:8px;">📞</div>
+      <div class="td-agent-name">Casey Lane</div>
+      <div class="td-agent-role">Carrier Coverage Trader</div>
+      <p style="font-size:12px;color:var(--muted);line-height:1.5;margin-bottom:14px;">Covers open positions with vetted carriers. Negotiates buy rates via Bland AI calls and load board postings.</p>
+      <div>
+        <button class="td-agent-btn" style="background:#3b1f6e;color:#c4b5fd;" onclick="tdShowCoverageForm()">🚛 Find Coverage</button>
+        <button class="td-agent-btn" style="background:var(--card);color:var(--text);" onclick="tdRunCasey('covered_today')">✅ Covered Today</button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Score a Load Form (hidden by default) -->
+  <div class="td-panel" id="td-score-form" style="display:none">
+    <div class="td-panel-hd">🎯 Rex — Score a Load Opportunity</div>
+    <div class="td-form" style="margin-bottom:14px;">
+      <div><label class="td-inp-label">Origin City</label><input class="td-inp" id="td-s-ocity" placeholder="Chicago"></div>
+      <div><label class="td-inp-label">Origin State</label><input class="td-inp" id="td-s-ostate" placeholder="IL" maxlength="2"></div>
+      <div><label class="td-inp-label">Dest City</label><input class="td-inp" id="td-s-dcity" placeholder="Dallas"></div>
+      <div><label class="td-inp-label">Dest State</label><input class="td-inp" id="td-s-dstate" placeholder="TX" maxlength="2"></div>
+      <div><label class="td-inp-label">Miles</label><input class="td-inp" id="td-s-miles" type="number" placeholder="920"></div>
+      <div><label class="td-inp-label">Sell Rate ($)</label><input class="td-inp" id="td-s-sell" type="number" placeholder="2400"></div>
+      <div><label class="td-inp-label">Buy Rate ($)</label><input class="td-inp" id="td-s-buy" type="number" placeholder="1950"></div>
+      <div><label class="td-inp-label">Commodity</label><input class="td-inp" id="td-s-commodity" placeholder="General Freight"></div>
+    </div>
+    <button class="btn-gold" onclick="tdScoreLoad()">Score This Load →</button>
+  </div>
+
+  <!-- Post a Load Form -->
+  <div class="td-panel" id="td-post-form" style="display:none">
+    <div class="td-panel-hd">➕ Jordan — Post a Load to the Book</div>
+    <div class="td-form" style="margin-bottom:14px;">
+      <div><label class="td-inp-label">Origin City</label><input class="td-inp" id="td-p-ocity" placeholder="Chicago"></div>
+      <div><label class="td-inp-label">Origin State</label><input class="td-inp" id="td-p-ostate" placeholder="IL" maxlength="2"></div>
+      <div><label class="td-inp-label">Dest City</label><input class="td-inp" id="td-p-dcity" placeholder="Dallas"></div>
+      <div><label class="td-inp-label">Dest State</label><input class="td-inp" id="td-p-dstate" placeholder="TX" maxlength="2"></div>
+      <div><label class="td-inp-label">Miles</label><input class="td-inp" id="td-p-miles" type="number" placeholder="920"></div>
+      <div><label class="td-inp-label">Sell Rate ($)</label><input class="td-inp" id="td-p-sell" type="number" placeholder="2400"></div>
+      <div><label class="td-inp-label">Target Buy Rate ($)</label><input class="td-inp" id="td-p-buy" type="number" placeholder="1950"></div>
+      <div><label class="td-inp-label">Pickup Date</label><input class="td-inp" id="td-p-pickup" type="date"></div>
+      <div><label class="td-inp-label">Shipper / Broker</label><input class="td-inp" id="td-p-shipper" placeholder="Acme Shippers Inc."></div>
+      <div><label class="td-inp-label">Source Platform</label>
+        <select class="td-inp" id="td-p-source">
+          <option value="direct">Direct Shipper</option>
+          <option value="dat">DAT</option>
+          <option value="truckstop">Truckstop</option>
+          <option value="123loadboard">123LoadBoard</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+    </div>
+    <button class="btn-gold" onclick="tdPostLoad()">Post to Book →</button>
+  </div>
+
+  <!-- Source Loads Form -->
+  <div class="td-panel" id="td-source-form" style="display:none">
+    <div class="td-panel-hd">🔍 Jordan — Source Loads from Load Boards</div>
+    <div class="td-form" style="margin-bottom:14px;">
+      <div><label class="td-inp-label">Origin State</label><input class="td-inp" id="td-src-state" placeholder="IL" maxlength="2"></div>
+      <div><label class="td-inp-label">Min $/Mile</label><input class="td-inp" id="td-src-rpm" type="number" step="0.01" placeholder="2.20"></div>
+      <div><label class="td-inp-label">Min Margin %</label><input class="td-inp" id="td-src-margin" type="number" placeholder="12"></div>
+      <div><label class="td-inp-label">Trailer Type</label>
+        <select class="td-inp" id="td-src-trailer">
+          <option value="dry_van">Dry Van</option>
+          <option value="reefer">Reefer</option>
+          <option value="flatbed">Flatbed</option>
+          <option value="cargo_van">Cargo Van</option>
+        </select>
+      </div>
+    </div>
+    <button class="btn-gold" onclick="tdSourceLoads()">Search Load Boards →</button>
+  </div>
+
+  <!-- Coverage Form -->
+  <div class="td-panel" id="td-coverage-form" style="display:none">
+    <div class="td-panel-hd">🚛 Casey — Find Coverage for a Load</div>
+    <div class="td-form" style="margin-bottom:14px;">
+      <div><label class="td-inp-label">Load ID (from book)</label><input class="td-inp" id="td-c-loadid" placeholder="uuid"></div>
+      <div><label class="td-inp-label">Origin State</label><input class="td-inp" id="td-c-ostate" placeholder="IL" maxlength="2"></div>
+      <div><label class="td-inp-label">Dest State</label><input class="td-inp" id="td-c-dstate" placeholder="TX" maxlength="2"></div>
+      <div><label class="td-inp-label">Miles</label><input class="td-inp" id="td-c-miles" type="number" placeholder="920"></div>
+      <div><label class="td-inp-label">Sell Rate ($)</label><input class="td-inp" id="td-c-sell" type="number" placeholder="2400"></div>
+      <div><label class="td-inp-label">Target Buy Rate ($)</label><input class="td-inp" id="td-c-buy" type="number" placeholder="1950"></div>
+      <div><label class="td-inp-label">Pickup Date</label><input class="td-inp" id="td-c-pickup" type="date"></div>
+    </div>
+    <button class="btn-gold" onclick="tdFindCoverage()">Find Coverage →</button>
+  </div>
+
+  <!-- Agent Output Panel -->
+  <div class="td-panel" id="td-output-panel" style="display:none">
+    <div class="td-panel-hd" id="td-output-title">Result</div>
+    <pre id="td-output-body" style="font-size:12px;color:var(--text);white-space:pre-wrap;word-break:break-word;max-height:420px;overflow-y:auto;margin:0;"></pre>
+  </div>
+
+  <!-- Open Positions Table -->
+  <div class="td-panel">
+    <div class="td-panel-hd">📋 Open Positions <span style="font-size:11px;font-weight:400;color:var(--muted)" id="td-book-count"></span></div>
+    <div style="overflow-x:auto;">
+      <table class="td-table">
+        <thead>
+          <tr>
+            <th>Lane</th><th>Miles</th><th>Sell</th><th>Buy</th><th>Margin</th><th>Pickup</th><th>Status</th><th>Carrier</th>
+          </tr>
+        </thead>
+        <tbody id="td-positions-body">
+          <tr><td colspan="8" style="color:var(--muted);text-align:center;padding:20px;">Loading…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+</div><!-- /page-trading-desk -->
+
+<script>
+// ── TRADING DESK ─────────────────────────────────────────────────────────────
+
+function tdLoadDashboard() {
+  tdRunRex('book_status', false);
+  tdLoadPositions();
+}
+
+async function tdAgentCall(agent, payload) {
+  const token = localStorage.getItem('3ll_token') || '';
+  const r = await fetch('/api/agents/' + agent + '/run', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+    body: JSON.stringify(payload),
+  });
+  if (!r.ok) throw new Error(r.status + ' ' + r.statusText);
+  return r.json();
+}
+
+function tdShowOutput(title, data) {
+  document.getElementById('td-output-title').textContent = title;
+  document.getElementById('td-output-body').textContent = JSON.stringify(data, null, 2);
+  document.getElementById('td-output-panel').style.display = 'block';
+  document.getElementById('td-output-panel').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+async function tdRunRex(action, showOutput = true) {
+  try {
+    const data = await tdAgentCall('rex', { action });
+    if (action === 'book_status') {
+      const el = id => document.getElementById(id);
+      el('td-open-loads').textContent   = data.open_positions ?? '—';
+      el('td-uncovered').textContent    = data.uncovered_loads ?? '—';
+      el('td-today-margin').textContent = data.today_gross_margin != null ? '$' + Number(data.today_gross_margin).toLocaleString() : '—';
+      el('td-today-settled').textContent = data.today_settled ?? '—';
+      const badge = document.getElementById('td-open-badge');
+      if (data.uncovered_loads > 0) { badge.textContent = data.uncovered_loads; badge.style.display = 'inline'; }
+    }
+    if (showOutput) tdShowOutput('Rex — ' + action, data);
+  } catch(e) { if (showOutput) tdShowOutput('Rex error', { error: e.message }); }
+}
+
+async function tdRunJordan(action, payload = {}) {
+  try {
+    const data = await tdAgentCall('jordan', { action, ...payload });
+    tdShowOutput('Jordan — ' + action, data);
+    if (action === 'open_positions') tdRenderPositions(data.positions || []);
+  } catch(e) { tdShowOutput('Jordan error', { error: e.message }); }
+}
+
+async function tdRunCasey(action, payload = {}) {
+  try {
+    const data = await tdAgentCall('casey', { action, ...payload });
+    tdShowOutput('Casey — ' + action, data);
+  } catch(e) { tdShowOutput('Casey error', { error: e.message }); }
+}
+
+function tdShowScoreForm()    { document.getElementById('td-score-form').style.display = document.getElementById('td-score-form').style.display === 'none' ? 'block' : 'none'; }
+function tdShowPostForm()     { document.getElementById('td-post-form').style.display  = document.getElementById('td-post-form').style.display  === 'none' ? 'block' : 'none'; }
+function tdShowSourceForm()   { document.getElementById('td-source-form').style.display = document.getElementById('td-source-form').style.display === 'none' ? 'block' : 'none'; }
+function tdShowCoverageForm() { document.getElementById('td-coverage-form').style.display = document.getElementById('td-coverage-form').style.display === 'none' ? 'block' : 'none'; }
+
+async function tdScoreLoad() {
+  const g = id => document.getElementById(id).value.trim();
+  const payload = {
+    action: 'score_load',
+    origin_city: g('td-s-ocity'), origin_state: g('td-s-ostate'),
+    dest_city: g('td-s-dcity'),   dest_state: g('td-s-dstate'),
+    miles: Number(g('td-s-miles')),
+    sell_rate: Number(g('td-s-sell')),
+    buy_rate: Number(g('td-s-buy')),
+    commodity: g('td-s-commodity'),
+  };
+  try {
+    const data = await tdAgentCall('rex', payload);
+    const rec = data.recommendation || '';
+    const scoreColor = rec === 'book' ? '#4ade80' : rec === 'negotiate' ? '#fbbf24' : '#f87171';
+    tdShowOutput(`Rex Score: ${data.score}/10 — ${rec.toUpperCase()} (${data.rationale})`, data);
+  } catch(e) { tdShowOutput('Rex error', { error: e.message }); }
+}
+
+async function tdPostLoad() {
+  const g = id => document.getElementById(id).value.trim();
+  const payload = {
+    action: 'post_load',
+    origin_city: g('td-p-ocity'), origin_state: g('td-p-ostate'),
+    dest_city: g('td-p-dcity'),   dest_state: g('td-p-dstate'),
+    miles: Number(g('td-p-miles')),
+    sell_rate: Number(g('td-p-sell')),
+    buy_rate: Number(g('td-p-buy')),
+    pickup_date: g('td-p-pickup'),
+    shipper_name: g('td-p-shipper'),
+    source_platform: g('td-p-source'),
+  };
+  try {
+    const data = await tdAgentCall('jordan', payload);
+    tdShowOutput('Jordan — Load Posted', data);
+    tdLoadPositions();
+  } catch(e) { tdShowOutput('Jordan error', { error: e.message }); }
+}
+
+async function tdSourceLoads() {
+  const g = id => document.getElementById(id).value.trim();
+  const payload = {
+    action: 'source_loads',
+    origin_state: g('td-src-state'),
+    min_rate_per_mile: Number(g('td-src-rpm')) || 2.20,
+    min_margin_pct: Number(g('td-src-margin')) || 12,
+    trailer_type: g('td-src-trailer'),
+  };
+  try {
+    const data = await tdAgentCall('jordan', payload);
+    tdShowOutput('Jordan — Source Loads', data);
+  } catch(e) { tdShowOutput('Jordan error', { error: e.message }); }
+}
+
+async function tdFindCoverage() {
+  const g = id => document.getElementById(id).value.trim();
+  const payload = {
+    action: 'find_coverage',
+    load_id: g('td-c-loadid'),
+    origin_state: g('td-c-ostate'), dest_state: g('td-c-dstate'),
+    miles: Number(g('td-c-miles')),
+    sell_rate: Number(g('td-c-sell')),
+    target_buy_rate: Number(g('td-c-buy')),
+    pickup_date: g('td-c-pickup'),
+  };
+  try {
+    const data = await tdAgentCall('casey', payload);
+    tdShowOutput('Casey — Coverage Strategy', data);
+  } catch(e) { tdShowOutput('Casey error', { error: e.message }); }
+}
+
+async function tdLoadPositions() {
+  try {
+    const token = localStorage.getItem('3ll_token') || '';
+    const r = await fetch('/api/agents/jordan/run', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify({ action: 'open_positions' }),
+    });
+    const data = await r.json();
+    tdRenderPositions(data.positions || []);
+  } catch(e) {}
+}
+
+function tdRenderPositions(rows) {
+  const tbody = document.getElementById('td-positions-body');
+  const countEl = document.getElementById('td-book-count');
+  if (!rows.length) {
+    tbody.innerHTML = '<tr><td colspan="8" style="color:var(--muted);text-align:center;padding:20px;">No open positions</td></tr>';
+    countEl.textContent = '';
+    return;
+  }
+  countEl.textContent = '(' + rows.length + ' loads)';
+  const statusClass = { sourced:'td-sourced', covered:'td-covered', dispatched:'td-dispatched', settled:'td-settled' };
+  tbody.innerHTML = rows.map(r => {
+    const margin = r.gross_margin != null ? '$' + Number(r.gross_margin).toFixed(0) : '—';
+    const marginPct = r.margin_pct != null ? '(' + Number(r.margin_pct).toFixed(1) + '%)' : '';
+    const cls = statusClass[r.status] || '';
+    return `<tr>
+      <td style="font-weight:600">${r.origin_state || '?'} → ${r.dest_state || '?'}</td>
+      <td>${r.miles ? Number(r.miles).toLocaleString() : '—'}</td>
+      <td style="color:var(--green)">$${Number(r.sell_rate||0).toFixed(0)}</td>
+      <td style="color:#f87171">$${Number(r.buy_rate||0).toFixed(0)}</td>
+      <td style="color:#fbbf24">${margin} <span style="font-size:10px;color:var(--muted)">${marginPct}</span></td>
+      <td>${r.pickup_date || '—'}</td>
+      <td><span class="td-pill ${cls}">${r.status}</span></td>
+      <td style="font-size:11px;color:var(--muted)">${r.covering_carrier_name || '—'}</td>
+    </tr>`;
+  }).join('');
+}
+</script>
+
 </html>
