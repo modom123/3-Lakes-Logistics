@@ -768,6 +768,7 @@ td.td-name{font-weight:600;color:var(--navy);}
     <div class="sb-label">Light Fleet</div>
     <div class="sb-item" onclick="nav('lf-map')"><span class="sb-icon">🗺️</span> LF Live Map <span class="sb-badge" id="lfmap-live-count" style="display:none;background:#8b5cf6;color:#fff">0</span></div>
     <div class="sb-item" onclick="nav('lf-nemt')"><span class="sb-icon">🏥</span> NEMT</div>
+    <div class="sb-item" onclick="nav('lf-medical')"><span class="sb-icon">🧪</span> Medical Courier</div>
     <div class="sb-item" onclick="nav('lf-executive')"><span class="sb-icon">🚗</span> Executive</div>
     <div class="sb-item" onclick="nav('lf-courier')"><span class="sb-icon">📦</span> Courier</div>
     <div class="sb-item" onclick="nav('lf-gig')"><span class="sb-icon">👥</span> Gig Fleet</div>
@@ -3515,7 +3516,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 let allCarriers=[], allLoads=[], allInvoices=[], currentInvFilter='all', loadCounter=3849;
 
-const pageNames={dashboard:'Dashboard',dispatch:'Dispatch Board','fleet-map':'Fleet Map',carriers:'Carriers',drivers:'Drivers',loads:'Load Manager',invoices:'Invoices & Billing',compliance:'DOT Compliance',ifta:'IFTA / Permits',insurance:'Insurance',revenue:'Revenue Tracker',providers:'Compliance Providers',checklist:'Daily Checklist',notes:'Dispatcher Notes',reports:'Team Reports','exec-command':'Exec Command',agents:'AI Agents',founders:'Founders Program',crm:'Lead CRM',leads:'Lead Pipeline',execution:'Execution Engine',factoring:'Factoring',email:'Email Center',vault:'Document Vault',clm:'CLM Scanner',ledger:'Atomic Ledger',agreements:'Agreements','lf-map':'Light Fleet Live Map','lf-nemt':'NEMT — Medical Transport','lf-executive':'Executive Transport','lf-courier':'Courier & Last-Mile','lf-gig':'Gig Fleet Management','ccg-office':'CC Gulley Office','trading-desk':'Trading Desk','broker-division':'Broker Division — Hub','broker-shippers':'Shipper Pipeline','broker-docs':'Docs & Invoices'};
+const pageNames={dashboard:'Dashboard',dispatch:'Dispatch Board','fleet-map':'Fleet Map',carriers:'Carriers',drivers:'Drivers',loads:'Load Manager',invoices:'Invoices & Billing',compliance:'DOT Compliance',ifta:'IFTA / Permits',insurance:'Insurance',revenue:'Revenue Tracker',providers:'Compliance Providers',checklist:'Daily Checklist',notes:'Dispatcher Notes',reports:'Team Reports','exec-command':'Exec Command',agents:'AI Agents',founders:'Founders Program',crm:'Lead CRM',leads:'Lead Pipeline',execution:'Execution Engine',factoring:'Factoring',email:'Email Center',vault:'Document Vault',clm:'CLM Scanner',ledger:'Atomic Ledger',agreements:'Agreements','lf-map':'Light Fleet Live Map','lf-nemt':'NEMT — Medical Transport','lf-medical':'Medical Courier','lf-executive':'Executive Transport','lf-courier':'Courier & Last-Mile','lf-gig':'Gig Fleet Management','ccg-office':'CC Gulley Office','trading-desk':'Trading Desk','broker-division':'Broker Division — Hub','broker-shippers':'Shipper Pipeline','broker-docs':'Docs & Invoices'};
 
 // ── 3 Lakes Logistics Backend API (FastAPI) ──
 const API_BASE = (window.__3LL_API_BASE || 'https://three-lakes-logistics-api.onrender.com').replace(/\/$/,'');
@@ -3610,7 +3611,7 @@ function nav(id){
   document.querySelectorAll('.sb-item').forEach(n=>{if(n.getAttribute('onclick')?.includes("'"+id+"'"))n.classList.add('active');});
   document.getElementById('page-title').textContent=pageNames[id]||id;
   // LF pages use full-page layout — hero acts as page header, topbar title hidden
-  const _lfFullPages=['lf-nemt','lf-executive','lf-courier','lf-gig','lf-map'];
+  const _lfFullPages=['lf-nemt','lf-medical','lf-executive','lf-courier','lf-gig','lf-map'];
   document.querySelector('.content').classList.toggle('lf-fullpage',_lfFullPages.includes(id));
   document.getElementById('main').classList.toggle('lf-fullpage',_lfFullPages.includes(id));
   // Fixed full-page overlays: always measure actual header stack
@@ -3645,6 +3646,11 @@ function nav(id){
   if(id==='drivers')loadDrivers();
   if(id==='ledger')loadLedger();
   if(id==='lf-nemt'||id==='lf-executive'||id==='lf-courier'||id==='lf-gig') loadLightFleet(id);
+  if(id==='lf-medical'){lfRunExpert('elena_ross','medical');}
+  if(id==='lf-nemt'){lfRunExpert('dr_james','nemt');}
+  if(id==='lf-executive'){lfRunExpert('victor_nash','executive');}
+  if(id==='lf-courier'){lfRunExpert('felix_grant','courier');}
+  if(id==='lf-gig'){lfRunExpert('morgan_hayes','gig');}
   if(id==='execution'){loadExecutionDomains();loadExecutionSteps();}
   if(id==='email'&&typeof mailInit==='function'){mailInit();}
 }
@@ -15055,6 +15061,84 @@ function lfmapToggleAutoRefresh() {
   clearInterval(_lfmapRefreshTimer);
   if (document.getElementById('lfmap-auto-refresh')?.checked) {
     _lfmapRefreshTimer = setInterval(lfMapRefresh, 30000);
+  }
+}
+
+// ── IEBC EXPERT REPORTS ──────────────────────────────────────────────────────
+
+async function lfRunExpert(agent, segment) {
+  const btnId = 'iebc-btn-' + segment;
+  const btn = document.getElementById(btnId);
+  if (btn) { btn.textContent = '⟳ Running…'; btn.disabled = true; }
+  try {
+    const token = localStorage.getItem('3ll_token') || '';
+    const r = await fetch('/api/agents/' + agent + '/run', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify({ action: 'report', scope: 'full' }),
+    });
+    if (!r.ok) throw new Error(r.statusText);
+    const d = await r.json();
+    lfRenderExpertReport(segment, d);
+    const ts = document.getElementById('iebc-ts-' + segment);
+    if (ts) ts.textContent = 'Last run: ' + new Date().toLocaleTimeString();
+  } catch(e) {
+    const el = document.getElementById('iebc-summary-' + segment);
+    if (el) el.textContent = 'Agent unavailable — check API key configuration.';
+  } finally {
+    if (btn) { btn.textContent = '▶ Run Report'; btn.disabled = false; }
+  }
+}
+
+function lfRenderExpertReport(segment, d) {
+  const report = d.report || d;
+  const health = report.segment_health ?? report.division_health;
+  const healthEl = document.getElementById('iebc-health-' + segment);
+  if (healthEl) {
+    healthEl.textContent = health != null ? health : '—';
+    healthEl.style.color = health >= 80 ? '#4ade80' : health >= 60 ? '#fbbf24' : '#f87171';
+  }
+  const summEl = document.getElementById('iebc-summary-' + segment);
+  if (summEl) summEl.textContent = report.ops_summary || report.summary || 'Report received.';
+
+  const flagsEl = document.getElementById('iebc-flags-' + segment);
+  const flags = report.compliance_flags || report.sla_alerts || report.client_alerts ||
+                report.performance_flags || report.driver_alerts || report.ops_flags || [];
+  if (flagsEl) {
+    if (!flags.length) {
+      flagsEl.innerHTML = '<div style="font-size:12px;color:#4ade80;">✓ No critical flags</div>';
+    } else {
+      flagsEl.innerHTML = flags.slice(0, 4).map(f => {
+        const urg = (f.urgency || 'medium').toLowerCase();
+        const cls = urg === 'critical' ? 'iebc-flag-crit' : urg === 'high' ? 'iebc-flag-high' : urg === 'medium' ? 'iebc-flag-med' : 'iebc-flag-low';
+        return `<div class="iebc-flag"><div class="iebc-flag-dot ${cls}"></div><span>${f.issue || f.opportunity || JSON.stringify(f)}</span></div>`;
+      }).join('');
+    }
+  }
+
+  const actEl = document.getElementById('iebc-actions-' + segment);
+  const actions = report.recommended_actions || [];
+  if (actEl) actEl.innerHTML = actions.slice(0, 3).map(a => `<div class="iebc-action-item">${a}</div>`).join('');
+
+  // Segment-specific extra data
+  if (segment === 'nemt' && report.broker_status) {
+    report.broker_status.forEach(b => {
+      const el = document.getElementById('iebc-broker-' + b.broker.toLowerCase().replace(/\s/g,''));
+      if (el) {
+        const cls = b.status === 'active' ? 'iebc-status-active' : b.status === 'issue' ? 'iebc-status-issue' : 'iebc-status-down';
+        el.innerHTML = `<span class="iebc-status-pill ${cls}"><span class="iebc-status-dot" style="background:currentColor"></span>${b.status}</span>`;
+      }
+    });
+  }
+  if (segment === 'courier' && report.pipeline_status) {
+    ['curri','roadie'].forEach(p => {
+      const el = document.getElementById('iebc-plat-' + p);
+      if (el) {
+        const s = report.pipeline_status[p] || 'unknown';
+        const cls = s === 'healthy' ? 'iebc-status-active' : s === 'degraded' ? 'iebc-status-issue' : 'iebc-status-down';
+        el.innerHTML = `<span class="iebc-status-pill ${cls}"><span class="iebc-status-dot" style="background:currentColor"></span>${s}</span>`;
+      }
+    });
   }
 }
 </script>
