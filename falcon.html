@@ -405,16 +405,27 @@ select.form-input{appearance:none;background-image:url("data:image/svg+xml,%3Csv
       <button class="nav-item" data-view="schedule" onclick="goView('schedule',this)">
         <span class="nav-icon">📅</span><span class="nav-label">Schedule</span>
       </button>
+      <button class="nav-item" data-view="history" onclick="goView('history',this)">
+        <span class="nav-icon">📜</span><span class="nav-label">Load History</span>
+      </button>
+      <div class="sb-section">Hours of Service</div>
+      <button class="nav-item" data-view="hos" onclick="goView('hos',this)">
+        <span class="nav-icon">⏱️</span><span class="nav-label">HOS Logger</span>
+        <span class="nav-badge" id="hos-break-badge" style="display:none;">BRK</span>
+      </button>
       <div class="sb-section">Finance</div>
       <button class="nav-item" data-view="earnings" onclick="goView('earnings',this)">
         <span class="nav-icon">💰</span><span class="nav-label">Earnings & Pay</span>
+      </button>
+      <button class="nav-item" data-view="settlements" onclick="goView('settlements',this)">
+        <span class="nav-icon">🧾</span><span class="nav-label">Settlements</span>
       </button>
       <div class="sb-section">Compliance</div>
       <button class="nav-item" data-view="dvir" onclick="goView('dvir',this)">
         <span class="nav-icon">🔍</span><span class="nav-label">DVIR Inspection</span>
       </button>
       <button class="nav-item" data-view="docs" onclick="goView('docs',this)">
-        <span class="nav-icon">📂</span><span class="nav-label">My Documents</span>
+        <span class="nav-icon">📂</span><span class="nav-label">Documents & Insurance</span>
       </button>
       <div class="sb-section">Communication</div>
       <button class="nav-item" data-view="messages" onclick="goView('messages',this)">
@@ -597,33 +608,194 @@ select.form-input{appearance:none;background-image:url("data:image/svg+xml,%3Csv
 
       <!-- ════ DOCUMENTS ════ -->
       <div class="view" id="view-docs">
+        <!-- Insurance highlight banner -->
+        <div id="ins-banner" style="display:none;background:linear-gradient(135deg,#FEF3C7,#FFFBEB);border:1px solid #FCD34D;border-radius:var(--r);padding:16px 20px;margin-bottom:16px;display:flex;align-items:center;gap:14px;">
+          <span style="font-size:28px;">🛡️</span>
+          <div style="flex:1;">
+            <div style="font-weight:700;color:#92400E;font-size:14px;">Insurance Card Required</div>
+            <div style="font-size:12px;color:#92400E;margin-top:2px;">Upload your current insurance card to stay compliant. Expires — check expiration date.</div>
+          </div>
+          <button class="btn btn-gold btn-sm" onclick="docQuickUpload('insurance')">Upload Now</button>
+        </div>
         <div class="grid-2">
           <div>
+            <!-- Category filter -->
+            <div class="chips" id="doc-cat-chips" style="margin-bottom:12px;">
+              <div class="chip active" data-cat="all" onclick="docCatFilter(this)">All</div>
+              <div class="chip" data-cat="compliance" onclick="docCatFilter(this)">Compliance</div>
+              <div class="chip" data-cat="operations" onclick="docCatFilter(this)">Operations</div>
+              <div class="chip" data-cat="financial" onclick="docCatFilter(this)">Financial</div>
+            </div>
             <div class="card">
-              <div class="card-hd"><div class="card-title">My Documents</div></div>
+              <div class="card-hd">
+                <div class="card-title">My Documents</div>
+                <button class="btn btn-ghost btn-sm" onclick="loadDocs()">↻ Refresh</button>
+              </div>
               <div id="docs-list"><div class="loading-state"><div class="spinner"></div></div></div>
             </div>
           </div>
           <div>
+            <div class="card" style="margin-bottom:16px;border:2px solid rgba(228,168,48,.3);">
+              <div class="card-hd"><div class="card-title" style="color:var(--gold);">🛡️ Insurance Upload</div></div>
+              <p style="font-size:13px;color:var(--muted);margin-bottom:14px;">Upload your current proof of insurance. Required for all active drivers.</p>
+              <label class="form-label">Insurance Provider</label>
+              <input class="form-input" id="ins-provider" placeholder="e.g. Progressive, Great West" style="margin-bottom:12px;"/>
+              <label class="form-label">Policy Number</label>
+              <input class="form-input" id="ins-policy" placeholder="Policy #" style="margin-bottom:12px;"/>
+              <label class="form-label">Expiration Date</label>
+              <input class="form-input" id="ins-exp" type="date" style="margin-bottom:12px;"/>
+              <div class="upload-zone" onclick="document.getElementById('ins-file').click()">
+                <input type="file" id="ins-file" accept="image/*,application/pdf" onchange="onFileChosen(this,'ins-file-name')"/>
+                <div style="font-size:28px;margin-bottom:8px;">🛡️</div>
+                <div style="font-weight:700;color:var(--text);font-size:13px;" id="ins-file-name">Select insurance card</div>
+                <div style="font-size:11px;color:var(--muted);margin-top:3px;">JPG, PNG, or PDF</div>
+              </div>
+              <button class="btn btn-gold btn-full" style="margin-top:12px;" onclick="uploadInsurance()">Upload Insurance Card</button>
+            </div>
             <div class="card">
-              <div class="card-hd"><div class="card-title">Upload Document</div></div>
-              <div style="margin-bottom:14px;">
-                <label class="form-label">Document Type</label>
-                <select class="form-input" id="doc-type-sel">
-                  <option value="bol">Bill of Lading (BOL)</option>
-                  <option value="pod">Proof of Delivery (POD)</option>
-                  <option value="lumper">Lumper Receipt</option>
-                  <option value="medical_card">Medical Card</option>
-                  <option value="insurance">Insurance Card</option>
-                </select>
-              </div>
+              <div class="card-hd"><div class="card-title">Upload Other Document</div></div>
+              <label class="form-label">Document Type</label>
+              <select class="form-input" id="doc-type-sel" style="margin-bottom:12px;">
+                <option value="bol">Bill of Lading (BOL)</option>
+                <option value="pod">Proof of Delivery (POD)</option>
+                <option value="lumper">Lumper Receipt</option>
+                <option value="medical_card">Medical Card</option>
+              </select>
+              <label class="form-label">Expiration Date (if applicable)</label>
+              <input class="form-input" id="doc-exp" type="date" style="margin-bottom:12px;"/>
               <div class="upload-zone" onclick="document.getElementById('doc-file').click()">
-                <input type="file" id="doc-file" accept="image/*,application/pdf" onchange="onDocFileChosen(this)"/>
-                <div style="font-size:36px;margin-bottom:10px;">📤</div>
-                <div style="font-weight:700;color:var(--text);margin-bottom:4px;" id="doc-file-name">Click to select file</div>
-                <div style="font-size:12px;color:var(--muted);">JPG, PNG, or PDF · Max 20 MB</div>
+                <input type="file" id="doc-file" accept="image/*,application/pdf" onchange="onFileChosen(this,'doc-file-name')"/>
+                <div style="font-size:28px;margin-bottom:8px;">📤</div>
+                <div style="font-weight:700;color:var(--text);font-size:13px;" id="doc-file-name">Click to select file</div>
+                <div style="font-size:11px;color:var(--muted);margin-top:3px;">JPG, PNG, or PDF · Max 20 MB</div>
               </div>
-              <button class="btn btn-gold btn-full" style="margin-top:14px;" onclick="uploadDoc()">Upload Document</button>
+              <button class="btn btn-ghost btn-full" style="margin-top:12px;" onclick="uploadDoc()">Upload Document</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ════ LOAD HISTORY ════ -->
+      <div class="view" id="view-history">
+        <div class="card" style="margin-bottom:16px;">
+          <div class="card-hd">
+            <div class="card-title">Load History</div>
+            <div style="display:flex;gap:8px;align-items:center;">
+              <select class="form-input" id="hist-period" style="padding:6px 10px;font-size:12px;width:auto;" onchange="loadHistory()">
+                <option value="30">Last 30 Days</option>
+                <option value="90">Last 90 Days</option>
+                <option value="365">This Year</option>
+                <option value="all">All Time</option>
+              </select>
+              <button class="btn btn-ghost btn-sm" onclick="loadHistory()">↻</button>
+            </div>
+          </div>
+          <!-- Summary tiles -->
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px;" id="hist-tiles">
+            <div class="kpi-tile" style="padding:14px;"><div class="kpi-val" id="hist-count">—</div><div class="kpi-lbl">Loads</div></div>
+            <div class="kpi-tile" style="padding:14px;"><div class="kpi-val" id="hist-miles">—</div><div class="kpi-lbl">Total Miles</div></div>
+            <div class="kpi-tile" style="padding:14px;"><div class="kpi-val" id="hist-gross">—</div><div class="kpi-lbl">Gross Earned</div></div>
+            <div class="kpi-tile" style="padding:14px;"><div class="kpi-val" id="hist-rpm">—</div><div class="kpi-lbl">Rate / Mile</div></div>
+          </div>
+          <div id="hist-body"><div class="loading-state"><div class="spinner"></div></div></div>
+        </div>
+      </div>
+
+      <!-- ════ HOS LOGGER ════ -->
+      <div class="view" id="view-hos">
+        <!-- Status Buttons -->
+        <div class="card" style="margin-bottom:16px;">
+          <div class="card-hd"><div class="card-title">Current Duty Status</div><div id="hos-clock-display" style="font-size:18px;font-weight:800;font-family:monospace;color:var(--navy);">00:00:00</div></div>
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px;">
+            <button class="btn btn-ghost btn-full" id="hos-btn-driving" onclick="setHosStatus('driving')" style="flex-direction:column;gap:4px;padding:14px 8px;">
+              <span style="font-size:22px;">🚗</span><span style="font-size:11px;font-weight:700;">Driving</span>
+            </button>
+            <button class="btn btn-ghost btn-full" id="hos-btn-onduty" onclick="setHosStatus('onduty')" style="flex-direction:column;gap:4px;padding:14px 8px;">
+              <span style="font-size:22px;">📋</span><span style="font-size:11px;font-weight:700;">On Duty</span>
+            </button>
+            <button class="btn btn-ghost btn-full" id="hos-btn-offduty" onclick="setHosStatus('offduty')" style="flex-direction:column;gap:4px;padding:14px 8px;">
+              <span style="font-size:22px;">🏠</span><span style="font-size:11px;font-weight:700;">Off Duty</span>
+            </button>
+            <button class="btn btn-ghost btn-full" id="hos-btn-sleeper" onclick="setHosStatus('sleeper')" style="flex-direction:column;gap:4px;padding:14px 8px;">
+              <span style="font-size:22px;">😴</span><span style="font-size:11px;font-weight:700;">Sleeper</span>
+            </button>
+          </div>
+          <div id="hos-break-alert" style="display:none;background:#FEF3C7;border:1px solid #FCD34D;border-radius:8px;padding:12px 16px;font-size:13px;font-weight:600;color:#92400E;">
+            ⚠️ 30-minute break required — you have driven 8+ hours without a break.
+          </div>
+        </div>
+        <!-- HOS Clocks -->
+        <div class="grid-2" style="margin-bottom:16px;">
+          <div class="card">
+            <div class="card-title" style="margin-bottom:14px;">Regulatory Clocks</div>
+            <div style="margin-bottom:16px;">
+              <div style="display:flex;justify-content:space-between;margin-bottom:5px;"><span style="font-size:13px;font-weight:600;">Drive Time Remaining</span><span id="hos-drive-rem" style="font-size:13px;font-weight:800;font-family:monospace;color:var(--green);">11:00</span></div>
+              <div class="hos-bar"><div class="hos-fill" id="hos-drive-fill" style="width:100%;background:var(--green);"></div></div>
+              <div style="font-size:11px;color:var(--muted);">11-hour daily driving limit</div>
+            </div>
+            <div style="margin-bottom:16px;">
+              <div style="display:flex;justify-content:space-between;margin-bottom:5px;"><span style="font-size:13px;font-weight:600;">On-Duty Window</span><span id="hos-duty-rem" style="font-size:13px;font-weight:800;font-family:monospace;color:var(--amber);">14:00</span></div>
+              <div class="hos-bar"><div class="hos-fill" id="hos-duty-fill" style="width:100%;background:var(--amber);"></div></div>
+              <div style="font-size:11px;color:var(--muted);">14-hour on-duty window</div>
+            </div>
+            <div style="margin-bottom:16px;">
+              <div style="display:flex;justify-content:space-between;margin-bottom:5px;"><span style="font-size:13px;font-weight:600;">Break Due In</span><span id="hos-break-rem" style="font-size:13px;font-weight:800;font-family:monospace;color:var(--blue);">8:00</span></div>
+              <div class="hos-bar"><div class="hos-fill" id="hos-break-fill" style="width:100%;background:var(--blue);"></div></div>
+              <div style="font-size:11px;color:var(--muted);">30-min break required after 8h driving</div>
+            </div>
+            <div>
+              <div style="display:flex;justify-content:space-between;margin-bottom:5px;"><span style="font-size:13px;font-weight:600;">70-Hour Cycle</span><span id="hos-cycle-rem" style="font-size:13px;font-weight:800;font-family:monospace;color:var(--muted);">70:00</span></div>
+              <div class="hos-bar"><div class="hos-fill" id="hos-cycle-fill" style="width:100%;background:var(--navy2);"></div></div>
+              <div style="font-size:11px;color:var(--muted);">8-day rolling 70-hour limit</div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-title" style="margin-bottom:14px;">Today's Log</div>
+            <!-- Visual timeline bar -->
+            <div style="position:relative;height:36px;border-radius:6px;overflow:hidden;background:var(--off);margin-bottom:8px;" id="hos-timeline"></div>
+            <div style="display:flex;gap:12px;font-size:11px;color:var(--muted);margin-bottom:16px;flex-wrap:wrap;">
+              <span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#3B82F6;margin-right:4px;"></span>Driving</span>
+              <span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#F59E0B;margin-right:4px;"></span>On Duty</span>
+              <span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#6B7A99;margin-right:4px;"></span>Off Duty</span>
+              <span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#1B3E75;margin-right:4px;"></span>Sleeper</span>
+            </div>
+            <div class="card-title" style="margin-bottom:10px;">Log Entries</div>
+            <div id="hos-log-list" style="max-height:220px;overflow-y:auto;"></div>
+            <button class="btn btn-ghost btn-full" style="margin-top:12px;" onclick="hosReset()">🔄 Reset for New Day</button>
+          </div>
+        </div>
+        <!-- 7-day summary -->
+        <div class="card">
+          <div class="card-hd"><div class="card-title">7-Day Hours Summary</div></div>
+          <div id="hos-week" style="overflow-x:auto;">
+            <table style="width:100%;border-collapse:collapse;font-size:12px;">
+              <thead><tr style="border-bottom:2px solid var(--border);">
+                <th style="text-align:left;padding:8px 4px;color:var(--muted);font-weight:700;">Day</th>
+                <th style="padding:8px 4px;color:var(--muted);font-weight:700;text-align:center;">Driving</th>
+                <th style="padding:8px 4px;color:var(--muted);font-weight:700;text-align:center;">On Duty</th>
+                <th style="padding:8px 4px;color:var(--muted);font-weight:700;text-align:center;">Off Duty</th>
+                <th style="padding:8px 4px;color:var(--muted);font-weight:700;text-align:center;">Total</th>
+              </tr></thead>
+              <tbody id="hos-week-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ════ SETTLEMENTS ════ -->
+      <div class="view" id="view-settlements">
+        <div style="display:grid;grid-template-columns:280px 1fr;gap:16px;height:calc(100vh - 120px);">
+          <div class="card" style="overflow-y:auto;">
+            <div class="card-hd"><div class="card-title">Pay Periods</div></div>
+            <div id="settle-list"><div class="loading-state"><div class="spinner"></div></div></div>
+          </div>
+          <div class="card" style="overflow-y:auto;">
+            <div id="settle-detail">
+              <div class="empty">
+                <div class="empty-icon">🧾</div>
+                <h3>Select a pay period</h3>
+                <p>Click a settlement on the left to view the full statement.</p>
+              </div>
             </div>
           </div>
         </div>
@@ -775,8 +947,9 @@ let _currentView = 'dashboard';
 
 const PAGE_TITLES = {
   dashboard:'Dashboard', myload:'My Load', loadboard:'Load Board',
-  schedule:'Schedule', earnings:'Earnings & Pay', dvir:'DVIR Inspection',
-  docs:'My Documents', messages:'Messages', location:'Location Ping',
+  schedule:'Schedule', history:'Load History', hos:'Hours of Service (HOS)',
+  earnings:'Earnings & Pay', settlements:'Settlements', dvir:'DVIR Inspection',
+  docs:'Documents & Insurance', messages:'Messages', location:'Location Ping',
   profile:'My Profile',
 };
 
@@ -844,6 +1017,9 @@ function goView(id, btn) {
   else if (id==='profile') loadProfile();
   else if (id==='location') initLocation();
   else if (id==='dvir') resetDvir();
+  else if (id==='history') loadHistory();
+  else if (id==='hos') initHos();
+  else if (id==='settlements') loadSettlements();
 }
 
 function toggleSidebar() {
@@ -1311,34 +1487,100 @@ async function requestPayout() {
 }
 
 // ── DOCUMENTS ────────────────────────────────────────────────────
+const DOC_CAT = {
+  BOL:'operations',POD:'operations',LUMPER:'operations',
+  INSURANCE:'financial',MEDICAL_CARD:'compliance',
+  CDL:'compliance',DRUG_TEST:'compliance',AGREEMENT:'compliance',W9:'financial',
+};
+const DOC_ICON = {BOL:'📋',POD:'✅',LUMPER:'💵',INSURANCE:'🛡️',MEDICAL_CARD:'🏥',CDL:'🪪',DRUG_TEST:'🧪',AGREEMENT:'📄',W9:'💼'};
+let _allDocs = [];
+let _docCatFilter = 'all';
+
 async function loadDocs() {
   const el = document.getElementById('docs-list');
   el.innerHTML = '<div class="loading-state"><div class="spinner"></div></div>';
   try {
     const data = await api('GET', '/api/driver/profile');
-    const docs = data.recent_documents || [];
-    if (!docs.length) {
-      el.innerHTML = '<div class="empty" style="padding:20px 0;"><div class="empty-icon">📂</div><h3>No Documents</h3><p>Upload your first document to get started.</p></div>';
-      return;
-    }
-    const iconMap = {BOL:'📋',POD:'✅',LUMPER:'💵',INSURANCE:'🛡️',MEDICAL_CARD:'🏥'};
-    el.innerHTML = docs.map(d=>`
-      <div class="doc-item">
-        <div class="doc-icon">${iconMap[d.doc_type]||'📄'}</div>
-        <div class="doc-info">
-          <div class="doc-name">${d.filename||d.doc_type}</div>
-          <div class="doc-meta">${d.doc_type} · ${(d.created_at||'').slice(0,10)}</div>
-        </div>
-        <span class="badge ${d.scan_status==='approved'?'badge-green':d.scan_status==='pending'?'badge-amber':'badge-red'}">${d.scan_status||'pending'}</span>
-      </div>`).join('');
+    _allDocs = data.recent_documents || [];
+    renderDocs();
+    // Show insurance banner if no insurance doc on file
+    const hasIns = _allDocs.some(d=>d.doc_type==='INSURANCE');
+    document.getElementById('ins-banner').style.display = hasIns ? 'none' : 'flex';
   } catch(e) {
     el.innerHTML = '<div style="font-size:13px;color:var(--muted);padding:12px 0;">Could not load documents.</div>';
   }
 }
 
-function onDocFileChosen(input) {
+function docCatFilter(chip) {
+  document.querySelectorAll('#doc-cat-chips .chip').forEach(c=>c.classList.remove('active'));
+  chip.classList.add('active');
+  _docCatFilter = chip.dataset.cat;
+  renderDocs();
+}
+
+function renderDocs() {
+  const el = document.getElementById('docs-list');
+  let docs = _allDocs;
+  if (_docCatFilter !== 'all') docs = docs.filter(d=>(DOC_CAT[d.doc_type]||'operations')===_docCatFilter);
+  if (!docs.length) {
+    el.innerHTML = '<div class="empty" style="padding:20px 0;"><div class="empty-icon">📂</div><h3>No Documents</h3><p>Upload your first document above.</p></div>';
+    return;
+  }
+  el.innerHTML = docs.map(d=>{
+    const exp = d.expiration_date ? new Date(d.expiration_date) : null;
+    const today = new Date();
+    const daysLeft = exp ? Math.round((exp-today)/(1000*60*60*24)) : null;
+    const expBadge = exp
+      ? daysLeft < 0 ? `<span class="badge badge-red" style="margin-left:6px;">Expired</span>`
+        : daysLeft < 30 ? `<span class="badge badge-amber" style="margin-left:6px;">Expires in ${daysLeft}d</span>`
+        : `<span class="badge badge-green" style="margin-left:6px;">Valid</span>`
+      : '';
+    return `<div class="doc-item">
+      <div class="doc-icon">${DOC_ICON[d.doc_type]||'📄'}</div>
+      <div class="doc-info">
+        <div class="doc-name">${d.filename||d.doc_type}</div>
+        <div class="doc-meta">${d.doc_type}${exp?' · Exp: '+exp.toLocaleDateString():''} · ${(d.created_at||'').slice(0,10)}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;">
+        ${expBadge}
+        <span class="badge ${d.scan_status==='approved'?'badge-green':d.scan_status==='pending'?'badge-amber':'badge-red'}">${d.scan_status||'pending'}</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function onFileChosen(input, targetId) {
   const f = input.files[0];
-  document.getElementById('doc-file-name').textContent = f ? f.name : 'Click to select file';
+  document.getElementById(targetId).textContent = f ? f.name : 'Click to select file';
+}
+
+function docQuickUpload(type) {
+  document.getElementById('doc-type-sel').value = type;
+  document.getElementById('doc-file').click();
+}
+
+async function uploadInsurance() {
+  const file = document.getElementById('ins-file').files[0];
+  if (!file) { toast('⚠️ Select your insurance card first', 'red'); return; }
+  const provider = document.getElementById('ins-provider').value;
+  const policy = document.getElementById('ins-policy').value;
+  const exp = document.getElementById('ins-exp').value;
+  try {
+    const fd = new FormData();
+    fd.append('file', file);
+    if (provider) fd.append('notes', `Provider: ${provider} | Policy: ${policy} | Exp: ${exp}`);
+    const r = await fetch(API+'/api/driver/documents/upload?doc_type=insurance', {
+      method:'POST', headers:{'Authorization':'Bearer '+_token}, body:fd,
+    });
+    if (!r.ok) throw new Error((await r.json().catch(()=>({}))).detail||'Upload failed');
+    toast('✅ Insurance card uploaded!', 'green');
+    document.getElementById('ins-file').value = '';
+    document.getElementById('ins-file-name').textContent = 'Select insurance card';
+    document.getElementById('ins-provider').value = '';
+    document.getElementById('ins-policy').value = '';
+    document.getElementById('ins-exp').value = '';
+    loadDocs();
+  } catch(e) { toast('⚠️ '+e.message, 'red'); }
 }
 
 async function uploadDoc() {
@@ -1348,12 +1590,11 @@ async function uploadDoc() {
   try {
     const fd = new FormData();
     fd.append('file', file);
-    fd.append('doc_type', docType);
     const r = await fetch(API+'/api/driver/documents/upload?doc_type='+docType, {
       method:'POST', headers:{'Authorization':'Bearer '+_token}, body:fd,
     });
     if (!r.ok) throw new Error((await r.json().catch(()=>({}))).detail||'Upload failed');
-    toast('✅ Document uploaded successfully!', 'green');
+    toast('✅ Document uploaded!', 'green');
     document.getElementById('doc-file').value = '';
     document.getElementById('doc-file-name').textContent = 'Click to select file';
     loadDocs();
@@ -1601,6 +1842,334 @@ async function submitDvir() {
     toast('✅ DVIR saved (offline). Will sync when connected.', 'amber');
     goView('dashboard', null);
   }
+}
+
+// ── LOAD HISTORY ──────────────────────────────────────────────────
+async function loadHistory() {
+  const el = document.getElementById('hist-body');
+  el.innerHTML = '<div class="loading-state"><div class="spinner"></div></div>';
+  const days = document.getElementById('hist-period')?.value || '30';
+  try {
+    const data = await api('GET', '/api/loads?status=delivered&limit=100');
+    let loads = Array.isArray(data) ? data : (data.items||data.loads||[]);
+    // Filter by period
+    if (days !== 'all') {
+      const cutoff = new Date(Date.now() - Number(days)*24*60*60*1000);
+      loads = loads.filter(l => new Date(l.delivered_at||l.updated_at||l.created_at) >= cutoff);
+    }
+    // Compute summary
+    const totalMiles = loads.reduce((s,l)=>s+(Number(l.miles)||0),0);
+    const totalEarn = loads.reduce((s,l)=>s+(Number(l.rate||l.rate_total)||0),0);
+    const rpm = totalMiles > 0 ? (totalEarn/totalMiles).toFixed(2) : '—';
+    document.getElementById('hist-count').textContent = loads.length;
+    document.getElementById('hist-miles').textContent = totalMiles.toLocaleString();
+    document.getElementById('hist-gross').textContent = '$'+totalEarn.toLocaleString();
+    document.getElementById('hist-rpm').textContent = totalMiles > 0 ? '$'+rpm : '—';
+    if (!loads.length) {
+      el.innerHTML = '<div class="empty"><div class="empty-icon">📜</div><h3>No Loads Found</h3><p>No delivered loads in this period.</p></div>';
+      return;
+    }
+    el.innerHTML = `<table style="width:100%;border-collapse:collapse;font-size:13px;">
+      <thead><tr style="border-bottom:2px solid var(--border);text-align:left;">
+        <th style="padding:10px 8px;color:var(--muted);font-weight:700;">Load #</th>
+        <th style="padding:10px 8px;color:var(--muted);font-weight:700;">Route</th>
+        <th style="padding:10px 8px;color:var(--muted);font-weight:700;">Equipment</th>
+        <th style="padding:10px 8px;color:var(--muted);font-weight:700;text-align:right;">Miles</th>
+        <th style="padding:10px 8px;color:var(--muted);font-weight:700;text-align:right;">Rate</th>
+        <th style="padding:10px 8px;color:var(--muted);font-weight:700;text-align:right;">$/mi</th>
+        <th style="padding:10px 8px;color:var(--muted);font-weight:700;">Delivered</th>
+      </tr></thead>
+      <tbody>${loads.map(l=>{
+        const rate = Number(l.rate||l.rate_total||0);
+        const miles = Number(l.miles||0);
+        const pm = miles > 0 ? (rate/miles).toFixed(2) : '—';
+        const dt = (l.delivered_at||l.updated_at||'').slice(0,10);
+        return `<tr style="border-bottom:1px solid var(--border);">
+          <td style="padding:10px 8px;font-weight:700;color:var(--navy);">#${l.load_number||l.id?.slice(0,8).toUpperCase()}</td>
+          <td style="padding:10px 8px;">${l.origin_city||'?'}, ${l.origin_state||''} → ${l.dest_city||'?'}, ${l.dest_state||''}</td>
+          <td style="padding:10px 8px;">${l.equipment_type||'—'}</td>
+          <td style="padding:10px 8px;text-align:right;">${miles?miles.toLocaleString():'—'}</td>
+          <td style="padding:10px 8px;text-align:right;font-weight:700;color:var(--green);">$${rate.toLocaleString()}</td>
+          <td style="padding:10px 8px;text-align:right;color:var(--muted);">${miles>0?'$'+pm:'—'}</td>
+          <td style="padding:10px 8px;color:var(--muted);">${dt}</td>
+        </tr>`;
+      }).join('')}</tbody>
+    </table>`;
+  } catch(e) {
+    el.innerHTML = `<div class="empty"><div class="empty-icon">⚠️</div><h3>Error</h3><p>${e.message}</p></div>`;
+  }
+}
+
+// ── SETTLEMENTS ───────────────────────────────────────────────────
+async function loadSettlements() {
+  const listEl = document.getElementById('settle-list');
+  listEl.innerHTML = '<div class="loading-state"><div class="spinner"></div></div>';
+  try {
+    const h = await api('GET', '/api/payout/history?limit=20');
+    const items = Array.isArray(h) ? h : (h.items||[]);
+    if (!items.length) {
+      listEl.innerHTML = '<div style="font-size:13px;color:var(--muted);padding:12px 0;">No settlement history yet.</div>';
+      return;
+    }
+    listEl.innerHTML = items.map((p,i)=>`
+      <div style="padding:12px;border-radius:8px;cursor:pointer;border:1px solid var(--border);margin-bottom:8px;transition:all .15s;" id="sp-${i}"
+           onmouseover="this.style.borderColor='var(--gold2)'" onmouseout="this.style.borderColor='var(--border)'"
+           onclick="showSettleDetail(${JSON.stringify(p).replace(/"/g,'&quot;')},${i})">
+        <div style="font-size:13px;font-weight:700;color:var(--text);">${p.description||p.load_number||'Pay Period'}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px;">${(p.paid_at||p.created_at||'').slice(0,10)}</div>
+        <div style="font-size:16px;font-weight:800;color:var(--green);margin-top:4px;">$${(Number(p.amount||0)/100).toFixed(2)}</div>
+      </div>`).join('');
+    // Auto-open first
+    if (items.length) showSettleDetail(items[0], 0);
+  } catch(e) {
+    listEl.innerHTML = '<div style="font-size:13px;color:var(--muted);">Could not load settlements.</div>';
+  }
+}
+
+function showSettleDetail(p, idx) {
+  document.querySelectorAll('[id^="sp-"]').forEach(el=>el.style.background='');
+  const sel = document.getElementById('sp-'+idx);
+  if (sel) sel.style.background='rgba(228,168,48,.08)';
+  const gross = Number(p.amount||0);
+  const fuelAdv = 0; const escrow = 0; // would come from real settlement data
+  const net = gross;
+  document.getElementById('settle-detail').innerHTML = `
+    <div style="border-bottom:2px solid var(--border);padding-bottom:16px;margin-bottom:20px;">
+      <div style="font-size:20px;font-weight:800;color:var(--text);">Settlement Statement</div>
+      <div style="font-size:13px;color:var(--muted);margin-top:4px;">Pay Period: ${(p.paid_at||p.created_at||'').slice(0,10)}</div>
+    </div>
+    <div style="margin-bottom:20px;">
+      <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px;">Gross Pay</div>
+      <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);">
+        <span style="font-size:14px;">${p.description||p.load_number||'Load Earnings'}</span>
+        <span style="font-size:14px;font-weight:700;color:var(--green);">+$${(gross/100).toFixed(2)}</span>
+      </div>
+    </div>
+    <div style="margin-bottom:20px;">
+      <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px;">Deductions</div>
+      <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);">
+        <span style="font-size:14px;">Fuel Advance</span>
+        <span style="font-size:14px;font-weight:700;color:var(--red);">-$${(fuelAdv/100).toFixed(2)}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);">
+        <span style="font-size:14px;">Escrow</span>
+        <span style="font-size:14px;font-weight:700;color:var(--red);">-$${(escrow/100).toFixed(2)}</span>
+      </div>
+    </div>
+    <div style="background:var(--off);border-radius:8px;padding:16px;display:flex;justify-content:space-between;align-items:center;">
+      <span style="font-size:16px;font-weight:800;color:var(--text);">Net Pay</span>
+      <span style="font-size:24px;font-weight:800;color:var(--green);">$${(net/100).toFixed(2)}</span>
+    </div>
+    <div style="margin-top:16px;display:flex;gap:10px;">
+      <button class="btn btn-ghost" onclick="window.print()">🖨️ Print Statement</button>
+      <span class="badge badge-${p.status==='paid'?'green':p.status==='pending'?'amber':'gray'}" style="font-size:13px;padding:8px 14px;">${p.status||'pending'}</span>
+    </div>`;
+}
+
+// ── HOS LOGGER ────────────────────────────────────────────────────
+// State persisted to localStorage
+let _hosStatus = 'offduty'; // driving | onduty | offduty | sleeper
+let _hosLog = [];           // [{status, start, end}] for today
+let _hosTimer = null;
+let _hosTickTimer = null;
+const HOS_COLORS = {driving:'#3B82F6',onduty:'#F59E0B',offduty:'#6B7A99',sleeper:'#1B3E75'};
+const HOS_LABELS = {driving:'Driving',onduty:'On Duty',offduty:'Off Duty',sleeper:'Sleeper'};
+
+function initHos() {
+  // Load persisted state
+  const saved = localStorage.getItem('fc_hos');
+  if (saved) {
+    try {
+      const s = JSON.parse(saved);
+      _hosStatus = s.status || 'offduty';
+      _hosLog = s.log || [];
+      // Filter log to today only
+      const todayStr = new Date().toDateString();
+      _hosLog = _hosLog.filter(e => new Date(e.start).toDateString() === todayStr);
+    } catch(e) {}
+  }
+  updateHosButtons();
+  renderHosLog();
+  renderHosTimeline();
+  renderHosWeek();
+  updateHosClocks();
+  // Tick every second
+  clearInterval(_hosTickTimer);
+  _hosTickTimer = setInterval(() => { updateHosClocks(); updateHosClockDisplay(); }, 1000);
+}
+
+function saveHosState() {
+  localStorage.setItem('fc_hos', JSON.stringify({status:_hosStatus, log:_hosLog}));
+}
+
+function setHosStatus(status) {
+  // Close current open entry
+  const now = new Date().toISOString();
+  const open = _hosLog.find(e=>!e.end);
+  if (open) open.end = now;
+  // New entry
+  _hosStatus = status;
+  _hosLog.push({status, start:now, end:null});
+  saveHosState();
+  updateHosButtons();
+  renderHosLog();
+  renderHosTimeline();
+  updateHosClocks();
+  toast(`Status: ${HOS_LABELS[status]}`, '');
+}
+
+function updateHosButtons() {
+  ['driving','onduty','offduty','sleeper'].forEach(s => {
+    const btn = document.getElementById('hos-btn-'+s);
+    if (!btn) return;
+    btn.className = 'btn btn-full ' + (s===_hosStatus ? 'btn-gold' : 'btn-ghost');
+    btn.style.flexDirection = 'column';
+    btn.style.gap = '4px';
+    btn.style.padding = '14px 8px';
+  });
+}
+
+function hosMinutes(status) {
+  const today = new Date().toDateString();
+  return _hosLog.filter(e => e.status===status && new Date(e.start).toDateString()===today)
+    .reduce((s,e) => {
+      const start = new Date(e.start);
+      const end = e.end ? new Date(e.end) : new Date();
+      return s + (end-start)/(1000*60);
+    }, 0);
+}
+
+function fmtHours(mins) {
+  const m = Math.max(0, Math.round(mins));
+  const h = Math.floor(m/60); const mm = m%60;
+  return String(h).padStart(2,'0')+':'+String(mm).padStart(2,'0');
+}
+
+function updateHosClocks() {
+  const driveMin = hosMinutes('driving');
+  const dutyMin = hosMinutes('driving') + hosMinutes('onduty');
+  const driveRem = Math.max(0, 660 - driveMin);   // 11h = 660 min
+  const dutyRem = Math.max(0, 840 - dutyMin);      // 14h = 840 min
+  const breakRem = Math.max(0, 480 - driveMin);    // 8h = 480 min before break
+
+  // 70h cycle — sum all driving+onduty over 7 days (simplified: today only for now)
+  const cycleUsed = dutyMin;
+  const cycleRem = Math.max(0, 4200 - cycleUsed);  // 70h = 4200 min
+
+  const setEl = (id, val) => { const e=document.getElementById(id); if(e) e.textContent=val; };
+  setEl('hos-drive-rem', fmtHours(driveRem));
+  setEl('hos-duty-rem', fmtHours(dutyRem));
+  setEl('hos-break-rem', fmtHours(breakRem));
+  setEl('hos-cycle-rem', fmtHours(cycleRem));
+  // Also update dashboard HOS
+  setEl('hos-drive-lbl', fmtHours(driveRem));
+  setEl('hos-duty-lbl', fmtHours(dutyRem));
+  setEl('hos-cycle-lbl', fmtHours(cycleRem));
+  setEl('kpi-hos', fmtHours(driveRem));
+
+  const pct = v => Math.min(100, v).toFixed(1)+'%';
+  const sf = (id, val) => { const e=document.getElementById(id); if(e) e.style.width=val; };
+  sf('hos-drive-fill', pct(driveRem/660*100));
+  sf('hos-duty-fill', pct(dutyRem/840*100));
+  sf('hos-break-fill', pct(breakRem/480*100));
+  sf('hos-cycle-fill', pct(cycleRem/4200*100));
+  sf('hos-drive-bar', pct(driveRem/660*100));
+  sf('hos-duty-bar', pct(dutyRem/840*100));
+  sf('hos-cycle-bar', pct(cycleRem/4200*100));
+
+  // Color drive fill red when < 1h
+  const df = document.getElementById('hos-drive-fill');
+  if (df) df.style.background = driveRem < 60 ? 'var(--red)' : driveRem < 120 ? 'var(--amber)' : 'var(--green)';
+
+  // Break alert
+  const breakAlert = document.getElementById('hos-break-alert');
+  const breakBadge = document.getElementById('hos-break-badge');
+  if (driveMin >= 480 && _hosStatus === 'driving') {
+    if (breakAlert) breakAlert.style.display = 'block';
+    if (breakBadge) breakBadge.style.display = '';
+  } else {
+    if (breakAlert) breakAlert.style.display = 'none';
+    if (breakBadge) breakBadge.style.display = 'none';
+  }
+}
+
+function updateHosClockDisplay() {
+  const open = _hosLog.find(e=>!e.end);
+  if (!open) return;
+  const secs = Math.floor((Date.now() - new Date(open.start)) / 1000);
+  const h = Math.floor(secs/3600); const m = Math.floor((secs%3600)/60); const s = secs%60;
+  const disp = document.getElementById('hos-clock-display');
+  if (disp) disp.textContent = String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');
+}
+
+function renderHosLog() {
+  const el = document.getElementById('hos-log-list');
+  if (!el) return;
+  const today = new Date().toDateString();
+  const entries = [..._hosLog].reverse().filter(e=>new Date(e.start).toDateString()===today);
+  if (!entries.length) { el.innerHTML = '<div style="font-size:13px;color:var(--muted);padding:8px 0;">No entries yet today.</div>'; return; }
+  el.innerHTML = entries.map(e=>{
+    const start = new Date(e.start);
+    const end = e.end ? new Date(e.end) : new Date();
+    const dur = Math.round((end-start)/60000);
+    return `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--off);">
+      <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${HOS_COLORS[e.status]};flex-shrink:0;"></span>
+      <span style="font-size:13px;font-weight:600;flex:1;">${HOS_LABELS[e.status]}</span>
+      <span style="font-size:11px;color:var(--muted);">${start.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}${e.end?' – '+new Date(e.end).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}):'  (now)'}</span>
+      <span style="font-size:11px;font-weight:700;color:var(--navy);">${fmtHours(dur)}</span>
+    </div>`;
+  }).join('');
+}
+
+function renderHosTimeline() {
+  const el = document.getElementById('hos-timeline');
+  if (!el) return;
+  const todayStart = new Date(); todayStart.setHours(0,0,0,0);
+  const dayMs = 24*60*60*1000;
+  el.innerHTML = '';
+  const today = new Date().toDateString();
+  _hosLog.filter(e=>new Date(e.start).toDateString()===today).forEach(e=>{
+    const start = Math.max(0, new Date(e.start) - todayStart);
+    const end = Math.min(dayMs, (e.end ? new Date(e.end) : new Date()) - todayStart);
+    const left = (start/dayMs*100).toFixed(2);
+    const width = ((end-start)/dayMs*100).toFixed(2);
+    const seg = document.createElement('div');
+    seg.style.cssText = `position:absolute;top:0;bottom:0;left:${left}%;width:${width}%;background:${HOS_COLORS[e.status]};`;
+    el.appendChild(seg);
+  });
+}
+
+function renderHosWeek() {
+  const tbody = document.getElementById('hos-week-body');
+  if (!tbody) return;
+  const rows = [];
+  for (let i=6;i>=0;i--) {
+    const d = new Date(Date.now() - i*24*60*60*1000);
+    const dstr = d.toDateString();
+    const dayLabel = i===0?'Today':i===1?'Yesterday':d.toLocaleDateString('en',{weekday:'short',month:'short',day:'numeric'});
+    // For demo: real data would come from persisted log per day
+    const drv = i===0 ? hosMinutes('driving') : 0;
+    const ondu = i===0 ? hosMinutes('onduty') : 0;
+    const off = i===0 ? hosMinutes('offduty')+hosMinutes('sleeper') : 0;
+    const tot = drv+ondu+off;
+    rows.push(`<tr style="border-bottom:1px solid var(--border);">
+      <td style="padding:9px 4px;font-weight:${i===0?'700':'500'};color:${i===0?'var(--navy)':'var(--muted)'};">${dayLabel}</td>
+      <td style="padding:9px 4px;text-align:center;color:${drv>0?'#3B82F6':'var(--muted)'};">${drv>0?fmtHours(drv):'—'}</td>
+      <td style="padding:9px 4px;text-align:center;color:${ondu>0?'#F59E0B':'var(--muted)'};">${ondu>0?fmtHours(ondu):'—'}</td>
+      <td style="padding:9px 4px;text-align:center;color:var(--muted);">${off>0?fmtHours(off):'—'}</td>
+      <td style="padding:9px 4px;text-align:center;font-weight:700;color:var(--text);">${tot>0?fmtHours(tot):'—'}</td>
+    </tr>`);
+  }
+  tbody.innerHTML = rows.join('');
+}
+
+function hosReset() {
+  if (!confirm('Reset today\'s HOS log? This cannot be undone.')) return;
+  _hosLog = [];
+  _hosStatus = 'offduty';
+  saveHosState();
+  initHos();
+  toast('HOS log reset for new day', '');
 }
 </script>
 </body>
