@@ -1,8 +1,8 @@
-"""Driver endpoints — location tracking, documents, profile."""
+"""Driver endpoints — location tracking, documents, DVIR, profile."""
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from typing import Annotated
+from typing import Annotated, List
 
 from fastapi import APIRouter, HTTPException, Header, Depends, UploadFile, File, status
 from pydantic import BaseModel
@@ -35,6 +35,21 @@ class DocumentUploadResponse(BaseModel):
     document_id: str
     url: str
     signed_url: str
+
+
+class DVIRSubmission(BaseModel):
+    inspection_type: str  # "pre_trip" | "post_trip"
+    vehicle_id: str | None = None
+    odometer: int | None = None
+    defects: List[str] = []
+    defects_corrected: bool = False
+    condition: str = "satisfactory"  # "satisfactory" | "defects_noted"
+    remarks: str | None = None
+    signature_data: str | None = None  # base64 driver signature
+
+
+class LoadRequestBody(BaseModel):
+    notes: str | None = None
 
 
 # ────────────────────────────────────────────────────────────────────────────
@@ -247,4 +262,130 @@ async def get_driver_full_profile(session: DriverSession):
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="profile fetch failed"
+        )
+
+
+# ────────────────────────────────────────────────────────────────────────────
+# DVIR — DRIVER VEHICLE INSPECTION REPORT (federal requirement)
+# ────────────────────────────────────────────────────────────────────────────
+
+@router.post("/dvir")
+async def submit_dvir(req: DVIRSubmission, session: DriverSession):
+    """Submit pre-trip or post-trip vehicle inspection report.
+
+    Federal regulation (49 CFR 396.11) requires drivers to inspect their
+    vehicle before and after each trip and report any defects found.
+    """
+    driver_id = session["driver_id"]
+
+    try:
+        driver_result = get_supabase().table("drivers").select(
+            "id, carrier_id, first_name, last_name"
+        ).eq("id", driver_id).single().execute()
+        driver = driver_result.data
+        carrier_id = driver["carrier_id"]
+
+        result = get_supabase().table("driver_dvir").insert({
+            "driver_id": driver_id,
+            "carrier_id": carrier_id,
+            "vehicle_id": req.vehicle_id,
+            "inspection_type": req.inspection_type,
+            "odometer": req.odometer,
+            "defects": req.defects,
+            "defects_corrected": req.defects_corrected,
+            "condition": req.condition,
+            "remarks": req.remarks,
+            "has_signature": bool(req.signature_data),
+            "submitted_at": datetime.now(timezone.utc).isoformat(),
+        }).execute()
+
+        dvir_id = result.data[0]["id"] if result.data else "submitted"
+        log.info("DVIR submitted driver=%s type=%s condition=%s",
+                 driver_id, req.inspection_type, req.condition)
+
+        return {
+            "ok": True,
+            "dvir_id": dvir_id,
+            "inspection_type": req.inspection_type,
+            "condition": req.condition,
+            "defects_count": len(req.defects),
+        }
+
+    except Exception as e:
+        log.error("DVIR submission failed driver=%s: %s", driver_id, e)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="DVIR submission failed"
+        )
+
+
+# ────────────────────────────────────────────────────────────────────────────
+# LOAD REQUEST — driver requests to pick up an available load
+# ────────────────────────────────────────────────────────────────────────────
+
+@router.post("/loads/{load_id}/request")
+async def request_load(load_id: str, body: LoadRequestBody, session: DriverSession):
+    """Driver requests to be assigned to an available load.
+
+    Creates a pending request that dispatchers can approve/decline.
+    A driver can only have one active pending request at a time.
+    """
+    driver_id = session["driver_id"]
+
+    try:
+        # Verify load exists and is available
+        load_result = get_supabase().table("loads").select(
+            "id, load_number, status, origin_city, dest_city, rate_total"
+        ).eq("id", load_id).single().execute()
+
+        if not load_result.data:
+            raise HTTPException(status_code=404, detail="load not found")
+
+        load = load_result.data
+        if load["status"] not in ("available", "pending"):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"load is not available (status: {load['status']})"
+            )
+
+        # Check for existing pending request from this driver
+        existing = get_supabase().table("load_requests").select("id").eq(
+            "driver_id", driver_id
+        ).eq("status", "pending").execute()
+
+        if existing.data:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="you already have a pending load request"
+            )
+
+        # Create request
+        req_result = get_supabase().table("load_requests").insert({
+            "load_id": load_id,
+            "driver_id": driver_id,
+            "status": "pending",
+            "notes": body.notes,
+            "requested_at": datetime.now(timezone.utc).isoformat(),
+        }).execute()
+
+        req_id = req_result.data[0]["id"] if req_result.data else "created"
+        log.info("Load request created driver=%s load=%s", driver_id, load_id)
+
+        return {
+            "ok": True,
+            "request_id": req_id,
+            "load_id": load_id,
+            "load_number": load.get("load_number"),
+            "route": f"{load.get('origin_city')} → {load.get('dest_city')}",
+            "status": "pending",
+            "message": "Request submitted. Dispatcher will confirm shortly.",
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        log.error("Load request failed driver=%s load=%s: %s", driver_id, load_id, e)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="request failed"
         )

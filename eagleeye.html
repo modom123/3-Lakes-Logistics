@@ -3564,7 +3564,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 let allCarriers=[], allLoads=[], allInvoices=[], currentInvFilter='all', loadCounter=3849;
 
-const pageNames={dashboard:'Dashboard',dispatch:'Dispatch Board','fleet-map':'Fleet Map',carriers:'Carriers',drivers:'Drivers',loads:'Load Manager',invoices:'Invoices & Billing',compliance:'DOT Compliance',ifta:'IFTA / Permits',insurance:'Insurance',revenue:'Revenue Tracker',providers:'Compliance Providers',checklist:'Daily Checklist',notes:'Dispatcher Notes',reports:'Team Reports','exec-command':'Exec Command',agents:'AI Agents',founders:'Founders Program',crm:'Lead CRM',leads:'Lead Pipeline',execution:'Execution Engine',factoring:'Factoring',email:'Email Center',vault:'Document Vault',clm:'CLM Scanner',ledger:'Atomic Ledger',agreements:'Agreements','lf-map':'Light Fleet Live Map','lf-nemt':'NEMT — Medical Transport','lf-medical':'Medical Courier','lf-executive':'Executive Transport','lf-courier':'Courier & Last-Mile','lf-gig':'Gig Fleet Management','mark-office':'Mark Odom — CEO Office','ccg-office':'CC Gulley Office','trading-desk':'Trading Desk','broker-division':'N. American Trading — Hub','broker-shippers':'Shipper Pipeline','broker-docs':'Docs & Invoices','trading-desk':'Trading Desk'};
+const pageNames={dashboard:'Dashboard',dispatch:'Dispatch Board','fleet-map':'Fleet Map',carriers:'Carriers',drivers:'Drivers',loads:'Load Manager',invoices:'Invoices & Billing',compliance:'DOT Compliance',ifta:'IFTA / Permits',insurance:'Insurance',revenue:'Revenue Tracker',providers:'Compliance Providers',checklist:'Daily Checklist',notes:'Dispatcher Notes',reports:'Team Reports','exec-command':'Exec Command',agents:'AI Agents',founders:'Founders Program',crm:'Lead CRM',leads:'Lead Pipeline',execution:'Execution Engine',factoring:'Factoring',email:'Email Center',vault:'Document Vault',clm:'CLM Scanner',ledger:'Atomic Ledger',agreements:'Agreements','lf-map':'Light Fleet Live Map','lf-nemt':'NEMT — Medical Transport','lf-medical':'Medical Courier','lf-executive':'Executive Transport','lf-courier':'Courier & Last-Mile','lf-gig':'Gig Fleet Management','mark-office':'Mark Odom — CEO Office','ccg-office':'CC Gulley Office','trading-desk':'Trading Desk','broker-division':'N. American Trading — Hub','broker-shippers':'Shipper Pipeline','broker-docs':'Docs & Invoices',bond:'Bond Office',tests:'System Test Suite'};
 
 // ── 3 Lakes Logistics Backend API (FastAPI) ──
 const API_BASE = (window.__3LL_API_BASE || 'https://three-lakes-logistics-api.onrender.com').replace(/\/$/,'');
@@ -10529,7 +10529,7 @@ window.moEmailOpen = async function(id,from){
   if(!view)return;
   view.innerHTML='<div style="color:rgba(255,255,255,.3);font-size:12px;text-align:center;padding:40px;">Loading message…</div>';
   try{
-    const m=await API.get('/api/mailboxes/mark/messages/'+id).catch(()=>null);
+    const m=await API.get('/api/mailboxes/email/'+id).catch(()=>null);
     if(!m){view.innerHTML='<div style="padding:20px;color:rgba(255,255,255,.4);">Could not load message</div>';return;}
     view.innerHTML=`<div style="padding:0 0 12px;border-bottom:1px solid rgba(245,200,66,.1);margin-bottom:14px;flex-shrink:0;">
       <div style="font-size:15px;font-weight:800;color:#fff;margin-bottom:8px;">${m.subject||'(No subject)'}</div>
@@ -10555,7 +10555,7 @@ window.moEmailSend = async function(){
   if(!to||!body){if(st)st.textContent='To and message required.';return;}
   if(st)st.textContent='Sending…';
   try{
-    await API.post('/api/email/send',{mailbox:'mark',to,subject:subj||'(No subject)',body});
+    await API.post('/api/mailboxes/compose',{from_mailbox:'mark',to,subject:subj||'(No subject)',body_text:body});
     if(st)st.textContent='✓ Sent';
     setTimeout(()=>{document.getElementById('mo-compose').style.display='none';if(st)st.textContent='';['mo-compose-to','mo-compose-subj','mo-compose-body'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});},1500);
   }catch(e){if(st)st.textContent='Send failed: '+e.message;}
@@ -11839,7 +11839,7 @@ window.ccgEmailOpen = async function(id,from){
   if(!view)return;
   view.innerHTML='<div style="color:rgba(255,255,255,.3);font-size:12px;text-align:center;padding:40px;">Loading message…</div>';
   try{
-    const m=await API.get('/api/mailboxes/cece/messages/'+id).catch(()=>null);
+    const m=await API.get('/api/mailboxes/email/'+id).catch(()=>null);
     if(!m){view.innerHTML='<div style="padding:20px;color:rgba(255,255,255,.4);">Could not load message</div>';return;}
     view.innerHTML=`<div style="padding:0 0 12px;border-bottom:1px solid rgba(56,189,248,.1);margin-bottom:14px;flex-shrink:0;">
       <div style="font-size:15px;font-weight:800;color:#fff;margin-bottom:8px;">${m.subject||'(No subject)'}</div>
@@ -11864,7 +11864,7 @@ window.ccgEmailSend = async function(){
   if(!to||!body){if(st)st.textContent='To and message required.';return;}
   if(st)st.textContent='Sending…';
   try{
-    await API.post('/api/email/send',{mailbox:'cece',to,subject:subj||'(No subject)',body});
+    await API.post('/api/mailboxes/compose',{from_mailbox:'cece',to,subject:subj||'(No subject)',body_text:body});
     if(st)st.textContent='✓ Sent';
     setTimeout(()=>{document.getElementById('ccg-compose').style.display='none';if(st)st.textContent='';['ccg-compose-to','ccg-compose-subj','ccg-compose-body'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});},1500);
   }catch(e){if(st)st.textContent='Send failed: '+e.message;}
