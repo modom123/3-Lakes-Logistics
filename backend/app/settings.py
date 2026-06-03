@@ -33,6 +33,10 @@ class Settings(BaseSettings):
     bland_ai_org_id: str = ""
     bland_ai_voice: str = ""  # Optional voice ID from your Bland dashboard; leave empty for default
 
+    vapi_api_key: str = ""
+    vapi_assistant_id: str = ""
+    vapi_webhook_secret: str = ""
+
     elevenlabs_api_key: str = ""
 
     postmark_server_token: str = ""
@@ -60,6 +64,7 @@ class Settings(BaseSettings):
     google_vision_credentials_json: str = ""
 
     motive_api_key: str = ""
+    motive_webhook_secret: str = ""
     samsara_api_key: str = ""
     geotab_username: str = ""
     geotab_password: str = ""
@@ -73,6 +78,7 @@ class Settings(BaseSettings):
     adobe_client_secret: str = ""
     adobe_account_id: str = ""
     adobe_api_endpoint: str = "https://api.na1.adobesign.com"
+    adobe_webhook_secret: str = ""
 
     # Social media — Facebook, Instagram, LinkedIn, TikTok, YouTube
     facebook_page_id: str = ""

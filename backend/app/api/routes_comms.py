@@ -14,13 +14,28 @@ from __future__ import annotations
 import re
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, Request, Response
+from fastapi import APIRouter, Depends, Header, HTTPException, Request, Response
 from pydantic import BaseModel
 
 from ..logging_service import get_logger, log_agent
 from ..settings import get_settings
 from ..supabase_client import get_supabase
 from .deps import require_bearer
+
+
+def _verify_twilio_signature(request: Request, x_twilio_signature: str | None) -> None:
+    s = get_settings()
+    if not (s.twilio_account_sid and s.twilio_auth_token):
+        return
+    if not x_twilio_signature:
+        raise HTTPException(401, "Missing X-Twilio-Signature")
+    try:
+        from twilio.request_validator import RequestValidator  # type: ignore
+        url = str(request.url)
+        if not RequestValidator(s.twilio_auth_token).validate(url, {}, x_twilio_signature):
+            raise HTTPException(401, "Invalid Twilio signature")
+    except ImportError:
+        pass  # twilio library not available — skip verification
 
 log = get_logger("3ll.comms")
 
@@ -196,8 +211,12 @@ def mark_read(driver_phone: str) -> dict:
 # ── Twilio inbound webhook (no auth required — Twilio POSTs here) ─────────────
 
 @router.post("/webhook/twilio")
-async def twilio_inbound(request: Request) -> Response:
+async def twilio_inbound(
+    request: Request,
+    x_twilio_signature: str | None = Header(default=None),
+) -> Response:
     """Receive inbound driver SMS from Twilio; reply via TwiML."""
+    _verify_twilio_signature(request, x_twilio_signature)
     form = await request.form()
     from_phone = form.get("From", "")
     body = (form.get("Body") or "").strip()

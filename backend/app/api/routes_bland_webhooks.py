@@ -21,19 +21,22 @@ def verify_bland_webhook(
     x_bland_signature: str | None = Header(default=None),
     x_bland_request_timestamp: str | None = Header(default=None),
 ) -> None:
-    """Verify Bland AI webhook signature using the webhook secret.
-
-    Bland AI includes X-Bland-Signature and X-Bland-Request-Timestamp headers.
-    Signature is HMAC-SHA256 of timestamp + body.
-    """
     s = get_settings()
     if not s.bland_ai_webhook_secret:
-        return  # Skip validation if secret not configured
+        return
 
     if not x_bland_signature or not x_bland_request_timestamp:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Missing webhook signature headers",
+        )
+
+    message = x_bland_request_timestamp.encode()
+    expected = hmac.new(s.bland_ai_webhook_secret.encode(), message, hashlib.sha256).hexdigest()
+    if not hmac.compare_digest(expected, x_bland_signature.lower()):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid webhook signature",
         )
 
 
