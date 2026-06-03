@@ -1277,7 +1277,7 @@ async function loadDashKpis() {
 async function loadDashActiveLoad() {
   const el = document.getElementById('dash-active-load');
   try {
-    const data = await api('GET', '/api/loads?status=assigned&limit=1');
+    const data = await api('GET', '/api/driver/loads?status=assigned&limit=1');
     const loads = Array.isArray(data) ? data : (data.items||data.loads||[]);
     if (loads.length) {
       _myLoad = loads[0];
@@ -1369,7 +1369,7 @@ async function loadMyLoad() {
   const el = document.getElementById('myload-content');
   el.innerHTML = '<div class="loading-state"><div class="spinner"></div> Loading your load…</div>';
   try {
-    const data = await api('GET', '/api/loads?status=assigned&limit=1');
+    const data = await api('GET', '/api/driver/loads?status=assigned&limit=1');
     const loads = Array.isArray(data) ? data : (data.items||data.loads||[]);
     if (!loads.length) {
       el.innerHTML = `<div class="card"><div class="empty"><div class="empty-icon">🚛</div><h3>No Active Load</h3><p>You have no assigned load at the moment.</p><button class="btn btn-gold" style="margin-top:14px;" onclick="goView('loadboard',null)">Browse Load Board →</button></div></div>`;
@@ -1485,7 +1485,7 @@ async function confirmStatus() {
   if (!_selectedNextStatus) return;
   closeModal('modal-status');
   try {
-    await api('PATCH', '/api/loads/'+_selectedNextStatus.loadId, {status:_selectedNextStatus.nextStatus});
+    await api('PATCH', '/api/driver/loads/'+_selectedNextStatus.loadId, {status:_selectedNextStatus.nextStatus});
     toast('✅ Status updated!', 'green');
     if (_selectedNextStatus.nextStatus==='in_transit') pingLocation();
     loadMyLoad();
@@ -1497,7 +1497,7 @@ async function saveCheckNotes() {
   const notes = document.getElementById('check-notes')?.value;
   if (!_myLoad) return;
   try {
-    await api('PATCH', '/api/loads/'+_myLoad.id, {driver_notes:notes});
+    await api('PATCH', '/api/driver/loads/'+_myLoad.id, {driver_notes:notes});
     toast('✅ Notes saved', 'green');
   } catch(e) { toast('⚠️ Could not save', 'red'); }
 }
@@ -1507,7 +1507,7 @@ async function loadBoard() {
   const el = document.getElementById('lb-body');
   el.innerHTML = '<div class="loading-state"><div class="spinner"></div> Loading available loads…</div>';
   try {
-    const data = await fetch(API+'/api/loads/public').then(r=>r.json());
+    const data = await fetch(API+'/api/fleet/public/loads').then(r=>r.json());
     _allLoads = Array.isArray(data) ? data : (data.items||data.loads||[]);
     renderBoard();
   } catch(e) {
@@ -1580,7 +1580,7 @@ async function loadSchedule() {
   const el = document.getElementById('schedule-body');
   el.innerHTML = '<div class="loading-state"><div class="spinner"></div></div>';
   try {
-    const data = await api('GET', '/api/loads?status=assigned,dispatched&limit=10');
+    const data = await api('GET', '/api/driver/loads?status=assigned,dispatched&limit=10');
     const loads = Array.isArray(data) ? data : (data.items||data.loads||[]);
     if (!loads.length) {
       el.innerHTML = '<div class="empty" style="padding:28px 0;"><div class="empty-icon">📅</div><h3>No Upcoming Loads</h3><p>Your schedule is clear.</p></div>';
@@ -2179,7 +2179,7 @@ async function loadHistory() {
   el.innerHTML = '<div class="loading-state"><div class="spinner"></div></div>';
   const days = document.getElementById('hist-period')?.value || '30';
   try {
-    const data = await api('GET', '/api/loads?status=delivered&limit=100');
+    const data = await api('GET', '/api/driver/loads?status=delivered&limit=100');
     let loads = Array.isArray(data) ? data : (data.items||data.loads||[]);
     // Filter by period
     if (days !== 'all') {

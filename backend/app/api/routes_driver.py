@@ -409,6 +409,49 @@ async def submit_dvir(req: DVIRSubmission, session: DriverSession):
 
 
 # ────────────────────────────────────────────────────────────────────────────
+# DRIVER LOADS — get/update loads assigned to this driver
+# ────────────────────────────────────────────────────────────────────────────
+
+@router.get("/loads")
+async def get_driver_loads(session: DriverSession, status: str | None = None, limit: int = 20):
+    """Return loads assigned to the authenticated driver."""
+    driver_id = session["driver_id"]
+    try:
+        q = (
+            get_supabase()
+            .table("loads")
+            .select("*")
+            .eq("driver_id", driver_id)
+            .order("created_at", desc=True)
+            .limit(limit)
+        )
+        if status:
+            statuses = [s.strip() for s in status.split(",")]
+            q = q.in_("status", statuses) if len(statuses) > 1 else q.eq("status", statuses[0])
+        res = q.execute()
+        return {"items": res.data or []}
+    except Exception as e:
+        log.error("get_driver_loads failed driver=%s: %s", driver_id, e)
+        return {"items": []}
+
+
+@router.patch("/loads/{load_id}")
+async def update_driver_load(load_id: str, payload: dict, session: DriverSession):
+    """Driver updates status or notes on their assigned load."""
+    driver_id = session["driver_id"]
+    allowed = {"status", "driver_notes"}
+    update_data = {k: v for k, v in payload.items() if k in allowed}
+    if not update_data:
+        raise HTTPException(status_code=400, detail="no updatable fields")
+    try:
+        get_supabase().table("loads").update(update_data).eq("id", load_id).eq("driver_id", driver_id).execute()
+        return {"ok": True}
+    except Exception as e:
+        log.error("update_driver_load failed driver=%s load=%s: %s", driver_id, load_id, e)
+        raise HTTPException(status_code=500, detail="update failed")
+
+
+# ────────────────────────────────────────────────────────────────────────────
 # LOAD REQUEST — driver requests to pick up an available load
 # ────────────────────────────────────────────────────────────────────────────
 
