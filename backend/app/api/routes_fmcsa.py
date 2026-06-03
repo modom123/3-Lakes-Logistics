@@ -203,6 +203,7 @@ def fmcsa_safety(dot_number: str) -> dict:
 def fmcsa_search(
     state: str | None = Query(default=None, description="2-letter state, e.g. IL"),
     city: str | None = Query(default=None),
+    company_name: str | None = Query(default=None, description="Partial company / DBA name search"),
     min_trucks: int = Query(default=1, ge=1),
     max_trucks: int = Query(default=30, le=500),
     carrier_op: str | None = Query(default=None, description="I=interstate, A=intrastate, H=intrastate HM"),
@@ -211,9 +212,13 @@ def fmcsa_search(
     authorized_only: bool = Query(default=True, description="Only AUTHORIZED operating status"),
     min_drivers: int = Query(default=0, ge=0),
     tractor_only: bool = Query(default=False, description="Only carriers with tractor trucks"),
+    phone_required: bool = Query(default=False, description="Only return records with a phone number"),
     limit: int = Query(default=50, le=200),
 ) -> dict:
     """Search FMCSA census — 4.44M carriers, 147 fields."""
+    if not state and not company_name:
+        raise HTTPException(400, "Provide at least a state (2-letter) or a company name to search.")
+
     conditions: list[str] = []
 
     if authorized_only:
@@ -226,6 +231,12 @@ def fmcsa_search(
     if city:
         safe_city = city.upper().replace("'", "''")
         conditions.append(f"upper(phy_city) like '%25{urllib.parse.quote(safe_city)}%25'")
+    if company_name:
+        safe_name = company_name.upper().replace("'", "''")
+        quoted = urllib.parse.quote(safe_name)
+        conditions.append(
+            f"(upper(legal_name) like '%25{quoted}%25' OR upper(dba_name) like '%25{quoted}%25')"
+        )
     if carrier_op:
         conditions.append(f"carrier_operation='{carrier_op.upper()}'")
     if hazmat is True:
@@ -234,6 +245,8 @@ def fmcsa_search(
         conditions.append("hm_flag='N'")
     if tractor_only:
         conditions.append("tractor_trucks > '0'")
+    if phone_required:
+        conditions.append("telephone IS NOT NULL")
     # Active carriers — exclude those with OOS date
     conditions.append("oos_date IS NULL")
     # Fleet size range
