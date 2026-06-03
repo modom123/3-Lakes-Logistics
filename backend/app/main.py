@@ -10,6 +10,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 
 from .api import (
@@ -213,6 +214,10 @@ def create_app() -> FastAPI:
     )
     if os.path.isdir(_marketing_dir):
         app.mount("/marketing", StaticFiles(directory=_marketing_dir), name="marketing")
+
+    @app.get("/google9f88d93f841d8a95.html", include_in_schema=False)
+    async def google_site_verification():
+        return PlainTextResponse("google-site-verification: google9f88d93f841d8a95.html")
 
     log.info("3 Lakes Logistics API ready (env=%s)", s.env)
     return app
