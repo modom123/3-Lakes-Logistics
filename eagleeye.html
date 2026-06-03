@@ -18387,7 +18387,8 @@ function _renderLeadPanel(l, activities) {
       <button onclick="lpCall()" ${phone==='—'?'disabled title="No phone"':''} style="flex:1;min-width:100px;padding:10px;font-size:12px;font-weight:700;background:linear-gradient(135deg,#1e3a8a,#1d4ed8);color:#fff;border:none;border-radius:8px;cursor:pointer;${phone==='—'?'opacity:.4;cursor:not-allowed':''}">📞 Call Now</button>
       <button onclick="lpSmsOpen()" ${phone==='—'?'disabled title="No phone"':''} style="flex:1;min-width:100px;padding:10px;font-size:12px;font-weight:700;background:linear-gradient(135deg,#065f46,#059669);color:#fff;border:none;border-radius:8px;cursor:pointer;${phone==='—'?'opacity:.4;cursor:not-allowed':''}">💬 Send SMS</button>
       <button onclick="lpEmailOpen()" ${email==='—'?'disabled title="No email"':''} style="flex:1;min-width:100px;padding:10px;font-size:12px;font-weight:700;background:linear-gradient(135deg,#7c2d12,#ea580c);color:#fff;border:none;border-radius:8px;cursor:pointer;${email==='—'?'opacity:.4;cursor:not-allowed':''}">📧 Send Email</button>
-      <button onclick="lpNoteOpen()" style="flex:1;min-width:100px;padding:10px;font-size:12px;font-weight:700;background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.2);border-radius:8px;cursor:pointer">📝 Add Note</button>
+      <button onclick="lpNoteOpen()" style="flex:1;min-width:100px;padding:10px;font-size:12px;font-weight:700;background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.2);border-radius:8px;cursor:pointer">📝 Note</button>
+      <button onclick="lpCallbackOpen()" style="flex:1;min-width:100px;padding:10px;font-size:12px;font-weight:700;background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.2);border-radius:8px;cursor:pointer">⏰ Callback</button>
     </div>
 
     <!-- Compose areas (hidden until triggered) -->
@@ -18504,6 +18505,40 @@ async function lpEmailSend() {
     const ar = await apiFetch(`/api/leads/${_lpLead.id}/activities?limit=30`);
     if(ar.ok){const ad=await ar.json();_renderLeadPanel(_lpLead,ad.activities||[]);document.getElementById('lp-stage-sel').value=_lpLead.status||'New';}
   } catch(e){ toast('Email failed: '+e.message,'error'); }
+}
+
+function lpCallbackOpen() {
+  const now = new Date();
+  now.setDate(now.getDate() + 1);
+  const defaultDt = now.toISOString().slice(0,16);
+  document.getElementById('lp-compose').style.display = 'block';
+  document.getElementById('lp-compose').innerHTML = `
+    <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.5);text-transform:uppercase;margin-bottom:8px">⏰ Schedule Callback</div>
+    <input type="datetime-local" id="lp-cb-dt" value="${defaultDt}" style="width:100%;box-sizing:border-box;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.2);border-radius:8px;color:#fff;padding:10px;font-size:12px;margin-bottom:8px">
+    <input id="lp-cb-note" class="fi" placeholder="Note (e.g. Call back Friday 2pm — interested in reefer)" style="width:100%;box-sizing:border-box;margin-bottom:8px">
+    <div style="display:flex;justify-content:flex-end;gap:8px">
+      <button onclick="document.getElementById('lp-compose').style.display='none'" style="padding:6px 14px;font-size:12px;background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.2);border-radius:6px;cursor:pointer">Cancel</button>
+      <button onclick="lpCallbackSave()" style="padding:6px 16px;font-size:12px;font-weight:700;background:linear-gradient(135deg,#7c3aed,#6d28d9);color:#fff;border:none;border-radius:6px;cursor:pointer">Set Callback</button>
+    </div>`;
+}
+
+async function lpCallbackSave() {
+  if (!_lpLead) return;
+  const dt   = document.getElementById('lp-cb-dt')?.value;
+  const note = (document.getElementById('lp-cb-note')?.value||'').trim();
+  if(!dt){toast('Pick a date/time','error');return;}
+  try {
+    await apiFetch(`/api/leads/${_lpLead.id}`, 'PATCH', {next_touch_at: new Date(dt).toISOString()});
+    await apiFetch(`/api/leads/${_lpLead.id}/activities`, 'POST', {
+      channel:'note', status:'sent',
+      summary:`📅 Callback scheduled: ${new Date(dt).toLocaleString()}${note?' — '+note:''}`,
+      agent:'manual'
+    });
+    toast(`⏰ Callback set for ${new Date(dt).toLocaleString()}`, 'success');
+    document.getElementById('lp-compose').style.display='none';
+    const ar = await apiFetch(`/api/leads/${_lpLead.id}/activities?limit=30`);
+    if(ar.ok){const ad=await ar.json();_renderLeadPanel(_lpLead,ad.activities||[]);document.getElementById('lp-stage-sel').value=_lpLead.status||'New';}
+  } catch(e){ toast('Callback save failed: '+e.message,'error'); }
 }
 
 async function lpNoteSave() {

@@ -6,6 +6,7 @@ a secure link to complete the profile. Full submissions run the entire pipeline.
 """
 from __future__ import annotations
 
+import re
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Request, status
@@ -18,6 +19,40 @@ from ..triggers import fire_onboarding
 
 log = get_logger("route.intake")
 router = APIRouter()
+
+
+def _auto_convert_lead(sb, dot_number: str | None, phone: str | None, carrier_id: str) -> None:
+    """Find a matching lead by DOT or phone and mark it Converted."""
+    from ..prospecting.activity import log_activity
+    now = datetime.now(timezone.utc).isoformat()
+    lead = None
+
+    if dot_number:
+        res = sb.table("leads").select("id,status").eq("dot_number", str(dot_number)).limit(1).execute()
+        if res.data:
+            lead = res.data[0]
+
+    if not lead and phone:
+        digits = re.sub(r"\D", "", phone)
+        for candidate in [phone, f"+1{digits}", digits]:
+            res = sb.table("leads").select("id,status").eq("phone", candidate).limit(1).execute()
+            if res.data:
+                lead = res.data[0]
+                break
+
+    if lead and lead.get("status") not in ("Converted", "Won"):
+        sb.table("leads").update({
+            "status":               "Converted",
+            "converted_carrier_id": carrier_id,
+            "converted_at":         now,
+        }).eq("id", lead["id"]).execute()
+        log_activity(
+            lead["id"], "stage_change", "sent",
+            summary=f"Converted — carrier {carrier_id} signed up via intake form",
+            agent="intake",
+            payload={"carrier_id": carrier_id},
+        )
+        log.info("lead %s auto-converted → carrier %s", lead["id"], carrier_id)
 
 
 def _last4(s: str | None) -> str | None:
@@ -301,6 +336,12 @@ async def carrier_intake(payload: CarrierIntake, request: Request,
     if not res.data:
         raise HTTPException(500, "carrier insert failed")
     carrier_id = res.data[0]["id"]
+
+    # Auto-convert any matching lead in the pipeline
+    try:
+        _auto_convert_lead(sb, payload.dot_number, phone, carrier_id)
+    except Exception as _e:
+        log.warning("lead auto-convert failed (non-fatal): %s", _e)
 
     # 2. fleet_assets (first truck)
     try:

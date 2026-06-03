@@ -195,19 +195,86 @@ def mark_read(driver_phone: str) -> dict:
 
 # ── Twilio inbound webhook (no auth required — Twilio POSTs here) ─────────────
 
+def _find_lead_by_phone(db, from_phone: str):
+    """Return the first lead matching this phone in any common format."""
+    digits = re.sub(r"\D", "", from_phone)
+    candidates = list({from_phone, digits, f"+1{digits}" if len(digits)==10 else None} - {None})
+    for candidate in candidates:
+        res = db.table("leads").select("*").eq("phone", candidate).limit(1).execute()
+        if res.data:
+            return res.data[0]
+    return None
+
+
 @router.post("/webhook/twilio")
 async def twilio_inbound(request: Request) -> Response:
-    """Receive inbound driver SMS from Twilio; reply via TwiML."""
+    """Receive inbound SMS from Twilio.
+
+    Routes to lead pipeline if sender matches a prospect; falls back to
+    driver dispatch handling otherwise.
+    """
+    from ..prospecting.activity import log_activity
+    from ..studio.registry import SIGNUP_URL, BOOKING_URL
+
     form = await request.form()
     from_phone = form.get("From", "")
     body = (form.get("Body") or "").strip()
+    upper = body.upper()
 
     _store("inbound", from_phone, body)
     log_agent("signal", "sms.inbound",
               payload={"from": from_phone, "body": body[:120]},
               result="received")
 
-    upper = body.upper()
+    # ── Check if sender is a lead prospect ──────────────────────────────────
+    db = get_supabase()
+    lead = _find_lead_by_phone(db, from_phone)
+
+    if lead and lead.get("status") not in ("Converted", "Won", "Dead"):
+        lead_id = lead["id"]
+        name = lead.get("business_name") or lead.get("company_name") or "there"
+
+        # Log inbound reply as activity
+        log_activity(lead_id, "sms", "sent",
+                     summary=f'Prospect replied: "{body[:120]}"',
+                     agent="inbound_sms",
+                     direction="inbound",
+                     payload={"from": from_phone, "body": body})
+
+        # Positive reply → mark Interested + send intake link
+        if upper in ("YES", "Y", "INTERESTED", "YEP", "YEAH", "SURE", "OK", "OKAY"):
+            log_activity(lead_id, "call", "interested",
+                         summary="Prospect replied YES to SMS outreach",
+                         agent="inbound_sms")
+            reply = (
+                f"Awesome, {name}! Here's your application link — takes about 5 minutes: "
+                f"{SIGNUP_URL} "
+                f"Questions? Reply or book a call: {BOOKING_URL}"
+            )
+        elif upper in ("NO", "N", "STOP", "UNSUBSCRIBE", "NOPE", "NOT INTERESTED"):
+            db.table("leads").update({"do_not_contact": True, "status": "Dead"}).eq("id", lead_id).execute()
+            log_activity(lead_id, "stage_change", "sent",
+                         summary="Opted out via SMS reply",
+                         agent="inbound_sms")
+            reply = "Got it — we've removed you from our list. Reply START anytime to re-engage. — 3 Lakes"
+        elif upper in ("SIGNUP", "SIGN UP", "APPLY", "APPLICATION", "LINK"):
+            reply = (
+                f"Here's your application link: {SIGNUP_URL}\n"
+                f"Or book a call: {BOOKING_URL} — 3 Lakes Logistics"
+            )
+        else:
+            # Generic prospect reply — log it, notify dispatcher
+            reply = (
+                f"Thanks for reaching out! A team member will follow up shortly. "
+                f"Ready to apply? {SIGNUP_URL} — 3 Lakes Logistics"
+            )
+
+        if len(reply) > 320:
+            reply = reply[:317] + "..."
+        twiml = f'<?xml version="1.0" encoding="UTF-8"?><Response><Message>{reply}</Message></Response>'
+        return Response(content=twiml, media_type="application/xml")
+
+    # ── Driver dispatch handling (existing behaviour) ────────────────────────
     if upper in ("YES", "Y", "ACCEPT", "OK", "YEP", "YEAH"):
         reply = "Load accepted! Your dispatcher will send details shortly. Drive safe. — 3 Lakes"
         log_agent("signal", "load.accepted_via_sms", payload={"from": from_phone}, result="accepted")
