@@ -86,10 +86,11 @@
       padding-top: calc(var(--safe-top) + 58px);
       padding-bottom: calc(var(--safe-bot) + 68px);
       overflow: hidden;
+      display: flex; flex-direction: column;
     }
 
-    /* ── ALL VIEWS fill the viewport — each manages its own scroll ── */
-    .view { display: none; flex-direction: column; height: 100%; }
+    /* ── ALL VIEWS fill the remaining space inside #main's padding ── */
+    .view { display: none; flex-direction: column; flex: 1; min-height: 0; }
     .view.active { display: flex; }
     /* Generic scrollable content pane used by most views */
     .view-scroll {
