@@ -129,7 +129,11 @@ async def upload_driver_document(
     driver_id = session["driver_id"]
 
     # Validate document type
-    valid_types = {"bol", "pod", "lumper", "insurance", "medical_card"}
+    valid_types = {
+        "bol", "pod", "lumper", "insurance", "medical_card",
+        "cdl", "drug_test", "agreement", "w9", "fuel_advance",
+        "rate_confirmation", "lease", "1099", "other"
+    }
     if doc_type not in valid_types:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -197,6 +201,88 @@ async def upload_driver_document(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="upload failed"
+        )
+
+
+# ────────────────────────────────────────────────────────────────────────────
+# DOCUMENT VAULT — list + signed URL refresh
+# ────────────────────────────────────────────────────────────────────────────
+
+@router.get("/documents")
+async def list_driver_documents(session: DriverSession):
+    """Return all documents uploaded by this driver with fresh signed URLs.
+
+    Signed URLs are valid for 7 days. The vault generates a fresh URL for
+    each document so the driver can always open/download them.
+    """
+    driver_id = session["driver_id"]
+
+    try:
+        result = get_supabase().table("document_vault").select(
+            "id, doc_type, filename, storage_path, file_size_kb, mime_type, "
+            "scan_status, created_at, notes, expiration_date"
+        ).eq("uploaded_by", driver_id).order("created_at", desc=True).execute()
+
+        docs = result.data or []
+
+        # Attach a fresh signed URL to each document
+        for doc in docs:
+            path = doc.get("storage_path")
+            if path:
+                try:
+                    su = get_supabase().storage.from_("driver-documents").create_signed_url(
+                        path=path, expires_in=604800
+                    )
+                    doc["signed_url"] = su.get("signedURL", "")
+                except Exception:
+                    doc["signed_url"] = ""
+            else:
+                doc["signed_url"] = ""
+
+        return {"documents": docs, "total": len(docs)}
+
+    except Exception as e:
+        log.error("Document list failed driver=%s: %s", driver_id, e)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="could not fetch documents"
+        )
+
+
+@router.delete("/documents/{doc_id}")
+async def delete_driver_document(doc_id: str, session: DriverSession):
+    """Delete a document from the vault (soft: removes metadata + storage file)."""
+    driver_id = session["driver_id"]
+
+    try:
+        # Verify ownership
+        result = get_supabase().table("document_vault").select(
+            "id, storage_path, uploaded_by"
+        ).eq("id", doc_id).single().execute()
+
+        doc = result.data
+        if not doc or doc["uploaded_by"] != driver_id:
+            raise HTTPException(status_code=404, detail="document not found")
+
+        # Delete from storage
+        if doc.get("storage_path"):
+            try:
+                get_supabase().storage.from_("driver-documents").remove([doc["storage_path"]])
+            except Exception:
+                pass
+
+        # Delete metadata
+        get_supabase().table("document_vault").delete().eq("id", doc_id).execute()
+
+        return {"ok": True, "deleted": doc_id}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        log.error("Document delete failed: %s", e)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="delete failed"
         )
 
 

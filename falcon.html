@@ -296,6 +296,30 @@ select.form-input{appearance:none;background-image:url("data:image/svg+xml,%3Csv
 .upload-zone:hover{border-color:var(--gold2);background:rgba(228,168,48,.03);}
 .upload-zone input{display:none;}
 
+/* ── VAULT GRID ────────────────────────────────────────────────── */
+.vault-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px;}
+.vault-card{background:var(--white);border-radius:var(--r);padding:18px;border:1px solid var(--border);cursor:pointer;transition:all .2s;position:relative;}
+.vault-card:hover{border-color:var(--gold2);box-shadow:0 4px 20px rgba(11,31,58,.1);transform:translateY(-1px);}
+.vault-card-icon{width:48px;height:48px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:22px;margin-bottom:12px;}
+.vault-card-name{font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.vault-card-type{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;}
+.vault-card-badges{display:flex;gap:5px;flex-wrap:wrap;}
+.vault-card-del{position:absolute;top:10px;right:10px;opacity:0;transition:opacity .2s;background:none;border:none;cursor:pointer;font-size:16px;color:var(--muted);}
+.vault-card:hover .vault-card-del{opacity:1;}
+/* Vault list row */
+.vault-row{display:flex;align-items:center;gap:14px;padding:12px;background:var(--white);border-radius:8px;border:1px solid var(--border);cursor:pointer;transition:border-color .15s;margin-bottom:8px;}
+.vault-row:hover{border-color:var(--gold2);}
+.vault-row-icon{width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;}
+.vault-row-info{flex:1;min-width:0;}
+.vault-row-name{font-size:13px;font-weight:700;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.vault-row-meta{font-size:11px;color:var(--muted);margin-top:1px;}
+.vault-row-actions{display:flex;gap:6px;align-items:center;flex-shrink:0;}
+/* Compliance check pill */
+.comp-pill{display:flex;align-items:center;gap:7px;padding:7px 13px;border-radius:20px;font-size:12px;font-weight:600;border:1px solid var(--border);background:var(--white);}
+.comp-pill.ok{background:#D1FAE5;border-color:#6EE7B7;color:#065F46;}
+.comp-pill.missing{background:#FEE2E2;border-color:#FCA5A5;color:#991B1B;cursor:pointer;}
+.comp-pill.expiring{background:#FEF3C7;border-color:#FCD34D;color:#92400E;}
+
 /* ── EMPTY STATE ───────────────────────────────────────────────── */
 .empty{text-align:center;padding:48px 24px;}
 .empty-icon{font-size:52px;margin-bottom:14px;}
@@ -606,73 +630,35 @@ select.form-input{appearance:none;background-image:url("data:image/svg+xml,%3Csv
         </div>
       </div>
 
-      <!-- ════ DOCUMENTS ════ -->
+      <!-- ════ DOCUMENTS VAULT ════ -->
       <div class="view" id="view-docs">
-        <!-- Insurance highlight banner -->
-        <div id="ins-banner" style="display:none;background:linear-gradient(135deg,#FEF3C7,#FFFBEB);border:1px solid #FCD34D;border-radius:var(--r);padding:16px 20px;margin-bottom:16px;display:flex;align-items:center;gap:14px;">
-          <span style="font-size:28px;">🛡️</span>
-          <div style="flex:1;">
-            <div style="font-weight:700;color:#92400E;font-size:14px;">Insurance Card Required</div>
-            <div style="font-size:12px;color:#92400E;margin-top:2px;">Upload your current insurance card to stay compliant. Expires — check expiration date.</div>
+
+        <!-- Compliance checklist strip -->
+        <div id="compliance-strip" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;"></div>
+
+        <!-- Toolbar -->
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap;">
+          <input class="form-input" id="vault-search" placeholder="🔍  Search documents…" style="flex:1;min-width:180px;" oninput="renderDocs()"/>
+          <div class="chips" id="doc-cat-chips" style="margin:0;">
+            <div class="chip active" data-cat="all" onclick="docCatFilter(this)">All</div>
+            <div class="chip" data-cat="compliance" onclick="docCatFilter(this)">📋 Compliance</div>
+            <div class="chip" data-cat="operations" onclick="docCatFilter(this)">🚛 Operations</div>
+            <div class="chip" data-cat="financial" onclick="docCatFilter(this)">💰 Financial</div>
           </div>
-          <button class="btn btn-gold btn-sm" onclick="docQuickUpload('insurance')">Upload Now</button>
+          <div style="display:flex;gap:6px;">
+            <button class="btn btn-ghost btn-sm" id="view-grid-btn" onclick="setDocView('grid')" title="Grid view">▦</button>
+            <button class="btn btn-ghost btn-sm" id="view-list-btn" onclick="setDocView('list')" title="List view">☰</button>
+          </div>
+          <button class="btn btn-ghost btn-sm" onclick="loadDocs()">↻</button>
+          <button class="btn btn-gold btn-sm" onclick="openModal('modal-upload')">+ Upload</button>
         </div>
-        <div class="grid-2">
-          <div>
-            <!-- Category filter -->
-            <div class="chips" id="doc-cat-chips" style="margin-bottom:12px;">
-              <div class="chip active" data-cat="all" onclick="docCatFilter(this)">All</div>
-              <div class="chip" data-cat="compliance" onclick="docCatFilter(this)">Compliance</div>
-              <div class="chip" data-cat="operations" onclick="docCatFilter(this)">Operations</div>
-              <div class="chip" data-cat="financial" onclick="docCatFilter(this)">Financial</div>
-            </div>
-            <div class="card">
-              <div class="card-hd">
-                <div class="card-title">My Documents</div>
-                <button class="btn btn-ghost btn-sm" onclick="loadDocs()">↻ Refresh</button>
-              </div>
-              <div id="docs-list"><div class="loading-state"><div class="spinner"></div></div></div>
-            </div>
-          </div>
-          <div>
-            <div class="card" style="margin-bottom:16px;border:2px solid rgba(228,168,48,.3);">
-              <div class="card-hd"><div class="card-title" style="color:var(--gold);">🛡️ Insurance Upload</div></div>
-              <p style="font-size:13px;color:var(--muted);margin-bottom:14px;">Upload your current proof of insurance. Required for all active drivers.</p>
-              <label class="form-label">Insurance Provider</label>
-              <input class="form-input" id="ins-provider" placeholder="e.g. Progressive, Great West" style="margin-bottom:12px;"/>
-              <label class="form-label">Policy Number</label>
-              <input class="form-input" id="ins-policy" placeholder="Policy #" style="margin-bottom:12px;"/>
-              <label class="form-label">Expiration Date</label>
-              <input class="form-input" id="ins-exp" type="date" style="margin-bottom:12px;"/>
-              <div class="upload-zone" onclick="document.getElementById('ins-file').click()">
-                <input type="file" id="ins-file" accept="image/*,application/pdf" onchange="onFileChosen(this,'ins-file-name')"/>
-                <div style="font-size:28px;margin-bottom:8px;">🛡️</div>
-                <div style="font-weight:700;color:var(--text);font-size:13px;" id="ins-file-name">Select insurance card</div>
-                <div style="font-size:11px;color:var(--muted);margin-top:3px;">JPG, PNG, or PDF</div>
-              </div>
-              <button class="btn btn-gold btn-full" style="margin-top:12px;" onclick="uploadInsurance()">Upload Insurance Card</button>
-            </div>
-            <div class="card">
-              <div class="card-hd"><div class="card-title">Upload Other Document</div></div>
-              <label class="form-label">Document Type</label>
-              <select class="form-input" id="doc-type-sel" style="margin-bottom:12px;">
-                <option value="bol">Bill of Lading (BOL)</option>
-                <option value="pod">Proof of Delivery (POD)</option>
-                <option value="lumper">Lumper Receipt</option>
-                <option value="medical_card">Medical Card</option>
-              </select>
-              <label class="form-label">Expiration Date (if applicable)</label>
-              <input class="form-input" id="doc-exp" type="date" style="margin-bottom:12px;"/>
-              <div class="upload-zone" onclick="document.getElementById('doc-file').click()">
-                <input type="file" id="doc-file" accept="image/*,application/pdf" onchange="onFileChosen(this,'doc-file-name')"/>
-                <div style="font-size:28px;margin-bottom:8px;">📤</div>
-                <div style="font-weight:700;color:var(--text);font-size:13px;" id="doc-file-name">Click to select file</div>
-                <div style="font-size:11px;color:var(--muted);margin-top:3px;">JPG, PNG, or PDF · Max 20 MB</div>
-              </div>
-              <button class="btn btn-ghost btn-full" style="margin-top:12px;" onclick="uploadDoc()">Upload Document</button>
-            </div>
-          </div>
-        </div>
+
+        <!-- Doc count -->
+        <div id="vault-count" style="font-size:12px;color:var(--muted);margin-bottom:12px;"></div>
+
+        <!-- Document grid / list -->
+        <div id="docs-list"><div class="loading-state"><div class="spinner"></div></div></div>
+
       </div>
 
       <!-- ════ LOAD HISTORY ════ -->
@@ -898,6 +884,97 @@ select.form-input{appearance:none;background-image:url("data:image/svg+xml,%3Csv
     </div><!-- /content -->
   </div><!-- /main -->
 </div><!-- /app -->
+
+<!-- ── DOCUMENT UPLOAD MODAL ── -->
+<div class="modal-bg" id="modal-upload">
+  <div class="modal-box" style="max-width:520px;">
+    <button class="modal-close" onclick="closeModal('modal-upload')">✕</button>
+    <div class="modal-title" style="margin-bottom:18px;">Upload Document</div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">
+      <div>
+        <label class="form-label">Document Type</label>
+        <select class="form-input" id="up-type">
+          <optgroup label="Compliance">
+            <option value="cdl">CDL License</option>
+            <option value="medical_card">Medical Card</option>
+            <option value="drug_test">Drug Screen</option>
+            <option value="agreement">Driver Agreement</option>
+          </optgroup>
+          <optgroup label="Insurance">
+            <option value="insurance">Insurance Card</option>
+          </optgroup>
+          <optgroup label="Operations">
+            <option value="bol">Bill of Lading (BOL)</option>
+            <option value="pod">Proof of Delivery (POD)</option>
+            <option value="lumper">Lumper Receipt</option>
+            <option value="rate_confirmation">Rate Confirmation</option>
+          </optgroup>
+          <optgroup label="Financial">
+            <option value="fuel_advance">Fuel Advance</option>
+            <option value="w9">W-9 Form</option>
+            <option value="1099">1099</option>
+            <option value="lease">Lease Agreement</option>
+          </optgroup>
+          <option value="other">Other</option>
+        </select>
+      </div>
+      <div>
+        <label class="form-label">Expiration Date <span style="font-weight:400;text-transform:none;">(if any)</span></label>
+        <input class="form-input" id="up-exp" type="date"/>
+      </div>
+    </div>
+    <div id="up-ins-fields" style="display:none;background:var(--off);border-radius:8px;padding:14px;margin-bottom:14px;">
+      <label class="form-label">Insurance Provider</label>
+      <input class="form-input" id="up-ins-provider" placeholder="e.g. Progressive, Great West" style="margin-bottom:10px;"/>
+      <label class="form-label">Policy Number</label>
+      <input class="form-input" id="up-ins-policy" placeholder="Policy #"/>
+    </div>
+    <label class="form-label">Notes <span style="font-weight:400;text-transform:none;">(optional)</span></label>
+    <input class="form-input" id="up-notes" placeholder="Load #, expiry reminder, etc." style="margin-bottom:14px;"/>
+
+    <!-- Drop zone -->
+    <div class="upload-zone" id="up-drop" onclick="document.getElementById('up-file').click()"
+         ondragover="event.preventDefault();this.style.borderColor='var(--gold2)'"
+         ondragleave="this.style.borderColor=''"
+         ondrop="onDropFile(event)">
+      <input type="file" id="up-file" accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx"
+             onchange="onFileChosen(this,'up-file-name')"/>
+      <div style="font-size:36px;margin-bottom:10px;">📂</div>
+      <div style="font-weight:700;color:var(--text);margin-bottom:4px;" id="up-file-name">Click or drag &amp; drop file here</div>
+      <div style="font-size:11px;color:var(--muted);">JPG, PNG, PDF, Word, Excel · Max 20 MB</div>
+    </div>
+    <!-- Progress bar -->
+    <div id="up-progress-wrap" style="display:none;margin-top:12px;">
+      <div style="height:6px;background:var(--off);border-radius:3px;overflow:hidden;">
+        <div id="up-progress-bar" style="height:100%;background:var(--gold2);width:0%;transition:width .3s;"></div>
+      </div>
+      <div id="up-progress-txt" style="font-size:12px;color:var(--muted);margin-top:4px;">Uploading…</div>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:16px;">
+      <button class="btn btn-gold" style="flex:1;" onclick="uploadDocModal()">Upload Document</button>
+      <button class="btn btn-ghost" onclick="closeModal('modal-upload')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── DOCUMENT PREVIEW MODAL ── -->
+<div class="modal-bg" id="modal-preview">
+  <div class="modal-box" style="max-width:700px;padding:0;overflow:hidden;">
+    <div style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
+      <div>
+        <div style="font-weight:800;font-size:15px;" id="prev-name">Document</div>
+        <div style="font-size:12px;color:var(--muted);" id="prev-meta"></div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <a class="btn btn-ghost btn-sm" id="prev-download" target="_blank" download>⬇ Download</a>
+        <a class="btn btn-navy btn-sm" id="prev-open" target="_blank">↗ Open</a>
+        <button class="btn btn-ghost btn-sm" onclick="closeModal('modal-preview')">✕</button>
+      </div>
+    </div>
+    <div id="prev-content" style="height:60vh;overflow:auto;background:#f0f0f0;display:flex;align-items:center;justify-content:center;"></div>
+  </div>
+</div>
 
 <!-- ── REQUEST LOAD MODAL ── -->
 <div class="modal-bg" id="modal-req">
@@ -1487,28 +1564,69 @@ async function requestPayout() {
 }
 
 // ── DOCUMENTS ────────────────────────────────────────────────────
+// ── DOCUMENT VAULT ────────────────────────────────────────────────
 const DOC_CAT = {
-  BOL:'operations',POD:'operations',LUMPER:'operations',
-  INSURANCE:'financial',MEDICAL_CARD:'compliance',
-  CDL:'compliance',DRUG_TEST:'compliance',AGREEMENT:'compliance',W9:'financial',
+  BOL:'operations', POD:'operations', LUMPER:'operations', RATE_CONFIRMATION:'operations',
+  INSURANCE:'financial', W9:'financial', '1099':'financial', FUEL_ADVANCE:'financial', LEASE:'financial',
+  MEDICAL_CARD:'compliance', CDL:'compliance', DRUG_TEST:'compliance', AGREEMENT:'compliance',
+  OTHER:'other',
 };
-const DOC_ICON = {BOL:'📋',POD:'✅',LUMPER:'💵',INSURANCE:'🛡️',MEDICAL_CARD:'🏥',CDL:'🪪',DRUG_TEST:'🧪',AGREEMENT:'📄',W9:'💼'};
+const DOC_ICON  = {BOL:'📋',POD:'✅',LUMPER:'💵',INSURANCE:'🛡️',MEDICAL_CARD:'🏥',CDL:'🪪',DRUG_TEST:'🧪',AGREEMENT:'📄',W9:'💼','1099':'🧾',FUEL_ADVANCE:'⛽',RATE_CONFIRMATION:'📌',LEASE:'🏠',OTHER:'📁'};
+const DOC_COLOR = {compliance:'rgba(59,130,246,.1)',operations:'rgba(16,185,129,.1)',financial:'rgba(245,158,11,.1)',other:'rgba(107,122,153,.1)'};
+const DOC_TEXT  = {compliance:'#1D4ED8',operations:'#065F46',financial:'#92400E',other:'var(--muted)'};
+
+const REQUIRED_DOCS = [
+  {type:'CDL',        label:'CDL License'},
+  {type:'MEDICAL_CARD',label:'Medical Card'},
+  {type:'DRUG_TEST',  label:'Drug Screen'},
+  {type:'INSURANCE',  label:'Insurance Card'},
+  {type:'AGREEMENT',  label:'Driver Agreement'},
+];
+
 let _allDocs = [];
 let _docCatFilter = 'all';
+let _docViewMode = 'grid'; // grid | list
 
 async function loadDocs() {
   const el = document.getElementById('docs-list');
-  el.innerHTML = '<div class="loading-state"><div class="spinner"></div></div>';
+  el.innerHTML = '<div class="loading-state"><div class="spinner"></div> Loading vault…</div>';
   try {
-    const data = await api('GET', '/api/driver/profile');
-    _allDocs = data.recent_documents || [];
+    const data = await api('GET', '/api/driver/documents');
+    _allDocs = data.documents || [];
+    renderComplianceStrip();
     renderDocs();
-    // Show insurance banner if no insurance doc on file
-    const hasIns = _allDocs.some(d=>d.doc_type==='INSURANCE');
-    document.getElementById('ins-banner').style.display = hasIns ? 'none' : 'flex';
   } catch(e) {
-    el.innerHTML = '<div style="font-size:13px;color:var(--muted);padding:12px 0;">Could not load documents.</div>';
+    // Fallback to profile endpoint
+    try {
+      const p = await api('GET', '/api/driver/profile');
+      _allDocs = p.recent_documents || [];
+      renderComplianceStrip();
+      renderDocs();
+    } catch(e2) {
+      el.innerHTML = '<div class="empty"><div class="empty-icon">⚠️</div><h3>Could not load vault</h3><p>'+e.message+'</p></div>';
+    }
   }
+}
+
+function renderComplianceStrip() {
+  const strip = document.getElementById('compliance-strip');
+  if (!strip) return;
+  const today = new Date();
+  strip.innerHTML = REQUIRED_DOCS.map(req => {
+    const found = _allDocs.find(d => d.doc_type === req.type);
+    if (!found) return `<div class="comp-pill missing" onclick="openUploadFor('${req.type.toLowerCase()}')">✕ ${req.label} Missing</div>`;
+    const exp = found.expiration_date ? new Date(found.expiration_date) : null;
+    if (exp && exp < today) return `<div class="comp-pill expiring">⚠️ ${req.label} Expired</div>`;
+    if (exp && (exp-today)/(1000*60*60*24) < 30) return `<div class="comp-pill expiring">⚠️ ${req.label} Expiring</div>`;
+    return `<div class="comp-pill ok">✓ ${req.label}</div>`;
+  }).join('');
+}
+
+function setDocView(mode) {
+  _docViewMode = mode;
+  document.getElementById('view-grid-btn').className = 'btn btn-sm ' + (mode==='grid' ? 'btn-navy' : 'btn-ghost');
+  document.getElementById('view-list-btn').className = 'btn btn-sm ' + (mode==='list' ? 'btn-navy' : 'btn-ghost');
+  renderDocs();
 }
 
 function docCatFilter(chip) {
@@ -1520,86 +1638,199 @@ function docCatFilter(chip) {
 
 function renderDocs() {
   const el = document.getElementById('docs-list');
+  const search = (document.getElementById('vault-search')?.value||'').toLowerCase();
   let docs = _allDocs;
-  if (_docCatFilter !== 'all') docs = docs.filter(d=>(DOC_CAT[d.doc_type]||'operations')===_docCatFilter);
+  if (_docCatFilter !== 'all') docs = docs.filter(d=>(DOC_CAT[d.doc_type]||'other')===_docCatFilter);
+  if (search) docs = docs.filter(d=>(d.filename||'').toLowerCase().includes(search)||(d.doc_type||'').toLowerCase().includes(search)||(d.notes||'').toLowerCase().includes(search));
+
+  const cnt = document.getElementById('vault-count');
+  if (cnt) cnt.textContent = docs.length + ' document' + (docs.length===1?'':'s') + (search||_docCatFilter!=='all'?' matching':'');
+
   if (!docs.length) {
-    el.innerHTML = '<div class="empty" style="padding:20px 0;"><div class="empty-icon">📂</div><h3>No Documents</h3><p>Upload your first document above.</p></div>';
+    el.innerHTML = `<div class="empty"><div class="empty-icon">📂</div><h3>${search?'No matches':'No Documents Yet'}</h3><p>${search?'Try a different search term.':'Upload your first document using the button above.'}</p><button class="btn btn-gold" style="margin-top:14px;" onclick="openModal('modal-upload')">+ Upload Document</button></div>`;
     return;
   }
-  el.innerHTML = docs.map(d=>{
-    const exp = d.expiration_date ? new Date(d.expiration_date) : null;
-    const today = new Date();
-    const daysLeft = exp ? Math.round((exp-today)/(1000*60*60*24)) : null;
-    const expBadge = exp
-      ? daysLeft < 0 ? `<span class="badge badge-red" style="margin-left:6px;">Expired</span>`
-        : daysLeft < 30 ? `<span class="badge badge-amber" style="margin-left:6px;">Expires in ${daysLeft}d</span>`
-        : `<span class="badge badge-green" style="margin-left:6px;">Valid</span>`
-      : '';
-    return `<div class="doc-item">
-      <div class="doc-icon">${DOC_ICON[d.doc_type]||'📄'}</div>
-      <div class="doc-info">
-        <div class="doc-name">${d.filename||d.doc_type}</div>
-        <div class="doc-meta">${d.doc_type}${exp?' · Exp: '+exp.toLocaleDateString():''} · ${(d.created_at||'').slice(0,10)}</div>
-      </div>
-      <div style="display:flex;align-items:center;gap:6px;">
-        ${expBadge}
-        <span class="badge ${d.scan_status==='approved'?'badge-green':d.scan_status==='pending'?'badge-amber':'badge-red'}">${d.scan_status||'pending'}</span>
-      </div>
+
+  if (_docViewMode === 'grid') {
+    el.innerHTML = `<div class="vault-grid">${docs.map(d=>vaultCard(d)).join('')}</div>`;
+  } else {
+    el.innerHTML = docs.map(d=>vaultRow(d)).join('');
+  }
+}
+
+function expInfo(d) {
+  if (!d.expiration_date) return {badge:'', daysLeft:null};
+  const exp = new Date(d.expiration_date);
+  const today = new Date();
+  const daysLeft = Math.round((exp-today)/(1000*60*60*24));
+  const badge = daysLeft < 0
+    ? `<span class="badge badge-red">Expired</span>`
+    : daysLeft < 30 ? `<span class="badge badge-amber">${daysLeft}d left</span>`
+    : `<span class="badge badge-green">Valid</span>`;
+  return {badge, daysLeft};
+}
+
+function vaultCard(d) {
+  const cat = DOC_CAT[d.doc_type] || 'other';
+  const {badge} = expInfo(d);
+  const scanBadge = d.scan_status==='approved' ? '<span class="badge badge-green">✓</span>'
+    : d.scan_status==='pending' ? '<span class="badge badge-amber">Pending</span>'
+    : '<span class="badge badge-gray">—</span>';
+  const sz = d.file_size_kb ? (d.file_size_kb < 1024 ? d.file_size_kb+'KB' : (d.file_size_kb/1024).toFixed(1)+'MB') : '';
+  return `<div class="vault-card" onclick="previewDoc(${JSON.stringify(d).replace(/"/g,'&quot;')})">
+    <button class="vault-card-del" onclick="event.stopPropagation();deleteDoc('${d.id}','${(d.filename||'').replace(/'/g,"\\'")}')" title="Delete">🗑</button>
+    <div class="vault-card-icon" style="background:${DOC_COLOR[cat]};color:${DOC_TEXT[cat]};">${DOC_ICON[d.doc_type]||'📄'}</div>
+    <div class="vault-card-name" title="${d.filename||d.doc_type}">${d.filename||d.doc_type}</div>
+    <div class="vault-card-type">${d.doc_type?.replace(/_/g,' ')||'Document'} ${sz?'· '+sz:''}</div>
+    <div class="vault-card-badges">${badge}${scanBadge}</div>
+    <div style="font-size:10px;color:var(--muted);margin-top:8px;">${(d.created_at||'').slice(0,10)}</div>
+  </div>`;
+}
+
+function vaultRow(d) {
+  const cat = DOC_CAT[d.doc_type] || 'other';
+  const {badge} = expInfo(d);
+  const sz = d.file_size_kb ? (d.file_size_kb < 1024 ? d.file_size_kb+'KB' : (d.file_size_kb/1024).toFixed(1)+'MB') : '';
+  const exp = d.expiration_date ? ' · Exp: '+d.expiration_date.slice(0,10) : '';
+  return `<div class="vault-row">
+    <div class="vault-row-icon" style="background:${DOC_COLOR[cat]};color:${DOC_TEXT[cat]};" onclick="previewDoc(${JSON.stringify(d).replace(/"/g,'&quot;')})">${DOC_ICON[d.doc_type]||'📄'}</div>
+    <div class="vault-row-info" onclick="previewDoc(${JSON.stringify(d).replace(/"/g,'&quot;')})">
+      <div class="vault-row-name">${d.filename||d.doc_type}</div>
+      <div class="vault-row-meta">${d.doc_type?.replace(/_/g,' ')||'Document'} · ${(d.created_at||'').slice(0,10)}${exp}${sz?' · '+sz:''}</div>
+    </div>
+    <div class="vault-row-actions">
+      ${badge}
+      ${d.signed_url ? `<a class="btn btn-ghost btn-sm" href="${d.signed_url}" target="_blank" download onclick="event.stopPropagation()">⬇</a>` : ''}
+      <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();deleteDoc('${d.id}','${(d.filename||'').replace(/'/g,"\\'")}')">🗑</button>
+    </div>
+  </div>`;
+}
+
+function previewDoc(d) {
+  const name = d.filename || d.doc_type || 'Document';
+  const meta = [d.doc_type?.replace(/_/g,' '), (d.created_at||'').slice(0,10), d.file_size_kb?(d.file_size_kb<1024?d.file_size_kb+'KB':(d.file_size_kb/1024).toFixed(1)+'MB'):''].filter(Boolean).join(' · ');
+  document.getElementById('prev-name').textContent = name;
+  document.getElementById('prev-meta').textContent = meta;
+
+  const dl = document.getElementById('prev-download');
+  const op = document.getElementById('prev-open');
+  const url = d.signed_url || '';
+  dl.href = url; dl.style.display = url ? '' : 'none';
+  op.href = url; op.style.display = url ? '' : 'none';
+
+  const cont = document.getElementById('prev-content');
+  if (!url) {
+    cont.innerHTML = '<div style="text-align:center;padding:40px;color:var(--muted);"><div style="font-size:48px;margin-bottom:12px;">📄</div><div>No preview available</div></div>';
+  } else if (/\.(jpg|jpeg|png|gif|webp)$/i.test(name) || (d.mime_type||'').startsWith('image/')) {
+    cont.innerHTML = `<img src="${url}" style="max-width:100%;max-height:100%;object-fit:contain;" onerror="this.style.display='none'"/>`;
+  } else if (/\.pdf$/i.test(name) || d.mime_type==='application/pdf') {
+    cont.innerHTML = `<iframe src="${url}" style="width:100%;height:100%;border:none;" title="${name}"></iframe>`;
+  } else {
+    cont.innerHTML = `<div style="text-align:center;padding:40px;">
+      <div style="font-size:64px;margin-bottom:16px;">${DOC_ICON[d.doc_type]||'📄'}</div>
+      <div style="font-weight:700;font-size:16px;margin-bottom:8px;">${name}</div>
+      <div style="color:var(--muted);font-size:13px;margin-bottom:20px;">This file type cannot be previewed in the browser.</div>
+      <a class="btn btn-gold" href="${url}" download target="_blank">⬇ Download to View</a>
     </div>`;
-  }).join('');
+  }
+  openModal('modal-preview');
+}
+
+async function deleteDoc(id, name) {
+  if (!confirm(`Delete "${name}"? This cannot be undone.`)) return;
+  try {
+    await api('DELETE', '/api/driver/documents/'+id);
+    toast('Document deleted', '');
+    loadDocs();
+  } catch(e) { toast('⚠️ Could not delete: '+e.message, 'red'); }
+}
+
+function openUploadFor(type) {
+  document.getElementById('up-type').value = type;
+  toggleInsFields();
+  openModal('modal-upload');
 }
 
 function onFileChosen(input, targetId) {
   const f = input.files[0];
-  document.getElementById(targetId).textContent = f ? f.name : 'Click to select file';
+  document.getElementById(targetId).textContent = f ? f.name : 'Click or drag & drop file here';
 }
 
-function docQuickUpload(type) {
-  document.getElementById('doc-type-sel').value = type;
-  document.getElementById('doc-file').click();
+function onDropFile(event) {
+  event.preventDefault();
+  document.getElementById('up-drop').style.borderColor = '';
+  const f = event.dataTransfer.files[0];
+  if (!f) return;
+  const dt = new DataTransfer(); dt.items.add(f);
+  document.getElementById('up-file').files = dt.files;
+  document.getElementById('up-file-name').textContent = f.name;
 }
 
-async function uploadInsurance() {
-  const file = document.getElementById('ins-file').files[0];
-  if (!file) { toast('⚠️ Select your insurance card first', 'red'); return; }
-  const provider = document.getElementById('ins-provider').value;
-  const policy = document.getElementById('ins-policy').value;
-  const exp = document.getElementById('ins-exp').value;
-  try {
-    const fd = new FormData();
-    fd.append('file', file);
-    if (provider) fd.append('notes', `Provider: ${provider} | Policy: ${policy} | Exp: ${exp}`);
-    const r = await fetch(API+'/api/driver/documents/upload?doc_type=insurance', {
-      method:'POST', headers:{'Authorization':'Bearer '+_token}, body:fd,
-    });
-    if (!r.ok) throw new Error((await r.json().catch(()=>({}))).detail||'Upload failed');
-    toast('✅ Insurance card uploaded!', 'green');
-    document.getElementById('ins-file').value = '';
-    document.getElementById('ins-file-name').textContent = 'Select insurance card';
-    document.getElementById('ins-provider').value = '';
-    document.getElementById('ins-policy').value = '';
-    document.getElementById('ins-exp').value = '';
-    loadDocs();
-  } catch(e) { toast('⚠️ '+e.message, 'red'); }
+function toggleInsFields() {
+  const type = document.getElementById('up-type').value;
+  document.getElementById('up-ins-fields').style.display = type==='insurance' ? 'block' : 'none';
 }
 
-async function uploadDoc() {
-  const file = document.getElementById('doc-file').files[0];
-  const docType = document.getElementById('doc-type-sel').value;
+document.addEventListener('DOMContentLoaded', () => {
+  const sel = document.getElementById('up-type');
+  if (sel) sel.addEventListener('change', toggleInsFields);
+});
+
+async function uploadDocModal() {
+  const file = document.getElementById('up-file').files[0];
   if (!file) { toast('⚠️ Select a file first', 'red'); return; }
+  const docType = document.getElementById('up-type').value;
+  const notes = document.getElementById('up-notes').value;
+  const exp = document.getElementById('up-exp').value;
+
+  // Show progress
+  const wrap = document.getElementById('up-progress-wrap');
+  const bar = document.getElementById('up-progress-bar');
+  const txt = document.getElementById('up-progress-txt');
+  wrap.style.display = 'block'; bar.style.width = '30%'; txt.textContent = 'Uploading…';
+
   try {
     const fd = new FormData();
     fd.append('file', file);
+    // Add insurance metadata to notes
+    if (docType === 'insurance') {
+      const provider = document.getElementById('up-ins-provider').value;
+      const policy = document.getElementById('up-ins-policy').value;
+      const noteStr = [provider?`Provider: ${provider}`:'', policy?`Policy: ${policy}`:'', notes].filter(Boolean).join(' | ');
+      if (noteStr) fd.append('notes', noteStr);
+    } else if (notes) {
+      fd.append('notes', notes);
+    }
+
+    bar.style.width = '60%';
     const r = await fetch(API+'/api/driver/documents/upload?doc_type='+docType, {
       method:'POST', headers:{'Authorization':'Bearer '+_token}, body:fd,
     });
+    bar.style.width = '100%';
     if (!r.ok) throw new Error((await r.json().catch(()=>({}))).detail||'Upload failed');
+
+    txt.textContent = '✅ Uploaded!';
+    setTimeout(()=>{ wrap.style.display='none'; bar.style.width='0%'; }, 1500);
     toast('✅ Document uploaded!', 'green');
-    document.getElementById('doc-file').value = '';
-    document.getElementById('doc-file-name').textContent = 'Click to select file';
+    // Reset form
+    document.getElementById('up-file').value = '';
+    document.getElementById('up-file-name').textContent = 'Click or drag & drop file here';
+    document.getElementById('up-notes').value = '';
+    document.getElementById('up-exp').value = '';
+    document.getElementById('up-ins-provider').value = '';
+    document.getElementById('up-ins-policy').value = '';
+    closeModal('modal-upload');
     loadDocs();
-  } catch(e) { toast('⚠️ '+e.message, 'red'); }
+  } catch(e) {
+    bar.style.width = '0%'; txt.textContent = ''; wrap.style.display = 'none';
+    toast('⚠️ '+e.message, 'red');
+  }
 }
+
+// Legacy shims (called from old profile view)
+function docQuickUpload(type) { openUploadFor(type); }
+async function uploadInsurance() { await uploadDocModal(); }
+async function uploadDoc() { await uploadDocModal(); }
 
 // ── MESSAGES ─────────────────────────────────────────────────────
 async function loadMessages() {
