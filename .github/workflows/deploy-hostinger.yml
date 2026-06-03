@@ -1,0 +1,39 @@
+name: Deploy Website to Hostinger
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '*.html'
+      - 'public/**'
+      - '.github/workflows/deploy-hostinger.yml'
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: FTP deploy to Hostinger
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Stage all website files into dist/
+      - name: Prepare website files
+        run: |
+          mkdir -p dist
+          # All root-level HTML pages
+          cp *.html dist/
+          # Google site verification + any other public files
+          cp -r public/. dist/
+          echo "Files to deploy:"
+          ls -la dist/
+
+      - name: Deploy to Hostinger via FTP
+        uses: SamKirkland/FTP-Deploy-Action@4.3.4
+        with:
+          server:    ${{ secrets.HOSTINGER_FTP_HOST }}
+          username:  ${{ secrets.HOSTINGER_FTP_USER }}
+          password:  ${{ secrets.HOSTINGER_FTP_PASSWORD }}
+          local-dir: ./dist/
+          server-dir: /public_html/
+          dangerous-clean-slate: false
