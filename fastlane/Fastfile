@@ -2,7 +2,9 @@ default_platform(:android)
 
 platform :android do
 
-  desc "Upload AAB to Google Play internal track"
+  # ── Truck Driver App ─────────────────────────────────────────────────────────
+
+  desc "Upload Truck Driver AAB to Google Play internal track"
   lane :upload_to_play do |options|
     aab_path = options[:aab] || Dir["android/app/build/outputs/bundle/release/*.aab"].first
 
@@ -21,22 +23,55 @@ platform :android do
       metadata_path:      "fastlane/metadata/android"
     )
 
-    UI.success("AAB uploaded to Play Store internal track!")
+    UI.success("Truck Driver AAB uploaded to Play Store internal track!")
   end
 
-  desc "Promote internal build to production"
+  desc "Promote Truck Driver internal build to production"
   lane :promote_to_production do
-    upload_to_play_store_internal_app_sharing(
-      package_name: "com.threelakes.driver"
-    )
     upload_to_play_store(
-      track:        "internal",
+      track:            "internal",
       track_promote_to: "production",
-      package_name: "com.threelakes.driver",
-      skip_upload_apk: true,
-      skip_upload_aab: true
+      package_name:     "com.threelakes.driver",
+      skip_upload_apk:  true,
+      skip_upload_aab:  true
     )
-    UI.success("App promoted to production!")
+    UI.success("Truck Driver app promoted to production!")
+  end
+
+  # ── Light Fleet App ──────────────────────────────────────────────────────────
+
+  desc "Upload Light Fleet AAB to Google Play internal track"
+  lane :upload_lf_to_play do |options|
+    aab_path = options[:aab] || Dir["android/app/build/outputs/bundle/release/*.aab"].first
+
+    UI.user_error!("No AAB found. Run the Android build first.") unless aab_path && File.exist?(aab_path)
+
+    upload_to_play_store(
+      track:              "internal",
+      aab:                aab_path,
+      package_name:       "com.threelakes.lightfleet",
+      release_status:     "draft",
+      version_name:       options[:version_name] || "1.0.0",
+      skip_upload_apk:    true,
+      skip_upload_metadata: false,
+      skip_upload_images: false,
+      skip_upload_screenshots: false,
+      metadata_path:      "fastlane/metadata-lf/android"
+    )
+
+    UI.success("Light Fleet AAB uploaded to Play Store internal track!")
+  end
+
+  desc "Promote Light Fleet internal build to production"
+  lane :promote_lf_to_production do
+    upload_to_play_store(
+      track:            "internal",
+      track_promote_to: "production",
+      package_name:     "com.threelakes.lightfleet",
+      skip_upload_apk:  true,
+      skip_upload_aab:  true
+    )
+    UI.success("Light Fleet app promoted to production!")
   end
 
 end
