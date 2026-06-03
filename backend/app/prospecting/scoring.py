@@ -1,17 +1,18 @@
 """Step 44: Lead Scoring (1-10).
 
 ICP heuristics:
-  + owner-op or small fleet (1-10 trucks)   → +3
-  + DOT <180 days old (new authority)        → +2
+  + phone present                            → +3  (contactable — highest priority)
+  + email present                            → +2  (contactable via email)
+  + owner-op or small fleet (1-10 trucks)   → +2
   + MC active (interstate)                   → +2
-  + phone present                            → +1
-  + email present                            → +1
+  + DOT <180 days old (new authority)        → +1
   + equipment match our Founders categories  → +1
 Max 10.
+
+Contact info is weighted highest — a lead we can't reach is worthless.
 """
 from __future__ import annotations
 
-from datetime import datetime, timezone
 from typing import Any
 
 FOUNDERS_EQUIPMENT = {"dry_van", "reefer", "flatbed", "step_deck",
@@ -20,16 +21,16 @@ FOUNDERS_EQUIPMENT = {"dry_van", "reefer", "flatbed", "step_deck",
 
 def score_lead(lead: dict[str, Any]) -> int:
     score = 0
+    if lead.get("phone"):
+        score += 3
+    if lead.get("email"):
+        score += 2
     fleet = lead.get("fleet_size")
     if isinstance(fleet, int) and 1 <= fleet <= 10:
-        score += 3
-    if lead.get("dot_age_days") and lead["dot_age_days"] < 180:
         score += 2
     if lead.get("mc_number"):
         score += 2
-    if lead.get("phone"):
-        score += 1
-    if lead.get("email"):
+    if lead.get("dot_age_days") and lead["dot_age_days"] < 180:
         score += 1
     equipment = lead.get("equipment_types") or []
     if any(e in FOUNDERS_EQUIPMENT for e in equipment):

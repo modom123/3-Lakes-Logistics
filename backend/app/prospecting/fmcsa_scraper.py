@@ -62,6 +62,7 @@ def fetch_new_entrants(limit: int = 50, since_days: int = 180) -> list[dict[str,
         "total_power_units >= '1'",
         "total_power_units <= '10'",
         f"add_date >= '{since_date}'",
+        "telephone IS NOT NULL",
     ]
 
     params = {
