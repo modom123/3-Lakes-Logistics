@@ -4,11 +4,11 @@ from __future__ import annotations
 from typing import Any, Callable
 
 from . import (
-    alexander, atlas, audit, beacon, bond_courier, casey, cash, chloe_sinclair, diana_cole,
-    drew, dr_james_nemt, echo, elena_ross, felix_grant, isabella, james_bond, jordan, kai,
-    katerina, lucas_sterling, maya, morgan_hayes, naomi, nova, orbit, outside_bond, penny,
-    pulse, quinn, rex, rio, scout, settler, shield, signal, sofia, sonny, technical_team,
-    vance, victor_nash, victoria, winston,
+    alexander, atlas, audit, beacon, bond_courier, casey, cash, cc_gulley, chloe_sinclair,
+    diana_cole, drew, dr_james_nemt, echo, elena_ross, felix_grant, isabella, james_bond,
+    jordan, kai, katerina, lucas_sterling, mark_odom, maya, morgan_hayes, naomi, nova,
+    orbit, outside_bond, penny, pulse, quinn, rex, rio, scout, settler, shield, signal,
+    sofia, sonny, technical_team, vance, vance_follow_up, victor_nash, victoria, winston,
 )
 
 _DISPATCH: dict[str, Callable[[dict[str, Any]], dict[str, Any]]] = {
@@ -39,6 +39,9 @@ _DISPATCH: dict[str, Callable[[dict[str, Any]], dict[str, Any]]] = {
     "technical_team":   technical_team.run,
     "lucas_sterling":   lucas_sterling.run,
     "chloe_sinclair":   chloe_sinclair.run,
+    "mark_odom":        mark_odom.run,
+    "cc_gulley":        cc_gulley.run,
+    "vance_follow_up":  vance_follow_up.run,
     # ── Light Fleet workers ──
     "maya":           maya.run,
     "kai":            kai.run,

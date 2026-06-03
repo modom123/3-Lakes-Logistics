@@ -143,7 +143,8 @@ async def request_signature(payload: CarrierIntake) -> JSONResponse:
         pdf_bytes = _generate_agreement_pdf(agreement_data)
 
         # 3. Send to Adobe Sign
-        redirect_uri = "http://localhost:8080/api/carriers/adobe-callback"  # TODO: Make configurable
+        from ..settings import get_settings as _get_settings
+        redirect_uri = _get_settings().site_url.rstrip("/") + "/api/carriers/adobe-callback"
         adobe_response = adobe.send_for_signature(
             access_token=payload.adobe_access_token,  # Must be provided by client
             agreement_name=f"3LL Dispatch Agreement — {payload.company_name}",

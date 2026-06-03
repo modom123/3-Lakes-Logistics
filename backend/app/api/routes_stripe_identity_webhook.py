@@ -86,7 +86,10 @@ async def stripe_identity_webhook(
         except stripe.error.SignatureVerificationError:
             raise HTTPException(status_code=401, detail="Invalid Stripe webhook signature")
     else:
-        # No secret configured yet — parse without verification (dev/setup mode)
+        # WARN: no secret — reject in production, allow only if no signature header sent
+        log.warning("STRIPE_IDENTITY_WEBHOOK_SECRET not set — webhook signature unverified")
+        if stripe_signature:
+            raise HTTPException(status_code=401, detail="Webhook secret not configured — cannot verify signature")
         import json
         try:
             event = json.loads(body)

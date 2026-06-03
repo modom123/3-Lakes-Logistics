@@ -9,6 +9,8 @@ from __future__ import annotations
 
 import hashlib
 import secrets
+import time
+from collections import defaultdict
 from datetime import datetime, timedelta, timezone
 from typing import Annotated
 
@@ -22,6 +24,23 @@ from .deps import require_bearer
 log = get_logger(__name__)
 
 router = APIRouter(prefix="/driver-auth", tags=["driver-auth"])
+
+# ── In-memory rate limiter: 5 attempts per phone per 15 minutes ──────────────
+_LOGIN_ATTEMPTS: dict[str, list[float]] = defaultdict(list)
+_RATE_LIMIT_MAX = 5
+_RATE_LIMIT_WINDOW = 900  # 15 minutes
+
+def _check_rate_limit(phone: str) -> None:
+    now = time.time()
+    window_start = now - _RATE_LIMIT_WINDOW
+    attempts = [t for t in _LOGIN_ATTEMPTS[phone] if t > window_start]
+    _LOGIN_ATTEMPTS[phone] = attempts
+    if len(attempts) >= _RATE_LIMIT_MAX:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="too many login attempts — try again in 15 minutes",
+        )
+    _LOGIN_ATTEMPTS[phone].append(now)
 
 
 # ────────────────────────────────────────────────────────────────────────────
@@ -161,7 +180,10 @@ async def driver_login(req: DriverLoginRequest):
             detail=str(e)
         )
 
-    # Hash PIN
+    # Rate limiting: 5 attempts per phone per 15 minutes
+    _check_rate_limit(phone_e164)
+
+    # Hash PIN (global salt — legacy format used for lookup)
     pin_hash = hash_pin(req.pin)
 
     # Look up driver
