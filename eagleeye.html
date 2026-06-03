@@ -690,10 +690,18 @@ td.td-name{font-weight:600;color:var(--navy);}
 #page-crm.active > .page-hdr{flex-shrink:0;}
 /* LF tab bar escapes page padding to be edge-to-edge */
 .lf-tab-bar{margin:-16px -20px 16px;}
+/* ── Form utility classes (used across multiple pages) ── */
+.form-input{width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:5px;font-size:13px;color:var(--text);background:var(--card);outline:none;box-sizing:border-box;font-family:var(--ff-b);}
+.form-input:focus{border-color:var(--gold);box-shadow:0 0 0 2px rgba(228,168,48,.15);}
+.form-input::placeholder{color:var(--muted);}
+select.form-input option{background:var(--surface);}
+.form-label{display:block;font-size:11px;font-weight:700;color:var(--muted);margin-bottom:5px;text-transform:uppercase;letter-spacing:.5px;}
+/* Table horizontal scroll shadow — hint that content scrolls right */
+.tbl-wrap{position:relative;}
 /* Mobile overrides */
 @media(max-width:768px){
   .page.active{padding:10px;}
-  #page-email.active,#page-fleet-map.active,#page-lf-map.active,#page-ccg-office.active,#page-bond.active{padding:0;}
+  #page-email.active,#page-fleet-map.active,#page-lf-map.active,#page-ccg-office.active,#page-mark-office.active,#page-bond.active{padding:0;}
   .lf-tab-bar{margin:-10px -10px 12px;}
 }
 </style>
@@ -9418,7 +9426,7 @@ select.oc-inp option{background:#1a1a2e;color:#fff;}
     <button class="mo-tab"        id="motab-directives" onclick="moTab('directives')">📣 Directives</button>
     <button class="mo-tab"        id="motab-docs"       onclick="moTab('docs')">📁 Documents</button>
     <button class="mo-tab"        id="motab-crm"        onclick="moTab('crm')">📇 My CRM</button>
-    <button class="mo-tab"        id="motab-email"      onclick="nav('email');setTimeout(()=>mailSelectMB('mark'),300)">📧 Email <span id="mo-email-ct" style="display:none;background:#f5c842;color:#000;font-size:9px;font-weight:800;border-radius:10px;padding:1px 6px;margin-left:2px;">0</span></button>
+    <button class="mo-tab"        id="motab-email"      onclick="moTab('email')">📧 Email <span id="mo-email-ct" style="display:none;background:#f5c842;color:#000;font-size:9px;font-weight:800;border-radius:10px;padding:1px 6px;margin-left:2px;">0</span></button>
     <button class="mo-tab"        id="motab-lf"         onclick="moTab('lf')">🚐 Light Fleet</button>
     <button class="mo-tab"        id="motab-trading"    onclick="moTab('trading')">📈 Trading Reports</button>
     <button class="mo-tab"        id="motab-zoom"       onclick="moTab('zoom')">📹 Zoom</button>
@@ -9447,11 +9455,11 @@ select.oc-inp option{background:#1a1a2e;color:#fff;}
 
         <!-- KPI Strip -->
         <div class="mo-kpi-strip">
-          <div class="mo-kpi gold"><div class="mo-kpi-n" id="mo-kpi-todos">—</div><div class="mo-kpi-l">Open Tasks to CC</div></div>
-          <div class="mo-kpi red"><div class="mo-kpi-n" id="mo-kpi-urgent">—</div><div class="mo-kpi-l">Urgent / Overdue</div></div>
-          <div class="mo-kpi amber"><div class="mo-kpi-n" id="mo-kpi-due-week">—</div><div class="mo-kpi-l">Due This Week</div></div>
-          <div class="mo-kpi green"><div class="mo-kpi-n" id="mo-kpi-done">—</div><div class="mo-kpi-l">Completed</div></div>
-          <div class="mo-kpi purple"><div class="mo-kpi-n" id="mo-kpi-directives">—</div><div class="mo-kpi-l">Active Directives</div></div>
+          <div class="mo-kpi gold" style="cursor:pointer;" onclick="moKpiDrill('todos')" title="View open tasks"><div class="mo-kpi-n" id="mo-kpi-todos">—</div><div class="mo-kpi-l">Open Tasks to CC ▸</div></div>
+          <div class="mo-kpi red" style="cursor:pointer;" onclick="moKpiDrill('urgent')" title="View urgent tasks"><div class="mo-kpi-n" id="mo-kpi-urgent">—</div><div class="mo-kpi-l">Urgent / Overdue ▸</div></div>
+          <div class="mo-kpi amber" style="cursor:pointer;" onclick="moKpiDrill('dueWeek')" title="View tasks due this week"><div class="mo-kpi-n" id="mo-kpi-due-week">—</div><div class="mo-kpi-l">Due This Week ▸</div></div>
+          <div class="mo-kpi green" style="cursor:pointer;" onclick="moKpiDrill('done')" title="View completed tasks"><div class="mo-kpi-n" id="mo-kpi-done">—</div><div class="mo-kpi-l">Completed ▸</div></div>
+          <div class="mo-kpi purple" style="cursor:pointer;" onclick="moKpiDrill('directives')" title="View active directives"><div class="mo-kpi-n" id="mo-kpi-directives">—</div><div class="mo-kpi-l">Active Directives ▸</div></div>
         </div>
 
         <!-- 2-col: intel feed + quick actions -->
@@ -9470,7 +9478,7 @@ select.oc-inp option{background:#1a1a2e;color:#fff;}
             <div class="mo-panel-body" style="display:flex;flex-direction:column;gap:10px;">
               <button class="mo-hdr-btn" style="text-align:left;padding:10px 14px;font-size:12px;" onclick="moTab('todo')">✅ Open Todo List → CC Gulley</button>
               <button class="mo-hdr-btn" style="text-align:left;padding:10px 14px;font-size:12px;" onclick="moTab('crm')">📇 My CRM — Contacts &amp; Leads</button>
-              <button class="mo-hdr-btn" style="text-align:left;padding:10px 14px;font-size:12px;" onclick="nav('email');setTimeout(()=>mailSelectMB('mark'),300)">📧 Open Email Inbox (mark@3lakeslogistics.com)</button>
+              <button class="mo-hdr-btn" style="text-align:left;padding:10px 14px;font-size:12px;" onclick="moTab('email')">📧 Open Email Inbox (mark@3lakeslogistics.com)</button>
               <button class="mo-hdr-btn" style="text-align:left;padding:10px 14px;font-size:12px;" onclick="moStartMeeting()">📹 Start Instant Zoom Meeting</button>
               <button class="mo-hdr-btn" style="text-align:left;padding:10px 14px;font-size:12px;" onclick="moTab('directives')">📣 Send Directive to Team</button>
               <button class="mo-hdr-btn" style="text-align:left;padding:10px 14px;font-size:12px;" onclick="nav('ccg-office')">🧭 Open CC Gulley Office</button>
@@ -10075,8 +10083,62 @@ select.oc-inp option{background:#1a1a2e;color:#fff;}
       </div>
     </div><!-- /crm -->
 
+    <!-- ════ EMAIL ════ -->
+    <div class="mo-pane" id="mopane-email">
+      <div style="display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden;position:relative;">
+        <div style="padding:8px 16px;background:rgba(5,3,14,.95);border-bottom:1px solid rgba(245,200,66,.15);flex-shrink:0;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+          <div style="font-size:12px;font-weight:800;color:#f5c842;">📧 mark@3lakeslogistics.com</div>
+          <button class="mo-hdr-btn" style="font-size:10px;padding:4px 10px;" onclick="moEmailLoad()">↺ Refresh</button>
+          <button class="mo-btn" style="font-size:10px;padding:4px 12px;margin-left:auto;" onclick="document.getElementById('mo-compose').style.display='flex'">✉️ Compose</button>
+        </div>
+        <div style="display:flex;flex:1;min-height:0;overflow:hidden;">
+          <!-- Inbox list -->
+          <div style="width:300px;flex-shrink:0;border-right:1px solid rgba(245,200,66,.12);display:flex;flex-direction:column;overflow:hidden;">
+            <div id="mo-email-list" style="flex:1;overflow-y:auto;scrollbar-width:thin;scrollbar-color:rgba(245,200,66,.4) transparent;">
+              <div style="color:rgba(255,255,255,.3);font-size:12px;text-align:center;padding:32px 16px;">Loading…</div>
+            </div>
+          </div>
+          <!-- Message view -->
+          <div id="mo-email-view" style="flex:1;display:flex;flex-direction:column;overflow-y:auto;padding:18px 22px;scrollbar-width:thin;scrollbar-color:rgba(245,200,66,.4) transparent;">
+            <div style="display:flex;align-items:center;justify-content:center;flex-direction:column;height:100%;color:rgba(255,255,255,.2);gap:10px;">
+              <div style="font-size:42px;">📧</div>
+              <div style="font-size:13px;">Select a message to read</div>
+            </div>
+          </div>
+        </div>
+        <!-- Compose panel -->
+        <div id="mo-compose" style="display:none;position:absolute;bottom:0;right:0;width:min(430px,100%);background:#05030e;border:1px solid rgba(245,200,66,.25);border-radius:12px 12px 0 0;flex-direction:column;overflow:hidden;box-shadow:0 -6px 24px rgba(0,0,0,.6);z-index:10;">
+          <div style="padding:10px 16px;background:rgba(245,200,66,.08);border-bottom:1px solid rgba(245,200,66,.15);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
+            <div style="font-weight:800;font-size:12px;color:#f5c842;">✉️ New Message — mark@3lakeslogistics.com</div>
+            <button onclick="document.getElementById('mo-compose').style.display='none'" style="background:none;border:none;color:rgba(255,255,255,.4);cursor:pointer;font-size:18px;line-height:1;">✕</button>
+          </div>
+          <div style="padding:12px 14px;display:flex;flex-direction:column;gap:8px;">
+            <div><div class="mo-fl">TO</div><input id="mo-compose-to" class="mo-input" placeholder="recipient@email.com"></div>
+            <div><div class="mo-fl">SUBJECT</div><input id="mo-compose-subj" class="mo-input" placeholder="Subject line…"></div>
+            <div><div class="mo-fl">MESSAGE</div><textarea id="mo-compose-body" class="mo-textarea" style="min-height:140px;" placeholder="Write your message…"></textarea></div>
+            <div style="display:flex;gap:8px;justify-content:flex-end;align-items:center;">
+              <span id="mo-compose-status" style="font-size:11px;color:#f5c842;"></span>
+              <button class="mo-btn" onclick="moEmailSend()">📤 Send</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div><!-- /email -->
+
   </div><!-- /body -->
 </div><!-- /mo -->
+
+<!-- Mark Office: KPI Drill Modal -->
+<div id="mo-kpi-drill" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9300;align-items:flex-end;justify-content:center;" onclick="if(event.target===this)this.style.display='none'">
+  <div style="background:#05030e;border:1px solid rgba(245,200,66,.25);border-top:3px solid #f5c842;border-radius:14px 14px 0 0;width:100%;max-width:620px;max-height:72vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 -8px 32px rgba(0,0,0,.6);">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:1px solid rgba(245,200,66,.12);flex-shrink:0;">
+      <div id="mo-kpi-drill-title" style="font-weight:800;font-size:14px;color:#f5c842;"></div>
+      <button onclick="document.getElementById('mo-kpi-drill').style.display='none'" style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);color:rgba(255,255,255,.6);font-size:13px;padding:4px 12px;border-radius:6px;cursor:pointer;">Close</button>
+    </div>
+    <div id="mo-kpi-drill-list" style="flex:1;overflow-y:auto;padding:14px 18px;scrollbar-width:thin;scrollbar-color:#f5c842 transparent;"></div>
+  </div>
+</div>
+
 </div><!-- /page-mark-office -->
 
 <script>
@@ -10097,6 +10159,7 @@ window.moTab = function(id){
   if(id==='directives')moLoadDirectives();
   if(id==='lf')moLFRefresh();
   if(id==='trading')moTDRefresh();
+  if(id==='email')moEmailLoad();
 };
 
 /* ── Todo: localStorage persistence ── */
@@ -10390,6 +10453,114 @@ window.moTDRefresh = function(){
   ]);
 };
 
+/* ── KPI Drill-down panel ── */
+window.moKpiDrill = function(type){
+  const todos=moTodos();
+  const open=todos.filter(t=>!t.done);
+  const urgent=open.filter(t=>moDueCls(t.due)==='urgent');
+  const dueWeek=open.filter(t=>{if(!t.due)return false;return(new Date(t.due).setHours(0,0,0,0)-new Date().setHours(0,0,0,0))/86400000<=7;});
+  const done=todos.filter(t=>t.done);
+  const drectives=[
+    {ts:'Today',sub:'Q3 Market Pivot — TX/FL Focus',to:'CC Gulley',body:'Shift all carrier acquisition to TX and FL corridors for Q3.'},
+    {ts:'Yesterday',sub:'Compliance Review Deadline',to:'All Divisions',body:'All DOT compliance reviews must be completed and filed by end of month.'},
+    {ts:'Jun 1',sub:'Trading Desk Performance Review',to:'North American Trading',body:'Weekly load board report required. Rex to prepare load mix analysis.'},
+  ];
+  let items=[],title='',isDir=false;
+  if(type==='todos'){title='📋 Open Tasks → CC Gulley';items=open.slice(0,10);}
+  else if(type==='urgent'){title='🔴 Urgent / Overdue Tasks';items=urgent.slice(0,10);}
+  else if(type==='dueWeek'){title='🟡 Due This Week';items=dueWeek.slice(0,10);}
+  else if(type==='done'){title='✅ Completed Tasks (Last 10)';items=done.slice(-10).reverse();}
+  else if(type==='directives'){title='📣 Active Directives';items=drectives;isDir=true;}
+  const drill=document.getElementById('mo-kpi-drill');
+  const list=document.getElementById('mo-kpi-drill-list');
+  const t=document.getElementById('mo-kpi-drill-title');
+  if(t)t.textContent=title;
+  if(list){
+    if(!items.length){
+      list.innerHTML='<div style="text-align:center;color:rgba(255,255,255,.3);padding:40px;font-size:13px;">No items here yet</div>';
+    }else if(isDir){
+      list.innerHTML=drectives.map(d=>`<div style="padding:11px 14px;border-radius:8px;border:1px solid rgba(255,255,255,.09);background:rgba(255,255,255,.03);border-left:3px solid #f5c842;margin-bottom:10px;">
+        <div style="font-weight:700;font-size:12px;color:#fff;margin-bottom:3px;">${d.sub} <span style="color:rgba(255,255,255,.3);font-weight:400;font-size:10px;">→ ${d.to}</span></div>
+        <div style="font-size:11px;color:rgba(255,255,255,.55);line-height:1.5;">${d.body}</div>
+        <div style="font-size:9px;color:rgba(255,255,255,.28);margin-top:4px;font-family:monospace;">${d.ts}</div>
+      </div>`).join('');
+    }else{
+      list.innerHTML=items.map(it=>`<div style="display:flex;align-items:flex-start;gap:10px;padding:11px 14px;border-radius:8px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);margin-bottom:8px;">
+        <span style="font-size:16px;flex-shrink:0;margin-top:2px;">${it.done?'✅':moDueCls(it.due)==='urgent'?'🔴':moDueCls(it.due)==='soon'?'🟡':'📋'}</span>
+        <div style="flex:1;min-width:0;">
+          <div style="font-weight:700;font-size:12px;color:${it.done?'rgba(255,255,255,.35)':'#fff'};${it.done?'text-decoration:line-through;':''}">${it.title}</div>
+          ${it.desc?`<div style="font-size:11px;color:rgba(255,255,255,.45);margin-top:2px;line-height:1.5;">${it.desc}</div>`:''}
+          <div style="display:flex;gap:6px;margin-top:5px;flex-wrap:wrap;align-items:center;">
+            ${it.due?`<span style="font-size:9px;font-family:monospace;padding:2px 7px;border-radius:10px;background:rgba(245,158,11,.12);color:#f59e0b;border:1px solid rgba(245,158,11,.25);">${moDueLbl(it.due)}</span>`:''}
+            <span style="font-size:9px;font-family:monospace;padding:2px 7px;border-radius:10px;background:rgba(255,255,255,.07);color:rgba(255,255,255,.5);">${_catIcon[it.cat]||'📌'} ${it.cat||'other'}</span>
+            <button onclick="moTodoToggle('${it.id}');document.getElementById('mo-kpi-drill').style.display='none';moTodoRender();" style="background:rgba(245,200,66,.12);border:1px solid rgba(245,200,66,.25);color:#f5c842;border-radius:5px;padding:1px 8px;font-size:9px;cursor:pointer;font-family:var(--ff-b);">${it.done?'↺ Reopen':'✓ Complete'}</button>
+          </div>
+        </div>
+      </div>`).join('');
+    }
+  }
+  if(drill)drill.style.display='flex';
+};
+
+/* ── Inline Email ── */
+window.moEmailLoad = async function(){
+  const list=document.getElementById('mo-email-list');
+  if(!list)return;
+  list.innerHTML='<div style="color:rgba(255,255,255,.3);font-size:12px;text-align:center;padding:24px;">Loading…</div>';
+  try{
+    const res=await API.get('/api/mailboxes/mark/inbox?limit=30').catch(()=>null);
+    const emails=(res?.emails||[]);
+    if(!emails.length){list.innerHTML='<div style="color:rgba(255,255,255,.3);font-size:12px;text-align:center;padding:32px;">No messages found</div>';return;}
+    const unread=emails.filter(m=>!m.is_read).length;
+    const ct=document.getElementById('mo-email-ct');
+    if(ct){ct.style.display=unread?'inline':'none';if(unread)ct.textContent=unread;}
+    list.innerHTML=emails.map(m=>`<div onclick="moEmailOpen(${JSON.stringify(m.id||m._id||'').replace(/"/g,'&quot;')},'${(m.from||'').replace(/'/g,'\\\'')}')" style="padding:10px 12px;border-bottom:1px solid rgba(245,200,66,.07);cursor:pointer;transition:background .12s;${!m.is_read?'background:rgba(245,200,66,.06);':''}">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;">
+        <div style="font-weight:${m.is_read?'500':'800'};font-size:11px;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;">${(m.from_name||m.from||'Unknown').slice(0,28)}</div>
+        <div style="font-size:9px;color:rgba(255,255,255,.3);flex-shrink:0;font-family:monospace;">${m.date?new Date(m.date).toLocaleDateString():'—'}</div>
+      </div>
+      <div style="font-size:11px;color:rgba(255,255,255,.6);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${(m.subject||'(No subject)').slice(0,40)}</div>
+    </div>`).join('');
+  }catch(e){list.innerHTML='<div style="color:rgba(255,255,255,.3);font-size:12px;text-align:center;padding:32px;">Could not load inbox<br><span style="font-size:10px;margin-top:6px;display:block;">Connect API to read email</span></div>';}
+};
+
+window.moEmailOpen = async function(id,from){
+  const view=document.getElementById('mo-email-view');
+  if(!view)return;
+  view.innerHTML='<div style="color:rgba(255,255,255,.3);font-size:12px;text-align:center;padding:40px;">Loading message…</div>';
+  try{
+    const m=await API.get('/api/mailboxes/mark/messages/'+id).catch(()=>null);
+    if(!m){view.innerHTML='<div style="padding:20px;color:rgba(255,255,255,.4);">Could not load message</div>';return;}
+    view.innerHTML=`<div style="padding:0 0 12px;border-bottom:1px solid rgba(245,200,66,.1);margin-bottom:14px;flex-shrink:0;">
+      <div style="font-size:15px;font-weight:800;color:#fff;margin-bottom:8px;">${m.subject||'(No subject)'}</div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <span style="font-size:11px;color:rgba(255,255,255,.5);">From: <b style="color:rgba(255,255,255,.8);">${m.from||from||'—'}</b></span>
+        <span style="font-size:11px;color:rgba(255,255,255,.5);">To: <b style="color:rgba(255,255,255,.8);">${m.to||'mark@3lakeslogistics.com'}</b></span>
+        <span style="font-size:10px;color:rgba(255,255,255,.3);font-family:monospace;">${m.date?new Date(m.date).toLocaleString():''}</span>
+      </div>
+      <div style="display:flex;gap:6px;margin-top:10px;">
+        <button class="mo-hdr-btn" style="font-size:10px;padding:4px 10px;" onclick="document.getElementById('mo-compose-to').value='${(m.from||'').replace(/'/g,'\\\'')
+}';document.getElementById('mo-compose-subj').value='Re: ${(m.subject||'').replace(/'/g,'\\\'').slice(0,60)}';document.getElementById('mo-compose').style.display='flex'">↩ Reply</button>
+      </div>
+    </div>
+    <div style="font-size:13px;color:rgba(255,255,255,.75);line-height:1.7;white-space:pre-wrap;">${(m.body||m.text||m.html_stripped||'(Empty message)').slice(0,4000)}</div>`;
+  }catch(e){view.innerHTML='<div style="padding:20px;color:rgba(255,255,255,.4);">Could not load message</div>';}
+};
+
+window.moEmailSend = async function(){
+  const to=(document.getElementById('mo-compose-to')?.value||'').trim();
+  const subj=(document.getElementById('mo-compose-subj')?.value||'').trim();
+  const body=(document.getElementById('mo-compose-body')?.value||'').trim();
+  const st=document.getElementById('mo-compose-status');
+  if(!to||!body){if(st)st.textContent='To and message required.';return;}
+  if(st)st.textContent='Sending…';
+  try{
+    await API.post('/api/email/send',{mailbox:'mark',to,subject:subj||'(No subject)',body});
+    if(st)st.textContent='✓ Sent';
+    setTimeout(()=>{document.getElementById('mo-compose').style.display='none';if(st)st.textContent='';['mo-compose-to','mo-compose-subj','mo-compose-body'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});},1500);
+  }catch(e){if(st)st.textContent='Send failed: '+e.message;}
+};
+
 if(!moTodos().length){
   const d=n=>new Date(Date.now()+n*86400000).toISOString().slice(0,10);
   moTodosSave([
@@ -10543,12 +10714,13 @@ if(!moTodos().length){
   <!-- Tabs -->
   <div class="ccg-tabs">
     <button class="ccg-tab active" id="ccgtab-home"       onclick="ccgTab('home')">🏠 Office Home</button>
+    <button class="ccg-tab"        id="ccgtab-frommark"   onclick="ccgTab('frommark')">✅ Tasks from Mark <span id="ccg-frommark-badge" style="display:none;background:#ef4444;color:#fff;font-size:9px;font-weight:800;border-radius:10px;padding:1px 6px;margin-left:2px;">0</span></button>
     <button class="ccg-tab"        id="ccgtab-team"       onclick="ccgTab('team')">👥 My Team</button>
     <button class="ccg-tab"        id="ccgtab-strategy"   onclick="ccgTab('strategy')">📊 Strategy</button>
     <button class="ccg-tab"        id="ccgtab-directives" onclick="ccgTab('directives')">📣 Directives <span id="ccg-dir-badge" style="display:none;background:#38bdf8;color:#000;font-size:9px;font-weight:800;border-radius:10px;padding:1px 6px;">NEW</span></button>
     <button class="ccg-tab"        id="ccgtab-docs"       onclick="ccgTab('docs')">📁 Documents</button>
     <button class="ccg-tab"        id="ccgtab-crm"        onclick="ccgTab('crm')">📇 My CRM</button>
-    <button class="ccg-tab"        id="ccgtab-email"      onclick="nav('email');setTimeout(()=>mailSelectMB('cece'),300)">📧 Email <span id="ccg-email-ct" style="display:none;background:#38bdf8;color:#000;font-size:9px;font-weight:800;border-radius:10px;padding:1px 6px;">0</span></button>
+    <button class="ccg-tab"        id="ccgtab-email"      onclick="ccgTab('email')">📧 Email <span id="ccg-email-ct" style="display:none;background:#38bdf8;color:#000;font-size:9px;font-weight:800;border-radius:10px;padding:1px 6px;">0</span></button>
     <button class="ccg-tab"        id="ccgtab-zoom"       onclick="ccgTab('zoom')">📹 Zoom</button>
     <button class="ccg-tab"        id="ccgtab-tv"         onclick="ccgTab('tv')">📺 Watch TV</button>
   </div>
@@ -10570,17 +10742,29 @@ if(!moTodos().length){
           <div style="margin-left:auto;display:flex;flex-direction:column;gap:6px;flex-shrink:0;">
             <button class="ccg-btn" onclick="ccgRunAll()">▶ Run All Agents</button>
             <button class="ccg-btn teal" onclick="ccgTab('directives')">📣 Send Directive</button>
+            <button class="ccg-btn" style="background:linear-gradient(135deg,#b45309,#d97706);" onclick="ccgTab('frommark')">✅ Tasks from Mark</button>
+          </div>
+        </div>
+
+        <!-- Tasks from Mark alert strip -->
+        <div id="ccg-frommark-strip" style="display:none;background:linear-gradient(135deg,rgba(239,68,68,.12),rgba(245,158,11,.08));border:1px solid rgba(239,68,68,.3);border-radius:10px;padding:12px 16px;flex-shrink:0;">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
+            <div>
+              <div style="font-size:12px;font-weight:800;color:#ef4444;margin-bottom:4px;">🔴 Tasks Assigned by Mark Odom</div>
+              <div id="ccg-frommark-preview" style="font-size:11px;color:rgba(255,255,255,.6);line-height:1.6;"></div>
+            </div>
+            <button class="ccg-btn" style="flex-shrink:0;background:linear-gradient(135deg,#b45309,#d97706);" onclick="ccgTab('frommark')">View All →</button>
           </div>
         </div>
 
         <!-- KPI Strip -->
         <div class="ccg-kpi-strip">
-          <div class="ccg-kpi sky"><div class="ccg-kpi-n" id="ccg-kpi-tier-a">—</div><div class="ccg-kpi-l">Tier A Targets</div></div>
-          <div class="ccg-kpi green"><div class="ccg-kpi-n" id="ccg-kpi-hot-states">—</div><div class="ccg-kpi-l">Hot Markets</div></div>
-          <div class="ccg-kpi amber"><div class="ccg-kpi-n" id="ccg-kpi-at-risk">—</div><div class="ccg-kpi-l">At-Risk Carriers</div></div>
-          <div class="ccg-kpi teal"><div class="ccg-kpi-n" id="ccg-kpi-retention">—%</div><div class="ccg-kpi-l">Retention Rate</div></div>
-          <div class="ccg-kpi purple"><div class="ccg-kpi-n" id="ccg-kpi-directives">—</div><div class="ccg-kpi-l">Active Directives</div></div>
-          <div class="ccg-kpi sky"><div class="ccg-kpi-n" id="ccg-kpi-emails">—</div><div class="ccg-kpi-l">Unread Emails</div></div>
+          <div class="ccg-kpi sky" style="cursor:pointer;" onclick="ccgKpiDrill('tier-a')" title="View Tier A targets"><div class="ccg-kpi-n" id="ccg-kpi-tier-a">—</div><div class="ccg-kpi-l">Tier A Targets ▸</div></div>
+          <div class="ccg-kpi green" style="cursor:pointer;" onclick="ccgKpiDrill('hot-states')" title="View hot markets"><div class="ccg-kpi-n" id="ccg-kpi-hot-states">—</div><div class="ccg-kpi-l">Hot Markets ▸</div></div>
+          <div class="ccg-kpi amber" style="cursor:pointer;" onclick="ccgKpiDrill('at-risk')" title="View at-risk carriers"><div class="ccg-kpi-n" id="ccg-kpi-at-risk">—</div><div class="ccg-kpi-l">At-Risk Carriers ▸</div></div>
+          <div class="ccg-kpi teal" style="cursor:pointer;" onclick="ccgKpiDrill('retention')" title="View retention details"><div class="ccg-kpi-n" id="ccg-kpi-retention">—%</div><div class="ccg-kpi-l">Retention Rate ▸</div></div>
+          <div class="ccg-kpi purple" style="cursor:pointer;" onclick="ccgTab('directives')" title="View active directives"><div class="ccg-kpi-n" id="ccg-kpi-directives">—</div><div class="ccg-kpi-l">Active Directives ▸</div></div>
+          <div class="ccg-kpi sky" style="cursor:pointer;" onclick="ccgTab('email')" title="Open email inbox"><div class="ccg-kpi-n" id="ccg-kpi-emails">—</div><div class="ccg-kpi-l">Unread Emails ▸</div></div>
         </div>
 
         <!-- 2-col: live intel + quick actions -->
@@ -10601,7 +10785,7 @@ if(!moTodos().length){
             <div class="ccg-panel-hdr"><div class="ccg-panel-title">⚡ Quick Actions</div></div>
             <div class="ccg-panel-body" style="display:flex;flex-direction:column;gap:10px;">
               <button class="ccg-hdr-btn" style="text-align:left;padding:10px 14px;font-size:12px;" onclick="ccgTab('crm')">📇 My CRM — Contacts &amp; Leads</button>
-              <button class="ccg-hdr-btn" style="text-align:left;padding:10px 14px;font-size:12px;" onclick="nav('email');setTimeout(()=>mailSelectMB('cece'),300)">📧 Open Email Inbox (cece@3lakeslogistics.com)</button>
+              <button class="ccg-hdr-btn" style="text-align:left;padding:10px 14px;font-size:12px;" onclick="ccgTab('email')">📧 Open Email Inbox (cece@3lakeslogistics.com)</button>
               <button class="ccg-hdr-btn" style="text-align:left;padding:10px 14px;font-size:12px;" onclick="ccgStartMeeting()">📹 Start Instant Zoom Meeting</button>
               <button class="ccg-hdr-btn" style="text-align:left;padding:10px 14px;font-size:12px;" onclick="ccgTab('directives')">📣 Send Directive to Team</button>
               <button class="ccg-hdr-btn" style="text-align:left;padding:10px 14px;font-size:12px;" onclick="ccgRunAgent('cc_gulley','CC Gulley')">🧭 Run CC Gulley Strategy Agent</button>
@@ -11051,6 +11235,73 @@ if(!moTodos().length){
       </div>
     </div><!-- /crm -->
 
+    <!-- ════ TASKS FROM MARK ════ -->
+    <div class="ccg-pane" id="ccgpane-frommark">
+      <div class="ccg-room">
+        <div style="flex-shrink:0;">
+          <div class="ccg-fl">CEO OFFICE → CC GULLEY</div>
+          <div class="ccg-label" style="font-size:16px;">Tasks Assigned by Mark Odom</div>
+          <div style="font-size:11px;color:rgba(255,255,255,.5);margin-bottom:4px;">All open tasks Mark has assigned to you. Mark them complete from here — Mark's office will sync automatically.</div>
+        </div>
+
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;flex-shrink:0;">
+          <select id="ccg-frommark-filter" class="ccg-input" style="max-width:160px;font-size:11px;" onchange="ccgFromMarkRender()">
+            <option value="open">Open Tasks</option>
+            <option value="urgent">Urgent / Overdue</option>
+            <option value="done">Completed</option>
+            <option value="all">All Tasks</option>
+          </select>
+          <span id="ccg-frommark-count" style="font-size:11px;color:rgba(255,255,255,.4);"></span>
+        </div>
+
+        <div id="ccg-frommark-list" style="flex:1;display:flex;flex-direction:column;gap:8px;">
+          <div style="color:rgba(255,255,255,.3);font-size:12px;text-align:center;padding:32px;">Loading tasks from Mark…</div>
+        </div>
+      </div>
+    </div><!-- /frommark -->
+
+    <!-- ════ EMAIL ════ -->
+    <div class="ccg-pane" id="ccgpane-email">
+      <div style="display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden;position:relative;">
+        <div style="padding:8px 16px;background:rgba(3,10,20,.95);border-bottom:1px solid rgba(56,189,248,.15);flex-shrink:0;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+          <div style="font-size:12px;font-weight:800;color:#38bdf8;">📧 cece@3lakeslogistics.com</div>
+          <button class="ccg-hdr-btn" style="font-size:10px;padding:4px 10px;" onclick="ccgEmailLoad()">↺ Refresh</button>
+          <button class="ccg-btn" style="font-size:10px;padding:4px 12px;margin-left:auto;" onclick="document.getElementById('ccg-compose').style.display='flex'">✉️ Compose</button>
+        </div>
+        <div style="display:flex;flex:1;min-height:0;overflow:hidden;">
+          <!-- Inbox list -->
+          <div style="width:300px;flex-shrink:0;border-right:1px solid rgba(56,189,248,.12);display:flex;flex-direction:column;overflow:hidden;">
+            <div id="ccg-email-list" style="flex:1;overflow-y:auto;scrollbar-width:thin;scrollbar-color:rgba(56,189,248,.4) transparent;">
+              <div style="color:rgba(255,255,255,.3);font-size:12px;text-align:center;padding:32px 16px;">Loading…</div>
+            </div>
+          </div>
+          <!-- Message view -->
+          <div id="ccg-email-view" style="flex:1;display:flex;flex-direction:column;overflow-y:auto;padding:18px 22px;scrollbar-width:thin;scrollbar-color:rgba(56,189,248,.4) transparent;">
+            <div style="display:flex;align-items:center;justify-content:center;flex-direction:column;height:100%;color:rgba(255,255,255,.2);gap:10px;">
+              <div style="font-size:42px;">📧</div>
+              <div style="font-size:13px;">Select a message to read</div>
+            </div>
+          </div>
+        </div>
+        <!-- Compose panel -->
+        <div id="ccg-compose" style="display:none;position:absolute;bottom:0;right:0;width:min(430px,100%);background:#030a14;border:1px solid rgba(56,189,248,.25);border-radius:12px 12px 0 0;flex-direction:column;overflow:hidden;box-shadow:0 -6px 24px rgba(0,0,0,.6);z-index:10;">
+          <div style="padding:10px 16px;background:rgba(56,189,248,.08);border-bottom:1px solid rgba(56,189,248,.15);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
+            <div style="font-weight:800;font-size:12px;color:#38bdf8;">✉️ New Message — cece@3lakeslogistics.com</div>
+            <button onclick="document.getElementById('ccg-compose').style.display='none'" style="background:none;border:none;color:rgba(255,255,255,.4);cursor:pointer;font-size:18px;line-height:1;">✕</button>
+          </div>
+          <div style="padding:12px 14px;display:flex;flex-direction:column;gap:8px;">
+            <div><div class="ccg-fl">TO</div><input id="ccg-compose-to" class="ccg-input" placeholder="recipient@email.com"></div>
+            <div><div class="ccg-fl">SUBJECT</div><input id="ccg-compose-subj" class="ccg-input" placeholder="Subject line…"></div>
+            <div><div class="ccg-fl">MESSAGE</div><textarea id="ccg-compose-body" class="ccg-textarea" style="min-height:130px;" placeholder="Write your message…"></textarea></div>
+            <div style="display:flex;gap:8px;justify-content:flex-end;align-items:center;">
+              <span id="ccg-compose-status" style="font-size:11px;color:#38bdf8;"></span>
+              <button class="ccg-btn" onclick="ccgEmailSend()">📤 Send</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div><!-- /email -->
+
   </div><!-- /body -->
 </div><!-- /ccg -->
 </div><!-- /page-ccg-office -->
@@ -11063,8 +11314,8 @@ if(!moTodos().length){
 
 /* ── Tab switching ── */
 window.ccgTab = function(id){
-  document.querySelectorAll('.ccg-tab').forEach(b=>b.classList.remove('active'));
-  document.querySelectorAll('.ccg-pane').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('#page-ccg-office .ccg-tab').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('#page-ccg-office .ccg-pane').forEach(p=>p.classList.remove('active'));
   const tb=document.getElementById('ccgtab-'+id);
   const pn=document.getElementById('ccgpane-'+id);
   if(tb)tb.classList.add('active');
@@ -11072,6 +11323,9 @@ window.ccgTab = function(id){
   if(id==='crm')ocInit('cece');
   if(id==='directives')ccgDirLoadActive();
   if(id==='strategy')ccgLoadPlan();
+  if(id==='frommark')ccgFromMarkRender();
+  if(id==='email')ccgEmailLoad();
+  if(id==='docs')ccgLoadDocs();
 };
 
 /* ── Refresh All ── */
@@ -11095,6 +11349,8 @@ async function ccgLoadOfficeData(){
     await Promise.all([ccgLoadAgentIntel('alexander'),ccgLoadAgentIntel('naomi'),ccgLoadAgentIntel('winston')]);
     // Email unread count
     ccgLoadEmailCount();
+    // Tasks from Mark badge
+    if(typeof ccgFromMarkRender==='function')ccgFromMarkRender();
   }catch(e){console.error('ccgLoadOfficeData',e);}
 }
 
@@ -11443,10 +11699,192 @@ window.ccgDeleteDoc = async function(id, name){
   }catch(e){toast('Delete failed','error');}
 };
 
+/* ── Tasks From Mark ── */
+window.ccgFromMarkRender = function(){
+  const todos=JSON.parse(localStorage.getItem('mo_todos')||'[]');
+  const filter=document.getElementById('ccg-frommark-filter')?.value||'open';
+  const list=document.getElementById('ccg-frommark-list');
+  const countEl=document.getElementById('ccg-frommark-count');
+  if(!list)return;
+  const open=todos.filter(t=>!t.done);
+  const urgent=open.filter(t=>{
+    if(!t.due)return false;
+    return(new Date(t.due).setHours(0,0,0,0)-new Date().setHours(0,0,0,0))/86400000<=0;
+  });
+  const done=todos.filter(t=>t.done);
+  let rows=filter==='open'?open:filter==='urgent'?urgent:filter==='done'?done:todos;
+  rows=rows.slice().sort((a,b)=>{
+    if(a.done!==b.done)return a.done?1:-1;
+    if(!a.due&&!b.due)return 0;if(!a.due)return 1;if(!b.due)return -1;
+    return new Date(a.due)-new Date(b.due);
+  });
+  if(countEl)countEl.textContent=`${rows.length} task${rows.length!==1?'s':''}`;
+  const badge=document.getElementById('ccg-frommark-badge');
+  if(badge){badge.textContent=open.length;badge.style.display=open.length?'inline':'none';}
+  const strip=document.getElementById('ccg-frommark-strip');
+  if(strip){
+    if(open.length){
+      strip.style.display='';
+      const prev=document.getElementById('ccg-frommark-preview');
+      if(prev)prev.innerHTML=open.slice(0,3).map(t=>`<div style="margin-bottom:2px;">• <b>${t.title}</b>${t.due?` <span style="color:#f59e0b;">(${ccgDueLbl(t.due)})</span>`:''}</div>`).join('')+(open.length>3?`<div style="font-size:10px;opacity:.6;margin-top:2px;">+${open.length-3} more</div>`:'');
+    }else{strip.style.display='none';}
+  }
+  if(!rows.length){
+    list.innerHTML='<div style="text-align:center;color:rgba(255,255,255,.3);padding:40px;font-size:12px;">No tasks found for this filter.<br><span style="font-size:10px;margin-top:6px;display:block;">Mark Odom will assign tasks to you via his office.</span></div>';
+    return;
+  }
+  const priCls={high:'color:#ef4444;border-color:rgba(239,68,68,.3);background:rgba(239,68,68,.1)',med:'color:#f59e0b;border-color:rgba(245,158,11,.3);background:rgba(245,158,11,.1)',low:'color:#10b981;border-color:rgba(16,185,129,.3);background:rgba(16,185,129,.1)'};
+  const catIcon={strategy:'📊',operations:'🚛',finance:'💰',compliance:'🛡️',trading:'📈',hr:'👥',other:'📌'};
+  list.innerHTML=rows.map(t=>`<div style="display:flex;align-items:flex-start;gap:12px;padding:14px 16px;border-radius:10px;border:1px solid rgba(255,255,255,.09);background:rgba(255,255,255,.03);transition:border-color .15s;${t.done?'opacity:.45;':''}">
+    <input type="checkbox" style="width:18px;height:18px;border-radius:4px;border:2px solid rgba(56,189,248,.5);background:transparent;cursor:pointer;flex-shrink:0;appearance:none;-webkit-appearance:none;margin-top:2px;${t.done?'background:#38bdf8;border-color:#38bdf8;':''}" ${t.done?'checked':''} onchange="ccgMarkDone('${t.id}',this.checked)">
+    <div style="flex:1;min-width:0;">
+      <div style="font-weight:700;font-size:13px;color:${t.done?'rgba(255,255,255,.35)':'#fff'};${t.done?'text-decoration:line-through;':''};margin-bottom:3px;">${t.title}</div>
+      ${t.desc?`<div style="font-size:11px;color:rgba(255,255,255,.5);line-height:1.5;margin-bottom:6px;">${t.desc}</div>`:''}
+      <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+        ${t.due?`<span style="font-size:9px;font-family:monospace;padding:2px 8px;border-radius:10px;background:rgba(245,158,11,.12);color:#f59e0b;border:1px solid rgba(245,158,11,.25);">${ccgDueLbl(t.due)}</span>`:''}
+        <span style="font-size:9px;font-family:monospace;padding:2px 8px;border-radius:10px;border:1px solid;${priCls[t.pri]||priCls.med}">${(t.pri||'med').toUpperCase()}</span>
+        <span style="font-size:9px;font-family:monospace;padding:2px 8px;border-radius:10px;background:rgba(56,189,248,.1);color:#38bdf8;border:1px solid rgba(56,189,248,.2);">${catIcon[t.cat]||'📌'} ${t.cat||'other'}</span>
+        <span style="font-size:9px;color:rgba(255,255,255,.3);font-family:monospace;">From: Mark Odom</span>
+      </div>
+    </div>
+  </div>`).join('');
+};
+
+function ccgDueLbl(due){
+  if(!due)return'No due date';
+  const diff=Math.round((new Date(due).setHours(0,0,0,0)-new Date().setHours(0,0,0,0))/86400000);
+  if(diff<0)return'Overdue '+Math.abs(diff)+'d';
+  if(diff===0)return'Due Today';
+  if(diff===1)return'Due Tomorrow';
+  return'In '+diff+'d';
+}
+
+window.ccgMarkDone = function(id, done){
+  const todos=JSON.parse(localStorage.getItem('mo_todos')||'[]');
+  const t=todos.find(x=>x.id===id);
+  if(t){
+    t.done=done;
+    if(done)t.done_by_cece=new Date().toISOString();
+    localStorage.setItem('mo_todos',JSON.stringify(todos));
+    if(typeof moTodoRender==='function')moTodoRender();
+  }
+  ccgFromMarkRender();
+  toast(done?'Task marked complete ✓':'Task reopened');
+};
+
+/* ── KPI Drill ── */
+window.ccgKpiDrill = function(type){
+  const labels={'tier-a':'🎯 Tier A Carrier Targets','hot-states':'🌡️ Hot Markets','at-risk':'⚠️ At-Risk Carriers','retention':'📊 Retention Details'};
+  const intel={
+    'tier-a':[
+      {label:'Priority State',text:'TX: 847 active carriers identified · 212 never-contacted Tier A targets · Alexander updating list daily.'},
+      {label:'Priority State',text:'FL: 619 carriers · 180 Tier A targets · High reefer demand. Naomi targeting refrigerated transport specialists.'},
+      {label:'Priority State',text:'GA: 341 carriers · 89 Tier A targets · Atlanta distribution hub driving demand.'},
+    ],
+    'hot-states':[
+      {label:'TX — Hottest Market',text:'Load-to-truck ratio: 4.1 · Spot rates up 12% WoW · Dry van and reefer in demand.'},
+      {label:'FL — Rising Fast',text:'Reefer capacity tightening · Hurricane prep season starting · Pre-book TX→FL lanes now.'},
+      {label:'GA — Steady Growth',text:'Atlanta hub activity +8% MoM · Atlanta distribution driving steady demand.'},
+    ],
+    'at-risk':[
+      {label:'Never-Loaded (30d)',text:'41 carriers signed up but never accepted a load. Winston targeting for re-engagement this week.'},
+      {label:'Inactive (15-30d)',text:'28 carriers last active 15–30 days ago. Churn risk HIGH. Personal outreach authorized.'},
+      {label:'Capacity Drop',text:'12 carriers showing 40%+ capacity reduction. May be working competitors. Retention call required.'},
+    ],
+    'retention':[
+      {label:'Retention Rate MTD',text:'Current: 87% · Target: 90% · Winston monitoring 69 at-risk carriers this week.'},
+      {label:'Top Retention Risk',text:'Carriers inactive for 15+ days have 3x higher churn probability. Winston escalating today.'},
+      {label:'Re-engagement',text:'41 never-loaded carriers in re-engagement funnel. Outreach campaign live via Winston.'},
+    ],
+  };
+  const items=intel[type]||[];
+  toast(labels[type]||type);
+  const drill=document.getElementById('ccg-kpi-drill');
+  const list=document.getElementById('ccg-kpi-drill-list');
+  const t=document.getElementById('ccg-kpi-drill-title');
+  if(t)t.textContent=labels[type]||type;
+  if(list)list.innerHTML=items.map(it=>`<div style="padding:11px 14px;border-radius:8px;border:1px solid rgba(56,189,248,.15);background:rgba(56,189,248,.04);border-left:3px solid #38bdf8;margin-bottom:10px;">
+    <div style="font-weight:700;font-size:11px;color:#38bdf8;margin-bottom:3px;">${it.label}</div>
+    <div style="font-size:12px;color:rgba(255,255,255,.7);line-height:1.6;">${it.text}</div>
+  </div>`).join('');
+  if(drill)drill.style.display='flex';
+};
+
+/* ── Inline Email ── */
+window.ccgEmailLoad = async function(){
+  const list=document.getElementById('ccg-email-list');
+  if(!list)return;
+  list.innerHTML='<div style="color:rgba(255,255,255,.3);font-size:12px;text-align:center;padding:24px;">Loading…</div>';
+  try{
+    const res=await API.get('/api/mailboxes/cece/inbox?limit=30').catch(()=>null);
+    const emails=(res?.emails||[]);
+    if(!emails.length){list.innerHTML='<div style="color:rgba(255,255,255,.3);font-size:12px;text-align:center;padding:32px;">No messages found</div>';return;}
+    const unread=emails.filter(m=>!m.is_read).length;
+    const ct=document.getElementById('ccg-email-ct');
+    if(ct){ct.style.display=unread?'inline':'none';if(unread)ct.textContent=unread;}
+    const kpiEl=document.getElementById('ccg-kpi-emails');
+    if(kpiEl)kpiEl.textContent=unread||emails.length;
+    list.innerHTML=emails.map(m=>`<div onclick="ccgEmailOpen('${(m.id||m._id||'')}','${(m.from||'').replace(/'/g,'\\\'').replace(/"/g,'&quot;')}')" style="padding:10px 12px;border-bottom:1px solid rgba(56,189,248,.07);cursor:pointer;transition:background .12s;${!m.is_read?'background:rgba(56,189,248,.06);':''}">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;">
+        <div style="font-weight:${m.is_read?'500':'800'};font-size:11px;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;">${(m.from_name||m.from||'Unknown').slice(0,28)}</div>
+        <div style="font-size:9px;color:rgba(255,255,255,.3);flex-shrink:0;font-family:monospace;">${m.date?new Date(m.date).toLocaleDateString():'—'}</div>
+      </div>
+      <div style="font-size:11px;color:rgba(255,255,255,.6);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${(m.subject||'(No subject)').slice(0,40)}</div>
+    </div>`).join('');
+  }catch(e){list.innerHTML='<div style="color:rgba(255,255,255,.3);font-size:12px;text-align:center;padding:32px;">Could not load inbox<br><span style="font-size:10px;margin-top:6px;display:block;">Connect API to read email</span></div>';}
+};
+
+window.ccgEmailOpen = async function(id,from){
+  const view=document.getElementById('ccg-email-view');
+  if(!view)return;
+  view.innerHTML='<div style="color:rgba(255,255,255,.3);font-size:12px;text-align:center;padding:40px;">Loading message…</div>';
+  try{
+    const m=await API.get('/api/mailboxes/cece/messages/'+id).catch(()=>null);
+    if(!m){view.innerHTML='<div style="padding:20px;color:rgba(255,255,255,.4);">Could not load message</div>';return;}
+    view.innerHTML=`<div style="padding:0 0 12px;border-bottom:1px solid rgba(56,189,248,.1);margin-bottom:14px;flex-shrink:0;">
+      <div style="font-size:15px;font-weight:800;color:#fff;margin-bottom:8px;">${m.subject||'(No subject)'}</div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <span style="font-size:11px;color:rgba(255,255,255,.5);">From: <b style="color:rgba(255,255,255,.8);">${m.from||from||'—'}</b></span>
+        <span style="font-size:11px;color:rgba(255,255,255,.5);">To: <b style="color:rgba(255,255,255,.8);">${m.to||'cece@3lakeslogistics.com'}</b></span>
+        <span style="font-size:10px;color:rgba(255,255,255,.3);font-family:monospace;">${m.date?new Date(m.date).toLocaleString():''}</span>
+      </div>
+      <div style="display:flex;gap:6px;margin-top:10px;">
+        <button class="ccg-hdr-btn" style="font-size:10px;padding:4px 10px;" onclick="document.getElementById('ccg-compose-to').value='${(m.from||'').replace(/'/g,'\\\'').replace(/"/g,'&quot;')}';document.getElementById('ccg-compose-subj').value='Re: ${(m.subject||'').replace(/'/g,'\\\'').slice(0,60)}';document.getElementById('ccg-compose').style.display='flex'">↩ Reply</button>
+      </div>
+    </div>
+    <div style="font-size:13px;color:rgba(255,255,255,.75);line-height:1.7;white-space:pre-wrap;">${(m.body||m.text||m.html_stripped||'(Empty message)').slice(0,4000)}</div>`;
+  }catch(e){view.innerHTML='<div style="padding:20px;color:rgba(255,255,255,.4);">Could not load message</div>';}
+};
+
+window.ccgEmailSend = async function(){
+  const to=(document.getElementById('ccg-compose-to')?.value||'').trim();
+  const subj=(document.getElementById('ccg-compose-subj')?.value||'').trim();
+  const body=(document.getElementById('ccg-compose-body')?.value||'').trim();
+  const st=document.getElementById('ccg-compose-status');
+  if(!to||!body){if(st)st.textContent='To and message required.';return;}
+  if(st)st.textContent='Sending…';
+  try{
+    await API.post('/api/email/send',{mailbox:'cece',to,subject:subj||'(No subject)',body});
+    if(st)st.textContent='✓ Sent';
+    setTimeout(()=>{document.getElementById('ccg-compose').style.display='none';if(st)st.textContent='';['ccg-compose-to','ccg-compose-subj','ccg-compose-body'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});},1500);
+  }catch(e){if(st)st.textContent='Send failed: '+e.message;}
+};
+
 /* auto-load is wired directly in nav() */
 
 })();
 </script>
+
+<!-- CC Office: KPI Drill Modal -->
+<div id="ccg-kpi-drill" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9300;align-items:flex-end;justify-content:center;" onclick="if(event.target===this)this.style.display='none'">
+  <div style="background:#030a14;border:1px solid rgba(56,189,248,.25);border-top:3px solid #38bdf8;border-radius:14px 14px 0 0;width:100%;max-width:620px;max-height:72vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 -8px 32px rgba(0,0,0,.6);">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:1px solid rgba(56,189,248,.12);flex-shrink:0;">
+      <div id="ccg-kpi-drill-title" style="font-weight:800;font-size:14px;color:#38bdf8;"></div>
+      <button onclick="document.getElementById('ccg-kpi-drill').style.display='none'" style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);color:rgba(255,255,255,.6);font-size:13px;padding:4px 12px;border-radius:6px;cursor:pointer;">Close</button>
+    </div>
+    <div id="ccg-kpi-drill-list" style="flex:1;overflow-y:auto;padding:14px 18px;scrollbar-width:thin;scrollbar-color:#38bdf8 transparent;"></div>
+  </div>
+</div>
 
 <script>
 // ═══════════════════════════════════════════════════════
@@ -11456,8 +11894,10 @@ window.ccgDeleteDoc = async function(id, name){
 // ═══════════════════════════════════════════════════════
 (function(){
 
-const OC_TYPES = ['Broker','Carrier','Customer','Shipper','Vendor','Investor','Personal'];
-const OC_PRI   = ['hot','warm','cold','none'];
+const OC_TYPES  = ['Broker','Carrier','Customer','Shipper','Vendor','Investor','Personal'];
+const OC_PRI    = ['hot','warm','cold','none'];
+const OC_STAGES = ['New Lead','Contacted','Interested','Negotiating','Won','Lost','On Hold'];
+const OC_ACT    = ['📞 Call','📧 Email','🤝 Meeting','📝 Note','📋 Task','💰 Deal Update'];
 
 // owner→prefix mapping: mark→'mo', cece→'cece'
 function pfx(owner){ return owner==='mark'?'mo':'cece'; }
@@ -11545,15 +11985,29 @@ window.ocOpen = function(owner, id){
   const det = el(owner,'detail');
   det.style.display='flex';
   const lc = c.last_contacted ? new Date(c.last_contacted).toLocaleDateString() : '—';
+  const stageColors={'New Lead':'rgba(99,102,241,.4)','Contacted':'rgba(56,189,248,.4)','Interested':'rgba(245,200,66,.4)','Negotiating':'rgba(245,158,11,.4)','Won':'rgba(16,185,129,.4)','Lost':'rgba(239,68,68,.4)','On Hold':'rgba(107,114,128,.4)'};
+  const stageColor=stageColors[c.pipeline_stage]||'rgba(255,255,255,.15)';
+  const acts=(c.activities||[]).slice().reverse();
+  const actHtml=acts.slice(0,12).map(a=>`<div style="display:flex;align-items:flex-start;gap:8px;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.05);">
+    <span style="font-size:14px;flex-shrink:0;margin-top:1px;">${a.type?.charAt(0)||'•'}</span>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:11px;color:rgba(255,255,255,.8);line-height:1.5;">${esc(a.note||a.type||'Activity')}</div>
+      <div style="font-size:9px;color:rgba(255,255,255,.3);margin-top:2px;font-family:monospace;">${a.type||''} · ${a.ts?new Date(a.ts).toLocaleString():''}</div>
+    </div>
+  </div>`).join('');
   det.innerHTML = `
     <div class="oc-detail-hdr">
-      <div>
+      <div style="flex:1;min-width:0;">
         <div class="oc-detail-name">${esc(c.name)}</div>
-        <div style="font-size:11px;color:rgba(255,255,255,.4);margin-top:2px;">${esc(c.company||'')}${c.type?` · ${c.type}`:''}</div>
+        <div style="display:flex;align-items:center;gap:8px;margin-top:4px;flex-wrap:wrap;">
+          <span style="font-size:10px;color:rgba(255,255,255,.4);">${esc(c.company||'')}${c.type?` · ${c.type}`:''}</span>
+          ${c.pipeline_stage?`<span style="font-size:9px;font-weight:700;padding:2px 8px;border-radius:10px;background:${stageColor};color:#fff;border:1px solid rgba(255,255,255,.15);">${c.pipeline_stage}</span>`:''}
+          ${c.deal_value?`<span style="font-size:9px;font-weight:700;padding:2px 8px;border-radius:10px;background:rgba(16,185,129,.15);color:#10b981;border:1px solid rgba(16,185,129,.25);">$${c.deal_value}</span>`:''}
+        </div>
       </div>
-      <div style="display:flex;gap:6px;flex-shrink:0;">
+      <div style="display:flex;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         <button class="oc-btn-out" onclick="ocEdit('${owner}','${id}')">✏️ Edit</button>
-        <button class="oc-btn-out" onclick="ocTouchContact('${owner}','${id}')" title="Mark as contacted today">📞 Touched</button>
+        <button class="oc-btn-out" onclick="ocLogActivity('${owner}','${id}')" title="Log a call, email, or note">+ Log</button>
         <button class="oc-btn-danger" onclick="ocDelete('${owner}','${id}')">🗑</button>
       </div>
     </div>
@@ -11563,11 +12017,33 @@ window.ocOpen = function(owner, id){
         ${vf('Email',c.email?`<a href="mailto:${c.email}" style="color:var(--oc-a,#f5c842)">${esc(c.email)}</a>`:'')}
       </div>
       <div class="oc-2col">
+        ${vf('Pipeline Stage',c.pipeline_stage||'—')}
+        ${vf('Deal Value',c.deal_value?`$${c.deal_value}`:'—')}
+      </div>
+      <div class="oc-2col">
         ${vf('Priority','<span class="oc-dot '+(c.priority||'none')+'" style="display:inline-block;margin-right:5px;vertical-align:middle;"></span>'+(c.priority||'None'))}
         ${vf('Last Contacted', lc)}
       </div>
       ${c.linkedin?vf('LinkedIn',`<a href="${c.linkedin}" target="_blank" style="color:var(--oc-a,#f5c842)">View Profile</a>`):''}
-      ${vf('Notes',`<div style="font-size:12px;color:rgba(255,255,255,.75);white-space:pre-wrap;line-height:1.6;">${esc(c.notes||'—')}</div>`)}
+      ${c.notes?vf('Notes',`<div style="font-size:12px;color:rgba(255,255,255,.75);white-space:pre-wrap;line-height:1.6;">${esc(c.notes)}</div>`):''}
+      <div style="margin-top:16px;padding-top:14px;border-top:1px solid rgba(255,255,255,.08);">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+          <div style="font-size:9px;font-weight:800;letter-spacing:.08em;color:rgba(255,255,255,.4);">ACTIVITY TIMELINE</div>
+          <button class="oc-btn-out" style="font-size:10px;padding:3px 10px;" onclick="ocLogActivity('${owner}','${id}')">+ Log Activity</button>
+        </div>
+        <div id="oc-act-log-form-${id}" style="display:none;background:rgba(255,255,255,.04);border-radius:8px;border:1px solid rgba(255,255,255,.1);padding:12px;margin-bottom:10px;">
+          <div class="oc-2col" style="margin-bottom:8px;">
+            <div><div class="oc-fl">TYPE</div><select class="oc-inp" id="oc-act-type-${id}">${OC_ACT.map(a=>`<option>${a}</option>`).join('')}</select></div>
+            <div><div class="oc-fl">DATE</div><input class="oc-inp" type="datetime-local" id="oc-act-date-${id}" value="${new Date().toISOString().slice(0,16)}"></div>
+          </div>
+          <div class="oc-row"><div class="oc-fl">NOTES</div><textarea class="oc-inp oc-ta" id="oc-act-note-${id}" style="min-height:60px;" placeholder="What happened? Next steps?"></textarea></div>
+          <div style="display:flex;gap:6px;margin-top:8px;">
+            <button class="oc-btn" onclick="ocSaveActivity('${owner}','${id}')">Save Activity</button>
+            <button class="oc-btn-out" onclick="document.getElementById('oc-act-log-form-${id}').style.display='none'">Cancel</button>
+          </div>
+        </div>
+        ${acts.length?actHtml:'<div style="font-size:11px;color:rgba(255,255,255,.25);padding:16px 0;text-align:center;">No activity logged yet — click + Log Activity</div>'}
+      </div>
     </div>`;
 };
 
@@ -11610,12 +12086,13 @@ function ocRenderForm(owner, c, isNew){
   const det = el(owner,'detail');
   const typeOpts = OC_TYPES.map(t=>`<option value="${t}"${c.type===t?' selected':''}>${t}</option>`).join('');
   const priOpts = OC_PRI.map(p=>`<option value="${p}"${(c.priority||'none')===p?' selected':''}>${p.charAt(0).toUpperCase()+p.slice(1)}</option>`).join('');
+  const stageOpts=OC_STAGES.map(s=>`<option value="${s}"${c.pipeline_stage===s?' selected':''}>${s}</option>`).join('');
   det.innerHTML = `
     <div class="oc-detail-hdr">
       <div class="oc-detail-name">${isNew?'New Contact':esc(c.name||'Edit Contact')}</div>
       <div style="display:flex;gap:6px;">
         <button class="oc-btn" onclick="ocSaveContact('${owner}')">💾 Save</button>
-        <button class="oc-btn-out" onclick="ocCancelForm('${owner}','${c.id||'')}')"}>✕ Cancel</button>
+        <button class="oc-btn-out" onclick="ocCancelForm('${owner}','${c.id||''}')"}>✕ Cancel</button>
       </div>
     </div>
     <div class="oc-detail-body">
@@ -11631,6 +12108,10 @@ function ocRenderForm(owner, c, isNew){
         <div class="oc-row"><div class="oc-fl">TYPE</div><select class="oc-inp" id="oc-f-type">${typeOpts}</select></div>
         <div class="oc-row"><div class="oc-fl">PRIORITY</div><select class="oc-inp" id="oc-f-pri">${priOpts}</select></div>
       </div>
+      <div class="oc-2col">
+        <div class="oc-row"><div class="oc-fl">PIPELINE STAGE</div><select class="oc-inp" id="oc-f-stage"><option value="">— No Stage —</option>${stageOpts}</select></div>
+        <div class="oc-row"><div class="oc-fl">DEAL VALUE ($)</div><input class="oc-inp" id="oc-f-deal" type="number" min="0" step="100" value="${c.deal_value||''}" placeholder="0"></div>
+      </div>
       <div class="oc-row"><div class="oc-fl">LINKEDIN</div><input class="oc-inp" id="oc-f-linkedin" value="${esc(c.linkedin||'')}" placeholder="https://linkedin.com/in/…"></div>
       <div class="oc-row"><div class="oc-fl">LAST CONTACTED</div><input class="oc-inp" id="oc-f-lc" type="date" value="${c.last_contacted?c.last_contacted.slice(0,10):''}"></div>
       <div class="oc-row"><div class="oc-fl">NOTES</div><textarea class="oc-inp oc-ta" id="oc-f-notes" placeholder="Anything worth remembering…">${esc(c.notes||'')}</textarea></div>
@@ -11644,15 +12125,18 @@ window.ocSaveContact = function(owner){
   const s = st(owner);
   const isNew = s.isNew || !s.editingId;
   let c = isNew ? {id: Date.now().toString(36)+Math.random().toString(36).slice(2), created: new Date().toISOString()} : arr.find(x=>x.id===s.editingId)||{};
-  c.name     = name;
-  c.company  = document.getElementById('oc-f-company')?.value.trim()||'';
-  c.phone    = document.getElementById('oc-f-phone')?.value.trim()||'';
-  c.email    = document.getElementById('oc-f-email')?.value.trim()||'';
-  c.type     = document.getElementById('oc-f-type')?.value||'';
-  c.priority = document.getElementById('oc-f-pri')?.value||'none';
-  c.linkedin = document.getElementById('oc-f-linkedin')?.value.trim()||'';
+  c.name           = name;
+  c.company        = document.getElementById('oc-f-company')?.value.trim()||'';
+  c.phone          = document.getElementById('oc-f-phone')?.value.trim()||'';
+  c.email          = document.getElementById('oc-f-email')?.value.trim()||'';
+  c.type           = document.getElementById('oc-f-type')?.value||'';
+  c.priority       = document.getElementById('oc-f-pri')?.value||'none';
+  c.pipeline_stage = document.getElementById('oc-f-stage')?.value||'';
+  c.deal_value     = document.getElementById('oc-f-deal')?.value||'';
+  c.linkedin       = document.getElementById('oc-f-linkedin')?.value.trim()||'';
   c.last_contacted = document.getElementById('oc-f-lc')?.value||null;
-  c.notes    = document.getElementById('oc-f-notes')?.value||'';
+  c.notes          = document.getElementById('oc-f-notes')?.value||'';
+  if(!c.activities) c.activities=[];
   if(isNew){ arr.push(c); s.isNew=false; }
   ocSaveAll(owner, arr);
   s.editingId = c.id;
@@ -11739,6 +12223,26 @@ window.ocOpenLead = function(owner, id){
         <button class="oc-btn-out" onclick="nav('crm')">↗ Open in Main CRM</button>
       </div>
     </div>`;
+};
+
+window.ocLogActivity = function(owner, id){
+  const form=document.getElementById('oc-act-log-form-'+id);
+  if(form)form.style.display=form.style.display==='none'?'block':'none';
+};
+
+window.ocSaveActivity = function(owner, id){
+  const arr=ocContacts(owner);
+  const c=arr.find(x=>x.id===id);
+  if(!c)return;
+  if(!c.activities)c.activities=[];
+  const type=document.getElementById('oc-act-type-'+id)?.value||'📝 Note';
+  const note=(document.getElementById('oc-act-note-'+id)?.value||'').trim();
+  const ts=document.getElementById('oc-act-date-'+id)?.value||new Date().toISOString();
+  c.activities.push({id:Date.now().toString(36),type,note,ts:new Date(ts).toISOString()});
+  c.last_contacted=new Date().toISOString();
+  ocSaveAll(owner,arr);
+  if(typeof toast!=='undefined')toast('Activity logged');
+  ocOpen(owner,id);
 };
 
 window.ocPullLead = function(owner, id){
