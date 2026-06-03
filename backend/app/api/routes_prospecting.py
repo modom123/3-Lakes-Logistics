@@ -259,11 +259,11 @@ def manual_call(body: dict) -> dict:
 
     lead_id = f"manual-{name.lower().replace(' ','-')}-{digits[-4:]}"
     result = vance_agent.run({
-        "phone":         e164,
-        "name":          name or "there",
-        "company_name":  body.get("company", ""),
-        "current_pain":  body.get("notes", ""),
-        "lead_id":       lead_id,
+        "phone":          e164,
+        "prospect_name":  name or "there",
+        "company_name":   body.get("company", ""),
+        "current_pain":   body.get("notes", ""),
+        "lead_id":        lead_id,
     })
 
     log_agent("vance", "manual_call", payload={"name": name, "phone": e164}, result=result.get("status"))
