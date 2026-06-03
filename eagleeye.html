@@ -6436,7 +6436,8 @@ async function loadLeadsPipeline(){
       items.map(l=>{
         const phone=ph(l);
         const equip=l.equipment_type||(l.equipment_types||[])[0]||'';
-        return '<tr>'+
+        const lid=esc(l.id);
+        return '<tr style="cursor:pointer" onclick="openLeadPanel(\''+lid+'\')">'+
           '<td><strong style="color:'+scoreColor(l.score||0)+'">'+(l.score||'—')+'</strong></td>'+
           '<td style="max-width:200px">'+esc(name(l))+srcBadge(src(l))+(l.fleet_size?'<br><span style="font-size:10px;color:var(--muted)">'+l.fleet_size+' trucks</span>':'')+'</td>'+
           '<td style="font-size:11px;color:var(--muted)">'+esc(loc(l))+'</td>'+
@@ -6444,7 +6445,7 @@ async function loadLeadsPipeline(){
           '<td class="t-mono" style="font-size:11px">'+esc(phone)+'</td>'+
           '<td style="font-size:11px">'+esc(equip)+'</td>'+
           '<td><span class="badge '+stgBadge(stg(l))+'">'+esc(stg(l))+'</span></td>'+
-          '<td><button class="btn-navy-sm" onclick="vanceDialLead(\''+esc(l.id)+'\',\''+esc(name(l)).replace(/'/g,"\\'")+'\',\''+esc(phone)+'\')" '+(phone==='—'?'disabled title="No phone number"':'')+'>📞 Call</button></td>'+
+          '<td onclick="event.stopPropagation()"><button class="btn-navy-sm" onclick="openLeadPanel(\''+lid+'\')" title="Open details">→</button></td>'+
         '</tr>';
       }).join('')+'</tbody></table></div>';
   }catch(e){
@@ -18289,6 +18290,266 @@ function tdRenderPositions(rows) {
     </tr>`;
   }).join('');
 }
+
+// ── LEAD DETAIL PANEL ────────────────────────────────────────────────────────
+
+let _lpLead = null;
+
+async function openLeadPanel(leadId) {
+  const panel = document.getElementById('lead-panel');
+  const overlay = document.getElementById('lead-panel-overlay');
+  document.getElementById('lp-panel-body').innerHTML =
+    '<div class="loading" style="padding:40px"><div class="spin"></div>Loading…</div>';
+  panel.classList.add('open');
+  overlay.classList.add('open');
+
+  try {
+    const [lr, ar] = await Promise.all([
+      apiFetch(`/api/leads/${leadId}`),
+      apiFetch(`/api/leads/${leadId}/activities?limit=30`),
+    ]);
+    _lpLead = lr.ok ? await lr.json() : null;
+    const actData = ar.ok ? await ar.json() : {activities:[]};
+    if (!_lpLead) { document.getElementById('lp-panel-body').innerHTML = '<p style="padding:20px;color:var(--muted)">Lead not found.</p>'; return; }
+    _renderLeadPanel(_lpLead, actData.activities || []);
+  } catch(e) {
+    document.getElementById('lp-panel-body').innerHTML = `<p style="padding:20px;color:var(--red)">Error: ${esc(e.message)}</p>`;
+  }
+}
+
+function closeLeadPanel() {
+  document.getElementById('lead-panel').classList.remove('open');
+  document.getElementById('lead-panel-overlay').classList.remove('open');
+  _lpLead = null;
+}
+
+function _renderLeadPanel(l, activities) {
+  const name = l.business_name || l.company_name || '—';
+  const phone = l.phone || '—';
+  const email = l.email || '—';
+  const score = l.score ?? '—';
+  const status = l.status || l.stage || 'New';
+  const scoreColor = s => s>=8?'var(--green)':s>=5?'var(--gold)':'var(--muted)';
+  const stageOpts = ['New','Contacted','Interested','Qualified','Converted','Dead']
+    .map(s=>`<option value="${s}"${status===s?' selected':''}>${s}</option>`).join('');
+
+  const channelIcon = c => ({call:'📞',sms:'💬',email:'📧',note:'📝',stage_change:'🔄',social:'📱'})[c]||'•';
+  const statusColor = s => ({sent:'#60a5fa',delivered:'#34d399',answered:'#34d399',interested:'#fbbf24',no_answer:'#94a3b8',voicemail:'#94a3b8',error:'#f87171',not_interested:'#f87171',bounced:'#f87171',stage_change:'#a78bfa'})[s]||'#94a3b8';
+
+  const timeline = activities.length ? activities.map(a => `
+    <div style="display:flex;gap:10px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.05)">
+      <div style="font-size:16px;min-width:24px;text-align:center">${channelIcon(a.channel)}</div>
+      <div style="flex:1;min-width:0">
+        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+          <span style="font-size:11px;font-weight:700;color:#fff">${a.channel.toUpperCase()}</span>
+          <span style="font-size:10px;padding:1px 7px;border-radius:10px;background:rgba(255,255,255,.1);color:${statusColor(a.status)};font-weight:600">${a.status}</span>
+          <span style="font-size:10px;color:rgba(255,255,255,.35);margin-left:auto">${new Date(a.created_at).toLocaleString()}</span>
+        </div>
+        ${a.summary?`<div style="font-size:11px;color:rgba(255,255,255,.6);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(a.summary)}">${esc(a.summary)}</div>`:''}
+        ${a.agent&&a.agent!=='manual'?`<div style="font-size:10px;color:rgba(255,255,255,.3);margin-top:1px">via ${a.agent}</div>`:''}
+      </div>
+    </div>`).join('') : '<div style="font-size:12px;color:rgba(255,255,255,.35);padding:16px 0;text-align:center">No activity yet — fire the first outreach below.</div>';
+
+  document.getElementById('lp-panel-body').innerHTML = `
+    <!-- Header info -->
+    <div style="padding:20px 24px;border-bottom:1px solid rgba(255,255,255,.1)">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap">
+        <div>
+          <div style="font-size:18px;font-weight:800;color:#fff;margin-bottom:4px">${esc(name)}</div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;font-size:12px;color:rgba(255,255,255,.55)">
+            ${l.dot_number?`<span>DOT ${l.dot_number}</span>`:''}
+            ${l.mc_number?`<span>MC ${l.mc_number}</span>`:''}
+            ${l.city||l.state?`<span>${[l.city,l.state].filter(Boolean).join(', ')}</span>`:''}
+            ${l.fleet_size?`<span>${l.fleet_size} trucks</span>`:''}
+            ${l.source?`<span style="background:rgba(59,130,246,.2);color:#93c5fd;padding:1px 7px;border-radius:4px;font-weight:700">${l.source}</span>`:''}
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <div style="font-size:28px;font-weight:900;color:${scoreColor(score)}">${score}</div>
+          <select id="lp-stage-sel" onchange="lpUpdateStage()" style="padding:5px 10px;font-size:12px;font-weight:700;background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.2);border-radius:6px;cursor:pointer">
+            ${stageOpts}
+          </select>
+        </div>
+      </div>
+      <!-- Contact info row -->
+      <div style="display:flex;gap:16px;margin-top:12px;flex-wrap:wrap;font-size:12px">
+        <span style="display:flex;align-items:center;gap:5px;color:${phone!=='—'?'#93c5fd':'rgba(255,255,255,.3)'}">
+          📞 ${phone!=='—'?`<a href="tel:${phone}" style="color:#93c5fd">${esc(phone)}</a>`:'No phone'}
+        </span>
+        <span style="display:flex;align-items:center;gap:5px;color:${email!=='—'?'#6ee7b7':'rgba(255,255,255,.3)'}">
+          📧 ${email!=='—'?`<a href="mailto:${email}" style="color:#6ee7b7">${esc(email)}</a>`:'No email'}
+        </span>
+      </div>
+    </div>
+
+    <!-- Quick action buttons -->
+    <div style="padding:16px 24px;border-bottom:1px solid rgba(255,255,255,.1);display:flex;gap:8px;flex-wrap:wrap">
+      <button onclick="lpCall()" ${phone==='—'?'disabled title="No phone"':''} style="flex:1;min-width:100px;padding:10px;font-size:12px;font-weight:700;background:linear-gradient(135deg,#1e3a8a,#1d4ed8);color:#fff;border:none;border-radius:8px;cursor:pointer;${phone==='—'?'opacity:.4;cursor:not-allowed':''}">📞 Call Now</button>
+      <button onclick="lpSmsOpen()" ${phone==='—'?'disabled title="No phone"':''} style="flex:1;min-width:100px;padding:10px;font-size:12px;font-weight:700;background:linear-gradient(135deg,#065f46,#059669);color:#fff;border:none;border-radius:8px;cursor:pointer;${phone==='—'?'opacity:.4;cursor:not-allowed':''}">💬 Send SMS</button>
+      <button onclick="lpEmailOpen()" ${email==='—'?'disabled title="No email"':''} style="flex:1;min-width:100px;padding:10px;font-size:12px;font-weight:700;background:linear-gradient(135deg,#7c2d12,#ea580c);color:#fff;border:none;border-radius:8px;cursor:pointer;${email==='—'?'opacity:.4;cursor:not-allowed':''}">📧 Send Email</button>
+      <button onclick="lpNoteOpen()" style="flex:1;min-width:100px;padding:10px;font-size:12px;font-weight:700;background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.2);border-radius:8px;cursor:pointer">📝 Add Note</button>
+    </div>
+
+    <!-- Compose areas (hidden until triggered) -->
+    <div id="lp-compose" style="display:none;padding:16px 24px;border-bottom:1px solid rgba(255,255,255,.1)"></div>
+
+    <!-- Activity timeline -->
+    <div style="padding:16px 24px">
+      <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">Activity Timeline</div>
+      <div id="lp-timeline">${timeline}</div>
+    </div>`;
+}
+
+async function lpUpdateStage() {
+  if (!_lpLead) return;
+  const newStatus = document.getElementById('lp-stage-sel').value;
+  const r = await apiFetch(`/api/leads/${_lpLead.id}`, 'PATCH', {status: newStatus});
+  if (r.ok) {
+    _lpLead.status = newStatus;
+    toast(`Stage → ${newStatus}`, 'success');
+    loadLeadsPipeline();
+    // Refresh timeline to show stage change
+    const ar = await apiFetch(`/api/leads/${_lpLead.id}/activities?limit=30`);
+    if (ar.ok) {
+      const d = await ar.json();
+      _renderLeadPanel(_lpLead, d.activities||[]);
+      document.getElementById('lp-stage-sel').value = newStatus;
+    }
+  } else toast('Stage update failed', 'error');
+}
+
+async function lpCall() {
+  if (!_lpLead) return;
+  const btn = document.querySelector('#lead-panel button:nth-child(1)');
+  if(btn){btn.disabled=true;btn.textContent='⏳ Dialing…';}
+  try {
+    const r = await apiFetch(`/api/leads/${_lpLead.id}/call`, 'POST', {});
+    const d = await r.json();
+    if (r.ok && d.ok) {
+      toast(`📞 Calling ${d.phone}`, 'success');
+    } else {
+      toast(`Call error: ${d.detail || 'unknown'}`, 'error');
+    }
+    // Refresh timeline
+    const ar = await apiFetch(`/api/leads/${_lpLead.id}/activities?limit=30`);
+    if(ar.ok){const ad=await ar.json();_renderLeadPanel(_lpLead,ad.activities||[]);document.getElementById('lp-stage-sel').value=_lpLead.status||'New';}
+  } catch(e){ toast('Call failed: '+e.message,'error'); }
+}
+
+function lpSmsOpen() {
+  const tmpl = `Hi, I'm reaching out from 3 Lakes Logistics. We have open loads in your area and are looking for reliable carriers. Would you like to hear more?`;
+  document.getElementById('lp-compose').style.display = 'block';
+  document.getElementById('lp-compose').innerHTML = `
+    <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.5);text-transform:uppercase;margin-bottom:8px">💬 SMS Message</div>
+    <textarea id="lp-sms-body" style="width:100%;box-sizing:border-box;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.2);border-radius:8px;color:#fff;padding:10px;font-size:12px;resize:vertical;min-height:80px" maxlength="160">${tmpl}</textarea>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px">
+      <span id="lp-sms-count" style="font-size:10px;color:rgba(255,255,255,.4)">${tmpl.length}/160</span>
+      <div style="display:flex;gap:8px">
+        <button onclick="document.getElementById('lp-compose').style.display='none'" style="padding:6px 14px;font-size:12px;background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.2);border-radius:6px;cursor:pointer">Cancel</button>
+        <button onclick="lpSmsSend()" style="padding:6px 16px;font-size:12px;font-weight:700;background:#059669;color:#fff;border:none;border-radius:6px;cursor:pointer">Send SMS</button>
+      </div>
+    </div>`;
+  document.getElementById('lp-sms-body').oninput = function(){
+    document.getElementById('lp-sms-count').textContent = this.value.length+'/160';
+  };
+}
+
+function lpEmailOpen() {
+  document.getElementById('lp-compose').style.display = 'block';
+  document.getElementById('lp-compose').innerHTML = `
+    <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.5);text-transform:uppercase;margin-bottom:8px">📧 Email</div>
+    <input id="lp-email-subj" class="fi" placeholder="Subject" value="Open Loads in Your Area — 3 Lakes Logistics" style="margin-bottom:8px;width:100%;box-sizing:border-box">
+    <textarea id="lp-email-body" style="width:100%;box-sizing:border-box;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.2);border-radius:8px;color:#fff;padding:10px;font-size:12px;resize:vertical;min-height:120px">Hi,\n\nI'm reaching out because we have consistent freight opportunities available for carriers in your area.\n\n3 Lakes Logistics offers:\n- Consistent weekly loads\n- Quick pay / factoring available\n- Dedicated lane opportunities\n- No broker fees\n\nWould you be open to a quick 10-minute call this week?\n\nBest,\n3 Lakes Logistics Team</textarea>
+    <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:8px">
+      <button onclick="document.getElementById('lp-compose').style.display='none'" style="padding:6px 14px;font-size:12px;background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.2);border-radius:6px;cursor:pointer">Cancel</button>
+      <button onclick="lpEmailSend()" style="padding:6px 16px;font-size:12px;font-weight:700;background:#ea580c;color:#fff;border:none;border-radius:6px;cursor:pointer">Send Email</button>
+    </div>`;
+}
+
+function lpNoteOpen() {
+  document.getElementById('lp-compose').style.display = 'block';
+  document.getElementById('lp-compose').innerHTML = `
+    <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.5);text-transform:uppercase;margin-bottom:8px">📝 Add Note</div>
+    <textarea id="lp-note-body" style="width:100%;box-sizing:border-box;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.2);border-radius:8px;color:#fff;padding:10px;font-size:12px;resize:vertical;min-height:80px" placeholder="e.g. Spoke with owner, interested in reefer lanes, call back Friday 2pm…"></textarea>
+    <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:8px">
+      <button onclick="document.getElementById('lp-compose').style.display='none'" style="padding:6px 14px;font-size:12px;background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.2);border-radius:6px;cursor:pointer">Cancel</button>
+      <button onclick="lpNoteSave()" style="padding:6px 16px;font-size:12px;font-weight:700;background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.2);border-radius:6px;cursor:pointer">Save Note</button>
+    </div>`;
+}
+
+async function lpSmsSend() {
+  if (!_lpLead) return;
+  const msg = (document.getElementById('lp-sms-body')?.value||'').trim();
+  if(!msg){toast('Message is empty','error');return;}
+  try {
+    const r = await apiFetch(`/api/leads/${_lpLead.id}/sms`, 'POST', {message: msg});
+    const d = await r.json();
+    if(r.ok) { toast('💬 SMS sent!','success'); document.getElementById('lp-compose').style.display='none'; }
+    else toast('SMS error: '+(d.detail||'unknown'),'error');
+    const ar = await apiFetch(`/api/leads/${_lpLead.id}/activities?limit=30`);
+    if(ar.ok){const ad=await ar.json();_renderLeadPanel(_lpLead,ad.activities||[]);document.getElementById('lp-stage-sel').value=_lpLead.status||'New';}
+  } catch(e){ toast('SMS failed: '+e.message,'error'); }
+}
+
+async function lpEmailSend() {
+  if (!_lpLead) return;
+  const subj = (document.getElementById('lp-email-subj')?.value||'').trim();
+  const msg  = (document.getElementById('lp-email-body')?.value||'').trim();
+  if(!subj||!msg){toast('Subject and message required','error');return;}
+  try {
+    const r = await apiFetch(`/api/leads/${_lpLead.id}/email`, 'POST', {subject:subj, message:msg});
+    const d = await r.json();
+    if(r.ok) { toast('📧 Email sent!','success'); document.getElementById('lp-compose').style.display='none'; }
+    else toast('Email error: '+(d.detail||'unknown'),'error');
+    const ar = await apiFetch(`/api/leads/${_lpLead.id}/activities?limit=30`);
+    if(ar.ok){const ad=await ar.json();_renderLeadPanel(_lpLead,ad.activities||[]);document.getElementById('lp-stage-sel').value=_lpLead.status||'New';}
+  } catch(e){ toast('Email failed: '+e.message,'error'); }
+}
+
+async function lpNoteSave() {
+  if (!_lpLead) return;
+  const note = (document.getElementById('lp-note-body')?.value||'').trim();
+  if(!note){toast('Note is empty','error');return;}
+  try {
+    await apiFetch(`/api/leads/${_lpLead.id}/activities`, 'POST', {channel:'note',status:'sent',summary:note,agent:'manual'});
+    toast('Note saved','success');
+    document.getElementById('lp-compose').style.display='none';
+    const ar = await apiFetch(`/api/leads/${_lpLead.id}/activities?limit=30`);
+    if(ar.ok){const ad=await ar.json();_renderLeadPanel(_lpLead,ad.activities||[]);document.getElementById('lp-stage-sel').value=_lpLead.status||'New';}
+  } catch(e){ toast('Note failed: '+e.message,'error'); }
+}
 </script>
+
+<!-- ── LEAD DETAIL PANEL ── -->
+<style>
+#lead-panel-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:1200}
+#lead-panel-overlay.open{display:block}
+#lead-panel{
+  position:fixed;top:0;right:0;bottom:0;width:520px;max-width:96vw;
+  background:var(--navy-dark,#0b2545);border-left:1px solid rgba(255,255,255,.12);
+  box-shadow:-24px 0 60px rgba(0,0,0,.4);z-index:1201;
+  transform:translateX(100%);transition:transform .25s cubic-bezier(.4,0,.2,1);
+  display:flex;flex-direction:column;overflow:hidden;
+}
+#lead-panel.open{transform:translateX(0)}
+#lp-panel-head{
+  background:linear-gradient(135deg,#0f3460,#1a1a2e);
+  padding:16px 20px;display:flex;align-items:center;justify-content:space-between;
+  border-bottom:1px solid rgba(255,255,255,.1);flex-shrink:0;
+}
+#lp-panel-body{flex:1;overflow-y:auto}
+#lp-panel-body::-webkit-scrollbar{width:4px}
+#lp-panel-body::-webkit-scrollbar-track{background:transparent}
+#lp-panel-body::-webkit-scrollbar-thumb{background:rgba(255,255,255,.2);border-radius:4px}
+</style>
+
+<div id="lead-panel-overlay" onclick="closeLeadPanel()"></div>
+<div id="lead-panel">
+  <div id="lp-panel-head">
+    <div style="font-size:14px;font-weight:800;color:#fff;letter-spacing:.02em">Lead Details</div>
+    <button onclick="closeLeadPanel()" style="background:rgba(255,255,255,.1);border:none;color:#fff;width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center">×</button>
+  </div>
+  <div id="lp-panel-body"></div>
+</div>
 
 </html>

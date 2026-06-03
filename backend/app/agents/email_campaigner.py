@@ -12,6 +12,7 @@ from typing import Any
 import httpx
 
 from ..logging_service import log_agent
+from ..prospecting.activity import log_activity
 from ..settings import get_settings
 from ..supabase_client import get_supabase
 from ..studio.email_template import build_html
@@ -76,9 +77,16 @@ def send_batch(daily_limit: int = 100) -> dict[str, Any]:
             db.table("leads").update(
                 {"last_touch_at": now, "last_contact_at": now, "outreach_channel": "email"}
             ).eq("id", row["id"]).execute()
+            log_activity(row["id"], "email", "sent",
+                         summary=f"Subject: {subject}",
+                         agent="email_campaigner",
+                         payload={"to": email, "subject": subject})
             sent += 1
         except Exception as exc:  # noqa: BLE001
             log_agent("email_campaigner", "send_failed", payload={"lead_id": row["id"]}, error=str(exc))
+            log_activity(row["id"], "email", "error",
+                         summary=str(exc)[:120], agent="email_campaigner",
+                         payload={"to": email})
             failed += 1
 
         time.sleep(0.05)

@@ -12,6 +12,7 @@ from typing import Any
 
 from .bland_client import start_outbound_call, handle_bland_webhook
 from ..logging_service import log_agent
+from ..prospecting.activity import log_activity
 from ..supabase_client import get_supabase
 from . import memory as mem
 from . import carrier_brain as cb
@@ -67,8 +68,15 @@ def run_batch(limit: int = 30) -> dict[str, Any]:
             db.table("leads").update(
                 {"last_contact_at": now, "last_touch_at": now, "outreach_channel": "voice"}
             ).eq("id", row["id"]).execute()
+            log_activity(str(row["id"]), "call", "sent",
+                         summary="Outbound call via Vance (Bland AI)",
+                         agent="vance",
+                         payload={"call_id": result.get("call_id"), "phone": phone})
             calls_queued += 1
         else:
+            log_activity(str(row["id"]), "call", "error",
+                         summary=f"Call failed: {result.get('error','unknown')}",
+                         agent="vance")
             errors += 1
 
         time.sleep(1)
@@ -129,6 +137,15 @@ def handle_webhook(event: dict[str, Any]) -> dict[str, Any]:
     lead_id  = event.get("lead_id") or event.get("metadata", {}).get("lead_id") or ""
     connected = status.lower() in ("completed", "answered", "connected")
     converted = event.get("converted", False) or event.get("booked", False)
+
+    if lead_id:
+        outcome = "interested" if converted else ("answered" if connected else "no_answer")
+        duration = event.get("call_length") or event.get("duration_ms", 0)
+        log_activity(lead_id, "call", outcome,
+                     summary=f"Call {status} · {'interested' if converted else 'no interest'} · {int(duration)}s",
+                     agent="vance",
+                     payload={"call_id": event.get("call_id"), "duration": duration,
+                              "transcript": (event.get("transcripts") or [{}])[-1].get("text", "")[:300]})
 
     # Read existing call outcomes and update rolling tallies
     existing = mem.recall_value("vance", "call_outcomes") or {}

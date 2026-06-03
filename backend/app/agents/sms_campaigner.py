@@ -9,6 +9,7 @@ from typing import Any
 import httpx
 
 from ..logging_service import log_agent
+from ..prospecting.activity import log_activity
 from ..settings import get_settings
 from ..supabase_client import get_supabase
 from . import memory as mem
@@ -80,12 +81,19 @@ def send_batch(daily_limit: int = 75) -> dict[str, Any]:
                 timeout=15,
             )
             r.raise_for_status()
+            resp = r.json()
             db.table("leads").update(
                 {"last_touch_at": now, "last_contact_at": now, "outreach_channel": "sms"}
             ).eq("id", row["id"]).execute()
+            log_activity(row["id"], "sms", "sent",
+                         summary=body[:120],
+                         agent="sms_campaigner",
+                         payload={"to": phone, "sid": resp.get("sid"), "template": template[:60]})
             sent += 1
         except Exception as exc:  # noqa: BLE001
             log_agent("sms_campaigner", "send_failed", payload={"lead_id": row["id"]}, error=str(exc))
+            log_activity(row["id"], "sms", "error",
+                         summary=str(exc)[:120], agent="sms_campaigner")
             failed += 1
 
         time.sleep(0.1)
