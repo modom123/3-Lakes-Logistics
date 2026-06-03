@@ -1706,10 +1706,6 @@ select.form-input option{background:var(--surface);}
             <span style="font-size:11px;color:rgba(255,255,255,.5);">Today's state: <strong style="color:#fbbf24;" id="lm-today-state">—</strong></span>
             <span style="font-size:11px;color:rgba(255,255,255,.5);">Pulled today: <strong style="color:#34d399;" id="lm-today-count">—</strong></span>
             <span style="font-size:11px;color:rgba(255,255,255,.5);" id="lm-last-run-txt"></span>
-            <button onclick="launchDailyPull()" id="lm-daily-btn"
-              style="padding:5px 14px;font-size:11px;font-weight:700;background:linear-gradient(135deg,#1e3a8a,#1d4ed8);color:#fff;border:none;border-radius:6px;cursor:pointer;white-space:nowrap;">
-              📥 Daily Pull (50)
-            </button>
           </div>
         </div>
 
@@ -7390,31 +7386,6 @@ async function launchLeadMachine() {
   btn.disabled = false; btn.textContent = '⚡ Launch Lead Machine';
 }
 
-async function launchDailyPull() {
-  const btn = document.getElementById('lm-daily-btn');
-  btn.disabled = true; btn.textContent = '⏳ Pulling…';
-  try {
-    const r = await fetch(
-      `${API_BASE}/api/prospecting/daily?min_score=6&auto_call=false`,
-      { method:'POST', headers:{'Authorization':'Bearer '+API_TOKEN, 'Content-Type':'application/json'} }
-    );
-    if (!r.ok) throw new Error(await r.text());
-    const data = await r.json();
-    toast(`✅ Daily pull: ${data.inserted} new leads from ${data.state_targeted||'FMCSA'}`, 'success');
-    document.getElementById('lm-r-sourced').textContent  = data.sourced  ?? '—';
-    document.getElementById('lm-r-inserted').textContent = data.inserted ?? '—';
-    document.getElementById('lm-r-skipped').textContent  = data.skipped_low_score_or_dupe ?? '—';
-    document.getElementById('lm-r-calls').textContent    = data.calls_queued ?? '—';
-    document.getElementById('lm-r-detail').textContent =
-      `Daily pull · State: ${data.state_targeted||'—'} · ${data.inserted} new · ${data.skipped_low_score_or_dupe} skipped`;
-    document.getElementById('lm-result').classList.add('show');
-    await loadDailyStatus();
-    await loadLeadsPipeline();
-  } catch(e) {
-    toast('Daily pull error: ' + e.message, 'error');
-  }
-  btn.disabled = false; btn.textContent = '📥 Daily Pull (50)';
-}
 
 async function loadDailyStatus() {
   try {

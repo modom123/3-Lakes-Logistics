@@ -95,6 +95,7 @@ def _start_scheduler(app: FastAPI) -> None:
             fire_insurance_expiry_alerts,
             fire_onboarding_bond_audit,
             fire_stall_reminders,
+            fire_fmcsa_ingest,
         )
         from .agents.memory import prune_interactions
         from .email.imap_poller import poll_all as poll_all_mailboxes
@@ -109,6 +110,7 @@ def _start_scheduler(app: FastAPI) -> None:
         scheduler.add_job(fire_alexander, CronTrigger(hour=6, minute=45), id="alexander_daily", replace_existing=True)
         scheduler.add_job(fire_victoria, CronTrigger(hour=7, minute=0), id="victoria_daily", replace_existing=True)
         scheduler.add_job(fire_cc_gulley, CronTrigger(hour=7, minute=5), id="cc_gulley_daily", replace_existing=True)
+        scheduler.add_job(fire_fmcsa_ingest, CronTrigger(hour=7, minute=10), id="fmcsa_ingest_daily", replace_existing=True)
         scheduler.add_job(fire_naomi, CronTrigger(hour=7, minute=15), id="naomi_daily", replace_existing=True)
         scheduler.add_job(fire_winston, CronTrigger(hour=7, minute=30), id="winston_daily", replace_existing=True)
         scheduler.add_job(fire_isabella, CronTrigger(hour=8, minute=0), id="isabella_daily", replace_existing=True)

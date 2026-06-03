@@ -16,6 +16,7 @@ Trigger map
   daily 07:00 UTC cron      →  fire_victoria()    — strategic snapshot
   daily 07:15 UTC cron      →  fire_naomi()       — lead scoring
   daily 07:30 UTC cron      →  fire_winston()     — carrier health + churn signals
+  daily 07:10 UTC cron      →  fire_fmcsa_ingest() — pull 50 new-entrant leads from FMCSA Census
   daily 07:45 UTC cron      →  fire_onboarding_bond_audit() — Bond onboarding pipeline audit
   daily 08:00 UTC cron      →  fire_isabella()    — campaign builder (leads + re-engagement)
   daily 08:15 UTC cron      →  fire_sofia()       — financial reconciliation
@@ -407,6 +408,21 @@ def fire_stall_reminders() -> None:
             log.info("fire_stall_reminders sent=%s errors=%s", result.get("sent"), result.get("errors"))
         except Exception as exc:  # noqa: BLE001
             log.error("fire_stall_reminders failed: %s", exc)
+    _bg(_run)
+
+
+def fire_fmcsa_ingest() -> None:
+    """Daily 07:10 UTC job — pull 50 new-entrant leads from FMCSA Census and insert qualifying rows."""
+    def _run():
+        try:
+            from .prospecting.fmcsa_scraper import ingest  # noqa: PLC0415
+            result = ingest(limit=50)
+            log.info(
+                "fire_fmcsa_ingest done fetched=%s inserted=%s state=%s",
+                result.get("fetched"), result.get("inserted"), result.get("state"),
+            )
+        except Exception as exc:  # noqa: BLE001
+            log.error("fire_fmcsa_ingest failed: %s", exc)
     _bg(_run)
 
 
