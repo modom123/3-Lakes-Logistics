@@ -11,7 +11,6 @@ changes, Outside Bond takes over:
 
 Automated task types
 --------------------
-bland_ai_allowlist   Add Render server IP to Bland AI's IP allowlist
 render_env           Set / update an env var on the Render service
 render_restart       Trigger a clean redeploy of the Render service
 api_probe            Health-check a live API endpoint and report status
@@ -40,12 +39,11 @@ from ..supabase_client import get_supabase
 from . import memory as mem
 
 _NAME            = "outside_bond"
-_BLAND_URL       = "https://api.bland.ai/v1"
 _RENDER_URL      = "https://api.render.com/v1"
 _RENDER_SVC      = "three-lakes-logistics-api"
 _OPENROUTER_URL  = "https://openrouter.ai/api/v1/chat/completions"
 
-_KNOWN_TASKS = ["bland_ai_allowlist", "render_env", "render_restart", "api_probe", "generic"]
+_KNOWN_TASKS = ["render_env", "render_restart", "api_probe", "generic"]
 
 _QWEN_SYSTEM = """You are Outside Bond, an autonomous IEBC field operative for 3 Lakes Logistics.
 James Bond (your inside auditor) has handed you a failed test phase with raw error details.
@@ -53,7 +51,7 @@ Your job: classify the failure and decide on the best automated action.
 
 Respond ONLY with a JSON object — no markdown, no prose — matching this schema:
 {
-  "task": "<one of: bland_ai_allowlist | render_env | render_restart | api_probe | generic>",
+  "task": "<one of: render_env | render_restart | api_probe | generic>",
   "should_automate": true | false,
   "reasoning": "<1-2 sentences explaining the classification>",
   "context": {},
@@ -61,40 +59,28 @@ Respond ONLY with a JSON object — no markdown, no prose — matching this sche
 }
 
 Classification rules:
-- "bland_ai_allowlist"  → error mentions 'allowlist', '403', 'host not in allowlist', 'bland', or Vance/carrier call failures
 - "render_restart"      → error mentions '502', '503', 'connection refused', 'service unavailable', 'timeout' on the main API
 - "render_env"          → error mentions missing env var, configuration, secret, or key not found
 - "api_probe"           → need to health-check a specific endpoint to confirm status
 - "generic"             → no automated fix available; should_automate must be false
+
+Note: Bland AI does NOT use an IP allowlist. Call failures (403, etc.) are API key or account issues — classify as render_env (missing BLAND_AI_API_KEY) or generic.
 
 For render_env tasks, include {"key": "VAR_NAME"} in context if you can identify the missing variable."""
 
 
 # ── Utilities ─────────────────────────────────────────────────────────────────
 
-def _server_ip() -> str | None:
-    """Return the server's outbound IP via ipify."""
-    try:
-        r = httpx.get("https://api.ipify.org?format=json", timeout=8)
-        return r.json().get("ip")
-    except Exception:
-        return None
-
-
 def _fallback_classify(error_details: str, phase: str) -> dict:
     """Hardcoded pattern matching used when both LLMs are unavailable."""
     err = error_details.lower()
-    if any(p in err for p in ("allowlist", "bland", "host not in")):
-        return {"task": "bland_ai_allowlist", "should_automate": True,
-                "reasoning": "Bland AI IP allowlist pattern detected.",
-                "context": {}, "manual_instructions": ""}
+    if any(p in err for p in ("bland_ai_api_key", "api key", "not configured", "env var")):
+        return {"task": "render_env", "should_automate": True,
+                "reasoning": "Missing API key or env var detected.",
+                "context": {"key": "BLAND_AI_API_KEY"}, "manual_instructions": ""}
     if any(p in err for p in ("502", "503", "connection refused", "service unavailable")):
         return {"task": "render_restart", "should_automate": True,
                 "reasoning": "Service unavailable pattern — restart Render service.",
-                "context": {}, "manual_instructions": ""}
-    if phase in ("carriers", "integration", "live"):
-        return {"task": "bland_ai_allowlist", "should_automate": True,
-                "reasoning": f"Phase '{phase}' failures typically caused by Bland AI IP block.",
                 "context": {}, "manual_instructions": ""}
     return {"task": "generic", "should_automate": False,
             "reasoning": "No pattern matched — manual review required.",
@@ -211,16 +197,7 @@ def _create_escalation(assigned_to: str, tier: int, event_type: str, desc: str) 
 
 def _escalate_to_command(task: str, context: dict, reason: str, server_ip: str | None) -> dict:
     """Create Tier-2 escalations for Mark Odom + CC Gulley with exact manual steps."""
-    if task == "bland_ai_allowlist":
-        ip_str = server_ip or "UNKNOWN — run: curl https://api.ipify.org from Render shell"
-        instructions = (
-            f"Outside Bond attempted to automate Bland AI IP allowlist but failed: {reason}. "
-            f"Manual fix (5 min): "
-            f"1) Open https://app.bland.ai → Account Settings → IP Allowlist. "
-            f"2) Click 'Add IP' → enter {ip_str} → Save. "
-            f"Impact: restores carrier intake, Vance dialer, and 4 nightly test failures."
-        )
-    elif task == "render_env":
+    if task == "render_env":
         key = context.get("key", "UNKNOWN_KEY")
         instructions = (
             f"Outside Bond could not set env var automatically: {reason}. "
@@ -261,30 +238,6 @@ def _escalate_to_command(task: str, context: dict, reason: str, server_ip: str |
 
 
 # ── Task handlers ─────────────────────────────────────────────────────────────
-
-def _handle_bland_ai_allowlist(context: dict) -> dict:
-    """Try to add the Render server IP to Bland AI's IP allowlist via API."""
-    s = get_settings()
-    ip = _server_ip()
-
-    if not s.bland_ai_api_key:
-        return {"automated": False, "reason": "BLAND_AI_API_KEY not configured", "server_ip": ip}
-
-    try:
-        r = httpx.post(
-            f"{_BLAND_URL}/accounts/ip-allowlist",
-            headers={"Authorization": f"Bearer {s.bland_ai_api_key}"},
-            json={"ip": ip, "org_id": s.bland_ai_org_id or ""},
-            timeout=15,
-        )
-        if r.status_code in (200, 201):
-            return {"automated": True, "action": f"Added {ip} to Bland AI allowlist", "server_ip": ip}
-        reason = f"Bland AI API {r.status_code}: {r.text[:200]}"
-    except Exception as exc:
-        reason = f"Bland AI API unreachable: {str(exc)[:200]}"
-
-    return {"automated": False, "reason": reason, "server_ip": ip}
-
 
 def _handle_render_env(context: dict) -> dict:
     """Set an environment variable on the Render service."""
@@ -344,11 +297,11 @@ def _handle_api_probe(context: dict) -> dict:
         r = httpx.get(url, timeout=10)
         return {"automated": True, "action": f"Probe {url} → {r.status_code}", "status_code": r.status_code}
     except Exception as exc:
-        return {"automated": False, "reason": f"Probe failed: {str(exc)[:200]}", "server_ip": _server_ip()}
+        return {"automated": False, "reason": f"Probe failed: {str(exc)[:200]}"}
 
 
 def _handle_generic(context: dict) -> dict:
-    return {"automated": False, "reason": "No automated handler for this task type", "server_ip": _server_ip()}
+    return {"automated": False, "reason": "No automated handler for this task type"}
 
 
 def _handle_lf_platform_connect(context: dict) -> dict:
@@ -521,7 +474,6 @@ def _handle_stripe_identity_setup(context: dict) -> dict:
 
 
 _HANDLERS: dict[str, Any] = {
-    "bland_ai_allowlist":      _handle_bland_ai_allowlist,
     "render_env":              _handle_render_env,
     "render_restart":          _handle_render_restart,
     "api_probe":               _handle_api_probe,
