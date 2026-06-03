@@ -434,6 +434,12 @@ async def carrier_intake(payload: CarrierIntake, request: Request,
         checkout_url = penny.create_checkout_session(carrier_id, payload.plan, str(email), payload.founders_truck_count)
         shield.enqueue_safety_check(carrier_id, payload.dot_number, payload.mc_number)
         bg.add_task(fire_onboarding, carrier_id)
+        # Auto-send carrier agreement signing link via native e-sign system
+        if email:
+            bg.add_task(
+                _send_carrier_agreement_link,
+                str(email), payload.company_name or "Carrier", payload.dot_number or ""
+            )
         log_agent("atlas", "trigger.onboarding", carrier_id=carrier_id, result="queued")
     else:
         log.info(f"Partial intake {carrier_id} — missing: {missing}")
@@ -444,6 +450,75 @@ async def carrier_intake(payload: CarrierIntake, request: Request,
         stripe_checkout_url=checkout_url,
         next_step="complete_profile" if missing else "stripe_checkout",
     )
+
+
+async def _send_carrier_agreement_link(email: str, company_name: str, dot_number: str) -> None:
+    """Create a signature_request and email the carrier their formal agreement link."""
+    try:
+        from ..settings import get_settings
+        import httpx as _httpx
+        sb = get_supabase()
+        now = __import__("datetime").datetime.now(__import__("datetime").timezone.utc)
+        expires = (now + __import__("datetime").timedelta(days=30)).isoformat()
+
+        result = sb.table("signature_requests").insert({
+            "agreement_type": "carrier_agreement",
+            "carrier_name": company_name,
+            "carrier_email": email,
+            "carrier_dot": dot_number or None,
+            "status": "pending",
+            "expires_at": expires,
+        }).execute()
+        row = (result.data or [{}])[0]
+        token = row.get("token", "")
+        if not token:
+            log.warning("signature_requests insert returned no token for %s", email)
+            return
+
+        site_url = get_settings().site_url or "https://www.3lakeslogistics.com"
+        sign_url = f"{site_url}/sign.html?token={token}"
+        s = get_settings()
+        if not s.postmark_server_token:
+            log.info("Postmark not configured — agreement link not emailed (URL: %s)", sign_url)
+            return
+
+        html = f"""
+        <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;color:#333">
+          <div style="background:#0b2545;padding:20px 24px">
+            <h1 style="color:#fff;margin:0;font-size:20px">Your Carrier Agreement is Ready</h1>
+          </div>
+          <div style="padding:24px">
+            <p>Hi {company_name},</p>
+            <p>Welcome to 3 Lakes Logistics! Please review and sign your <strong>Carrier Dispatch Agreement</strong> to complete your onboarding.</p>
+            <p style="margin:28px 0;text-align:center">
+              <a href="{sign_url}" style="background:#ea580c;color:#fff;padding:14px 32px;border-radius:6px;text-decoration:none;font-weight:bold;font-size:15px;display:inline-block">
+                Review &amp; Sign Agreement
+              </a>
+            </p>
+            <p style="font-size:13px;color:#666">This link expires in 30 days. Questions? Reply to this email or call 661-466-9932.</p>
+          </div>
+          <div style="background:#f5f5f5;padding:14px 24px;font-size:12px;color:#888;text-align:center">
+            &copy; 2026 3 Lakes Logistics LLC &nbsp;|&nbsp; 661-466-9932
+          </div>
+        </div>"""
+
+        async with _httpx.AsyncClient(timeout=10) as client:
+            await client.post(
+                "https://api.postmarkapp.com/email",
+                headers={"X-Postmark-Server-Token": s.postmark_server_token, "Content-Type": "application/json"},
+                json={
+                    "From": s.postmark_from_email,
+                    "To": email,
+                    "Subject": f"Action required: Sign your Carrier Agreement — 3 Lakes Logistics",
+                    "HtmlBody": html,
+                    "TextBody": f"Hi {company_name},\n\nPlease sign your Carrier Dispatch Agreement: {sign_url}\n\nThis link expires in 30 days.\n\n3 Lakes Logistics\n661-466-9932",
+                    "MessageStream": "outbound",
+                    "Tag": "carrier_agreement",
+                },
+            )
+        log.info("Carrier agreement link sent to %s (token=%s)", email, token[:8])
+    except Exception as exc:
+        log.error("_send_carrier_agreement_link failed for %s: %s", email, exc)
 
 
 def _inc_founders_claimed(sb, category: str) -> None:

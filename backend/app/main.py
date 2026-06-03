@@ -44,8 +44,6 @@ from .api import (
     executives_router,
     execution_router,
     migration_router,
-    adobe_webhooks_router,
-    adobe_intake_router,
     notifications_router,
     payout_router,
     fleet_public_router,
@@ -197,8 +195,6 @@ def create_app() -> FastAPI:
     app.include_router(email_router,           prefix="/api",              tags=["email"])
     app.include_router(executives_router,      prefix="/api",              tags=["executives"])
     app.include_router(migration_router,       prefix="/api",              tags=["migration"])
-    app.include_router(adobe_webhooks_router,  prefix="/api",              tags=["adobe"])
-    app.include_router(adobe_intake_router,    prefix="/api",              tags=["adobe"])
     app.include_router(mailboxes_router,       prefix="/api",              tags=["mailboxes"])
     app.include_router(agreements_router,      prefix="/api/agreements",   tags=["agreements"])
     app.include_router(factoring_router,       prefix="/api/factoring",    tags=["factoring"])
