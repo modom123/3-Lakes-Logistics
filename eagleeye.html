@@ -1694,12 +1694,30 @@ select.form-input option{background:var(--surface);}
       <div class="lm-card">
         <div class="lm-title">🚀 Lead Machine</div>
         <div class="lm-sub">Source new owner-operators from FMCSA · Score with AI · Queue Vance outbound calls</div>
+
+        <!-- Daily pull status bar -->
+        <div id="lm-daily-status" style="display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.07);border-radius:8px;padding:10px 14px;margin-bottom:12px;flex-wrap:wrap;">
+          <div style="display:flex;align-items:center;gap:6px;">
+            <div style="width:8px;height:8px;border-radius:50%;background:#22c55e;" id="lm-fmcsa-dot"></div>
+            <span style="font-size:12px;color:rgba(255,255,255,.7);font-weight:600;">FMCSA Live</span>
+            <span style="font-size:11px;color:rgba(255,255,255,.4);">· Open Census API · No key needed</span>
+          </div>
+          <div style="margin-left:auto;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+            <span style="font-size:11px;color:rgba(255,255,255,.5);">Today's state: <strong style="color:#fbbf24;" id="lm-today-state">—</strong></span>
+            <span style="font-size:11px;color:rgba(255,255,255,.5);">Pulled today: <strong style="color:#34d399;" id="lm-today-count">—</strong></span>
+            <span style="font-size:11px;color:rgba(255,255,255,.5);" id="lm-last-run-txt"></span>
+            <button onclick="launchDailyPull()" id="lm-daily-btn"
+              style="padding:5px 14px;font-size:11px;font-weight:700;background:linear-gradient(135deg,#1e3a8a,#1d4ed8);color:#fff;border:none;border-radius:6px;cursor:pointer;white-space:nowrap;">
+              📥 Daily Pull (50)
+            </button>
+          </div>
+        </div>
+
         <div class="lm-controls">
           <div class="lm-fg">
             <div class="lm-label">Source</div>
             <select class="lm-sel" id="lm-source">
-              <option value="auto">Auto (FMCSA if configured, demo otherwise)</option>
-              <option value="fmcsa">FMCSA New Entrants (live)</option>
+              <option value="fmcsa" selected>FMCSA Census (live)</option>
               <option value="demo">Demo / Seed Data</option>
             </select>
           </div>
@@ -1716,8 +1734,9 @@ select.form-input option{background:var(--surface);}
             <div class="lm-label">Limit</div>
             <select class="lm-sel" id="lm-limit">
               <option value="10">10 leads</option>
-              <option value="20" selected>20 leads</option>
-              <option value="50">50 leads</option>
+              <option value="25">25 leads</option>
+              <option value="50" selected>50 leads</option>
+              <option value="100">100 leads</option>
             </select>
           </div>
           <div class="lm-fg">
@@ -1733,10 +1752,15 @@ select.form-input option{background:var(--surface);}
           <div class="lm-result-grid">
             <div class="lm-stat"><div class="lm-stat-val" id="lm-r-sourced">—</div><div class="lm-stat-lbl">Sourced</div></div>
             <div class="lm-stat"><div class="lm-stat-val" id="lm-r-inserted">—</div><div class="lm-stat-lbl">New Leads</div></div>
-            <div class="lm-stat"><div class="lm-stat-val" id="lm-r-skipped">—</div><div class="lm-stat-lbl">Skipped</div></div>
+            <div class="lm-stat"><div class="lm-stat-val" id="lm-r-skipped">—</div><div class="lm-stat-lbl">Skipped (Dup/Score)</div></div>
             <div class="lm-stat"><div class="lm-stat-val" id="lm-r-calls">—</div><div class="lm-stat-lbl">Calls Queued</div></div>
           </div>
           <div id="lm-r-detail" style="margin-top:10px;font-family:var(--ff-m);font-size:10px;color:rgba(255,255,255,.5);letter-spacing:.3px;"></div>
+          <!-- 7-day state schedule -->
+          <div id="lm-schedule" style="margin-top:12px;display:none;">
+            <div style="font-size:10px;color:rgba(255,255,255,.4);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px;">Upcoming State Rotation</div>
+            <div id="lm-schedule-grid" style="display:flex;gap:6px;flex-wrap:wrap;"></div>
+          </div>
         </div>
       </div>
 
@@ -6476,7 +6500,7 @@ function renderIFTA(){
     else if(id==='revenue')loadRevenueBrain();
     else if(id==='vault')loadVault();
     else if(id==='founders')loadFoundersInventory();
-    else if(id==='leads')loadLeadsPipeline();
+    else if(id==='leads'){ loadLeadsPipeline(); loadDailyStatus(); }
     else if(id==='ifta'||id==='insurance')renderIFTA();
   };
 })();
@@ -7343,19 +7367,20 @@ async function launchLeadMachine() {
     document.getElementById('lm-r-skipped').textContent  = data.skipped_low_score_or_dupe ?? '—';
     document.getElementById('lm-r-calls').textContent    = data.calls_queued ?? '—';
     const detail = [
-      `Source: ${data.source}`,
+      `Source: FMCSA Census · State: ${data.state_targeted || '—'}`,
       `Min score: ${data.min_score_used}`,
-      data.fmcsa_configured ? '✅ FMCSA live' : '⚠ FMCSA key not set — used demo data',
-      data.bland_configured ? '✅ Bland AI ready' : '⚠ Bland AI not configured — set BLAND_AI_API_KEY in Render',
+      '✅ FMCSA live — open Census API',
+      data.bland_configured ? '✅ Bland AI ready' : '⚠ Bland AI not configured',
     ].join('  ·  ');
     document.getElementById('lm-r-detail').textContent = detail;
     resultEl.classList.add('show');
 
-    toast(`✅ Lead Machine: ${data.inserted} new leads sourced`, 'success');
+    toast(`✅ Lead Machine: ${data.inserted} new leads sourced from ${data.state_targeted||'FMCSA'}`, 'success');
     _pushNotif({ id:'lm_done_'+Date.now(), agent:'atlas', action:'pipeline_complete',
       result:`${data.inserted} leads · ${data.calls_queued} calls`, ts: new Date().toISOString() });
 
-    // Refresh leads table
+    // Refresh status + leads table
+    await loadDailyStatus();
     await loadLeadsPipeline();
   } catch(e) {
     toast('Lead Machine error: ' + e.message, 'error');
@@ -7363,6 +7388,65 @@ async function launchLeadMachine() {
       error: e.message, ts: new Date().toISOString() });
   }
   btn.disabled = false; btn.textContent = '⚡ Launch Lead Machine';
+}
+
+async function launchDailyPull() {
+  const btn = document.getElementById('lm-daily-btn');
+  btn.disabled = true; btn.textContent = '⏳ Pulling…';
+  try {
+    const r = await fetch(
+      `${API_BASE}/api/prospecting/daily?min_score=6&auto_call=false`,
+      { method:'POST', headers:{'Authorization':'Bearer '+API_TOKEN, 'Content-Type':'application/json'} }
+    );
+    if (!r.ok) throw new Error(await r.text());
+    const data = await r.json();
+    toast(`✅ Daily pull: ${data.inserted} new leads from ${data.state_targeted||'FMCSA'}`, 'success');
+    document.getElementById('lm-r-sourced').textContent  = data.sourced  ?? '—';
+    document.getElementById('lm-r-inserted').textContent = data.inserted ?? '—';
+    document.getElementById('lm-r-skipped').textContent  = data.skipped_low_score_or_dupe ?? '—';
+    document.getElementById('lm-r-calls').textContent    = data.calls_queued ?? '—';
+    document.getElementById('lm-r-detail').textContent =
+      `Daily pull · State: ${data.state_targeted||'—'} · ${data.inserted} new · ${data.skipped_low_score_or_dupe} skipped`;
+    document.getElementById('lm-result').classList.add('show');
+    await loadDailyStatus();
+    await loadLeadsPipeline();
+  } catch(e) {
+    toast('Daily pull error: ' + e.message, 'error');
+  }
+  btn.disabled = false; btn.textContent = '📥 Daily Pull (50)';
+}
+
+async function loadDailyStatus() {
+  try {
+    const r = await apiFetch('/api/prospecting/daily-status');
+    const d = await r.json();
+    if (!r.ok) return;
+
+    const stateEl = document.getElementById('lm-today-state');
+    const countEl = document.getElementById('lm-today-count');
+    const lastEl  = document.getElementById('lm-last-run-txt');
+    if (stateEl) stateEl.textContent = d.today_state || '—';
+    if (countEl) countEl.textContent = d.today_leads_pulled ?? '—';
+    if (lastEl && d.last_run) {
+      const ago = Math.round((Date.now() - new Date(d.last_run.ts).getTime()) / 60000);
+      lastEl.textContent = `Last pull: ${ago < 60 ? ago+'m ago' : Math.round(ago/60)+'h ago'}`;
+    }
+
+    // 7-day schedule
+    const schedEl = document.getElementById('lm-schedule');
+    const gridEl  = document.getElementById('lm-schedule-grid');
+    if (schedEl && gridEl && d.upcoming_states?.length) {
+      gridEl.innerHTML = d.upcoming_states.map(s => `
+        <div style="padding:4px 9px;border-radius:5px;font-size:11px;font-weight:700;
+          background:${s.is_today?'rgba(251,191,36,.2)':'rgba(255,255,255,.06)'};
+          color:${s.is_today?'#fbbf24':'rgba(255,255,255,.45)'};
+          border:1px solid ${s.is_today?'#fbbf24':'transparent'};">
+          ${s.is_today?'★ ':''}${s.state}
+          <div style="font-size:9px;font-weight:400;opacity:.7">${s.date.slice(5)}</div>
+        </div>`).join('');
+      schedEl.style.display = 'block';
+    }
+  } catch(e) { /* non-critical */ }
 }
 
 async function debugAirtable() {

@@ -76,29 +76,73 @@ def _seed_demo_leads(limit: int) -> list[dict[str, Any]]:
     return leads
 
 
-def _run_fmcsa_ingest(since_days: int = 1) -> list[dict[str, Any]]:
-    """Pull real new-entrant leads from FMCSA if key is configured."""
-    from ..prospecting.fmcsa_scraper import fetch_new_entrants
-    raw = fetch_new_entrants(since_days)
+def _run_fmcsa_ingest(limit: int = 50) -> list[dict[str, Any]]:
+    """Pull real new-entrant leads from FMCSA Census (no API key needed)."""
+    from ..prospecting.fmcsa_scraper import fetch_new_entrants, today_state
+    from ..prospecting import scoring
+
+    records = fetch_new_entrants(limit=limit)
     leads = []
-    for e in raw:
-        dot = str(e.get("dotNumber") or "")
-        mc = str(e.get("docketNumber") or "")
+    for rec in records:
+        dot = str(rec.get("dot_number") or "").strip()
+        mc_raw = rec.get("mc_mx_ff_number") or ""
+        mc = mc_raw.replace("MC-", "").replace("MX-", "").replace("FF-", "").strip()
+        name = (rec.get("legal_name") or rec.get("dba_name") or "").strip()
+        if not name:
+            continue
+
+        def _int(v: Any) -> int:
+            try:
+                return int(str(v or 0).replace(",", ""))
+            except (ValueError, TypeError):
+                return 0
+
+        trucks   = _int(rec.get("total_power_units"))
+        tractors = _int(rec.get("tractor_trucks"))
+        straight = _int(rec.get("straight_trucks"))
+        equip_types = []
+        if tractors > 0:
+            equip_types.append("Tractor-Trailer")
+        if straight > 0:
+            equip_types.append("Straight Truck")
+        if rec.get("hm_flag") == "Y":
+            equip_types.append("Hazmat")
+
+        rating = (rec.get("safety_rating") or "Not Rated").strip()
+        notes_parts = [f"FMCSA Safety Rating: {rating}"]
+        if trucks:
+            notes_parts.append(f"Trucks: {trucks}")
+        if rec.get("total_drivers"):
+            notes_parts.append(f"Drivers: {rec['total_drivers']}")
+        op = {"I": "Interstate", "A": "Intrastate", "H": "Intrastate HM"}.get(
+            rec.get("carrier_operation", ""), ""
+        )
+        if op:
+            notes_parts.append(f"Op: {op}")
+        if rec.get("add_date"):
+            notes_parts.append(f"DOT registered: {str(rec['add_date'])[:10]}")
+
         lead: dict[str, Any] = {
-            "source": "fmcsa",
-            "source_ref": dot,
-            "company_name": e.get("legalName"),
-            "dot_number": dot,
-            "mc_number": mc or None,
-            "phone": e.get("phone"),
-            "email": e.get("emailAddress"),
-            "address": e.get("physicalAddress"),
-            "fleet_size": e.get("totalPowerUnits"),
-            "equipment_types": [],
-            "stage": "new",
+            "business_name": name,
+            "company_name":  name,
+            "source":        "FMCSA",
+            "source_ref":    dot,
+            "status":        "New",
+            "stage":         "new",
+            "notes":         " · ".join(notes_parts),
         }
+        if dot:                     lead["dot_number"]     = dot
+        if mc:                      lead["mc_number"]      = mc
+        if rec.get("telephone"):    lead["phone"]          = str(rec["telephone"]).strip()
+        if rec.get("phy_city"):     lead["city"]           = str(rec["phy_city"]).strip()
+        if rec.get("phy_state"):    lead["state"]          = str(rec["phy_state"]).strip()
+        if trucks:                  lead["fleet_size"]     = trucks
+        if equip_types:             lead["equipment_type"] = equip_types[0]
+        if equip_types:             lead["equipment_types"] = equip_types
+
         lead["score"] = scoring.score_lead(lead)
         leads.append(lead)
+
     return leads
 
 
@@ -106,23 +150,24 @@ def _run_fmcsa_ingest(since_days: int = 1) -> list[dict[str, Any]]:
 
 @router.post("/run")
 def run_pipeline(
-    source: str = "auto",          # "fmcsa" | "demo" | "auto"
+    source: str = "auto",   # "fmcsa" | "demo" | "auto"
     min_score: int = 6,
-    limit: int = 20,
+    limit: int = 50,        # default 50 leads per run
     auto_call: bool = False,
 ) -> dict:
     """
     Source leads → score → insert qualifying rows → optionally trigger Vance.
 
     Returns a run summary immediately; Vance calls fire async via Vapi.
+    FMCSA source works without any API key — uses open Census dataset.
     """
     s = get_settings()
     sb = get_supabase()
     started_at = datetime.now(timezone.utc).isoformat()
 
-    # 1. Source leads
-    use_demo = source == "demo" or (source == "auto" and not s.fmcsa_webkey)
-    raw_leads = _seed_demo_leads(limit) if use_demo else _run_fmcsa_ingest()
+    # 1. Source leads — FMCSA Census works without a key; demo only for explicit request
+    use_demo = source == "demo"
+    raw_leads = _seed_demo_leads(limit) if use_demo else _run_fmcsa_ingest(limit)
     raw_leads = raw_leads[:limit]
 
     log_agent("sonny", "pipeline_source",
@@ -161,6 +206,7 @@ def run_pipeline(
               payload={"inserted": inserted, "skipped": skipped, "calls": calls_queued},
               result=f"{inserted} new leads, {calls_queued} calls queued")
 
+    from ..prospecting.fmcsa_scraper import today_state
     return {
         "ok": True,
         "started_at": started_at,
@@ -171,8 +217,9 @@ def run_pipeline(
         "calls_queued": calls_queued,
         "call_results": call_results,
         "min_score_used": min_score,
+        "state_targeted": today_state(),
+        "fmcsa_configured": True,   # open Census API — no key needed
         "bland_configured": bool(s.bland_ai_api_key),
-"fmcsa_configured": bool(s.fmcsa_webkey),
     }
 
 
@@ -236,3 +283,64 @@ def recent_calls(limit: int = 25) -> dict:
         .execute()
     ).data or []
     return {"calls": rows}
+
+
+@router.post("/daily")
+def daily_pull(
+    min_score: int = 6,
+    auto_call: bool = False,
+) -> dict:
+    """Daily automated 50-lead pull from FMCSA Census.
+
+    Designed to be called by a cron job or the Eagle Eye "Daily Pull" button.
+    Always pulls exactly 50 leads from today's target state, dedupes, scores,
+    and inserts qualifying leads. No API key required.
+    """
+    from ..prospecting.fmcsa_scraper import today_state
+    return run_pipeline(source="fmcsa", min_score=min_score, limit=50, auto_call=auto_call)
+
+
+@router.get("/daily-status")
+def daily_status() -> dict:
+    """Return today's pull summary and the target state for each upcoming day."""
+    from ..prospecting.fmcsa_scraper import _STATES, today_state
+    from datetime import date
+
+    sb = get_supabase()
+
+    # Last daily pull log entry
+    last_run = (
+        sb.table("agent_log")
+        .select("ts, result, payload")
+        .eq("agent", "vance")
+        .eq("action", "fmcsa_ingest")
+        .order("ts", desc=True)
+        .limit(1)
+        .execute()
+    ).data or []
+
+    # Today's lead count from FMCSA source
+    today_str = date.today().isoformat()
+    today_count_res = (
+        sb.table("leads")
+        .select("id", count="exact")
+        .eq("source", "FMCSA")
+        .gte("created_at", today_str)
+        .execute()
+    )
+    today_count = today_count_res.count or 0
+
+    # Next 7 days' state schedule
+    today_idx = datetime.now(timezone.utc).timetuple().tm_yday
+    schedule = []
+    for offset in range(7):
+        d = datetime.now(timezone.utc).date() + timedelta(days=offset)
+        state = _STATES[(today_idx + offset) % len(_STATES)]
+        schedule.append({"date": d.isoformat(), "state": state, "is_today": offset == 0})
+
+    return {
+        "today_state": today_state(),
+        "today_leads_pulled": today_count,
+        "last_run": last_run[0] if last_run else None,
+        "upcoming_states": schedule,
+    }
