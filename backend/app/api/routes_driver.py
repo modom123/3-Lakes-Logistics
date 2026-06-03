@@ -298,7 +298,8 @@ async def get_driver_full_profile(session: DriverSession):
     try:
         # Get driver
         driver_result = get_supabase().table("drivers").select(
-            "id, carrier_id, first_name, last_name, phone_e164, cdl_number, stripe_account_id, stripe_account_status"
+            "id, carrier_id, first_name, last_name, phone_e164, cdl_number, "
+            "stripe_account_id, stripe_account_status, display_id, driver_code"
         ).eq("id", driver_id).single().execute()
 
         driver = driver_result.data
@@ -333,6 +334,8 @@ async def get_driver_full_profile(session: DriverSession):
         return {
             "driver": {
                 "id": driver["id"],
+                "display_id": driver.get("display_id"),
+                "driver_code": driver.get("driver_code"),
                 "name": f"{driver['first_name']} {driver['last_name']}".strip(),
                 "phone": driver["phone_e164"],
                 "cdl": driver["cdl_number"]

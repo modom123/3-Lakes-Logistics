@@ -410,6 +410,7 @@ select.form-input{appearance:none;background-image:url("data:image/svg+xml,%3Csv
     <div class="sb-driver">
       <div class="sb-avatar" id="sb-avatar">?</div>
       <div class="sb-dname" id="sb-dname">Driver</div>
+      <div style="font-size:10px;color:rgba(255,255,255,.35);font-family:monospace;margin-top:1px;letter-spacing:.3px;" id="sb-display-id"></div>
       <div class="sb-status">
         <div class="sb-dot" id="sb-dot"></div>
         <span class="sb-status-txt" id="sb-status-txt">On Duty</span>
@@ -844,12 +845,15 @@ select.form-input{appearance:none;background-image:url("data:image/svg+xml,%3Csv
           <div class="prof-info">
             <h2 id="prof-name">Driver</h2>
             <p id="prof-phone"></p>
+            <div style="margin-top:6px;"><span class="badge badge-blue" id="prof-display-id" style="font-size:12px;letter-spacing:.5px;font-family:monospace;"></span></div>
           </div>
         </div>
         <div class="grid-2">
           <div>
             <div class="card">
               <div class="card-hd"><div class="card-title">Driver Information</div></div>
+              <div class="prof-row"><span class="prof-key">Driver ID</span><span class="prof-val" id="prof-display-id-row" style="font-family:monospace;font-weight:700;color:var(--navy);">—</span></div>
+              <div class="prof-row"><span class="prof-key">Driver Code</span><span class="prof-val" id="prof-driver-code">—</span></div>
               <div class="prof-row"><span class="prof-key">CDL Number</span><span class="prof-val" id="prof-cdl">—</span></div>
               <div class="prof-row"><span class="prof-key">Carrier</span><span class="prof-val" id="prof-carrier">—</span></div>
               <div class="prof-row"><span class="prof-key">Payout Status</span><span class="prof-val" id="prof-payout">—</span></div>
@@ -1186,7 +1190,13 @@ async function doLogin() {
     if (!r.ok) { const e=await r.json().catch(()=>({detail:'Login failed'})); throw new Error(e.detail||'Login failed'); }
     const data = await r.json();
     _token = data.token;
-    _driver = {id:data.driver_id, name:data.driver_name, carrier_id:data.carrier_id};
+    _driver = {
+      id: data.driver_id,
+      name: data.driver_name,
+      carrier_id: data.carrier_id,
+      display_id: data.display_id || null,
+      driver_code: data.driver_code || null,
+    };
     localStorage.setItem('fc_token', _token);
     localStorage.setItem('fc_driver', JSON.stringify(_driver));
     document.getElementById('login-screen').classList.add('hidden');
@@ -1217,6 +1227,8 @@ function updateSidebarDriver() {
   const init = name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
   document.getElementById('sb-avatar').textContent = init;
   document.getElementById('sb-dname').textContent = name;
+  const idEl = document.getElementById('sb-display-id');
+  if (idEl) idEl.textContent = _driver.display_id || '';
 }
 
 function updateDutyUI() {
@@ -2056,6 +2068,10 @@ async function loadProfile() {
     const init = name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
     document.getElementById('prof-avatar').textContent = init;
     document.getElementById('prof-name').textContent = name;
+    const did = _driver.display_id || '';
+    document.getElementById('prof-display-id').textContent = did;
+    document.getElementById('prof-display-id-row').textContent = did || '—';
+    document.getElementById('prof-driver-code').textContent = _driver.driver_code || '—';
   }
   try {
     const data = await api('GET', '/api/driver-auth/me');
@@ -2065,6 +2081,15 @@ async function loadProfile() {
   } catch(e) {}
   try {
     const p = await api('GET', '/api/driver/profile');
+    // Update display_id from profile if login didn't have it
+    if (p.driver?.display_id && !_driver?.display_id) {
+      _driver.display_id = p.driver.display_id;
+      _driver.driver_code = p.driver.driver_code;
+      localStorage.setItem('fc_driver', JSON.stringify(_driver));
+      document.getElementById('prof-display-id').textContent = p.driver.display_id;
+      document.getElementById('prof-display-id-row').textContent = p.driver.display_id;
+      document.getElementById('prof-driver-code').textContent = p.driver.driver_code || '—';
+    }
     document.getElementById('prof-payout').textContent = p.payout_status||'—';
     document.getElementById('prof-stripe').textContent = p.driver?.stripe_account_status||p.payout_status||'—';
     if (p.recent_documents?.length) {

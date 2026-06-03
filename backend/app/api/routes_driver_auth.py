@@ -39,6 +39,8 @@ class DriverLoginResponse(BaseModel):
     driver_name: str
     carrier_id: str
     expires_at: str
+    display_id: str | None = None   # e.g. "3L-D-1001"
+    driver_code: str | None = None  # carrier-scoped short code
     refresh_token: str | None = None
 
 
@@ -165,7 +167,7 @@ async def driver_login(req: DriverLoginRequest):
     # Look up driver
     try:
         result = get_supabase().table("drivers").select(
-            "id, first_name, last_name, carrier_id, pin_hash"
+            "id, first_name, last_name, carrier_id, pin_hash, display_id, driver_code"
         ).eq("phone_e164", phone_e164).single().execute()
 
         driver = result.data
@@ -209,7 +211,9 @@ async def driver_login(req: DriverLoginRequest):
         driver_name=f"{driver['first_name']} {driver['last_name']}".strip(),
         carrier_id=driver["carrier_id"],
         expires_at=expires_at.isoformat(),
-        refresh_token=None  # Implement refresh tokens in phase 2
+        display_id=driver.get("display_id"),
+        driver_code=driver.get("driver_code"),
+        refresh_token=None
     )
 
 
