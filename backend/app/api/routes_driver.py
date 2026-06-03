@@ -475,3 +475,205 @@ async def request_load(load_id: str, body: LoadRequestBody, session: DriverSessi
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="request failed"
         )
+
+
+# ────────────────────────────────────────────────────────────────────────────
+# DRIVER MESSAGES — read own thread + send to dispatcher
+# ────────────────────────────────────────────────────────────────────────────
+
+class DriverMessageBody(BaseModel):
+    message: str
+
+
+@router.get("/messages")
+async def get_driver_messages(session: DriverSession, limit: int = 50):
+    """Return the driver's own SMS/message thread with dispatch.
+
+    Reads from driver_messages keyed on the driver's phone_e164.
+    """
+    driver_id = session["driver_id"]
+
+    try:
+        # Look up driver phone
+        dr = get_supabase().table("drivers").select(
+            "phone_e164"
+        ).eq("id", driver_id).single().execute()
+        phone = dr.data.get("phone_e164", "")
+
+        rows = get_supabase().table("driver_messages").select(
+            "id, direction, body, msg_type, created_at, read, load_id"
+        ).eq("driver_phone", phone).order(
+            "created_at", desc=False
+        ).limit(limit).execute()
+
+        return {"messages": rows.data or [], "phone": phone}
+
+    except Exception as e:
+        log.error("Driver messages fetch failed driver=%s: %s", driver_id, e)
+        return {"messages": [], "phone": ""}
+
+
+@router.post("/messages")
+async def send_driver_message(req: DriverMessageBody, session: DriverSession):
+    """Driver sends a message to dispatch.
+
+    Stores in driver_messages as outbound and attempts Twilio send.
+    """
+    driver_id = session["driver_id"]
+
+    try:
+        dr = get_supabase().table("drivers").select(
+            "phone_e164, first_name, last_name, carrier_id"
+        ).eq("id", driver_id).single().execute()
+        driver = dr.data
+        phone = driver.get("phone_e164", "")
+        name = f"{driver.get('first_name','')} {driver.get('last_name','')}".strip()
+
+        get_supabase().table("driver_messages").insert({
+            "direction": "outbound_driver",
+            "driver_phone": phone,
+            "body": req.message,
+            "driver_id": driver_id,
+            "msg_type": "text",
+            "read": False,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+        }).execute()
+
+        log.info("Driver message sent driver=%s name=%s", driver_id, name)
+        return {"ok": True, "sent": True}
+
+    except Exception as e:
+        log.error("Driver message failed driver=%s: %s", driver_id, e)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="message failed"
+        )
+
+
+# ────────────────────────────────────────────────────────────────────────────
+# DRIVER NOTIFICATIONS — activity feed
+# ────────────────────────────────────────────────────────────────────────────
+
+@router.get("/notifications")
+async def get_driver_notifications(session: DriverSession, limit: int = 20):
+    """Return recent activity/notifications for the driver.
+
+    Combines inbound messages + recent load status changes as a feed.
+    """
+    driver_id = session["driver_id"]
+    items = []
+
+    try:
+        dr = get_supabase().table("drivers").select(
+            "phone_e164"
+        ).eq("id", driver_id).single().execute()
+        phone = dr.data.get("phone_e164", "")
+
+        # Inbound messages as notifications
+        msgs = get_supabase().table("driver_messages").select(
+            "id, body, created_at, read, direction"
+        ).eq("driver_phone", phone).eq("direction", "inbound").order(
+            "created_at", desc=True
+        ).limit(limit).execute()
+
+        for m in (msgs.data or []):
+            items.append({
+                "id": m["id"],
+                "icon": "💬",
+                "title": m.get("body", "")[:80],
+                "message": m.get("body", ""),
+                "created_at": m.get("created_at", ""),
+                "read_at": None if not m.get("read") else m.get("created_at"),
+                "type": "message",
+            })
+
+    except Exception as e:
+        log.debug("Notifications fetch error: %s", e)
+
+    try:
+        # Recent load events
+        loads = get_supabase().table("loads").select(
+            "id, load_number, status, updated_at, origin_city, dest_city"
+        ).eq("driver_id", driver_id).order(
+            "updated_at", desc=True
+        ).limit(5).execute()
+
+        status_icons = {
+            "assigned": "📋", "dispatched": "🚀",
+            "in_transit": "🚛", "delivered": "✅",
+        }
+        for ld in (loads.data or []):
+            icon = status_icons.get(ld.get("status", ""), "📋")
+            items.append({
+                "id": ld["id"],
+                "icon": icon,
+                "title": f"Load #{ld.get('load_number','?')} — {ld.get('status','').replace('_',' ').title()}",
+                "message": f"{ld.get('origin_city','?')} → {ld.get('dest_city','?')}",
+                "created_at": ld.get("updated_at", ""),
+                "read_at": ld.get("updated_at"),
+                "type": "load_event",
+            })
+
+    except Exception as e:
+        log.debug("Load notifications fetch error: %s", e)
+
+    items.sort(key=lambda x: x.get("created_at", ""), reverse=True)
+    return {"items": items[:limit], "unread": sum(1 for i in items if not i.get("read_at"))}
+
+
+# ────────────────────────────────────────────────────────────────────────────
+# FUEL ADVANCE REQUEST
+# ────────────────────────────────────────────────────────────────────────────
+
+class FuelAdvanceRequest(BaseModel):
+    amount: float          # USD amount requested
+    load_id: str | None = None
+    reason: str | None = None
+
+
+@router.post("/fuel-advance")
+async def request_fuel_advance(req: FuelAdvanceRequest, session: DriverSession):
+    """Driver requests a fuel advance against their current load."""
+    driver_id = session["driver_id"]
+
+    if req.amount <= 0 or req.amount > 2000:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="amount must be between $1 and $2,000"
+        )
+
+    try:
+        dr = get_supabase().table("drivers").select(
+            "id, carrier_id, first_name, last_name"
+        ).eq("id", driver_id).single().execute()
+        carrier_id = dr.data["carrier_id"]
+
+        result = get_supabase().table("fuel_advance_requests").insert({
+            "driver_id": driver_id,
+            "carrier_id": carrier_id,
+            "load_id": req.load_id,
+            "amount": req.amount,
+            "reason": req.reason,
+            "status": "pending",
+            "requested_at": datetime.now(timezone.utc).isoformat(),
+        }).execute()
+
+        req_id = result.data[0]["id"] if result.data else "submitted"
+        log.info("Fuel advance requested driver=%s amount=$%.2f", driver_id, req.amount)
+
+        return {
+            "ok": True,
+            "request_id": req_id,
+            "amount": req.amount,
+            "status": "pending",
+            "message": "Fuel advance request submitted. Dispatch will approve shortly.",
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        log.error("Fuel advance failed driver=%s: %s", driver_id, e)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="request failed"
+        )

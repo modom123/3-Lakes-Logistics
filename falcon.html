@@ -976,6 +976,53 @@ select.form-input{appearance:none;background-image:url("data:image/svg+xml,%3Csv
   </div>
 </div>
 
+<!-- ── POD UPLOAD MODAL ── -->
+<div class="modal-bg" id="modal-pod">
+  <div class="modal-box" style="max-width:460px;">
+    <button class="modal-close" onclick="closeModal('modal-pod')">✕</button>
+    <div class="modal-title">Upload Proof of Delivery</div>
+    <p style="font-size:13px;color:var(--muted);margin:8px 0 16px;">Take a photo of the signed Bill of Lading or delivery confirmation receipt.</p>
+    <div id="pod-load-info" style="background:var(--off);border-radius:8px;padding:12px;margin-bottom:16px;font-size:13px;color:var(--muted);">Loading load info…</div>
+    <div class="upload-zone" onclick="document.getElementById('pod-file').click()">
+      <input type="file" id="pod-file" accept="image/*,application/pdf" capture="environment" onchange="onFileChosen(this,'pod-file-name')"/>
+      <div style="font-size:36px;margin-bottom:8px;">📸</div>
+      <div style="font-weight:700;color:var(--text);font-size:13px;" id="pod-file-name">Take photo or select file</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:3px;">JPG, PNG, or PDF</div>
+    </div>
+    <div id="pod-progress-wrap" style="display:none;margin-top:10px;">
+      <div style="height:5px;background:var(--off);border-radius:3px;overflow:hidden;"><div id="pod-progress-bar" style="height:100%;background:var(--green);width:0%;transition:width .3s;"></div></div>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:14px;">
+      <button class="btn btn-green" style="flex:1;" onclick="uploadPOD()">📤 Upload POD</button>
+      <button class="btn btn-ghost" onclick="closeModal('modal-pod')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── FUEL ADVANCE MODAL ── -->
+<div class="modal-bg" id="modal-fuel-advance">
+  <div class="modal-box" style="max-width:420px;">
+    <button class="modal-close" onclick="closeModal('modal-fuel-advance')">✕</button>
+    <div class="modal-title">Request Fuel Advance</div>
+    <p style="font-size:13px;color:var(--muted);margin:8px 0 16px;">Fuel advances are deducted from your settlement. Max $2,000 per load.</p>
+    <label class="form-label">Amount Requested</label>
+    <div style="position:relative;margin-bottom:14px;">
+      <span style="position:absolute;left:13px;top:50%;transform:translateY(-50%);font-weight:700;color:var(--muted);">$</span>
+      <input class="form-input" id="fa-amount" type="number" min="50" max="2000" step="50" placeholder="500" style="padding-left:26px;"/>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
+      <button class="btn btn-ghost btn-sm" onclick="setFaAmt(200)">$200</button>
+      <button class="btn btn-ghost btn-sm" onclick="setFaAmt(500)">$500</button>
+      <button class="btn btn-ghost btn-sm" onclick="setFaAmt(750)">$750</button>
+      <button class="btn btn-ghost btn-sm" onclick="setFaAmt(1000)">$1,000</button>
+    </div>
+    <label class="form-label">Reason (optional)</label>
+    <input class="form-input" id="fa-reason" placeholder="e.g. Fuel stop I-80 eastbound" style="margin-bottom:16px;"/>
+    <div id="fa-load-info" style="font-size:12px;color:var(--muted);margin-bottom:14px;"></div>
+    <button class="btn btn-gold btn-full btn-lg" onclick="submitFuelAdvance()">Request Fuel Advance</button>
+  </div>
+</div>
+
 <!-- ── REQUEST LOAD MODAL ── -->
 <div class="modal-bg" id="modal-req">
   <div class="modal-box">
@@ -1145,6 +1192,7 @@ async function doLogin() {
     document.getElementById('login-screen').classList.add('hidden');
     document.getElementById('app').classList.add('visible');
     bootApp();
+    registerWebPush();
   } catch(e) {
     document.getElementById('login-err').textContent = e.message;
     document.getElementById('login-btn').textContent = 'Sign In to Falcon';
@@ -1240,7 +1288,7 @@ async function loadDashActiveLoad() {
 async function loadDashMessages() {
   const el = document.getElementById('dash-msgs');
   try {
-    const data = await api('GET', '/api/notifications?limit=3');
+    const data = await api('GET', '/api/driver/notifications?limit=3');
     const items = Array.isArray(data) ? data : (data.items||[]);
     if (!items.length) { el.innerHTML = '<div style="font-size:13px;color:var(--muted);padding:8px 0;">No recent messages.</div>'; return; }
     el.innerHTML = items.map(n=>`
@@ -1366,7 +1414,8 @@ function renderFullLoadDetail(load) {
       <div class="card">
         <div class="card-hd"><div class="card-title">Status Actions</div></div>
         ${actionBtn}
-        <button class="btn btn-ghost btn-full" style="margin-top:10px;" onclick="openModal('modal-pod-up')">📸 Upload POD</button>
+        <button class="btn btn-ghost btn-full" style="margin-top:10px;" onclick="openPodModal()">📸 Upload POD</button>
+        <button class="btn btn-ghost btn-full" style="margin-top:8px;" onclick="openModal('modal-fuel-advance')">⛽ Request Fuel Advance</button>
       </div>
     </div>
     <div>
@@ -1383,6 +1432,25 @@ function renderFullLoadDetail(load) {
         <div style="font-size:13px;color:var(--muted);margin-bottom:12px;">${load.dest_address||load.destination_address||load.dest_city+', '+(load.dest_state||'')}</div>
         ${load.delivery_date?`<div class="badge badge-amber" style="margin-bottom:12px;">📅 Delivery: ${load.delivery_date.slice(0,10)}</div>`:''}
         <button class="btn btn-navy btn-full" onclick="openMaps('${load.dest_address||load.destination_address||load.dest_city+' '+(load.dest_state||'')}')">🗺️ Navigate to Delivery</button>
+      </div>
+      <div class="card" style="margin-bottom:16px;">
+        <div class="card-hd"><div class="card-title">Rate Confirmation</div></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">
+          <div style="background:var(--off);border-radius:8px;padding:14px;">
+            <div style="font-size:22px;font-weight:800;color:var(--green);">$${Number(load.rate||load.rate_total||0).toLocaleString()}</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:2px;">Confirmed Rate</div>
+          </div>
+          <div style="background:var(--off);border-radius:8px;padding:14px;">
+            <div style="font-size:22px;font-weight:800;color:var(--navy);">${load.miles||'—'}</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:2px;">Miles · ${load.miles&&(load.rate||load.rate_total)?'$'+(Number(load.rate||load.rate_total)/Number(load.miles)).toFixed(2)+'/mi':'—'}</div>
+          </div>
+        </div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:10px;">
+          ${load.equipment_type?`Equipment: <strong>${load.equipment_type}</strong> · `:''}
+          ${load.weight?`Weight: <strong>${Number(load.weight).toLocaleString()} lbs</strong> · `:''}
+          ${load.commodity?`Commodity: <strong>${load.commodity}</strong>`:''}
+        </div>
+        ${load.rate_confirmation_url?`<a class="btn btn-ghost btn-full" href="${load.rate_confirmation_url}" target="_blank">📌 View Rate Confirmation PDF</a>`:'<div style="font-size:12px;color:var(--muted);background:var(--off);border-radius:6px;padding:10px;text-align:center;">Rate confirmation on file with dispatch</div>'}
       </div>
       <div class="card">
         <div class="card-hd"><div class="card-title">Check Call Notes</div></div>
@@ -1842,44 +1910,49 @@ async function loadMsgThread() {
   const el = document.getElementById('msg-thread');
   el.innerHTML = '<div class="loading-state"><div class="spinner"></div></div>';
   try {
-    const data = await api('GET', '/api/comms/messages?limit=30').catch(()=>null);
-    const msgs = data ? (Array.isArray(data) ? data : (data.messages||data.items||[])) : [];
+    const data = await api('GET', '/api/driver/messages?limit=60');
+    const msgs = Array.isArray(data) ? data : (data.messages || []);
     if (!msgs.length) {
-      el.innerHTML = '<div class="msg-bubble inbound" style="opacity:.5;">Dispatcher messages will appear here.</div>';
+      el.innerHTML = '<div class="msg-bubble inbound" style="opacity:.5;">No messages yet. Send one below to reach dispatch.</div>';
       return;
     }
-    const driverId = _driver?.id;
-    el.innerHTML = msgs.reverse().map(m=>{
-      const out = m.sender_id===driverId || m.direction==='outbound';
-      return `<div class="msg-bubble ${out?'outbound':'inbound'}">
-        ${m.body||m.message||m.text||''}
-        <div class="msg-meta" style="color:rgba(255,255,255,.4);">${out?'You':'Dispatch'} · ${(m.created_at||m.ts||'').slice(11,16)}</div>
+    el.innerHTML = msgs.map(m => {
+      const out = m.direction === 'outbound_driver' || m.direction === 'outbound';
+      const time = (m.created_at || '').slice(11, 16);
+      return `<div class="msg-bubble ${out ? 'outbound' : 'inbound'}">
+        ${m.body || ''}
+        <div class="msg-meta" style="color:rgba(255,255,255,.35);font-size:10px;margin-top:6px;">${out ? 'You' : 'Dispatch'} · ${time}</div>
       </div>`;
     }).join('');
-    // Scroll to bottom
     const wrap = document.getElementById('msg-thread-wrap');
     if (wrap) wrap.scrollTop = wrap.scrollHeight;
   } catch(e) {
-    el.innerHTML = '<div class="msg-bubble inbound" style="opacity:.5;">No messages available.</div>';
+    el.innerHTML = '<div class="msg-bubble inbound" style="opacity:.5;">Could not load messages.</div>';
   }
 }
 
 async function sendMsg() {
   const txt = document.getElementById('msg-text').value.trim();
   if (!txt) return;
+  const btn = document.querySelector('#view-messages .btn-gold');
+  if (btn) { btn.disabled = true; btn.textContent = '…'; }
   try {
-    await api('POST', '/api/comms/send', {message:txt, channel:'driver_portal'});
+    await api('POST', '/api/driver/messages', {message: txt});
     document.getElementById('msg-text').value = '';
-    toast('✅ Message sent', 'green');
+    toast('✅ Message sent to dispatch', 'green');
     loadMsgThread();
-  } catch(e) { toast('⚠️ Could not send: '+e.message, 'red'); }
+  } catch(e) {
+    toast('⚠️ Could not send: ' + e.message, 'red');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'Send'; }
+  }
 }
 
 async function loadNotifs() {
   const el = document.getElementById('notif-list');
   try {
-    const data = await api('GET', '/api/notifications?limit=10');
-    const items = Array.isArray(data) ? data : (data.items||[]);
+    const data = await api('GET', '/api/driver/notifications?limit=20');
+    const items = Array.isArray(data) ? data : (data.items || []);
     const badge = document.getElementById('tb-badge');
     const nb = document.getElementById('msg-badge');
     const unread = items.filter(n=>!n.read_at).length;
@@ -2401,6 +2474,104 @@ function hosReset() {
   saveHosState();
   initHos();
   toast('HOS log reset for new day', '');
+}
+
+// ── POD UPLOAD ────────────────────────────────────────────────────
+function openPodModal() {
+  const el = document.getElementById('pod-load-info');
+  if (_myLoad) {
+    el.innerHTML = `<strong>Load #${_myLoad.load_number || _myLoad.id?.slice(0,8).toUpperCase()}</strong><br>
+      ${_myLoad.origin_city||'Origin'}, ${_myLoad.origin_state||''} → ${_myLoad.dest_city||'Dest'}, ${_myLoad.dest_state||''}`;
+  } else {
+    el.textContent = 'No active load assigned.';
+  }
+  document.getElementById('pod-file').value = '';
+  document.getElementById('pod-file-name').textContent = 'Take photo or select file';
+  document.getElementById('pod-progress-wrap').style.display = 'none';
+  document.getElementById('pod-progress-bar').style.width = '0%';
+  openModal('modal-pod');
+}
+
+async function uploadPOD() {
+  const file = document.getElementById('pod-file').files[0];
+  if (!file) { toast('⚠️ Select or capture a file first', 'red'); return; }
+
+  const wrap = document.getElementById('pod-progress-wrap');
+  const bar = document.getElementById('pod-progress-bar');
+  wrap.style.display = 'block'; bar.style.width = '30%';
+
+  try {
+    const fd = new FormData();
+    fd.append('file', file);
+    if (_myLoad?.id) fd.append('load_id', _myLoad.id);
+    bar.style.width = '60%';
+    const r = await fetch(API + '/api/driver/documents/upload?doc_type=pod', {
+      method: 'POST', headers: { 'Authorization': 'Bearer ' + _token }, body: fd,
+    });
+    bar.style.width = '100%';
+    if (!r.ok) throw new Error((await r.json().catch(() => ({}))).detail || 'Upload failed');
+    toast('✅ POD uploaded successfully!', 'green');
+    closeModal('modal-pod');
+    loadDocs();
+  } catch (e) {
+    bar.style.width = '0%'; wrap.style.display = 'none';
+    toast('⚠️ ' + e.message, 'red');
+  }
+}
+
+// ── FUEL ADVANCE ─────────────────────────────────────────────────
+function setFaAmt(n) {
+  document.getElementById('fa-amount').value = n;
+  // Show load context if active load exists
+  const info = document.getElementById('fa-load-info');
+  if (_myLoad && info) {
+    info.textContent = `Will be deducted from Load #${_myLoad.load_number || _myLoad.id?.slice(0,8).toUpperCase()} settlement.`;
+  }
+}
+
+async function submitFuelAdvance() {
+  const amount = parseFloat(document.getElementById('fa-amount').value);
+  const reason = document.getElementById('fa-reason').value.trim();
+  if (!amount || amount < 50) { toast('⚠️ Enter an amount ($50 min)', 'red'); return; }
+  if (amount > 2000) { toast('⚠️ Maximum advance is $2,000', 'red'); return; }
+
+  const btn = document.querySelector('#modal-fuel-advance .btn-gold');
+  const orig = btn.textContent;
+  btn.textContent = 'Submitting…'; btn.disabled = true;
+
+  try {
+    const payload = { amount };
+    if (_myLoad?.id) payload.load_id = _myLoad.id;
+    if (reason) payload.reason = reason;
+    const data = await api('POST', '/api/driver/fuel-advance', payload);
+    toast('✅ Fuel advance requested — dispatcher notified!', 'green');
+    document.getElementById('fa-amount').value = '';
+    document.getElementById('fa-reason').value = '';
+    document.getElementById('fa-load-info').textContent = '';
+    closeModal('modal-fuel-advance');
+  } catch (e) {
+    toast('⚠️ ' + e.message, 'red');
+  } finally {
+    btn.textContent = orig; btn.disabled = false;
+  }
+}
+
+// ── WEB PUSH / FCM REGISTRATION ───────────────────────────────────
+async function registerWebPush() {
+  if (!('Notification' in window)) return;
+  try {
+    const permission = await Notification.requestPermission();
+    if (permission !== 'granted') return;
+    // Use a stable browser-fingerprint token for web push
+    // (Real FCM web push requires a service worker + VAPID key setup)
+    const pseudoToken = 'web-' + (_driver?.id || 'unknown') + '-' + Date.now();
+    await api('POST', '/api/notifications/register-fcm', {
+      token: pseudoToken,
+      device_type: 'web',
+    });
+  } catch (e) {
+    // Non-critical — silently ignore push registration failures
+  }
 }
 </script>
 </body>
