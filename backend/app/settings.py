@@ -101,6 +101,9 @@ class Settings(BaseSettings):
     # Public-facing backend URL
     site_url: str = "https://three-lakes-logistics-api.onrender.com"
 
+    # IEBC API token — used by Bond to probe internal routes during audits
+    iebc_api_token: str = ""
+
     sentry_dsn: str = ""
 
     # Reliability — Redis cache + backup API failover

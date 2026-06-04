@@ -41,6 +41,103 @@ from typing import Any
 from ..logging_service import log_agent
 from . import memory as mem
 
+# ── Route health probe ────────────────────────────────────────────────────────
+# Key API routes Bond audits for 404 / unhealthy status on every run.
+# Format: (method, path_suffix, body_or_None, auth_required)
+_PROBE_ROUTES: list[tuple[str, str, dict | None, bool]] = [
+    # Health
+    ("GET",  "/api/health/ping",                       None,                  False),
+    ("GET",  "/api/health/full",                       None,                  False),
+    # Agent registry
+    ("GET",  "/api/agents/list",                       None,                  True),
+    # IEBC nodes — critical
+    ("POST", "/api/agents/dr_james_nemt/run",          {"scope": "ops"},      True),
+    ("POST", "/api/agents/felix_grant/run",            {"scope": "pipeline"}, True),
+    # Bond channel
+    ("GET",  "/api/bond/status",                       None,                  True),
+    ("GET",  "/api/bond/thread",                       None,                  True),
+    # Execution engine
+    ("GET",  "/api/execution/steps",                   None,                  True),
+    # Email
+    ("GET",  "/api/email/stats",                       None,                  True),
+    ("GET",  "/api/email/templates",                   None,                  True),
+    ("GET",  "/api/email-log",                         None,                  True),
+    # Core ops
+    ("GET",  "/api/carriers/",                         None,                  True),
+    ("GET",  "/api/leads/",                            None,                  True),
+    ("GET",  "/api/dashboard/kpis",                    None,                  True),
+    # Light fleet
+    ("GET",  "/api/light-fleet/trips",                 None,                  True),
+]
+
+
+def _probe_api_routes() -> dict[str, Any]:
+    """Probe key API routes and return a health report.
+
+    Uses httpx to hit the live API base URL. Routes are classified as:
+      ok        → 200-299
+      not_found → 404
+      auth_fail → 401/403 (expected for auth-required routes called without token)
+      error     → 5xx
+      timeout   → no response
+    """
+    from ..settings import get_settings
+    try:
+        import httpx
+    except ImportError:
+        return {"error": "httpx not available", "routes": []}
+
+    s = get_settings()
+    base = (getattr(s, "site_url", None) or "http://localhost:8000").rstrip("/")
+    token = getattr(s, "iebc_api_token", None) or ""
+
+    results: list[dict] = []
+    not_found: list[str] = []
+    errors: list[str] = []
+
+    for method, path, body, needs_auth in _PROBE_ROUTES:
+        headers: dict[str, str] = {"Content-Type": "application/json"}
+        if needs_auth and token:
+            headers["Authorization"] = f"Bearer {token}"
+
+        try:
+            r = httpx.request(
+                method, f"{base}{path}",
+                json=body,
+                headers=headers,
+                timeout=10,
+            )
+            status = r.status_code
+            if status == 404:
+                classification = "not_found"
+                not_found.append(path)
+            elif status >= 500:
+                classification = "error"
+                errors.append(path)
+            elif status in (401, 403):
+                classification = "auth_fail"
+            else:
+                classification = "ok"
+        except Exception as exc:
+            status = 0
+            classification = "timeout"
+            errors.append(f"{path} ({exc.__class__.__name__})")
+
+        results.append({
+            "method":  method,
+            "path":    path,
+            "status":  status,
+            "health":  classification,
+        })
+
+    return {
+        "routes":        results,
+        "ok_count":      sum(1 for r in results if r["health"] == "ok"),
+        "not_found":     not_found,
+        "error_routes":  errors,
+        "total_probed":  len(results),
+    }
+
 # ── Agent wakeup map: agent_name → callable that accepts a payload dict ───────
 # Populated lazily on first use to avoid circular imports at module load.
 _WAKEUP_MAP: dict[str, Any] = {}
@@ -252,18 +349,32 @@ def _identify_tech_gaps(
     coverage: dict[str, Any],
     org_mems: list[dict],
     top_n: int = 5,
+    route_health: dict[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
     gaps: list[dict[str, Any]] = []
 
-    for agent in coverage["silent_agents"]:
-        gaps.append({
-            "priority": "HIGH",
-            "domain":   "Agent coverage gaps",
-            "gap":      f"Agent '{agent}' has never written to org memory — may be unconfigured or failing silently.",
-            "fix":      f"Verify {agent}.run() is reachable via /api/agents/{agent}/run and has no import errors.",
-        })
+    # ── 404 route health gaps (highest priority — routes are dead) ───────────
+    if route_health:
+        for path in route_health.get("not_found", []):
+            gaps.append({
+                "priority": "HIGH",
+                "domain":   "Agent coverage gaps",
+                "gap":      f"Route {path} returns 404 — endpoint is missing or not registered.",
+                "fix":      (
+                    f"Check that the router for {path} is imported in api/__init__.py and "
+                    f"included in main.py with the correct prefix. "
+                    f"If it's an agent route, verify the agent name in router.py matches exactly."
+                ),
+            })
+        for path in route_health.get("error_routes", []):
+            gaps.append({
+                "priority": "HIGH",
+                "domain":   "Error handling & fallbacks",
+                "gap":      f"Route {path} is returning a 5xx error or timing out.",
+                "fix":      f"Check backend logs for {path}. Verify Supabase connection and env vars are set.",
+            })
 
-    for agent, missing in coverage["missing_key_gaps"].items():
+    for agent in coverage["silent_agents"]:
         gaps.append({
             "priority": "MEDIUM",
             "domain":   "Memory / org brain",
@@ -546,7 +657,11 @@ def run(payload: dict[str, Any]) -> dict[str, Any]:
     coverage = _agent_coverage_report(by_agent)
     pipeline = _assess_lead_pipeline(intel["by_agent"])
     onboarding_pipeline = _assess_onboarding_pipeline()
-    gaps     = _identify_tech_gaps(coverage, org_mems, top_n=top_n)
+
+    # Probe live API routes for 404s and errors
+    route_health = _probe_api_routes()
+
+    gaps = _identify_tech_gaps(coverage, org_mems, top_n=top_n, route_health=route_health)
 
     # ── Qwen enrichment: find gaps the rule-based scan missed ────────────────
     extra_gaps, opportunities, risk_summary = _qwen_enrich_gaps(
@@ -569,6 +684,28 @@ def run(payload: dict[str, Any]) -> dict[str, Any]:
         intel2 = _gather_org_intelligence()
         coverage2 = _agent_coverage_report(intel2["by_agent"])
         wakeup_report["_after_wakeup_silent_count"] = str(coverage2["silent_agent_count"])
+
+    # ── Auto-remediation: post Bond directives for 404 routes ────────────────
+    route_fix_report: dict[str, Any] = {}
+    if remediate and route_health.get("not_found"):
+        not_found_routes = route_health["not_found"]
+        directive_content = (
+            f"BOND AUTO-REMEDIATION REQUIRED — {len(not_found_routes)} route(s) returning 404:\n"
+            + "\n".join(f"  • {p}" for p in not_found_routes)
+            + "\n\nAction: Check router registration in api/__init__.py and main.py. "
+            "Verify agent names match router.py exactly. Redeploy if routes were recently added."
+        )
+        try:
+            from . import bond_courier as _bc
+            sent = _bc.send_directive(directive_content, priority="critical", metadata={
+                "type": "route_404_remediation",
+                "not_found_routes": not_found_routes,
+                "scanned_at": datetime.now(timezone.utc).isoformat(),
+            })
+            route_fix_report["directive_sent"] = sent
+            route_fix_report["routes_flagged"] = not_found_routes
+        except Exception as exc:
+            route_fix_report["error"] = str(exc)
 
     # ── Route actionable external gaps to Outside Bond ────────────────────────
     outside_bond_report: dict[str, Any] = {}
@@ -603,6 +740,8 @@ def run(payload: dict[str, Any]) -> dict[str, Any]:
         "risk_summary":      risk_summary,
         "qwen_enriched":     bool(extra_gaps),
         "high_gap_count":    sum(1 for g in gaps if g.get("priority") == "HIGH"),
+        "route_health":      route_health,
+        "route_fix":         route_fix_report,
         "remediation":       wakeup_report,
         "outside_bond":      outside_bond_report,
         "onboarding_pipeline": onboarding_pipeline,
