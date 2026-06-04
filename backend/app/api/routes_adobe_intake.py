@@ -1,6 +1,8 @@
 """Adobe Sign intake flow — redirect user to e-signature, then auto-complete onboarding."""
 from __future__ import annotations
 
+import os
+
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import JSONResponse
 from io import BytesIO
@@ -14,6 +16,8 @@ from ..integrations.adobe_sign import get_adobe_sign_client
 
 log = get_logger("3ll.adobe_intake")
 router = APIRouter()
+
+ADOBE_CALLBACK_URL = os.getenv("ADOBE_CALLBACK_URL", "http://localhost:8080/api/carriers/adobe-callback")
 
 
 def _generate_agreement_pdf(data: dict) -> bytes:
@@ -143,7 +147,7 @@ async def request_signature(payload: CarrierIntake) -> JSONResponse:
         pdf_bytes = _generate_agreement_pdf(agreement_data)
 
         # 3. Send to Adobe Sign
-        redirect_uri = "http://localhost:8080/api/carriers/adobe-callback"  # TODO: Make configurable
+        redirect_uri = ADOBE_CALLBACK_URL
         adobe_response = adobe.send_for_signature(
             access_token=payload.adobe_access_token,  # Must be provided by client
             agreement_name=f"3LL Dispatch Agreement — {payload.company_name}",
