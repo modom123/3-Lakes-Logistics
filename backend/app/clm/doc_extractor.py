@@ -121,6 +121,11 @@ def _scan_with_claude_vision(
                 ],
             }],
         )
+        try:
+            from ..cost_tracking import track_anthropic as _ta
+            _ta("claude-sonnet-4-6", message.usage.input_tokens, message.usage.output_tokens, agent="clm_doc_extractor")
+        except Exception:
+            pass
         content_text = message.content[0].text.strip()
 
         if content_text.startswith("```"):

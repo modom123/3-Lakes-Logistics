@@ -1448,23 +1448,32 @@ select.form-input option{background:var(--surface);}
         </div>
       </div>
 
-      <!-- KPI tiles -->
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:20px" id="cost-kpi-tiles">
-        <div class="card" style="text-align:center">
-          <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">API & Usage MTD</div>
-          <div style="font-size:28px;font-weight:700;color:var(--accent)" id="cost-api-total">—</div>
+      <!-- KPI tiles row 1 -->
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:12px">
+        <div class="card" style="text-align:center;padding:14px">
+          <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">API & Usage MTD</div>
+          <div style="font-size:26px;font-weight:700;color:var(--accent)" id="cost-api-total">—</div>
         </div>
-        <div class="card" style="text-align:center">
-          <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Subscriptions / Mo</div>
-          <div style="font-size:28px;font-weight:700;color:#22c55e" id="cost-sub-total">—</div>
+        <div class="card" style="text-align:center;padding:14px">
+          <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Subscriptions / Mo</div>
+          <div style="font-size:26px;font-weight:700;color:#22c55e" id="cost-sub-total">—</div>
         </div>
-        <div class="card" style="text-align:center">
-          <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Total MTD</div>
-          <div style="font-size:28px;font-weight:700;color:#f59e0b" id="cost-grand-total">—</div>
+        <div class="card" style="text-align:center;padding:14px">
+          <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Total MTD</div>
+          <div style="font-size:26px;font-weight:700;color:#f59e0b" id="cost-grand-total">—</div>
         </div>
-        <div class="card" style="text-align:center">
-          <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Budget Alerts</div>
-          <div style="font-size:28px;font-weight:700;color:#ef4444" id="cost-alert-count">—</div>
+        <div class="card" style="text-align:center;padding:14px">
+          <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Projected EOM</div>
+          <div style="font-size:26px;font-weight:700;color:#8b5cf6" id="cost-proj-total">—</div>
+          <div style="font-size:10px;color:var(--muted);margin-top:2px" id="cost-proj-label"></div>
+        </div>
+        <div class="card" style="text-align:center;padding:14px">
+          <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Daily Burn</div>
+          <div style="font-size:26px;font-weight:700;color:#06b6d4" id="cost-daily-burn">—</div>
+        </div>
+        <div class="card" style="text-align:center;padding:14px">
+          <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Budget Alerts</div>
+          <div style="font-size:26px;font-weight:700;color:#ef4444" id="cost-alert-count">—</div>
         </div>
       </div>
 
@@ -1474,29 +1483,40 @@ select.form-input option{background:var(--surface);}
         <div id="cost-alerts-list"></div>
       </div>
 
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
         <!-- By Service -->
         <div class="card">
           <div class="card-hd"><div class="card-title">API Cost by Service (MTD)</div></div>
-          <table style="width:100%;border-collapse:collapse;font-size:13px" id="cost-by-service-table">
-            <thead><tr style="border-bottom:1px solid var(--border)">
-              <th style="text-align:left;padding:6px 4px;font-weight:600;color:var(--muted)">Service</th>
-              <th style="text-align:right;padding:6px 4px;font-weight:600;color:var(--muted)">Cost</th>
-              <th style="text-align:right;padding:6px 4px;font-weight:600;color:var(--muted)">% of API</th>
-            </tr></thead>
-            <tbody id="cost-service-rows"><tr><td colspan="3" style="text-align:center;padding:20px;color:var(--muted)">Loading…</td></tr></tbody>
-          </table>
+          <div id="cost-service-bars" style="padding:4px 0"></div>
         </div>
 
         <!-- By Category -->
         <div class="card">
           <div class="card-hd"><div class="card-title">Cost by Category (MTD)</div></div>
-          <table style="width:100%;border-collapse:collapse;font-size:13px">
+          <div id="cost-category-bars" style="padding:4px 0"></div>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+        <!-- 7-day trend -->
+        <div class="card">
+          <div class="card-hd">
+            <div class="card-title">Daily Cost — Last 7 Days</div>
+            <a href="#" onclick="downloadCostCSV();return false" style="font-size:12px;color:var(--accent)">⬇ Export CSV</a>
+          </div>
+          <div id="cost-trend-chart" style="padding:6px 0"></div>
+        </div>
+
+        <!-- By Agent -->
+        <div class="card">
+          <div class="card-hd"><div class="card-title">Cost by AI Agent (MTD)</div></div>
+          <table style="width:100%;border-collapse:collapse;font-size:12px">
             <thead><tr style="border-bottom:1px solid var(--border)">
-              <th style="text-align:left;padding:6px 4px;font-weight:600;color:var(--muted)">Category</th>
-              <th style="text-align:right;padding:6px 4px;font-weight:600;color:var(--muted)">Cost</th>
+              <th style="text-align:left;padding:4px;font-weight:600;color:var(--muted)">Agent</th>
+              <th style="text-align:right;padding:4px;font-weight:600;color:var(--muted)">Cost</th>
+              <th style="text-align:right;padding:4px;font-weight:600;color:var(--muted)">Calls</th>
             </tr></thead>
-            <tbody id="cost-category-rows"><tr><td colspan="2" style="text-align:center;padding:20px;color:var(--muted)">Loading…</td></tr></tbody>
+            <tbody id="cost-agent-rows"><tr><td colspan="3" style="text-align:center;padding:16px;color:var(--muted)">Loading…</td></tr></tbody>
           </table>
         </div>
       </div>
@@ -1519,10 +1539,10 @@ select.form-input option{background:var(--surface);}
       </div>
 
       <!-- Budget Manager -->
-      <div class="card" style="margin-bottom:20px">
+      <div class="card" style="margin-bottom:16px">
         <div class="card-hd">
-          <div class="card-title">Monthly Budgets</div>
-          <button class="btn-out" onclick="showAddBudgetForm()" style="font-size:12px">+ Add Budget</button>
+          <div class="card-title">Monthly Budget Health</div>
+          <button class="btn-out" onclick="showAddBudgetForm()" style="font-size:12px">+ Set Budget</button>
         </div>
         <div id="cost-add-budget-form" style="display:none;background:var(--surface-2,#f8fafc);border-radius:8px;padding:14px;margin-bottom:14px">
           <div style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:10px;align-items:end">
@@ -1543,14 +1563,9 @@ select.form-input option{background:var(--surface);}
             </div>
           </div>
         </div>
-        <table style="width:100%;border-collapse:collapse;font-size:13px">
-          <thead><tr style="border-bottom:1px solid var(--border)">
-            <th style="text-align:left;padding:6px 4px;font-weight:600;color:var(--muted)">Service / Category</th>
-            <th style="text-align:right;padding:6px 4px;font-weight:600;color:var(--muted)">Budget</th>
-            <th style="text-align:right;padding:6px 4px;font-weight:600;color:var(--muted)">Alert At</th>
-          </tr></thead>
-          <tbody id="cost-budget-rows"><tr><td colspan="3" style="text-align:center;padding:20px;color:var(--muted)">Loading…</td></tr></tbody>
-        </table>
+        <div id="cost-budget-bars" style="padding:4px 0">
+          <div style="text-align:center;padding:20px;color:var(--muted)">Loading…</div>
+        </div>
       </div>
 
       <!-- Recent cost entries -->
@@ -18367,70 +18382,91 @@ async function costApi(path, opts={}) {
 function $c(id) { return document.getElementById(id); }
 function fmtUSD(n, digits=2) { return '$' + Number(n||0).toLocaleString('en-US',{minimumFractionDigits:digits,maximumFractionDigits:digits}); }
 
+// Bar chart helper — renders horizontal bars for a {label: value} object
+function renderBarChart(containerId, items, maxVal, colorFn) {
+  const el = $c(containerId);
+  if (!el) return;
+  if (!items || !items.length) { el.innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted)">No data yet</div>'; return; }
+  el.innerHTML = items.map(({label, value}) => {
+    const pct = maxVal > 0 ? Math.min(value / maxVal * 100, 100) : 0;
+    const color = colorFn ? colorFn(label) : '#3b82f6';
+    return `<div style="margin-bottom:8px;padding:0 2px">
+      <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px">
+        <span style="font-weight:500">${label}</span>
+        <span style="color:var(--muted)">${fmtUSD(value,4)}</span>
+      </div>
+      <div style="height:8px;background:var(--border);border-radius:4px;overflow:hidden">
+        <div style="height:100%;width:${pct.toFixed(1)}%;background:${color};border-radius:4px;transition:width .4s ease"></div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+const _svcColors = {anthropic:'#7c3aed',openrouter:'#0891b2',bland_ai:'#059669',twilio:'#dc2626',google_maps:'#d97706',google_vision:'#7c3aed',checkr:'#0284c7',stripe:'#6366f1',postmark:'#16a34a',sendgrid:'#0ea5e9'};
+function _svcColor(svc) { return _svcColors[svc] || '#64748b'; }
+
 async function loadCostData() {
   try {
-    const [summary, alerts, budgets, entries, reports] = await Promise.all([
+    const [summary, alerts, budgets, entries, reports, projection, trend, byAgent] = await Promise.all([
       costApi('/summary'),
       costApi('/alerts'),
       costApi('/budgets'),
       costApi('/entries?limit=50'),
       costApi('/reports?limit=10'),
+      costApi('/projection'),
+      costApi('/trend?days=7'),
+      costApi('/by-agent'),
     ]);
-    renderCostSummary(summary);
+    renderCostSummary(summary, projection);
     renderCostAlerts(alerts);
-    renderCostBudgets(budgets);
+    renderCostBudgets(budgets, summary);
     renderCostEntries(entries);
     renderCostReports(reports);
+    renderCostTrend(trend);
+    renderCostByAgent(byAgent);
     // Update sidebar badge
     const badge = $c('cost-alert-badge');
-    if (badge) {
-      badge.style.display = alerts.critical_count > 0 ? 'inline' : 'none';
-      badge.textContent = '!';
-    }
+    if (badge) { badge.style.display = alerts.critical_count > 0 ? 'inline' : 'none'; badge.textContent = '!'; }
   } catch(e) {
     console.error('loadCostData failed:', e);
     toast('Failed to load cost data: ' + e.message, 'error');
   }
 }
 
-function renderCostSummary(s) {
+function renderCostSummary(s, proj) {
   if ($c('cost-period-label')) $c('cost-period-label').textContent = 'Period: ' + (s.period || '');
   if ($c('cost-api-total'))    $c('cost-api-total').textContent    = fmtUSD(s.api_cost_usd, 4);
   if ($c('cost-sub-total'))    $c('cost-sub-total').textContent    = fmtUSD(s.subscription_cost_usd);
   if ($c('cost-grand-total'))  $c('cost-grand-total').textContent  = fmtUSD(s.total_cost_usd);
 
-  // By service
-  const apiTotal = s.api_cost_usd || 1;
-  const svcRows = Object.entries(s.by_service || {}).map(([svc, amt]) => {
-    const pct = apiTotal > 0 ? (amt / apiTotal * 100).toFixed(1) : '0.0';
-    return `<tr style="border-bottom:1px solid var(--border)">
-      <td style="padding:5px 4px">${svc}</td>
-      <td style="padding:5px 4px;text-align:right;font-weight:600">${fmtUSD(amt,4)}</td>
-      <td style="padding:5px 4px;text-align:right;color:var(--muted)">${pct}%</td>
-    </tr>`;
-  }).join('');
-  if ($c('cost-service-rows')) $c('cost-service-rows').innerHTML = svcRows || '<tr><td colspan="3" style="text-align:center;padding:20px;color:var(--muted)">No API costs recorded yet</td></tr>';
+  if (proj) {
+    if ($c('cost-proj-total'))  $c('cost-proj-total').textContent  = fmtUSD(proj.projected_total_eom_usd);
+    if ($c('cost-proj-label'))  $c('cost-proj-label').textContent  = `${proj.pct_month_elapsed}% of month elapsed`;
+    if ($c('cost-daily-burn'))  $c('cost-daily-burn').textContent  = fmtUSD(proj.daily_burn_rate_usd, 4) + '/day';
+  }
 
-  // By category
-  const catRows = Object.entries(s.by_category || {}).map(([cat, amt]) =>
-    `<tr style="border-bottom:1px solid var(--border)">
-      <td style="padding:5px 4px">${cat}</td>
-      <td style="padding:5px 4px;text-align:right;font-weight:600">${fmtUSD(amt,4)}</td>
-    </tr>`
-  ).join('');
-  if ($c('cost-category-rows')) $c('cost-category-rows').innerHTML = catRows || '<tr><td colspan="2" style="text-align:center;padding:20px;color:var(--muted)">No costs recorded yet</td></tr>';
+  // By service — bar chart
+  const svcItems = Object.entries(s.by_service || {}).map(([label,value])=>({label,value}));
+  const svcMax = svcItems.reduce((m,i)=>Math.max(m,i.value),0);
+  renderBarChart('cost-service-bars', svcItems, svcMax, _svcColor);
 
-  // Subscriptions
+  // By category — bar chart
+  const _catColors = {ai_llm:'#7c3aed',communications:'#059669',infrastructure:'#0284c7',payments:'#6366f1',data:'#d97706',compliance:'#dc2626'};
+  const catItems = Object.entries(s.by_category || {}).map(([label,value])=>({label,value}));
+  const catMax = catItems.reduce((m,i)=>Math.max(m,i.value),0);
+  renderBarChart('cost-category-bars', catItems, catMax, l => _catColors[l] || '#64748b');
+
+  // Subscriptions table
   const subs = s.subscriptions || [];
   const subTotal = subs.reduce((a,b)=>a+Number(b.amount_usd||0),0);
   if ($c('cost-sub-monthly-label')) $c('cost-sub-monthly-label').textContent = 'Monthly total: ' + fmtUSD(subTotal);
-  const subRows = subs.map(s => `<tr style="border-bottom:1px solid var(--border)">
-    <td style="padding:5px 4px;font-weight:600">${s.service}</td>
-    <td style="padding:5px 4px;color:var(--muted)">${s.plan_name || '—'}</td>
-    <td style="padding:5px 4px;color:var(--muted)">${s.billing_cycle}</td>
-    <td style="padding:5px 4px;text-align:right">${s.billing_cycle === 'usage' ? '<em style="color:var(--muted)">usage</em>' : fmtUSD(Number(s.amount_usd||0))}</td>
+  const subRows = subs.map(sub => `<tr style="border-bottom:1px solid var(--border)">
+    <td style="padding:5px 4px;font-weight:600">${sub.service}</td>
+    <td style="padding:5px 4px;color:var(--muted)">${sub.plan_name || '—'}</td>
+    <td style="padding:5px 4px;color:var(--muted)">${sub.billing_cycle}</td>
+    <td style="padding:5px 4px;text-align:right">${sub.billing_cycle === 'usage' ? '<em style="color:var(--muted)">usage-based</em>' : fmtUSD(Number(sub.amount_usd||0))}</td>
   </tr>`).join('');
-  if ($c('cost-sub-rows')) $c('cost-sub-rows').innerHTML = subRows || '<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--muted)">No subscriptions</td></tr>';
+  if ($c('cost-sub-rows')) $c('cost-sub-rows').innerHTML = subRows || '<tr><td colspan="4" style="text-align:center;padding:16px;color:var(--muted)">No subscriptions</td></tr>';
 }
 
 function renderCostAlerts(a) {
@@ -18443,21 +18479,73 @@ function renderCostAlerts(a) {
   banner.style.display = 'block';
   list.innerHTML = alerts.map(a => {
     const color = a.severity === 'critical' ? '#b91c1c' : '#92400e';
-    return `<div style="color:${color};margin-bottom:4px">
-      <strong>${a.service_or_category}</strong>: ${fmtUSD(a.spent_usd,4)} of ${fmtUSD(a.budget_usd)} budget
-      — <strong>${a.pct_used}% used</strong> [${a.severity.toUpperCase()}]
+    const barPct = Math.min(a.pct_used, 100);
+    const barColor = a.severity === 'critical' ? '#ef4444' : '#f59e0b';
+    return `<div style="margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;color:${color};font-size:13px">
+        <strong>${a.service_or_category}</strong>
+        <span>${fmtUSD(a.spent_usd,4)} / ${fmtUSD(a.budget_usd)} — <strong>${a.pct_used}%</strong> [${a.severity.toUpperCase()}]</span>
+      </div>
+      <div style="height:6px;background:#fee2e2;border-radius:3px;margin-top:4px">
+        <div style="height:100%;width:${barPct}%;background:${barColor};border-radius:3px"></div>
+      </div>
     </div>`;
   }).join('');
 }
 
-function renderCostBudgets(b) {
+function renderCostBudgets(b, summary) {
   const items = b.items || [];
-  const rows = items.map(b => `<tr style="border-bottom:1px solid var(--border)">
-    <td style="padding:5px 4px">${b.service || b.category || '—'}</td>
-    <td style="padding:5px 4px;text-align:right">${fmtUSD(b.monthly_budget_usd)}</td>
-    <td style="padding:5px 4px;text-align:right;color:var(--muted)">${b.alert_threshold_pct}%</td>
+  const spent = summary ? summary.by_service : {};
+  if (!$c('cost-budget-bars')) return;
+  if (!items.length) { $c('cost-budget-bars').innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted)">No budgets set — click "+ Set Budget" to add one</div>'; return; }
+  $c('cost-budget-bars').innerHTML = items.map(budget => {
+    const label = budget.service || budget.category || '—';
+    const cap = Number(budget.monthly_budget_usd || 0);
+    const used = Number(spent[label] || 0);
+    const pct = cap > 0 ? Math.min(used / cap * 100, 100) : 0;
+    const threshold = budget.alert_threshold_pct || 80;
+    const color = pct >= 100 ? '#ef4444' : pct >= threshold ? '#f59e0b' : '#22c55e';
+    return `<div style="margin-bottom:10px;padding:0 2px">
+      <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px">
+        <span style="font-weight:500">${label}</span>
+        <span style="color:var(--muted)">${fmtUSD(used,4)} / ${fmtUSD(cap)} &nbsp;<span style="font-size:10px">(alert at ${threshold}%)</span></span>
+      </div>
+      <div style="height:10px;background:var(--border);border-radius:5px;overflow:hidden">
+        <div style="height:100%;width:${pct.toFixed(1)}%;background:${color};border-radius:5px;transition:width .4s ease"></div>
+      </div>
+      <div style="font-size:10px;color:${color};margin-top:2px">${pct.toFixed(1)}% used</div>
+    </div>`;
+  }).join('');
+}
+
+function renderCostTrend(trend) {
+  const days = trend.trend || [];
+  if (!$c('cost-trend-chart')) return;
+  if (!days.length) { $c('cost-trend-chart').innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted)">No data for last 7 days yet</div>'; return; }
+  const maxAmt = Math.max(...days.map(d => d.cost_usd), 0.0001);
+  $c('cost-trend-chart').innerHTML = `
+    <div style="display:flex;align-items:flex-end;gap:4px;height:80px;padding:0 4px">
+      ${days.map(d => {
+        const h = Math.max(d.cost_usd / maxAmt * 70, 2);
+        const label = d.date.slice(5); // MM-DD
+        return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px">
+          <div style="font-size:9px;color:var(--muted)">${fmtUSD(d.cost_usd,4)}</div>
+          <div style="width:100%;height:${h.toFixed(0)}px;background:#3b82f6;border-radius:3px 3px 0 0" title="${d.date}: ${fmtUSD(d.cost_usd,4)}"></div>
+          <div style="font-size:10px;color:var(--muted);white-space:nowrap">${label}</div>
+        </div>`;
+      }).join('')}
+    </div>
+    <div style="font-size:11px;color:var(--muted);text-align:right;padding:4px 4px 0">7-day total: ${fmtUSD(trend.total_usd, 4)}</div>`;
+}
+
+function renderCostByAgent(data) {
+  const agents = data.agents || [];
+  const rows = agents.slice(0,15).map(a => `<tr style="border-bottom:1px solid var(--border)">
+    <td style="padding:4px;font-weight:500">${a.agent}</td>
+    <td style="padding:4px;text-align:right;font-weight:600;color:var(--accent)">${fmtUSD(a.cost_usd, 4)}</td>
+    <td style="padding:4px;text-align:right;color:var(--muted)">${a.call_count}</td>
   </tr>`).join('');
-  if ($c('cost-budget-rows')) $c('cost-budget-rows').innerHTML = rows || '<tr><td colspan="3" style="text-align:center;padding:20px;color:var(--muted)">No budgets set</td></tr>';
+  if ($c('cost-agent-rows')) $c('cost-agent-rows').innerHTML = rows || '<tr><td colspan="3" style="text-align:center;padding:16px;color:var(--muted)">No attributed costs yet — starts filling as AI agents run</td></tr>';
 }
 
 function renderCostEntries(data) {
@@ -18469,18 +18557,18 @@ function renderCostEntries(data) {
       <td style="padding:4px;color:var(--muted);white-space:nowrap">${t}</td>
       <td style="padding:4px;font-weight:600">${e.service}</td>
       <td style="padding:4px;color:var(--muted)">${e.category}</td>
-      <td style="padding:4px;max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${e.description||'—'}</td>
+      <td style="padding:4px;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${e.description||'—'}</td>
       <td style="padding:4px;text-align:right;color:var(--muted)">${units}</td>
       <td style="padding:4px;text-align:right;font-weight:600;color:var(--accent)">${fmtUSD(e.cost_usd,6)}</td>
     </tr>`;
   }).join('');
-  if ($c('cost-entry-rows')) $c('cost-entry-rows').innerHTML = rows || '<tr><td colspan="6" style="text-align:center;padding:20px;color:var(--muted)">No API cost entries yet — costs will appear here as the system processes requests</td></tr>';
+  if ($c('cost-entry-rows')) $c('cost-entry-rows').innerHTML = rows || '<tr><td colspan="6" style="text-align:center;padding:20px;color:var(--muted)">No API cost entries yet — costs appear here automatically as the system runs</td></tr>';
 }
 
 function renderCostReports(data) {
   const items = data.items || [];
   const rows = items.map(r => {
-    const sentAt = r.sent_at ? new Date(r.sent_at).toLocaleString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}) : 'Not sent';
+    const sentAt = r.sent_at ? new Date(r.sent_at).toLocaleString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}) : '—';
     return `<tr style="border-bottom:1px solid var(--border)">
       <td style="padding:5px 4px;font-weight:600">${r.report_period}</td>
       <td style="padding:5px 4px;color:var(--muted)">${r.report_type}</td>
@@ -18488,7 +18576,7 @@ function renderCostReports(data) {
       <td style="padding:5px 4px;color:var(--muted)">${sentAt}</td>
     </tr>`;
   }).join('');
-  if ($c('cost-report-rows')) $c('cost-report-rows').innerHTML = rows || '<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--muted)">No reports sent yet — first report will be sent Monday 9:30 AM UTC</td></tr>';
+  if ($c('cost-report-rows')) $c('cost-report-rows').innerHTML = rows || '<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--muted)">No reports sent yet — Monday 9:30 AM UTC</td></tr>';
 }
 
 function showAddBudgetForm() {
@@ -18518,6 +18606,17 @@ async function sendCostReport() {
     else toast('Report generated (email not configured yet)', 'success');
     loadCostData();
   } catch(e) { toast('Failed: ' + e.message, 'error'); }
+}
+
+async function downloadCostCSV() {
+  const token = localStorage.getItem('3ll_token') || API_TOKEN || '';
+  const r = await fetch(API_BASE + '/api/costs/export?days=30', { headers: {'Authorization':'Bearer '+token} });
+  if (!r.ok) { toast('CSV export failed', 'error'); return; }
+  const blob = await r.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = '3ll-costs.csv'; a.click();
+  URL.revokeObjectURL(url);
 }
 </script>
 

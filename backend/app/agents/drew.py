@@ -86,7 +86,14 @@ def _qualify_prospect(prospect: dict) -> dict | None:
             timeout=15,
         )
         if r.status_code == 200:
-            text = r.json()["content"][0]["text"].strip()
+            _d = r.json()
+            try:
+                from ..cost_tracking import track_anthropic as _ta
+                _usage = _d.get("usage", {})
+                _ta("claude-haiku-4-5-20251001", _usage.get("input_tokens", 0), _usage.get("output_tokens", 0), agent="drew")
+            except Exception:
+                pass
+            text = _d["content"][0]["text"].strip()
             if text.startswith("```"):
                 text = text.split("```")[1]
                 if text.startswith("json"):

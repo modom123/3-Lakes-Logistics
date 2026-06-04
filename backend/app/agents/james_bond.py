@@ -140,7 +140,14 @@ def _call_qwen(system: str, user: str, max_tokens: int = 600) -> str | None:
             timeout=25,
         )
         if r.status_code == 200:
-            return r.json()["choices"][0]["message"]["content"].strip()
+            _d = r.json()
+            _u = _d.get("usage", {})
+            try:
+                from ..cost_tracking import track_openrouter as _tor
+                _tor(s.openrouter_model, _u.get("prompt_tokens", 0), _u.get("completion_tokens", 0), agent="james_bond")
+            except Exception:
+                pass
+            return _d["choices"][0]["message"]["content"].strip()
     except Exception:
         pass
     return None

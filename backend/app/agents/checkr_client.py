@@ -122,6 +122,11 @@ def create_report(
     try:
         result = _post("/reports", body)
         report_id = result.get("id")
+        try:
+            from ..cost_tracking import track_checkr as _tc
+            _tc(check_type=package)
+        except Exception:
+            pass
         log_agent(_NAME, "create_report",
                   payload={"candidate_id": candidate_id, "package": package},
                   result=str(report_id))

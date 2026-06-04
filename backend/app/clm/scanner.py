@@ -120,6 +120,11 @@ def scan_contract(
             system=_SYSTEM,
             messages=[{"role": "user", "content": user_prompt}],
         )
+        try:
+            from ..cost_tracking import track_anthropic as _ta
+            _ta("claude-sonnet-4-6", message.usage.input_tokens, message.usage.output_tokens, agent="clm_scanner")
+        except Exception:
+            pass
         content = message.content[0].text.strip()
 
         # Strip markdown code fences if present

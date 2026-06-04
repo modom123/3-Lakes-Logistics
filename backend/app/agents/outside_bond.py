@@ -138,7 +138,14 @@ def _qwen_reason(error_details: str, phase: str, context: dict) -> dict:
                 timeout=25,
             )
             if r.status_code == 200:
-                content = r.json()["choices"][0]["message"]["content"].strip()
+                _d = r.json()
+                _u = _d.get("usage", {})
+                try:
+                    from ..cost_tracking import track_openrouter as _tor
+                    _tor(s.openrouter_model, _u.get("prompt_tokens", 0), _u.get("completion_tokens", 0), agent="outside_bond")
+                except Exception:
+                    pass
+                content = _d["choices"][0]["message"]["content"].strip()
                 # Strip any accidental markdown fences
                 if content.startswith("```"):
                     content = content.split("```")[1]

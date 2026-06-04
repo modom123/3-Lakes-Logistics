@@ -28,5 +28,10 @@ def search_area(lat: float, lng: float, radius_mi: int = 50) -> list[dict[str, A
             results.extend(r.json().get("results") or [])
         except Exception:  # noqa: BLE001
             continue
+    try:
+        from ..cost_tracking import track_google_maps as _tgm
+        _tgm(len(QUERIES), operation="place_textsearch")
+    except Exception:
+        pass
     log_agent("vance", "gmaps_search", payload={"loc": [lat, lng]}, result=str(len(results)))
     return results

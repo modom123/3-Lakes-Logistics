@@ -2,8 +2,12 @@
 
 Routes:
   GET  /api/costs/summary         — MTD cost summary (API + subscriptions)
+  GET  /api/costs/projection      — end-of-month cost projection
+  GET  /api/costs/trend           — daily cost for last N days
+  GET  /api/costs/by-agent        — per-AI-agent cost breakdown
   GET  /api/costs/entries         — paginated cost entry log
   POST /api/costs/entries         — manual cost entry
+  GET  /api/costs/export          — CSV download of cost entries
   GET  /api/costs/subscriptions   — subscription list
   POST /api/costs/subscriptions   — add/update subscription
   GET  /api/costs/budgets         — budget list
@@ -14,10 +18,14 @@ Routes:
 """
 from __future__ import annotations
 
-from datetime import datetime, timezone
+import calendar
+import csv
+import io
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 from ..supabase_client import get_supabase
@@ -228,3 +236,138 @@ def send_cost_report(recipients: list[str] | None = None) -> dict:
     period = datetime.now(timezone.utc).strftime("%Y-%m (Manual Run %b %d)")
     result = send_report(summary, alerts, period_label=period, recipients=recipients or None)
     return {"ok": result.get("sent", False), **result}
+
+
+# ── Analytics endpoints ───────────────────────────────────────────────────────
+
+@router.get("/projection")
+def cost_projection() -> dict:
+    """End-of-month cost projection based on current daily burn rate."""
+    summary = get_mtd_summary()
+    now = datetime.now(timezone.utc)
+    days_elapsed = now.day
+    days_in_month = calendar.monthrange(now.year, now.month)[1]
+    days_remaining = days_in_month - days_elapsed
+
+    daily_rate = summary["api_cost_usd"] / max(days_elapsed, 1)
+    projected_api = round(daily_rate * days_in_month, 4)
+    projected_total = round(projected_api + summary["subscription_cost_usd"], 2)
+    pct_month_elapsed = round(days_elapsed / days_in_month * 100, 1)
+
+    return {
+        "period": summary["period"],
+        "days_elapsed": days_elapsed,
+        "days_remaining": days_remaining,
+        "days_in_month": days_in_month,
+        "pct_month_elapsed": pct_month_elapsed,
+        "api_mtd_usd": summary["api_cost_usd"],
+        "daily_burn_rate_usd": round(daily_rate, 6),
+        "projected_api_eom_usd": projected_api,
+        "subscription_monthly_usd": summary["subscription_cost_usd"],
+        "projected_total_eom_usd": projected_total,
+    }
+
+
+@router.get("/trend")
+def cost_trend(days: int = Query(7, ge=1, le=30)) -> dict:
+    """Daily cost breakdown for the last N days."""
+    sb = get_supabase()
+    since = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
+    rows = (
+        sb.table("cost_entries")
+        .select("service,cost_usd,recorded_at")
+        .gte("recorded_at", since)
+        .order("recorded_at", desc=False)
+        .execute()
+        .data or []
+    )
+
+    daily: dict[str, dict] = {}
+    for r in rows:
+        day = r["recorded_at"][:10]
+        if day not in daily:
+            daily[day] = {"date": day, "cost_usd": 0.0, "entry_count": 0, "by_service": {}}
+        amt = float(r.get("cost_usd") or 0)
+        daily[day]["cost_usd"] = round(daily[day]["cost_usd"] + amt, 6)
+        daily[day]["entry_count"] += 1
+        svc = r.get("service", "unknown")
+        daily[day]["by_service"][svc] = round(daily[day]["by_service"].get(svc, 0) + amt, 6)
+
+    trend = sorted(daily.values(), key=lambda x: x["date"])
+    return {"days": days, "trend": trend, "total_usd": round(sum(d["cost_usd"] for d in trend), 4)}
+
+
+@router.get("/by-agent")
+def cost_by_agent() -> dict:
+    """API cost breakdown per AI agent (from metadata.agent field)."""
+    sb = get_supabase()
+    start, end = _mtd_iso_range()
+    rows = (
+        sb.table("cost_entries")
+        .select("cost_usd,metadata,service")
+        .gte("recorded_at", start)
+        .lte("recorded_at", end)
+        .execute()
+        .data or []
+    )
+
+    by_agent: dict[str, dict] = {}
+    for r in rows:
+        meta = r.get("metadata") or {}
+        agent = meta.get("agent") or "unattributed"
+        amt = float(r.get("cost_usd") or 0)
+        if agent not in by_agent:
+            by_agent[agent] = {"agent": agent, "cost_usd": 0.0, "call_count": 0, "services": set()}
+        by_agent[agent]["cost_usd"] = round(by_agent[agent]["cost_usd"] + amt, 6)
+        by_agent[agent]["call_count"] += 1
+        by_agent[agent]["services"].add(r.get("service", ""))
+
+    result = sorted(
+        [{"agent": v["agent"], "cost_usd": v["cost_usd"], "call_count": v["call_count"],
+          "services": list(v["services"])} for v in by_agent.values()],
+        key=lambda x: -x["cost_usd"],
+    )
+    return {
+        "period": datetime.now(timezone.utc).strftime("%Y-%m"),
+        "agents": result,
+        "total_attributed_usd": round(sum(a["cost_usd"] for a in result if a["agent"] != "unattributed"), 4),
+    }
+
+
+@router.get("/export")
+def export_csv(
+    days: int = Query(30, ge=1, le=365),
+) -> StreamingResponse:
+    """Download cost entries as a CSV file."""
+    sb = get_supabase()
+    since = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
+    rows = (
+        sb.table("cost_entries")
+        .select("recorded_at,service,category,cost_usd,units,unit_type,description")
+        .gte("recorded_at", since)
+        .order("recorded_at", desc=True)
+        .limit(5000)
+        .execute()
+        .data or []
+    )
+
+    buf = io.StringIO()
+    w = csv.DictWriter(buf, fieldnames=["recorded_at", "service", "category", "cost_usd", "units", "unit_type", "description"])
+    w.writeheader()
+    w.writerows(rows)
+    buf.seek(0)
+
+    filename = f"3ll-costs-{datetime.now(timezone.utc).strftime('%Y-%m-%d')}.csv"
+    return StreamingResponse(
+        iter([buf.getvalue()]),
+        media_type="text/csv",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+def _mtd_iso_range() -> tuple[str, str]:
+    now = datetime.now(timezone.utc)
+    start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    last_day = calendar.monthrange(now.year, now.month)[1]
+    end = now.replace(day=last_day, hour=23, minute=59, second=59)
+    return start.isoformat(), end.isoformat()

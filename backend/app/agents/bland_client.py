@@ -184,6 +184,11 @@ def handle_bland_webhook(event: dict[str, Any]) -> dict[str, Any]:
         analysis = event.get("analysis") or {}
         duration = event.get("duration", 0)  # seconds
         cost = duration * 0.06 / 60  # $0.06/min base + LLM fees
+        try:
+            from ..cost_tracking import track_bland_ai as _tba
+            _tba(duration / 60, call_id=call_id, agent="vance", carrier_id=lead_id)
+        except Exception:
+            pass
 
         log_agent(
             "vance",

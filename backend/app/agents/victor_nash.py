@@ -206,7 +206,14 @@ def _call_qwen(exec_data: dict, scope: str) -> dict | None:
             timeout=30,
         )
         if r.status_code == 200:
-            content = r.json()["choices"][0]["message"]["content"].strip()
+            _d = r.json()
+            _u = _d.get("usage", {})
+            try:
+                from ..cost_tracking import track_openrouter as _tor
+                _tor(s.openrouter_model, _u.get("prompt_tokens", 0), _u.get("completion_tokens", 0), agent="victor_nash")
+            except Exception:
+                pass
+            content = _d["choices"][0]["message"]["content"].strip()
             if content.startswith("```"):
                 content = content.split("```")[1]
                 if content.startswith("json"):
