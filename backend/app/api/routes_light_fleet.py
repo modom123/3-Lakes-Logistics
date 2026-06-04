@@ -14,6 +14,7 @@ from fastapi import APIRouter, Depends, HTTPException, Response
 
 from ..supabase_client import get_supabase
 from .deps import require_bearer
+from .routes_driver_auth import _send_falcon_lf_welcome, normalize_phone
 
 router = APIRouter(dependencies=[Depends(require_bearer)])
 
@@ -375,16 +376,35 @@ def create_driver(payload: dict) -> dict:
     payload.setdefault("created_at", _now_iso())
     payload.setdefault("updated_at", _now_iso())
 
+    # Normalise and store phone_e164 if a phone was supplied
+    raw_phone = payload.get("phone") or payload.get("phone_e164") or ""
+    phone_e164: str | None = None
+    if raw_phone:
+        try:
+            phone_e164 = normalize_phone(raw_phone)
+            payload["phone"]       = phone_e164
+            payload["phone_e164"]  = phone_e164
+        except ValueError:
+            pass  # store as-is if format is unexpected
+
     res = get_supabase().table("light_vehicle_drivers").insert(payload).execute()
     if not res.data:
         raise HTTPException(status_code=500, detail="Driver creation failed")
+
+    driver = res.data[0]
+
+    # Fire onboarding automation
     try:
         from ..triggers import fire_lf_driver_onboarding
-        if res.data:
-            fire_lf_driver_onboarding(str(res.data[0]["id"]))
+        fire_lf_driver_onboarding(str(driver["id"]))
     except Exception:
         pass
-    return {"ok": True, "item": res.data[0]}
+
+    # Send Falcon Light Fleet welcome SMS
+    if phone_e164:
+        _send_falcon_lf_welcome(phone_e164, driver.get("name") or "")
+
+    return {"ok": True, "item": driver}
 
 
 @router.patch("/drivers/{driver_id}")

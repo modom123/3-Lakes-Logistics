@@ -114,10 +114,10 @@
   </div>
 
   <div class="card">
-    <form id="login-form" onsubmit="handleLogin(event)">
+    <form id="login-form" onsubmit="handleSubmit(event)">
       <div id="error" class="error"></div>
       <div id="loading" class="loading">
-        <div class="spinner"></div> Signing you in…
+        <div class="spinner"></div> <span id="loading-text">Signing you in…</span>
       </div>
 
       <div class="form-group">
@@ -128,12 +128,25 @@
       </div>
 
       <div class="form-group">
-        <label class="form-label">4-Digit PIN</label>
+        <label id="pin-label" class="form-label">4-Digit PIN</label>
         <input id="pin" type="password" class="form-input pin-input"
           placeholder="••••" inputmode="numeric" maxlength="4" minlength="4" required />
       </div>
 
+      <div id="confirm-pin-group" class="form-group" style="display:none">
+        <label class="form-label">Confirm PIN</label>
+        <input id="confirm-pin" type="password" class="form-input pin-input"
+          placeholder="••••" inputmode="numeric" maxlength="4" minlength="4" />
+      </div>
+
       <button id="login-btn" type="submit" class="btn-login">Sign In → Start Earning</button>
+
+      <div style="text-align:center;margin-top:14px">
+        <button type="button" id="mode-toggle" onclick="toggleMode()"
+          style="background:none;border:none;color:#8b5cf6;font-size:13px;cursor:pointer;padding:4px;text-decoration:underline">
+          First login? Set your PIN →
+        </button>
+      </div>
     </form>
   </div>
 
@@ -156,16 +169,49 @@ if (window.supabase && _cfg.SUPABASE_URL && _cfg.SUPABASE_KEY) {
   sb = window.supabase.createClient(_cfg.SUPABASE_URL, _cfg.SUPABASE_KEY);
 }
 
+var mode = 'login'; // 'login' | 'setup'
+
+function toggleMode() {
+  mode = mode === 'login' ? 'setup' : 'login';
+  var isSetup = mode === 'setup';
+  document.getElementById('confirm-pin-group').style.display = isSetup ? '' : 'none';
+  document.getElementById('confirm-pin').value = '';
+  document.getElementById('pin-label').textContent = isSetup ? 'New 4-Digit PIN' : '4-Digit PIN';
+  document.getElementById('pin').placeholder = isSetup ? 'New PIN' : '••••';
+  document.getElementById('login-btn').textContent = isSetup ? 'Set PIN & Start Earning →' : 'Sign In → Start Earning';
+  document.getElementById('mode-toggle').textContent = isSetup ? '← Back to Sign In' : 'First login? Set your PIN →';
+  document.getElementById('loading-text').textContent = isSetup ? 'Setting your PIN...' : 'Signing you in…';
+  document.getElementById('error').classList.remove('show');
+  document.getElementById('pin').value = '';
+}
+
+function handleSubmit(event) {
+  if (mode === 'setup') handleSetupPin(event);
+  else handleLogin(event);
+}
+
+function _storeLFSession(data, normalizedPhone) {
+  var id = data.driver_id || data.lf_driver_id || data.id || '';
+  localStorage.setItem('3ll_token',        data.token || ('lf-' + id));
+  localStorage.setItem('3ll_driver_id',    String(id));
+  localStorage.setItem('3ll_lf_driver_id', String(data.lf_driver_id || id));
+  localStorage.setItem('3ll_driver_mode',  'light');
+  localStorage.setItem('3ll_driver_name',  data.driver_name || data.name || '');
+  localStorage.setItem('3ll_phone',        normalizedPhone);
+  localStorage.setItem('3ll_expires_at',   data.expires_at || new Date(Date.now() + 86400000 * 30).toISOString());
+  ['3ll_driver_code','3ll_truck','3ll_trailer','3ll_carrier_id'].forEach(function(k){ localStorage.removeItem(k); });
+}
+
 async function handleLogin(e) {
   e.preventDefault();
-  const phone    = document.getElementById('phone').value.trim();
-  const pin      = document.getElementById('pin').value.trim();
-  const errorEl  = document.getElementById('error');
-  const loadEl   = document.getElementById('loading');
-  const btnEl    = document.getElementById('login-btn');
+  var phone   = document.getElementById('phone').value.trim();
+  var pin     = document.getElementById('pin').value.trim();
+  var errorEl = document.getElementById('error');
+  var loadEl  = document.getElementById('loading');
+  var btnEl   = document.getElementById('login-btn');
 
   errorEl.classList.remove('show');
-  const digits = phone.replace(/\D/g, '');
+  var digits = phone.replace(/\D/g, '');
 
   if (digits.length < 10) {
     errorEl.textContent = 'Please enter a valid 10-digit phone number.';
@@ -186,47 +232,92 @@ async function handleLogin(e) {
   }
 
   try {
-    const normalizedPhone = '+1' + digits;
+    var normalizedPhone = '+1' + digits;
 
-    // Try light_vehicle_drivers table first (LF-native login)
-    const { data: lfData, error: lfErr } = await sb.rpc('lf_driver_login', {
-      p_phone: normalizedPhone,
-      p_pin:   pin
-    });
-
-    if (!lfErr && lfData) {
-      // LF driver found
-      const driverName = [lfData.first_name, lfData.last_name].filter(Boolean).join(' ') || lfData.full_name || lfData.name || 'Driver';
-      localStorage.setItem('3ll_token',         'lf-' + lfData.id);
-      localStorage.setItem('3ll_driver_id',     String(lfData.id));
-      localStorage.setItem('3ll_lf_driver_id',  String(lfData.id));
-      localStorage.setItem('3ll_driver_mode',   'light');
-      localStorage.setItem('3ll_driver_name',   driverName);
-      localStorage.setItem('3ll_phone',         normalizedPhone);
-      localStorage.setItem('3ll_expires_at',    new Date(Date.now() + 86400000 * 30).toISOString());
-      // Clear any truck keys from a previous session
-      ['3ll_driver_code','3ll_truck','3ll_trailer','3ll_carrier_id'].forEach(k => localStorage.removeItem(k));
+    // Primary: lf_driver_login RPC (light_vehicle_drivers table)
+    var lfRpc = await sb.rpc('lf_driver_login', { p_phone: normalizedPhone, p_pin: pin });
+    if (!lfRpc.error && lfRpc.data) {
+      var d = lfRpc.data;
+      _storeLFSession({
+        token: 'lf-' + d.id, driver_id: d.id, lf_driver_id: d.id,
+        driver_name: d.name || [d.first_name, d.last_name].filter(Boolean).join(' '),
+      }, normalizedPhone);
       window.location.href = './lf.html';
       return;
     }
 
-    // Fallback: universal driver_login RPC (also covers LF drivers registered via carrier table)
-    const { data, error } = await sb.rpc('driver_login', { p_phone: normalizedPhone, p_pin: pin });
-    if (error || !data) {
-      errorEl.textContent = 'Incorrect phone or PIN. Contact dispatch to get set up.';
+    // Fallback: universal driver_login RPC (drivers table)
+    var uRpc = await sb.rpc('driver_login', { p_phone: normalizedPhone, p_pin: pin });
+    if (!uRpc.error && uRpc.data) {
+      var u = uRpc.data;
+      _storeLFSession({
+        token: 'lf-' + (u.lf_driver_id || u.id), driver_id: u.id, lf_driver_id: u.lf_driver_id || u.id,
+        driver_name: [u.first_name, u.last_name].filter(Boolean).join(' ') || u.name,
+      }, normalizedPhone);
+      window.location.href = './lf.html';
+      return;
+    }
+
+    errorEl.textContent = 'Incorrect phone or PIN. Contact dispatch to get set up.';
+    errorEl.classList.add('show');
+    loadEl.classList.remove('show'); btnEl.disabled = false;
+
+  } catch (err) {
+    errorEl.textContent = 'Connection error — check your internet and try again.';
+    errorEl.classList.add('show');
+    loadEl.classList.remove('show'); btnEl.disabled = false;
+  }
+}
+
+async function handleSetupPin(e) {
+  e.preventDefault();
+  var phone      = document.getElementById('phone').value.trim();
+  var pin        = document.getElementById('pin').value.trim();
+  var confirmPin = document.getElementById('confirm-pin').value.trim();
+  var errorEl    = document.getElementById('error');
+  var loadEl     = document.getElementById('loading');
+  var btnEl      = document.getElementById('login-btn');
+
+  errorEl.classList.remove('show');
+  var digits = phone.replace(/\D/g, '');
+
+  if (digits.length < 10) {
+    errorEl.textContent = 'Please enter a valid 10-digit phone number.';
+    errorEl.classList.add('show'); return;
+  }
+  if (pin.length !== 4 || !/^\d{4}$/.test(pin)) {
+    errorEl.textContent = 'PIN must be exactly 4 digits.';
+    errorEl.classList.add('show'); return;
+  }
+  if (pin !== confirmPin) {
+    errorEl.textContent = 'PINs do not match — please try again.';
+    errorEl.classList.add('show'); return;
+  }
+
+  loadEl.classList.add('show');
+  btnEl.disabled = true;
+
+  try {
+    var API_BASE = (_cfg.API_BASE || 'https://three-lakes-logistics-api.onrender.com');
+    var res = await fetch(API_BASE + '/api/driver-auth/setup-pin-lf', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone: digits, pin: pin }),
+    });
+
+    if (!res.ok) {
+      var err = await res.json().catch(function(){ return {}; });
+      var msg = err.detail || 'Setup failed. Contact your dispatcher.';
+      if (msg === 'PIN already set — use the Sign In form') {
+        msg = 'You already have a PIN — tap "← Back to Sign In" to log in.';
+      }
+      errorEl.textContent = msg;
       errorEl.classList.add('show');
       loadEl.classList.remove('show'); btnEl.disabled = false; return;
     }
 
-    const driverName = [data.first_name, data.last_name].filter(Boolean).join(' ') || data.name || 'Driver';
-    localStorage.setItem('3ll_token',        'lf-' + (data.lf_driver_id || data.id));
-    localStorage.setItem('3ll_driver_id',    String(data.id));
-    localStorage.setItem('3ll_lf_driver_id', String(data.lf_driver_id || data.id));
-    localStorage.setItem('3ll_driver_mode',  'light');
-    localStorage.setItem('3ll_driver_name',  driverName);
-    localStorage.setItem('3ll_phone',        normalizedPhone);
-    localStorage.setItem('3ll_expires_at',   new Date(Date.now() + 86400000 * 30).toISOString());
-    ['3ll_driver_code','3ll_truck','3ll_trailer','3ll_carrier_id'].forEach(k => localStorage.removeItem(k));
+    var data = await res.json();
+    _storeLFSession(data, '+1' + digits);
     window.location.href = './lf.html';
 
   } catch (err) {
@@ -236,18 +327,21 @@ async function handleLogin(e) {
   }
 }
 
-document.getElementById('pin').addEventListener('input', e => {
+document.getElementById('pin').addEventListener('input', function(e) {
   e.target.value = e.target.value.replace(/\D/g, '').substring(0, 4);
 });
-document.getElementById('phone').addEventListener('input', e => {
-  const d = e.target.value.replace(/\D/g, '');
-  let f = d;
+document.getElementById('confirm-pin').addEventListener('input', function(e) {
+  e.target.value = e.target.value.replace(/\D/g, '').substring(0, 4);
+});
+document.getElementById('phone').addEventListener('input', function(e) {
+  var d = e.target.value.replace(/\D/g, '');
+  var f = d;
   if (d.length >= 6)      f = '(' + d.slice(0,3) + ') ' + d.slice(3,6) + '-' + d.slice(6,10);
   else if (d.length >= 3) f = '(' + d.slice(0,3) + ') ' + d.slice(3);
   e.target.value = f.substring(0, 14);
 });
 
-if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(function(){});
 </script>
 </body>
 </html>

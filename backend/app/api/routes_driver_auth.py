@@ -23,11 +23,12 @@ from .deps import require_bearer
 
 log = get_logger(__name__)
 
-FALCON_URL = "https://www.3lakeslogistics.com/driver-pwa/login.html"
+FALCON_URL    = "https://www.3lakeslogistics.com/driver-pwa/login.html"
+FALCON_LF_URL = "https://www.3lakeslogistics.com/driver-pwa/login-lf.html"
 
 
 def _send_falcon_welcome(phone_e164: str, first_name: str) -> None:
-    """Send Falcon onboarding SMS to a newly created driver. Non-fatal on failure."""
+    """Send Falcon Carrier onboarding SMS to a newly created truck driver. Non-fatal on failure."""
     s = get_settings()
     if not (s.twilio_account_sid and s.twilio_auth_token and s.twilio_from_number):
         log.warning("Twilio not configured — skipping Falcon welcome SMS for %s", phone_e164)
@@ -46,9 +47,35 @@ def _send_falcon_welcome(phone_e164: str, first_name: str) -> None:
             body=body,
         )
         track_twilio(sms_count=1)
-        log.info("Falcon welcome SMS sent to %s", phone_e164)
+        log.info("Falcon Carrier welcome SMS sent to %s", phone_e164)
     except Exception as exc:
-        log.error("Falcon welcome SMS failed for %s: %s", phone_e164, exc)
+        log.error("Falcon Carrier welcome SMS failed for %s: %s", phone_e164, exc)
+
+
+def _send_falcon_lf_welcome(phone_e164: str, name: str) -> None:
+    """Send Falcon Light Fleet onboarding SMS to a newly created LF driver. Non-fatal on failure."""
+    s = get_settings()
+    if not (s.twilio_account_sid and s.twilio_auth_token and s.twilio_from_number):
+        log.warning("Twilio not configured — skipping Falcon LF welcome SMS for %s", phone_e164)
+        return
+    first_name = name.split()[0] if name else "Driver"
+    body = (
+        f"Welcome to 3 Lakes Light Fleet, {first_name}!\n\n"
+        f"Your Falcon portal is ready 24/7:\n{FALCON_LF_URL}\n\n"
+        f"Tap 'First Login' to set your PIN and get started.\n"
+        f"Questions? Reply to this message or call dispatch."
+    )
+    try:
+        from twilio.rest import Client
+        Client(s.twilio_account_sid, s.twilio_auth_token).messages.create(
+            to=phone_e164,
+            from_=s.twilio_from_number,
+            body=body,
+        )
+        track_twilio(sms_count=1)
+        log.info("Falcon LF welcome SMS sent to %s", phone_e164)
+    except Exception as exc:
+        log.error("Falcon LF welcome SMS failed for %s: %s", phone_e164, exc)
 
 
 router = APIRouter(prefix="/driver-auth", tags=["driver-auth"])
@@ -450,6 +477,60 @@ async def setup_driver_pin(req: SetupPinRequest):
         carrier_id=driver["carrier_id"],
         expires_at=expires_at.isoformat(),
     )
+
+
+@router.post("/setup-pin-lf")
+async def setup_lf_driver_pin(req: SetupPinRequest):
+    """First-login PIN setup for Light Fleet drivers — only works when pin_hash IS NULL.
+
+    Returns driver data so the frontend can store the session and enter Falcon LF.
+    Does not use driver_sessions (LF auth uses a synthetic token pattern).
+    """
+    if not req.pin or len(req.pin) != 4 or not req.pin.isdigit():
+        raise HTTPException(status_code=400, detail="PIN must be 4 digits")
+
+    try:
+        phone_e164 = normalize_phone(req.phone)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    try:
+        result = get_supabase().table("light_vehicle_drivers").select(
+            "id, name, phone, phone_e164, pin_hash, status"
+        ).or_(f"phone.eq.{phone_e164},phone_e164.eq.{phone_e164}").limit(1).execute()
+        driver = result.data[0] if result.data else None
+    except Exception:
+        driver = None
+
+    if not driver:
+        raise HTTPException(status_code=401, detail="phone number not found")
+
+    if driver.get("pin_hash"):
+        raise HTTPException(status_code=409, detail="PIN already set — use the Sign In form")
+
+    pin_hash = hash_pin(req.pin)
+    get_supabase().table("light_vehicle_drivers").update({
+        "pin_hash":   pin_hash,
+        "phone_e164": phone_e164,
+    }).eq("id", driver["id"]).execute()
+
+    log.info("LF driver %s set PIN via first-login flow", driver["id"])
+
+    name = driver.get("name") or ""
+    first_name = name.split()[0] if name else ""
+    last_name  = " ".join(name.split()[1:]) if len(name.split()) > 1 else ""
+
+    return {
+        "ok":         True,
+        "token":      f"lf-{driver['id']}",
+        "driver_id":  str(driver["id"]),
+        "lf_driver_id": str(driver["id"]),
+        "driver_name": name,
+        "first_name": first_name,
+        "last_name":  last_name,
+        "phone":      phone_e164,
+        "expires_at": (datetime.now(timezone.utc) + timedelta(days=30)).isoformat(),
+    }
 
 
 @router.delete("/{driver_id}", dependencies=[Depends(require_bearer)])
