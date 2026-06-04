@@ -17,9 +17,41 @@ from pydantic import BaseModel, Field
 
 from ..supabase_client import get_supabase
 from ..logging_service import get_logger
+from ..settings import get_settings
+from ..cost_tracking import track_twilio
 from .deps import require_bearer
 
 log = get_logger(__name__)
+
+FALCON_URL = "https://www.3lakeslogistics.com/driver-pwa/login.html"
+
+
+def _send_falcon_welcome(phone_e164: str, first_name: str, pin: str) -> None:
+    """Send Falcon onboarding SMS to a newly created driver. Non-fatal on failure."""
+    s = get_settings()
+    if not (s.twilio_account_sid and s.twilio_auth_token and s.twilio_from_number):
+        log.warning("Twilio not configured — skipping Falcon welcome SMS for %s", phone_e164)
+        return
+    body = (
+        f"Welcome to 3 Lakes Logistics, {first_name}!\n\n"
+        f"Your Falcon driver portal is ready 24/7:\n{FALCON_URL}\n\n"
+        f"Phone: {phone_e164}\n"
+        f"PIN: {pin}\n\n"
+        f"Tap the link and add it to your Home Screen for quick access.\n"
+        f"Questions? Reply to this message or call dispatch."
+    )
+    try:
+        from twilio.rest import Client
+        Client(s.twilio_account_sid, s.twilio_auth_token).messages.create(
+            to=phone_e164,
+            from_=s.twilio_from_number,
+            body=body,
+        )
+        track_twilio(sms_count=1)
+        log.info("Falcon welcome SMS sent to %s", phone_e164)
+    except Exception as exc:
+        log.error("Falcon welcome SMS failed for %s: %s", phone_e164, exc)
+
 
 router = APIRouter(prefix="/driver-auth", tags=["driver-auth"])
 
@@ -329,6 +361,9 @@ async def create_driver(req: CreateDriverRequest):
         }).execute()
 
         driver = result.data[0]
+
+        _send_falcon_welcome(phone_e164, req.first_name, req.pin)
+
         return {
             "ok": True,
             "driver_id":   driver["id"],
