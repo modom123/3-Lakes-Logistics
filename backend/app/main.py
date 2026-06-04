@@ -127,7 +127,7 @@ def _start_scheduler(app: FastAPI) -> None:
         scheduler.add_job(fire_insurance_expiry_alerts, CronTrigger(hour=6, minute=45), id="insurance_expiry_alerts", replace_existing=True)
         scheduler.add_job(fire_onboarding_bond_audit, CronTrigger(hour=7, minute=45), id="onboarding_bond_audit_daily", replace_existing=True)
         scheduler.add_job(fire_stall_reminders, CronTrigger(hour=10, minute=0), id="stall_reminders_daily", replace_existing=True)
-        scheduler.add_job(fire_dat_refresh, IntervalTrigger(minutes=30), id="dat_refresh", replace_existing=True)
+        scheduler.add_job(fire_dat_refresh, IntervalTrigger(hours=1), id="dat_refresh", replace_existing=True)
         scheduler.add_job(fire_load_expiry, IntervalTrigger(hours=1), id="load_expiry", replace_existing=True)
 
         scheduler.start()

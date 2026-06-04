@@ -17,7 +17,7 @@ Trigger map
   daily 07:15 UTC cron      →  fire_naomi()       — lead scoring
   daily 07:30 UTC cron      →  fire_winston()     — carrier health + churn signals
   daily 07:10 UTC cron      →  fire_fmcsa_ingest() — pull 50 new-entrant leads from FMCSA Census
-  every 30 min              →  fire_dat_refresh() — pull fresh available loads from DAT
+  hourly                    →  fire_dat_refresh() — pull fresh available loads from DAT
   hourly                    →  fire_load_expiry() — expire available loads older than 48 hours
   daily 07:45 UTC cron      →  fire_onboarding_bond_audit() — Bond onboarding pipeline audit
   daily 08:00 UTC cron      →  fire_isabella()    — campaign builder (leads + re-engagement)

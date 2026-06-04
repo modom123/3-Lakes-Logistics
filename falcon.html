@@ -1504,7 +1504,7 @@ async function loadBoard() {
     const data = await api('GET', '/api/driver/available-loads');
     const loads = data.loads || [];
     if (!loads.length) {
-      el.innerHTML = `<div class="empty"><div class="empty-icon">📭</div><h3>No loads right now</h3><p>Check back soon — new loads refresh every 30 minutes.</p></div>`;
+      el.innerHTML = `<div class="empty"><div class="empty-icon">📭</div><h3>No loads right now</h3><p>Check back soon — new loads post every hour.</p></div>`;
       return;
     }
     el.innerHTML = loads.map((l, i) => {
