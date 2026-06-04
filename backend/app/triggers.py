@@ -410,6 +410,36 @@ def fire_stall_reminders() -> None:
     _bg(_run)
 
 
+def fire_iebc_budget_check() -> None:
+    """Daily 08:45 — IEBC cost monitor checks API budgets and fires alerts."""
+    def _run():
+        try:
+            from .agents.iebc_monitor import run_budget_check  # noqa: PLC0415
+            result = run_budget_check()
+            log.info(
+                "daily_agent: iebc_budget_check critical=%s warnings=%s",
+                result.get("critical"), result.get("warnings"),
+            )
+        except Exception as exc:  # noqa: BLE001
+            log.error("daily_agent: iebc_budget_check failed: %s", exc)
+    _bg(_run)
+
+
+def fire_iebc_weekly_report() -> None:
+    """Monday 09:30 — generate and email weekly cost report to Mark Odom."""
+    def _run():
+        try:
+            from .agents.iebc_monitor import run_weekly_report  # noqa: PLC0415
+            result = run_weekly_report()
+            log.info(
+                "daily_agent: iebc_weekly_report total=$%.2f sent=%s",
+                result.get("total_cost_usd", 0), result.get("email_sent"),
+            )
+        except Exception as exc:  # noqa: BLE001
+            log.error("daily_agent: iebc_weekly_report failed: %s", exc)
+    _bg(_run)
+
+
 def fire_vault_scan(doc_id: str) -> None:
     """Trigger background AI extraction for a vault document.
 

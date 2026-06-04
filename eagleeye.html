@@ -789,6 +789,7 @@ select.form-input option{background:var(--surface);}
     <div class="sb-label">Finance</div>
     <div class="sb-item" onclick="nav('revenue')"><span class="sb-icon">💰</span> Revenue Tracker</div>
     <div class="sb-item" onclick="nav('providers')"><span class="sb-icon">🔗</span> Providers</div>
+    <div class="sb-item" onclick="nav('costs')"><span class="sb-icon">📉</span> Cost Tracking <span class="sb-badge" id="cost-alert-badge" style="display:none;background:#ef4444;color:#fff">!</span></div>
   </div>
   <div class="sb-section">
     <div class="sb-label">Daily Ops</div>
@@ -1432,6 +1433,160 @@ select.form-input option{background:var(--surface);}
         </div>
       </div>
     </div>
+
+    <!-- COST TRACKING — IEBC System Cost Monitor -->
+    <div class="page" id="page-costs">
+      <div class="page-hdr">
+        <div class="page-hdr-l">
+          <div class="chip">IEBC</div>
+          <h2>Cost Tracking</h2>
+          <span style="font-size:12px;color:var(--muted);margin-left:10px" id="cost-period-label">Loading…</span>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button class="btn-out" onclick="loadCostData()" style="font-size:12px">↺ Refresh</button>
+          <button class="btn-navy" onclick="sendCostReport()" style="font-size:12px">📧 Send Report</button>
+        </div>
+      </div>
+
+      <!-- KPI tiles -->
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:20px" id="cost-kpi-tiles">
+        <div class="card" style="text-align:center">
+          <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">API & Usage MTD</div>
+          <div style="font-size:28px;font-weight:700;color:var(--accent)" id="cost-api-total">—</div>
+        </div>
+        <div class="card" style="text-align:center">
+          <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Subscriptions / Mo</div>
+          <div style="font-size:28px;font-weight:700;color:#22c55e" id="cost-sub-total">—</div>
+        </div>
+        <div class="card" style="text-align:center">
+          <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Total MTD</div>
+          <div style="font-size:28px;font-weight:700;color:#f59e0b" id="cost-grand-total">—</div>
+        </div>
+        <div class="card" style="text-align:center">
+          <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Budget Alerts</div>
+          <div style="font-size:28px;font-weight:700;color:#ef4444" id="cost-alert-count">—</div>
+        </div>
+      </div>
+
+      <!-- Alerts banner -->
+      <div id="cost-alerts-banner" style="display:none;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:14px 18px;margin-bottom:18px">
+        <div style="font-weight:600;color:#b91c1c;margin-bottom:8px">⚠ Budget Alerts</div>
+        <div id="cost-alerts-list"></div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
+        <!-- By Service -->
+        <div class="card">
+          <div class="card-hd"><div class="card-title">API Cost by Service (MTD)</div></div>
+          <table style="width:100%;border-collapse:collapse;font-size:13px" id="cost-by-service-table">
+            <thead><tr style="border-bottom:1px solid var(--border)">
+              <th style="text-align:left;padding:6px 4px;font-weight:600;color:var(--muted)">Service</th>
+              <th style="text-align:right;padding:6px 4px;font-weight:600;color:var(--muted)">Cost</th>
+              <th style="text-align:right;padding:6px 4px;font-weight:600;color:var(--muted)">% of API</th>
+            </tr></thead>
+            <tbody id="cost-service-rows"><tr><td colspan="3" style="text-align:center;padding:20px;color:var(--muted)">Loading…</td></tr></tbody>
+          </table>
+        </div>
+
+        <!-- By Category -->
+        <div class="card">
+          <div class="card-hd"><div class="card-title">Cost by Category (MTD)</div></div>
+          <table style="width:100%;border-collapse:collapse;font-size:13px">
+            <thead><tr style="border-bottom:1px solid var(--border)">
+              <th style="text-align:left;padding:6px 4px;font-weight:600;color:var(--muted)">Category</th>
+              <th style="text-align:right;padding:6px 4px;font-weight:600;color:var(--muted)">Cost</th>
+            </tr></thead>
+            <tbody id="cost-category-rows"><tr><td colspan="2" style="text-align:center;padding:20px;color:var(--muted)">Loading…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Subscriptions -->
+      <div class="card" style="margin-bottom:20px">
+        <div class="card-hd">
+          <div class="card-title">Active Subscriptions</div>
+          <span id="cost-sub-monthly-label" style="font-size:12px;color:var(--muted)"></span>
+        </div>
+        <table style="width:100%;border-collapse:collapse;font-size:13px">
+          <thead><tr style="border-bottom:1px solid var(--border)">
+            <th style="text-align:left;padding:6px 4px;font-weight:600;color:var(--muted)">Service</th>
+            <th style="text-align:left;padding:6px 4px;font-weight:600;color:var(--muted)">Plan</th>
+            <th style="text-align:left;padding:6px 4px;font-weight:600;color:var(--muted)">Cycle</th>
+            <th style="text-align:right;padding:6px 4px;font-weight:600;color:var(--muted)">Amount</th>
+          </tr></thead>
+          <tbody id="cost-sub-rows"><tr><td colspan="4" style="text-align:center;padding:20px;color:var(--muted)">Loading…</td></tr></tbody>
+        </table>
+      </div>
+
+      <!-- Budget Manager -->
+      <div class="card" style="margin-bottom:20px">
+        <div class="card-hd">
+          <div class="card-title">Monthly Budgets</div>
+          <button class="btn-out" onclick="showAddBudgetForm()" style="font-size:12px">+ Add Budget</button>
+        </div>
+        <div id="cost-add-budget-form" style="display:none;background:var(--surface-2,#f8fafc);border-radius:8px;padding:14px;margin-bottom:14px">
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:10px;align-items:end">
+            <div>
+              <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px">Service (or blank for category)</label>
+              <input id="budget-service" type="text" placeholder="e.g. anthropic" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:4px;font-size:13px;background:var(--bg)">
+            </div>
+            <div>
+              <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px">Category (if no service)</label>
+              <input id="budget-category" type="text" placeholder="e.g. ai_llm" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:4px;font-size:13px;background:var(--bg)">
+            </div>
+            <div>
+              <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px">Monthly Budget ($)</label>
+              <input id="budget-amount" type="number" placeholder="500.00" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:4px;font-size:13px;background:var(--bg)">
+            </div>
+            <div>
+              <button class="btn-navy" onclick="saveBudget()" style="font-size:12px;padding:7px 14px">Save</button>
+            </div>
+          </div>
+        </div>
+        <table style="width:100%;border-collapse:collapse;font-size:13px">
+          <thead><tr style="border-bottom:1px solid var(--border)">
+            <th style="text-align:left;padding:6px 4px;font-weight:600;color:var(--muted)">Service / Category</th>
+            <th style="text-align:right;padding:6px 4px;font-weight:600;color:var(--muted)">Budget</th>
+            <th style="text-align:right;padding:6px 4px;font-weight:600;color:var(--muted)">Alert At</th>
+          </tr></thead>
+          <tbody id="cost-budget-rows"><tr><td colspan="3" style="text-align:center;padding:20px;color:var(--muted)">Loading…</td></tr></tbody>
+        </table>
+      </div>
+
+      <!-- Recent cost entries -->
+      <div class="card">
+        <div class="card-hd">
+          <div class="card-title">Recent API Cost Entries</div>
+          <span style="font-size:12px;color:var(--muted)">Last 50 events</span>
+        </div>
+        <table style="width:100%;border-collapse:collapse;font-size:12px">
+          <thead><tr style="border-bottom:1px solid var(--border)">
+            <th style="text-align:left;padding:5px 4px;font-weight:600;color:var(--muted)">Time</th>
+            <th style="text-align:left;padding:5px 4px;font-weight:600;color:var(--muted)">Service</th>
+            <th style="text-align:left;padding:5px 4px;font-weight:600;color:var(--muted)">Category</th>
+            <th style="text-align:left;padding:5px 4px;font-weight:600;color:var(--muted)">Description</th>
+            <th style="text-align:right;padding:5px 4px;font-weight:600;color:var(--muted)">Units</th>
+            <th style="text-align:right;padding:5px 4px;font-weight:600;color:var(--muted)">Cost</th>
+          </tr></thead>
+          <tbody id="cost-entry-rows"><tr><td colspan="6" style="text-align:center;padding:20px;color:var(--muted)">Loading…</td></tr></tbody>
+        </table>
+      </div>
+
+      <!-- Past Reports -->
+      <div class="card" style="margin-top:16px">
+        <div class="card-hd"><div class="card-title">Cost Reports Sent to Mark Odom</div></div>
+        <table style="width:100%;border-collapse:collapse;font-size:13px">
+          <thead><tr style="border-bottom:1px solid var(--border)">
+            <th style="text-align:left;padding:6px 4px;font-weight:600;color:var(--muted)">Period</th>
+            <th style="text-align:left;padding:6px 4px;font-weight:600;color:var(--muted)">Type</th>
+            <th style="text-align:right;padding:6px 4px;font-weight:600;color:var(--muted)">Total Cost</th>
+            <th style="text-align:left;padding:6px 4px;font-weight:600;color:var(--muted)">Sent At</th>
+          </tr></thead>
+          <tbody id="cost-report-rows"><tr><td colspan="4" style="text-align:center;padding:20px;color:var(--muted)">Loading…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+    <!-- END COST TRACKING -->
 
     <!-- CHECKLIST -->
     <div class="page" id="page-checklist">
@@ -3564,7 +3719,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 let allCarriers=[], allLoads=[], allInvoices=[], currentInvFilter='all', loadCounter=3849;
 
-const pageNames={dashboard:'Dashboard',dispatch:'Dispatch Board','fleet-map':'Fleet Map',carriers:'Carriers',drivers:'Drivers',loads:'Load Manager',invoices:'Invoices & Billing',compliance:'DOT Compliance',ifta:'IFTA / Permits',insurance:'Insurance',revenue:'Revenue Tracker',providers:'Compliance Providers',checklist:'Daily Checklist',notes:'Dispatcher Notes',reports:'Team Reports','exec-command':'Exec Command',agents:'AI Agents',founders:'Founders Program',crm:'Lead CRM',leads:'Lead Pipeline',execution:'Execution Engine',factoring:'Factoring',email:'Email Center',vault:'Document Vault',clm:'CLM Scanner',ledger:'Atomic Ledger',agreements:'Agreements','lf-map':'Light Fleet Live Map','lf-nemt':'NEMT — Medical Transport','lf-medical':'Medical Courier','lf-executive':'Executive Transport','lf-courier':'Courier & Last-Mile','lf-gig':'Gig Fleet Management','mark-office':'Mark Odom — CEO Office','ccg-office':'CC Gulley Office','trading-desk':'Trading Desk','broker-division':'N. American Trading — Hub','broker-shippers':'Shipper Pipeline','broker-docs':'Docs & Invoices','trading-desk':'Trading Desk'};
+const pageNames={dashboard:'Dashboard',dispatch:'Dispatch Board','fleet-map':'Fleet Map',carriers:'Carriers',drivers:'Drivers',loads:'Load Manager',invoices:'Invoices & Billing',compliance:'DOT Compliance',ifta:'IFTA / Permits',insurance:'Insurance',revenue:'Revenue Tracker',providers:'Compliance Providers',checklist:'Daily Checklist',notes:'Dispatcher Notes',reports:'Team Reports','exec-command':'Exec Command',agents:'AI Agents',founders:'Founders Program',crm:'Lead CRM',leads:'Lead Pipeline',execution:'Execution Engine',factoring:'Factoring',email:'Email Center',vault:'Document Vault',clm:'CLM Scanner',ledger:'Atomic Ledger',agreements:'Agreements','lf-map':'Light Fleet Live Map','lf-nemt':'NEMT — Medical Transport','lf-medical':'Medical Courier','lf-executive':'Executive Transport','lf-courier':'Courier & Last-Mile','lf-gig':'Gig Fleet Management','mark-office':'Mark Odom — CEO Office','ccg-office':'CC Gulley Office','trading-desk':'Trading Desk','broker-division':'N. American Trading — Hub','broker-shippers':'Shipper Pipeline','broker-docs':'Docs & Invoices','trading-desk':'Trading Desk',costs:'Cost Tracking — IEBC'};
 
 // ── 3 Lakes Logistics Backend API (FastAPI) ──
 const API_BASE = (window.__3LL_API_BASE || 'https://three-lakes-logistics-api.onrender.com').replace(/\/$/,'');
@@ -3702,6 +3857,7 @@ function nav(id){
   if(id==='lf-gig'){lfRunExpert('morgan_hayes','gig');}
   if(id==='execution'){loadExecutionDomains();loadExecutionSteps();}
   if(id==='email'&&typeof mailInit==='function'){mailInit();}
+  if(id==='costs'){loadCostData();}
 }
 
 function openModal(id){
@@ -18192,6 +18348,176 @@ function tdRenderPositions(rows) {
       <td style="font-size:11px;color:var(--muted)">${r.covering_carrier_name || '—'}</td>
     </tr>`;
   }).join('');
+}
+</script>
+
+<script>
+// ── COST TRACKING — IEBC ─────────────────────────────────────────────────────
+
+async function costApi(path, opts={}) {
+  const token = localStorage.getItem('3ll_token') || API_TOKEN || '';
+  const r = await fetch(API_BASE + '/api/costs' + path, {
+    headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+    ...opts,
+  });
+  if (!r.ok) throw new Error(r.status + ' ' + await r.text());
+  return r.json();
+}
+
+function $c(id) { return document.getElementById(id); }
+function fmtUSD(n, digits=2) { return '$' + Number(n||0).toLocaleString('en-US',{minimumFractionDigits:digits,maximumFractionDigits:digits}); }
+
+async function loadCostData() {
+  try {
+    const [summary, alerts, budgets, entries, reports] = await Promise.all([
+      costApi('/summary'),
+      costApi('/alerts'),
+      costApi('/budgets'),
+      costApi('/entries?limit=50'),
+      costApi('/reports?limit=10'),
+    ]);
+    renderCostSummary(summary);
+    renderCostAlerts(alerts);
+    renderCostBudgets(budgets);
+    renderCostEntries(entries);
+    renderCostReports(reports);
+    // Update sidebar badge
+    const badge = $c('cost-alert-badge');
+    if (badge) {
+      badge.style.display = alerts.critical_count > 0 ? 'inline' : 'none';
+      badge.textContent = '!';
+    }
+  } catch(e) {
+    console.error('loadCostData failed:', e);
+    toast('Failed to load cost data: ' + e.message, 'error');
+  }
+}
+
+function renderCostSummary(s) {
+  if ($c('cost-period-label')) $c('cost-period-label').textContent = 'Period: ' + (s.period || '');
+  if ($c('cost-api-total'))    $c('cost-api-total').textContent    = fmtUSD(s.api_cost_usd, 4);
+  if ($c('cost-sub-total'))    $c('cost-sub-total').textContent    = fmtUSD(s.subscription_cost_usd);
+  if ($c('cost-grand-total'))  $c('cost-grand-total').textContent  = fmtUSD(s.total_cost_usd);
+
+  // By service
+  const apiTotal = s.api_cost_usd || 1;
+  const svcRows = Object.entries(s.by_service || {}).map(([svc, amt]) => {
+    const pct = apiTotal > 0 ? (amt / apiTotal * 100).toFixed(1) : '0.0';
+    return `<tr style="border-bottom:1px solid var(--border)">
+      <td style="padding:5px 4px">${svc}</td>
+      <td style="padding:5px 4px;text-align:right;font-weight:600">${fmtUSD(amt,4)}</td>
+      <td style="padding:5px 4px;text-align:right;color:var(--muted)">${pct}%</td>
+    </tr>`;
+  }).join('');
+  if ($c('cost-service-rows')) $c('cost-service-rows').innerHTML = svcRows || '<tr><td colspan="3" style="text-align:center;padding:20px;color:var(--muted)">No API costs recorded yet</td></tr>';
+
+  // By category
+  const catRows = Object.entries(s.by_category || {}).map(([cat, amt]) =>
+    `<tr style="border-bottom:1px solid var(--border)">
+      <td style="padding:5px 4px">${cat}</td>
+      <td style="padding:5px 4px;text-align:right;font-weight:600">${fmtUSD(amt,4)}</td>
+    </tr>`
+  ).join('');
+  if ($c('cost-category-rows')) $c('cost-category-rows').innerHTML = catRows || '<tr><td colspan="2" style="text-align:center;padding:20px;color:var(--muted)">No costs recorded yet</td></tr>';
+
+  // Subscriptions
+  const subs = s.subscriptions || [];
+  const subTotal = subs.reduce((a,b)=>a+Number(b.amount_usd||0),0);
+  if ($c('cost-sub-monthly-label')) $c('cost-sub-monthly-label').textContent = 'Monthly total: ' + fmtUSD(subTotal);
+  const subRows = subs.map(s => `<tr style="border-bottom:1px solid var(--border)">
+    <td style="padding:5px 4px;font-weight:600">${s.service}</td>
+    <td style="padding:5px 4px;color:var(--muted)">${s.plan_name || '—'}</td>
+    <td style="padding:5px 4px;color:var(--muted)">${s.billing_cycle}</td>
+    <td style="padding:5px 4px;text-align:right">${s.billing_cycle === 'usage' ? '<em style="color:var(--muted)">usage</em>' : fmtUSD(Number(s.amount_usd||0))}</td>
+  </tr>`).join('');
+  if ($c('cost-sub-rows')) $c('cost-sub-rows').innerHTML = subRows || '<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--muted)">No subscriptions</td></tr>';
+}
+
+function renderCostAlerts(a) {
+  const alerts = a.alerts || [];
+  if ($c('cost-alert-count')) $c('cost-alert-count').textContent = alerts.length || '0';
+  const banner = $c('cost-alerts-banner');
+  const list   = $c('cost-alerts-list');
+  if (!banner || !list) return;
+  if (alerts.length === 0) { banner.style.display = 'none'; return; }
+  banner.style.display = 'block';
+  list.innerHTML = alerts.map(a => {
+    const color = a.severity === 'critical' ? '#b91c1c' : '#92400e';
+    return `<div style="color:${color};margin-bottom:4px">
+      <strong>${a.service_or_category}</strong>: ${fmtUSD(a.spent_usd,4)} of ${fmtUSD(a.budget_usd)} budget
+      — <strong>${a.pct_used}% used</strong> [${a.severity.toUpperCase()}]
+    </div>`;
+  }).join('');
+}
+
+function renderCostBudgets(b) {
+  const items = b.items || [];
+  const rows = items.map(b => `<tr style="border-bottom:1px solid var(--border)">
+    <td style="padding:5px 4px">${b.service || b.category || '—'}</td>
+    <td style="padding:5px 4px;text-align:right">${fmtUSD(b.monthly_budget_usd)}</td>
+    <td style="padding:5px 4px;text-align:right;color:var(--muted)">${b.alert_threshold_pct}%</td>
+  </tr>`).join('');
+  if ($c('cost-budget-rows')) $c('cost-budget-rows').innerHTML = rows || '<tr><td colspan="3" style="text-align:center;padding:20px;color:var(--muted)">No budgets set</td></tr>';
+}
+
+function renderCostEntries(data) {
+  const items = data.items || [];
+  const rows = items.map(e => {
+    const t = new Date(e.recorded_at).toLocaleString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
+    const units = e.units != null ? Number(e.units).toLocaleString() + ' ' + (e.unit_type||'') : '—';
+    return `<tr style="border-bottom:1px solid var(--border)">
+      <td style="padding:4px;color:var(--muted);white-space:nowrap">${t}</td>
+      <td style="padding:4px;font-weight:600">${e.service}</td>
+      <td style="padding:4px;color:var(--muted)">${e.category}</td>
+      <td style="padding:4px;max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${e.description||'—'}</td>
+      <td style="padding:4px;text-align:right;color:var(--muted)">${units}</td>
+      <td style="padding:4px;text-align:right;font-weight:600;color:var(--accent)">${fmtUSD(e.cost_usd,6)}</td>
+    </tr>`;
+  }).join('');
+  if ($c('cost-entry-rows')) $c('cost-entry-rows').innerHTML = rows || '<tr><td colspan="6" style="text-align:center;padding:20px;color:var(--muted)">No API cost entries yet — costs will appear here as the system processes requests</td></tr>';
+}
+
+function renderCostReports(data) {
+  const items = data.items || [];
+  const rows = items.map(r => {
+    const sentAt = r.sent_at ? new Date(r.sent_at).toLocaleString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}) : 'Not sent';
+    return `<tr style="border-bottom:1px solid var(--border)">
+      <td style="padding:5px 4px;font-weight:600">${r.report_period}</td>
+      <td style="padding:5px 4px;color:var(--muted)">${r.report_type}</td>
+      <td style="padding:5px 4px;text-align:right;color:var(--accent)">${fmtUSD(r.total_cost_usd)}</td>
+      <td style="padding:5px 4px;color:var(--muted)">${sentAt}</td>
+    </tr>`;
+  }).join('');
+  if ($c('cost-report-rows')) $c('cost-report-rows').innerHTML = rows || '<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--muted)">No reports sent yet — first report will be sent Monday 9:30 AM UTC</td></tr>';
+}
+
+function showAddBudgetForm() {
+  const f = $c('cost-add-budget-form');
+  if (f) f.style.display = f.style.display === 'none' ? 'block' : 'none';
+}
+
+async function saveBudget() {
+  const service  = ($c('budget-service')?.value || '').trim();
+  const category = ($c('budget-category')?.value || '').trim();
+  const amount   = parseFloat($c('budget-amount')?.value || '0');
+  if (!service && !category) { toast('Enter a service or category', 'error'); return; }
+  if (!amount || amount <= 0) { toast('Enter a valid budget amount', 'error'); return; }
+  try {
+    await costApi('/budgets', { method:'POST', body: JSON.stringify({ service: service||null, category: category||null, monthly_budget_usd: amount }) });
+    toast('Budget saved');
+    showAddBudgetForm();
+    loadCostData();
+  } catch(e) { toast('Failed: ' + e.message, 'error'); }
+}
+
+async function sendCostReport() {
+  try {
+    toast('Generating report and sending to Mark Odom…');
+    const r = await costApi('/reports/send', { method: 'POST', body: JSON.stringify(null) });
+    if (r.ok) toast('Report sent to ' + (r.recipients||[]).join(', '));
+    else toast('Report generated (email not configured yet)', 'success');
+    loadCostData();
+  } catch(e) { toast('Failed: ' + e.message, 'error'); }
 }
 </script>
 

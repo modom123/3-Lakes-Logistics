@@ -60,6 +60,7 @@ from .api import (
     triggers_router,
     webhooks_router,
     onboarding_status_router,
+    cost_tracking_router,
 )
 from .logging_service import get_logger
 from .settings import get_settings
@@ -95,6 +96,8 @@ def _start_scheduler(app: FastAPI) -> None:
             fire_insurance_expiry_alerts,
             fire_onboarding_bond_audit,
             fire_stall_reminders,
+            fire_iebc_budget_check,
+            fire_iebc_weekly_report,
         )
         from .agents.memory import prune_interactions
         from .email.imap_poller import poll_all as poll_all_mailboxes
@@ -125,6 +128,8 @@ def _start_scheduler(app: FastAPI) -> None:
         scheduler.add_job(fire_insurance_expiry_alerts, CronTrigger(hour=6, minute=45), id="insurance_expiry_alerts", replace_existing=True)
         scheduler.add_job(fire_onboarding_bond_audit, CronTrigger(hour=7, minute=45), id="onboarding_bond_audit_daily", replace_existing=True)
         scheduler.add_job(fire_stall_reminders, CronTrigger(hour=10, minute=0), id="stall_reminders_daily", replace_existing=True)
+        scheduler.add_job(fire_iebc_budget_check, CronTrigger(hour=8, minute=45), id="iebc_budget_check_daily", replace_existing=True)
+        scheduler.add_job(fire_iebc_weekly_report, CronTrigger(day_of_week="mon", hour=9, minute=30), id="iebc_weekly_report", replace_existing=True)
 
         scheduler.start()
         app.state.scheduler = scheduler
@@ -207,6 +212,7 @@ def create_app() -> FastAPI:
     app.include_router(stripe_identity_webhook_router, prefix="/api", tags=["stripe-identity-webhook"])
     app.include_router(studio_router,          prefix="/api",              tags=["studio"])
     app.include_router(onboarding_status_router, prefix="/api",           tags=["onboarding-status"])
+    app.include_router(cost_tracking_router,    prefix="/api/costs",      tags=["cost-tracking"])
     app.include_router(health_router,                                      tags=["health"])
 
     _marketing_dir = os.path.normpath(
