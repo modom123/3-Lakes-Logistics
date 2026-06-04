@@ -26,7 +26,7 @@ log = get_logger(__name__)
 FALCON_URL = "https://www.3lakeslogistics.com/driver-pwa/login.html"
 
 
-def _send_falcon_welcome(phone_e164: str, first_name: str, pin: str) -> None:
+def _send_falcon_welcome(phone_e164: str, first_name: str) -> None:
     """Send Falcon onboarding SMS to a newly created driver. Non-fatal on failure."""
     s = get_settings()
     if not (s.twilio_account_sid and s.twilio_auth_token and s.twilio_from_number):
@@ -35,9 +35,7 @@ def _send_falcon_welcome(phone_e164: str, first_name: str, pin: str) -> None:
     body = (
         f"Welcome to 3 Lakes Logistics, {first_name}!\n\n"
         f"Your Falcon driver portal is ready 24/7:\n{FALCON_URL}\n\n"
-        f"Phone: {phone_e164}\n"
-        f"PIN: {pin}\n\n"
-        f"Tap the link and add it to your Home Screen for quick access.\n"
+        f"Tap 'First Login' to set your PIN and get started.\n"
         f"Questions? Reply to this message or call dispatch."
     )
     try:
@@ -324,7 +322,7 @@ class CreateDriverRequest(BaseModel):
     first_name: str
     last_name: str
     phone: str = Field(..., description="10-digit US number or E.164")
-    pin: str    = Field(..., description="4-digit PIN")
+    pin: str | None = Field(default=None, description="4-digit PIN — omit to let the driver set their own on first login")
     driver_code: str | None = None
     cdl_number:  str | None = None
     truck_id:    str | None = None
@@ -332,8 +330,12 @@ class CreateDriverRequest(BaseModel):
 
 @router.post("/create", dependencies=[Depends(require_bearer)])
 async def create_driver(req: CreateDriverRequest):
-    """Admin: create a new driver account (called from Eagle Eye)."""
-    if not req.pin or len(req.pin) != 4 or not req.pin.isdigit():
+    """Admin: create a new driver account (called from Eagle Eye).
+
+    PIN is optional — if omitted, the driver sets their own PIN on first login
+    via POST /api/driver-auth/setup-pin.
+    """
+    if req.pin and (len(req.pin) != 4 or not req.pin.isdigit()):
         raise HTTPException(status_code=400, detail="PIN must be 4 digits")
 
     try:
@@ -341,7 +343,7 @@ async def create_driver(req: CreateDriverRequest):
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-    pin_hash = hash_pin(req.pin)
+    pin_hash = hash_pin(req.pin) if req.pin else None
     driver_code = req.driver_code or f"DRV-{phone_e164[-4:]}"
 
     try:
@@ -362,7 +364,7 @@ async def create_driver(req: CreateDriverRequest):
 
         driver = result.data[0]
 
-        _send_falcon_welcome(phone_e164, req.first_name, req.pin)
+        _send_falcon_welcome(phone_e164, req.first_name)
 
         return {
             "ok": True,
@@ -391,6 +393,63 @@ async def list_drivers(carrier_id: str | None = None, limit: int = 200):
     except Exception as e:
         log.error("List drivers failed: %s", e)
         raise HTTPException(status_code=500, detail="failed to list drivers")
+
+
+class SetupPinRequest(BaseModel):
+    phone: str = Field(..., description="10-digit US number")
+    pin:   str = Field(..., description="New 4-digit PIN")
+
+
+@router.post("/setup-pin")
+async def setup_driver_pin(req: SetupPinRequest):
+    """First-login PIN setup — unauthenticated, only works when pin_hash IS NULL.
+
+    Returns a full session token so the driver lands straight in Falcon.
+    """
+    if not req.pin or len(req.pin) != 4 or not req.pin.isdigit():
+        raise HTTPException(status_code=400, detail="PIN must be 4 digits")
+
+    try:
+        phone_e164 = normalize_phone(req.phone)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    try:
+        result = get_supabase().table("drivers").select(
+            "id, first_name, last_name, carrier_id, pin_hash, status"
+        ).eq("phone_e164", phone_e164).single().execute()
+        driver = result.data
+    except Exception:
+        raise HTTPException(status_code=401, detail="phone number not found")
+
+    if not driver:
+        raise HTTPException(status_code=401, detail="phone number not found")
+
+    if driver.get("pin_hash"):
+        raise HTTPException(status_code=409, detail="PIN already set — use the Sign In form")
+
+    pin_hash = hash_pin(req.pin)
+    get_supabase().table("drivers").update({"pin_hash": pin_hash}).eq("id", driver["id"]).execute()
+
+    token = secrets.token_urlsafe(32)
+    expires_at = datetime.now(timezone.utc) + timedelta(days=30)
+    get_supabase().table("driver_sessions").insert({
+        "driver_id":   driver["id"],
+        "token":       token,
+        "expires_at":  expires_at.isoformat(),
+        "ip_address":  "unknown",
+        "user_agent":  "mobile-app",
+    }).execute()
+
+    log.info("Driver %s set PIN via first-login flow", driver["id"])
+
+    return DriverLoginResponse(
+        token=token,
+        driver_id=driver["id"],
+        driver_name=f"{driver['first_name']} {driver['last_name']}".strip(),
+        carrier_id=driver["carrier_id"],
+        expires_at=expires_at.isoformat(),
+    )
 
 
 @router.delete("/{driver_id}", dependencies=[Depends(require_bearer)])
