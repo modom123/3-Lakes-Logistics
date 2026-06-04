@@ -17,6 +17,8 @@ Trigger map
   daily 07:15 UTC cron      →  fire_naomi()       — lead scoring
   daily 07:30 UTC cron      →  fire_winston()     — carrier health + churn signals
   daily 07:10 UTC cron      →  fire_fmcsa_ingest() — pull 50 new-entrant leads from FMCSA Census
+  every 30 min              →  fire_dat_refresh() — pull fresh available loads from DAT
+  hourly                    →  fire_load_expiry() — expire available loads older than 48 hours
   daily 07:45 UTC cron      →  fire_onboarding_bond_audit() — Bond onboarding pipeline audit
   daily 08:00 UTC cron      →  fire_isabella()    — campaign builder (leads + re-engagement)
   daily 08:15 UTC cron      →  fire_sofia()       — financial reconciliation
@@ -28,6 +30,7 @@ Trigger map
 from __future__ import annotations
 
 import threading
+from datetime import datetime, timezone
 from typing import Any
 from uuid import UUID
 
@@ -408,6 +411,88 @@ def fire_stall_reminders() -> None:
             log.info("fire_stall_reminders sent=%s errors=%s", result.get("sent"), result.get("errors"))
         except Exception as exc:  # noqa: BLE001
             log.error("fire_stall_reminders failed: %s", exc)
+    _bg(_run)
+
+
+def fire_dat_refresh() -> None:
+    """Every-30-min job — pull fresh available loads from DAT into the loads table."""
+    def _run():
+        try:
+            import httpx  # noqa: PLC0415
+            from .settings import get_settings  # noqa: PLC0415
+            from .supabase_client import get_supabase  # noqa: PLC0415
+            from .utils.load_transformer import transform_dat_load  # noqa: PLC0415
+
+            s = get_settings()
+            if not s.dat_client_id or not s.dat_client_secret:
+                log.info("fire_dat_refresh: DAT credentials not set, skipping")
+                return
+
+            # Auth
+            tok_r = httpx.post(
+                "https://api.dat.com/v1/token",
+                auth=(s.dat_client_id, s.dat_client_secret),
+                data={"grant_type": "client_credentials"},
+                timeout=20,
+            )
+            if tok_r.status_code != 200:
+                log.error("fire_dat_refresh: auth failed %s", tok_r.text[:120])
+                return
+            token = tok_r.json().get("access_token")
+
+            # Fetch
+            loads_r = httpx.get(
+                "https://api.dat.com/v1/loads",
+                headers={"Authorization": f"Bearer {token}"},
+                params={"limit": 100, "status": "available"},
+                timeout=30,
+            )
+            if loads_r.status_code != 200:
+                log.error("fire_dat_refresh: loads query failed %s", loads_r.text[:120])
+                return
+
+            dat_loads = loads_r.json().get("loads", [])
+            db = get_supabase()
+            imported = 0
+
+            for dat_load in dat_loads:
+                try:
+                    row = transform_dat_load(dat_load)
+                    existing = db.table("loads").select("id").eq("source_id", row["source_id"]).execute()
+                    if existing.data:
+                        continue
+                    db.table("loads").insert(row).execute()
+                    imported += 1
+                except Exception as exc:  # noqa: BLE001
+                    log.error("fire_dat_refresh: load import error: %s", exc)
+
+            log.info("fire_dat_refresh done imported=%d total_fetched=%d", imported, len(dat_loads))
+        except Exception as exc:  # noqa: BLE001
+            log.error("fire_dat_refresh failed: %s", exc)
+    _bg(_run)
+
+
+def fire_load_expiry() -> None:
+    """Hourly job — marks available loads older than 48 hours as expired."""
+    def _run():
+        try:
+            from datetime import timedelta  # noqa: PLC0415
+            from .supabase_client import get_supabase  # noqa: PLC0415
+
+            cutoff = (datetime.now(timezone.utc) - timedelta(hours=48)).isoformat()
+            result = (
+                get_supabase()
+                .table("loads")
+                .update({"status": "expired"})
+                .eq("status", "available")
+                .lt("created_at", cutoff)
+                .execute()
+            )
+            expired = len(result.data or [])
+            if expired:
+                log.info("fire_load_expiry expired=%d loads older than 48h", expired)
+        except Exception as exc:  # noqa: BLE001
+            log.error("fire_load_expiry failed: %s", exc)
     _bg(_run)
 
 

@@ -550,21 +550,15 @@ select.form-input{appearance:none;background-image:url("data:image/svg+xml,%3Csv
 
       <!-- ════ LOAD BOARD ════ -->
       <div class="view" id="view-loadboard">
-        <div class="card" style="margin-bottom:16px;">
-          <div class="card-hd">
-            <div class="card-title">Available Loads</div>
-            <button class="btn btn-ghost btn-sm" onclick="loadBoard()">↻ Refresh</button>
+        <div style="background:linear-gradient(135deg,#0B1F3A,#1a3a6b);border-radius:12px;padding:16px 20px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;">
+          <div>
+            <div style="color:#C9A84C;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px;">Your Picks</div>
+            <div style="color:#fff;font-size:17px;font-weight:700;">Top 3 Loads For You</div>
+            <div style="color:rgba(255,255,255,.55);font-size:12px;margin-top:2px;">Matched to your rig · best rates first</div>
           </div>
-          <div class="chips" id="lb-chips">
-            <div class="chip active" data-eq="all" onclick="lbChip(this)">All</div>
-            <div class="chip" data-eq="Van" onclick="lbChip(this)">Van</div>
-            <div class="chip" data-eq="Flatbed" onclick="lbChip(this)">Flatbed</div>
-            <div class="chip" data-eq="Reefer" onclick="lbChip(this)">Reefer</div>
-            <div class="chip" data-eq="Step Deck" onclick="lbChip(this)">Step Deck</div>
-            <div class="chip" data-eq="Tanker" onclick="lbChip(this)">Tanker</div>
-          </div>
-          <div id="lb-body"><div class="loading-state"><div class="spinner"></div> Loading loads…</div></div>
+          <button class="btn btn-ghost btn-sm" style="color:#C9A84C;border-color:rgba(201,168,76,.3);" onclick="loadBoard()">↻ Refresh</button>
         </div>
+        <div id="lb-body"><div class="loading-state"><div class="spinner"></div> Finding your best loads…</div></div>
       </div>
 
       <!-- ════ SCHEDULE ════ -->
@@ -1505,49 +1499,44 @@ async function saveCheckNotes() {
 // ── LOAD BOARD ────────────────────────────────────────────────────
 async function loadBoard() {
   const el = document.getElementById('lb-body');
-  el.innerHTML = '<div class="loading-state"><div class="spinner"></div> Loading available loads…</div>';
+  el.innerHTML = '<div class="loading-state"><div class="spinner"></div> Finding your best loads…</div>';
   try {
-    const data = await fetch(API+'/api/fleet/public/loads').then(r=>r.json());
-    _allLoads = Array.isArray(data) ? data : (data.items||data.loads||[]);
-    renderBoard();
+    const data = await api('GET', '/api/driver/available-loads');
+    const loads = data.loads || [];
+    if (!loads.length) {
+      el.innerHTML = `<div class="empty"><div class="empty-icon">📭</div><h3>No loads right now</h3><p>Check back soon — new loads refresh every 30 minutes.</p></div>`;
+      return;
+    }
+    el.innerHTML = loads.map((l, i) => {
+      const ratePerMile = l.rate_per_mile
+        ? `$${Number(l.rate_per_mile).toFixed(2)}/mi`
+        : (l.miles && l.rate_total ? `$${(l.rate_total/l.miles).toFixed(2)}/mi` : '');
+      return `
+      <div class="lb-item" style="position:relative;">
+        ${i===0?'<div style="position:absolute;top:-1px;right:12px;background:#C9A84C;color:#fff;font-size:10px;font-weight:700;padding:3px 8px;border-radius:0 0 6px 6px;letter-spacing:.05em;">TOP PICK</div>':''}
+        <div class="lb-hd">
+          <div>
+            <div class="lb-route">${l.origin_city||'?'}, ${l.origin_state||''} → ${l.dest_city||'?'}, ${l.dest_state||''}</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:3px;">#${l.load_number||l.id?.slice(0,8).toUpperCase()}</div>
+          </div>
+          <div>
+            <div class="lb-rate">$${Number(l.rate_total||0).toLocaleString()}</div>
+            ${ratePerMile?`<div style="font-size:11px;color:var(--green);text-align:right;font-weight:600;">${ratePerMile}</div>`:''}
+          </div>
+        </div>
+        <div class="lb-meta">
+          <span class="tag eq">🚛 ${l.equipment_type||'Truck'}</span>
+          ${l.miles?`<span class="tag">📏 ${Number(l.miles).toLocaleString()} mi</span>`:''}
+          ${l.weight?`<span class="tag">⚖️ ${Math.round(l.weight/1000)}k lbs</span>`:''}
+          ${l.pickup_at?`<span class="tag">📅 ${l.pickup_at.slice(0,10)}</span>`:''}
+          ${l.commodity?`<span class="tag">${l.commodity}</span>`:''}
+        </div>
+        <button class="btn btn-gold btn-full" style="margin-top:12px;" onclick="openLoadReq(${JSON.stringify(l).replace(/"/g,'&quot;')})">Claim This Load →</button>
+      </div>`;
+    }).join('');
   } catch(e) {
-    el.innerHTML = `<div class="empty"><div class="empty-icon">📭</div><h3>Could not load board</h3><p>${e.message}</p></div>`;
+    el.innerHTML = `<div class="empty"><div class="empty-icon">📭</div><h3>Could not fetch loads</h3><p>${e.message}</p></div>`;
   }
-}
-
-function lbChip(el) {
-  document.querySelectorAll('#lb-chips .chip').forEach(c=>c.classList.remove('active'));
-  el.classList.add('active');
-  _lbFilter = el.dataset.eq;
-  renderBoard();
-}
-
-function renderBoard() {
-  const el = document.getElementById('lb-body');
-  let loads = _allLoads;
-  if (_lbFilter!=='all') loads = loads.filter(l=>(l.equipment_type||'').toLowerCase().includes(_lbFilter.toLowerCase()));
-  if (!loads.length) {
-    el.innerHTML = '<div class="empty"><div class="empty-icon">📭</div><h3>No loads found</h3><p>Try a different filter or check back soon.</p></div>';
-    return;
-  }
-  el.innerHTML = loads.map(l=>`
-  <div class="lb-item">
-    <div class="lb-hd">
-      <div>
-        <div class="lb-route">${l.origin_city||'?'}, ${l.origin_state||''} → ${l.dest_city||l.destination_city||'?'}, ${l.dest_state||l.destination_state||''}</div>
-        <div style="font-size:11px;color:var(--muted);margin-top:3px;">#${l.load_number||l.id?.slice(0,8).toUpperCase()}</div>
-      </div>
-      <div class="lb-rate">$${Number(l.rate||0).toLocaleString()}</div>
-    </div>
-    <div class="lb-meta">
-      <span class="tag eq">🚛 ${l.equipment_type||'Truck'}</span>
-      ${l.miles?`<span class="tag">📏 ${l.miles} mi</span>`:''}
-      ${l.weight?`<span class="tag">⚖️ ${Math.round(l.weight/1000)}k lbs</span>`:''}
-      ${l.pickup_date?`<span class="tag">📅 ${l.pickup_date?.slice(0,10)}</span>`:''}
-      ${l.shipper_name?`<span class="tag">${l.shipper_name}</span>`:''}
-    </div>
-    <button class="btn btn-navy" onclick="openLoadReq(${JSON.stringify(l).replace(/"/g,'&quot;')})">Request This Load →</button>
-  </div>`).join('');
 }
 
 function openLoadReq(load) {

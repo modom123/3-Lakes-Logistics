@@ -452,6 +452,61 @@ async def update_driver_load(load_id: str, payload: dict, session: DriverSession
 
 
 # ────────────────────────────────────────────────────────────────────────────
+# AVAILABLE LOADS — curated picks the driver can claim
+# ────────────────────────────────────────────────────────────────────────────
+
+@router.get("/available-loads")
+async def get_available_loads(session: DriverSession):
+    """Return the top 3 claimable loads for this driver.
+
+    Filters by the driver's equipment type when known.
+    Excludes loads the driver has already requested.
+    Ordered by rate (highest first).
+    """
+    driver_id = session["driver_id"]
+    db = get_supabase()
+
+    try:
+        driver_row = db.table("drivers").select(
+            "id, equipment_type"
+        ).eq("id", driver_id).single().execute()
+        equipment_type = (driver_row.data or {}).get("equipment_type")
+    except Exception:
+        equipment_type = None
+
+    # IDs of loads this driver already requested
+    try:
+        pending = db.table("load_requests").select("load_id").eq(
+            "driver_id", driver_id
+        ).in_("status", ["pending", "approved"]).execute()
+        already_requested = {r["load_id"] for r in (pending.data or [])}
+    except Exception:
+        already_requested = set()
+
+    try:
+        q = (
+            db.table("loads")
+            .select(
+                "id, load_number, origin_city, origin_state, dest_city, dest_state,"
+                " rate_total, rate_per_mile, miles, weight, equipment_type,"
+                " pickup_at, delivery_at, shipper_name, commodity"
+            )
+            .eq("status", "available")
+            .order("rate_total", desc=True)
+            .limit(20)
+        )
+        if equipment_type:
+            q = q.ilike("equipment_type", f"%{equipment_type}%")
+
+        res = q.execute()
+        loads = [l for l in (res.data or []) if l["id"] not in already_requested][:3]
+        return {"loads": loads, "count": len(loads)}
+    except Exception as e:
+        log.error("get_available_loads failed driver=%s: %s", driver_id, e)
+        return {"loads": [], "count": 0}
+
+
+# ────────────────────────────────────────────────────────────────────────────
 # LOAD REQUEST — driver requests to pick up an available load
 # ────────────────────────────────────────────────────────────────────────────
 
