@@ -790,6 +790,7 @@ select.form-input option{background:var(--surface);}
     <div class="sb-item" onclick="nav('revenue')"><span class="sb-icon">💰</span> Revenue Tracker</div>
     <div class="sb-item" onclick="nav('providers')"><span class="sb-icon">🔗</span> Providers</div>
     <div class="sb-item" onclick="nav('costs')"><span class="sb-icon">📉</span> Cost Tracking <span class="sb-badge" id="cost-alert-badge" style="display:none;background:#ef4444;color:#fff">!</span></div>
+    <div class="sb-item" onclick="nav('tech-monitor')"><span class="sb-icon">🔬</span> Tech Monitor <span class="sb-badge" id="tech-alert-badge" style="display:none;background:#ef4444;color:#fff">!</span></div>
   </div>
   <div class="sb-section">
     <div class="sb-label">Daily Ops</div>
@@ -1602,6 +1603,126 @@ select.form-input option{background:var(--surface);}
       </div>
     </div>
     <!-- END COST TRACKING -->
+
+    <!-- TECH MONITOR — Marcus Reid CTO + Jamie Park VP DevOps -->
+    <div class="page" id="page-tech-monitor">
+      <div class="page-hdr">
+        <div class="page-hdr-l">
+          <div class="chip">IEBC</div>
+          <h2>Tech Monitor</h2>
+          <span style="font-size:12px;color:var(--muted);margin-left:10px">Marcus Reid (CTO) &amp; Jamie Park (VP DevOps)</span>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button class="btn-out" onclick="loadTechMonitor()" style="font-size:12px">↺ Refresh</button>
+        </div>
+      </div>
+
+      <!-- Status tiles -->
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:16px">
+        <div class="card" style="text-align:center;padding:14px">
+          <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Platform Status</div>
+          <div style="font-size:22px;font-weight:700" id="tm-platform-status">—</div>
+        </div>
+        <div class="card" style="text-align:center;padding:14px">
+          <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">APIs Up</div>
+          <div style="font-size:26px;font-weight:700;color:#22c55e" id="tm-apis-up">—</div>
+        </div>
+        <div class="card" style="text-align:center;padding:14px">
+          <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Criticals</div>
+          <div style="font-size:26px;font-weight:700;color:#ef4444" id="tm-criticals">—</div>
+        </div>
+        <div class="card" style="text-align:center;padding:14px">
+          <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Env Coverage</div>
+          <div style="font-size:26px;font-weight:700;color:#f59e0b" id="tm-env-pct">—</div>
+        </div>
+        <div class="card" style="text-align:center;padding:14px">
+          <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Integrity Score</div>
+          <div style="font-size:26px;font-weight:700;color:#8b5cf6" id="tm-integrity-score">—</div>
+        </div>
+        <div class="card" style="text-align:center;padding:14px">
+          <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Upgrade Proposals</div>
+          <div style="font-size:26px;font-weight:700;color:#06b6d4" id="tm-upgrades">—</div>
+        </div>
+      </div>
+
+      <!-- Alert banner -->
+      <div id="tm-alert-banner" style="display:none;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:14px 18px;margin-bottom:18px">
+        <div style="font-weight:600;color:#b91c1c;margin-bottom:8px">⚠ Platform Issues Detected</div>
+        <div id="tm-alert-list"></div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+        <!-- API Availability -->
+        <div class="card">
+          <div class="card-hd"><div class="card-title">API Availability (Jamie Park — Latest Run)</div></div>
+          <div style="padding:4px 0" id="tm-api-rows-wrap">
+            <table style="width:100%;border-collapse:collapse;font-size:13px">
+              <thead><tr style="background:var(--surface-2)">
+                <th style="padding:8px;text-align:left">Service</th>
+                <th style="padding:8px;text-align:center">Status</th>
+                <th style="padding:8px;text-align:right">Latency</th>
+              </tr></thead>
+              <tbody id="tm-api-rows"><tr><td colspan="3" style="text-align:center;padding:16px;color:var(--muted)">Run Jamie Park agent to populate</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Stack Health by Category -->
+        <div class="card">
+          <div class="card-hd"><div class="card-title">Tech Stack Health (Marcus Reid — Latest Run)</div></div>
+          <div id="tm-stack-rows" style="padding:8px 0">
+            <div style="text-align:center;padding:20px;color:var(--muted)">Run Marcus Reid agent to populate</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+        <!-- Upgrade Proposals -->
+        <div class="card">
+          <div class="card-hd"><div class="card-title">Upgrade Proposals (Marcus Reid)</div></div>
+          <table style="width:100%;border-collapse:collapse;font-size:12px">
+            <thead><tr style="background:var(--surface-2)">
+              <th style="padding:8px;text-align:left">Service</th>
+              <th style="padding:8px;text-align:left">Proposal</th>
+              <th style="padding:8px;text-align:center">Priority</th>
+            </tr></thead>
+            <tbody id="tm-upgrade-rows"><tr><td colspan="3" style="text-align:center;padding:16px;color:var(--muted)">No proposals yet</td></tr></tbody>
+          </table>
+        </div>
+
+        <!-- Risk Flags -->
+        <div class="card">
+          <div class="card-hd"><div class="card-title">Risk Flags &amp; Cost Spikes</div></div>
+          <div id="tm-risk-rows" style="padding:8px">
+            <div style="text-align:center;padding:20px;color:var(--muted)">No risk flags</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Env Coverage -->
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-hd">
+          <div class="card-title">Environment Variable Coverage (Jamie Park)</div>
+          <div id="tm-env-summary" style="font-size:12px;color:var(--muted)"></div>
+        </div>
+        <div id="tm-env-missing" style="padding:8px">
+          <div style="text-align:center;padding:16px;color:var(--muted)">Run Jamie Park agent to see env audit</div>
+        </div>
+      </div>
+
+      <!-- Run Agents -->
+      <div class="card">
+        <div class="card-hd"><div class="card-title">Run Agents Manually</div></div>
+        <div style="display:flex;gap:10px;padding:12px 0;flex-wrap:wrap">
+          <button class="btn-navy" onclick="runTechAgent('marcus_reid',{})">▶ Run Marcus Reid (CTO Review)</button>
+          <button class="btn-navy" onclick="runTechAgent('jamie_park',{})">▶ Run Jamie Park (Platform Check)</button>
+          <button class="btn-out" onclick="runTechAgent('marcus_reid',{report:true})">📋 Marcus Reid Report Only</button>
+          <button class="btn-out" onclick="runTechAgent('jamie_park',{scope:'api_ping'})">🔌 Jamie — API Ping Only</button>
+        </div>
+        <div id="tm-run-status" style="font-size:13px;color:var(--muted);padding:0 0 8px"></div>
+      </div>
+    </div>
+    <!-- END TECH MONITOR -->
 
     <!-- CHECKLIST -->
     <div class="page" id="page-checklist">
@@ -3734,7 +3855,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 let allCarriers=[], allLoads=[], allInvoices=[], currentInvFilter='all', loadCounter=3849;
 
-const pageNames={dashboard:'Dashboard',dispatch:'Dispatch Board','fleet-map':'Fleet Map',carriers:'Carriers',drivers:'Drivers',loads:'Load Manager',invoices:'Invoices & Billing',compliance:'DOT Compliance',ifta:'IFTA / Permits',insurance:'Insurance',revenue:'Revenue Tracker',providers:'Compliance Providers',checklist:'Daily Checklist',notes:'Dispatcher Notes',reports:'Team Reports','exec-command':'Exec Command',agents:'AI Agents',founders:'Founders Program',crm:'Lead CRM',leads:'Lead Pipeline',execution:'Execution Engine',factoring:'Factoring',email:'Email Center',vault:'Document Vault',clm:'CLM Scanner',ledger:'Atomic Ledger',agreements:'Agreements','lf-map':'Light Fleet Live Map','lf-nemt':'NEMT — Medical Transport','lf-medical':'Medical Courier','lf-executive':'Executive Transport','lf-courier':'Courier & Last-Mile','lf-gig':'Gig Fleet Management','mark-office':'Mark Odom — CEO Office','ccg-office':'CC Gulley Office','trading-desk':'Trading Desk','broker-division':'N. American Trading — Hub','broker-shippers':'Shipper Pipeline','broker-docs':'Docs & Invoices','trading-desk':'Trading Desk',costs:'Cost Tracking — IEBC'};
+const pageNames={dashboard:'Dashboard',dispatch:'Dispatch Board','fleet-map':'Fleet Map',carriers:'Carriers',drivers:'Drivers',loads:'Load Manager',invoices:'Invoices & Billing',compliance:'DOT Compliance',ifta:'IFTA / Permits',insurance:'Insurance',revenue:'Revenue Tracker',providers:'Compliance Providers',checklist:'Daily Checklist',notes:'Dispatcher Notes',reports:'Team Reports','exec-command':'Exec Command',agents:'AI Agents',founders:'Founders Program',crm:'Lead CRM',leads:'Lead Pipeline',execution:'Execution Engine',factoring:'Factoring',email:'Email Center',vault:'Document Vault',clm:'CLM Scanner',ledger:'Atomic Ledger',agreements:'Agreements','lf-map':'Light Fleet Live Map','lf-nemt':'NEMT — Medical Transport','lf-medical':'Medical Courier','lf-executive':'Executive Transport','lf-courier':'Courier & Last-Mile','lf-gig':'Gig Fleet Management','mark-office':'Mark Odom — CEO Office','ccg-office':'CC Gulley Office','trading-desk':'Trading Desk','broker-division':'N. American Trading — Hub','broker-shippers':'Shipper Pipeline','broker-docs':'Docs & Invoices','trading-desk':'Trading Desk',costs:'Cost Tracking — IEBC','tech-monitor':'Tech Monitor — Marcus Reid & Jamie Park'};
 
 // ── 3 Lakes Logistics Backend API (FastAPI) ──
 const API_BASE = (window.__3LL_API_BASE || 'https://three-lakes-logistics-api.onrender.com').replace(/\/$/,'');
@@ -3873,6 +3994,7 @@ function nav(id){
   if(id==='execution'){loadExecutionDomains();loadExecutionSteps();}
   if(id==='email'&&typeof mailInit==='function'){mailInit();}
   if(id==='costs'){loadCostData();}
+  if(id==='tech-monitor'){loadTechMonitor();}
 }
 
 function openModal(id){
@@ -18617,6 +18739,186 @@ async function downloadCostCSV() {
   const a = document.createElement('a');
   a.href = url; a.download = '3ll-costs.csv'; a.click();
   URL.revokeObjectURL(url);
+}
+
+// ── TECH MONITOR — Marcus Reid & Jamie Park ──────────────────────────────────
+
+function tmApi(path, opts={}) {
+  const token = localStorage.getItem('3ll_token') || API_TOKEN || '';
+  return fetch(API_BASE + '/api/agents' + path, {
+    headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+    ...opts,
+  }).then(r => r.ok ? r.json() : Promise.reject(r.status));
+}
+
+function tmMemApi(agent, key) {
+  const token = localStorage.getItem('3ll_token') || API_TOKEN || '';
+  return fetch(API_BASE + `/api/memory/${agent}/${key}`, {
+    headers: { 'Authorization': 'Bearer ' + token },
+  }).then(r => r.ok ? r.json() : null).catch(() => null);
+}
+
+async function loadTechMonitor() {
+  const [jamie, marcus] = await Promise.all([
+    tmMemApi('jamie_park', 'platform_health'),
+    tmMemApi('marcus_reid', 'last_tech_review'),
+  ]);
+
+  // Platform status tiles
+  const status = jamie?.value?.overall_status || 'unknown';
+  const statusColors = { healthy: '#22c55e', degraded: '#f59e0b', critical: '#ef4444', unknown: '#6b7280' };
+  const $ps = document.getElementById('tm-platform-status');
+  if ($ps) { $ps.textContent = status.toUpperCase(); $ps.style.color = statusColors[status] || '#6b7280'; }
+
+  const apiList = jamie?.value?.api_availability || [];
+  const upCount = apiList.filter(s => s.status === 'up').length;
+  const el = id => document.getElementById(id);
+  if (el('tm-apis-up')) el('tm-apis-up').textContent = apiList.length ? `${upCount}/${apiList.length}` : '—';
+  if (el('tm-criticals')) el('tm-criticals').textContent = jamie?.value?.critical_count ?? '—';
+
+  const envCov = jamie?.value?.env_coverage;
+  if (el('tm-env-pct')) el('tm-env-pct').textContent = envCov ? `${envCov.coverage_pct}%` : '—';
+
+  const integrity = marcus?.value?.system_integrity_score;
+  if (el('tm-integrity-score')) {
+    el('tm-integrity-score').textContent = integrity != null ? integrity : '—';
+    if (integrity != null) el('tm-integrity-score').style.color = integrity >= 80 ? '#22c55e' : integrity >= 60 ? '#f59e0b' : '#ef4444';
+  }
+  const proposals = marcus?.value?.upgrade_proposals || [];
+  if (el('tm-upgrades')) el('tm-upgrades').textContent = proposals.length;
+
+  // Alert banner
+  const criticals = jamie?.value?.critical_count || 0;
+  const warnings = jamie?.value?.warning_count || 0;
+  const banner = el('tm-alert-banner');
+  const alertList = el('tm-alert-list');
+  if (banner && alertList) {
+    const apiDown = (jamie?.value?.api_down || []);
+    const spikes = (jamie?.value?.cost_spikes || []);
+    if (criticals > 0 || warnings > 0) {
+      banner.style.display = 'block';
+      let items = '';
+      apiDown.forEach(s => items += `<div>🔴 <b>${s.service || s}</b> is <b>down/error</b></div>`);
+      spikes.forEach(s => items += `<div>💸 Cost spike: <b>${s.service}</b> $${s.actual_usd} (threshold $${s.threshold_usd})</div>`);
+      alertList.innerHTML = items || 'Platform issues detected — check API table for details.';
+      const badge = el('tech-alert-badge');
+      if (badge) { badge.style.display = 'inline-block'; badge.textContent = criticals + warnings; }
+    } else {
+      banner.style.display = 'none';
+    }
+  }
+
+  // API availability table
+  const apiRows = el('tm-api-rows');
+  if (apiRows) {
+    if (!apiList.length) {
+      apiRows.innerHTML = '<tr><td colspan="3" style="text-align:center;padding:16px;color:var(--muted)">Run Jamie Park agent to populate</td></tr>';
+    } else {
+      const statusDot = s => ({ up: '🟢', degraded: '🟡', timeout: '🟠', error: '🔴', no_key: '⚪', unknown: '⚫' }[s] || '⚫');
+      apiRows.innerHTML = apiList.map(s =>
+        `<tr style="border-top:1px solid var(--border)">
+          <td style="padding:8px">${s.service}</td>
+          <td style="padding:8px;text-align:center">${statusDot(s.status)} ${s.status}</td>
+          <td style="padding:8px;text-align:right;color:var(--muted)">${s.latency_ms != null ? s.latency_ms + 'ms' : '—'}</td>
+        </tr>`
+      ).join('');
+    }
+  }
+
+  // Stack health by category
+  const stackRows = el('tm-stack-rows');
+  const stackByCat = marcus?.value?.stack_by_category || {};
+  if (stackRows) {
+    if (!Object.keys(stackByCat).length) {
+      stackRows.innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted)">Run Marcus Reid agent to populate</div>';
+    } else {
+      stackRows.innerHTML = Object.entries(stackByCat).map(([cat, info]) => {
+        const score = info.score ?? 0;
+        const bar = `<div style="height:6px;background:var(--border);border-radius:3px;margin-top:4px">
+          <div style="height:6px;width:${score}%;background:${score>=80?'#22c55e':score>=60?'#f59e0b':'#ef4444'};border-radius:3px"></div></div>`;
+        return `<div style="margin-bottom:10px;padding:0 8px">
+          <div style="display:flex;justify-content:space-between;font-size:13px">
+            <span>${cat.replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase())}</span>
+            <span style="font-weight:600">${score}/100</span>
+          </div>${bar}
+        </div>`;
+      }).join('');
+    }
+  }
+
+  // Upgrade proposals
+  const upgradeRows = el('tm-upgrade-rows');
+  if (upgradeRows) {
+    if (!proposals.length) {
+      upgradeRows.innerHTML = '<tr><td colspan="3" style="text-align:center;padding:16px;color:var(--muted)">No proposals yet</td></tr>';
+    } else {
+      const prioColor = p => ({ high: '#ef4444', medium: '#f59e0b', low: '#22c55e' }[p] || '#6b7280');
+      upgradeRows.innerHTML = proposals.slice(0, 8).map(p =>
+        `<tr style="border-top:1px solid var(--border)">
+          <td style="padding:8px;font-weight:600">${p.service || '—'}</td>
+          <td style="padding:8px;color:var(--muted)">${p.proposal || p.reason || '—'}</td>
+          <td style="padding:8px;text-align:center;color:${prioColor(p.priority)}">${(p.priority||'—').toUpperCase()}</td>
+        </tr>`
+      ).join('');
+    }
+  }
+
+  // Risk flags + cost spikes
+  const riskRows = el('tm-risk-rows');
+  const riskFlags = marcus?.value?.risk_flags || [];
+  const costSpikes = jamie?.value?.cost_spikes || [];
+  if (riskRows) {
+    if (!riskFlags.length && !costSpikes.length) {
+      riskRows.innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted)">No risk flags or cost spikes detected</div>';
+    } else {
+      let html = '';
+      riskFlags.forEach(r => {
+        html += `<div style="padding:8px;border-bottom:1px solid var(--border)">
+          <span style="color:#ef4444;font-weight:600">⚠ Risk:</span> ${r.flag || r}</div>`;
+      });
+      costSpikes.forEach(s => {
+        html += `<div style="padding:8px;border-bottom:1px solid var(--border)">
+          <span style="color:#f59e0b;font-weight:600">💸 Cost Spike:</span>
+          ${s.service} — $${s.actual_usd} vs $${s.threshold_usd} threshold (+${s.over_by_pct}%)</div>`;
+      });
+      riskRows.innerHTML = html;
+    }
+  }
+
+  // Env coverage
+  if (envCov) {
+    const envSum = el('tm-env-summary');
+    if (envSum) envSum.textContent = `${envCov.present}/${envCov.total} configured`;
+    const envMissing = el('tm-env-missing');
+    if (envMissing && envCov.missing_vars?.length) {
+      envMissing.innerHTML = `<div style="display:flex;flex-wrap:wrap;gap:6px;padding:8px 0">` +
+        envCov.missing_vars.map(v =>
+          `<span style="background:#fef2f2;border:1px solid #fecaca;color:#b91c1c;padding:3px 8px;border-radius:4px;font-size:12px">${v.var}</span>`
+        ).join('') + `</div>`;
+    } else if (envMissing) {
+      envMissing.innerHTML = '<div style="padding:8px;color:#22c55e">✓ All required environment variables configured</div>';
+    }
+  }
+}
+
+async function runTechAgent(agentName, payload) {
+  const statusEl = document.getElementById('tm-run-status');
+  if (statusEl) statusEl.textContent = `Running ${agentName}…`;
+  try {
+    const token = localStorage.getItem('3ll_token') || API_TOKEN || '';
+    const r = await fetch(API_BASE + `/api/agents/${agentName}/run`, {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!r.ok) throw new Error(r.status);
+    const data = await r.json();
+    if (statusEl) statusEl.textContent = `✓ ${agentName} completed — refreshing data…`;
+    setTimeout(() => loadTechMonitor(), 1500);
+  } catch(e) {
+    if (statusEl) statusEl.textContent = `✗ ${agentName} failed: ${e.message}`;
+    toast(`${agentName} run failed`, 'error');
+  }
 }
 </script>
 

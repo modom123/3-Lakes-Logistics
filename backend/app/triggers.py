@@ -440,6 +440,38 @@ def fire_iebc_weekly_report() -> None:
     _bg(_run)
 
 
+def fire_marcus_reid() -> None:
+    """Friday 06:00 UTC — CTO tech stack review, upgrade proposals, system integrity score."""
+    def _run():
+        try:
+            from .agents.marcus_reid import run as marcus_run  # noqa: PLC0415
+            log.info("weekly_agent: marcus_reid starting")
+            result = marcus_run({})
+            log.info(
+                "weekly_agent: marcus_reid done integrity=%s proposals=%s",
+                result.get("system_integrity_score"), len(result.get("upgrade_proposals", [])),
+            )
+        except Exception as exc:  # noqa: BLE001
+            log.error("weekly_agent: marcus_reid failed: %s", exc)
+    _bg(_run)
+
+
+def fire_jamie_park() -> None:
+    """Daily 07:50 UTC — VP DevOps platform health check (API pings, env audit, cost spikes)."""
+    def _run():
+        try:
+            from .agents.jamie_park import run as jamie_run  # noqa: PLC0415
+            log.info("daily_agent: jamie_park starting")
+            result = jamie_run({})
+            log.info(
+                "daily_agent: jamie_park done status=%s critical=%s warn=%s",
+                result.get("overall_status"), result.get("critical_count"), result.get("warning_count"),
+            )
+        except Exception as exc:  # noqa: BLE001
+            log.error("daily_agent: jamie_park failed: %s", exc)
+    _bg(_run)
+
+
 def fire_vault_scan(doc_id: str) -> None:
     """Trigger background AI extraction for a vault document.
 

@@ -10,8 +10,10 @@ from . import (
     cc_gulley,       # Chief Strategy Officer — 30/60/90-day strategic roadmap
     echo,            # SMS driver support
     isabella,        # omnichannel outreach campaign builder
+    jamie_park,      # IEBC VP DevOps — platform health, API pings, infra limits
     james_bond,      # IEBC Consultant — tech audits, gap analysis, directives
     katerina,        # SLA / process automation auditor
+    marcus_reid,     # IEBC CTO — tech stack review, upgrade proposals
     mark_odom,       # CEO Commander — daily brief, tier-3 decisions
     motive_webhook,  # ELD webhook fan-in
     naomi,           # predictive lead scoring & targeting
@@ -35,8 +37,8 @@ from . import (
 
 __all__ = [
     "alexander", "atlas", "audit", "beacon", "bond_courier", "cc_gulley",
-    "echo", "isabella", "james_bond", "katerina", "mark_odom", "motive_webhook",
-    "naomi", "nova", "orbit", "penny", "prompts", "pulse", "router", "scout",
-    "settler", "shield", "signal", "sofia", "sonny", "technical_team",
-    "vance", "victoria", "winston",
+    "echo", "isabella", "jamie_park", "james_bond", "katerina", "marcus_reid",
+    "mark_odom", "motive_webhook", "naomi", "nova", "orbit", "penny", "prompts",
+    "pulse", "router", "scout", "settler", "shield", "signal", "sofia", "sonny",
+    "technical_team", "vance", "victoria", "winston",
 ]

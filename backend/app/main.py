@@ -98,6 +98,8 @@ def _start_scheduler(app: FastAPI) -> None:
             fire_stall_reminders,
             fire_iebc_budget_check,
             fire_iebc_weekly_report,
+            fire_marcus_reid,
+            fire_jamie_park,
         )
         from .agents.memory import prune_interactions
         from .email.imap_poller import poll_all as poll_all_mailboxes
@@ -130,6 +132,8 @@ def _start_scheduler(app: FastAPI) -> None:
         scheduler.add_job(fire_stall_reminders, CronTrigger(hour=10, minute=0), id="stall_reminders_daily", replace_existing=True)
         scheduler.add_job(fire_iebc_budget_check, CronTrigger(hour=8, minute=45), id="iebc_budget_check_daily", replace_existing=True)
         scheduler.add_job(fire_iebc_weekly_report, CronTrigger(day_of_week="mon", hour=9, minute=30), id="iebc_weekly_report", replace_existing=True)
+        scheduler.add_job(fire_jamie_park, CronTrigger(hour=7, minute=50), id="jamie_park_daily", replace_existing=True)
+        scheduler.add_job(fire_marcus_reid, CronTrigger(day_of_week="fri", hour=6, minute=0), id="marcus_reid_weekly", replace_existing=True)
 
         scheduler.start()
         app.state.scheduler = scheduler
