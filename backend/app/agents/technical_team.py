@@ -121,7 +121,7 @@ def _classify(test_name: str, domain: str, error: str) -> str:
         return "rate_limit"
     if any(k in txt for k in ("401", "403", "unauthorized", "auth guard", "forbidden")):
         return "auth"
-    if any(k in txt for k in ("adobe", "twilio", "dat board", "email parse", "integration")):
+    if any(k in txt for k in ("twilio", "dat board", "email parse", "integration")):
         return "integration"
     if any(k in txt for k in ("422", "env", "environment", "render env", "not configured")):
         return "config"

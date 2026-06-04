@@ -27,7 +27,6 @@ _KNOWN_SUBSCRIPTIONS: list[dict] = [
     {"service": "twilio",    "plan_name": "Pay-as-you-go","amount_usd": 0.00,   "billing_cycle": "usage"},
     {"service": "bland_ai",  "plan_name": "Pay-as-you-go","amount_usd": 0.00,   "billing_cycle": "usage"},
     {"service": "airtable",  "plan_name": "Pro",           "amount_usd": 20.00,  "billing_cycle": "monthly"},
-    {"service": "adobe_sign","plan_name": "Business",     "amount_usd": 34.99,  "billing_cycle": "monthly"},
     {"service": "postmark",  "plan_name": "10K/mo",       "amount_usd": 15.00,  "billing_cycle": "monthly"},
     {"service": "sendgrid",  "plan_name": "Essentials",   "amount_usd": 19.95,  "billing_cycle": "monthly"},
     {"service": "checkr",    "plan_name": "Pay-per-check","amount_usd": 0.00,   "billing_cycle": "usage"},

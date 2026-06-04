@@ -64,8 +64,6 @@ _REQUIRED_ENV: dict[str, str] = {
     "CHECKR_API_KEY":              "Checkr background checks",
     "DAT_USERNAME":                "DAT load board",
     "DAT_PASSWORD":                "DAT load board auth",
-    "ADOBE_SIGN_CLIENT_ID":        "Adobe Sign contracts",
-    "ADOBE_SIGN_CLIENT_SECRET":    "Adobe Sign OAuth",
     "MOTIVE_API_KEY":              "Motive ELD telematics",
     "STRIPE_SECRET_KEY":           "Stripe payments",
     "SECRET_KEY":                  "JWT / session secret",

@@ -68,7 +68,6 @@ _STACK = {
     ],
     "compliance_data": [
         {"service": "checkr",       "version": "v1", "use": "MVR + background checks", "cost": "$15-65/check"},
-        {"service": "adobe_sign",   "version": "API","use": "e-signature for agreements"},
         {"service": "fmcsa_webkey", "version": "v1", "use": "carrier lookup (Shield agent)"},
     ],
     "eld_telematics": [
@@ -274,7 +273,6 @@ def _env_audit() -> dict:
         "sendgrid":     s.sendgrid_api_key,
         "stripe":       s.stripe_secret_key,
         "checkr":       s.checkr_api_key,
-        "adobe_sign":   s.adobe_client_id,
         "airtable":     s.airtable_api_key,
         "google_maps":  s.google_maps_api_key,
         "google_vision":s.google_vision_credentials_json,

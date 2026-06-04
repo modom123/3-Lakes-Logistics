@@ -1,1 +1,1 @@
-"""External service integrations — Adobe Sign, Stripe webhooks, etc."""
+"""External service integrations — Stripe webhooks, Motive ELD, etc."""

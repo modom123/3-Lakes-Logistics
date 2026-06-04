@@ -2,7 +2,7 @@
 
 The IEBC (Internal Enterprise Business Control) cost team monitors:
   · API usage costs  — Anthropic, Bland AI, Twilio, OpenRouter, Google, Checkr
-  · Subscription fees — Supabase, Render, Vercel, Adobe Sign, DAT, Airtable, etc.
+  · Subscription fees — Supabase, Render, Vercel, DAT, Airtable, etc.
   · Budget health    — fires alerts when services approach/exceed monthly caps
   · Weekly reports   — every Monday, sends a full cost breakdown to Mark Odom
 
