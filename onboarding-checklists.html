@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>3 Lakes Logistics — Onboarding Checklists</title>
+<style>
+  /* ── Print / PDF reset ── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --navy:   #0f2b4c;
+    --blue:   #1a4fa0;
+    --gold:   #c8972b;
+    --green:  #166534;
+    --green-bg: #f0fdf4;
+    --slate:  #475569;
+    --light:  #f8fafc;
+    --border: #cbd5e1;
+    --text:   #1e293b;
+    --sub:    #64748b;
+  }
+
+  body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    font-size: 11pt;
+    color: var(--text);
+    background: #fff;
+    line-height: 1.55;
+  }
+
+  /* ── Cover page ── */
+  .cover {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 60px 40px;
+    background: var(--navy);
+    color: #fff;
+    page-break-after: always;
+  }
+  .cover .logo-mark {
+    width: 90px; height: 90px;
+    background: var(--gold);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 2.8rem;
+    margin: 0 auto 28px;
+    box-shadow: 0 8px 32px rgba(0,0,0,.35);
+  }
+  .cover h1 {
+    font-size: 2.2rem;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    margin-bottom: 8px;
+  }
+  .cover h2 {
+    font-size: 1.15rem;
+    font-weight: 400;
+    color: #93c5fd;
+    margin-bottom: 40px;
+  }
+  .cover .meta {
+    display: flex;
+    gap: 32px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  .cover .meta-item {
+    background: rgba(255,255,255,.08);
+    border: 1px solid rgba(255,255,255,.15);
+    border-radius: 10px;
+    padding: 16px 24px;
+    min-width: 160px;
+  }
+  .cover .meta-item .label { font-size: .7rem; text-transform: uppercase; letter-spacing: 1px; color: #93c5fd; margin-bottom: 4px; }
+  .cover .meta-item .value { font-size: .95rem; font-weight: 600; }
+  .cover .toc {
+    margin-top: 48px;
+    text-align: left;
+    background: rgba(255,255,255,.06);
+    border: 1px solid rgba(255,255,255,.12);
+    border-radius: 12px;
+    padding: 24px 32px;
+    width: 100%;
+    max-width: 480px;
+  }
+  .cover .toc h3 { font-size: .75rem; text-transform: uppercase; letter-spacing: 1px; color: #93c5fd; margin-bottom: 14px; }
+  .cover .toc ol { list-style: none; }
+  .cover .toc li { padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,.08); font-size: .95rem; display: flex; align-items: center; gap: 10px; }
+  .cover .toc li:last-child { border-bottom: none; }
+  .cover .toc .num { background: var(--gold); color: var(--navy); border-radius: 50%; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; font-size: .75rem; font-weight: 800; flex-shrink: 0; }
+
+  /* ── Section pages ── */
+  .section {
+    padding: 48px 56px;
+    page-break-before: always;
+  }
+  .section-header {
+    border-left: 5px solid var(--gold);
+    padding-left: 18px;
+    margin-bottom: 32px;
+  }
+  .section-number {
+    font-size: .7rem;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--gold);
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+  .section-header h2 {
+    font-size: 1.7rem;
+    font-weight: 800;
+    color: var(--navy);
+    margin-bottom: 6px;
+  }
+  .section-meta {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    margin-top: 10px;
+  }
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: .75rem;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-weight: 600;
+  }
+  .badge-blue  { background: #dbeafe; color: #1e40af; }
+  .badge-green { background: #dcfce7; color: #166534; }
+  .badge-gold  { background: #fef3c7; color: #92400e; }
+
+  /* ── Phase block ── */
+  .phase {
+    margin-bottom: 28px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    page-break-inside: avoid;
+  }
+  .phase-header {
+    background: var(--navy);
+    color: #fff;
+    padding: 10px 18px;
+    font-size: .85rem;
+    font-weight: 700;
+    letter-spacing: .3px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .phase-header .ph-num {
+    background: var(--gold);
+    color: var(--navy);
+    border-radius: 50%;
+    width: 22px; height: 22px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: .7rem;
+    font-weight: 900;
+    flex-shrink: 0;
+  }
+  .phase-body { padding: 14px 18px; background: #fff; }
+
+  /* ── Checklist items ── */
+  .check-group { margin-bottom: 6px; }
+  .check-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 4px 0;
+    font-size: .88rem;
+  }
+  .check-item .box {
+    width: 15px; height: 15px;
+    border: 2px solid var(--border);
+    border-radius: 3px;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+  .check-item.sub { padding-left: 28px; }
+  .check-item.sub .box { border-color: #d1d5db; }
+  .check-item .item-text { flex: 1; }
+  code {
+    font-family: 'Courier New', monospace;
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    border-radius: 3px;
+    padding: 0 4px;
+    font-size: .82rem;
+    color: #b45309;
+  }
+  .note-inline {
+    font-size: .78rem;
+    color: var(--sub);
+    margin-left: 25px;
+    margin-bottom: 2px;
+    font-style: italic;
+  }
+  .sub-group-label {
+    font-size: .78rem;
+    font-weight: 700;
+    color: var(--blue);
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    margin: 10px 0 4px;
+    padding-left: 2px;
+  }
+
+  /* ── Table ── */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: .85rem;
+    margin-top: 8px;
+  }
+  th {
+    background: var(--navy);
+    color: #fff;
+    padding: 9px 12px;
+    text-align: left;
+    font-size: .75rem;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+  }
+  td { padding: 8px 12px; border-bottom: 1px solid var(--border); }
+  tr:last-child td { border-bottom: none; }
+  tr:nth-child(even) td { background: var(--light); }
+
+  /* ── Notes box ── */
+  .notes-box {
+    background: #fef9ec;
+    border: 1px solid #fde68a;
+    border-left: 4px solid var(--gold);
+    border-radius: 8px;
+    padding: 16px 20px;
+    margin-top: 28px;
+  }
+  .notes-box h3 { font-size: .8rem; text-transform: uppercase; letter-spacing: 1px; color: #92400e; margin-bottom: 10px; }
+  .notes-box li { font-size: .85rem; margin-bottom: 6px; padding-left: 4px; }
+  .notes-box li strong { color: var(--navy); }
+
+  /* ── Sign-off box ── */
+  .signoff {
+    margin-top: 20px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 18px 20px;
+    page-break-inside: avoid;
+  }
+  .signoff h3 { font-size: .8rem; text-transform: uppercase; letter-spacing: 1px; color: var(--slate); margin-bottom: 14px; }
+  .signoff-row { display: flex; gap: 24px; margin-bottom: 14px; }
+  .signoff-field { flex: 1; }
+  .signoff-field label { font-size: .75rem; color: var(--sub); display: block; margin-bottom: 4px; }
+  .signoff-field .line { border-bottom: 1px solid var(--border); height: 22px; }
+
+  /* ── Print rules ── */
+  @media print {
+    body { font-size: 10pt; }
+    .cover { min-height: 100vh; }
+    .no-print { display: none !important; }
+    a { text-decoration: none; color: inherit; }
+    .phase { page-break-inside: avoid; }
+  }
+
+  /* ── Print button (screen only) ── */
+  .print-btn {
+    position: fixed;
+    bottom: 28px;
+    right: 28px;
+    background: var(--navy);
+    color: #fff;
+    border: none;
+    border-radius: 50px;
+    padding: 14px 28px;
+    font-size: .95rem;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 4px 20px rgba(0,0,0,.25);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    z-index: 99;
+  }
+  .print-btn:hover { background: var(--blue); }
+  @media print { .print-btn { display: none; } }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════ COVER ═══════════════════════════════════ -->
+<div class="cover">
+  <div class="logo-mark">🚚</div>
+  <h1>3 Lakes Logistics</h1>
+  <h2>Complete Onboarding Checklists</h2>
+
+  <div class="meta">
+    <div class="meta-item">
+      <div class="label">Effective Date</div>
+      <div class="value">June 5, 2026</div>
+    </div>
+    <div class="meta-item">
+      <div class="label">Owner</div>
+      <div class="value">Operations</div>
+    </div>
+    <div class="meta-item">
+      <div class="label">USDOT</div>
+      <div class="value">#4265380</div>
+    </div>
+    <div class="meta-item">
+      <div class="label">MC#</div>
+      <div class="value">#1621740</div>
+    </div>
+  </div>
+
+  <div class="toc">
+    <h3>Contents</h3>
+    <ol>
+      <li><span class="num">1</span> Driver Onboarding — Light Fleet</li>
+      <li><span class="num">2</span> Shipper Onboarding</li>
+      <li><span class="num">3</span> Internal Staff Onboarding</li>
+      <li><span class="num">4</span> System Logins &amp; Notes</li>
+    </ol>
+  </div>
+</div>
+
+<!-- ══════════════════════════════ SECTION 1: DRIVER ═══════════════════════════════ -->
+<div class="section">
+  <div class="section-header">
+    <div class="section-number">Section 1</div>
+    <h2>Driver Onboarding — Light Fleet</h2>
+    <div class="section-meta">
+      <span class="badge badge-blue">Goal: Verified, active, first load complete</span>
+      <span class="badge badge-green">SLA: 48 hours from application</span>
+      <span class="badge badge-gold">Owner: Elena Ross / Victor Nash</span>
+    </div>
+  </div>
+
+  <!-- Phase 1 -->
+  <div class="phase">
+    <div class="phase-header"><span class="ph-num">1</span> Application Received</div>
+    <div class="phase-body">
+      <div class="check-item"><span class="box"></span><span class="item-text">Driver submits form at <code>threelakeslogistics.com/light-fleet</code> (or referral link)</span></div>
+      <div class="check-item"><span class="box"></span><span class="item-text">Confirm intake email received by driver (auto-sent by Maya agent)</span></div>
+      <div class="check-item"><span class="box"></span><span class="item-text">Driver record created in Supabase <code>light_vehicle_drivers</code> with <code>status = inactive</code></span></div>
+      <div class="check-item"><span class="box"></span><span class="item-text">Verify all required fields captured:</span></div>
+      <div class="check-item sub"><span class="box"></span><span class="item-text">Full legal name</span></div>
+      <div class="check-item sub"><span class="box"></span><span class="item-text">Phone (mobile — used for SMS alerts)</span></div>
+      <div class="check-item sub"><span class="box"></span><span class="item-text">Email address</span></div>
+      <div class="check-item sub"><span class="box"></span><span class="item-text">Vehicle type (car, SUV, van, cargo van, pickup, box truck)</span></div>
+      <div class="check-item sub"><span class="box"></span><span class="item-text">Vehicle year / make / model / plate number</span></div>
+      <div class="check-item sub"><span class="box"></span><span class="item-text">Service area (city / region)</span></div>
+      <div class="check-item sub"><span class="box"></span><span class="item-text">Platforms opted in (3 Lakes, Roadie, GoShip, etc.)</span></div>
+      <div class="check-item sub"><span class="box"></span><span class="item-text">Clean MVR self-attestation acknowledged</span></div>
+    </div>
+  </div>
+
+  <!-- Phase 2 -->
+  <div class="phase">
+    <div class="phase-header"><span class="ph-num">2</span> License Verification (Stripe Identity)</div>
+    <div class="phase-body">
+      <div class="check-item"><span class="box"></span><span class="item-text">Stripe Identity session created — <code>stripe_verification_session_id</code> on driver row confirmed</span></div>
+      <div class="check-item"><span class="box"></span><span class="item-text">Driver receives verification link via SMS &amp; email</span></div>
+      <div class="check-item"><span class="box"></span><span class="item-text">Driver completes Stripe Identity flow (license scan on phone)</span></div>
+      <div class="check-item"><span class="box"></span><span class="item-text">Stripe webhook received: <code>identity.verification_session.verified</code></span></div>
+      <div class="note-inline">If <code>requires_input</code>: re-notify driver, second attempt window = 24 hrs</div>
+      <div class="note-inline">If <code>canceled</code>: outreach call within 2 hrs; resend link if driver still interested</div>
+      <div class="check-item"><span class="box"></span><span class="item-text"><code>mvr_status</code> updated to <code>verified</code> in driver table</span></div>
+      <div class="check-item"><span class="box"></span><span class="item-text">If Stripe unavailable (fallback): honor-system activated — flag for manual MVR review within 7 days</span></div>
+    </div>
+  </div>
+
+  <!-- Phase 3 -->
+  <div class="phase">
+    <div class="phase-header"><span class="ph-num">3</span> Insurance &amp; Documents</div>
+    <div class="phase-body">
+      <div class="check-item"><span class="box"></span><span class="item-text">Personal auto insurance on file (min liability limits met per state)</span></div>
+      <div class="check-item sub"><span class="box"></span><span class="item-text">Policy number logged</span></div>
+      <div class="check-item sub"><span class="box"></span><span class="item-text">Expiration date logged — calendar reminder set 30 days before</span></div>
+      <div class="check-item"><span class="box"></span><span class="item-text">W-9 collected and filed (required for 1099 at year-end)</span></div>
+      <div class="check-item"><span class="box"></span><span class="item-text">Direct deposit / payment info collected:</span></div>
+      <div class="check-item sub"><span class="box"></span><span class="item-text">Bank name, routing number, account number — OR —</span></div>
+      <div class="check-item sub"><span class="box"></span><span class="item-text">Stripe Connect link sent and completed</span></div>
+      <div class="check-item"><span class="box"></span><span class="item-text">Driver IC agreement signed (Adobe Sign)</span></div>
+      <div class="check-item sub"><span class="box"></span><span class="item-text">Agreement ID logged on driver row</span></div>
+    </div>
+  </div>
+
+  <!-- Phase 4 -->
+  <div class="phase">
+    <div class="phase-header"><span class="ph-num">4</span> App &amp; Systems Setup</div>
+    <div class="phase-body">
+      <div class="check-item"><span class="box"></span><span class="item-text">Light Fleet app installed (Android PWA from Play Store OR iOS shortcut)</span></div>
+      <div class="check-item"><span class="box"></span><span class="item-text">Driver can log in and see the load board</span></div>
+      <div class="check-item"><span class="box"></span><span class="item-text">Test push notification delivered successfully</span></div>
+      <div class="check-item"><span class="box"></span><span class="item-text">Driver profile complete in app:</span></div>
+      <div class="check-item sub"><span class="box"></span><span class="item-text">Profile photo uploaded</span></div>
+      <div class="check-item sub"><span class="box"></span><span class="item-text">Vehicle photo uploaded</span></div>
+      <div class="check-item sub"><span class="box"></span><span class="item-text">Bio / service area confirmed</span></div>
+    </div>
+  </div>
+
+  <!-- Phase 5 -->
+  <div class="phase">
+    <div class="phase-header"><span class="ph-num">5</span> First Load</div>
+    <div class="phase-body">
+      <div class="check-item"><span class="box"></span><span class="item-text">Driver assigned and accepts first load in app</span></div>
+      <div class="check-item"><span class="box"></span><span class="item-text">Driver completes pickup — POD photo captured</span></div>
+      <div class="check-item"><span class="box"></span><span class="item-text">Driver completes delivery — POD photo captured</span></div>
+      <div class="check-item"><span class="box"></span><span class="item-text">First payment processed within pay cycle</span></div>
+      <div class="check-item"><span class="box"></span><span class="item-text">Post-first-load check-in call / message from ops team</span></div>
+    </div>
+  </div>
+
+  <!-- Phase 6 -->
+  <div class="phase">
+    <div class="phase-header"><span class="ph-num">6</span> Activation Sign-off</div>
+    <div class="phase-body">
+      <div class="check-item"><span class="box"></span><span class="item-text"><code>status = active</code> confirmed in Supabase</span></div>
+      <div class="check-item"><span class="box"></span><span class="item-text">Driver added to ops Slack / WhatsApp channel</span></div>
+      <div class="check-item"><span class="box"></span><span class="item-text">Profile visible in Eagle Eye driver list</span></div>
+      <div class="check-item"><span class="box"></span><span class="item-text">IEBC node lead notified (Elena / Victor) — driver now in production</span></div>
+    </div>
+  </div>
+
+  <!-- Sign-off -->
+  <div class="signoff">
+    <h3>Driver Onboarding Sign-off</h3>
+    <div class="signoff-row">
+      <div class="signoff-field"><label>Driver Name</label><div class="line"></div></div>
+      <div class="signoff-field"><label>Driver ID</label><div class="line"></div></div>
+      <div class="signoff-field"><label>Date Activated</label><div class="line"></div></div>
+    </div>
+    <div class="signoff-row">
+      <div class="signoff-field"><label>Completed By (Ops)</label><div class="line"></div></div>
+      <div class="signoff-field"><label>Node Lead Sign-off</label><div class="line"></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════ SECTION 2: SHIPPER ════════════════════════════════ -->
+<div class="section">
+  <div class="section-header">
+    <div class="section-number">Section 2</div>
+    <h2>Shipper Onboarding</h2>
+    <div class="section-meta">
+      <span class="badge badge-blue">Goal: Book, track, and pay without friction</span>
+      <span class="badge badge-green">SLA: Account live within 24 hours</span>
+      <span class="badge badge-gold">Owner: Dr. James / Felix Grant</span>
+    </div>
+  </div>
+
+  <!-- Phase 1 -->
+  <div class="phase">
+    <div class="phase-header"><span class="ph-num">1</span> Account Creation</div>
+    <div class="phase-body">
+      <div class="check-item"><span class="box"></span><span class="item-text">Shipper registers at <code>threelakeslogistics.com/shipper</code> OR ops creates account in Eagle Eye</span></div>
+      <div class="check-item"><span class="box"></span><span class="item-text">Confirm registration email received (auto-sent)</span></div>
+      <div class="check-item"><span class="box"></span><span class="item-text">Shipper record created in <code>shippers</code> table</span></div>
+      <div class="check-item"><span class="box"></span><span class="item-text">Verify all required fields:</span></div>
+      <div class="check-item sub"><span class="box"></span><span class="item-text">Company legal name</span></div>
+      <div class="check-item sub"><span class="box"></span><span class="item-text">Primary contact name + title</span></div>
+      <div class="check-item sub"><span class="box"></span><span class="item-text">Phone (primary)</span></div>
+      <div class="check-item sub"><span class="box"></span><span class="item-text">Email (primary, for invoices and alerts)</span></div>
+      <div class="check-item sub"><span class="box"></span><span class="item-text">Billing address (street, city, state, ZIP)</span></div>
+      <div class="check-item sub"><span class="box"></span><span class="item-text">EIN / Tax ID (required for invoicing)</span></div>
+    </div>
+  </div>
+
+  <!-- Phase 2 -->
+  <div class="phase">
+    <div class="phase-header"><span class="ph-num">2</span> Credit &amp; Terms</div>
+    <div class="phase-body">
+      <div class="check-item"><span class="box"></span><span class="item-text">Credit application submitted and reviewed</span></div>
+      <div class="check-item sub"><span class="box"></span><span class="item-text">Net-15 / Net-30 / Net-45 terms assigned based on credit</span></div>
+      <div class="check-item sub"><span class="box"></span><span class="item-text">Credit limit set</span></div>
+      <div class="check-item sub"><span class="box"></span><span class="item-text">Terms signed via Adobe Sign</span></div>
+      <div class="check-item"><span class="box"></span><span class="item-text">Payment method on file:</span></div>
+      <div class="check-item sub"><span class="box"></span><span class="item-text">ACH bank info collected, OR</span></div>
+      <div class="check-item sub"><span class="box"></span><span class="item-text">Credit card added to Stripe customer, OR</span></div>
+      <div class="check-item sub"><span class="box"></span><span class="item-text">Check payment address confirmed</span></div>
+      <div class="check-item"><span class="box"></span><span class="item-text">Invoice delivery preference set (email / portal / both)</span></div>
+    </div>
+  </div>
+
+  <!-- Phase 3 -->
+  <div class="phase">
+    <div class="phase-header"><span class="ph-num">3</span> Shipper Portal Setup</div>
+    <div class="phase-body">
+      <div class="check-item"><span class="box"></span><span class="item-text">Shipper logs into portal at <code>threelakeslogistics.com/shipper</code></span></div>
+      <div class="check-item"><span class="box"></span><span class="item-text">Profile completed (company name, address, state, ZIP, billing email confirmed)</span></div>
+      <div class="check-item"><span class="box"></span><span class="item-text">Webhook notifications configured (if desired):</span></div>
+      <div class="check-item sub"><span class="box"></span><span class="item-text"><code>load.booked</code></span></div>
+      <div class="check-item sub"><span class="box"></span><span class="item-text"><code>load.dispatched</code></span></div>
+      <div class="check-item sub"><span class="box"></span><span class="item-text"><code>load.picked_up</code></span></div>
+      <div class="check-item sub"><span class="box"></span><span class="item-text"><code>load.delivered</code></span></div>
+      <div class="check-item sub"><span class="box"></span><span class="item-text"><code>load.exception</code></span></div>
+      <div class="check-item sub"><span class="box"></span><span class="item-text"><code>invoice.created</code></span></div>
+      <div class="check-item"><span class="box"></span><span class="item-text">Shipper reference / PO number format agreed</span></div>
+    </div>
+  </div>
+
+  <!-- Phase 4 -->
+  <div class="phase">
+    <div class="phase-header"><span class="ph-num">4</span> First Shipment Walkthrough</div>
+    <div class="phase-body">
+      <div class="check-item"><span class="box"></span><span class="item-text">Ops / sales walks shipper through the New Shipment Wizard:</span></div>
+      <div class="check-item sub"><span class="box"></span><span class="item-text">Step 1: Origin &amp; Destination (addresses, contact names, phone)</span></div>
+      <div class="check-item sub"><span class="box"></span><span class="item-text">Step 2: Pickup date / time window</span></div>
+      <div class="check-item sub"><span class="box"></span><span class="item-text">Step 3: Commodity, weight, equipment type</span></div>
+      <div class="check-item sub"><span class="box"></span><span class="item-text">Step 4: Accessorials (liftgate, residential, appointment, etc.)</span></div>
+      <div class="check-item sub"><span class="box"></span><span class="item-text">Step 5: Review quote → book</span></div>
+      <div class="check-item"><span class="box"></span><span class="item-text">First load booked and confirmed</span></div>
+      <div class="check-item"><span class="box"></span><span class="item-text">Shipper can see load status on portal dashboard</span></div>
+      <div class="check-item"><span class="box"></span><span class="item-text">Tracking link shared for shipper's visibility</span></div>
+      <div class="check-item"><span class="box"></span><span class="item-text">First invoice generated and delivered correctly</span></div>
+    </div>
+  </div>
+
+  <!-- Phase 5 -->
+  <div class="phase">
+    <div class="phase-header"><span class="ph-num">5</span> Ongoing Relationship Setup</div>
+    <div class="phase-body">
+      <div class="check-item"><span class="box"></span><span class="item-text">Shipper added to CRM in Eagle Eye (company, contact, tier)</span></div>
+      <div class="check-item"><span class="box"></span><span class="item-text">Preferred lanes / commodity types noted in CRM</span></div>
+      <div class="check-item"><span class="box"></span><span class="item-text">Dedicated ops contact assigned and introduced to shipper</span></div>
+      <div class="check-item"><span class="box"></span><span class="item-text">Recurring load schedule set up if applicable (weekly/monthly lanes)</span></div>
+      <div class="check-item"><span class="box"></span><span class="item-text">Eagle Eye CSO office briefed on account</span></div>
+    </div>
+  </div>
+
+  <!-- Phase 6 -->
+  <div class="phase">
+    <div class="phase-header"><span class="ph-num">6</span> Onboarding Sign-off</div>
+    <div class="phase-body">
+      <div class="check-item"><span class="box"></span><span class="item-text">First invoice paid (confirms billing loop works end-to-end)</span></div>
+      <div class="check-item"><span class="box"></span><span class="item-text">Shipper satisfaction check-in at 30 days</span></div>
+      <div class="check-item"><span class="box"></span><span class="item-text">Account flagged as active / production in Eagle Eye</span></div>
+      <div class="check-item"><span class="box"></span><span class="item-text">IEBC node lead notified — shipper account live</span></div>
+    </div>
+  </div>
+
+  <!-- Sign-off -->
+  <div class="signoff">
+    <h3>Shipper Onboarding Sign-off</h3>
+    <div class="signoff-row">
+      <div class="signoff-field"><label>Company Name</label><div class="line"></div></div>
+      <div class="signoff-field"><label>Shipper ID</label><div class="line"></div></div>
+      <div class="signoff-field"><label>Date Activated</label><div class="line"></div></div>
+    </div>
+    <div class="signoff-row">
+      <div class="signoff-field"><label>Account Manager</label><div class="line"></div></div>
+      <div class="signoff-field"><label>Credit Terms Assigned</label><div class="line"></div></div>
+      <div class="signoff-field"><label>Credit Limit</label><div class="line"></div></div>
+    </div>
+    <div class="signoff-row">
+      <div class="signoff-field"><label>Node Lead Sign-off</label><div class="line"></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════ SECTION 3: STAFF ════════════════════════════════ -->
+<div class="section">
+  <div class="section-header">
+    <div class="section-number">Section 3</div>
+    <h2>Internal Staff Onboarding</h2>
+    <div class="section-meta">
+      <span class="badge badge-blue">Goal: Fully set up and independent</span>
+      <span class="badge badge-green">SLA: Day-1 access before first shift</span>
+      <span class="badge badge-gold">Owner: Founders / Mark</span>
+    </div>
+  </div>
+
+  <!-- Phase 1 -->
+  <div class="phase">
+    <div class="phase-header"><span class="ph-num">1</span> Before Day 1</div>
+    <div class="phase-body">
+      <div class="check-item"><span class="box"></span><span class="item-text">Offer letter signed</span></div>
+      <div class="check-item"><span class="box"></span><span class="item-text">I-9 / right-to-work documents collected</span></div>
+      <div class="check-item"><span class="box"></span><span class="item-text">W-4 collected and filed</span></div>
+      <div class="check-item"><span class="box"></span><span class="item-text">Direct deposit info collected</span></div>
+      <div class="check-item"><span class="box"></span><span class="item-text">Role defined and IEBC node assigned (if applicable)</span></div>
+      <div class="check-item"><span class="box"></span><span class="item-text">Equipment ordered / confirmed (laptop, phone if provided)</span></div>
+    </div>
+  </div>
+
+  <!-- Phase 2 -->
+  <div class="phase">
+    <div class="phase-header"><span class="ph-num">2</span> Day 1 — Accounts Created</div>
+    <div class="phase-body">
+      <div class="sub-group-label">Email &amp; Communication</div>
+      <div class="check-item"><span class="box"></span><span class="item-text">Company email created (<code>name@3lakeslogistics.com</code>)</span></div>
+      <div class="check-item"><span class="box"></span><span class="item-text">Added to relevant Slack / WhatsApp channels</span></div>
+      <div class="check-item"><span class="box"></span><span class="item-text">Introduced to team via group channel</span></div>
+
+      <div class="sub-group-label">Core Systems Access</div>
+      <div class="check-item"><span class="box"></span><span class="item-text">Eagle Eye — login credentials issued</span></div>
+      <div class="check-item"><span class="box"></span><span class="item-text">Supabase — read access granted (role-based)</span></div>
+      <div class="check-item"><span class="box"></span><span class="item-text">Render.com — access if engineer role</span></div>
+      <div class="check-item"><span class="box"></span><span class="item-text">Stripe Dashboard — access if ops/finance role</span></div>
+      <div class="check-item"><span class="box"></span><span class="item-text">Hostinger / cPanel — access if web/IT role</span></div>
+      <div class="check-item"><span class="box"></span><span class="item-text">Google Workspace (Drive, Calendar, Gmail)</span></div>
+
+      <div class="sub-group-label">Ops Tools (Role-Dependent)</div>
+      <div class="check-item"><span class="box"></span><span class="item-text">DAT load board access (dispatch role)</span></div>
+      <div class="check-item"><span class="box"></span><span class="item-text">Motive ELD portal access (fleet ops role)</span></div>
+      <div class="check-item"><span class="box"></span><span class="item-text">Adobe Sign admin (contracts role)</span></div>
+      <div class="check-item"><span class="box"></span><span class="item-text">Bland.ai / Vapi dashboard (sales / SDR role)</span></div>
+    </div>
+  </div>
+
+  <!-- Phase 3 -->
+  <div class="phase">
+    <div class="phase-header"><span class="ph-num">3</span> Day 1 — Systems Training</div>
+    <div class="phase-body">
+      <div class="check-item"><span class="box"></span><span class="item-text">Eagle Eye walkthrough complete:</span></div>
+      <div class="check-item sub"><span class="box"></span><span class="item-text">Dispatch board (loads, statuses, map)</span></div>
+      <div class="check-item sub"><span class="box"></span><span class="item-text">Shipper CRM</span></div>
+      <div class="check-item sub"><span class="box"></span><span class="item-text">Driver management</span></div>
+      <div class="check-item sub"><span class="box"></span><span class="item-text">Agent nodes (IEBC) — what each agent does</span></div>
+      <div class="check-item sub"><span class="box"></span><span class="item-text">Checklists tab — daily ops tasks</span></div>
+      <div class="check-item sub"><span class="box"></span><span class="item-text">KPI dashboard</span></div>
+      <div class="check-item"><span class="box"></span><span class="item-text">Load lifecycle walkthrough: Quote → Book → Dispatch → Pickup → Delivery → Invoice → Payment</span></div>
+      <div class="check-item"><span class="box"></span><span class="item-text">Escalation paths explained (driver no-show, shipper complaint, system outage)</span></div>
+      <div class="check-item"><span class="box"></span><span class="item-text">IEBC agents explained:</span></div>
+      <div class="check-item sub"><span class="box"></span><span class="item-text">Node 201 — Dr. James (NEMT)</span></div>
+      <div class="check-item sub"><span class="box"></span><span class="item-text">Node 202 — Elena Ross (LF Ops)</span></div>
+      <div class="check-item sub"><span class="box"></span><span class="item-text">Node 203 — Victor Nash (LF Ops)</span></div>
+      <div class="check-item sub"><span class="box"></span><span class="item-text">Node 204 — Felix Grant (Courier)</span></div>
+      <div class="check-item sub"><span class="box"></span><span class="item-text">Node 205 — Morgan Hayes (LF Analytics)</span></div>
+      <div class="check-item sub"><span class="box"></span><span class="item-text">Bond — Consultant (diagnostics, reporting, audits)</span></div>
+    </div>
+  </div>
+
+  <!-- Phase 4 -->
+  <div class="phase">
+    <div class="phase-header"><span class="ph-num">4</span> Role-Specific Training</div>
+    <div class="phase-body">
+      <div class="sub-group-label">Dispatch</div>
+      <div class="check-item"><span class="box"></span><span class="item-text">How to post loads to DAT</span></div>
+      <div class="check-item"><span class="box"></span><span class="item-text">How to accept / assign loads in Eagle Eye</span></div>
+      <div class="check-item"><span class="box"></span><span class="item-text">Check Call procedures (every 2 hrs in transit)</span></div>
+      <div class="check-item"><span class="box"></span><span class="item-text">Exception handling (breakdowns, late pickups, claims)</span></div>
+
+      <div class="sub-group-label">Driver Relations</div>
+      <div class="check-item"><span class="box"></span><span class="item-text">Light Fleet app walkthrough (driver-side view)</span></div>
+      <div class="check-item"><span class="box"></span><span class="item-text">How to read Stripe Identity verification status</span></div>
+      <div class="check-item"><span class="box"></span><span class="item-text">How to activate / suspend a driver</span></div>
+      <div class="check-item"><span class="box"></span><span class="item-text">Insurance expiration tracking process</span></div>
+
+      <div class="sub-group-label">Sales / Business Development</div>
+      <div class="check-item"><span class="box"></span><span class="item-text">Shipper portal demo (know the product before selling it)</span></div>
+      <div class="check-item"><span class="box"></span><span class="item-text">Quote process — haversine × 1.25 road factor × RPM by equipment type</span></div>
+      <div class="check-item"><span class="box"></span><span class="item-text">CRM in Eagle Eye — how to add/update shipper leads</span></div>
+      <div class="check-item"><span class="box"></span><span class="item-text">Bland.ai outbound call setup</span></div>
+
+      <div class="sub-group-label">Finance / Invoicing</div>
+      <div class="check-item"><span class="box"></span><span class="item-text">How invoices are generated (Atomic Ledger — internal GL)</span></div>
+      <div class="check-item"><span class="box"></span><span class="item-text">How to apply payments in Atomic Ledger</span></div>
+      <div class="check-item"><span class="box"></span><span class="item-text">Factoring setup and reconciliation process</span></div>
+      <div class="check-item"><span class="box"></span><span class="item-text">1099 season — driver payment records pull from Supabase</span></div>
+
+      <div class="sub-group-label">Engineering / IT</div>
+      <div class="check-item"><span class="box"></span><span class="item-text">Codebase walkthrough (GitHub: <code>modom123/3-Lakes-Logistics</code>)</span></div>
+      <div class="check-item"><span class="box"></span><span class="item-text">Backend: FastAPI on Render.com — deploy process</span></div>
+      <div class="check-item"><span class="box"></span><span class="item-text">Database: Supabase PostgreSQL — table overview</span></div>
+      <div class="check-item"><span class="box"></span><span class="item-text">Frontend: static HTML/CSS/JS on Hostinger</span></div>
+      <div class="check-item"><span class="box"></span><span class="item-text">Webhook architecture (Stripe, Checkr, Motive, Bland, Vapi, Adobe)</span></div>
+      <div class="check-item"><span class="box"></span><span class="item-text">Environment variables — never commit secrets; use Render env panel</span></div>
+    </div>
+  </div>
+
+  <!-- Phase 5 -->
+  <div class="phase">
+    <div class="phase-header"><span class="ph-num">5</span> Security &amp; Compliance</div>
+    <div class="phase-body">
+      <div class="check-item"><span class="box"></span><span class="item-text">Password manager account created and set up</span></div>
+      <div class="check-item"><span class="box"></span><span class="item-text">MFA enabled on all accounts (email, Supabase, Stripe, Render)</span></div>
+      <div class="check-item"><span class="box"></span><span class="item-text">Security policy reviewed and signed:</span></div>
+      <div class="check-item sub"><span class="box"></span><span class="item-text">No sharing of API keys / Bearer tokens</span></div>
+      <div class="check-item sub"><span class="box"></span><span class="item-text">No accessing shipper or driver PII from personal devices</span></div>
+      <div class="check-item sub"><span class="box"></span><span class="item-text">No screenshots of financial data shared externally</span></div>
+      <div class="check-item"><span class="box"></span><span class="item-text">FMCSA / DOT compliance basics reviewed (dispatch/ops roles):</span></div>
+      <div class="check-item sub"><span class="box"></span><span class="item-text">HOS rules awareness</span></div>
+      <div class="check-item sub"><span class="box"></span><span class="item-text">USDOT #4265380 / MC #1621740 on all documentation</span></div>
+    </div>
+  </div>
+
+  <!-- Phase 6 -->
+  <div class="phase">
+    <div class="phase-header"><span class="ph-num">6</span> First Week Check-ins</div>
+    <div class="phase-body">
+      <div class="check-item"><span class="box"></span><span class="item-text">Day 3: Check-in with direct supervisor — any blockers?</span></div>
+      <div class="check-item"><span class="box"></span><span class="item-text">Day 7: Access audit — all needed systems working?</span></div>
+      <div class="check-item"><span class="box"></span><span class="item-text">Day 14: Role-specific skill check — can they operate independently?</span></div>
+      <div class="check-item"><span class="box"></span><span class="item-text">Day 30: Full performance check-in + 90-day goals set</span></div>
+    </div>
+  </div>
+
+  <!-- Phase 7 -->
+  <div class="phase">
+    <div class="phase-header"><span class="ph-num">7</span> HR Sign-off</div>
+    <div class="phase-body">
+      <div class="check-item"><span class="box"></span><span class="item-text">All systems access confirmed working</span></div>
+      <div class="check-item"><span class="box"></span><span class="item-text">Emergency contact info collected and filed</span></div>
+      <div class="check-item"><span class="box"></span><span class="item-text">HR file complete (I-9, W-4, offer letter, signed policies)</span></div>
+      <div class="check-item"><span class="box"></span><span class="item-text">Employee added to payroll cycle</span></div>
+      <div class="check-item"><span class="box"></span><span class="item-text">Welcome announcement posted (internal channel)</span></div>
+    </div>
+  </div>
+
+  <!-- Sign-off -->
+  <div class="signoff">
+    <h3>Staff Onboarding Sign-off</h3>
+    <div class="signoff-row">
+      <div class="signoff-field"><label>Employee Name</label><div class="line"></div></div>
+      <div class="signoff-field"><label>Role / Title</label><div class="line"></div></div>
+      <div class="signoff-field"><label>Start Date</label><div class="line"></div></div>
+    </div>
+    <div class="signoff-row">
+      <div class="signoff-field"><label>IEBC Node (if assigned)</label><div class="line"></div></div>
+      <div class="signoff-field"><label>Direct Supervisor</label><div class="line"></div></div>
+    </div>
+    <div class="signoff-row">
+      <div class="signoff-field"><label>HR Sign-off</label><div class="line"></div></div>
+      <div class="signoff-field"><label>IT Sign-off (access confirmed)</label><div class="line"></div></div>
+      <div class="signoff-field"><label>Date</label><div class="line"></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════ SECTION 4: REFERENCE ════════════════════════════════ -->
+<div class="section">
+  <div class="section-header">
+    <div class="section-number">Section 4</div>
+    <h2>System Logins &amp; Key Notes</h2>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>System</th>
+        <th>URL</th>
+        <th>Who Has Access</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td>Eagle Eye (Ops Dashboard)</td><td>threelakeslogistics.com/eagleeye.html</td><td>All ops staff</td></tr>
+      <tr><td>Shipper Portal</td><td>threelakeslogistics.com/shipper</td><td>Shippers + ops</td></tr>
+      <tr><td>API Backend</td><td>three-lakes-logistics-api.onrender.com</td><td>Engineers</td></tr>
+      <tr><td>Supabase</td><td>app.supabase.com</td><td>Engineers + data roles</td></tr>
+      <tr><td>Stripe Dashboard</td><td>dashboard.stripe.com</td><td>Finance + engineers</td></tr>
+      <tr><td>Render.com</td><td>render.com</td><td>Engineers</td></tr>
+      <tr><td>Hostinger</td><td>hpanel.hostinger.com</td><td>Engineers + web</td></tr>
+      <tr><td>DAT Load Board</td><td>dat.com</td><td>Dispatch</td></tr>
+      <tr><td>Motive ELD</td><td>keeptruckin.com</td><td>Fleet ops</td></tr>
+      <tr><td>GitHub</td><td>github.com/modom123/3-Lakes-Logistics</td><td>Engineers</td></tr>
+    </tbody>
+  </table>
+
+  <div class="notes-box" style="margin-top:28px;">
+    <h3>Important Notes</h3>
+    <ul style="padding-left:16px;">
+      <li><strong>Atomic Ledger</strong> handles all GL / accounting internally — do NOT set up QuickBooks or external accounting integrations</li>
+      <li><strong>Stripe Identity</strong> is the driver license verification system (~$1.50/verification) — check Stripe dashboard for verification status</li>
+      <li><strong>IEBC agents</strong> run autonomously — staff should monitor outputs, not override, unless escalating to a founder</li>
+      <li><strong>PII policy:</strong> Driver SSN, DOB, and license numbers stay in Supabase and Stripe only — never in Slack, email, or spreadsheets</li>
+      <li><strong>USDOT #4265380 / MC #1621740</strong> — must appear on all rate confirmations, invoices, and BOLs</li>
+    </ul>
+  </div>
+</div>
+
+<!-- Print button -->
+<button class="print-btn no-print" onclick="window.print()">🖨️ Save as PDF</button>
+
+</body>
+</html>
