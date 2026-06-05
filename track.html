@@ -19,7 +19,7 @@
       --radius: 12px;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; min-height: 100vh; }
+    body { background: var(--bg); color: var(--text); font-family: 'Inter', system-ui, sans-serif; min-height: 100vh; }
 
     /* ── Header ── */
     header {
@@ -116,7 +116,7 @@
     .dot-dest   { background: var(--accent); }
     .route-line { flex: 1; height: 2px; background: var(--border); position: relative; }
     .route-truck {
-      position: absolute; top: 50%; transform: translateY(-50%);
+      position: absolute; top: 50%; transform: translate(-50%, -50%);
       font-size: 16px; transition: left 0.8s ease;
     }
     .route-city { font-size: 14px; font-weight: 600; }
@@ -343,10 +343,6 @@
         <div class="doc-name"><span class="doc-icon">✅</span> Proof of Delivery (POD)</div>
         <button class="doc-btn" id="podBtn" onclick="openDoc('pod')">—</button>
       </div>
-      <div class="doc-row">
-        <div class="doc-name"><span class="doc-icon">🏷️</span> Rate Confirmation</div>
-        <button class="doc-btn" id="rateBtn" onclick="openDoc('rate')">—</button>
-      </div>
     </div>
 
     <!-- Dispatcher contact -->
@@ -361,26 +357,33 @@
 </main>
 
 <footer>
-  © 2025 3 Lakes Logistics LLC &nbsp;·&nbsp; DOT # &nbsp;·&nbsp;
+  © 2025 3 Lakes Logistics LLC &nbsp;·&nbsp; USDOT #4265380 &nbsp;·&nbsp; MC #1621740 &nbsp;·&nbsp;
   <a href="/shipper.html" style="color:var(--accent);text-decoration:none">Shipper Portal</a>
 </footer>
 
 <script>
 const API = 'https://three-lakes-logistics-api.onrender.com';
 let _currentData = null;
+let _trackLastTime = 0;
 
 function show(id) {
+  const displayMap = { loading: 'block', error: 'block', prompt: 'block', result: 'block' };
   ['loading','error','prompt','result'].forEach(i => {
     const el = document.getElementById(i);
-    if (el) el.style.display = i === id ? (i === 'result' ? 'block' : 'flex') : 'none';
+    if(el) el.style.display = i === id ? displayMap[i] : 'none';
   });
-  if (id === 'loading') document.getElementById('loading').style.display = 'block';
 }
 
 async function doTrack() {
   const raw = document.getElementById('tokenInput').value.trim();
   if (!raw) return;
-  // Accept either a full token or a bare tracking number
+  const now = Date.now();
+  if(now - _trackLastTime < 3000) {
+    document.getElementById('errorTitle').textContent = 'Please wait a moment before tracking again';
+    document.getElementById('errorSub').textContent = '';
+    show('error'); return;
+  }
+  _trackLastTime = now;
   const token = raw;
   window.history.replaceState(null, '', `?token=${encodeURIComponent(token)}`);
   await fetchLoad(token);
@@ -450,8 +453,11 @@ function renderLoad(d) {
   document.getElementById('rDestState').textContent = dState;
 
   // Truck position along route (rough % based on status)
-  const pct = { booked:5, pickup:20, in_transit:55, delivered:100, exception:55 }[d.status] ?? 5;
-  document.getElementById('rTruck').style.left = `${Math.min(pct, 90)}%`;
+  const pct = { booked:5, pickup:20, in_transit:55, delivered:95, exception:55 }[d.status] ?? 5;
+  document.getElementById('rTruck').style.left = `${Math.min(pct, 95)}%`;
+
+  // Update page title
+  document.title = `${d.load_id || 'Shipment'} — 3 Lakes Tracking`;
 
   // Distance / ETA
   if (d.distance_miles) {
@@ -514,10 +520,9 @@ function renderLoad(d) {
       </div>`;
   });
 
-  // Documents
+  // Documents (rate con excluded — commercially sensitive, only in authenticated portal)
   setDocBtn('bolBtn', d.bol_url);
   setDocBtn('podBtn', d.pod_url);
-  setDocBtn('rateBtn', d.rate_con_url);
 
   // Dispatcher
   if (d.dispatcher_phone) {
@@ -526,19 +531,24 @@ function renderLoad(d) {
 }
 
 function buildDefaultTimeline(d) {
+  if(d.status === 'cancelled') {
+    return [
+      {title:'Order Booked', done:true, active:false},
+      {title:'Shipment Cancelled', done:true, active:false},
+    ];
+  }
   const steps = [
-    { title: 'Order Booked',       key: 'booked',     alwaysDone: true },
-    { title: 'Driver Assigned',    key: 'assigned',   doneIf: ['pickup','in_transit','delivered'] },
-    { title: 'En Route to Pickup', key: 'pickup',     doneIf: ['in_transit','delivered'], activeIf: ['pickup'] },
-    { title: 'Picked Up',          key: 'pickedup',   doneIf: ['in_transit','delivered'] },
-    { title: 'In Transit',         key: 'in_transit', doneIf: ['delivered'], activeIf: ['in_transit','exception'] },
-    { title: 'Out for Delivery',   key: 'outgoing',   doneIf: ['delivered'] },
-    { title: 'Delivered',          key: 'delivered',  doneIf: ['delivered'] },
+    { title: 'Order Booked',            key: 'booked',     alwaysDone: true },
+    { title: 'Driver Assigned',         key: 'assigned',   doneIf: ['pickup','in_transit','out_for_delivery','delivered'] },
+    { title: 'En Route to Pickup',      key: 'pickup',     doneIf: ['in_transit','out_for_delivery','delivered'], activeIf: ['pickup'] },
+    { title: 'Picked Up — In Transit',  key: 'in_transit', doneIf: ['out_for_delivery','delivered'], activeIf: ['in_transit','exception'] },
+    { title: 'Out for Delivery',        key: 'outgoing',   doneIf: ['delivered'], activeIf: ['out_for_delivery'] },
+    { title: 'Delivered',               key: 'delivered',  doneIf: ['delivered'] },
   ];
   return steps.map(s => ({
     title: s.title,
     done: s.alwaysDone || (s.doneIf && s.doneIf.includes(d.status)),
-    active: s.activeIf && s.activeIf.includes(d.status),
+    active: !!(s.activeIf && s.activeIf.includes(d.status)),
   }));
 }
 

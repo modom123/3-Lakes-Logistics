@@ -102,7 +102,7 @@ tr:hover td{background:var(--surface2)}
 .page-btn.active{border-color:var(--accent);color:var(--accent2)}
 
 /* MODAL */
-.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:500;display:flex;align-items:center;justify-content:center;padding:20px;display:none}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:500;align-items:center;justify-content:center;padding:20px;display:none}
 .modal-overlay.open{display:flex}
 .modal{background:var(--surface);border:1px solid var(--border);border-radius:16px;width:100%;max-width:680px;max-height:90vh;overflow-y:auto}
 .modal-header{padding:24px 24px 0;display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
@@ -192,13 +192,22 @@ tr:hover td{background:var(--surface2)}
 @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
 
 /* RESPONSIVE */
+.dash-grid{display:grid;grid-template-columns:2fr 1fr;gap:20px}
+@media(max-width:900px){.dash-grid{grid-template-columns:1fr}}
 @media(max-width:768px){
   .nav-links{display:none}
   .stats-grid{grid-template-columns:1fr 1fr}
   .detail-grid{grid-template-columns:1fr}
   .account-grid{grid-template-columns:1fr}
   .form-row{grid-template-columns:1fr}
+  .app-body{padding-bottom:72px}
 }
+/* MOBILE NAV */
+.mobile-nav{display:none;position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-top:1px solid var(--border);z-index:200;padding:8px 0}
+.mobile-nav-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:4px;cursor:pointer;color:var(--muted);font-size:10px;font-weight:500}
+.mobile-nav-item.active{color:var(--accent2)}
+.mobile-nav-item .icon{font-size:20px}
+@media(max-width:768px){.mobile-nav{display:flex}}
 </style>
 </head>
 <body>
@@ -225,10 +234,13 @@ tr:hover td{background:var(--surface2)}
         <input type="email" id="login-email" placeholder="you@company.com" autocomplete="email">
       </div>
       <div class="form-group">
-        <label>Password</label>
+        <label for="login-password">Password</label>
         <input type="password" id="login-password" placeholder="••••••••" autocomplete="current-password">
       </div>
-      <button class="btn btn-primary" onclick="doLogin()">Sign In</button>
+      <div style="text-align:right;margin-top:-12px;margin-bottom:14px">
+        <a href="#" onclick="showForgotPassword()" style="font-size:12px;color:var(--muted)">Forgot password?</a>
+      </div>
+      <button class="btn btn-primary" id="login-btn" onclick="doLogin()">Sign In</button>
       <div class="auth-footer">Need shipping quotes? <a href="#" onclick="switchAuthTab('register')">Create free account →</a></div>
     </div>
 
@@ -251,7 +263,7 @@ tr:hover td{background:var(--surface2)}
         <div class="form-group"><label>Password</label><input type="password" id="reg-password" placeholder="Min 8 characters" autocomplete="new-password"></div>
         <div class="form-group"><label>Confirm Password</label><input type="password" id="reg-confirm" placeholder="Repeat password"></div>
       </div>
-      <button class="btn btn-primary" onclick="doRegister()">Create Account — Free</button>
+      <button class="btn btn-primary" id="register-btn" onclick="doRegister()">Create Account — Free</button>
       <div class="auth-footer">Already have an account? <a href="#" onclick="switchAuthTab('login')">Sign in →</a></div>
     </div>
   </div>
@@ -303,7 +315,7 @@ tr:hover td{background:var(--surface2)}
         </div>
       </div>
 
-      <div style="display:grid;grid-template-columns:2fr 1fr;gap:20px">
+      <div class="dash-grid">
         <div>
           <div class="section-header">
             <div class="section-title">Recent Shipments</div>
@@ -342,6 +354,7 @@ tr:hover td{background:var(--surface2)}
           <div class="filter-btn" onclick="filterLoads('in_transit',this)">In Transit</div>
           <div class="filter-btn" onclick="filterLoads('delivered',this)">Delivered</div>
           <div class="filter-btn" onclick="filterLoads('invoiced',this)">Invoiced</div>
+          <div class="filter-btn" onclick="filterLoads('cancelled',this)">Cancelled</div>
         </div>
         <table>
           <thead><tr><th>Load #</th><th>Pickup</th><th>Delivery</th><th>Equipment</th><th>Pickup Date</th><th>Rate</th><th>Status</th><th>Actions</th></tr></thead>
@@ -389,8 +402,13 @@ tr:hover td{background:var(--surface2)}
           <div class="form-group"><label>Email</label><input type="email" id="acc-email" class="full" disabled style="opacity:.6"></div>
           <div class="form-group"><label>Address</label><input type="text" id="acc-address" class="full"></div>
           <div class="form-row">
-            <div class="form-group"><label>City</label><input type="text" id="acc-city"></div>
-            <div class="form-group"><label>State</label><input type="text" id="acc-state" maxlength="2"></div>
+            <div class="form-group"><label for="acc-city">City</label><input type="text" id="acc-city"></div>
+            <div class="form-group"><label for="acc-state">State</label>
+              <select id="acc-state"><option value="">— State —</option>
+              <option>AL</option><option>AK</option><option>AZ</option><option>AR</option><option>CA</option><option>CO</option><option>CT</option><option>DE</option><option>FL</option><option>GA</option><option>HI</option><option>ID</option><option>IL</option><option>IN</option><option>IA</option><option>KS</option><option>KY</option><option>LA</option><option>ME</option><option>MD</option><option>MA</option><option>MI</option><option>MN</option><option>MS</option><option>MO</option><option>MT</option><option>NE</option><option>NV</option><option>NH</option><option>NJ</option><option>NM</option><option>NY</option><option>NC</option><option>ND</option><option>OH</option><option>OK</option><option>OR</option><option>PA</option><option>RI</option><option>SC</option><option>SD</option><option>TN</option><option>TX</option><option>UT</option><option>VT</option><option>VA</option><option>WA</option><option>WV</option><option>WI</option><option>WY</option>
+              </select>
+            </div>
+            <div class="form-group"><label for="acc-zip">ZIP</label><input type="text" id="acc-zip" maxlength="5" placeholder="60601"></div>
           </div>
           <button class="btn btn-primary" onclick="saveAccount()">Save Changes</button>
         </div>
@@ -406,9 +424,16 @@ tr:hover td{background:var(--surface2)}
           </div>
           <div class="account-section">
             <div class="account-title">Webhook Configuration</div>
-            <div class="form-group"><label>Webhook URL</label><input type="url" id="wh-url" placeholder="https://your-system.com/webhook"></div>
+            <div class="form-group"><label for="wh-url">Webhook URL</label><input type="url" id="wh-url" placeholder="https://your-system.com/webhook"></div>
             <div style="font-size:12px;color:var(--muted);margin-bottom:8px">Notify on events:</div>
-            <div class="webhook-events" id="wh-events-display"></div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:12px">
+              <label style="font-size:13px;display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="wh-ev-booked" value="load.booked"> Shipment Booked</label>
+              <label style="font-size:13px;display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="wh-ev-dispatched" value="load.dispatched"> Driver Assigned</label>
+              <label style="font-size:13px;display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="wh-ev-transit" value="load.in_transit"> In Transit</label>
+              <label style="font-size:13px;display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="wh-ev-delivered" value="load.delivered"> Delivered</label>
+              <label style="font-size:13px;display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="wh-ev-invoiced" value="load.invoiced"> Invoice Sent</label>
+              <label style="font-size:13px;display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="wh-ev-exception" value="load.exception"> Exception</label>
+            </div>
             <div style="margin-top:12px;display:flex;gap:8px">
               <button class="btn-sm btn-ship" onclick="saveWebhook()" style="flex:1">Save</button>
               <button class="btn-sm btn-secondary" onclick="testWebhook()" style="background:var(--surface3);color:var(--text);border:1px solid var(--border);flex:1">Test</button>
@@ -419,6 +444,13 @@ tr:hover td{background:var(--surface2)}
     </div>
 
   </main>
+  <nav class="mobile-nav" id="mobile-nav">
+    <div class="mobile-nav-item active" id="mnav-dashboard" onclick="showView('dashboard');updateMobileNav('dashboard')"><span class="icon">📊</span>Dashboard</div>
+    <div class="mobile-nav-item" id="mnav-shipments" onclick="showView('shipments');updateMobileNav('shipments')"><span class="icon">📦</span>Shipments</div>
+    <div class="mobile-nav-item" onclick="openNewShipmentWizard()"><span class="icon">➕</span>Book</div>
+    <div class="mobile-nav-item" id="mnav-invoices" onclick="showView('invoices');updateMobileNav('invoices')"><span class="icon">🧾</span>Invoices</div>
+    <div class="mobile-nav-item" id="mnav-account" onclick="showView('account');updateMobileNav('account')"><span class="icon">⚙️</span>Account</div>
+  </nav>
 </div>
 
 <!-- ── NEW SHIPMENT MODAL ──────────────────────────────────────── -->
@@ -426,7 +458,7 @@ tr:hover td{background:var(--surface2)}
 <div class="modal" style="max-width:740px">
   <div class="modal-header">
     <div class="modal-title">New Shipment</div>
-    <button class="modal-close" onclick="closeModal('modal-new-shipment')">✕</button>
+    <button class="modal-close" onclick="closeModal('modal-new-shipment')" aria-label="Close dialog">✕</button>
   </div>
   <div class="modal-body">
     <div class="wizard-steps" id="wizard-steps">
@@ -439,6 +471,11 @@ tr:hover td{background:var(--surface2)}
 
     <!-- STEP 1: PICKUP -->
     <div class="wizard-pane active" id="wpane-1">
+      <div class="section-label">Shipment Reference</div>
+      <div class="form-row">
+        <div class="form-group"><label for="w-shipper-ref">Your Reference / PO #</label><input type="text" id="w-shipper-ref" placeholder="e.g. PO-20045 or SO-8812"></div>
+        <div class="form-group"><label for="w-bol-num">BOL # (if pre-assigned)</label><input type="text" id="w-bol-num" placeholder="Optional"></div>
+      </div>
       <div class="section-label">Pickup Location</div>
       <div class="form-group"><label>Street Address</label><input type="text" id="w-pu-addr" placeholder="123 Warehouse Dr"></div>
       <div class="form-row">
@@ -527,7 +564,25 @@ tr:hover td{background:var(--surface2)}
         <div class="form-group"><label>Min Temp (°F)</label><input type="number" id="w-temp-min" placeholder="34"></div>
         <div class="form-group"><label>Max Temp (°F)</label><input type="number" id="w-temp-max" placeholder="38"></div>
       </div>
-      <div class="form-group"><label>Special Instructions</label><input type="text" id="w-instructions" placeholder="e.g. Liftgate required, No-touch freight"></div>
+      <div class="section-label">Accessorial Services</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px">
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer"><input type="checkbox" id="w-acc-liftgate-pu"> Liftgate — Pickup</label>
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer"><input type="checkbox" id="w-acc-liftgate-del"> Liftgate — Delivery</label>
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer"><input type="checkbox" id="w-acc-residential"> Residential Delivery</label>
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer"><input type="checkbox" id="w-acc-appt"> Appointment Required</label>
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer"><input type="checkbox" id="w-acc-team"> Team Driver</label>
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer"><input type="checkbox" id="w-acc-tonu"> TONU Risk Accepted</label>
+      </div>
+      <div id="flatbed-options" style="display:none;margin-bottom:16px">
+        <div class="section-label">Flatbed Options</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer"><input type="checkbox" id="w-fb-tarps"> Tarps Required</label>
+          <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer"><input type="checkbox" id="w-fb-coil"> Coil Racks</label>
+          <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer"><input type="checkbox" id="w-fb-conestoga"> Conestoga / Rolling Tarp</label>
+          <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer"><input type="checkbox" id="w-fb-rgn"> RGN (Removable Gooseneck)</label>
+        </div>
+      </div>
+      <div class="form-group"><label for="w-instructions">Special Instructions</label><input type="text" id="w-instructions" placeholder="e.g. No-touch freight, notify before arrival"></div>
     </div>
 
     <!-- STEP 4: QUOTE -->
@@ -596,7 +651,7 @@ tr:hover td{background:var(--surface2)}
       <div class="modal-title" id="detail-load-num">Load #—</div>
       <div style="font-size:12px;color:var(--muted);margin-top:2px" id="detail-load-sub">—</div>
     </div>
-    <button class="modal-close" onclick="closeModal('modal-load-detail')">✕</button>
+    <button class="modal-close" onclick="closeModal('modal-load-detail')" aria-label="Close dialog">✕</button>
   </div>
   <div class="modal-body">
     <div id="detail-content">
@@ -680,6 +735,8 @@ async function doLogin() {
   const email = document.getElementById('login-email').value.trim();
   const password = document.getElementById('login-password').value;
   if(!email || !password) return showAuthError('Email and password are required.');
+  const btn = document.getElementById('login-btn');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Signing in…';
   try {
     const r = await api('POST', '/api/shipper/auth/login', {email, password}, false);
     if(r.token) {
@@ -692,6 +749,15 @@ async function doLogin() {
       showAuthError(r.detail || 'Login failed.');
     }
   } catch(e) { showAuthError(e.message || 'Login failed. Please try again.'); }
+  finally { btn.disabled = false; btn.textContent = 'Sign In'; }
+}
+
+function showForgotPassword() {
+  const email = document.getElementById('login-email').value.trim();
+  if(!email) { showAuthError('Enter your email address first, then click Forgot password.'); return; }
+  api('POST', '/api/shipper/auth/password-reset', {email}, false)
+    .then(() => { clearAuthMsgs(); document.getElementById('auth-success').textContent='Password reset link sent — check your inbox.'; document.getElementById('auth-success').style.display='block'; })
+    .catch(e => showAuthError(e.message || 'Could not send reset email.'));
 }
 
 async function doRegister() {
@@ -703,9 +769,11 @@ async function doRegister() {
   const state = document.getElementById('reg-state').value;
   const password = document.getElementById('reg-password').value;
   const confirm = document.getElementById('reg-confirm').value;
-  if(!company_name || !email || !password) return showAuthError('Company name, email and password are required.');
+  if(!company_name || !contact_name || !email || !password) return showAuthError('Company name, contact name, email and password are required.');
   if(password !== confirm) return showAuthError('Passwords do not match.');
   if(password.length < 8) return showAuthError('Password must be at least 8 characters.');
+  const btn = document.getElementById('register-btn');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Creating account…';
   try {
     const r = await api('POST', '/api/shipper/auth/register', {company_name, contact_name, email, phone, state, password}, false);
     if(r.token) {
@@ -718,6 +786,7 @@ async function doRegister() {
       showAuthError(r.detail || 'Registration failed.');
     }
   } catch(e) { showAuthError(e.message || 'Registration failed.'); }
+  finally { btn.disabled = false; btn.textContent = 'Create Account — Free'; }
 }
 
 function doLogout() {
@@ -745,8 +814,16 @@ function showView(name) {
     const views = ['dashboard','shipments','invoices','account'];
     el.classList.toggle('active', views[i]===name);
   });
+  updateMobileNav(name);
   if(name==='invoices') loadInvoices();
   if(name==='account') loadAccount();
+}
+
+function updateMobileNav(name) {
+  ['dashboard','shipments','invoices','account'].forEach(v => {
+    const el = document.getElementById('mnav-'+v);
+    if(el) el.classList.toggle('active', v===name);
+  });
 }
 
 // ── API HELPER ────────────────────────────────────────────────────
@@ -757,7 +834,7 @@ async function api(method, path, body, auth=true) {
   const r = await fetch(API + path, opts);
   const data = await r.json().catch(() => ({}));
   if(!r.ok) {
-    if(r.status===401) { doLogout(); return; }
+    if(r.status===401) { doLogout(); throw new Error('Session expired. Please sign in again.'); }
     throw new Error(data.detail || `HTTP ${r.status}`);
   }
   return data;
@@ -771,9 +848,20 @@ async function loadDashboard() {
     document.getElementById('stat-delivered').textContent = d.delivered_this_month ?? '0';
     document.getElementById('stat-invoices').textContent = d.pending_invoices ?? '0';
     document.getElementById('stat-spend').textContent = '$' + (d.total_spend_this_month ?? 0).toLocaleString(undefined,{maximumFractionDigits:0});
+    const onTimeRate = d.on_time_rate;
+    const subEl = document.getElementById('stat-delivered-sub');
+    if(onTimeRate !== undefined) {
+      const pct = Math.round(onTimeRate * 100);
+      subEl.textContent = pct + '% on-time';
+      subEl.className = 'stat-change ' + (pct >= 90 ? 'up' : pct >= 75 ? '' : 'down');
+    } else { subEl.textContent = 'this month'; subEl.className = 'stat-change'; }
     renderLoadsTable('recent-loads-body', d.recent_loads || [], true);
     renderAlerts(d.alerts || []);
-  } catch(e) { console.error('Dashboard load failed', e); }
+  } catch(e) {
+    console.error('Dashboard load failed', e);
+    toast('Could not load dashboard data. Check your connection.', 'error');
+    document.getElementById('recent-loads-body').innerHTML = `<tr><td colspan="6"><div class="empty-state"><span class="empty-icon">⚠️</span><div class="empty-title">Failed to load</div><div><span style="color:var(--accent2);cursor:pointer" onclick="loadDashboard()">Try again</span></div></div></td></tr>`;
+  }
 }
 
 function renderAlerts(alerts) {
@@ -785,15 +873,29 @@ function renderAlerts(alerts) {
 }
 
 // ── LOADS ─────────────────────────────────────────────────────────
+const PAGE_SIZE = 25;
 async function loadAllLoads(status, page=0) {
   _loadsPage = page;
   try {
-    const qs = status && status!=='all' ? `?status=${status}&limit=50` : '?limit=50';
-    const d = await api('GET', '/api/shipper/loads'+qs);
+    const offset = page * PAGE_SIZE;
+    const qs = new URLSearchParams({limit: PAGE_SIZE, offset});
+    if(status && status !== 'all') qs.set('status', status);
+    const d = await api('GET', '/api/shipper/loads?' + qs);
     _allLoads = d.items || [];
+    const total = d.total || _allLoads.length;
     renderLoadsTable('loads-body', _allLoads, false);
-    document.getElementById('loads-count').textContent = `${_allLoads.length} shipment${_allLoads.length!==1?'s':''}`;
+    document.getElementById('loads-count').textContent = `${total} shipment${total!==1?'s':''}`;
+    renderPagination(total, page);
   } catch(e) { console.error('Loads load failed', e); }
+}
+
+function renderPagination(total, page) {
+  const pages = Math.ceil(total / PAGE_SIZE);
+  const el = document.getElementById('loads-pagination');
+  if(pages <= 1) { el.innerHTML = ''; return; }
+  let html = '';
+  for(let i=0; i<pages; i++) html += `<button class="page-btn ${i===page?'active':''}" onclick="loadAllLoads(_loadsFilter,${i})">${i+1}</button>`;
+  el.innerHTML = html;
 }
 
 function filterLoads(status, el) {
@@ -826,13 +928,18 @@ function renderLoadsTable(tbodyId, loads, compact) {
 
 function loadNum(id) { return '3LL-' + (id||'').substring(0,8).toUpperCase(); }
 function statusLabel(s) {
-  const m = {quote:'Quote',booked:'Booked',dispatched:'Dispatched',in_transit:'In Transit',delivered:'Delivered',invoiced:'Invoiced',cancelled:'Cancelled'};
+  const m = {quote:'⏱ Quote',booked:'📋 Booked',dispatched:'🚚 Dispatched',in_transit:'🛣 In Transit',delivered:'✅ Delivered',invoiced:'🧾 Invoiced',cancelled:'✕ Cancelled'};
   return m[s] || s || '—';
 }
 function fmt$(n) { return '$'+(n||0).toLocaleString(undefined,{minimumFractionDigits:0,maximumFractionDigits:0}); }
 
 async function cancelLoad(id) {
-  if(!confirm('Cancel this shipment?')) return;
+  const load = _allLoads.find(l => l.id === id);
+  const isActive = load && ['dispatched','in_transit'].includes(load.status);
+  const msg = isActive
+    ? `Cancel load ${loadNum(id)}? A carrier has already been assigned — cancellation fees may apply per your carrier agreement. This cannot be undone.`
+    : `Cancel load ${loadNum(id)}? This cannot be undone.`;
+  if(!confirm(msg)) return;
   try {
     await api('DELETE', '/api/shipper/loads/'+id);
     toast('Shipment cancelled', 'success');
@@ -871,7 +978,12 @@ async function openLoadDetail(id) {
       <div class="detail-row"><span class="detail-label">Weight</span><span class="detail-val">${d.weight_lbs ? d.weight_lbs.toLocaleString()+' lbs' : '—'}</span></div>
       <div class="detail-row"><span class="detail-label">Pallets</span><span class="detail-val">${d.pallets||'—'}</span></div>
       <div class="detail-row"><span class="detail-label">Miles</span><span class="detail-val">${d.quoted_miles ? Math.round(d.quoted_miles)+' mi' : '—'}</span></div>
-      <div class="detail-row"><span class="detail-label">Total Rate</span><span class="detail-val" style="color:var(--green);font-weight:700">${fmt$(d.total_rate)}</span></div>`;
+      <div class="detail-row"><span class="detail-label">Total Rate</span><span class="detail-val" style="color:var(--green);font-weight:700">${fmt$(d.total_rate)}</span></div>
+      ${d.carrier_name?`<div class="detail-row"><span class="detail-label">Carrier</span><span class="detail-val">${d.carrier_name}</span></div>`:''}
+      ${d.carrier_mc?`<div class="detail-row"><span class="detail-label">MC #</span><span class="detail-val">${d.carrier_mc}</span></div>`:''}
+      ${d.driver_name?`<div class="detail-row"><span class="detail-label">Driver</span><span class="detail-val">${d.driver_name}</span></div>`:''}
+      ${d.driver_phone?`<div class="detail-row"><span class="detail-label">Driver Phone</span><span class="detail-val"><a href="tel:${d.driver_phone}" style="color:var(--accent2)">${d.driver_phone}</a></span></div>`:''}
+    `;
 
     // Location
     if(d.current_lat && d.current_lng) {
@@ -900,24 +1012,54 @@ async function openLoadDetail(id) {
 }
 
 function buildTimeline(d) {
+  if(d.status === 'cancelled') {
+    return [
+      {key:'quote',label:'Quote Created',done:true,active:false,time:d.created_at?new Date(d.created_at).toLocaleString():''},
+      {key:'cancelled',label:'Shipment Cancelled',done:true,active:false,time:(d.cancelled_at||d.updated_at)?new Date(d.cancelled_at||d.updated_at).toLocaleString():''},
+    ];
+  }
+  const ev = d.events || {};
   const steps = [
-    {key:'quote',label:'Quote Created',done:true,active:false},
-    {key:'booked',label:'Shipment Booked',done:['booked','dispatched','in_transit','delivered','invoiced'].includes(d.status)},
-    {key:'dispatched',label:'Driver Assigned',done:['dispatched','in_transit','delivered','invoiced'].includes(d.status)},
-    {key:'in_transit',label:'Pickup Complete — In Transit',done:['in_transit','delivered','invoiced'].includes(d.status)},
-    {key:'delivered',label:'Delivered',done:['delivered','invoiced'].includes(d.status)},
-    {key:'invoiced',label:'Invoice Sent',done:d.status==='invoiced'},
+    {key:'quote',     label:'Quote Created',              ts:d.created_at,       done:true},
+    {key:'booked',    label:'Shipment Booked',            ts:ev.booked_at,       done:['booked','dispatched','in_transit','delivered','invoiced'].includes(d.status)},
+    {key:'dispatched',label:'Driver Assigned',            ts:ev.dispatched_at,   done:['dispatched','in_transit','delivered','invoiced'].includes(d.status)},
+    {key:'in_transit',label:'Pickup Complete — In Transit',ts:ev.pickup_at,      done:['in_transit','delivered','invoiced'].includes(d.status)},
+    {key:'delivered', label:'Delivered',                  ts:ev.delivered_at,    done:['delivered','invoiced'].includes(d.status)},
+    {key:'invoiced',  label:'Invoice Sent',               ts:ev.invoiced_at,     done:d.status==='invoiced'},
   ];
-  const active = steps.findIndex(s => !s.done);
-  return steps.map((s,i) => ({...s, active: i===active, time: s.done && d.updated_at ? new Date(d.updated_at).toLocaleDateString() : s.active ? 'In progress' : 'Pending'}));
+  const activeIdx = steps.findIndex(s => !s.done);
+  return steps.map((s,i) => ({
+    ...s, active: i===activeIdx,
+    time: s.ts ? new Date(s.ts).toLocaleString() : (i===activeIdx ? 'In progress' : s.done ? '—' : 'Pending')
+  }));
 }
 
 // ── NEW SHIPMENT WIZARD ───────────────────────────────────────────
 function openNewShipmentWizard() {
   _wizardStep = 1;
   _quoteData = null;
+  // Clear all wizard fields to prevent double-booking from stale data
+  ['w-pu-addr','w-pu-city','w-pu-contact','w-pu-phone',
+   'w-del-addr','w-del-city','w-del-contact','w-del-phone',
+   'w-commodity','w-weight','w-pallets','w-length','w-width','w-height',
+   'w-hazmat-class','w-temp-min','w-temp-max','w-instructions',
+   'w-shipper-ref','w-bol-num'].forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
+  ['w-pu-state','w-del-state'].forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
+  ['w-pu-zip','w-del-zip'].forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
+  ['w-hazmat','w-temp','w-acc-liftgate-pu','w-acc-liftgate-del','w-acc-residential','w-acc-appt','w-acc-team','w-acc-tonu',
+   'w-fb-tarps','w-fb-coil','w-fb-conestoga','w-fb-rgn'].forEach(id => { const el=document.getElementById(id); if(el) el.checked=false; });
+  const stackable = document.getElementById('w-stackable'); if(stackable) stackable.checked = true;
+  document.getElementById('hazmat-fields').style.display = 'none';
+  document.getElementById('temp-fields').style.display = 'none';
+  document.getElementById('flatbed-options').style.display = 'none';
+  const today = new Date().toISOString().split('T')[0];
+  const nextWeek = new Date(Date.now()+7*86400000).toISOString().split('T')[0];
+  document.getElementById('w-pu-date').value = today;
+  document.getElementById('w-del-date').value = nextWeek;
   setWizardStep(1);
-  document.getElementById('modal-new-shipment').classList.add('open');
+  const modal = document.getElementById('modal-new-shipment');
+  modal.classList.add('open');
+  trapFocus(modal);
 }
 
 function setWizardStep(n) {
@@ -938,17 +1080,45 @@ async function wizardNext() {
     const city = document.getElementById('w-pu-city').value.trim();
     const state = document.getElementById('w-pu-state').value;
     const date = document.getElementById('w-pu-date').value;
+    const zip = document.getElementById('w-pu-zip').value.trim();
     if(!city || !state || !date) { toast('Please fill in pickup city, state and date', 'error'); return; }
+    if(zip && !/^\d{5}$/.test(zip)) { toast('Enter a valid 5-digit pickup ZIP code', 'error'); return; }
     setWizardStep(2);
   } else if(_wizardStep === 2) {
     const city = document.getElementById('w-del-city').value.trim();
     const state = document.getElementById('w-del-state').value;
     const date = document.getElementById('w-del-date').value;
+    const zip = document.getElementById('w-del-zip').value.trim();
+    const pickupDate = document.getElementById('w-pu-date').value;
     if(!city || !state || !date) { toast('Please fill in delivery city, state and date', 'error'); return; }
+    if(date < pickupDate) { toast('Delivery date must be on or after pickup date', 'error'); return; }
+    if(zip && !/^\d{5}$/.test(zip)) { toast('Enter a valid 5-digit delivery ZIP code', 'error'); return; }
     setWizardStep(3);
   } else if(_wizardStep === 3) {
+    const weight = parseFloat(document.getElementById('w-weight').value);
+    const commodity = document.getElementById('w-commodity').value.trim();
+    if(!commodity) { toast('Please enter a commodity description', 'error'); return; }
+    if(!weight || weight <= 0 || weight > 80000) { toast('Please enter a valid weight (1–80,000 lbs)', 'error'); return; }
+    if(document.getElementById('w-hazmat').checked && !document.getElementById('w-hazmat-class').value.trim()) {
+      toast('HazMat class is required for hazardous materials', 'error'); return;
+    }
+    if(document.getElementById('w-temp').checked) {
+      const tMin = document.getElementById('w-temp-min').value;
+      const tMax = document.getElementById('w-temp-max').value;
+      if(!tMin || !tMax) { toast('Temperature range is required for refrigerated freight', 'error'); return; }
+    }
+    const quoteKey = [
+      document.getElementById('w-pu-city').value, document.getElementById('w-pu-state').value,
+      document.getElementById('w-del-city').value, document.getElementById('w-del-state').value,
+      weight, document.getElementById('w-eq-type').value
+    ].join('|');
     setWizardStep(4);
-    await fetchQuote();
+    if(!_quoteData || _quoteData._key !== quoteKey) {
+      await fetchQuote(quoteKey);
+    } else {
+      document.getElementById('quote-loading').style.display = 'none';
+      document.getElementById('quote-result').style.display = 'block';
+    }
   } else if(_wizardStep === 4) {
     if(!_quoteData) { toast('Please wait for quote to calculate', 'error'); return; }
     buildConfirmSummary();
@@ -962,7 +1132,7 @@ function wizardBack() {
   if(_wizardStep > 1) setWizardStep(_wizardStep - 1);
 }
 
-async function fetchQuote() {
+async function fetchQuote(quoteKey) {
   document.getElementById('quote-loading').style.display = 'block';
   document.getElementById('quote-result').style.display = 'none';
   document.getElementById('quote-error').style.display = 'none';
@@ -979,9 +1149,12 @@ async function fetchQuote() {
       temp_controlled: document.getElementById('w-temp').checked,
       pickup_date: document.getElementById('w-pu-date').value,
       delivery_date: document.getElementById('w-del-date').value,
+      origin_zip: document.getElementById('w-pu-zip').value.trim() || null,
+      dest_zip: document.getElementById('w-del-zip').value.trim() || null,
     };
     const q = await api('POST', '/api/shipper/quote', body);
     _quoteData = q;
+    _quoteData._key = quoteKey;
     document.getElementById('quote-loading').style.display = 'none';
     document.getElementById('quote-result').style.display = 'block';
     document.getElementById('q-total').textContent = fmt$(q.total_rate);
@@ -1106,7 +1279,7 @@ async function loadInvoices() {
       return;
     }
     el.innerHTML = inv.map(i => `
-      <div class="invoice-card" onclick="openLoadDetail('${i.load_id||i.id}')">
+      <div class="invoice-card">
         <div class="invoice-row">
           <div>
             <div class="invoice-num">${i.invoice_number || '—'}</div>
@@ -1114,10 +1287,15 @@ async function loadInvoices() {
           </div>
           <div style="text-align:right">
             <div class="invoice-amount">${fmt$(i.invoice_amount)}</div>
-            <span class="badge ${i.invoice_paid?'badge-paid':'badge-invoiced'}" style="font-size:10px">${i.invoice_paid?'Paid':'Unpaid'}</span>
+            <span class="badge ${i.invoice_paid?'badge-paid':'badge-invoiced'}" style="font-size:10px">${i.invoice_paid?'✅ Paid':'Unpaid'}</span>
           </div>
         </div>
         <div class="invoice-meta" style="margin-top:8px">Issued: ${i.invoice_date||'—'} &nbsp;·&nbsp; Due: ${i.invoice_due_date||'—'}</div>
+        <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+          ${i.invoice_pdf_url ? `<a href="${i.invoice_pdf_url}" target="_blank" style="background:var(--surface3);color:var(--text);border:1px solid var(--border);padding:6px 14px;border-radius:7px;font-size:12px;text-decoration:none">📄 Download PDF</a>` : ''}
+          ${!i.invoice_paid && i.payment_link ? `<a href="${i.payment_link}" target="_blank" style="background:var(--green);color:#fff;border:none;padding:6px 14px;border-radius:7px;font-size:12px;font-weight:600;text-decoration:none">💳 Pay Now</a>` : ''}
+          <span style="background:var(--surface3);color:var(--text);border:1px solid var(--border);padding:6px 14px;border-radius:7px;font-size:12px;cursor:pointer" onclick="openLoadDetail('${i.load_id||i.id}')">View Load</span>
+        </div>
       </div>`).join('');
   } catch(e) { el.innerHTML = '<div style="color:var(--red);text-align:center;padding:40px">Failed to load invoices</div>'; }
 }
@@ -1133,10 +1311,13 @@ async function loadAccount() {
     document.getElementById('acc-address').value = d.address || '';
     document.getElementById('acc-city').value = d.city || '';
     document.getElementById('acc-state').value = d.state || '';
+    document.getElementById('acc-zip').value = d.zip || '';
     document.getElementById('billing-terms').textContent = 'Net ' + (d.payment_terms || 30);
     document.getElementById('wh-url').value = d.webhook_url || '';
     const events = d.webhook_events || [];
-    document.getElementById('wh-events-display').innerHTML = events.map(e => `<div class="event-tag">${e}</div>`).join('');
+    ['wh-ev-booked','wh-ev-dispatched','wh-ev-transit','wh-ev-delivered','wh-ev-invoiced','wh-ev-exception'].forEach(id => {
+      const el = document.getElementById(id); if(el) el.checked = events.includes(el.value);
+    });
   } catch(e) { toast(e.message, 'error'); }
 }
 
@@ -1148,7 +1329,8 @@ async function saveAccount() {
       phone: document.getElementById('acc-phone').value.trim(),
       address: document.getElementById('acc-address').value.trim(),
       city: document.getElementById('acc-city').value.trim(),
-      state: document.getElementById('acc-state').value.trim(),
+      state: document.getElementById('acc-state').value,
+      zip: document.getElementById('acc-zip').value.trim(),
     });
     toast('Account saved', 'success');
     _shipper.company_name = document.getElementById('acc-company').value.trim();
@@ -1178,8 +1360,12 @@ async function rotateApiKey() {
 
 async function saveWebhook() {
   try {
+    const events = ['wh-ev-booked','wh-ev-dispatched','wh-ev-transit','wh-ev-delivered','wh-ev-invoiced','wh-ev-exception']
+      .filter(id => document.getElementById(id)?.checked)
+      .map(id => document.getElementById(id).value);
     await api('PATCH', '/api/shipper/webhook', {
       webhook_url: document.getElementById('wh-url').value.trim(),
+      webhook_events: events,
     });
     toast('Webhook saved', 'success');
   } catch(e) { toast(e.message, 'error'); }
@@ -1199,8 +1385,32 @@ function toggleHazmat() {
 function toggleTemp() {
   document.getElementById('temp-fields').style.display = document.getElementById('w-temp').checked ? '' : 'none';
 }
-function openModal(id) { document.getElementById(id).classList.add('open'); }
+document.addEventListener('DOMContentLoaded', () => {
+  const eqSel = document.getElementById('w-eq-type');
+  if(eqSel) eqSel.addEventListener('change', function() {
+    document.getElementById('flatbed-options').style.display = this.value === 'flatbed' ? '' : 'none';
+  });
+});
+
+function openModal(id) {
+  const modal = document.getElementById(id);
+  modal.classList.add('open');
+  trapFocus(modal);
+}
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+function trapFocus(modalEl) {
+  const focusable = modalEl.querySelectorAll('button,input,select,textarea,a[href],[tabindex]:not([tabindex="-1"])');
+  if(!focusable.length) return;
+  const first = focusable[0], last = focusable[focusable.length-1];
+  modalEl._trapHandler = function(e) {
+    if(e.key !== 'Tab') return;
+    if(e.shiftKey) { if(document.activeElement===first) { last.focus(); e.preventDefault(); } }
+    else { if(document.activeElement===last) { first.focus(); e.preventDefault(); } }
+  };
+  modalEl.addEventListener('keydown', modalEl._trapHandler);
+  first.focus();
+}
 
 document.querySelectorAll('.modal-overlay').forEach(el => {
   el.addEventListener('click', e => { if(e.target===el) el.classList.remove('open'); });
