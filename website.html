@@ -3023,7 +3023,14 @@ async function bizSubmit(e) {
 </div>
 
 <script>
+// Pre-warm Render so it's awake by the time driver hits Submit
+function _lfPingApi() {
+  const API = (window.__3LL_API_BASE||'https://three-lakes-logistics-api.onrender.com').replace(/\/$/,'');
+  fetch(API+'/api/health', {method:'GET'}).catch(()=>{});
+}
+
 function lfStartSignup(type, label, color) {
+  _lfPingApi();
   showPage('lf-intake');
   document.getElementById('lf-intake-chip').textContent = label;
   document.getElementById('lf-intake-sub').textContent = 'Clean record + active insurance = instant approval. You could be dispatched within 24 hours.';
@@ -3090,9 +3097,13 @@ async function lfSubmitIntake(e){
   };
   try {
     const API = (window.__3LL_API_BASE||'https://three-lakes-logistics-api.onrender.com').replace(/\/$/,'');
+    const ctrl = new AbortController();
+    const _t = setTimeout(()=>ctrl.abort(), 45000); // 45s — Render cold start can take ~30s
     const r = await fetch(API+'/api/light-fleet/drivers/intake',{
-      method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)
+      method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload),
+      signal: ctrl.signal
     });
+    clearTimeout(_t);
     if(r.ok){
       const res = await r.json();
       form.style.display='none';
@@ -3121,7 +3132,10 @@ async function lfSubmitIntake(e){
       btn.textContent='Create My Account →'; btn.disabled=false;
     }
   } catch(err){
-    errEl.textContent='Network error — please try again or call 661-466-9932.';
+    const msg = (err.name==='AbortError')
+      ? 'Our server took too long to respond. Please try again — it usually works on the second attempt.'
+      : 'Network error — please check your connection and try again, or call 661-466-9932.';
+    errEl.textContent = msg;
     errEl.style.display='block';
     btn.textContent='Create My Account →'; btn.disabled=false;
   }
