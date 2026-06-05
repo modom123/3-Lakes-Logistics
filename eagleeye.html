@@ -27,12 +27,13 @@
   --shadow-lg:0 8px 48px rgba(11,37,69,.14);
   --sidebar-w:240px;
   --surface:#FFFFFF; --bg:#F8F9FC; --gold1:#D4960E;
+  --surface2:#F1F5F9; --accent:#2563EB; --gold-muted:#6b5a1e;
 }
 html,body{height:100%;overflow:hidden;}
 body{font-family:var(--ff-b);color:var(--text);background:var(--off);display:flex;}
-::-webkit-scrollbar{width:20px;height:20px;}
+::-webkit-scrollbar{width:8px;height:8px;}
 ::-webkit-scrollbar-track{background:var(--slate);}
-::-webkit-scrollbar-thumb{background:var(--gold);border-radius:8px;border:5px solid var(--slate);}
+::-webkit-scrollbar-thumb{background:var(--gold);border-radius:8px;}
 
 /* ── SIDEBAR ── */
 #sidebar{
@@ -256,6 +257,14 @@ body{font-family:var(--ff-b);color:var(--text);background:var(--off);display:fle
 }
 .btn-out:hover{border-color:var(--navy);background:var(--off);}
 
+.btn-gold{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:8px 16px;border-radius:6px;
+  background:var(--gold);border:none;
+  color:#fff;font-size:13px;font-weight:600;
+  cursor:pointer;transition:opacity .15s;
+}
+.btn-gold:hover{opacity:.88;}
 .btn-gold-sm{
   display:inline-flex;align-items:center;gap:5px;
   padding:5px 12px;border-radius:6px;
@@ -2062,7 +2071,7 @@ select.form-input option{background:var(--surface);}
               <option value="Not_Interested">Not interested</option>
               <option value="Won">Won</option>
             </select>
-            <input type="text" id="crm-search" placeholder="Search…" onchange="renderCrmCurrentView()" style="padding:6px 10px;border:1px solid var(--border);border-radius:4px;font-size:13px;width:160px">
+            <input type="text" id="crm-search" placeholder="Search…" oninput="renderCrmCurrentView()" style="padding:6px 10px;border:1px solid var(--border);border-radius:4px;font-size:13px;width:160px">
           </div>
         </div>
       </div>
@@ -3309,52 +3318,6 @@ select.form-input option{background:var(--surface);}
   </div><!-- /content -->
 </div><!-- /main -->
 
-<!-- EC: Create Escalation Modal -->
-<div id="ec-esc-modal" style="display:none;position:fixed;inset:0;background:rgba(11,37,69,.8);z-index:4000;align-items:center;justify-content:center;backdrop-filter:blur(4px);">
-  <div style="background:white;border-radius:16px;width:92%;max-width:520px;overflow:hidden;box-shadow:0 24px 80px rgba(0,0,0,.4);">
-    <div style="background:var(--navy);padding:18px 24px;display:flex;justify-content:space-between;align-items:center;">
-      <div style="color:#F5C842;font-family:var(--ff-m);font-size:13px;font-weight:700;letter-spacing:1px;">CREATE TRIAGE ESCALATION</div>
-      <button onclick="document.getElementById('ec-esc-modal').style.display='none'" style="background:transparent;color:rgba(255,255,255,.6);border:none;cursor:pointer;font-size:18px;">&times;</button>
-    </div>
-    <div style="padding:26px;display:grid;gap:14px;">
-      <div><label class="fl">Tier *</label><select class="fsel" id="ec-new-tier"><option value="1">Tier 1 — AI Auto-Resolve (15 min SLA)</option><option value="2">Tier 2 — Executive Review (1hr SLA)</option><option value="3">Tier 3 — Commander War Room</option></select></div>
-      <div><label class="fl">Event Type *</label><select class="fsel" id="ec-new-type"><option value="ocr_failure">OCR Failure</option><option value="safety_red">Safety Red</option><option value="api_down">API Down</option><option value="fraud_alert">Fraud Alert</option><option value="dispute">Dispute</option><option value="gps_lag">GPS Lag</option><option value="rate_variance">Rate Variance</option></select></div>
-      <div><label class="fl">Assigned To</label><input class="fi" id="ec-new-assigned" placeholder="Executive name, ai_agent, or commander"></div>
-      <div><label class="fl">Description</label><textarea class="fta" id="ec-new-desc" placeholder="Describe the issue…" style="min-height:80px"></textarea></div>
-      <div style="display:flex;gap:10px;margin-top:4px">
-        <button onclick="ecSubmitEscalation()" class="btn-navy" style="flex:1">Create Escalation</button>
-        <button onclick="document.getElementById('ec-esc-modal').style.display='none'" class="btn-out">Cancel</button>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- EC: Record KPI Modal -->
-<div id="ec-kpi-modal" style="display:none;position:fixed;inset:0;background:rgba(11,37,69,.8);z-index:4000;align-items:center;justify-content:center;backdrop-filter:blur(4px);">
-  <div style="background:white;border-radius:16px;width:92%;max-width:520px;overflow:hidden;box-shadow:0 24px 80px rgba(0,0,0,.4);">
-    <div style="background:var(--navy);padding:18px 24px;display:flex;justify-content:space-between;align-items:center;">
-      <div style="color:#F5C842;font-family:var(--ff-m);font-size:13px;font-weight:700;letter-spacing:1px;">RECORD KPI SNAPSHOT</div>
-      <button onclick="document.getElementById('ec-kpi-modal').style.display='none'" style="background:transparent;color:rgba(255,255,255,.6);border:none;cursor:pointer;font-size:18px;">&times;</button>
-    </div>
-    <div style="padding:26px;display:grid;gap:14px;">
-      <div><label class="fl">Executive ID *</label><input class="fi" id="ec-kpi-exec-id" placeholder="UUID from executives table"></div>
-      <div><label class="fl">KPI Name *</label><input class="fi" id="ec-kpi-name" placeholder="e.g. 200-Step Uptime"></div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-        <div><label class="fl">Current Value</label><input class="fi" type="number" step="0.01" id="ec-kpi-current" placeholder="e.g. 99.97"></div>
-        <div><label class="fl">Target Value</label><input class="fi" type="number" step="0.01" id="ec-kpi-target" placeholder="e.g. 99.99"></div>
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-        <div><label class="fl">Unit</label><select class="fsel" id="ec-kpi-unit"><option value="percent">percent</option><option value="dollars">dollars</option><option value="hours">hours</option><option value="ms">ms</option><option value="score">score</option></select></div>
-        <div><label class="fl">Status</label><select class="fsel" id="ec-kpi-status"><option value="on_track">On Track</option><option value="at_risk">At Risk</option><option value="critical">Critical</option></select></div>
-      </div>
-      <div style="display:flex;gap:10px;margin-top:4px">
-        <button onclick="ecSubmitKpi()" class="btn-navy" style="flex:1">Record Snapshot</button>
-        <button onclick="document.getElementById('ec-kpi-modal').style.display='none'" class="btn-out">Cancel</button>
-      </div>
-    </div>
-  </div>
-</div>
-
 <!-- ── MODALS ── -->
 
 <!-- ADD LOAD -->
@@ -4215,7 +4178,7 @@ function openAssignModal(loadId){
 }
 function openAssignModalForCarrier(carrierId,carrierName){
   const unassigned=allLoads.find(l=>l.status==='Booked'&&!l.driver_name);
-  if(!unassigned){showToast('No unassigned Booked loads — open a specific load first');return;}
+  if(!unassigned){toast('No unassigned Booked loads — open a specific load first');return;}
   openAssignModal(unassigned.id);
   setTimeout(()=>{const sel=document.getElementById('assign-driver-sel');if(sel)sel.value=carrierId;},100);
 }
@@ -4223,16 +4186,16 @@ async function submitAssignDriver(){
   const sel=document.getElementById('assign-driver-sel');
   const carrierId=sel?.value;
   const carrierName=sel?.options[sel.selectedIndex]?.dataset.name||'';
-  if(!carrierId||!_assignLoadId){showToast('Select a carrier first','error');return;}
+  if(!carrierId||!_assignLoadId){toast('Select a carrier first','error');return;}
   const btn=document.getElementById('assign-submit-btn');
   if(btn){btn.disabled=true;btn.textContent='Assigning…';}
   const r=await apiFetch('/api/dashboard/loads/'+_assignLoadId,'PATCH',{driver_name:carrierName});
   if(r.ok){
     closeModal('assign-driver-modal');
-    showToast('✅ '+carrierName+' assigned to load');
+    toast('✅ '+carrierName+' assigned to load');
     await loadLoads();
   } else {
-    showToast('Failed to assign carrier','error');
+    toast('Failed to assign carrier','error');
   }
   if(btn){btn.disabled=false;btn.textContent='Assign →';}
 }
@@ -4275,8 +4238,8 @@ async function cycleLoadStatus(id){
   const current=load?.status||'Booked';
   const next=statuses[(statuses.indexOf(current)+1)%statuses.length];
   const r=await apiFetch('/api/dashboard/loads/'+id,'PATCH',{status:next});
-  if(!r.ok){showToast('Error updating status','error');return;}
-  await loadLoads();showToast('Status → '+next);
+  if(!r.ok){toast('Error updating status','error');return;}
+  await loadLoads();toast('Status → '+next);
   const body={load_id:id,load_number:load?.load_number||'',rate:load?.rate||null};
   if(next==='En Route')fireTrigger('pickup',body);
   if(next==='Delivered'||next==='Completed')fireTrigger('delivered',body);
@@ -4927,7 +4890,7 @@ function showDashSummary(type){
       </tr>`).join('')+'</tbody></table>';
   } else if(type==='dispatch-on'){
     title.textContent='Carriers On Load — Current 10';
-    const rows=allLoads.filter(l=>l.status==='In Transit'||l.status==='Dispatched').slice(0,10);
+    const rows=allLoads.filter(l=>l.status==='En Route'||l.status==='Booked'||l.status==='Check Due').slice(0,10);
     if(!rows.length){html='<div style="color:#6b7280;padding:20px 0">No loads currently in transit or dispatched.</div>';}
     else html='<table style="width:100%;border-collapse:collapse;font-size:13px">'+
       '<thead><tr style="border-bottom:2px solid #e5e7eb">'+
@@ -4962,9 +4925,9 @@ function showDashSummary(type){
         <td style="padding:9px 6px;color:#6b7280;font-family:monospace;font-size:12px">${(c.created_at||'').split('T')[0]||'—'}</td>
       </tr>`).join('')+'</tbody></table>';
   } else if(type==='dispatch-checkcall'){
-    title.textContent='Check-Calls Due — In-Transit Loads';
-    const rows=allLoads.filter(l=>l.status==='In Transit').slice(0,10);
-    if(!rows.length){html='<div style="color:#6b7280;padding:20px 0">No loads currently in transit.</div>';}
+    title.textContent='Check-Calls Due — En Route Loads';
+    const rows=allLoads.filter(l=>l.status==='En Route'||l.status==='Check Due').slice(0,10);
+    if(!rows.length){html='<div style="color:#6b7280;padding:20px 0">No loads currently en route.</div>';}
     else html='<table style="width:100%;border-collapse:collapse;font-size:13px">'+
       '<thead><tr style="border-bottom:2px solid #e5e7eb">'+
       '<th style="text-align:left;padding:8px 6px;color:#6b7280;font-weight:700;font-size:11px">DRIVER</th>'+
@@ -5126,7 +5089,7 @@ async function ecLoadCSOOffice(){
   if(opsEl){
     try{
       const bond=await API.post('/api/agents/james_bond/run',{scope:'ops',top_n:3});
-      const items=bond.items||bond.results||bond.summary||null;
+      const items=bond.output||bond.data||bond.items||bond.results||bond.summary||null;
       if(items){
         const arr=Array.isArray(items)?items:[items];
         opsEl.innerHTML=arr.slice(0,3).map(i=>{
@@ -5397,7 +5360,27 @@ const _TKinit = () => {
   };
 }; _TKinit(); })();
 function invStatusBadge(s){if(s==='Paid')return 'badge-green';if(s==='Overdue')return 'badge-red';if(s==='Partial')return 'badge-orange';return 'badge-gold';}
-function toggleCheck(el){el.classList.toggle('done');el.querySelector('.ck-box').textContent=el.classList.contains('done')?'✓':'';}
+function toggleCheck(el){
+  el.classList.toggle('done');
+  const done=el.classList.contains('done');
+  el.querySelector('.ck-box').textContent=done?'✓':'';
+  // Persist state — key by text content so it survives page reloads
+  const key='ck_'+btoa(el.querySelector('.ck-text')?.textContent||Math.random()).slice(0,20);
+  if(!el.dataset.ckKey) el.dataset.ckKey=key;
+  localStorage.setItem(el.dataset.ckKey, done?'1':'0');
+}
+// Restore checklist state on load
+function restoreChecklists(){
+  document.querySelectorAll('#page-checklist .check-item').forEach(el=>{
+    const key='ck_'+btoa(el.querySelector('.ck-text')?.textContent||'').slice(0,20);
+    el.dataset.ckKey=key;
+    if(localStorage.getItem(key)==='1'){
+      el.classList.add('done');
+      el.querySelector('.ck-box').textContent='✓';
+    }
+  });
+}
+document.addEventListener('DOMContentLoaded',restoreChecklists);
 function resetChecklist(){document.querySelectorAll('.check-item').forEach(el=>{el.classList.remove('done');el.querySelector('.ck-box').textContent='';});}
 
 // ── FMCSA LOOKUP ─────────────────────────────────────────────
@@ -5636,7 +5619,7 @@ function printRateCon(){
 
 async function submitRateCon(){
   const email=document.getElementById('rc-to-email')?.value?.trim();
-  if(!email){showToast('Enter a recipient email','error');return;}
+  if(!email){toast('Enter a recipient email','error');return;}
   const load=allLoads.find(l=>l.id===_rcLoadId);
   if(!load)return;
   const btn=document.getElementById('rc-send-btn');
@@ -5645,7 +5628,7 @@ async function submitRateCon(){
     const r=await apiFetch('/api/rate-confirmation/send','POST',{load_id:_rcLoadId,to_email:email});
     if(r.ok){
       closeModal('rate-con-modal');
-      showToast('✅ Rate confirmation sent to '+email);
+      toast('✅ Rate confirmation sent to '+email);
       return;
     }
   }catch(e){}
@@ -5656,9 +5639,9 @@ async function submitRateCon(){
   try{
     await emailjs.send(EJS_SERVICE,EJS_RATE_CON,params);
     closeModal('rate-con-modal');
-    showToast('✅ Rate confirmation sent to '+email);
+    toast('✅ Rate confirmation sent to '+email);
   }catch(e){
-    showToast('Email failed: '+(e.text||e.message||'Unknown error'),'error');
+    toast('Email failed: '+(e.text||e.message||'Unknown error'),'error');
   }finally{
     btn.disabled=false;btn.textContent='📧 Send Email';
   }
@@ -5753,7 +5736,12 @@ const AGENT_META = {
   isabella:  {icon:'📣', label:'Isabella',  desc:'Outreach campaign builder'},
   katerina:  {icon:'⚙️', label:'Katerina',  desc:'SLA audit & process automation'},
   winston:   {icon:'🤝', label:'Winston',   desc:'Carrier retention & at-risk'},
-  naomi:     {icon:'🎯', label:'Naomi',     desc:'Predictive lead scoring'},
+  naomi:        {icon:'🎯', label:'Naomi',       desc:'Predictive lead scoring'},
+  dr_james_nemt:{icon:'🏥', label:'Dr. James',   desc:'NEMT segment director — Node 201'},
+  elena_ross:   {icon:'🚚', label:'Elena Ross',  desc:'Light Fleet ops — Node 202'},
+  victor_nash:  {icon:'⚡', label:'Victor Nash', desc:'Light Fleet ops — Node 203'},
+  felix_grant:  {icon:'📦', label:'Felix Grant', desc:'Courier segment — Node 204'},
+  morgan_hayes: {icon:'📊', label:'Morgan Hayes',desc:'Light Fleet analytics — Node 205'},
 };
 
 // ── Error queue → auto-dispatch to Bond + Technical Team ─────────────────────
@@ -5789,11 +5777,12 @@ async function _diagAutoDispatch() {
     apiFetch('/api/agents/james_bond/run', 'POST', { scope: 'tech', top_n: 3 }).catch(() => {});
 
     // 2. Technical Team remediates
-    const res = await apiFetch('/api/agents/technical_team/run', 'POST', {
+    const _res = await apiFetch('/api/agents/technical_team/run', 'POST', {
       action: 'remediate',
       failures,
       requested_by: 'eagle_eye_auto',
     });
+    const res = await _res.json().catch(() => ({}));
     const fixed = (res.fixes_applied || []).length;
     const status = fixed > 0 ? `✅ ${fixed} fix(es) applied` : '🔍 Analysis complete — check Bond Office';
     if (indicator) { indicator.textContent = status; indicator.style.color = fixed > 0 ? '#10b981' : '#94a3b8'; }
@@ -6651,7 +6640,7 @@ async function resendNOA(id){
   if(!confirm('Resend the NOA signing email to this carrier?'))return;
   try{
     await apiFetch('/api/factoring/'+id+'/resend','POST',{});
-    showToast('NOA resent successfully.');
+    toast('NOA resent successfully.');
     loadFactoring();
   }catch(e){alert('Failed to resend NOA: '+e.message);}
 }
@@ -15785,7 +15774,7 @@ async function submitCreateDriver() {
     const json = await r.json();
     if (!r.ok) throw new Error(json.detail || r.statusText);
     closeModal('add-driver-modal');
-    showToast(`✅ Driver ${first} ${last} created — Code: ${json.driver_code}`);
+    toast(`✅ Driver ${first} ${last} created — Code: ${json.driver_code}`);
     loadDrivers();
     // Reset form
     ['drv-first','drv-last','drv-phone','drv-pin','drv-code'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
@@ -15801,8 +15790,8 @@ async function submitCreateDriver() {
 async function deactivateDriver(driverId) {
   if (!confirm('Deactivate this driver? They will no longer be able to log in.')) return;
   const r = await apiFetch('/api/driver-auth/'+driverId, 'DELETE');
-  if (r.ok) { showToast('Driver deactivated'); loadDrivers(); }
-  else showToast('Failed to deactivate');
+  if (r.ok) { toast('Driver deactivated'); loadDrivers(); }
+  else toast('Failed to deactivate');
 }
 </script>
 
