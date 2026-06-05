@@ -191,37 +191,41 @@ def process_intake(payload: dict[str, Any]) -> dict[str, Any]:
             return_url=f"https://3lakeslogistics.com/driver-verified",
         )
 
-        verification_url = session.get("url")
-        session_id = session.get("session_id")
+        if not session.get("created"):
+            # Stripe Identity unavailable — fall through to honor-system path
+            log_agent(_NAME, "stripe_identity_unavailable", error=session.get("error", "unknown"))
+        else:
+            verification_url = session.get("url")
+            session_id = session.get("session_id")
 
-        if session.get("created") and sb and driver_id:
-            try:
-                sb.table("light_vehicle_drivers").update({
-                    "stripe_verification_session_id": session_id,
-                }).eq("id", str(driver_id)).execute()
-            except Exception:  # noqa: BLE001
-                pass
+            if sb and driver_id:
+                try:
+                    sb.table("light_vehicle_drivers").update({
+                        "stripe_verification_session_id": session_id,
+                    }).eq("id", str(driver_id)).execute()
+                except Exception:  # noqa: BLE001
+                    pass
 
-        if phone:
-            _send_sms(phone, _PENDING_SMS)
+            if phone:
+                _send_sms(phone, _PENDING_SMS)
 
-        mem.remember(
-            _NAME, "last_intake",
-            {"name": name, "driver_id": str(driver_id), "stripe_session": session_id},
-            confidence=0.85,
-            summary=f"Intake received: {name} — Stripe Identity session created",
-        )
-        log_agent(_NAME, "verification_started", payload={"name": name, "email": email})
+            mem.remember(
+                _NAME, "last_intake",
+                {"name": name, "driver_id": str(driver_id), "stripe_session": session_id},
+                confidence=0.85,
+                summary=f"Intake received: {name} — Stripe Identity session created",
+            )
+            log_agent(_NAME, "verification_started", payload={"name": name, "email": email})
 
-        return {
-            "status": "pending_verification",
-            "driver_id": str(driver_id) if driver_id else None,
-            "verification_url": verification_url,
-            "stripe_session_id": session_id,
-            "message": "License verification link sent. Driver will be approved automatically when verified.",
-        }
+            return {
+                "status": "pending_verification",
+                "driver_id": str(driver_id) if driver_id else None,
+                "verification_url": verification_url,
+                "stripe_session_id": session_id,
+                "message": "License verification link sent. Driver will be approved automatically when verified.",
+            }
 
-    # ── Fallback: honor-system (no Checkr key) ────────────────────────────────
+    # ── Fallback: honor-system (no Stripe key or Stripe unavailable) ──────────
     if clean_record == "no":
         if phone:
             _send_sms(phone, _DENY_MVR_SMS)
