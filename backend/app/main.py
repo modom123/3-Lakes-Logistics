@@ -60,6 +60,9 @@ from .api import (
     triggers_router,
     webhooks_router,
     onboarding_status_router,
+    shipper_auth_router,
+    shipper_router,
+    shipper_tracking_router,
 )
 from .logging_service import get_logger
 from .settings import get_settings
@@ -207,6 +210,9 @@ def create_app() -> FastAPI:
     app.include_router(stripe_identity_webhook_router, prefix="/api", tags=["stripe-identity-webhook"])
     app.include_router(studio_router,          prefix="/api",              tags=["studio"])
     app.include_router(onboarding_status_router, prefix="/api",           tags=["onboarding-status"])
+    app.include_router(shipper_auth_router,      prefix="/api/shipper/auth", tags=["shipper-auth"])
+    app.include_router(shipper_router,           prefix="/api/shipper",      tags=["shipper"])
+    app.include_router(shipper_tracking_router,  prefix="/api",              tags=["tracking"])
     app.include_router(health_router,                                      tags=["health"])
 
     _marketing_dir = os.path.normpath(

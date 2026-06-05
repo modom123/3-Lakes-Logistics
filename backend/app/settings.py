@@ -101,6 +101,9 @@ class Settings(BaseSettings):
     # Public-facing backend URL
     site_url: str = "https://three-lakes-logistics-api.onrender.com"
 
+    # Shipper portal — dispatcher phone shown on public tracking page
+    shipper_dispatcher_phone: str = "+13135469006"
+
     # IEBC API token — used by Bond to probe internal routes during audits
     iebc_api_token: str = ""
 

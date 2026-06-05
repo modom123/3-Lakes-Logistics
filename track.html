@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Track Your Shipment — 3 Lakes Logistics</title>
+  <style>
+    :root {
+      --bg: #0a0e1a;
+      --surface: #111827;
+      --card: #1a2235;
+      --border: #2a3548;
+      --accent: #3b82f6;
+      --accent2: #10b981;
+      --warn: #f59e0b;
+      --danger: #ef4444;
+      --text: #e2e8f0;
+      --muted: #64748b;
+      --radius: 12px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; min-height: 100vh; }
+
+    /* ── Header ── */
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 16px 24px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .logo { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 18px; }
+    .logo-icon { width: 36px; height: 36px; background: var(--accent); border-radius: 8px;
+      display: flex; align-items: center; justify-content: center; font-size: 18px; }
+    .header-right { font-size: 13px; color: var(--muted); }
+    .header-right a { color: var(--accent); text-decoration: none; }
+
+    /* ── Main layout ── */
+    main { max-width: 860px; margin: 0 auto; padding: 32px 16px 64px; }
+
+    /* ── Search bar ── */
+    .search-bar {
+      display: flex; gap: 10px; margin-bottom: 32px;
+    }
+    .search-bar input {
+      flex: 1; background: var(--surface); border: 1px solid var(--border);
+      color: var(--text); padding: 12px 16px; border-radius: var(--radius);
+      font-size: 15px; outline: none;
+    }
+    .search-bar input:focus { border-color: var(--accent); }
+    .search-bar input::placeholder { color: var(--muted); }
+    .btn {
+      padding: 12px 24px; background: var(--accent); color: #fff; border: none;
+      border-radius: var(--radius); font-size: 14px; font-weight: 600; cursor: pointer;
+    }
+    .btn:hover { opacity: 0.88; }
+
+    /* ── State cards ── */
+    .state-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 40px; text-align: center;
+    }
+    .state-icon { font-size: 48px; margin-bottom: 16px; }
+    .state-title { font-size: 20px; font-weight: 700; margin-bottom: 8px; }
+    .state-sub { color: var(--muted); font-size: 14px; }
+
+    /* ── Tracking result ── */
+    #result { display: none; }
+
+    /* Status header */
+    .status-header {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 24px; margin-bottom: 20px;
+      display: flex; align-items: flex-start; justify-content: space-between; gap: 16px;
+      flex-wrap: wrap;
+    }
+    .status-left h2 { font-size: 22px; font-weight: 700; margin-bottom: 4px; }
+    .status-left .ref { font-size: 13px; color: var(--muted); }
+    .status-badge {
+      padding: 6px 16px; border-radius: 20px; font-size: 13px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap;
+    }
+    .badge-booked    { background: rgba(59,130,246,0.18); color: #60a5fa; }
+    .badge-pickup    { background: rgba(245,158,11,0.18); color: #fbbf24; }
+    .badge-intransit { background: rgba(59,130,246,0.18); color: #60a5fa; }
+    .badge-delivered { background: rgba(16,185,129,0.18); color: #34d399; }
+    .badge-exception { background: rgba(239,68,68,0.18);  color: #f87171; }
+
+    /* Two-column grid */
+    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+    @media (max-width: 600px) { .grid2 { grid-template-columns: 1fr; } }
+
+    .info-card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 20px;
+    }
+    .info-card h3 { font-size: 13px; color: var(--muted); text-transform: uppercase;
+      letter-spacing: 0.5px; margin-bottom: 14px; }
+    .info-row { display: flex; justify-content: space-between; align-items: flex-start;
+      margin-bottom: 10px; gap: 8px; font-size: 14px; }
+    .info-row:last-child { margin-bottom: 0; }
+    .info-label { color: var(--muted); flex-shrink: 0; }
+    .info-val { text-align: right; font-weight: 500; }
+
+    /* Route visual */
+    .route-card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 20px; margin-bottom: 20px;
+    }
+    .route-card h3 { font-size: 13px; color: var(--muted); text-transform: uppercase;
+      letter-spacing: 0.5px; margin-bottom: 16px; }
+    .route-visual { display: flex; align-items: center; gap: 8px; }
+    .route-dot {
+      width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0;
+    }
+    .dot-origin { background: var(--accent2); }
+    .dot-dest   { background: var(--accent); }
+    .route-line { flex: 1; height: 2px; background: var(--border); position: relative; }
+    .route-truck {
+      position: absolute; top: 50%; transform: translateY(-50%);
+      font-size: 16px; transition: left 0.8s ease;
+    }
+    .route-city { font-size: 14px; font-weight: 600; }
+    .route-state { font-size: 12px; color: var(--muted); }
+    .route-meta { display: flex; justify-content: space-between; margin-top: 12px;
+      font-size: 13px; color: var(--muted); }
+
+    /* Timeline */
+    .timeline-card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 20px; margin-bottom: 20px;
+    }
+    .timeline-card h3 { font-size: 13px; color: var(--muted); text-transform: uppercase;
+      letter-spacing: 0.5px; margin-bottom: 16px; }
+    .timeline { display: flex; flex-direction: column; gap: 0; }
+    .tl-item { display: flex; gap: 14px; }
+    .tl-left { display: flex; flex-direction: column; align-items: center; flex-shrink: 0; width: 32px; }
+    .tl-dot {
+      width: 10px; height: 10px; border-radius: 50%; border: 2px solid var(--border);
+      background: var(--bg); flex-shrink: 0; margin-top: 3px;
+    }
+    .tl-dot.done { background: var(--accent2); border-color: var(--accent2); }
+    .tl-dot.active { background: var(--accent); border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(59,130,246,0.3); }
+    .tl-dot.pending { background: var(--bg); border-color: var(--border); }
+    .tl-line { flex: 1; width: 2px; background: var(--border); min-height: 32px; }
+    .tl-line.done { background: var(--accent2); }
+    .tl-item:last-child .tl-line { display: none; }
+    .tl-content { padding-bottom: 24px; }
+    .tl-title { font-size: 14px; font-weight: 600; }
+    .tl-title.muted { color: var(--muted); }
+    .tl-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+    .tl-time { font-size: 12px; color: var(--accent); margin-top: 2px; }
+
+    /* Location */
+    .location-card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 20px; margin-bottom: 20px;
+    }
+    .location-card h3 { font-size: 13px; color: var(--muted); text-transform: uppercase;
+      letter-spacing: 0.5px; margin-bottom: 12px; }
+    .location-display {
+      display: flex; align-items: center; gap: 14px;
+    }
+    .location-pin { font-size: 32px; }
+    .location-text .city { font-size: 18px; font-weight: 700; }
+    .location-text .coords { font-size: 12px; color: var(--muted); margin-top: 2px; }
+    .location-text .updated { font-size: 12px; color: var(--accent2); margin-top: 4px; }
+
+    /* Documents */
+    .docs-card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 20px; margin-bottom: 20px;
+    }
+    .docs-card h3 { font-size: 13px; color: var(--muted); text-transform: uppercase;
+      letter-spacing: 0.5px; margin-bottom: 12px; }
+    .doc-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 14px;
+    }
+    .doc-row:last-child { border-bottom: none; }
+    .doc-name { display: flex; align-items: center; gap: 8px; }
+    .doc-icon { font-size: 18px; }
+    .doc-btn {
+      padding: 5px 14px; border-radius: 6px; font-size: 12px; font-weight: 600;
+      cursor: pointer; border: none;
+    }
+    .doc-available { background: rgba(16,185,129,0.18); color: #34d399; }
+    .doc-pending { background: rgba(100,116,139,0.18); color: var(--muted); cursor: default; }
+
+    /* Contact */
+    .contact-card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 20px;
+      display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;
+    }
+    .contact-left { font-size: 14px; }
+    .contact-left strong { display: block; margin-bottom: 4px; }
+    .contact-left span { color: var(--muted); font-size: 13px; }
+    .contact-btn {
+      display: flex; align-items: center; gap: 8px;
+      background: var(--accent2); color: #fff; border: none;
+      padding: 10px 20px; border-radius: var(--radius);
+      font-size: 14px; font-weight: 600; cursor: pointer; text-decoration: none;
+    }
+    .contact-btn:hover { opacity: 0.88; }
+
+    /* Spinner */
+    .spinner {
+      width: 32px; height: 32px; border: 3px solid var(--border);
+      border-top-color: var(--accent); border-radius: 50%;
+      animation: spin 0.7s linear infinite; margin: 0 auto 16px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    footer {
+      text-align: center; padding: 24px; font-size: 12px; color: var(--muted);
+      border-top: 1px solid var(--border);
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">🚚</div>
+    3 Lakes Logistics
+  </div>
+  <div class="header-right">
+    Shipper portal: <a href="/shipper.html">Sign in</a>
+  </div>
+</header>
+
+<main>
+  <!-- Search -->
+  <div class="search-bar">
+    <input id="tokenInput" type="text" placeholder="Enter tracking number or token…" />
+    <button class="btn" onclick="doTrack()">Track</button>
+  </div>
+
+  <!-- Loading -->
+  <div id="loading" class="state-card" style="display:none">
+    <div class="spinner"></div>
+    <div class="state-title">Fetching shipment…</div>
+    <div class="state-sub">This will only take a moment.</div>
+  </div>
+
+  <!-- Error -->
+  <div id="error" class="state-card" style="display:none">
+    <div class="state-icon">🔍</div>
+    <div class="state-title" id="errorTitle">Shipment not found</div>
+    <div class="state-sub" id="errorSub">Check your tracking number and try again, or contact your dispatcher.</div>
+  </div>
+
+  <!-- Default prompt -->
+  <div id="prompt" class="state-card">
+    <div class="state-icon">📦</div>
+    <div class="state-title">Track your shipment</div>
+    <div class="state-sub">Enter a tracking token above to see real-time status, location, and documents.</div>
+  </div>
+
+  <!-- Result -->
+  <div id="result">
+    <!-- Status header -->
+    <div class="status-header">
+      <div class="status-left">
+        <h2 id="rLoadId">—</h2>
+        <div class="ref" id="rRef">—</div>
+      </div>
+      <span class="status-badge" id="rBadge">—</span>
+    </div>
+
+    <!-- Route visual -->
+    <div class="route-card">
+      <h3>Route</h3>
+      <div class="route-visual">
+        <div>
+          <div class="route-city" id="rOriginCity">—</div>
+          <div class="route-state" id="rOriginState">—</div>
+        </div>
+        <div class="route-dot dot-origin"></div>
+        <div class="route-line">
+          <div class="route-truck" id="rTruck" style="left:0%">🚛</div>
+        </div>
+        <div class="route-dot dot-dest"></div>
+        <div style="text-align:right">
+          <div class="route-city" id="rDestCity">—</div>
+          <div class="route-state" id="rDestState">—</div>
+        </div>
+      </div>
+      <div class="route-meta">
+        <span id="rDistance">—</span>
+        <span id="rEta">—</span>
+      </div>
+    </div>
+
+    <!-- Info grid -->
+    <div class="grid2">
+      <div class="info-card">
+        <h3>Freight Details</h3>
+        <div class="info-row"><span class="info-label">Type</span><span class="info-val" id="rEquip">—</span></div>
+        <div class="info-row"><span class="info-label">Weight</span><span class="info-val" id="rWeight">—</span></div>
+        <div class="info-row"><span class="info-label">Commodity</span><span class="info-val" id="rCommodity">—</span></div>
+        <div class="info-row"><span class="info-label">Pieces</span><span class="info-val" id="rPieces">—</span></div>
+        <div class="info-row"><span class="info-label">Hazmat</span><span class="info-val" id="rHazmat">No</span></div>
+      </div>
+      <div class="info-card">
+        <h3>Schedule</h3>
+        <div class="info-row"><span class="info-label">Pickup</span><span class="info-val" id="rPickupDate">—</span></div>
+        <div class="info-row"><span class="info-label">Delivery</span><span class="info-val" id="rDeliveryDate">—</span></div>
+        <div class="info-row"><span class="info-label">Driver</span><span class="info-val" id="rDriver">—</span></div>
+        <div class="info-row"><span class="info-label">Carrier MC</span><span class="info-val" id="rMC">—</span></div>
+        <div class="info-row"><span class="info-label">Truck</span><span class="info-val" id="rTruckUnit">—</span></div>
+      </div>
+    </div>
+
+    <!-- Current location -->
+    <div class="location-card" id="locationCard">
+      <h3>Current Location</h3>
+      <div class="location-display">
+        <div class="location-pin">📍</div>
+        <div class="location-text">
+          <div class="city" id="rLocCity">Unknown</div>
+          <div class="coords" id="rLocCoords"></div>
+          <div class="updated" id="rLocUpdated"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Timeline -->
+    <div class="timeline-card">
+      <h3>Shipment Timeline</h3>
+      <div class="timeline" id="rTimeline"></div>
+    </div>
+
+    <!-- Documents -->
+    <div class="docs-card">
+      <h3>Documents</h3>
+      <div class="doc-row">
+        <div class="doc-name"><span class="doc-icon">📄</span> Bill of Lading (BOL)</div>
+        <button class="doc-btn" id="bolBtn" onclick="openDoc('bol')">—</button>
+      </div>
+      <div class="doc-row">
+        <div class="doc-name"><span class="doc-icon">✅</span> Proof of Delivery (POD)</div>
+        <button class="doc-btn" id="podBtn" onclick="openDoc('pod')">—</button>
+      </div>
+      <div class="doc-row">
+        <div class="doc-name"><span class="doc-icon">🏷️</span> Rate Confirmation</div>
+        <button class="doc-btn" id="rateBtn" onclick="openDoc('rate')">—</button>
+      </div>
+    </div>
+
+    <!-- Dispatcher contact -->
+    <div class="contact-card">
+      <div class="contact-left">
+        <strong>Need help with this shipment?</strong>
+        <span>Our dispatch team is available 24/7.</span>
+      </div>
+      <a id="dispatcherLink" href="tel:+13135469006" class="contact-btn">📞 Call Dispatcher</a>
+    </div>
+  </div>
+</main>
+
+<footer>
+  © 2025 3 Lakes Logistics LLC &nbsp;·&nbsp; DOT # &nbsp;·&nbsp;
+  <a href="/shipper.html" style="color:var(--accent);text-decoration:none">Shipper Portal</a>
+</footer>
+
+<script>
+const API = 'https://three-lakes-logistics-api.onrender.com';
+let _currentData = null;
+
+function show(id) {
+  ['loading','error','prompt','result'].forEach(i => {
+    const el = document.getElementById(i);
+    if (el) el.style.display = i === id ? (i === 'result' ? 'block' : 'flex') : 'none';
+  });
+  if (id === 'loading') document.getElementById('loading').style.display = 'block';
+}
+
+async function doTrack() {
+  const raw = document.getElementById('tokenInput').value.trim();
+  if (!raw) return;
+  // Accept either a full token or a bare tracking number
+  const token = raw;
+  window.history.replaceState(null, '', `?token=${encodeURIComponent(token)}`);
+  await fetchLoad(token);
+}
+
+async function fetchLoad(token) {
+  show('loading');
+  try {
+    const r = await fetch(`${API}/api/track/${encodeURIComponent(token)}`);
+    if (r.status === 404) {
+      show('error');
+      document.getElementById('errorTitle').textContent = 'Shipment not found';
+      document.getElementById('errorSub').textContent = 'No shipment matched that tracking token. Please check the number and try again.';
+      return;
+    }
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const data = await r.json();
+    _currentData = data;
+    renderLoad(data);
+    show('result');
+  } catch (e) {
+    show('error');
+    document.getElementById('errorTitle').textContent = 'Unable to retrieve shipment';
+    document.getElementById('errorSub').textContent = 'Please try again in a moment, or contact your dispatcher directly.';
+    console.error(e);
+  }
+}
+
+function statusBadge(status) {
+  const map = {
+    booked:     ['badge-booked',    '📋 Booked'],
+    pickup:     ['badge-pickup',    '⏳ En Route to Pickup'],
+    in_transit: ['badge-intransit', '🚛 In Transit'],
+    delivered:  ['badge-delivered', '✅ Delivered'],
+    exception:  ['badge-exception', '⚠️ Exception'],
+  };
+  return map[status] || ['badge-booked', status];
+}
+
+function fmt(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  return d.toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
+}
+function fmtTs(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  return d.toLocaleString('en-US', { month:'short', day:'numeric', hour:'numeric', minute:'2-digit' });
+}
+
+function renderLoad(d) {
+  // Status
+  const [cls, label] = statusBadge(d.status);
+  const badge = document.getElementById('rBadge');
+  badge.textContent = label;
+  badge.className = `status-badge ${cls}`;
+
+  document.getElementById('rLoadId').textContent = d.load_id || d.id || '—';
+  document.getElementById('rRef').textContent = d.shipper_ref ? `Ref: ${d.shipper_ref}` : (d.po_number ? `PO: ${d.po_number}` : '');
+
+  // Route
+  const oCity = d.origin_city || '', oState = d.origin_state || '';
+  const dCity = d.dest_city || '', dState = d.dest_state || '';
+  document.getElementById('rOriginCity').textContent = oCity || '—';
+  document.getElementById('rOriginState').textContent = oState;
+  document.getElementById('rDestCity').textContent = dCity || '—';
+  document.getElementById('rDestState').textContent = dState;
+
+  // Truck position along route (rough % based on status)
+  const pct = { booked:5, pickup:20, in_transit:55, delivered:100, exception:55 }[d.status] ?? 5;
+  document.getElementById('rTruck').style.left = `${Math.min(pct, 90)}%`;
+
+  // Distance / ETA
+  if (d.distance_miles) {
+    document.getElementById('rDistance').textContent = `${Math.round(d.distance_miles).toLocaleString()} mi`;
+  }
+  if (d.delivery_date) {
+    document.getElementById('rEta').textContent = `ETA: ${fmt(d.delivery_date)}`;
+  }
+
+  // Freight
+  document.getElementById('rEquip').textContent = (d.equipment_type||'').replace('_',' ') || '—';
+  document.getElementById('rWeight').textContent = d.weight_lbs ? `${d.weight_lbs.toLocaleString()} lbs` : '—';
+  document.getElementById('rCommodity').textContent = d.commodity || '—';
+  document.getElementById('rPieces').textContent = d.pieces ?? '—';
+  document.getElementById('rHazmat').textContent = d.hazmat ? 'Yes ⚠️' : 'No';
+
+  // Schedule
+  document.getElementById('rPickupDate').textContent = fmt(d.pickup_date);
+  document.getElementById('rDeliveryDate').textContent = fmt(d.delivery_date);
+  document.getElementById('rDriver').textContent = d.driver_name || '—';
+  document.getElementById('rMC').textContent = d.carrier_mc || '—';
+  document.getElementById('rTruckUnit').textContent = d.truck_unit || '—';
+
+  // Location
+  const tel = d.telemetry;
+  if (tel && (tel.lat || tel.city)) {
+    document.getElementById('rLocCity').textContent =
+      tel.city ? `${tel.city}${tel.state ? ', ' + tel.state : ''}` : 'En route';
+    if (tel.lat && tel.lng) {
+      document.getElementById('rLocCoords').textContent = `${tel.lat.toFixed(4)}, ${tel.lng.toFixed(4)}`;
+    }
+    if (tel.recorded_at) {
+      document.getElementById('rLocUpdated').textContent = `Updated ${fmtTs(tel.recorded_at)}`;
+    }
+  } else {
+    document.getElementById('rLocCity').textContent = 'Location unavailable';
+  }
+
+  // Timeline
+  const tl = document.getElementById('rTimeline');
+  tl.innerHTML = '';
+  const events = d.timeline || buildDefaultTimeline(d);
+  events.forEach((ev, i) => {
+    const isDone = ev.done || ev.completed;
+    const isActive = ev.active;
+    const dotCls = isDone ? 'done' : (isActive ? 'active' : 'pending');
+    const lineCls = isDone ? 'done' : '';
+    tl.innerHTML += `
+      <div class="tl-item">
+        <div class="tl-left">
+          <div class="tl-dot ${dotCls}"></div>
+          <div class="tl-line ${lineCls}"></div>
+        </div>
+        <div class="tl-content">
+          <div class="tl-title${isDone || isActive ? '' : ' muted'}">${ev.title || ev.event || ev.name}</div>
+          ${ev.location ? `<div class="tl-sub">${ev.location}</div>` : ''}
+          ${ev.note ? `<div class="tl-sub">${ev.note}</div>` : ''}
+          ${ev.ts || ev.created_at ? `<div class="tl-time">${fmtTs(ev.ts || ev.created_at)}</div>` : ''}
+        </div>
+      </div>`;
+  });
+
+  // Documents
+  setDocBtn('bolBtn', d.bol_url);
+  setDocBtn('podBtn', d.pod_url);
+  setDocBtn('rateBtn', d.rate_con_url);
+
+  // Dispatcher
+  if (d.dispatcher_phone) {
+    document.getElementById('dispatcherLink').href = `tel:${d.dispatcher_phone}`;
+  }
+}
+
+function buildDefaultTimeline(d) {
+  const steps = [
+    { title: 'Order Booked',       key: 'booked',     alwaysDone: true },
+    { title: 'Driver Assigned',    key: 'assigned',   doneIf: ['pickup','in_transit','delivered'] },
+    { title: 'En Route to Pickup', key: 'pickup',     doneIf: ['in_transit','delivered'], activeIf: ['pickup'] },
+    { title: 'Picked Up',          key: 'pickedup',   doneIf: ['in_transit','delivered'] },
+    { title: 'In Transit',         key: 'in_transit', doneIf: ['delivered'], activeIf: ['in_transit','exception'] },
+    { title: 'Out for Delivery',   key: 'outgoing',   doneIf: ['delivered'] },
+    { title: 'Delivered',          key: 'delivered',  doneIf: ['delivered'] },
+  ];
+  return steps.map(s => ({
+    title: s.title,
+    done: s.alwaysDone || (s.doneIf && s.doneIf.includes(d.status)),
+    active: s.activeIf && s.activeIf.includes(d.status),
+  }));
+}
+
+function setDocBtn(id, url) {
+  const btn = document.getElementById(id);
+  if (url) {
+    btn.textContent = 'Download';
+    btn.className = 'doc-btn doc-available';
+    btn.dataset.url = url;
+  } else {
+    btn.textContent = 'Pending';
+    btn.className = 'doc-btn doc-pending';
+    btn.dataset.url = '';
+  }
+}
+
+function openDoc(type) {
+  const map = { bol: 'bolBtn', pod: 'podBtn', rate: 'rateBtn' };
+  const url = document.getElementById(map[type])?.dataset?.url;
+  if (url) window.open(url, '_blank');
+}
+
+document.getElementById('tokenInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') doTrack();
+});
+
+// Auto-load from query string
+(function () {
+  const p = new URLSearchParams(window.location.search);
+  const t = p.get('token') || p.get('tracking') || p.get('id');
+  if (t) {
+    document.getElementById('tokenInput').value = t;
+    fetchLoad(t);
+  }
+})();
+</script>
+
+</body>
+</html>

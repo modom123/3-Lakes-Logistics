@@ -1,0 +1,1222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>3 Lakes Logistics — Shipper Portal</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0a0e1a;--surface:#111827;--surface2:#1a2235;--surface3:#232f45;
+  --border:#2a3a55;--text:#e2e8f0;--muted:#94a3b8;--accent:#3b82f6;
+  --accent2:#60a5fa;--green:#22c55e;--yellow:#f59e0b;--red:#ef4444;
+  --purple:#a855f7;--cyan:#06b6d4;
+  --font:'Inter',system-ui,sans-serif;
+}
+body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:100vh}
+a{color:var(--accent2);text-decoration:none}
+
+/* AUTH SCREENS */
+#auth-screen{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px}
+.auth-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;width:100%;max-width:440px;padding:40px}
+.auth-logo{text-align:center;margin-bottom:32px}
+.auth-logo .logo-icon{font-size:40px;display:block;margin-bottom:8px}
+.auth-logo h1{font-size:22px;font-weight:700;color:var(--text)}
+.auth-logo p{font-size:13px;color:var(--muted);margin-top:4px}
+.auth-tabs{display:flex;gap:4px;background:var(--bg);border-radius:10px;padding:4px;margin-bottom:28px}
+.auth-tab{flex:1;padding:8px;text-align:center;border-radius:8px;cursor:pointer;font-size:14px;font-weight:500;color:var(--muted);transition:.15s}
+.auth-tab.active{background:var(--surface2);color:var(--text)}
+.form-group{margin-bottom:18px}
+.form-group label{display:block;font-size:13px;color:var(--muted);margin-bottom:6px;font-weight:500}
+.form-group input,.form-group select{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 14px;color:var(--text);font-size:14px;outline:none;transition:.15s}
+.form-group input:focus,.form-group select:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(59,130,246,.15)}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.btn{width:100%;padding:11px;border-radius:8px;border:none;font-size:14px;font-weight:600;cursor:pointer;transition:.15s}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-primary:hover{background:#2563eb}
+.btn-secondary{background:var(--surface3);color:var(--text);border:1px solid var(--border)}
+.auth-footer{text-align:center;margin-top:20px;font-size:13px;color:var(--muted)}
+.error-msg{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);color:#fca5a5;border-radius:8px;padding:10px 14px;font-size:13px;margin-bottom:16px;display:none}
+.success-msg{background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3);color:#86efac;border-radius:8px;padding:10px 14px;font-size:13px;margin-bottom:16px;display:none}
+
+/* MAIN APP */
+#app-screen{display:none;min-height:100vh}
+.app-header{background:var(--surface);border-bottom:1px solid var(--border);padding:0 24px;height:60px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+.header-left{display:flex;align-items:center;gap:16px}
+.header-logo{font-size:16px;font-weight:700;display:flex;align-items:center;gap:8px}
+.header-logo span{color:var(--accent2)}
+.nav-links{display:flex;gap:4px}
+.nav-link{padding:6px 14px;border-radius:8px;font-size:13px;font-weight:500;color:var(--muted);cursor:pointer;transition:.15s}
+.nav-link:hover{background:var(--surface2);color:var(--text)}
+.nav-link.active{background:var(--surface2);color:var(--text)}
+.header-right{display:flex;align-items:center;gap:12px}
+.company-badge{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:6px 12px;font-size:13px;font-weight:500}
+.btn-sm{padding:6px 14px;border-radius:8px;border:none;font-size:13px;font-weight:500;cursor:pointer}
+.btn-ship{background:var(--accent);color:#fff}
+.btn-logout{background:var(--surface3);color:var(--muted);border:1px solid var(--border)}
+.app-body{padding:24px;max-width:1280px;margin:0 auto}
+
+/* VIEWS */
+.view{display:none}
+.view.active{display:block}
+
+/* DASHBOARD */
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:24px}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px}
+.stat-label{font-size:12px;color:var(--muted);font-weight:500;text-transform:uppercase;letter-spacing:.5px}
+.stat-value{font-size:28px;font-weight:700;margin-top:6px;margin-bottom:4px}
+.stat-change{font-size:12px;color:var(--muted)}
+.stat-change.up{color:var(--green)}
+.stat-change.down{color:var(--red)}
+.section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.section-title{font-size:16px;font-weight:600}
+.section-action{font-size:13px;color:var(--accent2);cursor:pointer}
+
+/* LOADS TABLE */
+.loads-table-wrap{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.table-filters{padding:16px;border-bottom:1px solid var(--border);display:flex;gap:8px;flex-wrap:wrap}
+.filter-btn{padding:5px 12px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);color:var(--muted);font-size:12px;cursor:pointer;transition:.15s}
+.filter-btn.active{border-color:var(--accent);color:var(--accent2);background:rgba(59,130,246,.1)}
+table{width:100%;border-collapse:collapse}
+th{text-align:left;font-size:12px;color:var(--muted);font-weight:500;text-transform:uppercase;letter-spacing:.5px;padding:12px 16px;border-bottom:1px solid var(--border);background:var(--surface2)}
+td{padding:14px 16px;border-bottom:1px solid rgba(42,58,85,.5);font-size:13px;vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:var(--surface2)}
+.badge{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.4px}
+.badge-quote{background:rgba(148,163,184,.1);color:#94a3b8;border:1px solid rgba(148,163,184,.2)}
+.badge-booked{background:rgba(59,130,246,.1);color:#60a5fa;border:1px solid rgba(59,130,246,.2)}
+.badge-dispatched{background:rgba(168,85,247,.1);color:#c084fc;border:1px solid rgba(168,85,247,.2)}
+.badge-in_transit{background:rgba(245,158,11,.1);color:#fbbf24;border:1px solid rgba(245,158,11,.2)}
+.badge-delivered{background:rgba(34,197,94,.1);color:#4ade80;border:1px solid rgba(34,197,94,.2)}
+.badge-invoiced{background:rgba(6,182,212,.1);color:#22d3ee;border:1px solid rgba(6,182,212,.2)}
+.badge-cancelled{background:rgba(239,68,68,.1);color:#f87171;border:1px solid rgba(239,68,68,.2)}
+.badge-paid{background:rgba(34,197,94,.15);color:#4ade80;border:1px solid rgba(34,197,94,.3)}
+.table-action{color:var(--accent2);cursor:pointer;font-size:12px;font-weight:500;margin-right:10px;padding:3px 8px;border-radius:5px;transition:.15s}
+.table-action:hover{background:rgba(59,130,246,.1)}
+.empty-state{text-align:center;padding:60px 20px;color:var(--muted)}
+.empty-icon{font-size:40px;margin-bottom:12px;display:block}
+.empty-title{font-size:16px;font-weight:600;color:var(--text);margin-bottom:8px}
+.pagination{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-top:1px solid var(--border);font-size:13px;color:var(--muted)}
+.page-btns{display:flex;gap:6px}
+.page-btn{padding:5px 12px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:12px;cursor:pointer}
+.page-btn.active{border-color:var(--accent);color:var(--accent2)}
+
+/* MODAL */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:500;display:flex;align-items:center;justify-content:center;padding:20px;display:none}
+.modal-overlay.open{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:16px;width:100%;max-width:680px;max-height:90vh;overflow-y:auto}
+.modal-header{padding:24px 24px 0;display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
+.modal-title{font-size:18px;font-weight:700}
+.modal-close{background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;padding:4px;border-radius:6px;line-height:1}
+.modal-close:hover{background:var(--surface2);color:var(--text)}
+.modal-body{padding:0 24px 24px}
+.modal-footer{padding:16px 24px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:10px}
+.btn-modal-cancel{background:var(--surface3);color:var(--text);border:1px solid var(--border);padding:9px 20px;border-radius:8px;font-size:14px;font-weight:500;cursor:pointer}
+.btn-modal-ok{background:var(--accent);color:#fff;border:none;padding:9px 20px;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer}
+.btn-modal-ok:hover{background:#2563eb}
+
+/* WIZARD */
+.wizard-steps{display:flex;gap:4px;margin-bottom:28px;background:var(--bg);border-radius:10px;padding:4px}
+.wizard-step{flex:1;padding:8px 4px;text-align:center;border-radius:7px;font-size:12px;font-weight:500;color:var(--muted);cursor:default}
+.wizard-step.active{background:var(--surface2);color:var(--text)}
+.wizard-step.done{color:var(--green)}
+.wizard-pane{display:none}
+.wizard-pane.active{display:block}
+.section-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;font-weight:600;margin-bottom:14px;margin-top:20px;padding-bottom:6px;border-bottom:1px solid var(--border)}
+.section-label:first-child{margin-top:0}
+
+/* QUOTE RESULT */
+.quote-box{background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:20px}
+.quote-total{font-size:32px;font-weight:700;color:var(--green)}
+.quote-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;font-size:13px;border-bottom:1px solid rgba(42,58,85,.5)}
+.quote-row:last-child{border-bottom:none;padding-top:10px;font-weight:600;font-size:14px}
+.quote-label{color:var(--muted)}
+
+/* LOAD DETAIL MODAL */
+.detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px}
+.detail-section{background:var(--surface2);border-radius:10px;padding:16px}
+.detail-section-title{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;font-weight:600;margin-bottom:10px}
+.detail-row{display:flex;justify-content:space-between;align-items:flex-start;padding:4px 0;font-size:13px}
+.detail-label{color:var(--muted)}
+.detail-val{font-weight:500;text-align:right;max-width:60%}
+
+/* TIMELINE */
+.timeline{position:relative;padding-left:24px}
+.timeline::before{content:'';position:absolute;left:7px;top:6px;bottom:6px;width:2px;background:var(--border)}
+.timeline-item{position:relative;padding-bottom:20px}
+.timeline-item:last-child{padding-bottom:0}
+.timeline-dot{position:absolute;left:-24px;width:16px;height:16px;border-radius:50%;border:2px solid var(--border);background:var(--surface);display:flex;align-items:center;justify-content:center;top:2px}
+.timeline-dot.done{border-color:var(--green);background:rgba(34,197,94,.1)}
+.timeline-dot.active{border-color:var(--accent);background:rgba(59,130,246,.1);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(59,130,246,.4)}50%{box-shadow:0 0 0 6px rgba(59,130,246,0)}}
+.timeline-label{font-size:13px;font-weight:500}
+.timeline-time{font-size:11px;color:var(--muted);margin-top:2px}
+
+/* INVOICE */
+.invoice-card{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:10px;cursor:pointer;transition:.15s}
+.invoice-card:hover{border-color:var(--accent)}
+.invoice-row{display:flex;justify-content:space-between;align-items:center}
+.invoice-num{font-size:14px;font-weight:600}
+.invoice-amount{font-size:18px;font-weight:700;color:var(--green)}
+.invoice-meta{font-size:12px;color:var(--muted);margin-top:6px}
+
+/* ACCOUNT */
+.account-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.account-section{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px}
+.account-title{font-size:14px;font-weight:600;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--border)}
+.api-key-box{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px 14px;font-family:monospace;font-size:13px;color:var(--accent2);word-break:break-all;margin-bottom:10px}
+.webhook-events{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.event-tag{padding:3px 10px;background:rgba(59,130,246,.1);border:1px solid rgba(59,130,246,.2);border-radius:20px;font-size:11px;color:var(--accent2)}
+
+/* ALERTS */
+.alert-list{display:flex;flex-direction:column;gap:8px}
+.alert-item{background:var(--surface);border-radius:8px;padding:12px 14px;font-size:13px;display:flex;align-items:flex-start;gap:10px;border-left:3px solid var(--accent)}
+.alert-item.warn{border-left-color:var(--yellow)}
+.alert-item.danger{border-left-color:var(--red)}
+
+/* LIVE MAP placeholder */
+.map-placeholder{background:var(--surface2);border:1px solid var(--border);border-radius:10px;height:200px;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:8px;color:var(--muted);margin-bottom:16px}
+.map-dot{width:12px;height:12px;background:var(--accent);border-radius:50%;animation:pulse 2s infinite}
+
+/* TOAST */
+#toast{position:fixed;bottom:24px;right:24px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 18px;font-size:13px;box-shadow:0 8px 24px rgba(0,0,0,.4);transform:translateY(80px);opacity:0;transition:.3s;z-index:9999;max-width:320px}
+#toast.show{transform:translateY(0);opacity:1}
+#toast.success{border-color:var(--green);color:#4ade80}
+#toast.error{border-color:var(--red);color:#f87171}
+#toast.info{border-color:var(--accent);color:var(--accent2)}
+
+/* LOADING */
+.spinner{width:18px;height:18px;border:2px solid rgba(255,255,255,.2);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;display:inline-block;margin-right:8px;vertical-align:middle}
+@keyframes spin{to{transform:rotate(360deg)}}
+.skeleton{background:linear-gradient(90deg,var(--surface2) 25%,var(--surface3) 50%,var(--surface2) 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;border-radius:6px;height:16px}
+@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+
+/* RESPONSIVE */
+@media(max-width:768px){
+  .nav-links{display:none}
+  .stats-grid{grid-template-columns:1fr 1fr}
+  .detail-grid{grid-template-columns:1fr}
+  .account-grid{grid-template-columns:1fr}
+  .form-row{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<!-- ── AUTH SCREEN ──────────────────────────────────────────────── -->
+<div id="auth-screen">
+  <div class="auth-card">
+    <div class="auth-logo">
+      <span class="logo-icon">🚛</span>
+      <h1>3 Lakes Logistics</h1>
+      <p>Shipper Portal — Book, Track & Manage</p>
+    </div>
+    <div id="auth-error" class="error-msg"></div>
+    <div id="auth-success" class="success-msg"></div>
+    <div class="auth-tabs">
+      <div class="auth-tab active" onclick="switchAuthTab('login')">Sign In</div>
+      <div class="auth-tab" onclick="switchAuthTab('register')">Create Account</div>
+    </div>
+
+    <!-- LOGIN -->
+    <div id="login-form">
+      <div class="form-group">
+        <label>Email Address</label>
+        <input type="email" id="login-email" placeholder="you@company.com" autocomplete="email">
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="login-password" placeholder="••••••••" autocomplete="current-password">
+      </div>
+      <button class="btn btn-primary" onclick="doLogin()">Sign In</button>
+      <div class="auth-footer">Need shipping quotes? <a href="#" onclick="switchAuthTab('register')">Create free account →</a></div>
+    </div>
+
+    <!-- REGISTER -->
+    <div id="register-form" style="display:none">
+      <div class="form-row">
+        <div class="form-group"><label>Company Name</label><input type="text" id="reg-company" placeholder="Acme Freight Co."></div>
+        <div class="form-group"><label>Contact Name</label><input type="text" id="reg-contact" placeholder="Jane Smith"></div>
+      </div>
+      <div class="form-group"><label>Email Address</label><input type="email" id="reg-email" placeholder="jane@acmefreight.com" autocomplete="email"></div>
+      <div class="form-row">
+        <div class="form-group"><label>Phone</label><input type="tel" id="reg-phone" placeholder="(312) 555-0100"></div>
+        <div class="form-group"><label>State</label>
+          <select id="reg-state"><option value="">— State —</option>
+          <option>AL</option><option>AK</option><option>AZ</option><option>AR</option><option>CA</option><option>CO</option><option>CT</option><option>DE</option><option>FL</option><option>GA</option><option>HI</option><option>ID</option><option>IL</option><option>IN</option><option>IA</option><option>KS</option><option>KY</option><option>LA</option><option>ME</option><option>MD</option><option>MA</option><option>MI</option><option>MN</option><option>MS</option><option>MO</option><option>MT</option><option>NE</option><option>NV</option><option>NH</option><option>NJ</option><option>NM</option><option>NY</option><option>NC</option><option>ND</option><option>OH</option><option>OK</option><option>OR</option><option>PA</option><option>RI</option><option>SC</option><option>SD</option><option>TN</option><option>TX</option><option>UT</option><option>VT</option><option>VA</option><option>WA</option><option>WV</option><option>WI</option><option>WY</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Password</label><input type="password" id="reg-password" placeholder="Min 8 characters" autocomplete="new-password"></div>
+        <div class="form-group"><label>Confirm Password</label><input type="password" id="reg-confirm" placeholder="Repeat password"></div>
+      </div>
+      <button class="btn btn-primary" onclick="doRegister()">Create Account — Free</button>
+      <div class="auth-footer">Already have an account? <a href="#" onclick="switchAuthTab('login')">Sign in →</a></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── APP SCREEN ──────────────────────────────────────────────── -->
+<div id="app-screen">
+  <header class="app-header">
+    <div class="header-left">
+      <div class="header-logo">🚛 <span>3 Lakes</span> Shipper Portal</div>
+      <nav class="nav-links">
+        <div class="nav-link active" onclick="showView('dashboard')">Dashboard</div>
+        <div class="nav-link" onclick="showView('shipments')">Shipments</div>
+        <div class="nav-link" onclick="showView('invoices')">Invoices</div>
+        <div class="nav-link" onclick="showView('account')">Account</div>
+      </nav>
+    </div>
+    <div class="header-right">
+      <div class="company-badge" id="header-company">— Loading —</div>
+      <button class="btn-sm btn-ship" onclick="openNewShipmentWizard()">+ New Shipment</button>
+      <button class="btn-sm btn-logout" onclick="doLogout()">Sign Out</button>
+    </div>
+  </header>
+
+  <main class="app-body">
+
+    <!-- DASHBOARD VIEW -->
+    <div id="view-dashboard" class="view active">
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-label">Active Loads</div>
+          <div class="stat-value" id="stat-active">—</div>
+          <div class="stat-change" id="stat-active-sub">in transit + dispatched</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Delivered This Month</div>
+          <div class="stat-value" id="stat-delivered">—</div>
+          <div class="stat-change up" id="stat-delivered-sub">on-time</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Pending Invoices</div>
+          <div class="stat-value" id="stat-invoices">—</div>
+          <div class="stat-change" id="stat-invoices-sub">awaiting payment</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Spend This Month</div>
+          <div class="stat-value" id="stat-spend">—</div>
+          <div class="stat-change" id="stat-spend-sub">total freight cost</div>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:2fr 1fr;gap:20px">
+        <div>
+          <div class="section-header">
+            <div class="section-title">Recent Shipments</div>
+            <div class="section-action" onclick="showView('shipments')">View all →</div>
+          </div>
+          <div id="recent-loads-wrap" class="loads-table-wrap">
+            <table>
+              <thead><tr><th>Load #</th><th>Route</th><th>Date</th><th>Status</th><th>Rate</th><th></th></tr></thead>
+              <tbody id="recent-loads-body"><tr><td colspan="6" class="empty-state" style="text-align:center;padding:30px">Loading…</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+        <div>
+          <div class="section-header">
+            <div class="section-title">Alerts</div>
+          </div>
+          <div id="alerts-list" class="alert-list">
+            <div class="alert-item" style="color:var(--muted)">No active alerts</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SHIPMENTS VIEW -->
+    <div id="view-shipments" class="view">
+      <div class="section-header" style="margin-bottom:16px">
+        <div class="section-title">All Shipments</div>
+        <button class="btn-sm btn-ship" onclick="openNewShipmentWizard()">+ New Shipment</button>
+      </div>
+      <div class="loads-table-wrap">
+        <div class="table-filters">
+          <div class="filter-btn active" onclick="filterLoads('all',this)">All</div>
+          <div class="filter-btn" onclick="filterLoads('quote',this)">Quote</div>
+          <div class="filter-btn" onclick="filterLoads('booked',this)">Booked</div>
+          <div class="filter-btn" onclick="filterLoads('dispatched',this)">Dispatched</div>
+          <div class="filter-btn" onclick="filterLoads('in_transit',this)">In Transit</div>
+          <div class="filter-btn" onclick="filterLoads('delivered',this)">Delivered</div>
+          <div class="filter-btn" onclick="filterLoads('invoiced',this)">Invoiced</div>
+        </div>
+        <table>
+          <thead><tr><th>Load #</th><th>Pickup</th><th>Delivery</th><th>Equipment</th><th>Pickup Date</th><th>Rate</th><th>Status</th><th>Actions</th></tr></thead>
+          <tbody id="loads-body"><tr><td colspan="8"><div class="empty-state"><span class="empty-icon">📦</span><div class="empty-title">No shipments yet</div><div>Click "New Shipment" to get started</div></div></td></tr></tbody>
+        </table>
+        <div class="pagination">
+          <span id="loads-count">0 shipments</span>
+          <div class="page-btns" id="loads-pagination"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- INVOICES VIEW -->
+    <div id="view-invoices" class="view">
+      <div class="section-header" style="margin-bottom:16px">
+        <div class="section-title">Invoices & Billing</div>
+      </div>
+      <div style="display:grid;grid-template-columns:2fr 1fr;gap:20px">
+        <div id="invoices-list">
+          <div style="color:var(--muted);text-align:center;padding:40px">Loading invoices…</div>
+        </div>
+        <div>
+          <div class="account-section">
+            <div class="account-title">Billing Summary</div>
+            <div class="detail-row"><span class="detail-label">Total Outstanding</span><span id="billing-outstanding" class="detail-val">—</span></div>
+            <div class="detail-row"><span class="detail-label">Overdue</span><span id="billing-overdue" class="detail-val" style="color:var(--red)">—</span></div>
+            <div class="detail-row"><span class="detail-label">Paid This Year</span><span id="billing-paid" class="detail-val" style="color:var(--green)">—</span></div>
+            <div class="detail-row"><span class="detail-label">Payment Terms</span><span id="billing-terms" class="detail-val">Net 30</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ACCOUNT VIEW -->
+    <div id="view-account" class="view">
+      <div class="section-header" style="margin-bottom:16px">
+        <div class="section-title">Account Settings</div>
+      </div>
+      <div class="account-grid">
+        <div class="account-section">
+          <div class="account-title">Company Information</div>
+          <div class="form-group"><label>Company Name</label><input type="text" id="acc-company" class="full"></div>
+          <div class="form-group"><label>Contact Name</label><input type="text" id="acc-contact" class="full"></div>
+          <div class="form-group"><label>Phone</label><input type="tel" id="acc-phone" class="full"></div>
+          <div class="form-group"><label>Email</label><input type="email" id="acc-email" class="full" disabled style="opacity:.6"></div>
+          <div class="form-group"><label>Address</label><input type="text" id="acc-address" class="full"></div>
+          <div class="form-row">
+            <div class="form-group"><label>City</label><input type="text" id="acc-city"></div>
+            <div class="form-group"><label>State</label><input type="text" id="acc-state" maxlength="2"></div>
+          </div>
+          <button class="btn btn-primary" onclick="saveAccount()">Save Changes</button>
+        </div>
+        <div>
+          <div class="account-section" style="margin-bottom:16px">
+            <div class="account-title">API Access</div>
+            <div style="font-size:12px;color:var(--muted);margin-bottom:10px">Use your API key to submit loads programmatically</div>
+            <div class="api-key-box" id="api-key-display">••••••••••••••••••••••••••••••••</div>
+            <div style="display:flex;gap:8px">
+              <button class="btn-sm btn-secondary" onclick="revealApiKey()" style="background:var(--surface3);color:var(--text);border:1px solid var(--border);flex:1">Reveal</button>
+              <button class="btn-sm btn-secondary" onclick="rotateApiKey()" style="background:var(--surface3);color:var(--text);border:1px solid var(--border);flex:1">Rotate Key</button>
+            </div>
+          </div>
+          <div class="account-section">
+            <div class="account-title">Webhook Configuration</div>
+            <div class="form-group"><label>Webhook URL</label><input type="url" id="wh-url" placeholder="https://your-system.com/webhook"></div>
+            <div style="font-size:12px;color:var(--muted);margin-bottom:8px">Notify on events:</div>
+            <div class="webhook-events" id="wh-events-display"></div>
+            <div style="margin-top:12px;display:flex;gap:8px">
+              <button class="btn-sm btn-ship" onclick="saveWebhook()" style="flex:1">Save</button>
+              <button class="btn-sm btn-secondary" onclick="testWebhook()" style="background:var(--surface3);color:var(--text);border:1px solid var(--border);flex:1">Test</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- ── NEW SHIPMENT MODAL ──────────────────────────────────────── -->
+<div class="modal-overlay" id="modal-new-shipment">
+<div class="modal" style="max-width:740px">
+  <div class="modal-header">
+    <div class="modal-title">New Shipment</div>
+    <button class="modal-close" onclick="closeModal('modal-new-shipment')">✕</button>
+  </div>
+  <div class="modal-body">
+    <div class="wizard-steps" id="wizard-steps">
+      <div class="wizard-step active" id="wstep-1">1 · Pickup</div>
+      <div class="wizard-step" id="wstep-2">2 · Delivery</div>
+      <div class="wizard-step" id="wstep-3">3 · Freight</div>
+      <div class="wizard-step" id="wstep-4">4 · Quote</div>
+      <div class="wizard-step" id="wstep-5">5 · Confirm</div>
+    </div>
+
+    <!-- STEP 1: PICKUP -->
+    <div class="wizard-pane active" id="wpane-1">
+      <div class="section-label">Pickup Location</div>
+      <div class="form-group"><label>Street Address</label><input type="text" id="w-pu-addr" placeholder="123 Warehouse Dr"></div>
+      <div class="form-row">
+        <div class="form-group"><label>City</label><input type="text" id="w-pu-city" placeholder="Chicago"></div>
+        <div class="form-group"><label>State</label>
+          <select id="w-pu-state"><option value="">— State —</option>
+          <option>AL</option><option>AK</option><option>AZ</option><option>AR</option><option>CA</option><option>CO</option><option>CT</option><option>DE</option><option>FL</option><option>GA</option><option>HI</option><option>ID</option><option>IL</option><option>IN</option><option>IA</option><option>KS</option><option>KY</option><option>LA</option><option>ME</option><option>MD</option><option>MA</option><option>MI</option><option>MN</option><option>MS</option><option>MO</option><option>MT</option><option>NE</option><option>NV</option><option>NH</option><option>NJ</option><option>NM</option><option>NY</option><option>NC</option><option>ND</option><option>OH</option><option>OK</option><option>OR</option><option>PA</option><option>RI</option><option>SC</option><option>SD</option><option>TN</option><option>TX</option><option>UT</option><option>VT</option><option>VA</option><option>WA</option><option>WV</option><option>WI</option><option>WY</option>
+          </select>
+        </div>
+        <div class="form-group"><label>ZIP</label><input type="text" id="w-pu-zip" placeholder="60601" maxlength="5"></div>
+      </div>
+      <div class="section-label">Pickup Schedule</div>
+      <div class="form-row">
+        <div class="form-group"><label>Pickup Date</label><input type="date" id="w-pu-date"></div>
+        <div class="form-group"><label>Window Start</label><input type="time" id="w-pu-start" value="08:00"></div>
+        <div class="form-group"><label>Window End</label><input type="time" id="w-pu-end" value="17:00"></div>
+      </div>
+      <div class="section-label">Pickup Contact</div>
+      <div class="form-row">
+        <div class="form-group"><label>Contact Name</label><input type="text" id="w-pu-contact" placeholder="Warehouse Manager"></div>
+        <div class="form-group"><label>Phone</label><input type="tel" id="w-pu-phone" placeholder="(312) 555-0100"></div>
+      </div>
+    </div>
+
+    <!-- STEP 2: DELIVERY -->
+    <div class="wizard-pane" id="wpane-2">
+      <div class="section-label">Delivery Location</div>
+      <div class="form-group"><label>Street Address</label><input type="text" id="w-del-addr" placeholder="456 Distribution Ave"></div>
+      <div class="form-row">
+        <div class="form-group"><label>City</label><input type="text" id="w-del-city" placeholder="Dallas"></div>
+        <div class="form-group"><label>State</label>
+          <select id="w-del-state"><option value="">— State —</option>
+          <option>AL</option><option>AK</option><option>AZ</option><option>AR</option><option>CA</option><option>CO</option><option>CT</option><option>DE</option><option>FL</option><option>GA</option><option>HI</option><option>ID</option><option>IL</option><option>IN</option><option>IA</option><option>KS</option><option>KY</option><option>LA</option><option>ME</option><option>MD</option><option>MA</option><option>MI</option><option>MN</option><option>MS</option><option>MO</option><option>MT</option><option>NE</option><option>NV</option><option>NH</option><option>NJ</option><option>NM</option><option>NY</option><option>NC</option><option>ND</option><option>OH</option><option>OK</option><option>OR</option><option>PA</option><option>RI</option><option>SC</option><option>SD</option><option>TN</option><option>TX</option><option>UT</option><option>VT</option><option>VA</option><option>WA</option><option>WV</option><option>WI</option><option>WY</option>
+          </select>
+        </div>
+        <div class="form-group"><label>ZIP</label><input type="text" id="w-del-zip" placeholder="75201" maxlength="5"></div>
+      </div>
+      <div class="section-label">Delivery Schedule</div>
+      <div class="form-row">
+        <div class="form-group"><label>Delivery Date</label><input type="date" id="w-del-date"></div>
+        <div class="form-group"><label>Window Start</label><input type="time" id="w-del-start" value="08:00"></div>
+        <div class="form-group"><label>Window End</label><input type="time" id="w-del-end" value="17:00"></div>
+      </div>
+      <div class="section-label">Delivery Contact</div>
+      <div class="form-row">
+        <div class="form-group"><label>Contact Name</label><input type="text" id="w-del-contact" placeholder="Receiving Manager"></div>
+        <div class="form-group"><label>Phone</label><input type="tel" id="w-del-phone" placeholder="(214) 555-0100"></div>
+      </div>
+    </div>
+
+    <!-- STEP 3: FREIGHT -->
+    <div class="wizard-pane" id="wpane-3">
+      <div class="section-label">Equipment & Commodity</div>
+      <div class="form-row">
+        <div class="form-group"><label>Equipment Type</label>
+          <select id="w-eq-type">
+            <option value="dry_van">Dry Van (53')</option>
+            <option value="flatbed">Flatbed</option>
+            <option value="reefer">Reefer / Refrigerated</option>
+            <option value="step_deck">Step Deck</option>
+            <option value="hotshot">Hotshot</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Commodity</label><input type="text" id="w-commodity" placeholder="e.g. Automotive Parts"></div>
+      </div>
+      <div class="section-label">Weight & Dimensions</div>
+      <div class="form-row">
+        <div class="form-group"><label>Weight (lbs)</label><input type="number" id="w-weight" placeholder="42000" min="1" max="80000"></div>
+        <div class="form-group"><label>Pallets</label><input type="number" id="w-pallets" placeholder="26" min="1" max="52"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Length (ft)</label><input type="number" id="w-length" placeholder="53" min="1" max="53"></div>
+        <div class="form-group"><label>Width (ft)</label><input type="number" id="w-width" placeholder="8.5" step="0.1"></div>
+        <div class="form-group"><label>Height (ft)</label><input type="number" id="w-height" placeholder="8" step="0.1"></div>
+      </div>
+      <div class="section-label">Special Requirements</div>
+      <div class="form-row">
+        <div class="form-group"><label style="display:flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" id="w-hazmat" onchange="toggleHazmat()"> HazMat</label></div>
+        <div class="form-group"><label style="display:flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" id="w-temp" onchange="toggleTemp()"> Temperature Controlled</label></div>
+        <div class="form-group"><label style="display:flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" id="w-stackable" checked> Stackable</label></div>
+      </div>
+      <div id="hazmat-fields" style="display:none" class="form-group">
+        <label>HazMat Class</label><input type="text" id="w-hazmat-class" placeholder="e.g. Class 3 — Flammable Liquids">
+      </div>
+      <div id="temp-fields" style="display:none" class="form-row">
+        <div class="form-group"><label>Min Temp (°F)</label><input type="number" id="w-temp-min" placeholder="34"></div>
+        <div class="form-group"><label>Max Temp (°F)</label><input type="number" id="w-temp-max" placeholder="38"></div>
+      </div>
+      <div class="form-group"><label>Special Instructions</label><input type="text" id="w-instructions" placeholder="e.g. Liftgate required, No-touch freight"></div>
+    </div>
+
+    <!-- STEP 4: QUOTE -->
+    <div class="wizard-pane" id="wpane-4">
+      <div id="quote-loading" style="text-align:center;padding:40px;color:var(--muted)">
+        <div class="spinner"></div> Calculating rate…
+      </div>
+      <div id="quote-result" style="display:none">
+        <div class="quote-box">
+          <div style="font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Instant Quote</div>
+          <div class="quote-total" id="q-total">—</div>
+          <div style="font-size:12px;color:var(--muted);margin-bottom:20px" id="q-rpm">— /mile</div>
+          <div class="quote-row"><span class="quote-label">Estimated Miles</span><span id="q-miles">—</span></div>
+          <div class="quote-row"><span class="quote-label">Base Rate</span><span id="q-base">—</span></div>
+          <div class="quote-row"><span class="quote-label">Fuel Surcharge</span><span id="q-fuel">—</span></div>
+          <div class="quote-row" id="q-acc-row" style="display:none"><span class="quote-label">Accessorial Fees</span><span id="q-acc">—</span></div>
+          <div class="quote-row"><span class="quote-label" style="font-weight:600">Total Rate</span><span id="q-total2" style="color:var(--green)">—</span></div>
+        </div>
+        <div style="background:rgba(59,130,246,.05);border:1px solid rgba(59,130,246,.15);border-radius:8px;padding:14px;font-size:13px;color:var(--muted)">
+          ✓ Rate valid for 1 hour &nbsp;·&nbsp; ✓ All-in pricing, no hidden fees &nbsp;·&nbsp; ✓ Dedicated carrier
+        </div>
+      </div>
+      <div id="quote-error" style="display:none;color:var(--red);text-align:center;padding:20px;font-size:13px"></div>
+    </div>
+
+    <!-- STEP 5: CONFIRM -->
+    <div class="wizard-pane" id="wpane-5">
+      <div id="confirm-summary" style="display:none">
+        <div class="detail-grid">
+          <div class="detail-section">
+            <div class="detail-section-title">Pickup</div>
+            <div id="confirm-pickup"></div>
+          </div>
+          <div class="detail-section">
+            <div class="detail-section-title">Delivery</div>
+            <div id="confirm-delivery"></div>
+          </div>
+        </div>
+        <div class="detail-grid">
+          <div class="detail-section">
+            <div class="detail-section-title">Freight</div>
+            <div id="confirm-freight"></div>
+          </div>
+          <div class="detail-section">
+            <div class="detail-section-title">Rate</div>
+            <div id="confirm-rate"></div>
+          </div>
+        </div>
+        <div style="margin-top:16px;font-size:13px;color:var(--muted)">By booking this shipment, you agree to our <a href="terms-of-service.html" target="_blank">Terms of Service</a> and <a href="carrier-agreement.html" target="_blank">Carrier Agreement</a>.</div>
+      </div>
+    </div>
+  </div>
+  <div class="modal-footer">
+    <button class="btn-modal-cancel" id="wizard-back-btn" onclick="wizardBack()" style="display:none">← Back</button>
+    <button class="btn-modal-cancel" onclick="closeModal('modal-new-shipment')">Cancel</button>
+    <button class="btn-modal-ok" id="wizard-next-btn" onclick="wizardNext()">Next →</button>
+  </div>
+</div>
+</div>
+
+<!-- ── LOAD DETAIL MODAL ──────────────────────────────────────── -->
+<div class="modal-overlay" id="modal-load-detail">
+<div class="modal" style="max-width:800px">
+  <div class="modal-header">
+    <div>
+      <div class="modal-title" id="detail-load-num">Load #—</div>
+      <div style="font-size:12px;color:var(--muted);margin-top:2px" id="detail-load-sub">—</div>
+    </div>
+    <button class="modal-close" onclick="closeModal('modal-load-detail')">✕</button>
+  </div>
+  <div class="modal-body">
+    <div id="detail-content">
+      <div id="detail-map" class="map-placeholder">
+        <div class="map-dot"></div>
+        <div id="detail-map-text" style="font-size:13px">Loading location…</div>
+      </div>
+      <div class="detail-grid">
+        <div class="detail-section">
+          <div class="detail-section-title">Route</div>
+          <div id="detail-route"></div>
+        </div>
+        <div class="detail-section">
+          <div class="detail-section-title">Freight</div>
+          <div id="detail-freight"></div>
+        </div>
+      </div>
+      <div style="margin-top:16px">
+        <div class="section-label">Shipment Timeline</div>
+        <div class="timeline" id="detail-timeline"></div>
+      </div>
+      <div style="margin-top:16px">
+        <div class="section-label">Documents</div>
+        <div id="detail-docs" style="display:flex;gap:10px;flex-wrap:wrap"></div>
+      </div>
+    </div>
+  </div>
+  <div class="modal-footer">
+    <div style="font-size:12px;color:var(--muted)">Tracking: <a id="detail-track-link" href="#" target="_blank" style="color:var(--accent2)">Public link →</a></div>
+    <button class="btn-modal-cancel" onclick="closeModal('modal-load-detail')">Close</button>
+  </div>
+</div>
+</div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<script>
+const API = 'https://three-lakes-logistics-api.onrender.com';
+let _token = localStorage.getItem('shipper_token') || '';
+let _shipper = JSON.parse(localStorage.getItem('shipper_data') || 'null');
+let _wizardStep = 1;
+let _quoteData = null;
+let _loadsFilter = 'all';
+let _loadsPage = 0;
+let _allLoads = [];
+let _apiKeyRevealed = false;
+
+// ── INIT ──────────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+  const today = new Date().toISOString().split('T')[0];
+  const nextWeek = new Date(Date.now() + 7*86400000).toISOString().split('T')[0];
+  ['w-pu-date','w-del-date'].forEach((id,i) => {
+    const el = document.getElementById(id);
+    if(el) { el.min = today; el.value = i===0 ? today : nextWeek; }
+  });
+  if(_token && _shipper) {
+    showApp();
+  }
+});
+
+// ── AUTH ──────────────────────────────────────────────────────────
+function switchAuthTab(tab) {
+  document.querySelectorAll('.auth-tab').forEach((el,i) => el.classList.toggle('active', (i===0&&tab==='login')||(i===1&&tab==='register')));
+  document.getElementById('login-form').style.display = tab==='login' ? '' : 'none';
+  document.getElementById('register-form').style.display = tab==='register' ? '' : 'none';
+  clearAuthMsgs();
+}
+
+function clearAuthMsgs() {
+  ['auth-error','auth-success'].forEach(id => { const el = document.getElementById(id); el.style.display='none'; el.textContent=''; });
+}
+
+function showAuthError(msg) {
+  const el = document.getElementById('auth-error');
+  el.textContent = msg; el.style.display = 'block';
+}
+
+async function doLogin() {
+  clearAuthMsgs();
+  const email = document.getElementById('login-email').value.trim();
+  const password = document.getElementById('login-password').value;
+  if(!email || !password) return showAuthError('Email and password are required.');
+  try {
+    const r = await api('POST', '/api/shipper/auth/login', {email, password}, false);
+    if(r.token) {
+      _token = r.token;
+      _shipper = {shipper_id: r.shipper_id, company_name: r.company_name};
+      localStorage.setItem('shipper_token', _token);
+      localStorage.setItem('shipper_data', JSON.stringify(_shipper));
+      showApp();
+    } else {
+      showAuthError(r.detail || 'Login failed.');
+    }
+  } catch(e) { showAuthError(e.message || 'Login failed. Please try again.'); }
+}
+
+async function doRegister() {
+  clearAuthMsgs();
+  const company_name = document.getElementById('reg-company').value.trim();
+  const contact_name = document.getElementById('reg-contact').value.trim();
+  const email = document.getElementById('reg-email').value.trim();
+  const phone = document.getElementById('reg-phone').value.trim();
+  const state = document.getElementById('reg-state').value;
+  const password = document.getElementById('reg-password').value;
+  const confirm = document.getElementById('reg-confirm').value;
+  if(!company_name || !email || !password) return showAuthError('Company name, email and password are required.');
+  if(password !== confirm) return showAuthError('Passwords do not match.');
+  if(password.length < 8) return showAuthError('Password must be at least 8 characters.');
+  try {
+    const r = await api('POST', '/api/shipper/auth/register', {company_name, contact_name, email, phone, state, password}, false);
+    if(r.token) {
+      _token = r.token;
+      _shipper = {shipper_id: r.shipper_id, company_name: r.company_name};
+      localStorage.setItem('shipper_token', _token);
+      localStorage.setItem('shipper_data', JSON.stringify(_shipper));
+      showApp();
+    } else {
+      showAuthError(r.detail || 'Registration failed.');
+    }
+  } catch(e) { showAuthError(e.message || 'Registration failed.'); }
+}
+
+function doLogout() {
+  api('POST', '/api/shipper/auth/logout', {}).catch(()=>{});
+  localStorage.removeItem('shipper_token');
+  localStorage.removeItem('shipper_data');
+  _token = ''; _shipper = null;
+  document.getElementById('app-screen').style.display = 'none';
+  document.getElementById('auth-screen').style.display = 'flex';
+}
+
+// ── APP ──────────────────────────────────────────────────────────
+function showApp() {
+  document.getElementById('auth-screen').style.display = 'none';
+  document.getElementById('app-screen').style.display = 'block';
+  document.getElementById('header-company').textContent = _shipper?.company_name || 'Loading…';
+  loadDashboard();
+  loadAllLoads();
+}
+
+function showView(name) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById('view-'+name).classList.add('active');
+  document.querySelectorAll('.nav-link').forEach((el,i) => {
+    const views = ['dashboard','shipments','invoices','account'];
+    el.classList.toggle('active', views[i]===name);
+  });
+  if(name==='invoices') loadInvoices();
+  if(name==='account') loadAccount();
+}
+
+// ── API HELPER ────────────────────────────────────────────────────
+async function api(method, path, body, auth=true) {
+  const opts = { method, headers: {'Content-Type':'application/json'} };
+  if(auth) opts.headers['Authorization'] = 'Bearer ' + _token;
+  if(body && method!=='GET') opts.body = JSON.stringify(body);
+  const r = await fetch(API + path, opts);
+  const data = await r.json().catch(() => ({}));
+  if(!r.ok) {
+    if(r.status===401) { doLogout(); return; }
+    throw new Error(data.detail || `HTTP ${r.status}`);
+  }
+  return data;
+}
+
+// ── DASHBOARD ─────────────────────────────────────────────────────
+async function loadDashboard() {
+  try {
+    const d = await api('GET', '/api/shipper/dashboard');
+    document.getElementById('stat-active').textContent = d.active_loads ?? '0';
+    document.getElementById('stat-delivered').textContent = d.delivered_this_month ?? '0';
+    document.getElementById('stat-invoices').textContent = d.pending_invoices ?? '0';
+    document.getElementById('stat-spend').textContent = '$' + (d.total_spend_this_month ?? 0).toLocaleString(undefined,{maximumFractionDigits:0});
+    renderLoadsTable('recent-loads-body', d.recent_loads || [], true);
+    renderAlerts(d.alerts || []);
+  } catch(e) { console.error('Dashboard load failed', e); }
+}
+
+function renderAlerts(alerts) {
+  const el = document.getElementById('alerts-list');
+  if(!alerts.length) { el.innerHTML = '<div class="alert-item" style="color:var(--muted)">No active alerts</div>'; return; }
+  el.innerHTML = alerts.map(a => `<div class="alert-item ${a.level==='danger'?'danger':a.level==='warn'?'warn':''}">
+    <span>${a.icon||'ℹ️'}</span><div><div style="font-weight:500">${a.title}</div><div style="font-size:12px;color:var(--muted)">${a.message||''}</div></div>
+  </div>`).join('');
+}
+
+// ── LOADS ─────────────────────────────────────────────────────────
+async function loadAllLoads(status, page=0) {
+  _loadsPage = page;
+  try {
+    const qs = status && status!=='all' ? `?status=${status}&limit=50` : '?limit=50';
+    const d = await api('GET', '/api/shipper/loads'+qs);
+    _allLoads = d.items || [];
+    renderLoadsTable('loads-body', _allLoads, false);
+    document.getElementById('loads-count').textContent = `${_allLoads.length} shipment${_allLoads.length!==1?'s':''}`;
+  } catch(e) { console.error('Loads load failed', e); }
+}
+
+function filterLoads(status, el) {
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  _loadsFilter = status;
+  loadAllLoads(status);
+}
+
+function renderLoadsTable(tbodyId, loads, compact) {
+  const tbody = document.getElementById(tbodyId);
+  if(!loads || !loads.length) {
+    tbody.innerHTML = `<tr><td colspan="${compact?6:8}"><div class="empty-state"><span class="empty-icon">📦</span><div class="empty-title">No shipments yet</div><div>Click "New Shipment" to get started</div></div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML = loads.map(l => `
+    <tr>
+      <td style="font-weight:600;font-family:monospace;color:var(--accent2)">${loadNum(l.id)}</td>
+      ${!compact ? `<td>${l.origin_city}, ${l.origin_state}</td><td>${l.dest_city}, ${l.dest_state}</td><td style="text-transform:capitalize">${(l.load_type||'dry_van').replace('_',' ')}</td>` : `<td>${l.origin_city}, ${l.origin_state} → ${l.dest_city}, ${l.dest_state}</td>`}
+      <td>${l.pickup_date||'—'}</td>
+      <td style="color:var(--green);font-weight:600">$${(l.total_rate||0).toLocaleString(undefined,{maximumFractionDigits:0})}</td>
+      <td><span class="badge badge-${l.status||'quote'}">${statusLabel(l.status)}</span></td>
+      <td>
+        <span class="table-action" onclick="openLoadDetail('${l.id}')">View</span>
+        <a class="table-action" href="track.html?token=${l.tracking_token}" target="_blank">Track</a>
+        ${l.status==='quote'||l.status==='booked' ? `<span class="table-action" style="color:var(--red)" onclick="cancelLoad('${l.id}')">Cancel</span>` : ''}
+      </td>
+    </tr>`).join('');
+}
+
+function loadNum(id) { return '3LL-' + (id||'').substring(0,8).toUpperCase(); }
+function statusLabel(s) {
+  const m = {quote:'Quote',booked:'Booked',dispatched:'Dispatched',in_transit:'In Transit',delivered:'Delivered',invoiced:'Invoiced',cancelled:'Cancelled'};
+  return m[s] || s || '—';
+}
+function fmt$(n) { return '$'+(n||0).toLocaleString(undefined,{minimumFractionDigits:0,maximumFractionDigits:0}); }
+
+async function cancelLoad(id) {
+  if(!confirm('Cancel this shipment?')) return;
+  try {
+    await api('DELETE', '/api/shipper/loads/'+id);
+    toast('Shipment cancelled', 'success');
+    loadAllLoads(_loadsFilter);
+    loadDashboard();
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+// ── LOAD DETAIL ───────────────────────────────────────────────────
+async function openLoadDetail(id) {
+  document.getElementById('modal-load-detail').classList.add('open');
+  document.getElementById('detail-load-num').textContent = 'Load ' + loadNum(id);
+  document.getElementById('detail-load-sub').textContent = 'Loading…';
+  document.getElementById('detail-route').innerHTML = '';
+  document.getElementById('detail-freight').innerHTML = '';
+  document.getElementById('detail-timeline').innerHTML = '';
+  document.getElementById('detail-docs').innerHTML = '';
+  document.getElementById('detail-map-text').textContent = 'Fetching location…';
+  try {
+    const d = await api('GET', '/api/shipper/loads/'+id);
+    document.getElementById('detail-load-sub').textContent = statusLabel(d.status) + ' · ' + (d.origin_city||'') + ' → ' + (d.dest_city||'');
+    document.getElementById('detail-track-link').href = 'track.html?token=' + d.tracking_token;
+
+    // Route
+    document.getElementById('detail-route').innerHTML = `
+      <div class="detail-row"><span class="detail-label">From</span><span class="detail-val">${d.origin_address||''}, ${d.origin_city}, ${d.origin_state}</span></div>
+      <div class="detail-row"><span class="detail-label">To</span><span class="detail-val">${d.dest_address||''}, ${d.dest_city}, ${d.dest_state}</span></div>
+      <div class="detail-row"><span class="detail-label">Pickup</span><span class="detail-val">${d.pickup_date||'—'}</span></div>
+      <div class="detail-row"><span class="detail-label">Delivery</span><span class="detail-val">${d.delivery_date||'—'}</span></div>
+      ${d.eta ? `<div class="detail-row"><span class="detail-label">ETA</span><span class="detail-val">${new Date(d.eta).toLocaleString()}</span></div>` : ''}`;
+
+    // Freight
+    document.getElementById('detail-freight').innerHTML = `
+      <div class="detail-row"><span class="detail-label">Equipment</span><span class="detail-val" style="text-transform:capitalize">${(d.load_type||'').replace('_',' ')}</span></div>
+      <div class="detail-row"><span class="detail-label">Commodity</span><span class="detail-val">${d.commodity||'—'}</span></div>
+      <div class="detail-row"><span class="detail-label">Weight</span><span class="detail-val">${d.weight_lbs ? d.weight_lbs.toLocaleString()+' lbs' : '—'}</span></div>
+      <div class="detail-row"><span class="detail-label">Pallets</span><span class="detail-val">${d.pallets||'—'}</span></div>
+      <div class="detail-row"><span class="detail-label">Miles</span><span class="detail-val">${d.quoted_miles ? Math.round(d.quoted_miles)+' mi' : '—'}</span></div>
+      <div class="detail-row"><span class="detail-label">Total Rate</span><span class="detail-val" style="color:var(--green);font-weight:700">${fmt$(d.total_rate)}</span></div>`;
+
+    // Location
+    if(d.current_lat && d.current_lng) {
+      document.getElementById('detail-map-text').textContent = `📍 ${d.current_city||''}, ${d.current_state||''} · ${d.current_lat.toFixed(4)}, ${d.current_lng.toFixed(4)}`;
+    } else {
+      document.getElementById('detail-map-text').textContent = d.status==='delivered' ? '✅ Delivered' : d.status==='booked'||d.status==='quote' ? 'Not yet dispatched' : 'Location unavailable';
+    }
+
+    // Timeline
+    const timeline = buildTimeline(d);
+    document.getElementById('detail-timeline').innerHTML = timeline.map(t => `
+      <div class="timeline-item">
+        <div class="timeline-dot ${t.done?'done':t.active?'active':''}"></div>
+        <div class="timeline-label">${t.label}</div>
+        <div class="timeline-time">${t.time}</div>
+      </div>`).join('');
+
+    // Docs
+    const docs = [];
+    if(d.bol_url) docs.push(`<a href="${d.bol_url}" target="_blank" class="btn-sm" style="background:var(--surface3);color:var(--text);border:1px solid var(--border);padding:6px 14px;border-radius:7px;font-size:13px">📄 Bill of Lading</a>`);
+    if(d.pod_url) docs.push(`<a href="${d.pod_url}" target="_blank" class="btn-sm" style="background:var(--surface3);color:var(--text);border:1px solid var(--border);padding:6px 14px;border-radius:7px;font-size:13px">✅ Proof of Delivery</a>`);
+    if(d.invoice_number) docs.push(`<span class="btn-sm" style="background:var(--surface3);color:var(--cyan);border:1px solid var(--border);padding:6px 14px;border-radius:7px;font-size:13px;cursor:pointer" onclick="closeModal('modal-load-detail');showView('invoices')">🧾 Invoice ${d.invoice_number}</span>`);
+    document.getElementById('detail-docs').innerHTML = docs.length ? docs.join('') : '<div style="color:var(--muted);font-size:13px">No documents available yet</div>';
+
+  } catch(e) { toast(e.message, 'error'); closeModal('modal-load-detail'); }
+}
+
+function buildTimeline(d) {
+  const steps = [
+    {key:'quote',label:'Quote Created',done:true,active:false},
+    {key:'booked',label:'Shipment Booked',done:['booked','dispatched','in_transit','delivered','invoiced'].includes(d.status)},
+    {key:'dispatched',label:'Driver Assigned',done:['dispatched','in_transit','delivered','invoiced'].includes(d.status)},
+    {key:'in_transit',label:'Pickup Complete — In Transit',done:['in_transit','delivered','invoiced'].includes(d.status)},
+    {key:'delivered',label:'Delivered',done:['delivered','invoiced'].includes(d.status)},
+    {key:'invoiced',label:'Invoice Sent',done:d.status==='invoiced'},
+  ];
+  const active = steps.findIndex(s => !s.done);
+  return steps.map((s,i) => ({...s, active: i===active, time: s.done && d.updated_at ? new Date(d.updated_at).toLocaleDateString() : s.active ? 'In progress' : 'Pending'}));
+}
+
+// ── NEW SHIPMENT WIZARD ───────────────────────────────────────────
+function openNewShipmentWizard() {
+  _wizardStep = 1;
+  _quoteData = null;
+  setWizardStep(1);
+  document.getElementById('modal-new-shipment').classList.add('open');
+}
+
+function setWizardStep(n) {
+  for(let i=1;i<=5;i++) {
+    document.getElementById('wpane-'+i).classList.toggle('active', i===n);
+    const ws = document.getElementById('wstep-'+i);
+    ws.classList.toggle('active', i===n);
+    ws.classList.toggle('done', i<n);
+  }
+  document.getElementById('wizard-back-btn').style.display = n>1 ? '' : 'none';
+  const nextBtn = document.getElementById('wizard-next-btn');
+  nextBtn.textContent = n===4 ? 'Get Quote' : n===5 ? '✓ Book Shipment' : 'Next →';
+  _wizardStep = n;
+}
+
+async function wizardNext() {
+  if(_wizardStep === 1) {
+    const city = document.getElementById('w-pu-city').value.trim();
+    const state = document.getElementById('w-pu-state').value;
+    const date = document.getElementById('w-pu-date').value;
+    if(!city || !state || !date) { toast('Please fill in pickup city, state and date', 'error'); return; }
+    setWizardStep(2);
+  } else if(_wizardStep === 2) {
+    const city = document.getElementById('w-del-city').value.trim();
+    const state = document.getElementById('w-del-state').value;
+    const date = document.getElementById('w-del-date').value;
+    if(!city || !state || !date) { toast('Please fill in delivery city, state and date', 'error'); return; }
+    setWizardStep(3);
+  } else if(_wizardStep === 3) {
+    setWizardStep(4);
+    await fetchQuote();
+  } else if(_wizardStep === 4) {
+    if(!_quoteData) { toast('Please wait for quote to calculate', 'error'); return; }
+    buildConfirmSummary();
+    setWizardStep(5);
+  } else if(_wizardStep === 5) {
+    await bookShipment();
+  }
+}
+
+function wizardBack() {
+  if(_wizardStep > 1) setWizardStep(_wizardStep - 1);
+}
+
+async function fetchQuote() {
+  document.getElementById('quote-loading').style.display = 'block';
+  document.getElementById('quote-result').style.display = 'none';
+  document.getElementById('quote-error').style.display = 'none';
+  try {
+    const body = {
+      origin_city: document.getElementById('w-pu-city').value.trim(),
+      origin_state: document.getElementById('w-pu-state').value,
+      dest_city: document.getElementById('w-del-city').value.trim(),
+      dest_state: document.getElementById('w-del-state').value,
+      load_type: document.getElementById('w-eq-type').value,
+      weight_lbs: parseFloat(document.getElementById('w-weight').value) || null,
+      pallets: parseInt(document.getElementById('w-pallets').value) || null,
+      hazmat: document.getElementById('w-hazmat').checked,
+      temp_controlled: document.getElementById('w-temp').checked,
+      pickup_date: document.getElementById('w-pu-date').value,
+      delivery_date: document.getElementById('w-del-date').value,
+    };
+    const q = await api('POST', '/api/shipper/quote', body);
+    _quoteData = q;
+    document.getElementById('quote-loading').style.display = 'none';
+    document.getElementById('quote-result').style.display = 'block';
+    document.getElementById('q-total').textContent = fmt$(q.total_rate);
+    document.getElementById('q-rpm').textContent = '$'+(q.rate_per_mile||0).toFixed(2)+'/mile · '+Math.round(q.quoted_miles||0)+' estimated miles';
+    document.getElementById('q-miles').textContent = Math.round(q.quoted_miles||0)+' mi';
+    document.getElementById('q-base').textContent = fmt$(q.base_rate);
+    document.getElementById('q-fuel').textContent = fmt$(q.fuel_surcharge);
+    document.getElementById('q-total2').textContent = fmt$(q.total_rate);
+    if(q.accessorial_fees > 0) {
+      document.getElementById('q-acc-row').style.display = '';
+      document.getElementById('q-acc').textContent = fmt$(q.accessorial_fees);
+    }
+  } catch(e) {
+    document.getElementById('quote-loading').style.display = 'none';
+    document.getElementById('quote-error').style.display = 'block';
+    document.getElementById('quote-error').textContent = '⚠ ' + (e.message || 'Could not calculate rate. Please try again.');
+  }
+}
+
+function buildConfirmSummary() {
+  document.getElementById('confirm-summary').style.display = 'block';
+  document.getElementById('confirm-pickup').innerHTML = `
+    <div class="detail-row"><span class="detail-label">Address</span><span class="detail-val">${document.getElementById('w-pu-addr').value||'—'}</span></div>
+    <div class="detail-row"><span class="detail-label">City, State</span><span class="detail-val">${document.getElementById('w-pu-city').value}, ${document.getElementById('w-pu-state').value}</span></div>
+    <div class="detail-row"><span class="detail-label">Date</span><span class="detail-val">${document.getElementById('w-pu-date').value}</span></div>
+    <div class="detail-row"><span class="detail-label">Window</span><span class="detail-val">${document.getElementById('w-pu-start').value} – ${document.getElementById('w-pu-end').value}</span></div>`;
+  document.getElementById('confirm-delivery').innerHTML = `
+    <div class="detail-row"><span class="detail-label">Address</span><span class="detail-val">${document.getElementById('w-del-addr').value||'—'}</span></div>
+    <div class="detail-row"><span class="detail-label">City, State</span><span class="detail-val">${document.getElementById('w-del-city').value}, ${document.getElementById('w-del-state').value}</span></div>
+    <div class="detail-row"><span class="detail-label">Date</span><span class="detail-val">${document.getElementById('w-del-date').value}</span></div>
+    <div class="detail-row"><span class="detail-label">Window</span><span class="detail-val">${document.getElementById('w-del-start').value} – ${document.getElementById('w-del-end').value}</span></div>`;
+  const eq = document.getElementById('w-eq-type');
+  document.getElementById('confirm-freight').innerHTML = `
+    <div class="detail-row"><span class="detail-label">Equipment</span><span class="detail-val">${eq.options[eq.selectedIndex].text}</span></div>
+    <div class="detail-row"><span class="detail-label">Commodity</span><span class="detail-val">${document.getElementById('w-commodity').value||'General Freight'}</span></div>
+    <div class="detail-row"><span class="detail-label">Weight</span><span class="detail-val">${document.getElementById('w-weight').value||'—'} lbs</span></div>
+    <div class="detail-row"><span class="detail-label">Pallets</span><span class="detail-val">${document.getElementById('w-pallets').value||'—'}</span></div>`;
+  if(_quoteData) {
+    document.getElementById('confirm-rate').innerHTML = `
+      <div class="detail-row"><span class="detail-label">Miles</span><span class="detail-val">${Math.round(_quoteData.quoted_miles||0)} mi</span></div>
+      <div class="detail-row"><span class="detail-label">Base Rate</span><span class="detail-val">${fmt$(_quoteData.base_rate)}</span></div>
+      <div class="detail-row"><span class="detail-label">Fuel Surcharge</span><span class="detail-val">${fmt$(_quoteData.fuel_surcharge)}</span></div>
+      <div class="detail-row"><span class="detail-label" style="font-weight:600">Total</span><span class="detail-val" style="color:var(--green);font-weight:700">${fmt$(_quoteData.total_rate)}</span></div>`;
+  }
+}
+
+async function bookShipment() {
+  const btn = document.getElementById('wizard-next-btn');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Booking…';
+  try {
+    const body = {
+      origin_address: document.getElementById('w-pu-addr').value.trim(),
+      origin_city: document.getElementById('w-pu-city').value.trim(),
+      origin_state: document.getElementById('w-pu-state').value,
+      origin_zip: document.getElementById('w-pu-zip').value.trim(),
+      origin_contact: document.getElementById('w-pu-contact').value.trim(),
+      origin_phone: document.getElementById('w-pu-phone').value.trim(),
+      pickup_date: document.getElementById('w-pu-date').value,
+      pickup_window_start: document.getElementById('w-pu-start').value,
+      pickup_window_end: document.getElementById('w-pu-end').value,
+      dest_address: document.getElementById('w-del-addr').value.trim(),
+      dest_city: document.getElementById('w-del-city').value.trim(),
+      dest_state: document.getElementById('w-del-state').value,
+      dest_zip: document.getElementById('w-del-zip').value.trim(),
+      dest_contact: document.getElementById('w-del-contact').value.trim(),
+      dest_phone: document.getElementById('w-del-phone').value.trim(),
+      delivery_date: document.getElementById('w-del-date').value,
+      delivery_window_start: document.getElementById('w-del-start').value,
+      delivery_window_end: document.getElementById('w-del-end').value,
+      load_type: document.getElementById('w-eq-type').value,
+      commodity: document.getElementById('w-commodity').value.trim(),
+      weight_lbs: parseFloat(document.getElementById('w-weight').value) || null,
+      pallets: parseInt(document.getElementById('w-pallets').value) || null,
+      length_ft: parseFloat(document.getElementById('w-length').value) || null,
+      width_ft: parseFloat(document.getElementById('w-width').value) || null,
+      height_ft: parseFloat(document.getElementById('w-height').value) || null,
+      hazmat: document.getElementById('w-hazmat').checked,
+      hazmat_class: document.getElementById('w-hazmat-class').value.trim() || null,
+      temp_controlled: document.getElementById('w-temp').checked,
+      temp_min_f: parseFloat(document.getElementById('w-temp-min').value) || null,
+      temp_max_f: parseFloat(document.getElementById('w-temp-max').value) || null,
+      stackable: document.getElementById('w-stackable').checked,
+      special_instructions: document.getElementById('w-instructions').value.trim(),
+      quote_data: _quoteData,
+    };
+    const r = await api('POST', '/api/shipper/loads', body);
+    closeModal('modal-new-shipment');
+    toast('✓ Shipment booked! Load ' + loadNum(r.id), 'success');
+    loadAllLoads(_loadsFilter);
+    loadDashboard();
+    showView('shipments');
+  } catch(e) {
+    toast(e.message || 'Booking failed', 'error');
+  } finally {
+    btn.disabled = false; btn.textContent = '✓ Book Shipment';
+  }
+}
+
+// ── INVOICES ──────────────────────────────────────────────────────
+async function loadInvoices() {
+  const el = document.getElementById('invoices-list');
+  el.innerHTML = '<div style="color:var(--muted);text-align:center;padding:40px">Loading…</div>';
+  try {
+    const d = await api('GET', '/api/shipper/invoices');
+    const inv = d.items || [];
+    let outstanding = 0, overdue = 0, paid = 0;
+    const today = new Date();
+    inv.forEach(i => {
+      const amt = i.invoice_amount || 0;
+      if(i.invoice_paid) paid += amt;
+      else {
+        outstanding += amt;
+        if(i.invoice_due_date && new Date(i.invoice_due_date) < today) overdue += amt;
+      }
+    });
+    document.getElementById('billing-outstanding').textContent = fmt$(outstanding);
+    document.getElementById('billing-overdue').textContent = fmt$(overdue);
+    document.getElementById('billing-paid').textContent = fmt$(paid);
+
+    if(!inv.length) {
+      el.innerHTML = '<div style="text-align:center;padding:60px;color:var(--muted)"><span style="font-size:40px;display:block;margin-bottom:12px">🧾</span><div style="font-size:16px;font-weight:600;color:var(--text);margin-bottom:8px">No invoices yet</div><div>Invoices are generated automatically after delivery</div></div>';
+      return;
+    }
+    el.innerHTML = inv.map(i => `
+      <div class="invoice-card" onclick="openLoadDetail('${i.load_id||i.id}')">
+        <div class="invoice-row">
+          <div>
+            <div class="invoice-num">${i.invoice_number || '—'}</div>
+            <div class="invoice-meta">${i.origin_city||'—'}, ${i.origin_state||''} → ${i.dest_city||'—'}, ${i.dest_state||''}</div>
+          </div>
+          <div style="text-align:right">
+            <div class="invoice-amount">${fmt$(i.invoice_amount)}</div>
+            <span class="badge ${i.invoice_paid?'badge-paid':'badge-invoiced'}" style="font-size:10px">${i.invoice_paid?'Paid':'Unpaid'}</span>
+          </div>
+        </div>
+        <div class="invoice-meta" style="margin-top:8px">Issued: ${i.invoice_date||'—'} &nbsp;·&nbsp; Due: ${i.invoice_due_date||'—'}</div>
+      </div>`).join('');
+  } catch(e) { el.innerHTML = '<div style="color:var(--red);text-align:center;padding:40px">Failed to load invoices</div>'; }
+}
+
+// ── ACCOUNT ───────────────────────────────────────────────────────
+async function loadAccount() {
+  try {
+    const d = await api('GET', '/api/shipper/account');
+    document.getElementById('acc-company').value = d.company_name || '';
+    document.getElementById('acc-contact').value = d.contact_name || '';
+    document.getElementById('acc-phone').value = d.phone || '';
+    document.getElementById('acc-email').value = d.email || '';
+    document.getElementById('acc-address').value = d.address || '';
+    document.getElementById('acc-city').value = d.city || '';
+    document.getElementById('acc-state').value = d.state || '';
+    document.getElementById('billing-terms').textContent = 'Net ' + (d.payment_terms || 30);
+    document.getElementById('wh-url').value = d.webhook_url || '';
+    const events = d.webhook_events || [];
+    document.getElementById('wh-events-display').innerHTML = events.map(e => `<div class="event-tag">${e}</div>`).join('');
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+async function saveAccount() {
+  try {
+    await api('PATCH', '/api/shipper/me', {
+      company_name: document.getElementById('acc-company').value.trim(),
+      contact_name: document.getElementById('acc-contact').value.trim(),
+      phone: document.getElementById('acc-phone').value.trim(),
+      address: document.getElementById('acc-address').value.trim(),
+      city: document.getElementById('acc-city').value.trim(),
+      state: document.getElementById('acc-state').value.trim(),
+    });
+    toast('Account saved', 'success');
+    _shipper.company_name = document.getElementById('acc-company').value.trim();
+    document.getElementById('header-company').textContent = _shipper.company_name;
+    localStorage.setItem('shipper_data', JSON.stringify(_shipper));
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+async function revealApiKey() {
+  if(_apiKeyRevealed) return;
+  try {
+    const d = await api('GET', '/api/shipper/account/api-key');
+    document.getElementById('api-key-display').textContent = d.api_key || '—';
+    _apiKeyRevealed = true;
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+async function rotateApiKey() {
+  if(!confirm('Rotate API key? Your existing key will stop working immediately.')) return;
+  try {
+    const d = await api('POST', '/api/shipper/account/api-key/rotate');
+    document.getElementById('api-key-display').textContent = d.api_key;
+    _apiKeyRevealed = true;
+    toast('API key rotated', 'success');
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+async function saveWebhook() {
+  try {
+    await api('PATCH', '/api/shipper/webhook', {
+      webhook_url: document.getElementById('wh-url').value.trim(),
+    });
+    toast('Webhook saved', 'success');
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+async function testWebhook() {
+  try {
+    const d = await api('POST', '/api/shipper/webhook/test');
+    toast(d.delivered ? '✓ Test webhook delivered' : '⚠ Webhook delivery failed: '+d.error, d.delivered?'success':'error');
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+// ── UI HELPERS ────────────────────────────────────────────────────
+function toggleHazmat() {
+  document.getElementById('hazmat-fields').style.display = document.getElementById('w-hazmat').checked ? '' : 'none';
+}
+function toggleTemp() {
+  document.getElementById('temp-fields').style.display = document.getElementById('w-temp').checked ? '' : 'none';
+}
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+document.querySelectorAll('.modal-overlay').forEach(el => {
+  el.addEventListener('click', e => { if(e.target===el) el.classList.remove('open'); });
+});
+
+document.addEventListener('keydown', e => {
+  if(e.key==='Escape') document.querySelectorAll('.modal-overlay.open').forEach(el => el.classList.remove('open'));
+});
+
+function toast(msg, type='info') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'show ' + type;
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.classList.remove('show'), 3500);
+}
+</script>
+</body>
+</html>

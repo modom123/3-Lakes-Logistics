@@ -35,6 +35,9 @@ from .routes_lf_webhooks   import router as lf_webhooks_router
 from .routes_checkr_webhook          import router as checkr_webhook_router
 from .routes_stripe_identity_webhook import router as stripe_identity_webhook_router
 from .routes_onboarding_status import router as onboarding_status_router
+from .routes_shipper_auth     import router as shipper_auth_router
+from .routes_shipper          import router as shipper_router
+from .routes_shipper_tracking import router as shipper_tracking_router
 
 from ..clm             import clm_router
 from ..email_ingest    import router as email_ingest_router
@@ -90,4 +93,7 @@ __all__ = [
     "stripe_identity_webhook_router",
     "studio_router",
     "onboarding_status_router",
+    "shipper_auth_router",
+    "shipper_router",
+    "shipper_tracking_router",
 ]
