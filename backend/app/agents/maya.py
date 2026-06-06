@@ -154,6 +154,8 @@ def process_intake(payload: dict[str, Any]) -> dict[str, Any]:
     # ── Create driver row (status=pending_screening) ──────────────────────────
     driver_id = None
     _db_error: str | None = None
+    if sb is None:
+        _db_error = "supabase_unavailable: check SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY env vars on Render"
     if sb:
         try:
             first, last = _split_name(name)
