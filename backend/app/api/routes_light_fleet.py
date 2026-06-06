@@ -40,6 +40,15 @@ def _today_iso() -> str:
     return now.replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
 
 
+def _default_services(vehicle_type: str | None) -> list[str]:
+    """Pick a sensible default segment so a driver is never invisible on every
+    roster. Luxury vehicles default to executive; everything else to courier
+    (the most general same-day segment)."""
+    if (vehicle_type or "").lower() == "luxury":
+        return ["executive"]
+    return ["courier"]
+
+
 def _require_trip(sb, trip_id: str) -> dict:
     res = sb.table("light_vehicle_trips").select("*").eq("id", trip_id).execute()
     if not res.data:
@@ -375,9 +384,14 @@ def create_driver(payload: dict) -> dict:
     payload.setdefault("mvr_status", "pending")
     payload.setdefault("background_check_status", "pending")
     payload.setdefault("total_trips", 0)
-    payload.setdefault("approved_services", [])
     payload.setdefault("created_at", _now_iso())
     payload.setdefault("updated_at", _now_iso())
+
+    # Guarantee the driver is visible on at least one segment roster.
+    # An empty approved_services means the ?service= filter hides them everywhere,
+    # so derive a sensible default from vehicle_type.
+    if not payload.get("approved_services"):
+        payload["approved_services"] = _default_services(payload.get("vehicle_type"))
 
     # Normalise and store phone_e164 if a phone was supplied
     raw_phone = payload.get("phone") or payload.get("phone_e164") or ""
@@ -713,7 +727,7 @@ def live_locations() -> dict:
     drivers_by_id: dict = {}
     if driver_ids:
         drv_res = sb.table("light_vehicle_drivers").select(
-            "id,full_name,vehicle_type,vehicle_plate,last_lat,last_lng,last_ping_at"
+            "id,name,vehicle_type,vehicle_plate,last_lat,last_lng,last_ping_at"
         ).in_("id", driver_ids).execute()
         for d in (drv_res.data or []):
             drivers_by_id[d["id"]] = d
@@ -735,7 +749,7 @@ def live_locations() -> dict:
             "passenger_name": t.get("passenger_name"),
             "rate_total": t.get("rate_total"),
             "driver_id": drv.get("id"),
-            "driver_name": drv.get("full_name"),
+            "driver_name": drv.get("name"),
             "vehicle_type": drv.get("vehicle_type"),
             "vehicle_plate": drv.get("vehicle_plate"),
             "last_ping_at": drv.get("last_ping_at"),

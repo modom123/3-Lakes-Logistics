@@ -17040,12 +17040,9 @@ async function lfLoadRoster(service, stripId){
   if(!strip) return;
   strip.innerHTML = '<div style="display:flex;align-items:center;gap:8px;color:rgba(255,255,255,.4);font-size:12px"><div class="spin"></div> Loading drivers…</div>';
   try {
-    const token = localStorage.getItem('3ll_token') || localStorage.getItem('3ll_admin_token') || 'eagle-eye-staff';
-    const res = await fetch(LF_API + '/api/light-fleet/drivers?limit=200&service=' + encodeURIComponent(service), {
-      headers: { 'Authorization': 'Bearer ' + token }
-    });
-    if(!res.ok) throw new Error(res.statusText);
-    const d = await res.json();
+    // Use lfFetch so the roster shares the exact same auth as KPIs/trips
+    // (admin token → app token), avoiding a 403 from a bogus fallback token.
+    const d = await lfFetch('/api/light-fleet/drivers?limit=200&service=' + encodeURIComponent(service));
     const drivers = d.items || [];
     if(!drivers.length){
       strip.innerHTML = `<div class="lf-driver-chip" style="opacity:.5;align-items:center;justify-content:center;min-width:180px;text-align:center;"><div style="font-size:22px;margin-bottom:6px">👤</div><div style="font-size:12px;color:rgba(255,255,255,.5)">No ${service} drivers yet</div></div>`;
@@ -17643,14 +17640,10 @@ async function lfRunExpert(agent, segment) {
   const btn = document.getElementById(btnId);
   if (btn) { btn.textContent = '⟳ Running…'; btn.disabled = true; }
   try {
-    const token = localStorage.getItem('3ll_token') || '';
-    const r = await fetch('/api/agents/' + agent + '/run', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-      body: JSON.stringify({ action: 'report', scope: 'full' }),
-    });
-    if (!r.ok) throw new Error(r.statusText);
-    const d = await r.json();
+    // Route through lfFetch so this hits the API origin (LF_API) with the same
+    // admin/app token as every other LF call — a relative fetch() would hit the
+    // static web host and fail on every page load.
+    const d = await lfFetch('/api/agents/' + agent + '/run', 'POST', { action: 'report', scope: 'full' });
     lfRenderExpertReport(segment, d);
     const ts = document.getElementById('iebc-ts-' + segment);
     if (ts) ts.textContent = 'Last run: ' + new Date().toLocaleTimeString();

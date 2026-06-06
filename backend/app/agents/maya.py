@@ -121,6 +121,10 @@ def process_intake(payload: dict[str, Any]) -> dict[str, Any]:
     vehicle_model = str(payload.get("vehicle_model", "")).strip()
     vehicle_type  = str(payload.get("vehicle_type", "")).strip()
     services      = payload.get("approved_services") or []
+    # Never onboard a driver with no segment — they'd be invisible on every
+    # roster (the ?service= filter would exclude them everywhere).
+    if not services:
+        services = ["executive"] if vehicle_type.lower() == "luxury" else ["courier"]
     clean_record  = str(payload.get("clean_record", "")).lower()
     has_insurance = str(payload.get("has_insurance", "")).lower()
     referral_source = payload.get("referral_source") or ""
