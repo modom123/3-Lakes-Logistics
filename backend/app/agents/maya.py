@@ -154,7 +154,7 @@ def process_intake(payload: dict[str, Any]) -> dict[str, Any]:
     if sb:
         try:
             first, last = _split_name(name)
-            result = sb.table("light_vehicle_drivers").insert({
+            row: dict = {
                 "name": name,
                 "phone": phone,
                 "email": email,
@@ -170,13 +170,21 @@ def process_intake(payload: dict[str, Any]) -> dict[str, Any]:
                 "has_insurance": has_insurance == "yes",
                 "referral_source": referral_source,
                 "notes": notes,
-                "status": "inactive",        # activated after MVR clears
+                "status": "inactive",
                 "mvr_status": "pending",
                 "background_check_status": "pending",
-                "platforms_opted_in": platforms_opted_in,
-                "plan": "starter",           # 15% platform fee per load, driver keeps 85%
-            }).execute()
+                "plan": "starter",
+            }
+            result = sb.table("light_vehicle_drivers").insert(row).execute()
             driver_id = (result.data[0] or {}).get("id") if result.data else None
+            # Store platform preferences if the column exists (added by migration 019)
+            if driver_id and platforms_opted_in:
+                try:
+                    sb.table("light_vehicle_drivers").update(
+                        {"platforms_opted_in": platforms_opted_in}
+                    ).eq("id", str(driver_id)).execute()
+                except Exception:  # noqa: BLE001
+                    pass  # column not yet added — harmless
         except Exception as e:  # noqa: BLE001
             log_agent(_NAME, "db_error", error=str(e))
 
