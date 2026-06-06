@@ -5922,17 +5922,66 @@ async function loadAgents(){
     if(!grid)return;
     grid.innerHTML=agents.map(name=>{
       const m=AGENT_META[name]||{icon:'🤖',label:name,desc:''};
-      return '<div class="card" style="padding:14px">'+
-        '<div style="font-size:24px">'+m.icon+'</div>'+
-        '<div style="font-weight:700;margin-top:4px">'+m.label+'</div>'+
-        '<div style="font-size:11px;color:var(--muted);margin-bottom:10px">'+esc(m.desc)+'</div>'+
-        '<button class="btn-navy-sm" style="width:100%" onclick="runAgent(\''+name+'\',{})">Run</button>'+
-        '</div>';
+      return `<div class="card" style="padding:14px">
+        <div style="font-size:24px">${m.icon}</div>
+        <div style="font-weight:700;margin-top:4px">${m.label}</div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:10px">${esc(m.desc)}</div>
+        <div style="display:flex;gap:6px;margin-bottom:0">
+          <button class="btn-navy-sm" style="flex:1" onclick="runAgent('${name}',{})">▶ Run</button>
+          <button id="actbtn-${name}" onclick="toggleAgentActivity('${name}',this)" style="font-size:11px;padding:4px 8px;background:var(--surface);border:1px solid var(--border);border-radius:5px;cursor:pointer;color:var(--muted);white-space:nowrap">⏱ Activity</button>
+        </div>
+        <div id="agent-activity-${name}" style="display:none;margin-top:8px;border-top:1px solid var(--border);padding-top:8px"></div>
+      </div>`;
     }).join('');
   }catch(e){
     const grid=document.getElementById('agent-grid');
     if(grid)grid.innerHTML='<div class="empty-state">Backend offline — set API_BASE_URL in Render environment to connect.</div>';
   }
+}
+
+let _agentLogCache=null, _agentLogCacheTs=0;
+
+async function _fetchAgentLog(){
+  if(_agentLogCache&&Date.now()-_agentLogCacheTs<30000)return _agentLogCache;
+  const {items}=await API.agentLog();
+  // Try a broader fetch for the activity panels
+  try{
+    const r=await API.get('/api/agents/log?limit=200');
+    _agentLogCache=r.items||items||[];
+  }catch{_agentLogCache=items||[];}
+  _agentLogCacheTs=Date.now();
+  return _agentLogCache;
+}
+
+function toggleAgentActivity(name,btn){
+  const panel=document.getElementById('agent-activity-'+name);
+  if(!panel)return;
+  if(panel.style.display!=='none'){panel.style.display='none';btn.style.color='var(--muted)';return;}
+  btn.textContent='⌛ …';
+  btn.disabled=true;
+  _fetchAgentLog().then(items=>{
+    const rows=items.filter(r=>r.agent===name).slice(0,5);
+    btn.textContent='⏱ Activity';
+    btn.disabled=false;
+    btn.style.color='var(--gold2)';
+    if(!rows.length){
+      panel.innerHTML='<div style="font-size:11px;color:var(--muted);text-align:center;padding:4px 0">No events logged yet</div>';
+    }else{
+      panel.innerHTML=rows.map(r=>{
+        const ts=new Date(r.ts).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});
+        const isErr=!!r.error;
+        const detail=r.error||r.result||'—';
+        return `<div style="padding:5px 0;border-bottom:1px solid rgba(255,255,255,.04)">
+          <div style="display:flex;justify-content:space-between;gap:6px">
+            <span style="font-size:11px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(r.action||'—')}</span>
+            <span style="font-size:10px;color:var(--muted);flex-shrink:0">${ts}</span>
+          </div>
+          <div style="font-size:10px;color:${isErr?'var(--red)':'var(--muted)'};overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:1px" title="${esc(detail)}">${esc(detail)}</div>
+        </div>`;
+      }).join('');
+    }
+    panel.style.display='block';
+  }).catch(()=>{btn.textContent='⏱ Activity';btn.disabled=false;panel.innerHTML='<div style="font-size:11px;color:var(--red);padding:4px 0">Error loading log</div>';panel.style.display='block';});
 }
 
 async function runAgent(name, payload){
