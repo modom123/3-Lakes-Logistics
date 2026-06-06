@@ -316,10 +316,10 @@ style{display:none!important;}
 .badge-ghost{background:transparent;color:var(--muted);border:1px solid var(--border);}
 
 /* ── TABLE ── */
-.tbl-wrap{overflow-x:auto;overflow-y:auto;max-height:480px;border-radius:10px;border:1.5px solid var(--border);}
+.tbl-wrap{overflow-x:auto;overflow-y:auto;max-height:clamp(320px,60vh,640px);border-radius:10px;border:1.5px solid var(--border);}
 /* Universal scroll container — apply to any list/log/table wrapper */
-.scroll-box{overflow-y:auto;max-height:480px;}
-.scroll-box-sm{overflow-y:auto;max-height:280px;}
+.scroll-box{overflow-y:auto;max-height:clamp(320px,60vh,640px);}
+.scroll-box-sm{overflow-y:auto;max-height:clamp(200px,35vh,320px);}
 table{width:100%;border-collapse:collapse;}
 thead tr{background:var(--slate);}
 thead th{position:sticky;top:0;z-index:2;background:var(--slate);}
@@ -2081,7 +2081,7 @@ select.form-input option{background:var(--surface);}
       </div>
 
       <!-- LIST VIEW -->
-      <div id="crm-view-list" style="display:grid;grid-template-columns:350px 1fr;gap:16px;padding:16px;height:calc(100vh - 120px);overflow:hidden">
+      <div id="crm-view-list" style="display:grid;grid-template-columns:350px 1fr;gap:16px;padding:16px;overflow:hidden;flex:1;min-height:0">
         <div style="display:flex;flex-direction:column;border-right:1px solid var(--border);padding-right:16px">
           <div style="flex:1;overflow-y:auto;border:1px solid var(--border);border-radius:6px">
             <div id="crm-leads-list" style="min-height:200px"><div class="loading"><div class="spin"></div>Loading leads…</div></div>
@@ -2096,12 +2096,12 @@ select.form-input option{background:var(--surface);}
       </div>
 
       <!-- KANBAN VIEW -->
-      <div id="crm-view-kanban" style="display:none;padding:16px;overflow-x:auto;overflow-y:hidden;height:calc(100vh - 120px)">
+      <div id="crm-view-kanban" style="display:none;padding:16px;overflow-x:auto;overflow-y:hidden;flex:1;min-height:0">
         <div id="crm-kanban-board" style="display:flex;gap:12px;min-width:max-content;height:100%"></div>
       </div>
 
       <!-- OUTREACH CAMPAIGNS VIEW -->
-      <div id="crm-view-outreach" style="display:none;padding:16px;overflow-y:auto;height:calc(100vh - 120px)">
+      <div id="crm-view-outreach" style="display:none;padding:16px;overflow-y:auto;flex:1;min-height:0">
         <div id="crm-oe-root"></div>
       </div>
     </div>
