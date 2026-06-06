@@ -8,6 +8,7 @@ Actions:
   deny                manually send denial SMS with reason
   status              intake queue stats
   send_invitation     send Checkr screening invitation link to a driver candidate
+  intake_stats        return intake queue stats
 """
 from __future__ import annotations
 

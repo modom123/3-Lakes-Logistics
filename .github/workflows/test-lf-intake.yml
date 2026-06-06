@@ -15,8 +15,6 @@ jobs:
     steps:
       - name: Wait for Render deploy + cold start
         run: |
-          echo "Waiting 60s for Render to finish deploying latest commit..."
-          sleep 60
           echo "Pinging API to confirm it is awake..."
           for i in 1 2 3 4 5 6; do
             STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 \
