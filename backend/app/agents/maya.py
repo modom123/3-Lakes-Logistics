@@ -152,6 +152,7 @@ def process_intake(payload: dict[str, Any]) -> dict[str, Any]:
 
     # ── Create driver row (status=pending_screening) ──────────────────────────
     driver_id = None
+    _db_error: str | None = None
     if sb:
         try:
             first, last = _split_name(name)
@@ -178,6 +179,8 @@ def process_intake(payload: dict[str, Any]) -> dict[str, Any]:
             }
             result = sb.table("light_vehicle_drivers").insert(row).execute()
             driver_id = (result.data[0] or {}).get("id") if result.data else None
+            if not driver_id:
+                _db_error = f"insert returned no data (result.data={result.data!r})"
             # Store platform preferences if the column exists (added by migration 019)
             if driver_id and platforms_opted_in:
                 try:
@@ -187,7 +190,8 @@ def process_intake(payload: dict[str, Any]) -> dict[str, Any]:
                 except Exception:  # noqa: BLE001
                     pass  # column not yet added — harmless
         except Exception as e:  # noqa: BLE001
-            log_agent(_NAME, "db_error", error=str(e))
+            _db_error = str(e)
+            log_agent(_NAME, "db_error", error=_db_error)
 
     # ── License verification via Stripe Identity ──────────────────────────────
     if s.stripe_secret_key:
@@ -230,6 +234,7 @@ def process_intake(payload: dict[str, Any]) -> dict[str, Any]:
             "verification_url": verification_url,
             "stripe_session_id": session_id,
             "message": "License verification link sent. Driver will be approved automatically when verified.",
+            **({"db_error": _db_error} if _db_error else {}),
         }
 
     # ── Fallback: honor-system (no Checkr key) ────────────────────────────────
@@ -267,6 +272,7 @@ def process_intake(payload: dict[str, Any]) -> dict[str, Any]:
         "status": "approved",
         "driver_id": str(driver_id) if driver_id else None,
         "warning": "CHECKR_API_KEY not configured — MVR not verified",
+        **({"db_error": _db_error} if _db_error else {}),
     }
 
 
