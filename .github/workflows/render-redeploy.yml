@@ -1,0 +1,35 @@
+name: Render Hourly Redeploy
+
+on:
+  schedule:
+    - cron: '0 * * * *'   # top of every hour UTC
+  workflow_dispatch:
+
+jobs:
+  redeploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Render deploy
+        env:
+          DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+        run: |
+          if [ -z "$DEPLOY_HOOK" ]; then
+            echo "⚠️  RENDER_DEPLOY_HOOK_URL secret not set — nothing to do."
+            echo "Add it in GitHub → Settings → Secrets → Actions."
+            echo "Get the URL from: Render dashboard → your service → Settings → Deploy Hooks → Create deploy hook"
+            exit 0
+          fi
+
+          echo "Triggering Render redeploy..."
+          RESPONSE=$(curl -s -w "\n__STATUS__%{http_code}" -X POST "$DEPLOY_HOOK" --max-time 15)
+          BODY=$(echo "$RESPONSE" | sed 's/__STATUS__[0-9]*//')
+          STATUS=$(echo "$RESPONSE" | grep -o '__STATUS__[0-9]*' | sed 's/__STATUS__//')
+
+          echo "HTTP $STATUS — $BODY"
+
+          if [ "$STATUS" = "200" ] || [ "$STATUS" = "201" ] || [ "$STATUS" = "202" ]; then
+            echo "✅ Deploy triggered successfully"
+          else
+            echo "❌ Deploy hook returned HTTP $STATUS"
+            exit 1
+          fi
