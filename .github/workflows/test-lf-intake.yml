@@ -1,0 +1,106 @@
+name: Test Light Fleet Intake
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test-intake:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wait for Render to be awake (cold start)
+        run: |
+          echo "Pinging API to wake Render..."
+          for i in 1 2 3 4 5; do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 \
+              https://three-lakes-logistics-api.onrender.com/api/health/ping)
+            echo "Attempt $i: HTTP $STATUS"
+            if [ "$STATUS" = "200" ]; then
+              echo "API is awake!"
+              break
+            fi
+            echo "Sleeping 15s..."
+            sleep 15
+          done
+
+      - name: Submit Joel Mccool light fleet intake
+        id: intake
+        run: |
+          PAYLOAD='{
+            "name": "Joel Mccool",
+            "phone": "9714277491",
+            "email": "houseofmccool@gmail.com",
+            "location": "Portland, OR",
+            "vehicle_year": "2020",
+            "vehicle_make": "Toyota",
+            "vehicle_model": "Camry",
+            "vehicle_type": "sedan",
+            "approved_services": ["courier"],
+            "license_number": "OR1234567",
+            "license_state": "OR",
+            "dob": "1985-01-01",
+            "clean_record": "yes",
+            "has_insurance": "yes",
+            "referral_source": "",
+            "notes": "Test submission via GitHub Actions"
+          }'
+
+          echo "Submitting intake for Joel Mccool..."
+          RESPONSE=$(curl -s -w "\n__STATUS__%{http_code}" --max-time 30 \
+            -X POST \
+            -H "Content-Type: application/json" \
+            -d "$PAYLOAD" \
+            https://three-lakes-logistics-api.onrender.com/api/light-fleet/drivers/intake)
+
+          BODY=$(echo "$RESPONSE" | sed 's/__STATUS__[0-9]*//')
+          STATUS=$(echo "$RESPONSE" | grep -o '__STATUS__[0-9]*' | sed 's/__STATUS__//')
+
+          echo "HTTP Status: $STATUS"
+          echo "Response body: $BODY"
+
+          if [ "$STATUS" = "200" ] || [ "$STATUS" = "201" ]; then
+            echo "✅ INTAKE SUCCEEDED"
+            DRIVER_ID=$(echo "$BODY" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('driver_id','none'))" 2>/dev/null || echo "parse_error")
+            echo "Driver ID: $DRIVER_ID"
+            echo "driver_id=$DRIVER_ID" >> $GITHUB_OUTPUT
+            echo "success=true" >> $GITHUB_OUTPUT
+          else
+            echo "❌ INTAKE FAILED — HTTP $STATUS"
+            echo "Error: $BODY"
+            echo "success=false" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+
+      - name: Verify driver appears in Eagle Eye
+        if: steps.intake.outputs.success == 'true'
+        env:
+          API_TOKEN: ${{ secrets.API_BEARER_TOKEN }}
+        run: |
+          if [ -z "$API_TOKEN" ]; then
+            echo "⚠️  API_BEARER_TOKEN secret not set — skipping driver list check"
+            exit 0
+          fi
+
+          echo "Checking driver list..."
+          RESPONSE=$(curl -s --max-time 20 \
+            -H "Authorization: Bearer $API_TOKEN" \
+            "https://three-lakes-logistics-api.onrender.com/api/light-fleet/drivers?limit=20")
+
+          echo "Driver list response: $RESPONSE"
+
+          FOUND=$(echo "$RESPONSE" | python3 -c "
+          import sys, json
+          data = json.load(sys.stdin)
+          drivers = data.get('items', [])
+          joel = next((d for d in drivers if 'Mccool' in (d.get('name') or '')), None)
+          print('FOUND' if joel else 'NOT_FOUND')
+          print(json.dumps(joel, indent=2) if joel else 'No record')
+          " 2>/dev/null || echo "PARSE_ERROR")
+
+          echo "$FOUND"
+
+          if echo "$FOUND" | grep -q "FOUND"; then
+            echo "✅ Joel Mccool IS in the driver list — onboarding works!"
+          else
+            echo "❌ Joel Mccool NOT found in driver list"
+            exit 1
+          fi
