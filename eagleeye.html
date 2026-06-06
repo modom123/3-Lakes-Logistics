@@ -547,7 +547,7 @@ td.td-name{font-weight:600;color:var(--navy);}
   position:fixed;top:108px;right:20px;width:360px;z-index:1000;
   background:var(--white);border:1.5px solid var(--border);
   border-radius:14px;box-shadow:0 12px 48px rgba(11,37,69,.18);
-  display:none;flex-direction:column;max-height:480px;overflow:hidden;
+  display:none;flex-direction:column;max-height:480px;overflow:hidden;overflow-y:auto;
 }
 .notif-panel.open{display:flex;}
 .notif-panel-hd{
@@ -2918,7 +2918,7 @@ select.form-input option{background:var(--surface);}
 
 @media(max-width:768px){
   :root{--sidebar-w:0px;}
-  html,body{overflow:auto;}
+  /* Keep overflow:hidden — the app shell flex layout requires it */
 
   #sidebar{
     position:fixed;left:-240px;top:0;bottom:0;
@@ -2933,7 +2933,7 @@ select.form-input option{background:var(--surface);}
   .tb-title{font-size:15px;}
   .btn-sync{padding:6px 10px;font-size:11px;}
 
-  .content{padding:14px 12px;}
+  /* .content must NOT have padding — pages handle their own internal padding */
 
   .g4{grid-template-columns:repeat(2,1fr);gap:10px;}
   .g3{grid-template-columns:repeat(2,1fr);gap:10px;}
