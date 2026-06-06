@@ -16187,8 +16187,8 @@ async function deactivateDriver(driverId) {
 .lf-hero{border-radius:12px;padding:22px 24px;margin-bottom:22px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;position:relative;overflow:hidden;}
 /* Full-page layout — fills viewport, hero bleeds edge-to-edge, ticker + topbar hidden */
 .content.lf-fullpage{padding:0;}
-.content.lf-fullpage .page.active{display:flex;flex-direction:column;height:100%;overflow-y:auto;}
-.content.lf-fullpage .lf-wrap{padding:0 0 80px;max-width:none;margin:0;min-height:100%;box-sizing:border-box;}
+.content.lf-fullpage .page.active{display:flex;flex-direction:column;height:100%;overflow:hidden;}
+.content.lf-fullpage .lf-wrap{padding:0;max-width:none;margin:0;display:flex;flex-direction:column;flex:1;min-height:0;}
 .content.lf-fullpage .lf-hero{border-radius:0;margin-bottom:0;padding:28px 32px;}
 .content.lf-fullpage .lf-kpis{margin:20px 32px 0;}
 .content.lf-fullpage .lf-actions{margin:16px 32px 0;}
@@ -16202,13 +16202,25 @@ async function deactivateDriver(driverId) {
 #main.lf-fullpage .topbar .tb-date{color:rgba(255,255,255,.55);}
 #main.lf-fullpage .topbar .tb-live{color:rgba(74,222,128,.9);}
 #main.lf-fullpage .topbar .tb-live::before{background:rgba(74,222,128,.9);}
-/* IEBC banner top padding absorbs the 60px floating topbar; side padding on sub-sections */
-.content.lf-fullpage .iebc-banner{padding-top:80px;}
-.content.lf-fullpage .iebc-intel-row{margin:0;padding:0 32px;}
-.content.lf-fullpage .iebc-kpis{margin:0;margin-top:20px;padding:0 32px;}
-.content.lf-fullpage .iebc-status-row{margin:16px 32px;}
-.content.lf-fullpage .iebc-section{padding-left:32px;padding-right:32px;}
-.content.lf-fullpage .iebc-table-wrap{margin:0;padding:0 32px 16px;}
+/* IEBC banner + intel + kpis: fixed header, col-split fills rest */
+.content.lf-fullpage .iebc-banner{padding-top:80px;flex-shrink:0;}
+.content.lf-fullpage .iebc-intel-row{margin:0;padding:0 32px;flex-shrink:0;}
+.content.lf-fullpage .iebc-kpis{margin:0;margin-top:20px;padding:0 32px;flex-shrink:0;}
+/* Two-column split: roster left, ops right */
+.lf-two-col{display:grid;grid-template-columns:340px 1fr;flex:1;min-height:0;border-top:1px solid rgba(255,255,255,.07);overflow:hidden;}
+.lf-col-left{overflow-y:auto;border-right:1px solid rgba(255,255,255,.08);background:rgba(0,0,0,.15);display:flex;flex-direction:column;}
+.lf-col-right{overflow-y:auto;display:flex;flex-direction:column;}
+.lf-col-hd{padding:11px 16px 9px;font-size:9px;font-weight:700;font-family:var(--ff-m);letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,.35);border-bottom:1px solid rgba(255,255,255,.06);position:sticky;top:0;z-index:2;background:inherit;}
+.lf-roster-tbl{width:100%;border-collapse:collapse;font-size:12px;}
+.lf-roster-tbl thead{background:rgba(255,255,255,.03);}
+.lf-roster-tbl th{padding:7px 12px;text-align:left;font-size:10px;font-weight:600;color:rgba(255,255,255,.35);font-family:var(--ff-m);border-bottom:1px solid rgba(255,255,255,.06);}
+.lf-roster-tbl td{padding:9px 12px;border-bottom:1px solid rgba(255,255,255,.04);color:rgba(255,255,255,.75);}
+.lf-roster-tbl tr:hover td{background:rgba(255,255,255,.04);}
+/* Right column sub-sections get 32px side padding */
+.lf-col-right .iebc-section{padding:12px 24px 8px;border-bottom:none;}
+.lf-col-right .iebc-status-row{margin:0;padding:0 24px 12px;gap:10px;}
+.lf-col-right .iebc-table-wrap{margin:0;padding:0 24px 20px;}
+.lf-col-right .lf-actions{margin:0 0 10px;}
 /* Broker / Trading pages full-bleed: heroes edge-to-edge */
 .content.lf-fullpage .bd-hero,
 .content.lf-fullpage .td-hero,
@@ -16380,69 +16392,40 @@ async function deactivateDriver(driverId) {
       <div class="iebc-kpi"><div class="iebc-kpi-val" id="lf-nemt-mtd" style="color:#10b981;">—</div><div class="iebc-kpi-lbl">MTD Trips</div></div>
       <div class="iebc-kpi"><div class="iebc-kpi-val" id="lf-nemt-rev" style="color:#10b981;">—</div><div class="iebc-kpi-lbl">MTD Revenue</div></div>
     </div>
-    <!-- Driver Roster -->
-    <div class="iebc-section">
-      <div class="iebc-section-hd">Driver Roster</div>
-    </div>
-    <div class="iebc-table-wrap">
-      <table class="lf-table lf-table-nemt">
-        <thead><tr><th>Name</th><th>Phone</th><th>Vehicle</th><th>MVR</th><th>Background</th><th>Trips</th><th>Status</th></tr></thead>
-        <tbody id="lf-nemt-roster-tbody">
-          <tr><td colspan="7"><div class="lf-empty-state"><div class="lf-empty-state-icon">🏥</div><div class="lf-empty-state-msg">No NEMT drivers yet</div></div></td></tr>
-        </tbody>
-      </table>
-    </div>
-    <!-- Broker Status -->
-    <div class="iebc-section">
-      <div class="iebc-section-hd">Broker Status</div>
-    </div>
-    <div class="iebc-status-row">
-      <div class="iebc-status-card">
-        <div class="iebc-status-card-name">MTM</div>
-        <div id="iebc-broker-mtm"><span class="iebc-status-pill iebc-status-active"><span class="iebc-status-dot" style="background:currentColor"></span>active</span></div>
+    <div class="lf-two-col">
+      <div class="lf-col-left">
+        <div class="lf-col-hd">Driver Roster</div>
+        <table class="lf-roster-tbl">
+          <thead><tr><th>Name / Phone</th><th>Vehicle</th><th>MVR</th><th>Status</th></tr></thead>
+          <tbody id="lf-nemt-roster-tbody">
+            <tr><td colspan="4"><div class="lf-empty-state" style="padding:28px 0"><div class="lf-empty-state-icon">🏥</div><div class="lf-empty-state-msg">No NEMT drivers yet</div></div></td></tr>
+          </tbody>
+        </table>
       </div>
-      <div class="iebc-status-card">
-        <div class="iebc-status-card-name">Modivcare</div>
-        <div id="iebc-broker-modivcare"><span class="iebc-status-pill iebc-status-active"><span class="iebc-status-dot" style="background:currentColor"></span>active</span></div>
+      <div class="lf-col-right">
+        <div class="iebc-section"><div class="iebc-section-hd">Broker Status</div></div>
+        <div class="iebc-status-row">
+          <div class="iebc-status-card"><div class="iebc-status-card-name">MTM</div><div id="iebc-broker-mtm"><span class="iebc-status-pill iebc-status-active"><span class="iebc-status-dot" style="background:currentColor"></span>active</span></div></div>
+          <div class="iebc-status-card"><div class="iebc-status-card-name">Modivcare</div><div id="iebc-broker-modivcare"><span class="iebc-status-pill iebc-status-active"><span class="iebc-status-dot" style="background:currentColor"></span>active</span></div></div>
+          <div class="iebc-status-card"><div class="iebc-status-card-name">Southeastrans</div><div id="iebc-broker-southeastrans"><span class="iebc-status-pill iebc-status-active"><span class="iebc-status-dot" style="background:currentColor"></span>active</span></div></div>
+        </div>
+        <div class="iebc-section"><div class="iebc-section-hd">Trip Queue</div></div>
+        <div class="iebc-table-wrap">
+          <div class="lf-actions" style="margin:0 0 10px;">
+            <select id="lf-nemt-status-filter" onchange="lfLoadTrips('nemt')" style="padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:var(--card);color:var(--text);"><option value="">All Statuses</option><option value="pending">Pending</option><option value="assigned">Assigned</option><option value="in_progress">In Progress</option><option value="completed">Completed</option><option value="cancelled">Cancelled</option></select>
+            <button class="lf-btn" style="background:#10b981;color:#fff;" onclick="lfOpenTrip('nemt')">+ New Trip</button>
+          </div>
+          <table class="lf-table lf-table-nemt"><thead><tr><th>Patient</th><th>Pickup</th><th>Dropoff</th><th>Scheduled</th><th>Driver</th><th>Status</th><th>Rate</th><th></th></tr></thead>
+            <tbody id="lf-nemt-tbody"><tr><td colspan="8"><div class="lf-empty-state"><div class="lf-empty-state-icon">🏥</div><div class="lf-empty-state-msg">No trips found</div><div class="lf-empty-state-sub">Schedule a new medical transport trip to get started</div></div></td></tr></tbody>
+          </table>
+        </div>
+        <div class="iebc-section"><div class="iebc-section-hd">NEMT Clients</div></div>
+        <div class="iebc-table-wrap">
+          <table class="lf-table lf-table-nemt"><thead><tr><th>Name</th><th>Phone</th><th>Insurance</th><th>Mobility</th><th>Total Trips</th><th>Status</th></tr></thead>
+            <tbody id="lf-nemt-clients-tbody"><tr><td colspan="6"><div class="lf-empty-state"><div class="lf-empty-state-icon">👤</div><div class="lf-empty-state-msg">No clients registered</div><div class="lf-empty-state-sub">Add recurring NEMT patients to pre-fill trip details</div></div></td></tr></tbody>
+          </table>
+        </div>
       </div>
-      <div class="iebc-status-card">
-        <div class="iebc-status-card-name">Southeastrans</div>
-        <div id="iebc-broker-southeastrans"><span class="iebc-status-pill iebc-status-active"><span class="iebc-status-dot" style="background:currentColor"></span>active</span></div>
-      </div>
-    </div>
-    <!-- Operations Table -->
-    <div class="iebc-section">
-      <div class="iebc-section-hd">Trip Queue</div>
-    </div>
-    <div class="iebc-table-wrap">
-      <div class="lf-actions" style="margin:0 0 10px;">
-        <select id="lf-nemt-status-filter" onchange="lfLoadTrips('nemt')" style="padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:var(--card);color:var(--text);">
-          <option value="">All Statuses</option>
-          <option value="pending">Pending</option>
-          <option value="assigned">Assigned</option>
-          <option value="in_progress">In Progress</option>
-          <option value="completed">Completed</option>
-          <option value="cancelled">Cancelled</option>
-        </select>
-        <button class="lf-btn" style="background:#10b981;color:#fff;" onclick="lfOpenTrip('nemt')">+ New Trip</button>
-      </div>
-      <table class="lf-table lf-table-nemt">
-        <thead><tr><th>Patient</th><th>Pickup</th><th>Dropoff</th><th>Scheduled</th><th>Driver</th><th>Status</th><th>Rate</th><th></th></tr></thead>
-        <tbody id="lf-nemt-tbody">
-          <tr><td colspan="8"><div class="lf-empty-state"><div class="lf-empty-state-icon">🏥</div><div class="lf-empty-state-msg">No trips found</div><div class="lf-empty-state-sub">Schedule a new medical transport trip to get started</div></div></td></tr>
-        </tbody>
-      </table>
-    </div>
-    <div class="iebc-section">
-      <div class="iebc-section-hd">NEMT Clients</div>
-    </div>
-    <div class="iebc-table-wrap">
-      <table class="lf-table lf-table-nemt">
-        <thead><tr><th>Name</th><th>Phone</th><th>Insurance</th><th>Mobility</th><th>Total Trips</th><th>Status</th></tr></thead>
-        <tbody id="lf-nemt-clients-tbody">
-          <tr><td colspan="6"><div class="lf-empty-state"><div class="lf-empty-state-icon">👤</div><div class="lf-empty-state-msg">No clients registered</div><div class="lf-empty-state-sub">Add recurring NEMT patients to pre-fill trip details</div></div></td></tr>
-        </tbody>
-      </table>
     </div>
   </div>
 </div>
@@ -16490,50 +16473,30 @@ async function deactivateDriver(driverId) {
       <div class="iebc-kpi"><div class="iebc-kpi-val" id="lf-med-contracts" style="color:#ef4444;">—</div><div class="iebc-kpi-lbl">Hospital Contracts</div></div>
       <div class="iebc-kpi"><div class="iebc-kpi-val" id="lf-med-rev" style="color:#ef4444;">—</div><div class="iebc-kpi-lbl">MTD Revenue</div></div>
     </div>
-    <!-- Driver Roster -->
-    <div class="iebc-section">
-      <div class="iebc-section-hd">Driver Roster</div>
-    </div>
-    <div class="iebc-table-wrap">
-      <table class="lf-table" style="--lf-color:#ef4444;">
-        <thead><tr><th>Name</th><th>Phone</th><th>Vehicle</th><th>MVR</th><th>Background</th><th>Trips</th><th>Status</th></tr></thead>
-        <tbody id="lf-med-roster-tbody">
-          <tr><td colspan="7"><div class="lf-empty-state"><div class="lf-empty-state-icon">🧪</div><div class="lf-empty-state-msg">No medical courier drivers yet</div></div></td></tr>
-        </tbody>
-      </table>
-    </div>
-    <!-- Contract Health -->
-    <div class="iebc-section">
-      <div class="iebc-section-hd">Contract Health — Hospital &amp; Lab Partners</div>
-    </div>
-    <div class="iebc-status-row">
-      <div class="iebc-status-card">
-        <div class="iebc-status-card-name">General Hospital Network</div>
-        <div id="iebc-contract-ghn"><span class="iebc-status-pill iebc-status-active"><span class="iebc-status-dot" style="background:currentColor"></span>active</span></div>
-        <div style="font-size:10px;color:var(--muted);margin-top:4px;">Pickup SLA: 15 min</div>
+    <div class="lf-two-col">
+      <div class="lf-col-left">
+        <div class="lf-col-hd">Driver Roster</div>
+        <table class="lf-roster-tbl">
+          <thead><tr><th>Name / Phone</th><th>Vehicle</th><th>MVR</th><th>Status</th></tr></thead>
+          <tbody id="lf-med-roster-tbody">
+            <tr><td colspan="4"><div class="lf-empty-state" style="padding:28px 0"><div class="lf-empty-state-icon">🧪</div><div class="lf-empty-state-msg">No medical courier drivers yet</div></div></td></tr>
+          </tbody>
+        </table>
       </div>
-      <div class="iebc-status-card">
-        <div class="iebc-status-card-name">LabCorp Logistics</div>
-        <div id="iebc-contract-labcorp"><span class="iebc-status-pill iebc-status-active"><span class="iebc-status-dot" style="background:currentColor"></span>active</span></div>
-        <div style="font-size:10px;color:var(--muted);margin-top:4px;">Temp cargo: 2–8°C</div>
+      <div class="lf-col-right">
+        <div class="iebc-section"><div class="iebc-section-hd">Contract Health — Hospital &amp; Lab Partners</div></div>
+        <div class="iebc-status-row">
+          <div class="iebc-status-card"><div class="iebc-status-card-name">General Hospital Network</div><div id="iebc-contract-ghn"><span class="iebc-status-pill iebc-status-active"><span class="iebc-status-dot" style="background:currentColor"></span>active</span></div><div style="font-size:10px;color:var(--muted);margin-top:4px;">Pickup SLA: 15 min</div></div>
+          <div class="iebc-status-card"><div class="iebc-status-card-name">LabCorp Logistics</div><div id="iebc-contract-labcorp"><span class="iebc-status-pill iebc-status-active"><span class="iebc-status-dot" style="background:currentColor"></span>active</span></div><div style="font-size:10px;color:var(--muted);margin-top:4px;">Temp cargo: 2–8°C</div></div>
+          <div class="iebc-status-card"><div class="iebc-status-card-name">Regional Oncology Clinic</div><div id="iebc-contract-onco"><span class="iebc-status-pill iebc-status-issue"><span class="iebc-status-dot" style="background:currentColor"></span>review</span></div><div style="font-size:10px;color:var(--muted);margin-top:4px;">Chain of custody audit</div></div>
+        </div>
+        <div class="iebc-section"><div class="iebc-section-hd">Active Pickups</div></div>
+        <div class="iebc-table-wrap">
+          <table class="lf-table" style="--lf-color:#ef4444;"><thead><tr><th>Order ID</th><th>Origin</th><th>Destination</th><th>Cargo Type</th><th>Pickup SLA</th><th>Driver</th><th>Temp</th><th>Status</th></tr></thead>
+            <tbody id="lf-med-tbody"><tr><td colspan="8"><div class="lf-empty-state"><div class="lf-empty-state-icon">🧪</div><div class="lf-empty-state-msg">No active medical courier pickups</div><div class="lf-empty-state-sub">Assign a medical courier run to begin SLA tracking</div></div></td></tr></tbody>
+          </table>
+        </div>
       </div>
-      <div class="iebc-status-card">
-        <div class="iebc-status-card-name">Regional Oncology Clinic</div>
-        <div id="iebc-contract-onco"><span class="iebc-status-pill iebc-status-issue"><span class="iebc-status-dot" style="background:currentColor"></span>review</span></div>
-        <div style="font-size:10px;color:var(--muted);margin-top:4px;">Chain of custody audit</div>
-      </div>
-    </div>
-    <!-- Operations Table -->
-    <div class="iebc-section">
-      <div class="iebc-section-hd">Active Pickups</div>
-    </div>
-    <div class="iebc-table-wrap">
-      <table class="lf-table" style="--lf-color:#ef4444;">
-        <thead><tr><th>Order ID</th><th>Origin</th><th>Destination</th><th>Cargo Type</th><th>Pickup SLA</th><th>Driver</th><th>Temp</th><th>Status</th></tr></thead>
-        <tbody id="lf-med-tbody">
-          <tr><td colspan="8"><div class="lf-empty-state"><div class="lf-empty-state-icon">🧪</div><div class="lf-empty-state-msg">No active medical courier pickups</div><div class="lf-empty-state-sub">Assign a medical courier run to begin SLA tracking</div></div></td></tr>
-        </tbody>
-      </table>
     </div>
   </div>
 </div>
@@ -16581,72 +16544,41 @@ async function deactivateDriver(driverId) {
       <div class="iebc-kpi"><div class="iebc-kpi-val" id="lf-exec-rating" style="color:#eab308;">—</div><div class="iebc-kpi-lbl">Avg Rating</div></div>
       <div class="iebc-kpi"><div class="iebc-kpi-val" id="lf-exec-rev" style="color:#eab308;">—</div><div class="iebc-kpi-lbl">MTD Revenue</div></div>
     </div>
-    <!-- Driver Roster -->
-    <div class="iebc-section">
-      <div class="iebc-section-hd">Driver Roster</div>
-    </div>
-    <div class="iebc-table-wrap">
-      <table class="lf-table lf-table-exec">
-        <thead><tr><th>Name</th><th>Phone</th><th>Vehicle</th><th>MVR</th><th>Background</th><th>Rating</th><th>Trips</th><th>Status</th></tr></thead>
-        <tbody id="lf-exec-roster-tbody">
-          <tr><td colspan="8"><div class="lf-empty-state"><div class="lf-empty-state-icon">🚗</div><div class="lf-empty-state-msg">No executive drivers yet</div></div></td></tr>
-        </tbody>
-      </table>
-    </div>
-    <!-- Corporate Accounts -->
-    <div class="iebc-section">
-      <div class="iebc-section-hd">Corporate Account Health</div>
-    </div>
-    <div class="iebc-status-row">
-      <div class="iebc-status-card">
-        <div class="iebc-status-card-name">Meridian Financial Group</div>
-        <div><span class="iebc-status-pill iebc-status-active"><span class="iebc-status-dot" style="background:currentColor"></span>active</span></div>
-        <div style="font-size:10px;color:var(--muted);margin-top:4px;">Monthly trips: —</div>
+    <div class="lf-two-col">
+      <div class="lf-col-left">
+        <div class="lf-col-hd">Driver Roster</div>
+        <table class="lf-roster-tbl">
+          <thead><tr><th>Name / Phone</th><th>Vehicle</th><th>Rating</th><th>Status</th></tr></thead>
+          <tbody id="lf-exec-roster-tbody">
+            <tr><td colspan="4"><div class="lf-empty-state" style="padding:28px 0"><div class="lf-empty-state-icon">🚗</div><div class="lf-empty-state-msg">No executive drivers yet</div></div></td></tr>
+          </tbody>
+        </table>
       </div>
-      <div class="iebc-status-card">
-        <div class="iebc-status-card-name">Summit Law Partners</div>
-        <div><span class="iebc-status-pill iebc-status-active"><span class="iebc-status-dot" style="background:currentColor"></span>active</span></div>
-        <div style="font-size:10px;color:var(--muted);margin-top:4px;">Monthly trips: —</div>
+      <div class="lf-col-right">
+        <div class="iebc-section"><div class="iebc-section-hd">Corporate Account Health</div></div>
+        <div class="iebc-status-row">
+          <div class="iebc-status-card"><div class="iebc-status-card-name">Meridian Financial Group</div><div><span class="iebc-status-pill iebc-status-active"><span class="iebc-status-dot" style="background:currentColor"></span>active</span></div><div style="font-size:10px;color:var(--muted);margin-top:4px;">Monthly trips: —</div></div>
+          <div class="iebc-status-card"><div class="iebc-status-card-name">Summit Law Partners</div><div><span class="iebc-status-pill iebc-status-active"><span class="iebc-status-dot" style="background:currentColor"></span>active</span></div><div style="font-size:10px;color:var(--muted);margin-top:4px;">Monthly trips: —</div></div>
+          <div class="iebc-status-card"><div class="iebc-status-card-name">Delta Consult LLC</div><div><span class="iebc-status-pill iebc-status-issue"><span class="iebc-status-dot" style="background:currentColor"></span>at-risk</span></div><div style="font-size:10px;color:var(--muted);margin-top:4px;">Monthly trips: —</div></div>
+        </div>
+        <div class="iebc-section"><div class="iebc-section-hd">Booking Queue</div></div>
+        <div class="iebc-table-wrap">
+          <div class="lf-actions" style="margin:0 0 10px;">
+            <select id="lf-exec-status-filter" onchange="lfLoadTrips('executive')" style="padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:var(--card);color:var(--text);"><option value="">All Statuses</option><option value="pending">Pending</option><option value="assigned">Assigned</option><option value="in_progress">In Progress</option><option value="completed">Completed</option><option value="cancelled">Cancelled</option></select>
+            <button class="lf-btn" style="background:#eab308;color:#000;" onclick="lfOpenTrip('executive')">+ New Booking</button>
+          </div>
+          <table class="lf-table lf-table-exec"><thead><tr><th>Client</th><th>Pickup</th><th>Dropoff</th><th>Scheduled</th><th>Vehicle</th><th>Flight #</th><th>Status</th><th>Rate</th><th></th></tr></thead>
+            <tbody id="lf-exec-tbody"><tr><td colspan="9"><div class="lf-empty-state"><div class="lf-empty-state-icon">🚗</div><div class="lf-empty-state-msg">No bookings yet</div><div class="lf-empty-state-sub">Create a new executive booking or add a corporate account below</div></div></td></tr></tbody>
+          </table>
+        </div>
+        <div class="iebc-section"><div class="iebc-section-hd">Corporate Accounts</div></div>
+        <div class="iebc-table-wrap">
+          <div style="text-align:right;margin-bottom:8px;"><button class="lf-btn" style="background:#eab308;color:#000;" onclick="lfOpenExecAccount()">+ Add Account</button></div>
+          <table class="lf-table lf-table-exec"><thead><tr><th>Company</th><th>Contact</th><th>Billing</th><th>Rate/mi</th><th>Airport Flat</th><th>Total Trips</th><th>Status</th></tr></thead>
+            <tbody id="lf-exec-accounts-tbody"><tr><td colspan="7"><div class="lf-empty-state"><div class="lf-empty-state-icon">🏢</div><div class="lf-empty-state-msg">No corporate accounts</div><div class="lf-empty-state-sub">Add recurring corporate clients for streamlined booking</div></div></td></tr></tbody>
+          </table>
+        </div>
       </div>
-      <div class="iebc-status-card">
-        <div class="iebc-status-card-name">Delta Consult LLC</div>
-        <div><span class="iebc-status-pill iebc-status-issue"><span class="iebc-status-dot" style="background:currentColor"></span>at-risk</span></div>
-        <div style="font-size:10px;color:var(--muted);margin-top:4px;">Monthly trips: —</div>
-      </div>
-    </div>
-    <!-- Operations Table -->
-    <div class="iebc-section">
-      <div class="iebc-section-hd">Booking Queue</div>
-    </div>
-    <div class="iebc-table-wrap">
-      <div class="lf-actions" style="margin:0 0 10px;">
-        <select id="lf-exec-status-filter" onchange="lfLoadTrips('executive')" style="padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:var(--card);color:var(--text);">
-          <option value="">All Statuses</option>
-          <option value="pending">Pending</option>
-          <option value="assigned">Assigned</option>
-          <option value="in_progress">In Progress</option>
-          <option value="completed">Completed</option>
-          <option value="cancelled">Cancelled</option>
-        </select>
-        <button class="lf-btn" style="background:#eab308;color:#000;" onclick="lfOpenTrip('executive')">+ New Booking</button>
-      </div>
-      <table class="lf-table lf-table-exec">
-        <thead><tr><th>Client</th><th>Pickup</th><th>Dropoff</th><th>Scheduled</th><th>Vehicle</th><th>Flight #</th><th>Status</th><th>Rate</th><th></th></tr></thead>
-        <tbody id="lf-exec-tbody">
-          <tr><td colspan="9"><div class="lf-empty-state"><div class="lf-empty-state-icon">🚗</div><div class="lf-empty-state-msg">No bookings yet</div><div class="lf-empty-state-sub">Create a new executive booking or add a corporate account below</div></div></td></tr>
-        </tbody>
-      </table>
-    </div>
-    <div class="iebc-section">
-      <div class="iebc-section-hd">Corporate Accounts</div>
-    </div>
-    <div class="iebc-table-wrap">
-      <table class="lf-table lf-table-exec">
-        <thead><tr><th>Company</th><th>Contact</th><th>Billing</th><th>Rate/mi</th><th>Airport Flat</th><th>Total Trips</th><th>Status</th></tr></thead>
-        <tbody id="lf-exec-accounts-tbody">
-          <tr><td colspan="7"><div class="lf-empty-state"><div class="lf-empty-state-icon">🏢</div><div class="lf-empty-state-msg">No corporate accounts</div><div class="lf-empty-state-sub">Add recurring corporate clients for streamlined booking</div></div></td></tr>
-        </tbody>
-      </table>
     </div>
   </div>
 </div>
@@ -16694,34 +16626,22 @@ async function deactivateDriver(driverId) {
       <div class="iebc-kpi"><div class="iebc-kpi-val" id="lf-cour-complete" style="color:#f59e0b;">—</div><div class="iebc-kpi-lbl">Completion Rate</div></div>
       <div class="iebc-kpi"><div class="iebc-kpi-val" id="lf-cour-rev" style="color:#f59e0b;">—</div><div class="iebc-kpi-lbl">MTD Revenue</div></div>
     </div>
-    <!-- Driver Roster -->
-    <div class="iebc-section">
-      <div class="iebc-section-hd">Driver Roster</div>
-    </div>
-    <div class="iebc-table-wrap">
-      <table class="lf-table lf-table-cour">
-        <thead><tr><th>Name</th><th>Phone</th><th>Vehicle</th><th>MVR</th><th>Background</th><th>Trips</th><th>Status</th></tr></thead>
-        <tbody id="lf-cour-roster-tbody">
-          <tr><td colspan="7"><div class="lf-empty-state"><div class="lf-empty-state-icon">📦</div><div class="lf-empty-state-msg">No courier drivers yet</div></div></td></tr>
-        </tbody>
-      </table>
-    </div>
-    <!-- Platform Status -->
-    <div class="iebc-section">
-      <div class="iebc-section-hd">Platform Status</div>
-    </div>
-    <div class="iebc-status-row">
-      <div class="iebc-status-card">
-        <div class="iebc-status-card-name">Curri</div>
-        <div id="iebc-plat-curri"><span class="iebc-status-pill iebc-status-active"><span class="iebc-status-dot" style="background:currentColor"></span>healthy</span></div>
-        <div style="font-size:10px;color:var(--muted);margin-top:4px;">API connection OK</div>
+    <div class="lf-two-col">
+      <div class="lf-col-left">
+        <div class="lf-col-hd">Driver Roster</div>
+        <table class="lf-roster-tbl">
+          <thead><tr><th>Name / Phone</th><th>Vehicle</th><th>MVR</th><th>Status</th></tr></thead>
+          <tbody id="lf-cour-roster-tbody">
+            <tr><td colspan="4"><div class="lf-empty-state" style="padding:28px 0"><div class="lf-empty-state-icon">📦</div><div class="lf-empty-state-msg">No courier drivers yet</div></div></td></tr>
+          </tbody>
+        </table>
       </div>
-      <div class="iebc-status-card">
-        <div class="iebc-status-card-name">Roadie</div>
-        <div id="iebc-plat-roadie"><span class="iebc-status-pill iebc-status-active"><span class="iebc-status-dot" style="background:currentColor"></span>healthy</span></div>
-        <div style="font-size:10px;color:var(--muted);margin-top:4px;">API connection OK</div>
-      </div>
-    </div>
+      <div class="lf-col-right">
+        <div class="iebc-section"><div class="iebc-section-hd">Platform Status</div></div>
+        <div class="iebc-status-row">
+          <div class="iebc-status-card"><div class="iebc-status-card-name">Curri</div><div id="iebc-plat-curri"><span class="iebc-status-pill iebc-status-active"><span class="iebc-status-dot" style="background:currentColor"></span>healthy</span></div><div style="font-size:10px;color:var(--muted);margin-top:4px;">API connection OK</div></div>
+          <div class="iebc-status-card"><div class="iebc-status-card-name">Roadie</div><div id="iebc-plat-roadie"><span class="iebc-status-pill iebc-status-active"><span class="iebc-status-dot" style="background:currentColor"></span>healthy</span></div><div style="font-size:10px;color:var(--muted);margin-top:4px;">API connection OK</div></div>
+        </div>
     <!-- Operations Table -->
     <div class="iebc-section">
       <div class="iebc-section-hd">Delivery Queue</div>
@@ -16745,8 +16665,10 @@ async function deactivateDriver(driverId) {
         </tbody>
       </table>
     </div>
-  </div>
-</div>
+      </div><!-- /lf-col-right -->
+    </div><!-- /lf-two-col -->
+  </div><!-- /lf-wrap -->
+</div><!-- /page-lf-courier -->
 
 <!-- ── GIG FLEET PAGE ── -->
 <div class="page" id="page-lf-gig">
@@ -17133,43 +17055,41 @@ function lfOpenModal(id){ document.getElementById(id).style.display='flex'; }
 function lfCloseModal(id){ document.getElementById(id).style.display='none'; }
 
 function lfRefresh(pageId){
-  if(pageId==='lf-nemt'){ lfLoadKpis('nemt'); lfLoadTrips('nemt'); lfLoadNemtClients(); lfLoadRoster('nemt','lf-nemt-roster-tbody',7); }
-  if(pageId==='lf-medical'){ lfLoadRoster('medical','lf-med-roster-tbody',7); }
-  if(pageId==='lf-executive'){ lfLoadKpis('executive'); lfLoadTrips('executive'); lfLoadExecAccounts(); lfLoadRoster('executive','lf-exec-roster-tbody',8); }
-  if(pageId==='lf-courier'){ lfLoadKpis('courier'); lfLoadTrips('courier'); lfLoadRoster('courier','lf-cour-roster-tbody',7); }
+  if(pageId==='lf-nemt'){ lfLoadKpis('nemt'); lfLoadTrips('nemt'); lfLoadNemtClients(); lfLoadRoster('nemt','lf-nemt-roster-tbody'); }
+  if(pageId==='lf-medical'){ lfLoadRoster('medical','lf-med-roster-tbody'); }
+  if(pageId==='lf-executive'){ lfLoadKpis('executive'); lfLoadTrips('executive'); lfLoadExecAccounts(); lfLoadRoster('executive','lf-exec-roster-tbody'); }
+  if(pageId==='lf-courier'){ lfLoadKpis('courier'); lfLoadTrips('courier'); lfLoadRoster('courier','lf-cour-roster-tbody'); }
   if(pageId==='lf-gig'){ lfLoadGigKpis(); lfLoadDrivers(); }
 }
 
 function loadLightFleet(id){ lfRefresh(id); }
 
-async function lfLoadRoster(service, tbodyId, cols){
+async function lfLoadRoster(service, tbodyId){
   const tbody = document.getElementById(tbodyId);
   if(!tbody) return;
-  tbody.innerHTML = `<tr><td colspan="${cols}"><div class="lf-empty-state"><div class="spin" style="margin:0 auto 8px"></div></div></td></tr>`;
+  tbody.innerHTML = '<tr><td colspan="4"><div class="lf-empty-state" style="padding:20px 0"><div class="spin" style="margin:0 auto 8px"></div></div></td></tr>';
   try {
-    const d = await lfFetch('/api/light-fleet/drivers?limit=200');
-    const all = d.items || [];
-    const drivers = all.filter(dr => (dr.approved_services||[]).includes(service) || all.length === 0);
+    const d = await lfFetch('/api/light-fleet/drivers?limit=200&service='+encodeURIComponent(service));
+    const drivers = d.items || [];
     if(!drivers.length){
       const icons = {nemt:'🏥',medical:'🧪',executive:'🚗',courier:'📦'};
-      tbody.innerHTML = `<tr><td colspan="${cols}"><div class="lf-empty-state"><div class="lf-empty-state-icon">${icons[service]||'👤'}</div><div class="lf-empty-state-msg">No ${service} drivers yet</div></div></td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="4"><div class="lf-empty-state" style="padding:28px 0"><div class="lf-empty-state-icon">${icons[service]||'👤'}</div><div class="lf-empty-state-msg">No ${service} drivers onboarded yet</div></div></td></tr>`;
       return;
     }
     tbody.innerHTML = drivers.map(dr => {
       const veh = [dr.vehicle_year,dr.vehicle_make,dr.vehicle_model].filter(Boolean).join(' ') || '—';
-      const ratingCol = cols===8 ? `<td>${dr.rating!=null?'⭐ '+dr.rating:'—'}</td>` : '';
+      const sc = dr.status==='active'?'#22c55e':dr.status==='suspended'?'#ef4444':'#f59e0b';
+      const ratingOrMvr = service==='executive'
+        ? (dr.rating!=null ? `⭐ ${dr.rating}` : '—')
+        : lfBadge(dr.mvr_status||'pending');
       return `<tr>
-        <td><strong>${dr.name||'—'}</strong></td>
-        <td>${dr.phone||'—'}</td>
-        <td style="font-size:11px;color:var(--muted)">${veh}</td>
-        <td>${lfBadge(dr.mvr_status||'pending')}</td>
-        <td>${lfBadge(dr.background_check_status||'pending')}</td>
-        ${ratingCol}
-        <td>${dr.total_trips||0}</td>
-        <td>${lfBadge(dr.status||'active')}</td>
+        <td style="padding:8px 12px"><div style="font-weight:600;font-size:12px;color:rgba(255,255,255,.85)">${dr.name||'—'}</div><div style="font-size:10px;color:rgba(255,255,255,.4);margin-top:1px">${dr.phone||''}</div></td>
+        <td style="padding:8px 12px;font-size:11px;color:rgba(255,255,255,.45)">${veh}</td>
+        <td style="padding:8px 12px">${ratingOrMvr}</td>
+        <td style="padding:8px 12px"><span style="display:inline-block;padding:2px 8px;border-radius:10px;background:${sc}22;color:${sc};font-size:10px;font-weight:700;font-family:var(--ff-m)">${dr.status||'active'}</span></td>
       </tr>`;
     }).join('');
-  } catch(e){ tbody.innerHTML = `<tr><td colspan="${cols}" style="color:var(--red);padding:12px;text-align:center">Error loading roster</td></tr>`; }
+  } catch(e){ tbody.innerHTML = '<tr><td colspan="4" style="color:var(--red);padding:12px;text-align:center;font-size:12px">Error loading roster</td></tr>'; }
 }
 
 async function dashLoadLFRoster(){

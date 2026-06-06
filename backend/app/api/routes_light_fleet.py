@@ -338,9 +338,10 @@ def complete_trip(trip_id: str, payload: dict | None = None) -> dict:
 def list_drivers(
     status: str | None = None,
     vehicle_type: str | None = None,
+    service: str | None = None,
     limit: int = 100,
 ) -> dict:
-    """List light-vehicle drivers with optional status/vehicle_type filters."""
+    """List light-vehicle drivers with optional status/vehicle_type/service filters."""
     sb = get_supabase()
     q = (
         sb.table("light_vehicle_drivers")
@@ -352,6 +353,8 @@ def list_drivers(
         q = q.eq("status", status)
     if vehicle_type:
         q = q.eq("vehicle_type", vehicle_type)
+    if service:
+        q = q.contains("approved_services", [service])
     res = q.execute()
     items = res.data or []
     return {"items": items, "total": len(items)}
