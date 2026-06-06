@@ -24,6 +24,33 @@ def list_carriers(
     return {"count": len(res.data or []), "items": res.data or []}
 
 
+@router.post("/")
+def create_carrier(payload: dict) -> dict:
+    """Create a carrier record from Eagle Eye (bypasses RLS via service role key)."""
+    if not payload.get("company_name"):
+        raise HTTPException(400, "company_name is required")
+    data = {
+        "company_name": payload["company_name"],
+        "mc_number": payload.get("mc_number") or None,
+        "dot_number": payload.get("dot_number") or None,
+        "phone": payload.get("phone") or None,
+        "email": payload.get("email") or None,
+        "address": payload.get("address") or None,
+        "plan": payload.get("plan") or "pay_as_you_go",
+        "trailer_type": payload.get("trailer_type") or None,
+        "insurance_carrier": payload.get("insurance_carrier") or None,
+        "eld_provider": payload.get("eld_provider") or None,
+        "status": payload.get("status") or "onboarding",
+    }
+    try:
+        res = get_supabase().table("active_carriers").insert(data).execute()
+    except Exception as exc:
+        raise HTTPException(500, f"Database error: {exc}") from exc
+    if not res.data:
+        raise HTTPException(500, "insert returned no data")
+    return {"ok": True, "carrier": res.data[0]}
+
+
 @router.get("/{carrier_id}")
 def get_carrier(carrier_id: str) -> dict:
     res = get_supabase().table("active_carriers").select("*").eq("id", carrier_id).maybe_single().execute()
