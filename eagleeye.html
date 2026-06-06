@@ -16642,29 +16642,28 @@ async function deactivateDriver(driverId) {
           <div class="iebc-status-card"><div class="iebc-status-card-name">Curri</div><div id="iebc-plat-curri"><span class="iebc-status-pill iebc-status-active"><span class="iebc-status-dot" style="background:currentColor"></span>healthy</span></div><div style="font-size:10px;color:var(--muted);margin-top:4px;">API connection OK</div></div>
           <div class="iebc-status-card"><div class="iebc-status-card-name">Roadie</div><div id="iebc-plat-roadie"><span class="iebc-status-pill iebc-status-active"><span class="iebc-status-dot" style="background:currentColor"></span>healthy</span></div><div style="font-size:10px;color:var(--muted);margin-top:4px;">API connection OK</div></div>
         </div>
-    <!-- Operations Table -->
-    <div class="iebc-section">
-      <div class="iebc-section-hd">Delivery Queue</div>
-    </div>
-    <div class="iebc-table-wrap">
-      <div class="lf-actions" style="margin:0 0 10px;">
-        <select id="lf-cour-status-filter" onchange="lfLoadTrips('courier')" style="padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:var(--card);color:var(--text);">
-          <option value="">All Statuses</option>
-          <option value="pending">Pending</option>
-          <option value="assigned">Assigned</option>
-          <option value="in_progress">In Progress</option>
-          <option value="completed">Completed</option>
-          <option value="cancelled">Cancelled</option>
-        </select>
-        <button class="lf-btn" style="background:#f59e0b;color:#fff;" onclick="lfOpenTrip('courier')">+ New Delivery</button>
-      </div>
-      <table class="lf-table lf-table-cour">
-        <thead><tr><th>Pickup</th><th>Dropoff</th><th>Scheduled</th><th>Packages</th><th>Weight</th><th>Driver</th><th>Status</th><th>Rate</th><th></th></tr></thead>
-        <tbody id="lf-cour-tbody">
-          <tr><td colspan="9"><div class="lf-empty-state"><div class="lf-empty-state-icon">📦</div><div class="lf-empty-state-msg">No deliveries in queue</div><div class="lf-empty-state-sub">Dispatch a new courier run to begin tracking</div></div></td></tr>
-        </tbody>
-      </table>
-    </div>
+        <div class="iebc-section">
+          <div class="iebc-section-hd">Delivery Queue</div>
+        </div>
+        <div class="iebc-table-wrap">
+          <div class="lf-actions" style="margin:0 0 10px;">
+            <select id="lf-cour-status-filter" onchange="lfLoadTrips('courier')" style="padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:var(--card);color:var(--text);">
+              <option value="">All Statuses</option>
+              <option value="pending">Pending</option>
+              <option value="assigned">Assigned</option>
+              <option value="in_progress">In Progress</option>
+              <option value="completed">Completed</option>
+              <option value="cancelled">Cancelled</option>
+            </select>
+            <button class="lf-btn" style="background:#f59e0b;color:#fff;" onclick="lfOpenTrip('courier')">+ New Delivery</button>
+          </div>
+          <table class="lf-table lf-table-cour">
+            <thead><tr><th>Pickup</th><th>Dropoff</th><th>Scheduled</th><th>Packages</th><th>Weight</th><th>Driver</th><th>Status</th><th>Rate</th><th></th></tr></thead>
+            <tbody id="lf-cour-tbody">
+              <tr><td colspan="9"><div class="lf-empty-state"><div class="lf-empty-state-icon">📦</div><div class="lf-empty-state-msg">No deliveries in queue</div><div class="lf-empty-state-sub">Dispatch a new courier run to begin tracking</div></div></td></tr>
+            </tbody>
+          </table>
+        </div>
       </div><!-- /lf-col-right -->
     </div><!-- /lf-two-col -->
   </div><!-- /lf-wrap -->
@@ -17056,7 +17055,7 @@ function lfCloseModal(id){ document.getElementById(id).style.display='none'; }
 
 function lfRefresh(pageId){
   if(pageId==='lf-nemt'){ lfLoadKpis('nemt'); lfLoadTrips('nemt'); lfLoadNemtClients(); lfLoadRoster('nemt','lf-nemt-roster-tbody'); }
-  if(pageId==='lf-medical'){ lfLoadRoster('medical','lf-med-roster-tbody'); }
+  if(pageId==='lf-medical'){ lfLoadKpis('medical'); lfLoadTrips('medical'); lfLoadRoster('medical','lf-med-roster-tbody'); }
   if(pageId==='lf-executive'){ lfLoadKpis('executive'); lfLoadTrips('executive'); lfLoadExecAccounts(); lfLoadRoster('executive','lf-exec-roster-tbody'); }
   if(pageId==='lf-courier'){ lfLoadKpis('courier'); lfLoadTrips('courier'); lfLoadRoster('courier','lf-cour-roster-tbody'); }
   if(pageId==='lf-gig'){ lfLoadGigKpis(); lfLoadDrivers(); }
@@ -17155,16 +17154,21 @@ async function lfLoadKpis(type){
       document.getElementById('lf-nemt-today').textContent   = t.today   ?? '0';
       document.getElementById('lf-nemt-mtd').textContent     = t.mtd     ?? '0';
       document.getElementById('lf-nemt-rev').textContent     = lfFmt$(t.mtd_revenue);
+    } else if(type==='medical'){
+      document.getElementById('lf-med-active').textContent    = t.active    ?? '0';
+      document.getElementById('lf-med-sla').textContent       = t.sla_pct   != null ? t.sla_pct+'%' : '—';
+      document.getElementById('lf-med-contracts').textContent = t.contracts ?? '0';
+      document.getElementById('lf-med-rev').textContent       = lfFmt$(t.mtd_revenue);
     } else if(type==='executive'){
-      document.getElementById('lf-exec-pending').textContent = t.pending ?? '0';
-      document.getElementById('lf-exec-today').textContent   = t.today   ?? '0';
-      document.getElementById('lf-exec-mtd').textContent     = t.mtd     ?? '0';
+      document.getElementById('lf-exec-pending').textContent = t.pending  ?? '0';
+      document.getElementById('lf-exec-ontime').textContent  = t.ontime_pct != null ? t.ontime_pct+'%' : '—';
+      document.getElementById('lf-exec-rating').textContent  = t.avg_rating != null ? t.avg_rating.toFixed(1) : '—';
       document.getElementById('lf-exec-rev').textContent     = lfFmt$(t.mtd_revenue);
     } else if(type==='courier'){
-      document.getElementById('lf-cour-pending').textContent = t.pending ?? '0';
-      document.getElementById('lf-cour-today').textContent   = t.today   ?? '0';
-      document.getElementById('lf-cour-mtd').textContent     = t.mtd     ?? '0';
-      document.getElementById('lf-cour-rev').textContent     = lfFmt$(t.mtd_revenue);
+      document.getElementById('lf-cour-pending').textContent  = t.pending         ?? '0';
+      document.getElementById('lf-cour-accept').textContent   = t.accept_rate  != null ? t.accept_rate+'%'   : '—';
+      document.getElementById('lf-cour-complete').textContent = t.complete_rate != null ? t.complete_rate+'%' : '—';
+      document.getElementById('lf-cour-rev').textContent      = lfFmt$(t.mtd_revenue);
     }
   } catch(e){ console.error('lf kpis',e); }
 }
@@ -17172,10 +17176,10 @@ async function lfLoadKpis(type){
 async function lfLoadGigKpis(){
   try {
     const d = await lfFetch('/api/light-fleet/kpis');
-    document.getElementById('lf-gig-total').textContent = d.drivers?.total ?? '0';
-    document.getElementById('lf-gig-active').textContent = d.drivers?.active ?? '0';
-    document.getElementById('lf-gig-clear').textContent  = d.drivers?.mvr_clear ?? '0';
-    document.getElementById('lf-gig-trips').textContent  = d.today_total ?? '0';
+    document.getElementById('lf-gig-total').textContent    = d.drivers?.total    ?? '0';
+    document.getElementById('lf-gig-active').textContent   = d.drivers?.active   ?? '0';
+    document.getElementById('lf-gig-earnings').textContent = d.drivers?.avg_earnings != null ? lfFmt$(d.drivers.avg_earnings) : '—';
+    document.getElementById('lf-gig-util').textContent     = d.drivers?.util_pct != null ? d.drivers.util_pct+'%' : '—';
   } catch(e){ console.error('lf gig kpis',e); }
 }
 
@@ -17200,6 +17204,17 @@ async function lfLoadTrips(type){
         <td>${lfBadge(r.status)}</td>
         <td>${lfFmt$(r.rate_total)}</td>
         <td><button class="lf-btn-ghost" style="padding:4px 10px;font-size:11px" onclick="lfCancelTrip('${r.id}')">Cancel</button></td>
+      </tr>`).join('');
+    } else if(type==='medical'){
+      tbody.innerHTML = rows.map(r=>`<tr>
+        <td>${r.id||'—'}</td>
+        <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.pickup_address||'—'}</td>
+        <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.dropoff_address||'—'}</td>
+        <td>${r.cargo_type||'—'}</td>
+        <td>${r.sla_minutes!=null?r.sla_minutes+' min':'—'}</td>
+        <td>${r.driver_id||'—'}</td>
+        <td>${r.temp_range||'—'}</td>
+        <td>${lfBadge(r.status)}</td>
       </tr>`).join('');
     } else if(type==='executive'){
       tbody.innerHTML = rows.map(r=>`<tr>
@@ -17229,7 +17244,7 @@ async function lfLoadTrips(type){
   } catch(e){ console.error('lf trips',e); tbody.innerHTML='<tr><td colspan="10" class="lf-empty" style="color:var(--red)">Error loading trips</td></tr>'; }
 }
 
-function typeKey(type){ return type==='executive'?'exec':type==='courier'?'cour':type; }
+function typeKey(type){ return type==='executive'?'exec':type==='courier'?'cour':type==='medical'?'med':type; }
 
 async function lfCancelTrip(id){
   if(!confirm('Cancel this trip?')) return;
