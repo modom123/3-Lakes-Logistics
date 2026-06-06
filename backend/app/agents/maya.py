@@ -7,6 +7,7 @@ Actions:
   welcome             manually send welcome SMS to an approved driver
   deny                manually send denial SMS with reason
   status              intake queue stats
+  send_invitation     send Checkr screening invitation link to a driver candidate
 """
 from __future__ import annotations
 
