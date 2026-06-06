@@ -21,8 +21,11 @@ jobs:
       - name: Prepare website files
         run: |
           mkdir -p dist
-          # All root-level HTML pages
+          # All root-level public HTML pages
           cp *.html dist/
+          # eagleeye.html is the INTERNAL command center (hosted on Vercel) —
+          # never publish it to the public Hostinger site.
+          rm -f dist/eagleeye.html
           # Google site verification + any other public files
           cp -r public/. dist/
           echo "Files to deploy:"
