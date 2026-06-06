@@ -580,10 +580,17 @@ def driver_intake(payload: dict) -> dict:
             "missing_required_fields": "Please fill in all required fields.",
         }.get(reason, "Your application could not be processed at this time.")
         raise HTTPException(status_code=422, detail=status_msg)
+    driver_id = result.get("driver_id")
+    if driver_id:
+        try:
+            from ..triggers import fire_lf_driver_onboarding
+            fire_lf_driver_onboarding(str(driver_id))
+        except Exception:
+            pass
     return {
         "ok": True,
         "status": result.get("status", "pending_verification"),
-        "driver_id": result.get("driver_id"),
+        "driver_id": driver_id,
         "verification_url": result.get("verification_url"),
         "message": result.get("message", "Check your phone for next steps."),
     }

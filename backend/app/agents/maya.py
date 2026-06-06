@@ -174,6 +174,7 @@ def process_intake(payload: dict[str, Any]) -> dict[str, Any]:
                 "mvr_status": "pending",
                 "background_check_status": "pending",
                 "platforms_opted_in": platforms_opted_in,
+                "plan": "starter",           # 15% platform fee per load, driver keeps 85%
             }).execute()
             driver_id = (result.data[0] or {}).get("id") if result.data else None
         except Exception as e:  # noqa: BLE001
@@ -214,6 +215,7 @@ def process_intake(payload: dict[str, Any]) -> dict[str, Any]:
         log_agent(_NAME, "verification_started", payload={"name": name, "email": email})
 
         return {
+            "approved": True,
             "status": "pending_verification",
             "driver_id": str(driver_id) if driver_id else None,
             "verification_url": verification_url,
@@ -252,6 +254,7 @@ def process_intake(payload: dict[str, Any]) -> dict[str, Any]:
     log_agent(_NAME, "approved_fallback", payload={"name": name}, result="no_checkr_key — self-reported only")
 
     return {
+        "approved": True,
         "status": "approved",
         "driver_id": str(driver_id) if driver_id else None,
         "warning": "CHECKR_API_KEY not configured — MVR not verified",
