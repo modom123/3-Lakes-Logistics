@@ -127,7 +127,11 @@ body{font-family:var(--ff-b);color:var(--text);background:var(--off);display:fle
 }
 .btn-sync:hover{background:var(--navy2);box-shadow:0 4px 16px rgba(11,37,69,.28);}
 
-.content{flex:1;overflow:hidden;padding:0;background:var(--off);display:flex;flex-direction:column;}
+/* Explicit style-element hide so <style> tags inside .page don't act as flex children */
+style{display:none!important;}
+.content{flex:1;min-height:0;overflow:hidden;padding:0;background:var(--off);display:flex;flex-direction:column;}
+/* Page body wrapper — flex:1 fills height, scrolls internally */
+.page-body{flex:1;min-height:0;overflow-y:auto;padding:20px 20px 40px;box-sizing:border-box;}
 .page{display:none;}
 .page.active{
   display:flex;flex-direction:column;
@@ -2810,7 +2814,7 @@ select.form-input option{background:var(--surface);}
 <div class="page" id="page-exec-command">
 <style>
 /* ── Executive Command Panel Styles ───────────────────────────── */
-.ec-wrap{max-width:none;margin:0;padding:24px 20px 80px;}
+.ec-wrap{flex:1;min-height:0;overflow-y:auto;max-width:none;margin:0;padding:24px 20px 80px;box-sizing:border-box;}
 .ec-hero{background:linear-gradient(135deg,#0B2545 0%,#1B3E75 60%,#0B2545 100%);border-radius:18px;padding:36px 44px;margin-bottom:36px;display:flex;align-items:center;justify-content:space-between;gap:24px;flex-wrap:wrap;}
 .ec-hero-left .ec-badge{display:inline-flex;align-items:center;gap:8px;background:rgba(200,144,42,.18);border:1px solid rgba(200,144,42,.35);color:#F5C842;padding:5px 16px;border-radius:100px;font-size:10px;letter-spacing:2px;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:14px;}
 .ec-hero-left .ec-badge::before{content:"";width:6px;height:6px;border-radius:50%;background:#F5C842;animation:pulse 2s ease infinite;}
@@ -15825,7 +15829,7 @@ async function deactivateDriver(driverId) {
 <!-- LIGHT FLEET — 4 SERVICE PAGES                                       -->
 <!-- ════════════════════════════════════════════════════════════════════ -->
 <style>
-.lf-wrap{padding:0;box-sizing:border-box;}
+.lf-wrap{flex:1;min-height:0;overflow-y:auto;padding:20px 20px 80px;box-sizing:border-box;}
 /* ── LF Tab Bar ── */
 .lf-tabs{position:sticky;top:0;z-index:10;background:var(--off);border-bottom:2px solid var(--border);padding:10px 20px 0;margin:-16px -20px 18px;display:flex;gap:4px;flex-wrap:wrap;}
 .lf-tab{display:inline-flex;align-items:center;gap:7px;padding:9px 18px;border:none;background:transparent;font-size:13px;font-weight:600;font-family:var(--ff-b);color:var(--muted);cursor:pointer;border-radius:8px 8px 0 0;border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .18s;white-space:nowrap;}
@@ -15862,13 +15866,13 @@ async function deactivateDriver(driverId) {
 .lf-badge.flagged{background:rgba(239,68,68,.15);color:#ef4444;}
 .lf-empty{text-align:center;padding:40px;color:var(--muted);font-size:14px;}
 .lf-section-hdr{font-size:13px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid var(--border);padding-bottom:8px;margin:28px 0 16px;}
-@media(max-width:768px){.lf-wrap{padding:0;}}
+@media(max-width:768px){.lf-wrap{padding:12px 12px 60px;}}
 /* Service accent colors */
 :root{--lf-nemt:#3b82f6;--lf-exec:#f59e0b;--lf-cour:#8b5cf6;--lf-gig:#22c55e;}
 .lf-hero{border-radius:12px;padding:22px 24px;margin-bottom:22px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;position:relative;overflow:hidden;}
 /* Full-page layout — hero bleeds edge-to-edge, ticker + topbar hidden */
 .content.lf-fullpage{padding:0;}
-.content.lf-fullpage .lf-wrap{padding:0 0 80px;max-width:none;margin:0;}
+/* lf-wrap already has flex:1 + overflow-y:auto — no additional override needed */
 .content.lf-fullpage .lf-hero{border-radius:0;margin-bottom:0;padding:28px 32px;}
 .content.lf-fullpage .lf-kpis{margin:20px 32px 0;}
 .content.lf-fullpage .lf-actions{margin:16px 32px 0;}
@@ -15889,21 +15893,8 @@ async function deactivateDriver(driverId) {
 .content.lf-fullpage .iebc-status-row{margin:16px 0;}
 .content.lf-fullpage .iebc-section{padding-left:0;padding-right:0;}
 .content.lf-fullpage .iebc-table-wrap{margin:0;}
-/* Broker / Trading pages full-bleed: heroes edge-to-edge */
-.content.lf-fullpage .bd-hero,
-.content.lf-fullpage .td-hero,
-.content.lf-fullpage .drew-hero,
-.content.lf-fullpage .quinn-hero{border-radius:0;margin-bottom:0;padding-top:80px;}
-/* All content below broker/trading heroes gets 20px side margins */
-.content.lf-fullpage .td-hero ~ *,
-.content.lf-fullpage .bd-hero ~ *,
-.content.lf-fullpage .drew-hero ~ *,
-.content.lf-fullpage .quinn-hero ~ *{margin-left:20px;margin-right:20px;}
-/* Override inline padding on broker page wrapper divs */
-#page-broker-division > div[style],
-#page-trading-desk > div[style],
-#page-broker-shippers > div[style],
-#page-broker-docs > div[style]{padding:0!important;}
+/* Broker / trading hero — consistent card style within page-body padding */
+.bd-hero,.td-hero,.drew-hero,.quinn-hero{border-radius:12px;}
 .lf-hero::before{content:'';position:absolute;inset:0;opacity:.07;border-radius:12px;}
 .lf-hero-nemt{background:linear-gradient(135deg,rgba(59,130,246,.18) 0%,rgba(59,130,246,.06) 100%);border:1px solid rgba(59,130,246,.3);}
 .lf-hero-nemt .lf-hero-icon{color:#3b82f6;}
@@ -17389,7 +17380,7 @@ function lfRenderExpertReport(segment, d) {
 .bd-out{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:16px;}
 .bd-out pre{font-size:11px;color:var(--text);white-space:pre-wrap;word-break:break-word;max-height:300px;overflow-y:auto;margin:0;}
 </style>
-<div style="padding:0 0 40px;">
+<div class="page-body">
   <div class="bd-hero">
     <div class="bd-hero-title">📈 North American Trading</div>
     <div class="bd-hero-sub">5-agent team · Load sourcing → Shipper development → Coverage → Docs → Settlement</div>
@@ -17485,7 +17476,7 @@ function lfRenderExpertReport(segment, d) {
 .s-active{background:rgba(34,197,94,.12);color:#4ade80;}
 .s-lost{background:rgba(148,163,184,.1);color:var(--muted);}
 </style>
-<div style="padding:0 0 40px;">
+<div class="page-body">
   <div class="drew-hero">
     <div class="drew-hero-title">🏭 Drew Calloway — Shipper Development</div>
     <div class="drew-hero-sub">Bland AI outbound calls · Direct shipper accounts · The revenue engine</div>
@@ -17563,7 +17554,7 @@ function lfRenderExpertReport(segment, d) {
 .doc-factored{background:rgba(168,85,247,.12);color:#d8b4fe;}
 .doc-overdue{background:rgba(239,68,68,.12);color:#f87171;}
 </style>
-<div style="padding:0 0 40px;">
+<div class="page-body">
   <div class="quinn-hero">
     <div class="quinn-hero-title">📄 Quinn Mercer — Broker Ops & Documentation</div>
     <div style="font-size:12px;color:rgba(255,255,255,.55);">Rate Confirmations · Freight Invoices · Factoring · Accounts Receivable</div>
@@ -17852,7 +17843,7 @@ async function bdSubmitFactoring() {
 .td-inp-label{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;margin-bottom:5px;display:block;}
 </style>
 
-<div style="padding:0 0 40px;">
+<div class="page-body">
   <!-- Hero -->
   <div class="td-hero">
     <div class="td-hero-title">📈 Trading Desk</div>
