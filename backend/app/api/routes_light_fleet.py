@@ -581,12 +581,14 @@ def driver_intake(payload: dict) -> dict:
         }.get(reason, "Your application could not be processed at this time.")
         raise HTTPException(status_code=422, detail=status_msg)
     driver_id = result.get("driver_id")
-    if driver_id:
-        try:
-            from ..triggers import fire_lf_driver_onboarding
-            fire_lf_driver_onboarding(str(driver_id))
-        except Exception:
-            pass
+    if not driver_id:
+        db_err = result.get("db_error", "unknown — check Render logs")
+        raise HTTPException(status_code=500, detail=f"Driver record not created: {db_err}")
+    try:
+        from ..triggers import fire_lf_driver_onboarding
+        fire_lf_driver_onboarding(str(driver_id))
+    except Exception:
+        pass
     return {
         "ok": True,
         "status": result.get("status", "pending_verification"),
