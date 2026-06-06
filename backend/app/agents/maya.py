@@ -174,6 +174,7 @@ def process_intake(payload: dict[str, Any]) -> dict[str, Any]:
                 "mvr_status": "pending",
                 "background_check_status": "pending",
                 "platforms_opted_in": platforms_opted_in,
+                "plan": "starter",           # 15% platform fee per load, driver keeps 85%
             }).execute()
             driver_id = (result.data[0] or {}).get("id") if result.data else None
         except Exception as e:  # noqa: BLE001
