@@ -262,13 +262,20 @@ async def carrier_intake(payload: CarrierIntake, request: Request,
     address = payload.address or ", ".join(filter(None, [
         payload.address_city, payload.address_state, payload.address_zip]))
 
+    # Compute company_name fallback — owner-operators often skip the "Legal Company Name" field
+    company_name = (payload.company_name or "").strip()
+    if not company_name:
+        first = (payload.owner_first_name or "").strip()
+        last = (payload.owner_last_name or "").strip()
+        company_name = f"{first} {last}".strip() or "Unknown Carrier"
+
     # Detect missing fields — partial submissions get onboarding_incomplete status
     missing = _missing_fields(payload, email)
     onboarding_status = "onboarding_incomplete" if missing else "onboarding"
 
     # 1. active_carriers
     carrier_row = {
-        "company_name": payload.company_name,
+        "company_name": company_name,
         "legal_entity": payload.legal_entity,
         "dot_number": payload.dot_number,
         "mc_number": payload.mc_number,
@@ -382,7 +389,7 @@ async def carrier_intake(payload: CarrierIntake, request: Request,
 
     # 8. Send welcome email (always — includes completion link if fields missing)
     if email:
-        bg.add_task(_send_welcome_email, email, payload.company_name, carrier_id, missing, payload.plan)
+        bg.add_task(_send_welcome_email, email, company_name, carrier_id, missing, payload.plan)
 
     log_agent("atlas", "intake_received", carrier_id=carrier_id,
               payload={"plan": payload.plan, "status": onboarding_status, "missing": missing})

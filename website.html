@@ -1404,6 +1404,7 @@ button,a,[onclick]{cursor:pointer;}
         <div class="ob-win-ring">✓</div>
         <div class="ob-win-t">Application Received!</div>
         <p class="ob-win-p">Welcome to the 3 Lakes Logistics family. Your dispatcher will call within 24 hours to complete onboarding and book your first loads.</p>
+        <div id="obWinErr" style="display:none;background:#fff3cd;border:1px solid #ffc107;border-radius:8px;padding:14px 18px;margin:16px 0;font-size:13px;color:#856404;text-align:left;line-height:1.6;"></div>
         <div class="ob-win-acts">
           <button class="btn-gold" onclick="document.getElementById('agMod').style.display='flex'">📄 View Your Agreement</button>
           <button class="btn-navy" onclick="showPage('contact')">📞 Contact Us Now</button>
@@ -1819,11 +1820,20 @@ function oSub(){
       }
     })
     .catch(err=>{
-      try{console.warn('[3LL intake offline — queued]',err&&err.message);}catch(_){}
+      try{console.warn('[3LL intake error]',err&&err.message);}catch(_){}
       try{
         const q=JSON.parse(localStorage.getItem('3LL_INTAKE_QUEUE')||'[]');
         q.push({payload:payload,ts:Date.now(),error:String(err&&err.message||err)});
         localStorage.setItem('3LL_INTAKE_QUEUE',JSON.stringify(q));
+      }catch(_){}
+      // Show visible error notice on the success screen
+      try{
+        const errBanner=document.getElementById('obWinErr');
+        if(errBanner){
+          errBanner.style.display='block';
+          const msg=err&&err.message?err.message:'network error';
+          errBanner.innerHTML='<strong>⚠️ Submission Error</strong><br>We could not save your application to our system ('+msg+'). Please call us at <strong>661-466-9932</strong> or email <strong>info@3lakeslogistics.com</strong> to confirm your signup.';
+        }
       }catch(_){}
     });
   })();

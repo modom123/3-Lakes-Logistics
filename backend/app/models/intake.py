@@ -52,7 +52,7 @@ class CarrierIntake(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
     # --- Step 1: Company / Authority ---
-    company_name: str = Field(min_length=2)
+    company_name: str | None = None  # fallback computed server-side from owner name
     legal_entity: str | None = None
     dot_number: str | None = None
     mc_number: str | None = None
@@ -63,6 +63,8 @@ class CarrierIntake(BaseModel):
     years_in_business: int | None = None
 
     # Allow the form's `owner_phone` / `owner_email` alternates
+    owner_first_name: str | None = None
+    owner_last_name: str | None = None
     owner_phone: str | None = None
     owner_email: str | None = None
     address_city: str | None = None
