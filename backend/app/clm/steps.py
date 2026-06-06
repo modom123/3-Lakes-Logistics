@@ -565,7 +565,6 @@ def step_130_rate_benchmark(
         "flatbed": 2.70,
         "step_deck": 2.75,
         "box_truck": 2.20,
-        "cargo_van": 1.95,
         "tanker": 3.10,
         "hot_shot": 2.30,
     }

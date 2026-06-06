@@ -67,11 +67,10 @@ create table if not exists public.founders_inventory (
 
 -- Keys must match FOUNDERS_CATEGORIES in index (7).html exactly.
 insert into public.founders_inventory (category, display_name, total, claimed) values
-  ('dry_van','Dry Van',300,0),
-  ('reefer','Reefer',200,0),
-  ('flatbed','Flatbed / Step Deck',150,0),
+  ('dry_van','Dry Van',350,0),
+  ('reefer','Reefer',225,0),
+  ('flatbed','Flatbed / Step Deck',175,0),
   ('box_truck','Box Truck 26'' (Non-CDL)',100,0),
-  ('cargo_van','Cargo Van',100,0),
   ('tanker','Tanker / Hazmat',50,0),
   ('hotshot','Hot Shot',50,0),
   ('auto','Auto Carrier',50,0)

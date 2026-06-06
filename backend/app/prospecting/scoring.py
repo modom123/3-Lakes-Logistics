@@ -15,7 +15,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 FOUNDERS_EQUIPMENT = {"dry_van", "reefer", "flatbed", "step_deck",
-                      "box26", "cargo_van", "tanker_hazmat", "hotshot", "auto"}
+                      "box26", "tanker_hazmat", "hotshot", "auto"}
 
 
 def score_lead(lead: dict[str, Any]) -> int:
