@@ -2,6 +2,12 @@ name: Test Light Fleet Intake
 
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/test-lf-intake.yml'
+      - 'backend/app/agents/maya.py'
+      - 'backend/app/api/routes_light_fleet.py'
 
 jobs:
   test-intake:
