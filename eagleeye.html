@@ -140,15 +140,57 @@ style{display:none!important;}
   padding:0;
   animation:pgIn .3s ease;
 }
-/* Full-bleed pages: no scroll handled internally */
+/* ── FIXED FULL-PAGE OVERLAYS ──────────────────────────────────────────────
+   These pages live outside #main in the DOM. They must use position:fixed
+   to overlay the viewport correctly. top is set by JS (_overlayTop) on nav;
+   fallback 60px covers the topbar.
+   ────────────────────────────────────────────────────────────────────────── */
 #page-email.active,
 #page-fleet-map.active,
 #page-lf-map.active,
 #page-ccg-office.active,
 #page-mark-office.active,
-#page-bond.active{padding:0;overflow:hidden;}
-/* Fullpage LF/broker pages: no padding, scroll within page */
-.content.lf-fullpage .page.active{padding:0;overflow-y:auto;}
+#page-bond.active,
+#page-tests.active,
+#page-lf-nemt.active,
+#page-lf-medical.active,
+#page-lf-executive.active,
+#page-lf-courier.active,
+#page-lf-gig.active,
+#page-broker-division.active,
+#page-broker-shippers.active,
+#page-broker-docs.active,
+#page-trading-desk.active{
+  position:fixed;
+  top:60px;          /* overridden by JS _overlayTop() on nav */
+  left:var(--sidebar-w);
+  right:0;
+  bottom:0;
+  z-index:30;
+  padding:0;
+  overflow:hidden;
+  background:var(--bg);
+  animation:pgIn .3s ease;
+}
+@media(max-width:768px){
+  #page-email.active,
+  #page-fleet-map.active,
+  #page-lf-map.active,
+  #page-ccg-office.active,
+  #page-mark-office.active,
+  #page-bond.active,
+  #page-tests.active,
+  #page-lf-nemt.active,
+  #page-lf-medical.active,
+  #page-lf-executive.active,
+  #page-lf-courier.active,
+  #page-lf-gig.active,
+  #page-broker-division.active,
+  #page-broker-shippers.active,
+  #page-broker-docs.active,
+  #page-trading-desk.active{left:0;}
+}
+/* Fullpage LF/broker pages: inner wrap handles scroll — no extra override needed */
 /* Regular pages: header and common content rows get side breathing room */
 .page-hdr{padding:16px 20px 0;}
 .page.active > .g4,
@@ -3629,10 +3671,14 @@ function nav(id){
   const _lfFullPages=['lf-nemt','lf-medical','lf-executive','lf-courier','lf-gig','lf-map','broker-division','trading-desk','broker-shippers','broker-docs'];
   document.querySelector('.content').classList.toggle('lf-fullpage',_lfFullPages.includes(id));
   document.getElementById('main').classList.toggle('lf-fullpage',_lfFullPages.includes(id));
-  // Fixed full-page overlays: always measure actual header stack
-  if(['bond','cso','fleet-map','ccg-office','mark-office'].includes(id)){
+  // All fixed full-page overlays: measure actual header stack and set top
+  const _fixedPages=['bond','cso','fleet-map','ccg-office','mark-office','email','tests',
+    'lf-nemt','lf-medical','lf-executive','lf-courier','lf-gig',
+    'broker-division','trading-desk','broker-shippers','broker-docs'];
+  if(_fixedPages.includes(id)){
     const top = _overlayTop();
-    document.getElementById('page-'+id).style.top=top+'px';
+    const el = document.getElementById('page-'+id);
+    if(el) el.style.top = top+'px';
     const content=document.querySelector('.content');
     if(content) content.scrollTop=0;
   }
@@ -7670,7 +7716,7 @@ async function loadTriggerStatus() {
 .mail-item-preview{font-size:11px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .mail-item-tags{display:flex;gap:4px;margin-top:4px;flex-wrap:wrap}
 .mail-body-pane{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
-.mail-body-empty{display:flex;align-items:center;justify-content:center;flex-direction:column;height:100%;color:var(--muted)}
+.mail-body-empty{display:flex;align-items:center;justify-content:center;flex-direction:column;flex:1;min-height:0;color:var(--muted)}
 </style>
 
 <div class="mail-client">
@@ -7706,7 +7752,7 @@ async function loadTriggerStatus() {
       <div style="font-size:14px">Select an email to read</div>
       <div style="font-size:12px;margin-top:6px;color:var(--muted)">5 connected mailboxes</div>
     </div>
-    <div id="mail-body-content" style="display:none;height:100%;flex-direction:column;overflow:hidden"></div>
+    <div id="mail-body-content" style="display:none;flex:1;min-height:0;flex-direction:column;overflow:hidden"></div>
   </div>
 </div>
 
