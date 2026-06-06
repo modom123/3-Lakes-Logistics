@@ -142,8 +142,8 @@ body{font-family:var(--ff-b);color:var(--text);background:var(--off);display:fle
 #page-ccg-office.active,
 #page-mark-office.active,
 #page-bond.active{padding:0;overflow:hidden;}
-/* Fullpage LF/broker pages: no padding, scroll within page */
-.content.lf-fullpage .page.active{padding:0;overflow-y:auto;}
+/* Fullpage LF/broker pages: no padding, flex-fill, scroll within page */
+.content.lf-fullpage .page.active{padding:0;display:flex;flex-direction:column;flex:1;min-height:0;overflow-y:auto;}
 /* Regular pages: header and common content rows get side breathing room */
 .page-hdr{padding:16px 20px 0;}
 .page.active > .g4,
@@ -16187,7 +16187,7 @@ async function deactivateDriver(driverId) {
 .lf-hero{border-radius:12px;padding:22px 24px;margin-bottom:22px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;position:relative;overflow:hidden;}
 /* Full-page layout — fills viewport, hero bleeds edge-to-edge, ticker + topbar hidden */
 .content.lf-fullpage{padding:0;}
-.content.lf-fullpage .page.active{display:flex;flex-direction:column;height:100%;overflow-y:auto;}
+.content.lf-fullpage .page.active{display:flex;flex-direction:column;flex:1;min-height:0;overflow-y:auto;}
 .content.lf-fullpage .lf-wrap{display:block;padding:0 0 60px;max-width:none;margin:0;overflow:visible;}
 .content.lf-fullpage .lf-hero{border-radius:0;margin-bottom:0;padding:28px 32px;}
 .content.lf-fullpage .lf-kpis{margin:20px 32px 0;}
@@ -17106,7 +17106,7 @@ async function dashLoadLFRoster(){
 }
 
 async function lfFetch(path, method='GET', body=null){
-  const token = localStorage.getItem('3ll_admin_token') || localStorage.getItem('3ll_token') || '';
+  const token = localStorage.getItem('3ll_admin_token') || localStorage.getItem('3ll_token') || API_TOKEN;
   const opts = { method, headers: {'Authorization':'Bearer '+token,'Content-Type':'application/json'} };
   if(body) opts.body = JSON.stringify(body);
   const r = await fetch(LF_API+path, opts);
