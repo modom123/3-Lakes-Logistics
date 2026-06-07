@@ -40,6 +40,7 @@ from .api import (
     stripe_identity_webhook_router,
     driver_auth_router,
     driver_router,
+    driver_messages_router,
     email_router,
     email_ingest_router,
     executives_router,
@@ -238,6 +239,7 @@ def create_app() -> FastAPI:
     app.include_router(comms_public_router,    prefix="/api/comms",        tags=["comms"])
     app.include_router(driver_auth_router,     prefix="/api",              tags=["driver-auth"])
     app.include_router(driver_router,          prefix="/api",              tags=["driver"])
+    app.include_router(driver_messages_router, prefix="/api/messages",     tags=["driver-messages"])
     app.include_router(payout_router,          prefix="/api",              tags=["payout"])
     app.include_router(notifications_router,   prefix="/api",              tags=["notifications"])
     app.include_router(email_router,           prefix="/api",              tags=["email"])

@@ -1,8 +1,10 @@
 """Email management API routes — email log queries, template management, test emails, rate confirmation parsing."""
 from __future__ import annotations
 
+import os
 import re
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from pydantic import BaseModel
 
 from ..logging_service import get_logger
 from ..supabase_client import get_supabase
@@ -11,6 +13,8 @@ from .deps import require_bearer
 
 log = get_logger("email.routes")
 router = APIRouter()
+
+SITE_URL = os.getenv("SITE_URL", "https://www.3lakeslogistics.com")
 
 
 @router.get("/email-log", dependencies=[Depends(require_bearer)])
@@ -495,3 +499,101 @@ def _extract_rate_confirmation_fields(email: dict) -> dict:
         extracted["broker_name"] = broker_match.group(1).strip()
 
     return extracted
+
+
+# ── Rate Confirmation Send ────────────────────────────────────────────────────
+
+class RateConSendReq(BaseModel):
+    load_id: str
+    to_email: str
+
+
+@router.post("/rate-confirmation/send", dependencies=[Depends(require_bearer)])
+async def send_rate_confirmation(body: RateConSendReq) -> dict:
+    """Send a rate confirmation email for a load to a carrier/driver email address."""
+    sb = get_supabase()
+    rows = (
+        sb.table("loads")
+        .select("*")
+        .eq("id", body.load_id)
+        .limit(1)
+        .execute()
+        .data or []
+    )
+    if not rows:
+        raise HTTPException(404, "Load not found")
+    load = rows[0]
+
+    origin = ", ".join(filter(None, [load.get("origin_city"), load.get("origin_state")])) or load.get("origin", "—")
+    dest   = ", ".join(filter(None, [load.get("dest_city"),   load.get("dest_state")]))   or load.get("destination", "—")
+    rate   = f"${float(load.get('rate_total') or load.get('rate') or 0):,.2f}"
+    fee    = f"${float(load.get('dispatch_fee') or 0):,.2f}"
+    pct    = load.get("dispatch_pct") or "5"
+    pickup = load.get("pickup_at", "")
+    if pickup:
+        try:
+            from datetime import datetime
+            pickup = datetime.fromisoformat(pickup.replace("Z", "+00:00")).strftime("%b %d, %Y")
+        except Exception:
+            pass
+
+    html = f"""
+    <div style="font-family:Arial,sans-serif;max-width:700px;margin:0 auto;color:#333">
+      <div style="background:#1e288b;padding:20px 24px">
+        <img src="{SITE_URL}/logo.png" alt="3 Lakes Logistics" height="36" style="height:36px" onerror="this.style.display='none'">
+        <h1 style="color:#fff;margin:8px 0 0;font-size:20px">Rate Confirmation</h1>
+      </div>
+      <div style="padding:24px">
+        <table style="width:100%;border-collapse:collapse;font-size:14px;margin-bottom:20px">
+          <tr><td style="padding:8px 0;color:#666;width:40%">Load #</td><td style="font-weight:700">{load.get('load_number','—')}</td></tr>
+          <tr style="background:#f9f9f9"><td style="padding:8px 0;color:#666">Origin</td><td style="font-weight:700">{origin}</td></tr>
+          <tr><td style="padding:8px 0;color:#666">Destination</td><td style="font-weight:700">{dest}</td></tr>
+          <tr style="background:#f9f9f9"><td style="padding:8px 0;color:#666">Pickup Date</td><td>{pickup or '—'}</td></tr>
+          <tr><td style="padding:8px 0;color:#666">Commodity</td><td>{load.get('commodity','General Freight')}</td></tr>
+          <tr style="background:#f9f9f9"><td style="padding:8px 0;color:#666">Miles</td><td>{load.get('miles','—')}</td></tr>
+          <tr><td style="padding:8px 0;color:#666">Rate Total</td><td style="font-weight:800;font-size:16px;color:#1e288b">{rate}</td></tr>
+          <tr style="background:#f9f9f9"><td style="padding:8px 0;color:#666">Dispatch Fee ({pct}%)</td><td style="color:#dc2626">{fee}</td></tr>
+          <tr><td style="padding:8px 0;color:#666">Carrier</td><td>{load.get('carrier_name','—')}</td></tr>
+          <tr style="background:#f9f9f9"><td style="padding:8px 0;color:#666">Driver</td><td>{load.get('driver_name','—')}</td></tr>
+        </table>
+        <p style="font-size:12px;color:#888;border-top:1px solid #eee;padding-top:12px">
+          By accepting this load, carrier agrees to all applicable terms of 3 Lakes Logistics LLC. Carrier must maintain required insurance minimums and comply with all FMCSA/DOT regulations.
+        </p>
+      </div>
+      <div style="background:#f5f5f5;padding:14px 24px;font-size:12px;color:#888;text-align:center">
+        &copy; 2026 3 Lakes Logistics LLC &nbsp;|&nbsp; 661-466-9932
+      </div>
+    </div>
+    """
+
+    from ..settings import get_settings
+    import httpx
+    s = get_settings()
+    if not s.postmark_server_token:
+        log.warning("Postmark not configured — rate confirmation email not sent")
+        return {"ok": False, "reason": "postmark_not_configured"}
+
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            resp = await client.post(
+                "https://api.postmarkapp.com/email",
+                headers={"X-Postmark-Server-Token": s.postmark_server_token, "Content-Type": "application/json"},
+                json={
+                    "From":          s.postmark_from_email,
+                    "To":            body.to_email,
+                    "Subject":       f"Rate Confirmation — Load #{load.get('load_number','N/A')} — 3 Lakes Logistics",
+                    "HtmlBody":      html,
+                    "TextBody":      f"Rate Confirmation\nLoad #{load.get('load_number','—')}\n{origin} → {dest}\nRate: {rate}\nDispatch Fee: {fee}\n\n3 Lakes Logistics\n661-466-9932",
+                    "MessageStream": "outbound",
+                    "Tag":           "rate-confirmation",
+                },
+            )
+            if resp.status_code != 200:
+                log.error("Postmark rate-con send failed: %s", resp.text)
+                return {"ok": False, "reason": resp.text}
+    except Exception as exc:
+        log.error("Rate confirmation email send failed: %s", exc)
+        return {"ok": False, "reason": str(exc)}
+
+    log.info("Rate confirmation sent for load %s to %s", body.load_id, body.to_email)
+    return {"ok": True, "load_id": body.load_id, "to": body.to_email}

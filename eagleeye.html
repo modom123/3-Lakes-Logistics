@@ -19007,7 +19007,7 @@ async function initMillionBlueprint(){
   // Pull live driver counts from DB
   let drivers=[];
   try{
-    const res=await apiFetch('/api/lf/drivers?limit=500');
+    const res=await apiFetch('/api/light-fleet/drivers?limit=500');
     if(res.ok){const d=await res.json();drivers=Array.isArray(d)?d:(d.drivers||d.items||[]);}
   }catch{}
 
