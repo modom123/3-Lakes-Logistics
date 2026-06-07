@@ -158,44 +158,71 @@ def process_intake(payload: dict[str, Any]) -> dict[str, Any]:
     # ── Create driver row (status=pending_screening) ──────────────────────────
     driver_id = None
     _db_error: str | None = None
+    _is_existing = False
     if sb is None:
         _db_error = "supabase_unavailable: check SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY env vars on Render"
     if sb:
         try:
-            first, last = _split_name(name)
-            row: dict = {
-                "name": name,
-                "phone": phone,
-                "email": email,
-                "location": location,
-                "vehicle_year": int(vehicle_year) if vehicle_year else None,
-                "vehicle_make": vehicle_make,
-                "vehicle_model": vehicle_model,
-                "vehicle_type": vehicle_type,
-                "approved_services": services,
-                "license_number": license_number or None,
-                "license_state": license_state or None,
-                "clean_record": clean_record == "yes",
-                "has_insurance": has_insurance == "yes",
-                "referral_source": referral_source,
-                "notes": notes,
-                "status": "inactive",
-                "mvr_status": "pending",
-                "background_check_status": "pending",
-                "plan": "starter",
-            }
-            result = sb.table("light_vehicle_drivers").insert(row).execute()
-            driver_id = (result.data[0] or {}).get("id") if result.data else None
-            if not driver_id:
-                _db_error = f"insert returned no data (result.data={result.data!r})"
-            # Store platform preferences if the column exists (added by migration 019)
-            if driver_id and platforms_opted_in:
-                try:
-                    sb.table("light_vehicle_drivers").update(
-                        {"platforms_opted_in": platforms_opted_in}
-                    ).eq("id", str(driver_id)).execute()
-                except Exception:  # noqa: BLE001
-                    pass  # column not yet added — harmless
+            # Dedup check — look for an existing driver with the same email or phone
+            # before inserting to prevent duplicate records from repeated submissions.
+            existing = None
+            if email:
+                r = sb.table("light_vehicle_drivers").select("id,status").eq("email", email).limit(1).execute()
+                existing = (r.data or [None])[0]
+            if not existing and phone:
+                r = sb.table("light_vehicle_drivers").select("id,status").eq("phone", phone).limit(1).execute()
+                existing = (r.data or [None])[0]
+
+            if existing:
+                driver_id = existing.get("id")
+                _is_existing = True
+                # Refresh any new info they provided on re-submission
+                updates: dict = {
+                    "location": location,
+                    "vehicle_year": int(vehicle_year) if vehicle_year else None,
+                    "vehicle_make": vehicle_make,
+                    "vehicle_model": vehicle_model,
+                    "vehicle_type": vehicle_type,
+                    "approved_services": services,
+                    "clean_record": clean_record == "yes",
+                    "has_insurance": has_insurance == "yes",
+                    "notes": notes,
+                }
+                if license_number:
+                    updates["license_number"] = license_number
+                if license_state:
+                    updates["license_state"] = license_state
+                if platforms_opted_in:
+                    updates["platforms_opted_in"] = platforms_opted_in
+                sb.table("light_vehicle_drivers").update(updates).eq("id", str(driver_id)).execute()
+                log_agent(_NAME, "dedup_reuse", payload={"name": name, "driver_id": str(driver_id)})
+            else:
+                row: dict = {
+                    "name": name,
+                    "phone": phone,
+                    "email": email,
+                    "location": location,
+                    "vehicle_year": int(vehicle_year) if vehicle_year else None,
+                    "vehicle_make": vehicle_make,
+                    "vehicle_model": vehicle_model,
+                    "vehicle_type": vehicle_type,
+                    "approved_services": services,
+                    "license_number": license_number or None,
+                    "license_state": license_state or None,
+                    "clean_record": clean_record == "yes",
+                    "has_insurance": has_insurance == "yes",
+                    "referral_source": referral_source,
+                    "notes": notes,
+                    "status": "inactive",
+                    "mvr_status": "pending",
+                    "background_check_status": "pending",
+                    "plan": "starter",
+                    "platforms_opted_in": platforms_opted_in or None,
+                }
+                result = sb.table("light_vehicle_drivers").insert(row).execute()
+                driver_id = (result.data[0] or {}).get("id") if result.data else None
+                if not driver_id:
+                    _db_error = f"insert returned no data (result.data={result.data!r})"
         except Exception as e:  # noqa: BLE001
             _db_error = str(e)
             log_agent(_NAME, "db_error", error=_db_error)
