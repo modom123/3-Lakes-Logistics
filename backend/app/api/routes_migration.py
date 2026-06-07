@@ -7,6 +7,75 @@ from .deps import require_bearer
 
 router = APIRouter(dependencies=[Depends(require_bearer)])
 
+
+@router.post("/migrate/020-lf-dedup")
+def run_020_lf_dedup() -> dict:
+    """
+    Migration 020 — Remove duplicate light_vehicle_drivers rows.
+
+    Keeps the earliest record per email (then per phone), deletes the rest.
+    Safe to call multiple times — subsequent runs will find nothing to delete.
+
+    After this runs, apply the unique indexes manually in the Supabase SQL editor:
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_lvd_email_unique
+        ON light_vehicle_drivers (email) WHERE email IS NOT NULL AND email <> '';
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_lvd_phone_unique
+        ON light_vehicle_drivers (phone) WHERE phone IS NOT NULL AND phone <> '';
+    """
+    sb = get_supabase()
+    rows = sb.table("light_vehicle_drivers") \
+             .select("id,name,email,phone,created_at") \
+             .execute().data or []
+
+    deleted_ids: list[str] = []
+    seen_emails: dict[str, str] = {}   # email → first id seen
+    seen_phones: dict[str, str] = {}   # phone → first id seen
+
+    # Sort oldest first so we keep the earliest record
+    rows_sorted = sorted(rows, key=lambda r: (r.get("created_at") or "", r.get("id") or ""))
+
+    for r in rows_sorted:
+        rid = str(r.get("id") or "")
+        email = (r.get("email") or "").strip().lower()
+        phone = (r.get("phone") or "").strip()
+
+        if email:
+            if email in seen_emails:
+                deleted_ids.append(rid)
+                continue
+            seen_emails[email] = rid
+
+        if phone and rid not in deleted_ids:
+            if phone in seen_phones:
+                deleted_ids.append(rid)
+                continue
+            seen_phones[phone] = rid
+
+    removed = []
+    errors = []
+    for did in deleted_ids:
+        try:
+            sb.table("light_vehicle_drivers").delete().eq("id", did).execute()
+            removed.append(did)
+        except Exception as e:  # noqa: BLE001
+            errors.append(f"{did}: {str(e)[:100]}")
+
+    return {
+        "ok": True,
+        "total_before": len(rows),
+        "duplicates_found": len(deleted_ids),
+        "duplicates_removed": len(removed),
+        "remaining": len(rows) - len(removed),
+        "errors": errors,
+        "next_step": (
+            "Run these in Supabase SQL editor to lock in uniqueness:\n"
+            "CREATE UNIQUE INDEX IF NOT EXISTS idx_lvd_email_unique "
+            "ON light_vehicle_drivers (email) WHERE email IS NOT NULL AND email <> '';\n"
+            "CREATE UNIQUE INDEX IF NOT EXISTS idx_lvd_phone_unique "
+            "ON light_vehicle_drivers (phone) WHERE phone IS NOT NULL AND phone <> '';"
+        ),
+    }
+
 # Table names to try in order — handles different naming conventions
 _TABLE_CANDIDATES = [
     "Carrier Leads", "carrier leads", "Leads", "leads",
