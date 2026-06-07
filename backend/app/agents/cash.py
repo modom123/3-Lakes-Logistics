@@ -3,7 +3,7 @@
 Calculates driver earnings on completed trips, logs to ledger, and marks trips settled.
 
 Fee structure:
-  Starter plan  — 15% platform fee  (driver keeps 85%)
+  Starter plan  — 10% platform fee  (driver keeps 90%)
   Pro Fleet     — $199/mo + 5% fee  (driver keeps 95%)
   Add-On        — $99/mo + 5% fee   (driver keeps 95%)
 
@@ -26,10 +26,10 @@ _NAME = "cash"
 
 # Platform fee rates by driver plan
 _FEE_RATES = {
-    "starter":    0.15,
+    "starter":    0.10,
     "pro_fleet":  0.05,
     "add_on":     0.05,
-    "default":    0.15,
+    "default":    0.10,
 }
 
 
