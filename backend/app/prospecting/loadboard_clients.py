@@ -42,7 +42,9 @@ _RETRY_CODES = {429, 500, 502, 503, 504}
 @dataclass
 class SearchParams:
     origin_state: str
-    trailer_type: str           # "dry_van" | "reefer" | "flatbed" | ...
+    trailer_type: str           # "dry_van" | "reefer" | "flatbed" | "cargo_van" | ...
+    origin_city: str = ""       # optional city filter (e.g. "Portland")
+    origin_zip: str = ""        # optional ZIP for deadhead center (e.g. "97201")
     max_weight_lbs: int = 45000
     max_deadhead_mi: int = 150
     min_rate_per_mile: float = 2.10
@@ -245,12 +247,17 @@ def loadboard123_search(p: SearchParams) -> list[LoadResult]:
     if not s.loadboard_123_api_key:
         return []
     headers = {"X-API-Key": s.loadboard_123_api_key, "Accept": "application/json"}
-    body = _get("https://api.123loadboard.com/v3/loads", headers=headers, params={
+    params: dict = {
         "originState": p.origin_state,
-        "equipType": p.trailer_type,
+        "equipType": p.trailer_type or "cargo_van",
         "maxDeadhead": p.max_deadhead_mi,
         "limit": 50,
-    })
+    }
+    if p.origin_city:
+        params["originCity"] = p.origin_city
+    if p.origin_zip:
+        params["originZip"] = p.origin_zip
+    body = _get("https://api.123loadboard.com/v3/loads", headers=headers, params=params)
     if not body:
         return []
     loads = body if isinstance(body, list) else (body.get("loads") or [])

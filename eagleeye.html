@@ -769,6 +769,7 @@ select.form-input option{background:var(--surface);}
     <div class="sb-item" onclick="nav('carriers')"><span class="sb-icon">👥</span> Carriers <span class="sb-badge" id="carrier-notif" style="display:none">●</span></div>
     <div class="sb-item" onclick="nav('drivers')"><span class="sb-icon">🪪</span> Drivers <span class="sb-badge" id="drv-notif" style="display:none">●</span></div>
     <div class="sb-item" onclick="nav('loads')"><span class="sb-icon">📦</span> Load Manager</div>
+    <div class="sb-item" onclick="nav('load-hunter')" style="position:relative"><span class="sb-icon">🎯</span> Load Hunter <span class="sb-badge" id="lh-notif" style="display:none;background:#ef4444;color:#fff;animation:pulse 1s infinite">0</span></div>
     <div class="sb-item" onclick="nav('invoices')"><span class="sb-icon">🧾</span> Invoices <span class="sb-badge" id="invoice-notif" style="display:none">●</span></div>
   </div>
 
@@ -1252,6 +1253,200 @@ select.form-input option{background:var(--surface);}
         </div>
       </div>
     </div>
+
+    <!-- ═══ LOAD HUNTER ═══ -->
+    <div class="page" id="page-load-hunter">
+    <style>
+    .lh-wrap{padding:20px;max-width:1400px;margin:0 auto}
+    .lh-hero{background:linear-gradient(135deg,#0f172a,#1c1917);border-radius:14px;padding:24px 28px;margin-bottom:18px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px}
+    .lh-hero-left .tag{font-size:10px;font-weight:800;letter-spacing:2px;color:#ef4444;text-transform:uppercase;margin-bottom:6px}
+    .lh-hero-left h2{font-size:22px;font-weight:900;color:#fff;margin:0 0 4px;font-family:var(--ff-h)}
+    .lh-hero-left .sub{font-size:12px;color:rgba(255,255,255,.5)}
+    .lh-hunt-btn{background:#ef4444;color:#fff;border:none;border-radius:10px;padding:14px 32px;font-size:16px;font-weight:800;cursor:pointer;font-family:var(--ff-h);transition:all .2s;display:flex;align-items:center;gap:8px}
+    .lh-hunt-btn:hover{background:#dc2626;transform:scale(1.03)}
+    .lh-hunt-btn:disabled{background:#555;cursor:not-allowed;transform:none}
+    .lh-hunt-btn.hunting{animation:lh-pulse 0.8s infinite}
+    @keyframes lh-pulse{0%,100%{opacity:1}50%{opacity:.6}}
+
+    .lh-stats{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+    .lh-stat{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 18px;min-width:100px;text-align:center}
+    .lh-stat .v{font-size:22px;font-weight:900;font-family:var(--ff-h)}
+    .lh-stat .l{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-top:2px}
+    .lh-stat.hot .v{color:#ef4444}
+    .lh-stat.good .v{color:#22c55e}
+    .lh-stat.gold .v{color:#f59e0b}
+
+    .lh-controls{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin-bottom:18px}
+    .lh-ctrl-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px 18px}
+    .lh-ctrl-card h4{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;margin:0 0 12px;color:var(--muted)}
+    .lh-form-row{display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap}
+    .lh-form-row label{font-size:11px;font-weight:700;min-width:80px;color:var(--text)}
+    .lh-form-row input,.lh-form-row select{flex:1;padding:6px 8px;font-size:12px;border:1px solid var(--border);border-radius:6px;background:var(--surface);min-width:80px}
+    .lh-board-toggle{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:6px;border:1px solid var(--border);font-size:11px;font-weight:700;cursor:pointer;background:var(--surface);transition:all .15s}
+    .lh-board-toggle.active{background:#1e288b;color:#fff;border-color:#1e288b}
+    .lh-boards-row{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
+    .lh-auto-row{display:flex;align-items:center;gap:10px;margin-top:8px}
+    .lh-toggle{width:40px;height:20px;border-radius:99px;background:var(--border);cursor:pointer;position:relative;transition:background .2s;flex-shrink:0}
+    .lh-toggle.on{background:#22c55e}
+    .lh-toggle::after{content:'';width:16px;height:16px;border-radius:50%;background:#fff;position:absolute;top:2px;left:2px;transition:left .2s;box-shadow:0 1px 3px rgba(0,0,0,.3)}
+    .lh-toggle.on::after{left:22px}
+
+    .lh-table-wrap{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+    .lh-table-hdr{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
+    .lh-table{width:100%;border-collapse:collapse;font-size:12px}
+    .lh-table th{padding:8px 10px;text-align:left;background:var(--border);font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);font-weight:700}
+    .lh-table td{padding:9px 10px;border-bottom:1px solid var(--border)}
+    .lh-table tr:last-child td{border-bottom:none}
+    .lh-table tr:hover td{background:rgba(0,0,0,.03)}
+    .lh-rpm{font-weight:800;font-size:13px;font-family:var(--ff-m)}
+    .lh-rpm.hot{color:#ef4444}
+    .lh-rpm.good{color:#16a34a}
+    .lh-rpm.ok{color:#f59e0b}
+    .lh-hot-badge{background:#ef4444;color:#fff;font-size:9px;font-weight:800;padding:2px 5px;border-radius:4px;margin-left:4px;letter-spacing:.5px;text-transform:uppercase}
+    .lh-source-badge{display:inline-block;font-size:9px;font-weight:800;padding:2px 6px;border-radius:4px;text-transform:uppercase;letter-spacing:.5px}
+    .lh-source-123{background:rgba(99,102,241,.15);color:#6366f1}
+    .lh-source-dat{background:rgba(245,158,11,.15);color:#92400e}
+    .lh-source-truckstop{background:rgba(34,197,94,.15);color:#15803d}
+    .lh-source-truckerpath{background:rgba(239,68,68,.15);color:#dc2626}
+    .lh-no-results{padding:48px 20px;text-align:center;color:var(--muted)}
+    .lh-no-results .icon{font-size:40px;margin-bottom:8px}
+
+    .lh-profile-tabs{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+    .lh-profile-tab{padding:8px 18px;border-radius:8px;border:1px solid var(--border);font-size:12px;font-weight:700;cursor:pointer;background:var(--surface);transition:all .15s}
+    .lh-profile-tab.active{background:#1e288b;color:#fff;border-color:#1e288b}
+    </style>
+
+    <div class="lh-wrap">
+
+      <!-- Hero -->
+      <div class="lh-hero">
+        <div class="lh-hero-left">
+          <div class="tag">⚡ Relentless — Scanning Every 3 Minutes</div>
+          <h2>🎯 Load Hunter</h2>
+          <div class="sub">Monitors 123loadboard, DAT, Truckstop, TruckerPath simultaneously. Alerts on hot loads instantly.</div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:10px">
+          <button class="lh-hunt-btn" id="lh-hunt-now-btn" onclick="lhHuntNow()">
+            <span id="lh-btn-icon">🎯</span> <span id="lh-btn-text">Hunt Now</span>
+          </button>
+          <div style="font-size:11px;color:rgba(255,255,255,.4);text-align:right">Last hunt: <span id="lh-last-hunt-time">—</span></div>
+        </div>
+      </div>
+
+      <!-- Profile Tabs -->
+      <div class="lh-profile-tabs">
+        <div class="lh-profile-tab active" id="lh-tab-light" onclick="lhSetProfile('light')">🚐 Light Fleet (Portland)</div>
+        <div class="lh-profile-tab" id="lh-tab-heavy" onclick="lhSetProfile('heavy')">🚛 Heavy Fleet (Portland)</div>
+        <div class="lh-profile-tab" id="lh-tab-custom" onclick="lhSetProfile('custom')">⚙️ Custom</div>
+      </div>
+
+      <!-- Stats -->
+      <div class="lh-stats">
+        <div class="lh-stat hot"><div class="v" id="lh-stat-hot">0</div><div class="l">🔥 HOT Loads</div></div>
+        <div class="lh-stat good"><div class="v" id="lh-stat-total">0</div><div class="l">Total Hits</div></div>
+        <div class="lh-stat gold"><div class="v" id="lh-stat-boards">0</div><div class="l">Boards Live</div></div>
+        <div class="lh-stat"><div class="v" id="lh-stat-origin">—</div><div class="l">Origin</div></div>
+        <div class="lh-stat"><div class="v" id="lh-stat-dh">—</div><div class="l">Max DH</div></div>
+        <div class="lh-stat"><div class="v" id="lh-stat-rpm">—</div><div class="l">Min RPM</div></div>
+      </div>
+
+      <!-- Controls -->
+      <div class="lh-controls">
+        <div class="lh-ctrl-card">
+          <h4>🔍 Search Criteria</h4>
+          <div class="lh-form-row">
+            <label>Origin City</label>
+            <input id="lh-origin-city" type="text" value="Portland">
+          </div>
+          <div class="lh-form-row">
+            <label>State</label>
+            <input id="lh-origin-state" type="text" value="OR" style="max-width:60px">
+            <label style="min-width:40px">ZIP</label>
+            <input id="lh-origin-zip" type="text" value="97201" style="max-width:80px">
+          </div>
+          <div class="lh-form-row">
+            <label>Max DH (mi)</label>
+            <input id="lh-max-dh" type="number" value="100" min="10" max="500">
+          </div>
+          <div class="lh-form-row">
+            <label>Min RPM ($)</label>
+            <input id="lh-min-rpm" type="number" value="1.00" step="0.10" min="0.50">
+          </div>
+          <div class="lh-form-row">
+            <label>Hot RPM ($)</label>
+            <input id="lh-hot-rpm" type="number" value="2.00" step="0.10" min="1.00">
+          </div>
+          <div class="lh-form-row">
+            <label>Equipment</label>
+            <select id="lh-trailer-type">
+              <option value="cargo_van">Cargo Van</option>
+              <option value="suv">SUV</option>
+              <option value="dry_van">Dry Van (53ft)</option>
+              <option value="reefer">Reefer</option>
+              <option value="flatbed">Flatbed</option>
+              <option value="step_deck">Step Deck</option>
+              <option value="power_only">Power Only</option>
+              <option value="hotshot">Hotshot</option>
+            </select>
+          </div>
+          <button class="btn-gold" style="width:100%;margin-top:8px;font-size:12px" onclick="lhSaveConfig()">💾 Save Config</button>
+        </div>
+
+        <div class="lh-ctrl-card">
+          <h4>📡 Load Boards</h4>
+          <div class="lh-boards-row" id="lh-boards-row">
+            <div class="lh-board-toggle active" id="lh-board-123loadboard" onclick="lhToggleBoard('123loadboard')">123Loadboard</div>
+            <div class="lh-board-toggle active" id="lh-board-dat" onclick="lhToggleBoard('dat')">DAT</div>
+            <div class="lh-board-toggle active" id="lh-board-truckstop" onclick="lhToggleBoard('truckstop')">Truckstop</div>
+            <div class="lh-board-toggle active" id="lh-board-truckerpath" onclick="lhToggleBoard('truckerpath')">TruckerPath</div>
+          </div>
+          <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border)">
+            <h4 style="margin-bottom:8px">⏱️ Auto Hunt</h4>
+            <div class="lh-auto-row">
+              <div class="lh-toggle" id="lh-auto-toggle" onclick="lhToggleAuto()"></div>
+              <span style="font-size:12px">Hunt every <strong id="lh-auto-interval">3</strong> min while open</span>
+            </div>
+            <div class="lh-auto-row" style="margin-top:6px">
+              <span style="font-size:11px;color:var(--muted)">Alert on HOT loads (≥ <span id="lh-hot-rpm-display">$2.00</span>/mi):</span>
+              <div class="lh-toggle on" id="lh-alert-toggle" onclick="this.classList.toggle('on')"></div>
+            </div>
+          </div>
+          <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border)">
+            <h4 style="margin-bottom:6px">📊 Board Status</h4>
+            <div id="lh-board-status" style="font-size:11px;color:var(--muted)">Run a hunt to see board status</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Results table -->
+      <div class="lh-table-wrap">
+        <div class="lh-table-hdr">
+          <div>
+            <span style="font-weight:800;font-size:14px">Live Results</span>
+            <span style="font-size:11px;color:var(--muted);margin-left:8px" id="lh-results-label"></span>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <input type="text" id="lh-search" placeholder="🔍 Filter results…" oninput="lhFilter()" style="padding:5px 10px;font-size:12px;border:1px solid var(--border);border-radius:6px;background:var(--surface);width:160px">
+            <select id="lh-filter-source" onchange="lhFilter()" style="padding:5px 8px;font-size:11px;border:1px solid var(--border);border-radius:6px;background:var(--surface)">
+              <option value="">All Boards</option>
+              <option value="123loadboard">123Loadboard</option>
+              <option value="dat">DAT</option>
+              <option value="truckstop">Truckstop</option>
+              <option value="truckerpath">TruckerPath</option>
+            </select>
+            <label style="font-size:11px;display:flex;align-items:center;gap:4px;cursor:pointer">
+              <input type="checkbox" id="lh-filter-hot" onchange="lhFilter()"> 🔥 HOT only
+            </label>
+            <button class="btn-out" style="font-size:11px;padding:4px 10px" onclick="lhLoadResults()">↻</button>
+          </div>
+        </div>
+        <div id="lh-table-body">
+          <div class="lh-no-results"><div class="icon">🎯</div><div>Hit <strong>Hunt Now</strong> to start scanning boards</div><div style="font-size:11px;margin-top:4px;color:var(--muted)">Auto-scan runs every 3 minutes in the background</div></div>
+        </div>
+      </div>
+
+    </div><!-- /lh-wrap -->
+    </div><!-- /page-load-hunter -->
 
     <!-- INVOICES -->
     <div class="page" id="page-invoices">
@@ -3945,7 +4140,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 let allCarriers=[], allLoads=[], allInvoices=[], currentInvFilter='all', loadCounter=3849;
 
-const pageNames={dashboard:'Dashboard',dispatch:'Dispatch Board','fleet-map':'Fleet Map',carriers:'Carriers',drivers:'Drivers',loads:'Load Manager',invoices:'Invoices & Billing',compliance:'DOT Compliance',ifta:'IFTA / Permits',insurance:'Insurance',revenue:'Revenue Tracker',providers:'Compliance Providers',checklist:'Daily Checklist',notes:'Dispatcher Notes',reports:'Team Reports','exec-command':'Exec Command',agents:'AI Agents',founders:'Founders Program',crm:'Lead CRM',leads:'Lead Pipeline',execution:'Execution Engine',factoring:'Factoring',email:'Email Center',vault:'Document Vault',clm:'CLM Scanner',ledger:'Atomic Ledger',agreements:'Agreements','lf-map':'Light Fleet Live Map','lf-nemt':'NEMT — Medical Transport','lf-medical':'Medical Courier','lf-executive':'Executive Transport','lf-courier':'Courier & Last-Mile','lf-gig':'Gig Fleet Management','lf-bizdev':'Light Fleet — Business Development','lf-million':'Light Fleet — $1M Blueprint','mark-office':'Mark Odom — CEO Office','ccg-office':'CC Gulley Office','trading-desk':'Trading Desk','broker-division':'N. American Trading — Hub','broker-shippers':'Shipper Pipeline','broker-docs':'Docs & Invoices','trading-desk':'Trading Desk',costs:'Cost Tracking — IEBC','tech-monitor':'Tech Monitor — Marcus Reid & Jamie Park'};
+const pageNames={dashboard:'Dashboard',dispatch:'Dispatch Board','fleet-map':'Fleet Map',carriers:'Carriers',drivers:'Drivers',loads:'Load Manager',invoices:'Invoices & Billing',compliance:'DOT Compliance',ifta:'IFTA / Permits',insurance:'Insurance',revenue:'Revenue Tracker',providers:'Compliance Providers',checklist:'Daily Checklist',notes:'Dispatcher Notes',reports:'Team Reports','exec-command':'Exec Command',agents:'AI Agents',founders:'Founders Program',crm:'Lead CRM',leads:'Lead Pipeline',execution:'Execution Engine',factoring:'Factoring',email:'Email Center',vault:'Document Vault',clm:'CLM Scanner',ledger:'Atomic Ledger',agreements:'Agreements','lf-map':'Light Fleet Live Map','lf-nemt':'NEMT — Medical Transport','lf-medical':'Medical Courier','lf-executive':'Executive Transport','lf-courier':'Courier & Last-Mile','lf-gig':'Gig Fleet Management','lf-bizdev':'Light Fleet — Business Development','lf-million':'Light Fleet — $1M Blueprint','load-hunter':'Load Hunter — Live Board Scanner','mark-office':'Mark Odom — CEO Office','ccg-office':'CC Gulley Office','trading-desk':'Trading Desk','broker-division':'N. American Trading — Hub','broker-shippers':'Shipper Pipeline','broker-docs':'Docs & Invoices','trading-desk':'Trading Desk',costs:'Cost Tracking — IEBC','tech-monitor':'Tech Monitor — Marcus Reid & Jamie Park'};
 
 // ── 3 Lakes Logistics Backend API (FastAPI) ──
 const API_BASE = (window.__3LL_API_BASE || 'https://three-lakes-logistics-api.onrender.com').replace(/\/$/,'');
@@ -4084,6 +4279,7 @@ function nav(id){
   if(id==='lf-gig'){lfRunExpert('morgan_hayes','gig');}
   if(id==='lf-bizdev'){initLfBizDev();}
   if(id==='lf-million'){initMillionBlueprint();}
+  if(id==='load-hunter'){initLoadHunter();}
   if(id==='execution'){loadExecutionDomains();loadExecutionSteps();}
   if(id==='email'&&typeof mailInit==='function'){mailInit();}
   if(id==='costs'){loadCostData();}
@@ -20550,6 +20746,307 @@ async function runTechAgent(agentName, payload) {
     toast(`${agentName} run failed`, 'error');
   }
 }
+
+// ── LOAD HUNTER ──────────────────────────────────────────────────────────────
+let _lhAllLoads = [];
+let _lhAutoTimer = null;
+let _lhActiveBoardsList = ['123loadboard','dat','truckstop','truckerpath'];
+
+const LH_PROFILES = {
+  light: {
+    origin_city:'Portland', origin_state:'OR', origin_zip:'97201',
+    max_dh_miles:100, min_rpm:1.00, hot_rpm:2.00, trailer_type:'cargo_van',
+    boards:['123loadboard','dat','truckstop','truckerpath']
+  },
+  heavy: {
+    origin_city:'Portland', origin_state:'OR', origin_zip:'97201',
+    max_dh_miles:150, min_rpm:2.10, hot_rpm:3.00, trailer_type:'dry_van',
+    boards:['dat','truckstop','truckerpath']
+  }
+};
+
+async function initLoadHunter() {
+  try {
+    const st = await apiFetch('/api/load-hunter/status');
+    if (st.config) _lhApplyConfig(st.config);
+    const lastAt = st.last_hunt?.at || st.last_hunt;
+    if (lastAt && typeof lastAt === 'string') {
+      const t = new Date(lastAt);
+      const el = document.getElementById('lh-last-hunt-time');
+      if (el) el.textContent = t.toLocaleTimeString();
+    }
+    await lhLoadResults();
+  } catch(e) {
+    console.warn('Load Hunter init:', e);
+  }
+}
+
+function _lhApplyConfig(cfg) {
+  const set = (id, v) => { const el=document.getElementById(id); if(el && v!==undefined) el.value=v; };
+  set('lh-origin-city', cfg.origin_city);
+  set('lh-origin-state', cfg.origin_state);
+  set('lh-origin-zip', cfg.origin_zip);
+  set('lh-max-dh', cfg.max_dh_miles);
+  set('lh-min-rpm', cfg.min_rpm);
+  set('lh-hot-rpm', cfg.hot_rpm);
+  set('lh-trailer-type', cfg.trailer_type);
+  if (cfg.boards) {
+    _lhActiveBoardsList = [...cfg.boards];
+    ['123loadboard','dat','truckstop','truckerpath'].forEach(b => {
+      const el = document.getElementById('lh-board-'+b);
+      if (el) el.classList.toggle('active', _lhActiveBoardsList.includes(b));
+    });
+  }
+  const stat = document.getElementById('lh-stat-origin');
+  if (stat) stat.textContent = (cfg.origin_city||'') + (cfg.origin_state ? ', '+cfg.origin_state : '');
+  const dh = document.getElementById('lh-stat-dh');
+  if (dh) dh.textContent = (cfg.max_dh_miles||'—') + ' mi';
+  const rpm = document.getElementById('lh-stat-rpm');
+  if (rpm) rpm.textContent = '$' + (cfg.min_rpm||'—');
+  const hotDisp = document.getElementById('lh-hot-rpm-display');
+  if (hotDisp) hotDisp.textContent = '$' + (cfg.hot_rpm||2.00).toFixed(2);
+}
+
+function _lhReadForm() {
+  const g = id => document.getElementById(id);
+  return {
+    origin_city:  g('lh-origin-city')?.value  || 'Portland',
+    origin_state: g('lh-origin-state')?.value || 'OR',
+    origin_zip:   g('lh-origin-zip')?.value   || '97201',
+    max_dh_miles: parseInt(g('lh-max-dh')?.value || '100'),
+    min_rpm:      parseFloat(g('lh-min-rpm')?.value || '1.00'),
+    hot_rpm:      parseFloat(g('lh-hot-rpm')?.value || '2.00'),
+    trailer_type: g('lh-trailer-type')?.value || 'cargo_van',
+    boards:       [..._lhActiveBoardsList],
+  };
+}
+
+async function lhHuntNow() {
+  const btn = document.getElementById('lh-hunt-now-btn');
+  const icon = document.getElementById('lh-btn-icon');
+  const txt  = document.getElementById('lh-btn-text');
+  if (btn) { btn.disabled = true; btn.classList.add('hunting'); }
+  if (icon) icon.textContent = '⏳';
+  if (txt)  txt.textContent  = 'Hunting…';
+
+  const cfg = _lhReadForm();
+  _lhApplyConfig(cfg);
+
+  try {
+    const res = await apiFetch('/api/load-hunter/hunt', {
+      method: 'POST',
+      body: JSON.stringify(cfg),
+    });
+    const loads = res.loads || [];
+    const hot   = res.hot   !== undefined ? res.hot   : loads.filter(l=>l.is_hot).length;
+    const total = res.total !== undefined ? res.total : loads.length;
+
+    // update stats
+    const setEl = (id,v) => { const e=document.getElementById(id); if(e) e.textContent=v; };
+    setEl('lh-stat-hot', hot);
+    setEl('lh-stat-total', total);
+    setEl('lh-stat-boards', cfg.boards.length);
+    setEl('lh-last-hunt-time', new Date().toLocaleTimeString());
+    setEl('lh-results-label', `${total} loads found — ${hot} HOT`);
+
+    // update board status (res.boards is {board: count})
+    const boardStatus = document.getElementById('lh-board-status');
+    if (boardStatus && res.boards) {
+      boardStatus.innerHTML = Object.entries(res.boards).map(([b,cnt])=>
+        `<div style="display:flex;justify-content:space-between;margin-bottom:2px">
+          <span>${b}</span>
+          <span style="color:${cnt>0?'#22c55e':'#ef4444'}">${cnt>0 ? cnt+' loads' : 'no results'}</span>
+        </div>`
+      ).join('');
+    }
+
+    // update notification badge
+    const badge = document.getElementById('lh-notif');
+    if (badge) {
+      if (hot > 0) { badge.textContent = hot; badge.style.display='inline-flex'; }
+      else badge.style.display = 'none';
+    }
+
+    // alert on hot loads if toggle is on
+    if (hot > 0 && document.getElementById('lh-alert-toggle')?.classList.contains('on')) {
+      toast(`🔥 ${hot} HOT load${hot>1?'s':''} found! Check Load Hunter.`, 'success');
+    }
+
+    // reload full results from DB (freshest data)
+    await lhLoadResults();
+
+  } catch(e) {
+    toast('Load Hunter hunt failed: ' + e.message, 'error');
+    const boardStatus = document.getElementById('lh-board-status');
+    if (boardStatus) boardStatus.innerHTML = `<span style="color:#ef4444">Hunt error: ${e.message}</span>`;
+  } finally {
+    if (btn) { btn.disabled = false; btn.classList.remove('hunting'); }
+    if (icon) icon.textContent = '🎯';
+    if (txt)  txt.textContent  = 'Hunt Now';
+  }
+}
+
+function lhSetProfile(profile) {
+  // update tab active state
+  ['light','heavy','custom'].forEach(p => {
+    const el = document.getElementById('lh-tab-'+p);
+    if (el) el.classList.toggle('active', p===profile);
+  });
+
+  if (profile === 'custom') return; // leave form as-is
+
+  const cfg = LH_PROFILES[profile];
+  if (!cfg) return;
+
+  _lhActiveBoardsList = [...cfg.boards];
+  _lhApplyConfig(cfg);
+
+  // sync form fields directly
+  const set = (id,v) => { const el=document.getElementById(id); if(el) el.value=v; };
+  set('lh-origin-city', cfg.origin_city);
+  set('lh-origin-state', cfg.origin_state);
+  set('lh-origin-zip', cfg.origin_zip);
+  set('lh-max-dh', cfg.max_dh_miles);
+  set('lh-min-rpm', cfg.min_rpm.toFixed(2));
+  set('lh-hot-rpm', cfg.hot_rpm.toFixed(2));
+  set('lh-trailer-type', cfg.trailer_type);
+  // update board toggles
+  ['123loadboard','dat','truckstop','truckerpath'].forEach(b => {
+    const el = document.getElementById('lh-board-'+b);
+    if (el) el.classList.toggle('active', _lhActiveBoardsList.includes(b));
+  });
+}
+
+function lhToggleBoard(board) {
+  const idx = _lhActiveBoardsList.indexOf(board);
+  if (idx >= 0) {
+    if (_lhActiveBoardsList.length <= 1) { toast('Keep at least one board active', 'warn'); return; }
+    _lhActiveBoardsList.splice(idx, 1);
+  } else {
+    _lhActiveBoardsList.push(board);
+  }
+  const el = document.getElementById('lh-board-'+board);
+  if (el) el.classList.toggle('active', _lhActiveBoardsList.includes(board));
+  document.getElementById('lh-stat-boards').textContent = _lhActiveBoardsList.length;
+  // switch to custom tab since user modified
+  ['light','heavy','custom'].forEach(p => {
+    const t = document.getElementById('lh-tab-'+p);
+    if (t) t.classList.toggle('active', p==='custom');
+  });
+}
+
+function lhToggleAuto() {
+  const tog = document.getElementById('lh-auto-toggle');
+  if (!tog) return;
+  const isOn = tog.classList.toggle('on');
+  if (isOn) {
+    const intervalMin = 3;
+    _lhAutoTimer = setInterval(() => lhHuntNow(), intervalMin * 60 * 1000);
+    toast('Auto-hunt enabled — scanning every 3 min', 'success');
+  } else {
+    if (_lhAutoTimer) { clearInterval(_lhAutoTimer); _lhAutoTimer = null; }
+    toast('Auto-hunt disabled', 'info');
+  }
+}
+
+async function lhSaveConfig() {
+  const cfg = _lhReadForm();
+  try {
+    await apiFetch('/api/load-hunter/config', { method:'POST', body:JSON.stringify(cfg) });
+    toast('Hunt config saved', 'success');
+  } catch(e) {
+    toast('Save failed: ' + e.message, 'error');
+  }
+}
+
+async function lhLoadResults(limit=200) {
+  try {
+    const res = await apiFetch(`/api/load-hunter/results?limit=${limit}`);
+    _lhAllLoads = res.loads || [];
+    lhFilter();
+    const label = document.getElementById('lh-results-label');
+    if (label) label.textContent = `${_lhAllLoads.length} loads in database`;
+  } catch(e) {
+    console.warn('lhLoadResults error:', e);
+  }
+}
+
+function lhFilter() {
+  const q     = (document.getElementById('lh-search')?.value || '').toLowerCase();
+  const src   = document.getElementById('lh-filter-source')?.value || '';
+  const hotOnly = document.getElementById('lh-filter-hot')?.checked || false;
+
+  let rows = _lhAllLoads;
+  if (q) rows = rows.filter(l =>
+    (l.origin_city||'').toLowerCase().includes(q) ||
+    (l.dest_city||'').toLowerCase().includes(q) ||
+    (l.broker_name||'').toLowerCase().includes(q) ||
+    (l.source||'').toLowerCase().includes(q)
+  );
+  if (src)     rows = rows.filter(l => l.source === src);
+  if (hotOnly) rows = rows.filter(l => l.is_hot);
+
+  _lhRenderTable(rows);
+  const label = document.getElementById('lh-results-label');
+  if (label) label.textContent = `${rows.length} of ${_lhAllLoads.length} loads`;
+}
+
+function _lhRenderTable(loads) {
+  const wrap = document.getElementById('lh-table-body');
+  if (!wrap) return;
+  if (!loads || loads.length === 0) {
+    wrap.innerHTML = `<div class="lh-no-results"><div class="icon">🎯</div><div>No loads match your filter</div><div style="font-size:11px;margin-top:4px;color:var(--muted)">Try a broader search or hit Hunt Now</div></div>`;
+    return;
+  }
+  const fmt$ = v => v ? '$'+Number(v).toLocaleString() : '—';
+  const fmtRpm = rpm => {
+    if (!rpm) return '<span class="lh-rpm ok">—</span>';
+    const r = parseFloat(rpm);
+    const hotRpm = parseFloat(document.getElementById('lh-hot-rpm')?.value || '2.00');
+    const minRpm = parseFloat(document.getElementById('lh-min-rpm')?.value || '1.00');
+    const cls = r >= hotRpm ? 'hot' : r >= minRpm ? 'good' : 'ok';
+    return `<span class="lh-rpm ${cls}">$${r.toFixed(2)}</span>`;
+  };
+  const srcBadge = s => {
+    const k = (s||'').toLowerCase().replace(/[^a-z0-9]/g,'');
+    const map = {'123loadboard':'123','dat':'DAT','truckstop':'TS','truckerpath':'TP'};
+    return `<span class="lh-source-badge lh-source-${k}">${map[k]||s||'?'}</span>`;
+  };
+  const fmtDate = d => {
+    if (!d) return '—';
+    try { return new Date(d).toLocaleDateString('en-US',{month:'short',day:'numeric'}); } catch{ return d; }
+  };
+
+  const rows = loads.map(l => {
+    const hotBadge = l.is_hot ? '<span class="lh-hot-badge">HOT</span>' : '';
+    const rate = l.rate_total ? fmt$(l.rate_total) : '—';
+    const orig = [l.origin_city, l.origin_state].filter(Boolean).join(', ') || '—';
+    const dest = [l.dest_city,   l.dest_state  ].filter(Boolean).join(', ') || '—';
+    return `<tr>
+      <td>${srcBadge(l.source)}</td>
+      <td>${orig}</td>
+      <td>${dest}</td>
+      <td>${l.miles ? Math.round(l.miles)+' mi' : '—'}</td>
+      <td>${rate}</td>
+      <td>${fmtRpm(l.rpm)}${hotBadge}</td>
+      <td style="font-size:11px;color:var(--muted)">${l.trailer_type||'—'}</td>
+      <td style="font-size:11px">${l.broker_name||'—'}</td>
+      <td style="font-size:11px;color:var(--muted)">${fmtDate(l.pickup_date)}</td>
+      <td style="font-size:11px;color:var(--muted)">${fmtDate(l.found_at)}</td>
+    </tr>`;
+  }).join('');
+
+  wrap.innerHTML = `<table class="lh-table">
+    <thead><tr>
+      <th>Board</th><th>Origin</th><th>Dest</th><th>Miles</th>
+      <th>Rate</th><th>RPM</th><th>Equipment</th><th>Broker</th>
+      <th>Pickup</th><th>Found</th>
+    </tr></thead>
+    <tbody>${rows}</tbody>
+  </table>`;
+}
+// ── END LOAD HUNTER ───────────────────────────────────────────────────────────
+
 </script>
 
 </html>

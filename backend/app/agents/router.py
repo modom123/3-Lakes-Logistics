@@ -6,9 +6,9 @@ from typing import Any, Callable
 from . import (
     alexander, atlas, audit, beacon, bond_courier, casey, cash, chloe_sinclair, diana_cole,
     drew, dr_james_nemt, echo, elena_ross, felix_grant, isabella, jamie_park, james_bond,
-    jordan, kai, katerina, lucas_sterling, marcus_reid, maya, morgan_hayes, naomi, nova,
-    orbit, outside_bond, penny, pulse, quinn, rex, rio, scout, settler, shield, signal,
-    sofia, sonny, technical_team, vance, victor_nash, victoria, winston,
+    jordan, kai, katerina, load_hunter, lucas_sterling, marcus_reid, maya, morgan_hayes,
+    naomi, nova, orbit, outside_bond, penny, pulse, quinn, rex, rio, scout, settler, shield,
+    signal, sofia, sonny, technical_team, vance, victor_nash, victoria, winston,
 )
 
 _DISPATCH: dict[str, Callable[[dict[str, Any]], dict[str, Any]]] = {
@@ -41,6 +41,8 @@ _DISPATCH: dict[str, Callable[[dict[str, Any]], dict[str, Any]]] = {
     "chloe_sinclair":   chloe_sinclair.run,
     "marcus_reid":      marcus_reid.run,
     "jamie_park":       jamie_park.run,
+    # ── Load Hunter ──
+    "load_hunter":    load_hunter.run,
     # ── Light Fleet workers ──
     "maya":           maya.run,
     "kai":            kai.run,

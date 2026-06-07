@@ -41,6 +41,7 @@ from .api import (
     driver_auth_router,
     driver_router,
     driver_messages_router,
+    load_hunter_router,
     email_router,
     email_ingest_router,
     executives_router,
@@ -134,6 +135,16 @@ def _start_scheduler(app: FastAPI) -> None:
         scheduler.add_job(fire_iebc_weekly_report, CronTrigger(day_of_week="mon", hour=9, minute=30), id="iebc_weekly_report", replace_existing=True)
         scheduler.add_job(fire_jamie_park, CronTrigger(hour=7, minute=50), id="jamie_park_daily", replace_existing=True)
         scheduler.add_job(fire_marcus_reid, CronTrigger(day_of_week="fri", hour=6, minute=0), id="marcus_reid_weekly", replace_existing=True)
+
+        def _fire_load_hunt():
+            try:
+                from .agents.load_hunter import hunt
+                result = hunt()
+                log.info("Scheduled load hunt: %s loads found (%s HOT)", result.get("total", 0), result.get("hot", 0))
+            except Exception as exc:
+                log.warning("Scheduled load hunt failed: %s", exc)
+
+        scheduler.add_job(_fire_load_hunt, IntervalTrigger(minutes=3), id="load_hunter_scan", replace_existing=True)
 
         scheduler.start()
         app.state.scheduler = scheduler
@@ -240,6 +251,7 @@ def create_app() -> FastAPI:
     app.include_router(driver_auth_router,     prefix="/api",              tags=["driver-auth"])
     app.include_router(driver_router,          prefix="/api",              tags=["driver"])
     app.include_router(driver_messages_router, prefix="/api/messages",     tags=["driver-messages"])
+    app.include_router(load_hunter_router,     prefix="/api/load-hunter",  tags=["load-hunter"])
     app.include_router(payout_router,          prefix="/api",              tags=["payout"])
     app.include_router(notifications_router,   prefix="/api",              tags=["notifications"])
     app.include_router(email_router,           prefix="/api",              tags=["email"])
