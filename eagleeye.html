@@ -781,6 +781,7 @@ select.form-input option{background:var(--surface);}
     <div class="sb-item" onclick="nav('lf-courier')"><span class="sb-icon">📦</span> Courier</div>
     <div class="sb-item" onclick="nav('lf-gig')"><span class="sb-icon">👥</span> Gig Fleet</div>
     <div class="sb-item" onclick="nav('lf-bizdev')"><span class="sb-icon">🤝</span> LF Business Dev <span class="sb-badge" id="lf-bizdev-notif" style="display:none;background:#f59e0b;color:#000">!</span></div>
+    <div class="sb-item" onclick="nav('lf-million')"><span class="sb-icon">💰</span> $1M Blueprint</div>
   </div>
 
   <div class="sb-section">
@@ -3944,7 +3945,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 let allCarriers=[], allLoads=[], allInvoices=[], currentInvFilter='all', loadCounter=3849;
 
-const pageNames={dashboard:'Dashboard',dispatch:'Dispatch Board','fleet-map':'Fleet Map',carriers:'Carriers',drivers:'Drivers',loads:'Load Manager',invoices:'Invoices & Billing',compliance:'DOT Compliance',ifta:'IFTA / Permits',insurance:'Insurance',revenue:'Revenue Tracker',providers:'Compliance Providers',checklist:'Daily Checklist',notes:'Dispatcher Notes',reports:'Team Reports','exec-command':'Exec Command',agents:'AI Agents',founders:'Founders Program',crm:'Lead CRM',leads:'Lead Pipeline',execution:'Execution Engine',factoring:'Factoring',email:'Email Center',vault:'Document Vault',clm:'CLM Scanner',ledger:'Atomic Ledger',agreements:'Agreements','lf-map':'Light Fleet Live Map','lf-nemt':'NEMT — Medical Transport','lf-medical':'Medical Courier','lf-executive':'Executive Transport','lf-courier':'Courier & Last-Mile','lf-gig':'Gig Fleet Management','lf-bizdev':'Light Fleet — Business Development','mark-office':'Mark Odom — CEO Office','ccg-office':'CC Gulley Office','trading-desk':'Trading Desk','broker-division':'N. American Trading — Hub','broker-shippers':'Shipper Pipeline','broker-docs':'Docs & Invoices','trading-desk':'Trading Desk',costs:'Cost Tracking — IEBC','tech-monitor':'Tech Monitor — Marcus Reid & Jamie Park'};
+const pageNames={dashboard:'Dashboard',dispatch:'Dispatch Board','fleet-map':'Fleet Map',carriers:'Carriers',drivers:'Drivers',loads:'Load Manager',invoices:'Invoices & Billing',compliance:'DOT Compliance',ifta:'IFTA / Permits',insurance:'Insurance',revenue:'Revenue Tracker',providers:'Compliance Providers',checklist:'Daily Checklist',notes:'Dispatcher Notes',reports:'Team Reports','exec-command':'Exec Command',agents:'AI Agents',founders:'Founders Program',crm:'Lead CRM',leads:'Lead Pipeline',execution:'Execution Engine',factoring:'Factoring',email:'Email Center',vault:'Document Vault',clm:'CLM Scanner',ledger:'Atomic Ledger',agreements:'Agreements','lf-map':'Light Fleet Live Map','lf-nemt':'NEMT — Medical Transport','lf-medical':'Medical Courier','lf-executive':'Executive Transport','lf-courier':'Courier & Last-Mile','lf-gig':'Gig Fleet Management','lf-bizdev':'Light Fleet — Business Development','lf-million':'Light Fleet — $1M Blueprint','mark-office':'Mark Odom — CEO Office','ccg-office':'CC Gulley Office','trading-desk':'Trading Desk','broker-division':'N. American Trading — Hub','broker-shippers':'Shipper Pipeline','broker-docs':'Docs & Invoices','trading-desk':'Trading Desk',costs:'Cost Tracking — IEBC','tech-monitor':'Tech Monitor — Marcus Reid & Jamie Park'};
 
 // ── 3 Lakes Logistics Backend API (FastAPI) ──
 const API_BASE = (window.__3LL_API_BASE || 'https://three-lakes-logistics-api.onrender.com').replace(/\/$/,'');
@@ -4039,7 +4040,7 @@ function nav(id){
   document.querySelectorAll('.sb-item').forEach(n=>{if(n.getAttribute('onclick')?.includes("'"+id+"'"))n.classList.add('active');});
   document.getElementById('page-title').textContent=pageNames[id]||id;
   // LF pages use full-page layout — hero acts as page header, topbar title hidden
-  const _lfFullPages=['lf-nemt','lf-medical','lf-executive','lf-courier','lf-gig','lf-bizdev','lf-map','broker-division','trading-desk','broker-shippers','broker-docs'];
+  const _lfFullPages=['lf-nemt','lf-medical','lf-executive','lf-courier','lf-gig','lf-bizdev','lf-million','lf-map','broker-division','trading-desk','broker-shippers','broker-docs'];
   document.querySelector('.content').classList.toggle('lf-fullpage',_lfFullPages.includes(id));
   document.getElementById('main').classList.toggle('lf-fullpage',_lfFullPages.includes(id));
   // Fixed full-page overlays: always measure actual header stack
@@ -4082,6 +4083,7 @@ function nav(id){
   if(id==='lf-courier'){lfRunExpert('felix_grant','courier');}
   if(id==='lf-gig'){lfRunExpert('morgan_hayes','gig');}
   if(id==='lf-bizdev'){initLfBizDev();}
+  if(id==='lf-million'){initMillionBlueprint();}
   if(id==='execution'){loadExecutionDomains();loadExecutionSteps();}
   if(id==='email'&&typeof mailInit==='function'){mailInit();}
   if(id==='costs'){loadCostData();}
@@ -18442,6 +18444,438 @@ function lfRenderExpertReport(segment, d) {
 
 </div><!-- /bd-wrap -->
 </div><!-- /page-lf-bizdev -->
+
+<!-- ═══ LF $1M BLUEPRINT ═══ -->
+<div class="page" id="page-lf-million">
+<style>
+.mil-wrap{padding:24px;max-width:1400px;margin:0 auto}
+.mil-hero{background:linear-gradient(135deg,#0f172a 0%,#1e3a5f 50%,#0f172a 100%);border-radius:14px;padding:32px 36px;margin-bottom:24px;position:relative;overflow:hidden}
+.mil-hero::before{content:'$1,000,000';position:absolute;right:-20px;top:50%;transform:translateY(-50%);font-size:120px;font-weight:900;color:rgba(255,255,255,.03);font-family:var(--ff-h);white-space:nowrap;pointer-events:none}
+.mil-hero-tag{font-size:10px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:#f59e0b;margin-bottom:8px}
+.mil-hero-title{font-size:28px;font-weight:900;color:#fff;font-family:var(--ff-h);margin-bottom:6px}
+.mil-hero-sub{font-size:14px;color:rgba(255,255,255,.6);max-width:520px;line-height:1.5}
+.mil-hero-kpis{display:flex;gap:24px;margin-top:24px;flex-wrap:wrap}
+.mil-hero-kpi{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:14px 20px;min-width:130px}
+.mil-hero-kpi .val{font-size:22px;font-weight:900;color:#fff;font-family:var(--ff-h)}
+.mil-hero-kpi .lbl{font-size:10px;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:1px;margin-top:2px}
+.mil-hero-kpi.gold .val{color:#f59e0b}
+.mil-hero-kpi.green .val{color:#22c55e}
+
+.mil-progress-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px 24px;margin-bottom:20px}
+.mil-progress-bar-outer{background:var(--border);border-radius:99px;height:18px;overflow:hidden;margin:10px 0}
+.mil-progress-bar-inner{height:100%;border-radius:99px;transition:width .8s cubic-bezier(.4,0,.2,1);background:linear-gradient(90deg,#f59e0b,#ea580c)}
+.mil-progress-labels{display:flex;justify-content:space-between;font-size:11px;color:var(--muted)}
+
+.mil-phases{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-bottom:24px}
+.mil-phase{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px;position:relative;overflow:hidden}
+.mil-phase.active-phase{border-color:#f59e0b;box-shadow:0 0 0 1px rgba(245,158,11,.3)}
+.mil-phase.done-phase{border-color:#22c55e}
+.mil-phase-num{font-size:10px;font-weight:800;letter-spacing:2px;text-transform:uppercase;margin-bottom:6px}
+.mil-phase.active-phase .mil-phase-num{color:#f59e0b}
+.mil-phase.done-phase .mil-phase-num{color:#22c55e}
+.mil-phase-title{font-size:14px;font-weight:800;color:var(--text);margin-bottom:4px}
+.mil-phase-period{font-size:11px;color:var(--muted);margin-bottom:10px}
+.mil-phase-metric{font-size:20px;font-weight:900;font-family:var(--ff-h);color:var(--navy)}
+.mil-phase-sublabel{font-size:10px;color:var(--muted);margin-top:1px}
+.mil-phase-drivers{font-size:11px;margin-top:10px;color:var(--muted)}
+.mil-phase-check{position:absolute;top:14px;right:14px;font-size:18px}
+
+.mil-streams{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin-bottom:24px}
+.mil-stream{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px 20px}
+.mil-stream-icon{font-size:24px;margin-bottom:8px}
+.mil-stream-title{font-size:14px;font-weight:800;color:var(--text);margin-bottom:4px}
+.mil-stream-desc{font-size:12px;color:var(--muted);line-height:1.5;margin-bottom:10px}
+.mil-stream-rev{font-size:16px;font-weight:900;color:#16a34a;font-family:var(--ff-h)}
+.mil-stream-rev-lbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+
+.mil-math{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px 24px;margin-bottom:20px}
+.mil-math-table{width:100%;border-collapse:collapse;font-size:13px;margin-top:12px}
+.mil-math-table th{text-align:left;padding:8px 10px;border-bottom:2px solid var(--border);font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted)}
+.mil-math-table td{padding:9px 10px;border-bottom:1px solid var(--border)}
+.mil-math-table tr:last-child td{border-bottom:none;font-weight:800;font-size:14px;background:rgba(34,197,94,.06)}
+.mil-math-table .num{text-align:right;font-family:var(--ff-m);font-weight:700}
+.mil-math-table .green{color:#16a34a}
+
+.mil-actions-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-bottom:24px}
+.mil-action{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px;display:flex;gap:12px;align-items:flex-start}
+.mil-action-icon{font-size:20px;flex-shrink:0;margin-top:1px}
+.mil-action-title{font-size:13px;font-weight:700;color:var(--text);margin-bottom:3px}
+.mil-action-desc{font-size:11px;color:var(--muted);line-height:1.4}
+
+.mil-tracker{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px 24px;margin-bottom:20px}
+.mil-vehicle-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)}
+.mil-vehicle-row:last-child{border-bottom:none}
+.mil-vehicle-icon{font-size:22px;width:32px;text-align:center;flex-shrink:0}
+.mil-vehicle-info{flex:1}
+.mil-vehicle-name{font-size:13px;font-weight:700}
+.mil-vehicle-sub{font-size:11px;color:var(--muted)}
+.mil-vehicle-bar{flex:2;min-width:120px}
+.mil-vehicle-bar-outer{background:var(--border);border-radius:99px;height:8px;overflow:hidden}
+.mil-vehicle-bar-fill{height:100%;border-radius:99px;transition:width .8s}
+.mil-vehicle-nums{font-size:11px;color:var(--muted);margin-top:2px;text-align:right}
+.mil-vehicle-rev{font-size:13px;font-weight:800;font-family:var(--ff-m);color:var(--navy);min-width:90px;text-align:right}
+</style>
+
+<div class="mil-wrap">
+
+  <!-- Hero -->
+  <div class="mil-hero">
+    <div class="mil-hero-tag">Light Fleet Division — Revenue Roadmap</div>
+    <div class="mil-hero-title">The $1,000,000 Blueprint</div>
+    <div class="mil-hero-sub">10% automated dispatch at scale. 100 active drivers. Multiple revenue streams. One focused team.</div>
+    <div class="mil-hero-kpis">
+      <div class="mil-hero-kpi gold">
+        <div class="val" id="mil-cur-drivers">—</div>
+        <div class="lbl">Active Drivers</div>
+      </div>
+      <div class="mil-hero-kpi">
+        <div class="val" id="mil-target-drivers">100</div>
+        <div class="lbl">Driver Target</div>
+      </div>
+      <div class="mil-hero-kpi green">
+        <div class="val" id="mil-weekly-rev">—</div>
+        <div class="lbl">Est. Weekly Revenue</div>
+      </div>
+      <div class="mil-hero-kpi">
+        <div class="val" id="mil-annual-rev">—</div>
+        <div class="lbl">Annual Run Rate</div>
+      </div>
+      <div class="mil-hero-kpi gold">
+        <div class="val" id="mil-pct-goal">—</div>
+        <div class="lbl">% to $1M Goal</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Progress to $1M -->
+  <div class="mil-progress-card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+      <div style="font-weight:800;font-size:14px">Progress to $1,000,000 Annual Revenue</div>
+      <div style="font-size:12px;color:var(--muted)">Target: 100 drivers → $19,375/week</div>
+    </div>
+    <div class="mil-progress-bar-outer">
+      <div class="mil-progress-bar-inner" id="mil-progress-bar" style="width:0%"></div>
+    </div>
+    <div class="mil-progress-labels">
+      <span>$0</span>
+      <span id="mil-progress-label">0%</span>
+      <span>$1,000,000</span>
+    </div>
+  </div>
+
+  <!-- Phase Roadmap -->
+  <div style="font-weight:800;font-size:15px;margin-bottom:12px;color:var(--navy)">📍 Phase Roadmap</div>
+  <div class="mil-phases">
+    <div class="mil-phase" id="mil-phase-1">
+      <div class="mil-phase-check" id="mil-phase-1-check"></div>
+      <div class="mil-phase-num">Phase 1</div>
+      <div class="mil-phase-title">Launch</div>
+      <div class="mil-phase-period">Month 1–2</div>
+      <div class="mil-phase-metric">$14,300</div>
+      <div class="mil-phase-sublabel">/ month to 3LL</div>
+      <div class="mil-phase-drivers">10 drivers · 7 vans · 2 SUVs · 1 car</div>
+    </div>
+    <div class="mil-phase" id="mil-phase-2">
+      <div class="mil-phase-check" id="mil-phase-2-check"></div>
+      <div class="mil-phase-num">Phase 2</div>
+      <div class="mil-phase-title">Traction</div>
+      <div class="mil-phase-period">Month 3–4</div>
+      <div class="mil-phase-metric">$35,750</div>
+      <div class="mil-phase-sublabel">/ month to 3LL</div>
+      <div class="mil-phase-drivers">25 drivers · 15 vans · 6 SUVs · 4 cars</div>
+    </div>
+    <div class="mil-phase" id="mil-phase-3">
+      <div class="mil-phase-check" id="mil-phase-3-check"></div>
+      <div class="mil-phase-num">Phase 3</div>
+      <div class="mil-phase-title">Scale</div>
+      <div class="mil-phase-period">Month 5–7</div>
+      <div class="mil-phase-metric">$71,500</div>
+      <div class="mil-phase-sublabel">/ month to 3LL</div>
+      <div class="mil-phase-drivers">50 drivers · 30 vans · 12 SUVs · 8 cars</div>
+    </div>
+    <div class="mil-phase" id="mil-phase-4">
+      <div class="mil-phase-check" id="mil-phase-4-check"></div>
+      <div class="mil-phase-num">Phase 4</div>
+      <div class="mil-phase-title">Momentum</div>
+      <div class="mil-phase-period">Month 8–9</div>
+      <div class="mil-phase-metric">$107,250</div>
+      <div class="mil-phase-sublabel">/ month to 3LL</div>
+      <div class="mil-phase-drivers">75 drivers · 45 vans · 18 SUVs · 12 cars</div>
+    </div>
+    <div class="mil-phase" id="mil-phase-5">
+      <div class="mil-phase-check" id="mil-phase-5-check"></div>
+      <div class="mil-phase-num">Phase 5</div>
+      <div class="mil-phase-title">Million</div>
+      <div class="mil-phase-period">Month 10–12</div>
+      <div class="mil-phase-metric" style="color:#16a34a">$84,000+</div>
+      <div class="mil-phase-sublabel">/ month (all streams)</div>
+      <div class="mil-phase-drivers">100 drivers + enterprise contracts</div>
+    </div>
+  </div>
+
+  <!-- Vehicle Revenue Math -->
+  <div class="mil-math">
+    <div style="font-weight:800;font-size:15px;margin-bottom:4px">🔢 The Revenue Math — 100-Driver Roster</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:4px">Based on documented weekly gross averages. 10% dispatch fee. 52-week year.</div>
+    <table class="mil-math-table">
+      <thead><tr>
+        <th>Vehicle Type</th><th>Drivers</th><th>Est. Weekly Gross / Driver</th>
+        <th class="num">Your 10%</th><th class="num">Roster Weekly</th><th class="num green">Annual</th>
+      </tr></thead>
+      <tbody>
+        <tr>
+          <td>🚐 Cargo Van</td><td>50</td><td>$2,750</td>
+          <td class="num">$275</td><td class="num">$13,750</td><td class="num green">$715,000</td>
+        </tr>
+        <tr>
+          <td>🚙 SUV</td><td>25</td><td>$1,400</td>
+          <td class="num">$140</td><td class="num">$3,500</td><td class="num green">$182,000</td>
+        </tr>
+        <tr>
+          <td>🚗 Passenger Car</td><td>25</td><td>$850</td>
+          <td class="num">$85</td><td class="num">$2,125</td><td class="num green">$110,500</td>
+        </tr>
+        <tr>
+          <td colspan="4" style="font-size:12px;color:var(--muted)">Core Dispatch Revenue</td>
+          <td class="num">$19,375</td><td class="num green">$1,007,500</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Live Vehicle Tracker -->
+  <div class="mil-tracker">
+    <div style="font-weight:800;font-size:15px;margin-bottom:16px">📊 Live Fleet Tracker vs. Target</div>
+    <div class="mil-vehicle-row">
+      <div class="mil-vehicle-icon">🚐</div>
+      <div class="mil-vehicle-info">
+        <div class="mil-vehicle-name">Cargo Vans</div>
+        <div class="mil-vehicle-sub" id="mil-van-sub">Loading…</div>
+      </div>
+      <div class="mil-vehicle-bar">
+        <div class="mil-vehicle-bar-outer"><div class="mil-vehicle-bar-fill" id="mil-van-bar" style="width:0%;background:#f59e0b"></div></div>
+        <div class="mil-vehicle-nums" id="mil-van-nums"></div>
+      </div>
+      <div class="mil-vehicle-rev" id="mil-van-rev">—</div>
+    </div>
+    <div class="mil-vehicle-row">
+      <div class="mil-vehicle-icon">🚙</div>
+      <div class="mil-vehicle-info">
+        <div class="mil-vehicle-name">SUVs</div>
+        <div class="mil-vehicle-sub" id="mil-suv-sub">Loading…</div>
+      </div>
+      <div class="mil-vehicle-bar">
+        <div class="mil-vehicle-bar-outer"><div class="mil-vehicle-bar-fill" id="mil-suv-bar" style="width:0%;background:#6366f1"></div></div>
+        <div class="mil-vehicle-nums" id="mil-suv-nums"></div>
+      </div>
+      <div class="mil-vehicle-rev" id="mil-suv-rev">—</div>
+    </div>
+    <div class="mil-vehicle-row">
+      <div class="mil-vehicle-icon">🚗</div>
+      <div class="mil-vehicle-info">
+        <div class="mil-vehicle-name">Passenger Cars</div>
+        <div class="mil-vehicle-sub" id="mil-car-sub">Loading…</div>
+      </div>
+      <div class="mil-vehicle-bar">
+        <div class="mil-vehicle-bar-outer"><div class="mil-vehicle-bar-fill" id="mil-car-bar" style="width:0%;background:#22c55e"></div></div>
+        <div class="mil-vehicle-nums" id="mil-car-nums"></div>
+      </div>
+      <div class="mil-vehicle-rev" id="mil-car-rev">—</div>
+    </div>
+  </div>
+
+  <!-- Revenue Streams -->
+  <div style="font-weight:800;font-size:15px;margin-bottom:12px;color:var(--navy)">💡 All Revenue Streams</div>
+  <div class="mil-streams">
+    <div class="mil-stream">
+      <div class="mil-stream-icon">⚡</div>
+      <div class="mil-stream-title">Automated Dispatch (Core)</div>
+      <div class="mil-stream-desc">10% of every load booked. Automation scans 15+ boards simultaneously — speed-to-book beats every human dispatcher. Smart backhaul stitching eliminates empty miles.</div>
+      <div class="mil-stream-rev">$715K–$1M+</div>
+      <div class="mil-stream-rev-lbl">annual at 100 drivers</div>
+    </div>
+    <div class="mil-stream">
+      <div class="mil-stream-icon">⭐</div>
+      <div class="mil-stream-title">Pro Fleet Subscriptions</div>
+      <div class="mil-stream-desc">$199/mo flat + 5% fee for high-volume drivers who want priority routing, dedicated coordinator, and premium lane access. Predictable MRR on top of dispatch fees.</div>
+      <div class="mil-stream-rev">$47,760</div>
+      <div class="mil-stream-rev-lbl">annual · 20 Pro drivers × $199/mo</div>
+    </div>
+    <div class="mil-stream">
+      <div class="mil-stream-icon">🏥</div>
+      <div class="mil-stream-title">Enterprise Contracts</div>
+      <div class="mil-stream-desc">Hospital systems, medical courier networks, and same-day delivery platforms. B2B contracts at $5K–$15K/mo lock in guaranteed volume and remove the load-board dependency.</div>
+      <div class="mil-stream-rev">$60K–$180K</div>
+      <div class="mil-stream-rev-lbl">annual · 1–3 contracts</div>
+    </div>
+    <div class="mil-stream">
+      <div class="mil-stream-icon">🔗</div>
+      <div class="mil-stream-title">Platform Partnerships</div>
+      <div class="mil-stream-desc">Amazon Flex overflow, GoShare, Lugg, Dolly — bring contracted drivers who get steady volume from platform partners. Earn placement fees and referral bonuses per driver placed.</div>
+      <div class="mil-stream-rev">$25K–$50K</div>
+      <div class="mil-stream-rev-lbl">annual referral / placement fees</div>
+    </div>
+    <div class="mil-stream">
+      <div class="mil-stream-icon">💳</div>
+      <div class="mil-stream-title">Fuel Card & Factoring Referrals</div>
+      <div class="mil-stream-desc">Every driver you onboard is a potential fuel card signup and factoring client. Earn $200–$500 per driver referred to factoring partners. Fuel card revenue share per gallon.</div>
+      <div class="mil-stream-rev">$20K–$50K</div>
+      <div class="mil-stream-rev-lbl">annual at 100-driver scale</div>
+    </div>
+    <div class="mil-stream">
+      <div class="mil-stream-icon">🏗️</div>
+      <div class="mil-stream-title">White-Label Dispatch Tech</div>
+      <div class="mil-stream-desc">Once the automation stack is proven, license it to other small fleet operators at $299–$999/mo. The infrastructure is already built — this is pure margin on top of core revenue.</div>
+      <div class="mil-stream-rev">$36K–$120K</div>
+      <div class="mil-stream-rev-lbl">annual · 10–30 licensees</div>
+    </div>
+  </div>
+
+  <!-- Priority Actions -->
+  <div style="font-weight:800;font-size:15px;margin-bottom:12px;color:var(--navy)">🎯 Priority Actions — This Week</div>
+  <div class="mil-actions-grid">
+    <div class="mil-action">
+      <div class="mil-action-icon">📱</div>
+      <div>
+        <div class="mil-action-title">Activate Driver Recruitment Campaign</div>
+        <div class="mil-action-desc">Target cargo van owners on Facebook Marketplace, Craigslist gigs, and GoShare driver groups. Goal: 10 signed drivers in 30 days.</div>
+      </div>
+    </div>
+    <div class="mil-action">
+      <div class="mil-action-icon">🤖</div>
+      <div>
+        <div class="mil-action-title">Connect Load Board Automation</div>
+        <div class="mil-action-desc">Wire multi-board scraper to Eagle Eye alerts. Every cargo van load under 60 seconds hits your drivers before competitors see it.</div>
+      </div>
+    </div>
+    <div class="mil-action">
+      <div class="mil-action-icon">🏥</div>
+      <div>
+        <div class="mil-action-title">Target 3 Hospital Systems</div>
+        <div class="mil-action-desc">Marcus Webb (Healthcare rep) should be cold-calling Inland Empire hospital supply chains this week. One contract = $5K–$15K/mo guaranteed.</div>
+      </div>
+    </div>
+    <div class="mil-action">
+      <div class="mil-action-icon">📄</div>
+      <div>
+        <div class="mil-action-title">Send IC Agreements to All Active Drivers</div>
+        <div class="mil-action-desc">Use the Agreements page to send Independent Contractor agreements. Every driver must be signed before they book their first load.</div>
+      </div>
+    </div>
+    <div class="mil-action">
+      <div class="mil-action-icon">⭐</div>
+      <div>
+        <div class="mil-action-title">Pitch Pro Fleet to Top 5 Drivers</div>
+        <div class="mil-action-desc">Identify highest-volume drivers and pitch Pro Fleet ($199/mo + 5%). Priority routing, dedicated lane optimization, faster payouts.</div>
+      </div>
+    </div>
+    <div class="mil-action">
+      <div class="mil-action-icon">🤝</div>
+      <div>
+        <div class="mil-action-title">Register on GoShare & Lugg Platforms</div>
+        <div class="mil-action-desc">Jordan Vale (Enterprise rep) to register the company as a fleet provider. Platform contracts funnel steady gig volume directly to your drivers.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- The Automation Advantage box -->
+  <div style="background:linear-gradient(135deg,rgba(99,102,241,.08),rgba(245,158,11,.05));border:1px solid rgba(99,102,241,.2);border-radius:12px;padding:20px 24px;margin-bottom:20px">
+    <div style="font-weight:800;font-size:14px;color:#6366f1;margin-bottom:12px">⚡ Why Automation Beats the Competition</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px">
+      <div>
+        <div style="font-weight:700;font-size:12px;margin-bottom:3px">Human Dispatcher</div>
+        <div style="font-size:12px;color:var(--muted);line-height:1.5">Manages 5–7 drivers max · Misses loads that disappear in &lt;60s · Manually calculates backhauls on Google Maps · 30 min/driver for onboarding paperwork</div>
+      </div>
+      <div>
+        <div style="font-weight:700;font-size:12px;margin-bottom:3px;color:#16a34a">3 Lakes Automation</div>
+        <div style="font-size:12px;color:var(--muted);line-height:1.5">Scales to 100+ drivers seamlessly · Scans 15+ boards simultaneously · Auto-stitches backhauls instantly · AI document parsing in seconds · Instant bid alerts</div>
+      </div>
+      <div>
+        <div style="font-weight:700;font-size:12px;margin-bottom:3px;color:#f59e0b">The Edge</div>
+        <div style="font-size:12px;color:var(--muted);line-height:1.5">Automation finds the load. Human coordinator locks the rate. Drivers get the efficiency of an app with the personal touch of a dedicated coordinator. That loyalty is the moat.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Refresh button -->
+  <div style="text-align:center;padding-bottom:20px">
+    <button class="btn-out" onclick="initMillionBlueprint()">↻ Refresh Live Data</button>
+    <button class="btn-gold" style="margin-left:10px" onclick="nav('lf-bizdev')">🤝 Go to BizDev Team</button>
+    <button class="btn-out" style="margin-left:10px" onclick="nav('lf-gig')">👥 Manage Gig Fleet</button>
+  </div>
+
+</div><!-- /mil-wrap -->
+</div><!-- /page-lf-million -->
+
+<script>
+// ── $1M Blueprint ──────────────────────────────────────────────────────────────
+async function initMillionBlueprint(){
+  // Pull live driver counts from DB
+  let drivers=[];
+  try{
+    const res=await apiFetch('/api/lf/drivers?limit=500');
+    if(res.ok){const d=await res.json();drivers=Array.isArray(d)?d:(d.drivers||d.items||[]);}
+  }catch{}
+
+  // Categorize by vehicle_type
+  const vans  =drivers.filter(d=>/(cargo.?van|van)/i.test(d.vehicle_type||'')).length;
+  const suvs  =drivers.filter(d=>/(suv|crossover)/i.test(d.vehicle_type||'')).length;
+  const cars  =drivers.filter(d=>/(car|sedan|passenger)/i.test(d.vehicle_type||'')).length;
+  const total =drivers.length||0;
+
+  // Revenue estimates (weekly, 10% fee)
+  const vanWeekly  =vans  *275;
+  const suvWeekly  =suvs  *140;
+  const carWeekly  =cars  * 85;
+  const totalWeekly=vanWeekly+suvWeekly+carWeekly;
+  const annualRev  =totalWeekly*52;
+  const pctGoal    =Math.min(100,Math.round(annualRev/10000));// $1M = 100%
+
+  const fmt$=v=>'$'+v.toLocaleString('en-US',{maximumFractionDigits:0});
+  const set=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
+
+  set('mil-cur-drivers',total);
+  set('mil-weekly-rev',fmt$(totalWeekly));
+  set('mil-annual-rev',fmt$(annualRev));
+  set('mil-pct-goal',pctGoal+'%');
+
+  const bar=document.getElementById('mil-progress-bar');
+  if(bar){bar.style.width=pctGoal+'%';}
+  set('mil-progress-label',pctGoal+'%  ·  '+fmt$(annualRev)+' of $1,000,000');
+
+  // Vehicle bars (targets: 50 vans, 25 SUVs, 25 cars)
+  _milBar('mil-van-bar' ,vans,50);
+  _milBar('mil-suv-bar' ,suvs,25);
+  _milBar('mil-car-bar' ,cars,25);
+  set('mil-van-sub' ,`${vans} active · target 50`);
+  set('mil-suv-sub' ,`${suvs} active · target 25`);
+  set('mil-car-sub' ,`${cars} active · target 25`);
+  set('mil-van-nums',`${vans}/50`);
+  set('mil-suv-nums',`${suvs}/25`);
+  set('mil-car-nums',`${cars}/25`);
+  set('mil-van-rev' ,fmt$(vanWeekly)+'/wk');
+  set('mil-suv-rev' ,fmt$(suvWeekly)+'/wk');
+  set('mil-car-rev' ,fmt$(carWeekly)+'/wk');
+
+  // Phase highlighting based on driver count
+  const phases=[[1,0,10],[2,10,25],[3,25,50],[4,50,75],[5,75,Infinity]];
+  phases.forEach(([n,lo,hi])=>{
+    const el=document.getElementById(`mil-phase-${n}`);
+    const ck=document.getElementById(`mil-phase-${n}-check`);
+    if(!el)return;
+    el.classList.remove('active-phase','done-phase');
+    if(total>=hi){el.classList.add('done-phase');if(ck)ck.textContent='✅';}
+    else if(total>=lo){el.classList.add('active-phase');if(ck)ck.textContent='🔥';}
+    else{if(ck)ck.textContent='';}
+  });
+}
+
+function _milBar(id,val,max){
+  const el=document.getElementById(id);
+  if(!el)return;
+  el.style.width=Math.min(100,Math.round((val/max)*100))+'%';
+}
+</script>
 
 <script>
 // ── Light Fleet Business Development ─────────────────────────────────────────
