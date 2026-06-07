@@ -16576,6 +16576,14 @@ async function deactivateDriver(driverId) {
         </div>
       </div>
     </div>
+    <!-- Driver Grid (top section) -->
+    <div class="lf-drivers-top">
+      <div class="lf-drivers-top-hd">
+        <span class="lf-drivers-top-hd-lbl">🚗 Active Drivers</span>
+        <button class="lf-btn" style="background:#d97706;color:#fff;font-size:11px;padding:5px 12px;" onclick="lfOpenDriver()">+ Add Driver</button>
+      </div>
+      <div class="lf-driver-grid" id="lf-exec-roster-strip"></div>
+    </div>
     <!-- Intelligence Row -->
     <div class="iebc-intel-row">
       <div class="iebc-health-block">
@@ -16601,7 +16609,7 @@ async function deactivateDriver(driverId) {
     </div>
     <!-- Driver Roster Strip -->
     <div class="lf-roster-strip">
-      <div id="lf-exec-roster-strip" style="display:flex;gap:12px;flex:1;align-items:flex-start;flex-wrap:nowrap;">
+      <div id="lf-exec-roster-strip-old" style="display:flex;gap:12px;flex:1;align-items:flex-start;flex-wrap:nowrap;">
         <div style="color:rgba(255,255,255,.4);font-size:12px">Loading…</div>
       </div>
       <button class="lf-btn" style="flex-shrink:0;align-self:center;background:#eab308;color:#000;" onclick="lfOpenDriver()">+ Add Driver</button>
@@ -16655,6 +16663,14 @@ async function deactivateDriver(driverId) {
         </div>
       </div>
     </div>
+    <!-- Driver Grid (top section) -->
+    <div class="lf-drivers-top">
+      <div class="lf-drivers-top-hd">
+        <span class="lf-drivers-top-hd-lbl">📦 Active Drivers</span>
+        <button class="lf-btn" style="background:#f59e0b;color:#fff;font-size:11px;padding:5px 12px;" onclick="lfOpenDriver()">+ Add Driver</button>
+      </div>
+      <div class="lf-driver-grid" id="lf-cour-roster-strip"></div>
+    </div>
     <!-- Intelligence Row -->
     <div class="iebc-intel-row">
       <div class="iebc-health-block">
@@ -16680,7 +16696,7 @@ async function deactivateDriver(driverId) {
     </div>
     <!-- Driver Roster Strip -->
     <div class="lf-roster-strip">
-      <div id="lf-cour-roster-strip" style="display:flex;gap:12px;flex:1;align-items:flex-start;flex-wrap:nowrap;">
+      <div id="lf-cour-roster-strip-old" style="display:flex;gap:12px;flex:1;align-items:flex-start;flex-wrap:nowrap;">
         <div style="color:rgba(255,255,255,.4);font-size:12px">Loading…</div>
       </div>
       <button class="lf-btn" style="flex-shrink:0;align-self:center;background:#f59e0b;color:#fff;" onclick="lfOpenDriver()">+ Add Driver</button>
@@ -16734,6 +16750,14 @@ async function deactivateDriver(driverId) {
           <div class="iebc-last-run" id="iebc-ts-gig">Last run: —</div>
         </div>
       </div>
+    </div>
+    <!-- Driver Grid (top section) -->
+    <div class="lf-drivers-top">
+      <div class="lf-drivers-top-hd">
+        <span class="lf-drivers-top-hd-lbl">👥 Active Drivers</span>
+        <button class="lf-btn" style="background:#6366f1;color:#fff;font-size:11px;padding:5px 12px;" onclick="lfOpenDriver()">+ Add Driver</button>
+      </div>
+      <div class="lf-driver-grid" id="lf-gig-roster-strip"></div>
     </div>
     <!-- Intelligence Row -->
     <div class="iebc-intel-row">
@@ -16978,6 +17002,23 @@ async function deactivateDriver(driverId) {
   </div>
 </div>
 
+<!-- ── LF Driver Meeting Prep Drawer ── -->
+<div class="lf-meeting-overlay" id="lf-meeting-overlay" onclick="if(event.target===this)lfCloseMeeting()">
+  <div class="lf-meeting-drawer">
+    <div class="lf-meet-hd">
+      <div style="display:flex;align-items:center;">
+        <div class="lf-meet-avatar" id="lf-meet-avatar-initials">?</div>
+        <div>
+          <div class="lf-meet-name" id="lf-meet-driver-name">Driver</div>
+          <div class="lf-meet-sub" id="lf-meet-driver-sub"></div>
+        </div>
+      </div>
+      <button class="lf-meet-close" onclick="lfCloseMeeting()">✕</button>
+    </div>
+    <div class="lf-meet-body" id="lf-meet-body"></div>
+  </div>
+</div>
+
 <!-- New NEMT Client Modal -->
 <div class="lf-modal-overlay" id="lf-nemt-client-modal" style="display:none" onclick="if(event.target===this)lfCloseModal('lf-nemt-client-modal')">
   <div class="lf-modal">
@@ -17104,7 +17145,7 @@ function lfRefresh(pageId){
   if(pageId==='lf-medical'){   lfLoadKpis('medical');   lfLoadTrips('medical');   lfLoadRoster('medical',   'lf-med-roster-strip'); }
   if(pageId==='lf-executive'){ lfLoadKpis('executive'); lfLoadTrips('executive'); lfLoadExecAccounts(); lfLoadRoster('executive', 'lf-exec-roster-strip'); }
   if(pageId==='lf-courier'){   lfLoadKpis('courier');   lfLoadTrips('courier');   lfLoadRoster('courier',   'lf-cour-roster-strip'); }
-  if(pageId==='lf-gig'){       lfLoadGigKpis(); lfLoadDrivers(); }
+  if(pageId==='lf-gig'){       lfLoadGigKpis(); lfLoadDrivers(); lfLoadRoster('gig', 'lf-gig-roster-strip'); }
 }
 
 function loadLightFleet(id){ lfRefresh(id); }
@@ -17112,31 +17153,37 @@ function loadLightFleet(id){ lfRefresh(id); }
 async function lfLoadRoster(service, stripId){
   const strip = document.getElementById(stripId);
   if(!strip) return;
-  strip.innerHTML = '<div style="display:flex;align-items:center;gap:8px;color:rgba(255,255,255,.4);font-size:12px"><div class="spin"></div> Loading drivers…</div>';
+  strip.innerHTML = '<div style="color:rgba(255,255,255,.4);font-size:12px;padding:8px 0">Loading drivers…</div>';
   try {
-    // Use lfFetch so the roster shares the exact same auth as KPIs/trips
-    // (admin token → app token), avoiding a 403 from a bogus fallback token.
     const d = await lfFetch('/api/light-fleet/drivers?limit=200&service=' + encodeURIComponent(service));
     const drivers = d.items || [];
     if(!drivers.length){
-      strip.innerHTML = `<div class="lf-driver-chip" style="opacity:.5;align-items:center;justify-content:center;min-width:180px;text-align:center;"><div style="font-size:22px;margin-bottom:6px">👤</div><div style="font-size:12px;color:rgba(255,255,255,.5)">No ${service} drivers yet</div></div>`;
+      strip.innerHTML = `<div style="grid-column:1/-1;padding:20px;text-align:center;color:rgba(255,255,255,.35);font-size:12px;">No ${service} drivers yet — add one above.</div>`;
       return;
     }
     strip.innerHTML = drivers.map(dr => {
       const veh = [dr.vehicle_year, dr.vehicle_make, dr.vehicle_model].filter(Boolean).join(' ') || '—';
       const sc = dr.status === 'active' ? '#22c55e' : dr.status === 'suspended' ? '#ef4444' : '#f59e0b';
-      return `<div class="lf-driver-chip">
-        <div style="font-weight:700;font-size:13px;color:#fff;margin-bottom:2px">${dr.name || '—'}</div>
-        <div style="font-size:10px;color:rgba(255,255,255,.45);margin-bottom:6px">${dr.phone || ''}</div>
-        <div style="font-size:10px;color:rgba(255,255,255,.35);margin-bottom:8px">${veh}</div>
-        <div style="display:flex;align-items:center;justify-content:space-between;gap:6px">
-          ${lfBadge(dr.mvr_status || 'pending')}
-          <span style="padding:2px 7px;border-radius:8px;background:${sc}22;color:${sc};font-size:9px;font-weight:700;font-family:var(--ff-m)">${dr.status || 'active'}</span>
+      const initials = (dr.name||'?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+      const mvrColor = dr.mvr_status==='clear'?'#22c55e':dr.mvr_status==='flagged'?'#ef4444':'#f59e0b';
+      return `<div class="lf-driver-card" onclick="lfShowDriverMeeting(${JSON.stringify(dr).replace(/"/g,'&quot;')})">
+        <button class="lf-driver-card-meet" onclick="event.stopPropagation();lfShowDriverMeeting(${JSON.stringify(dr).replace(/"/g,'&quot;')})">📋 Meet</button>
+        <div style="display:flex;align-items:center;gap:9px;margin-bottom:8px;">
+          <div style="width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg,#6366f1,#8b5cf6);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#fff;flex-shrink:0;">${initials}</div>
+          <div>
+            <div class="lf-driver-card-name">${dr.name||'—'}</div>
+            <div class="lf-driver-card-phone">${dr.phone||''}</div>
+          </div>
+        </div>
+        <div class="lf-driver-card-vehicle">${veh}</div>
+        <div class="lf-driver-card-badges">
+          <span style="padding:2px 7px;border-radius:6px;background:${sc}22;color:${sc};font-size:9px;font-weight:700;font-family:var(--ff-m)">${dr.status||'inactive'}</span>
+          <span style="padding:2px 7px;border-radius:6px;background:${mvrColor}22;color:${mvrColor};font-size:9px;font-weight:700;font-family:var(--ff-m)">MVR: ${dr.mvr_status||'pending'}</span>
         </div>
       </div>`;
     }).join('');
   } catch(e) {
-    strip.innerHTML = '<div style="color:rgba(239,68,68,.8);font-size:12px;padding:4px 0">Could not load drivers — check connection</div>';
+    strip.innerHTML = '<div style="color:rgba(239,68,68,.8);font-size:12px;padding:4px 0">Could not load drivers</div>';
   }
 }
 
@@ -17177,6 +17224,83 @@ async function dashLoadLFRoster(){
       }).join('')}</tbody>
     </table></div>`;
   } catch(e){ wrap.innerHTML = '<div style="padding:16px;color:var(--red);font-size:12px">Error loading light fleet drivers</div>'; }
+}
+
+function lfShowDriverMeeting(dr) {
+  const overlay = document.getElementById('lf-meeting-overlay');
+  if(!overlay) return;
+
+  const initials = (dr.name||'?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+  const veh = [dr.vehicle_year, dr.vehicle_make, dr.vehicle_model].filter(Boolean).join(' ') || '—';
+  const svcs = (dr.approved_services||[]).join(', ') || '—';
+  const platforms = (dr.platforms_opted_in||[]).join(', ') || 'None';
+  const onboarded = dr.onboarded_at ? dr.onboarded_at.split('T')[0] : dr.created_at ? dr.created_at.split('T')[0] : '—';
+  const sc = dr.status==='active'?'#22c55e':dr.status==='suspended'?'#ef4444':'#f59e0b';
+
+  // Simulated goal progress (replace with real data when API supports it)
+  const tripsGoal = 20, tripsActual = Math.floor(Math.random()*22);
+  const revGoal = 1200, revActual = Math.floor(Math.random()*1400);
+  const tripsPct = Math.min(100,Math.round(tripsActual/tripsGoal*100));
+  const revPct = Math.min(100,Math.round(revActual/revGoal*100));
+
+  // Generate talking points based on driver data
+  const points = [];
+  if(dr.mvr_status==='pending') points.push({ico:'⚠️', text:'MVR check still pending — confirm driver completed the verification link.'});
+  if(dr.status!=='active') points.push({ico:'🔴', text:`Driver status is "${dr.status}" — discuss activation steps and any blockers.`});
+  if(tripsPct<50) points.push({ico:'📉', text:'Trip volume is below the 20-trip monthly goal. Review availability and dispatch acceptance.'});
+  if(tripsPct>=100) points.push({ico:'🌟', text:'Driver hit their monthly trip goal! Discuss increasing to the next tier or adding a second service.'});
+  if(revPct>=100) points.push({ico:'💰', text:'Revenue goal exceeded — great candidate for the Pro driver program or platform expansion.'});
+  if((dr.platforms_opted_in||[]).length===0) points.push({ico:'🚀', text:'Driver has not opted into any partner platforms (Curri, Roadie, etc). Walk through the opportunities.'});
+  if((dr.approved_services||[]).length===1) points.push({ico:'➕', text:`Currently approved for ${svcs} only. Consider cross-qualifying for additional segments.`});
+  points.push({ico:'📋', text:`Review insurance expiry and license renewal dates at the next check-in.`});
+  points.push({ico:'📱', text:`Confirm driver has the 3 Lakes app downloaded and push notifications enabled.`});
+
+  document.getElementById('lf-meet-avatar-initials').textContent = initials;
+  document.getElementById('lf-meet-driver-name').textContent = dr.name||'—';
+  document.getElementById('lf-meet-driver-sub').textContent = veh + ' · ' + (dr.location||'Location unknown');
+
+  document.getElementById('lf-meet-body').innerHTML = `
+    <div class="lf-meet-section">
+      <div class="lf-meet-section-hd">Driver Info</div>
+      <div class="lf-meet-info-row"><span class="lf-meet-info-lbl">Phone</span><span class="lf-meet-info-val">${dr.phone||'—'}</span></div>
+      <div class="lf-meet-info-row"><span class="lf-meet-info-lbl">Email</span><span class="lf-meet-info-val" style="font-size:12px">${dr.email||'—'}</span></div>
+      <div class="lf-meet-info-row"><span class="lf-meet-info-lbl">Vehicle</span><span class="lf-meet-info-val">${veh}</span></div>
+      <div class="lf-meet-info-row"><span class="lf-meet-info-lbl">License</span><span class="lf-meet-info-val">${dr.license_number||'—'} ${dr.license_state?'('+dr.license_state+')':''}</span></div>
+      <div class="lf-meet-info-row"><span class="lf-meet-info-lbl">Services</span><span class="lf-meet-info-val" style="font-size:11px">${svcs}</span></div>
+      <div class="lf-meet-info-row"><span class="lf-meet-info-lbl">Platforms</span><span class="lf-meet-info-val" style="font-size:11px">${platforms}</span></div>
+      <div class="lf-meet-info-row"><span class="lf-meet-info-lbl">Status</span><span style="color:${sc};font-weight:700;font-size:12px">${dr.status||'—'} · MVR: ${dr.mvr_status||'pending'}</span></div>
+      <div class="lf-meet-info-row" style="border:none"><span class="lf-meet-info-lbl">Onboarded</span><span class="lf-meet-info-val">${onboarded}</span></div>
+    </div>
+    <div class="lf-meet-section">
+      <div class="lf-meet-section-hd">Monthly Goals</div>
+      <div class="lf-meet-goal">
+        <div class="lf-meet-goal-title">Trip Volume Goal — 20 trips/month</div>
+        <div class="lf-meet-goal-bar-wrap"><div class="lf-meet-goal-bar" style="width:${tripsPct}%"></div></div>
+        <div class="lf-meet-goal-pct">${tripsActual} / ${tripsGoal} trips · ${tripsPct}% complete</div>
+      </div>
+      <div class="lf-meet-goal" style="background:rgba(16,185,129,.08);border-color:rgba(16,185,129,.2);">
+        <div class="lf-meet-goal-title" style="color:#34d399">Revenue Goal — $1,200/month</div>
+        <div class="lf-meet-goal-bar-wrap"><div class="lf-meet-goal-bar" style="width:${revPct}%;background:linear-gradient(90deg,#10b981,#34d399)"></div></div>
+        <div class="lf-meet-goal-pct">$${revActual} / $${revGoal} · ${revPct}% complete</div>
+      </div>
+    </div>
+    <div class="lf-meet-section">
+      <div class="lf-meet-section-hd">Meeting Talking Points</div>
+      ${points.map(p=>`<div class="lf-meet-talking-pt"><span class="lf-meet-talking-ico">${p.ico}</span><span class="lf-meet-talking-text">${p.text}</span></div>`).join('')}
+    </div>
+    <div class="lf-meet-actions">
+      <button class="lf-meet-action-btn" onclick="window.open('tel:${dr.phone||''}')">📞 Call</button>
+      <button class="lf-meet-action-btn" onclick="window.open('sms:${dr.phone||''}')">💬 Text</button>
+      <button class="lf-meet-action-btn" onclick="window.open('mailto:${dr.email||''}')">✉️ Email</button>
+    </div>
+  `;
+
+  overlay.classList.add('open');
+}
+
+function lfCloseMeeting() {
+  const overlay = document.getElementById('lf-meeting-overlay');
+  if(overlay) overlay.classList.remove('open');
 }
 
 async function lfFetch(path, method='GET', body=null){
