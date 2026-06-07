@@ -16203,12 +16203,70 @@ async function deactivateDriver(driverId) {
 #main.lf-fullpage .topbar .tb-live{color:rgba(74,222,128,.9);}
 #main.lf-fullpage .topbar .tb-live::before{background:rgba(74,222,128,.9);}
 /* IEBC banner + intel + kpis */
-.content.lf-fullpage .iebc-banner{padding-top:80px;flex-shrink:0;}
+.content.lf-fullpage .iebc-banner{padding-top:62px;flex-shrink:0;}
 .content.lf-fullpage .iebc-intel-row{margin:0;padding:0 32px;flex-shrink:0;}
 .content.lf-fullpage .iebc-kpis{margin:0;margin-top:20px;padding:0 32px;flex-shrink:0;}
 /* Driver roster horizontal strip */
 .lf-roster-strip{display:flex;flex-direction:row;gap:12px;overflow-x:auto;padding:16px 32px;background:rgba(0,0,0,.2);border-top:1px solid rgba(255,255,255,.07);border-bottom:1px solid rgba(255,255,255,.07);align-items:flex-start;}
 .lf-driver-chip{min-width:200px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:12px 14px;flex-shrink:0;display:flex;flex-direction:column;}
+/* ── LF Driver Grid (top section, replaces horizontal roster strip) ── */
+.lf-drivers-top{padding:16px 32px;background:rgba(0,0,0,.15);border-top:1px solid rgba(255,255,255,.07);border-bottom:1px solid rgba(255,255,255,.07);}
+.lf-drivers-top-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+.lf-drivers-top-hd-lbl{font-size:11px;font-weight:700;color:rgba(255,255,255,.5);letter-spacing:1.5px;text-transform:uppercase;}
+.lf-driver-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px;}
+.lf-driver-card{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:13px 14px;cursor:pointer;transition:all .18s;position:relative;}
+.lf-driver-card:hover{background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.22);transform:translateY(-2px);}
+.lf-driver-card-name{font-size:13px;font-weight:700;color:#fff;margin-bottom:1px;}
+.lf-driver-card-vehicle{font-size:10px;color:rgba(255,255,255,.38);margin-bottom:7px;}
+.lf-driver-card-phone{font-size:10px;color:rgba(255,255,255,.45);margin-bottom:7px;}
+.lf-driver-card-badges{display:flex;align-items:center;gap:5px;flex-wrap:wrap;}
+.lf-driver-card-meet{position:absolute;top:10px;right:10px;background:rgba(255,255,255,.08);border:none;border-radius:5px;color:rgba(255,255,255,.4);font-size:10px;padding:2px 7px;cursor:pointer;transition:all .15s;}
+.lf-driver-card:hover .lf-driver-card-meet{background:rgba(255,255,255,.15);color:#fff;}
+
+/* ── LF reorder: roster on top, intel/report below ── */
+.lf-wrap{display:flex;flex-direction:column;}
+.lf-wrap .iebc-banner{order:1;}
+.lf-wrap .lf-drivers-top{order:2;}
+.lf-wrap .lf-roster-strip{display:none;}
+.lf-wrap .iebc-intel-row{order:3;}
+.lf-wrap .iebc-kpis{order:4;}
+.lf-wrap .iebc-section{order:5;}
+.lf-wrap .iebc-status-row{order:6;}
+.lf-wrap .iebc-table-wrap{order:7;}
+.lf-wrap .lf-actions{order:8;}
+
+/* ── Driver Meeting Drawer ── */
+.lf-meeting-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:1100;opacity:0;pointer-events:none;transition:opacity .25s;}
+.lf-meeting-overlay.open{opacity:1;pointer-events:auto;}
+.lf-meeting-drawer{position:fixed;top:0;right:-480px;width:460px;max-width:95vw;height:100vh;background:#0f1b30;border-left:1px solid rgba(255,255,255,.1);z-index:1101;display:flex;flex-direction:column;transition:right .3s cubic-bezier(.4,0,.2,1);overflow:hidden;}
+.lf-meeting-overlay.open .lf-meeting-drawer{right:0;}
+.lf-meet-hd{padding:20px 22px 16px;border-bottom:1px solid rgba(255,255,255,.09);display:flex;align-items:flex-start;justify-content:space-between;flex-shrink:0;}
+.lf-meet-avatar{width:48px;height:48px;border-radius:12px;background:linear-gradient(135deg,#6366f1,#8b5cf6);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;color:#fff;flex-shrink:0;margin-right:13px;}
+.lf-meet-name{font-size:17px;font-weight:800;color:#fff;line-height:1.2;}
+.lf-meet-sub{font-size:11px;color:rgba(255,255,255,.45);margin-top:2px;}
+.lf-meet-close{background:none;border:none;color:rgba(255,255,255,.4);font-size:20px;cursor:pointer;padding:0;line-height:1;}
+.lf-meet-close:hover{color:#fff;}
+.lf-meet-body{flex:1;overflow-y:auto;padding:18px 22px 40px;}
+.lf-meet-section{margin-bottom:20px;}
+.lf-meet-section-hd{font-size:10px;font-weight:700;color:rgba(255,255,255,.35);letter-spacing:2px;text-transform:uppercase;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid rgba(255,255,255,.07);}
+.lf-meet-kpi-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.lf-meet-kpi{background:rgba(255,255,255,.05);border-radius:8px;padding:10px 12px;}
+.lf-meet-kpi-val{font-size:22px;font-weight:800;color:#fff;line-height:1;}
+.lf-meet-kpi-lbl{font-size:10px;color:rgba(255,255,255,.35);margin-top:3px;font-family:var(--ff-m);}
+.lf-meet-info-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.05);font-size:13px;}
+.lf-meet-info-lbl{color:rgba(255,255,255,.4);width:110px;flex-shrink:0;font-size:11px;}
+.lf-meet-info-val{color:#fff;font-weight:500;}
+.lf-meet-goal{background:rgba(99,102,241,.1);border:1px solid rgba(99,102,241,.25);border-radius:8px;padding:11px 14px;margin-bottom:8px;}
+.lf-meet-goal-title{font-size:12px;font-weight:700;color:#a5b4fc;margin-bottom:4px;}
+.lf-meet-goal-bar-wrap{height:6px;background:rgba(255,255,255,.08);border-radius:100px;overflow:hidden;margin:6px 0 4px;}
+.lf-meet-goal-bar{height:100%;background:linear-gradient(90deg,#6366f1,#8b5cf6);border-radius:100px;}
+.lf-meet-goal-pct{font-size:10px;color:rgba(255,255,255,.45);}
+.lf-meet-talking-pt{display:flex;gap:10px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.05);}
+.lf-meet-talking-ico{font-size:14px;flex-shrink:0;margin-top:1px;}
+.lf-meet-talking-text{font-size:12px;color:rgba(255,255,255,.75);line-height:1.6;}
+.lf-meet-actions{display:flex;gap:8px;margin-top:16px;flex-wrap:wrap;}
+.lf-meet-action-btn{flex:1;min-width:100px;padding:9px 12px;border-radius:8px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.05);color:rgba(255,255,255,.8);font-size:12px;font-weight:600;cursor:pointer;text-align:center;transition:all .15s;}
+.lf-meet-action-btn:hover{background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.3);}
 /* Broker / Trading pages full-bleed: heroes edge-to-edge */
 .content.lf-fullpage .bd-hero,
 .content.lf-fullpage .td-hero,
@@ -16285,13 +16343,13 @@ async function deactivateDriver(driverId) {
 
 <style>
 /* ── IEBC SEGMENT PAGES ── */
-.iebc-banner{padding:28px 32px 24px;position:relative;overflow:hidden;}
+.iebc-banner{padding:10px 32px 10px;position:relative;overflow:hidden;}
 .iebc-banner::after{content:'';position:absolute;top:-80px;right:-80px;width:260px;height:260px;border-radius:50%;background:rgba(255,255,255,.04);pointer-events:none;}
 .iebc-banner-row{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;}
 .iebc-node-chip{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700;color:rgba(255,255,255,.8);letter-spacing:.8px;margin-bottom:8px;}
-.iebc-expert-name{font-size:20px;font-weight:800;color:#fff;margin-bottom:2px;}
+.iebc-expert-name{font-size:14px;font-weight:800;color:#fff;margin-bottom:2px;}
 .iebc-expert-title{font-size:12px;color:rgba(255,255,255,.55);}
-.iebc-expert-icon{font-size:36px;margin-right:14px;flex-shrink:0;}
+.iebc-expert-icon{font-size:22px;margin-right:10px;flex-shrink:0;}
 .iebc-run-btn{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);color:#fff;font-size:12px;font-weight:700;padding:8px 16px;border-radius:8px;cursor:pointer;transition:background .15s;white-space:nowrap;}
 .iebc-run-btn:hover{background:rgba(255,255,255,.25);}
 .iebc-last-run{font-size:10px;color:rgba(255,255,255,.4);margin-top:4px;}
@@ -16357,6 +16415,14 @@ async function deactivateDriver(driverId) {
         </div>
       </div>
     </div>
+    <!-- Driver Grid (top section) -->
+    <div class="lf-drivers-top">
+      <div class="lf-drivers-top-hd">
+        <span class="lf-drivers-top-hd-lbl">🏥 Active Drivers</span>
+        <button class="lf-btn" style="background:#10b981;color:#fff;font-size:11px;padding:5px 12px;" onclick="lfOpenDriver()">+ Add Driver</button>
+      </div>
+      <div class="lf-driver-grid" id="lf-nemt-roster-strip"></div>
+    </div>
     <!-- Intelligence Row -->
     <div class="iebc-intel-row">
       <div class="iebc-health-block">
@@ -16382,7 +16448,7 @@ async function deactivateDriver(driverId) {
     </div>
     <!-- Driver Roster Strip -->
     <div class="lf-roster-strip">
-      <div id="lf-nemt-roster-strip" style="display:flex;gap:12px;flex:1;align-items:flex-start;flex-wrap:nowrap;">
+      <div id="lf-nemt-roster-strip-old" style="display:flex;gap:12px;flex:1;align-items:flex-start;flex-wrap:nowrap;">
         <div style="color:rgba(255,255,255,.4);font-size:12px">Loading…</div>
       </div>
       <button class="lf-btn" style="flex-shrink:0;align-self:center;background:#10b981;color:#fff;" onclick="lfOpenDriver()">+ Add Driver</button>
@@ -16435,6 +16501,14 @@ async function deactivateDriver(driverId) {
         </div>
       </div>
     </div>
+    <!-- Driver Grid (top section) -->
+    <div class="lf-drivers-top">
+      <div class="lf-drivers-top-hd">
+        <span class="lf-drivers-top-hd-lbl">🧪 Active Drivers</span>
+        <button class="lf-btn" style="background:#ef4444;color:#fff;font-size:11px;padding:5px 12px;" onclick="lfOpenDriver()">+ Add Driver</button>
+      </div>
+      <div class="lf-driver-grid" id="lf-med-roster-strip"></div>
+    </div>
     <!-- Intelligence Row -->
     <div class="iebc-intel-row">
       <div class="iebc-health-block">
@@ -16460,7 +16534,7 @@ async function deactivateDriver(driverId) {
     </div>
     <!-- Driver Roster Strip -->
     <div class="lf-roster-strip">
-      <div id="lf-med-roster-strip" style="display:flex;gap:12px;flex:1;align-items:flex-start;flex-wrap:nowrap;">
+      <div id="lf-med-roster-strip-old" style="display:flex;gap:12px;flex:1;align-items:flex-start;flex-wrap:nowrap;">
         <div style="color:rgba(255,255,255,.4);font-size:12px">Loading…</div>
       </div>
       <button class="lf-btn" style="flex-shrink:0;align-self:center;background:#ef4444;color:#fff;" onclick="lfOpenDriver()">+ Add Driver</button>
