@@ -256,37 +256,142 @@ def h208_create_driver_profile(carrier_id, contract_id, payload) -> dict:
 
 def h209_send_welcome_sms(carrier_id, contract_id, payload) -> dict:
     try:
+        from ...settings import get_settings
         driver_id = payload.get("driver_id") or carrier_id
         d = _driver(driver_id)
         name = d.get("name") or "Driver"
         phone = d.get("phone") or payload.get("phone")
+        if not phone:
+            return {"sms_sent": False, "reason": "no_phone_number"}
         services = d.get("approved_services") or payload.get("approved_services") or []
         services_str = ", ".join(services) if services else "your assigned services"
         message = (
             f"Welcome to 3 Lakes Light Fleet, {name}! "
-            f"You're approved to drive {services_str}."
+            f"You're approved for: {services_str}. "
+            f"A team member will reach out shortly with next steps. "
+            f"Questions? Reply to this message or call 3 Lakes at any time."
         )
-        log.info("SMS to %s: %s", phone, message)
-        return {
-            "sms_sent": True,
-            "phone": phone,
-            "message": message,
-        }
+        s = get_settings()
+        if s.twilio_account_sid and s.twilio_auth_token and s.twilio_from_number:
+            try:
+                from twilio.rest import Client  # type: ignore
+                msg = Client(s.twilio_account_sid, s.twilio_auth_token).messages.create(
+                    body=message,
+                    from_=s.twilio_from_number,
+                    to=phone,
+                )
+                log.info("Welcome SMS sent to %s sid=%s", phone, msg.sid)
+                return {"sms_sent": True, "phone": phone, "sms_sid": msg.sid}
+            except Exception as e:  # noqa: BLE001
+                log.warning("Twilio SMS failed for %s: %s", phone, e)
+                return {"sms_sent": False, "error": str(e)}
+        log.info("Twilio not configured — would send SMS to %s: %s", phone, message)
+        return {"sms_sent": False, "note": "twilio_not_configured", "would_send": message}
     except Exception as e:  # noqa: BLE001
         return {"sms_sent": False, "error": str(e)}
 
 
-# ── Step 210: activate.app_access ────────────────────────────────────────────
+# ── Step 209b: send.welcome_email ─────────────────────────────────────────────
+
+def _send_welcome_email(driver_id, d: dict) -> dict:
+    """Send HTML welcome email via Hostinger SMTP from info@ mailbox."""
+    name = d.get("name") or "Driver"
+    email = d.get("email") or ""
+    if not email:
+        return {"email_sent": False, "reason": "no_email_address"}
+    services = d.get("approved_services") or []
+    services_list = "".join(f"<li>{s.title()}</li>" for s in services) if services else "<li>Your assigned services</li>"
+    body_html = f"""
+<html><body style="font-family:Arial,sans-serif;color:#222;max-width:600px;margin:auto">
+<h2 style="color:#1a4fa8">Welcome to 3 Lakes Light Fleet, {name}!</h2>
+<p>We're excited to have you on the team. Your driver profile is now <strong>active</strong>
+and you are approved for the following services:</p>
+<ul>{services_list}</ul>
+<p>Here's what to expect next:</p>
+<ol>
+  <li>A team member will reach out within 1 business day to walk you through your first assignment.</li>
+  <li>Make sure your vehicle is clean, fueled, and ready to go.</li>
+  <li>Keep your phone available — dispatch notifications come via text.</li>
+</ol>
+<p>If you have any questions, reply to this email or text us directly — we're here to help.</p>
+<p style="margin-top:32px">Welcome aboard,<br>
+<strong>The 3 Lakes Light Fleet Team</strong><br>
+<a href="https://3lakeslogistics.com">3lakeslogistics.com</a></p>
+</body></html>"""
+    body_text = (
+        f"Welcome to 3 Lakes Light Fleet, {name}!\n\n"
+        f"Your driver profile is active. Approved services: {', '.join(services) if services else 'assigned services'}.\n\n"
+        "A team member will contact you within 1 business day. "
+        "Questions? Reply to this email or text us anytime.\n\n"
+        "— The 3 Lakes Light Fleet Team"
+    )
+    try:
+        from ...email.smtp_sender import send_from_mailbox
+        result = send_from_mailbox(
+            mailbox="info",
+            to=[email],
+            subject=f"Welcome to 3 Lakes Light Fleet, {name}!",
+            body_html=body_html,
+            body_text=body_text,
+        )
+        log.info("Welcome email sent to %s driver_id=%s", email, driver_id)
+        return {"email_sent": True, "to": email}
+    except Exception as e:  # noqa: BLE001
+        log.warning("Welcome email failed for %s: %s", email, e)
+        return {"email_sent": False, "error": str(e)}
+
+
+# ── Step 210: activate.app_access + send welcome email + welcome call ─────────
 
 def h210_activate_app_access(carrier_id, contract_id, payload) -> dict:
     try:
         driver_id = payload.get("driver_id") or carrier_id
+        d = _driver(driver_id)
+
+        # Send welcome email
+        email_result = _send_welcome_email(driver_id, d)
+
+        # Welcome phone call via Bland AI
+        call_result: dict = {"call_placed": False, "note": "not_attempted"}
+        phone = d.get("phone") or payload.get("phone")
+        name = d.get("name") or "there"
+        if phone:
+            try:
+                from ...agents.bland_client import start_outbound_call
+                services = d.get("approved_services") or []
+                services_str = ", ".join(services) if services else "light fleet services"
+                welcome_script = (
+                    f"You are Maya, a friendly onboarding specialist at 3 Lakes Logistics. "
+                    f"You are calling {name} to personally welcome them to the 3 Lakes Light Fleet. "
+                    f"They just completed sign-up and are approved for: {services_str}. "
+                    f"Key points to cover:\n"
+                    f"1. Congratulate them on completing onboarding.\n"
+                    f"2. Confirm their approved services: {services_str}.\n"
+                    f"3. Let them know a dispatch coordinator will be in touch within 1 business day for first assignment.\n"
+                    f"4. Ask if they have any immediate questions.\n"
+                    f"5. Keep it warm, friendly, and under 3 minutes.\n"
+                    f"Personality: warm, encouraging, professional. This is their first impression of 3 Lakes."
+                )
+                bland_result = start_outbound_call(
+                    lead_id=str(driver_id),
+                    phone=phone,
+                    prospect_name=name,
+                )
+                if bland_result.get("status") == "started":
+                    call_result = {"call_placed": True, "call_id": bland_result.get("call_id")}
+                    log.info("Welcome call placed to %s driver_id=%s call_id=%s", phone, driver_id, bland_result.get("call_id"))
+                else:
+                    call_result = {"call_placed": False, "error": bland_result.get("error")}
+            except Exception as e:  # noqa: BLE001
+                log.warning("Welcome call failed for driver_id=%s: %s", driver_id, e)
+                call_result = {"call_placed": False, "error": str(e)}
+
         return {
             "driver_id": str(driver_id) if driver_id else None,
             "app_activated": True,
-            "login_instructions": (
-                "Download the 3 Lakes Driver app and log in with your phone number."
-            ),
+            "login_instructions": "Download the 3 Lakes Driver app and log in with your phone number.",
+            "welcome_email": email_result,
+            "welcome_call": call_result,
         }
     except Exception as e:  # noqa: BLE001
         return {"app_activated": False, "error": str(e)}
