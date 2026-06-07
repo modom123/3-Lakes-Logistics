@@ -9899,7 +9899,7 @@ select.oc-inp option{background:#1a1a2e;color:#fff;}
             <button class="mo-btn" style="font-size:11px;padding:6px 16px;" onclick="moTodoNew()">+ New Task</button>
             <select class="mo-select" id="mo-todo-filter" style="width:140px;padding:6px 10px;font-size:11px;" onchange="moTodoRender()">
               <option value="all">All Tasks</option>
-              <option value="open">Open Only</option>
+              <option value="open" selected>Open Only</option>
               <option value="urgent">Urgent / Overdue</option>
               <option value="done">Completed</option>
             </select>
@@ -10590,7 +10590,16 @@ window.moTodoClear = function(){
 
 window.moTodoToggle = function(id){
   const todos=moTodos();const t=todos.find(x=>x.id===id);if(t)t.done=!t.done;
-  moTodosSave(todos);moTodoRender();
+  moTodosSave(todos);
+  const filter=document.getElementById('mo-todo-filter')?.value||'open';
+  if(t&&t.done&&filter!=='all'&&filter!=='done'){
+    // Animate the row out, then re-render
+    const row=document.getElementById('mo-row-'+id);
+    if(row){row.style.transition='opacity .35s,transform .35s';row.style.opacity='0';row.style.transform='translateX(12px)';setTimeout(moTodoRender,370);}
+    else{moTodoRender();}
+  } else {
+    moTodoRender();
+  }
 };
 
 window.moTodoDel = function(id){
