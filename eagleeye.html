@@ -7961,7 +7961,7 @@ async function loadTriggerStatus() {
 <div class="page" id="page-email">
 <style>
 .mail-client{display:flex;flex:1;min-height:0;overflow:hidden;background:var(--bg)}
-.mail-sidebar{width:240px;min-width:240px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto;flex-shrink:0}
+.mail-sidebar{width:180px;min-width:160px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto;flex-shrink:0}
 .mail-sidebar-top{padding:14px 12px 10px;border-bottom:1px solid var(--border)}
 .mail-mb-list{padding:8px 0}
 .mail-mb-item{padding:8px 12px;display:flex;align-items:center;gap:8px;cursor:pointer;transition:background .12s}
@@ -7970,7 +7970,7 @@ async function loadTriggerStatus() {
 .mail-mb-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;transition:background .3s}
 .mail-mb-label{flex:1;font-size:12px;font-weight:500;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .mail-mb-count{font-size:10px;font-weight:700;background:var(--navy);color:#FFD700;padding:2px 6px;border-radius:8px;white-space:nowrap}
-.mail-list-pane{width:340px;min-width:280px;border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;flex-shrink:0}
+.mail-list-pane{width:280px;min-width:220px;border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;flex-shrink:0}
 .mail-list-hd{padding:10px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;flex-shrink:0}
 .mail-list-body{flex:1;overflow-y:auto}
 .mail-item{padding:10px 14px;border-bottom:1px solid rgba(0,0,0,.05);cursor:pointer;transition:background .12s}
@@ -8107,7 +8107,7 @@ function _renderSidebar(mailboxes){
     const title=mb.status+(mb.error?' — '+mb.error:'')+(mb.last_polled?' · Polled '+new Date(mb.last_polled).toLocaleTimeString():'');
     h+=`<div class="mail-mb-item ${_mailCurrent===mb.name?'active':''}" onclick="mailSelectMB('${mb.name}')" title="${esc(title)}">
       <div class="mail-mb-dot" style="background:${dot}"></div>
-      <span class="mail-mb-label">${mb.name}@3lakeslogistics.com</span>
+      <span class="mail-mb-label">${mb.name}@</span>
       ${mb.unread?`<span class="mail-mb-count" style="background:${_MB_COLORS[mb.name]||'var(--navy)'}">${mb.unread}</span>`:''}
     </div>`;
   }
