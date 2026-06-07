@@ -779,6 +779,13 @@ def h30_onboarding_complete(carrier_id, contract_id, payload):
         advance_phase_notification(str(carrier_id) if carrier_id else "", 10)
     except Exception as _exc:  # noqa: BLE001
         log.debug("advance_phase_notification phase 10 failed: %s", _exc)
+    # Notify CC Gulley — new carrier changes strategic metrics
+    try:
+        from ...triggers import fire_cc_gulley  # noqa: PLC0415
+        fire_cc_gulley()
+        log.info("CC Gulley triggered after carrier onboarding: %s", carrier_id)
+    except Exception as _exc:  # noqa: BLE001
+        log.warning("CC Gulley trigger failed at step 30: %s", _exc)
     return result
 
 

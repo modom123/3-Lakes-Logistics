@@ -589,7 +589,7 @@ def h220_onboarding_complete(carrier_id, contract_id, payload) -> dict:
         driver_id = payload.get("driver_id") or carrier_id
         d = _driver(driver_id)
         approved_services = d.get("approved_services") or payload.get("approved_services") or []
-        return {
+        result = {
             "completed": True,
             "driver_id": str(driver_id) if driver_id else None,
             "name": d.get("name"),
@@ -597,6 +597,14 @@ def h220_onboarding_complete(carrier_id, contract_id, payload) -> dict:
             "approved_services": approved_services,
             "completed_at": _NOW(),
         }
+        # Notify CC Gulley — new driver expands fleet capacity and changes strategic metrics
+        try:
+            from ...triggers import fire_cc_gulley  # noqa: PLC0415
+            fire_cc_gulley()
+            log.info("CC Gulley triggered after LF driver onboarding: %s", driver_id)
+        except Exception as _exc:  # noqa: BLE001
+            log.warning("CC Gulley trigger failed at step 220: %s", _exc)
+        return result
     except Exception as e:  # noqa: BLE001
         return {"completed": False, "error": str(e)}
 
