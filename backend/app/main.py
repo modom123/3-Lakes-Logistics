@@ -35,6 +35,7 @@ from .api import (
     light_fleet_router,
     lf_public_router,
     lf_webhooks_router,
+    driver_packet_router,
     checkr_webhook_router,
     stripe_identity_webhook_router,
     driver_auth_router,
@@ -247,6 +248,7 @@ def create_app() -> FastAPI:
     app.include_router(factoring_router,       prefix="/api/factoring",    tags=["factoring"])
     app.include_router(light_fleet_router,     prefix="/api/light-fleet",  tags=["light-fleet"])
     app.include_router(lf_public_router,       prefix="/api/light-fleet",  tags=["light-fleet-public"])
+    app.include_router(driver_packet_router,   prefix="/api/light-fleet",  tags=["light-fleet"])
     app.include_router(lf_webhooks_router,     prefix="/api",              tags=["lf-webhooks"])
     app.include_router(checkr_webhook_router,          prefix="/api", tags=["checkr-webhook"])
     app.include_router(stripe_identity_webhook_router, prefix="/api", tags=["stripe-identity-webhook"])

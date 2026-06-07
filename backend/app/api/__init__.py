@@ -30,6 +30,7 @@ from .routes_agreements    import router as agreements_router
 from .routes_factoring     import router as factoring_router
 from .routes_light_fleet   import router as light_fleet_router, public_router as lf_public_router
 from .routes_lf_webhooks   import router as lf_webhooks_router
+from .routes_driver_packet import router as driver_packet_router
 from .routes_checkr_webhook          import router as checkr_webhook_router
 from .routes_stripe_identity_webhook import router as stripe_identity_webhook_router
 from .routes_onboarding_status import router as onboarding_status_router
@@ -83,6 +84,7 @@ __all__ = [
     "light_fleet_router",
     "lf_public_router",
     "lf_webhooks_router",
+    "driver_packet_router",
     "checkr_webhook_router",
     "stripe_identity_webhook_router",
     "studio_router",

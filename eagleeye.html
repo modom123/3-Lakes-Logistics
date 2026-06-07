@@ -17166,12 +17166,23 @@ async function lfLoadRoster(service, stripId){
       const sc = dr.status === 'active' ? '#22c55e' : dr.status === 'suspended' ? '#ef4444' : '#f59e0b';
       const initials = (dr.name||'?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
       const mvrColor = dr.mvr_status==='clear'?'#22c55e':dr.mvr_status==='flagged'?'#ef4444':'#f59e0b';
+      // Welcome workflow dot: green = all 3 instant steps done, yellow = partial, grey = not started
+      const wSmsDone = !!dr.welcome_sms_sent;
+      const wEmailDone = !!dr.welcome_email_sent;
+      const wCallDone = !!dr.welcome_call_placed;
+      const wStarted = !!dr.welcome_workflow_started_at;
+      const wDoneCount = [wSmsDone, wEmailDone, wCallDone].filter(Boolean).length;
+      const wDotColor = !wStarted ? '#9ca3af' : wDoneCount === 3 ? '#22c55e' : '#f59e0b';
+      const wDotTitle = !wStarted ? 'Welcome workflow not started' : wDoneCount === 3 ? 'Welcome workflow complete' : `Welcome workflow in progress (${wDoneCount}/3 steps)`;
       return `<div class="lf-driver-card" onclick="lfShowDriverMeeting(${JSON.stringify(dr).replace(/"/g,'&quot;')})">
         <button class="lf-driver-card-meet" onclick="event.stopPropagation();lfShowDriverMeeting(${JSON.stringify(dr).replace(/"/g,'&quot;')})">📋 Meet</button>
         <div style="display:flex;align-items:center;gap:9px;margin-bottom:8px;">
           <div style="width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg,#6366f1,#8b5cf6);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#fff;flex-shrink:0;">${initials}</div>
-          <div>
-            <div class="lf-driver-card-name">${dr.name||'—'}</div>
+          <div style="flex:1;min-width:0;">
+            <div style="display:flex;align-items:center;gap:5px;">
+              <div class="lf-driver-card-name" style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${dr.name||'—'}</div>
+              <span title="${wDotTitle}" style="width:8px;height:8px;border-radius:50%;background:${wDotColor};flex-shrink:0;display:inline-block;box-shadow:0 0 0 1.5px rgba(255,255,255,.25);"></span>
+            </div>
             <div class="lf-driver-card-phone">${dr.phone||''}</div>
           </div>
         </div>
@@ -17288,6 +17299,25 @@ function lfShowDriverMeeting(dr) {
       <div class="lf-meet-section-hd">Meeting Talking Points</div>
       ${points.map(p=>`<div class="lf-meet-talking-pt"><span class="lf-meet-talking-ico">${p.ico}</span><span class="lf-meet-talking-text">${p.text}</span></div>`).join('')}
     </div>
+    <div class="lf-meet-section">
+      <div class="lf-meet-section-hd">Welcome Journey</div>
+      ${(()=>{
+        const steps = [
+          { label: 'SMS Sent',         done: !!dr.welcome_sms_sent },
+          { label: 'Email Sent',       done: !!dr.welcome_email_sent },
+          { label: 'Call Made',        done: !!dr.welcome_call_placed },
+          { label: 'Day 1 Follow-up',  done: !!dr.day1_sms_sent },
+          { label: 'Day 2 Follow-up',  done: !!dr.day2_email_sent },
+        ];
+        const rows = steps.map(s => `
+          <div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.06);">
+            <span style="font-size:16px;line-height:1;">${s.done ? '✅' : '<span style="font-size:16px;color:#6b7280;">○</span>'}</span>
+            <span style="font-size:13px;color:${s.done ? '#d1fae5' : '#9ca3af'};">${s.label}</span>
+          </div>`).join('');
+        const resendBtn = `<button class="lf-meet-action-btn" style="margin-top:12px;background:rgba(245,158,11,.15);color:#f59e0b;border-color:rgba(245,158,11,.3);" onclick="lfResendWelcome(${JSON.stringify(dr.phone||'').replace(/"/g,'&quot;')},${JSON.stringify(dr.id||'').replace(/"/g,'&quot;')})">🔁 Resend Welcome</button>`;
+        return rows + resendBtn;
+      })()}
+    </div>
     <div class="lf-meet-actions">
       <button class="lf-meet-action-btn" onclick="window.open('tel:${dr.phone||''}')">📞 Call</button>
       <button class="lf-meet-action-btn" onclick="window.open('sms:${dr.phone||''}')">💬 Text</button>
@@ -17301,6 +17331,16 @@ function lfShowDriverMeeting(dr) {
 function lfCloseMeeting() {
   const overlay = document.getElementById('lf-meeting-overlay');
   if(overlay) overlay.classList.remove('open');
+}
+
+async function lfResendWelcome(phone, driverId) {
+  if(!phone) { alert('No phone number on file for this driver.'); return; }
+  try {
+    await lfFetch('/api/triggers/maya-call', 'POST', { phone, driver_id: driverId, trigger: 'resend_welcome' });
+    alert('Welcome call/SMS triggered for ' + phone);
+  } catch(e) {
+    alert('Could not trigger welcome: ' + (e.message || 'Unknown error'));
+  }
 }
 
 async function lfFetch(path, method='GET', body=null){
