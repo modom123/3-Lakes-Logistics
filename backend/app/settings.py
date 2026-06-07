@@ -138,6 +138,8 @@ class Settings(BaseSettings):
     arrive_client_secret: str = ""
     echo_global_api_key: str = ""
     cargo_chief_api_key: str = ""
+    chrobinson_client_id: str = ""
+    chrobinson_client_secret: str = ""
 
     # --- Light Fleet Platform API Keys ---
     # Curri — B2B same-day carrier (carriers.curri.com)

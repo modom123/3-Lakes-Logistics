@@ -39,7 +39,7 @@ DEFAULT_CONFIG: dict[str, Any] = {
     "max_dh_miles":  100,
     "min_rpm":       1.00,
     "trailer_type":  "cargo_van",
-    "boards":        ["123loadboard", "dat", "truckstop", "truckerpath"],
+    "boards":        ["123loadboard", "dat", "truckstop", "truckerpath", "ch_robinson"],
     "hot_rpm":       2.00,   # loads above this are flagged HOT 🔥
     "limit_per_board": 50,
 }
@@ -97,11 +97,13 @@ def hunt(config: dict[str, Any] | None = None) -> dict[str, Any]:
             dat_search,
             truckstop_search,
             truckerpath_search,
+            chrobinson_search,
         )
         extra_clients = {
             "dat": dat_search,
             "truckstop": truckstop_search,
             "truckerpath": truckerpath_search,
+            "ch_robinson": chrobinson_search,
         }
     except ImportError:
         extra_clients = {}

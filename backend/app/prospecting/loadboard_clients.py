@@ -832,7 +832,71 @@ def _cc_map(l: dict) -> LoadResult:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Master search — fan out to all 15 sources, deduplicate by (origin, dest, rate)
+# 15. C.H. Robinson — Navisphere Carrier API (free for registered carriers)
+#     Register: chrobinson.com/carriers/sign-up → Navisphere account → email DOT#
+# ─────────────────────────────────────────────────────────────────────────────
+
+_chr_cache = _TokenCache()
+
+
+def _chr_token() -> str | None:
+    if _chr_cache.valid():
+        return _chr_cache.token
+    s = get_settings()
+    if not s.chrobinson_client_id or not s.chrobinson_client_secret:
+        return None
+    tok, exp = _fetch_oauth2_token(
+        "https://api.chrobinson.com/identity/connect/token",
+        s.chrobinson_client_id, s.chrobinson_client_secret,
+        scope="navisphere.loads.read")
+    if tok:
+        _chr_cache.set(tok, exp)
+    return tok
+
+
+def chrobinson_search(p: SearchParams) -> list[LoadResult]:
+    tok = _chr_token()
+    if not tok:
+        return []
+    headers = {"Authorization": f"Bearer {tok}", "Accept": "application/json"}
+    body = _post("https://api.chrobinson.com/loads/v1/search", headers=headers, json={
+        "originLocation": {
+            "stateProv": p.origin_state,
+            **({"city": p.origin_city} if p.origin_city else {}),
+        },
+        "equipmentType": p.trailer_type,
+        "maxDeadheadMiles": p.max_deadhead_mi,
+        "pageSize": 50,
+    })
+    if not body:
+        return []
+    return [_chr_map(l) for l in (body.get("loads") or [])]
+
+
+def _chr_map(l: dict) -> LoadResult:
+    o = l.get("originLocation") or {}
+    d = l.get("destinationLocation") or {}
+    r = l.get("rate") or {}
+    return LoadResult(
+        source="ch_robinson",
+        load_id=str(l.get("loadNumber", l.get("id", ""))),
+        broker_name="C.H. Robinson",
+        origin_city=o.get("city", ""),
+        origin_state=o.get("stateProv", ""),
+        dest_city=d.get("city", ""),
+        dest_state=d.get("stateProv", ""),
+        miles=l.get("totalMiles"),
+        rate_total=r.get("amount"),
+        rate_per_mile=r.get("perMile"),
+        weight_lbs=l.get("weight"),
+        trailer_type=l.get("equipmentType", ""),
+        pickup_date=(l.get("stops") or [{}])[0].get("appointmentStartDate", "")[:10] or None,
+        raw=l,
+    )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Master search — fan out to all 16 sources, deduplicate by (origin, dest, rate)
 # ─────────────────────────────────────────────────────────────────────────────
 
 _ALL_CLIENTS = [
@@ -850,7 +914,8 @@ _ALL_CLIENTS = [
     arrive_search,        # 12
     echo_global_search,   # 13
     cargo_chief_search,   # 14
-    # 15 = Convoy: folded into DAT after July 2025 acquisition — sourced above
+    chrobinson_search,    # 15 — C.H. Robinson Navisphere (free)
+    # 16 = Convoy: folded into DAT after July 2025 acquisition — sourced above
 ]
 
 
