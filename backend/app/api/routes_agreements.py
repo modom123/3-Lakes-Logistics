@@ -12,6 +12,8 @@ Public (token auth):
 from __future__ import annotations
 
 import os
+import random
+import string
 from datetime import datetime, timezone
 
 import httpx
@@ -66,11 +68,20 @@ router = APIRouter()
 
 # ── Internal endpoints ────────────────────────────────────────────────────────
 
+def _generate_agreement_no() -> str:
+    digits = "".join(random.choices(string.digits, k=6))
+    return f"3LL-DSP-{digits}"
+
+
 class SendRequest(BaseModel):
     agreement_type: str
     carrier_name: str
     carrier_email: str
     carrier_dot: str | None = None
+    carrier_mc: str | None = None
+    carrier_phone: str | None = None
+    service_plan: str | None = None
+    agreement_no: str | None = None
     metadata: dict | None = None
 
 
@@ -94,6 +105,17 @@ async def send_for_signature(body: SendRequest) -> dict:
     if body.agreement_type not in AGREEMENT_LABELS:
         raise HTTPException(400, f"agreement_type must be one of {list(AGREEMENT_LABELS)}")
 
+    agreement_no = body.agreement_no or _generate_agreement_no()
+
+    meta = body.metadata or {}
+    if body.carrier_mc:
+        meta["carrier_mc"] = body.carrier_mc
+    if body.carrier_phone:
+        meta["carrier_phone"] = body.carrier_phone
+    if body.service_plan:
+        meta["service_plan"] = body.service_plan
+    meta["agreement_no"] = agreement_no
+
     sb = get_supabase()
     result = (
         sb.table("signature_requests")
@@ -102,7 +124,7 @@ async def send_for_signature(body: SendRequest) -> dict:
             "carrier_name":   body.carrier_name,
             "carrier_email":  body.carrier_email,
             "carrier_dot":    body.carrier_dot,
-            "metadata":       body.metadata or {},
+            "metadata":       meta,
         })
         .execute()
     )
@@ -113,15 +135,61 @@ async def send_for_signature(body: SendRequest) -> dict:
     sign_url = f"{SITE_URL}/sign.html?token={token}"
     label    = AGREEMENT_LABELS[body.agreement_type]
 
-    await _send_signing_email(body.carrier_email, body.carrier_name, label, sign_url)
+    await _send_signing_email(
+        body.carrier_email, body.carrier_name, label, sign_url,
+        agreement_no=agreement_no,
+        carrier_mc=body.carrier_mc,
+        service_plan=body.service_plan,
+    )
 
-    return {"ok": True, "id": req_id, "token": token, "sign_url": sign_url}
+    return {
+        "ok": True,
+        "id": req_id,
+        "token": token,
+        "sign_url": sign_url,
+        "agreement_no": agreement_no,
+    }
 
 
 @router.delete("/requests/{req_id}", dependencies=[Depends(require_bearer)])
 def cancel_request(req_id: str) -> dict:
     sb = get_supabase()
     sb.table("signature_requests").update({"status": "cancelled"}).eq("id", req_id).eq("status", "pending").execute()
+    return {"ok": True}
+
+
+@router.post("/requests/{req_id}/resend", dependencies=[Depends(require_bearer)])
+async def resend_signing_email(req_id: str) -> dict:
+    sb = get_supabase()
+    rows = (
+        sb.table("signature_requests")
+        .select("*")
+        .eq("id", req_id)
+        .limit(1)
+        .execute()
+        .data or []
+    )
+    if not rows:
+        raise HTTPException(404, "Request not found")
+    row = rows[0]
+    if row["status"] != "pending":
+        raise HTTPException(409, f"Cannot resend a {row['status']} request")
+
+    meta = row.get("metadata") or {}
+    token = row.get("token", "")
+    sign_url = f"{SITE_URL}/sign.html?token={token}"
+    label = AGREEMENT_LABELS.get(row["agreement_type"], row["agreement_type"])
+
+    await _send_signing_email(
+        row["carrier_email"],
+        row["carrier_name"],
+        label,
+        sign_url,
+        agreement_no=meta.get("agreement_no"),
+        carrier_mc=meta.get("carrier_mc"),
+        service_plan=meta.get("service_plan"),
+    )
+    log.info("Resent signing email for request %s to %s", req_id, row["carrier_email"])
     return {"ok": True}
 
 
@@ -221,11 +289,31 @@ def _fetch_token(token: str) -> dict:
     return row
 
 
-async def _send_signing_email(to: str, name: str, label: str, sign_url: str) -> None:
+async def _send_signing_email(
+    to: str,
+    name: str,
+    label: str,
+    sign_url: str,
+    agreement_no: str | None = None,
+    carrier_mc: str | None = None,
+    service_plan: str | None = None,
+) -> None:
     s = get_settings()
     if not s.postmark_server_token:
         log.warning("Postmark not configured — signing email not sent to %s", to)
         return
+
+    detail_rows = ""
+    if agreement_no:
+        detail_rows += f'<tr><td style="color:#666;padding:4px 0">Agreement #</td><td style="font-weight:bold;padding:4px 0">{agreement_no}</td></tr>'
+    if carrier_mc:
+        detail_rows += f'<tr><td style="color:#666;padding:4px 0">MC #</td><td style="padding:4px 0">{carrier_mc}</td></tr>'
+    if service_plan:
+        detail_rows += f'<tr><td style="color:#666;padding:4px 0">Service Plan</td><td style="padding:4px 0">{service_plan}</td></tr>'
+    details_block = ""
+    if detail_rows:
+        details_block = f'<table style="width:100%;border-collapse:collapse;margin:16px 0;font-size:14px">{detail_rows}</table>'
+
     html = f"""
     <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;color:#333">
       <div style="background:#1e288b;padding:20px 24px">
@@ -235,6 +323,7 @@ async def _send_signing_email(to: str, name: str, label: str, sign_url: str) -> 
       <div style="padding:24px">
         <p>Hi {name},</p>
         <p>Please review and sign your <strong>{label}</strong> with 3 Lakes Logistics.</p>
+        {details_block}
         <p style="margin:28px 0;text-align:center">
           <a href="{sign_url}" style="background:#ea580c;color:#fff;padding:14px 32px;border-radius:6px;text-decoration:none;font-weight:bold;font-size:15px;display:inline-block">
             Review &amp; Sign Agreement
@@ -257,7 +346,7 @@ async def _send_signing_email(to: str, name: str, label: str, sign_url: str) -> 
                     "To":            to,
                     "Subject":       f"Please sign: {label} — 3 Lakes Logistics",
                     "HtmlBody":      html,
-                    "TextBody":      f"Hi {name},\n\nPlease sign your {label}: {sign_url}\n\nThis link expires in 30 days.\n\n3 Lakes Logistics",
+                    "TextBody":      f"Hi {name},\n\nPlease sign your {label}: {sign_url}\n\nAgreement #: {agreement_no or 'N/A'}\nThis link expires in 30 days.\n\n3 Lakes Logistics",
                     "MessageStream": "outbound",
                     "Tag":           "esign",
                 },

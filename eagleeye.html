@@ -7049,65 +7049,119 @@ async function deactivateFactoring(id){
 }
 
 // ── Agreements ────────────────────────────────────────────────────
+const AGR_PLAN_TYPES=new Set(['carrier_agreement','broker_agreement','dispatcher_service','independent_contractor']);
+let _agrAllRows=[];
+
 async function loadAgreements(){
   const t=document.getElementById('agr-table');
   if(!t)return;
   t.innerHTML='<div class="loading"><div class="spin"></div>Loading…</div>';
   try{
-    const res=await apiFetch('/api/agreements/requests');
+    const res=await apiFetch('/api/agreements/requests?limit=500');
     const d=await res.json();
-    const rows=d.items||[];
-    // metrics
+    _agrAllRows=d.items||[];
     const set=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
-    set('agr-total',rows.length);
-    set('agr-pending',rows.filter(r=>r.status==='pending').length);
-    set('agr-signed',rows.filter(r=>r.status==='signed').length);
-    set('agr-expired',rows.filter(r=>r.status==='expired'||r.status==='cancelled').length);
-    // badge
-    const pend=rows.filter(r=>r.status==='pending').length;
+    set('agr-total',_agrAllRows.length);
+    set('agr-pending',_agrAllRows.filter(r=>r.status==='pending').length);
+    set('agr-signed',_agrAllRows.filter(r=>r.status==='signed').length);
+    set('agr-expired',_agrAllRows.filter(r=>r.status==='expired'||r.status==='cancelled').length);
+    const pend=_agrAllRows.filter(r=>r.status==='pending').length;
     const nb=document.getElementById('agreements-notif');
     if(nb){nb.style.display=pend?'inline':'none';nb.textContent=pend;}
-    if(!rows.length){t.innerHTML='<div style="padding:40px;text-align:center;color:var(--muted)">No signature requests yet — use the Send for Signature button to get started.</div>';return;}
-    const statusBadge=s=>{
-      const map={pending:'orange',signed:'green',expired:'red',cancelled:'red'};
-      return `<span class="badge badge-${map[s]||'orange'}" style="font-size:10px;text-transform:capitalize">${s}</span>`;
-    };
-    t.innerHTML=`<div class="tbl-wrap"><table class="tbl"><thead><tr>
-      <th>Agreement</th><th>Carrier / Party</th><th>Email</th><th style="width:90px">DOT</th>
-      <th style="width:80px">Status</th><th style="width:110px">Sent</th><th style="width:110px">Signed</th><th style="width:120px">Actions</th>
-    </tr></thead><tbody>${rows.map(r=>{
-      const label=AGR_LABELS[r.agreement_type]||r.agreement_type;
-      const sent=r.created_at?new Date(r.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'2-digit'}):'—';
-      const signed=r.signed_at?new Date(r.signed_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'2-digit'}):'—';
-      const rid=esc(r.id),tok=esc(r.token);
-      const siteUrl='https://www.3lakeslogistics.com';
-      const signLink=`${siteUrl}/sign.html?token=${tok}`;
-      const actions=r.status==='pending'
-        ?`<button class="btn-xs btn-out" title="Copy signing link" onclick="navigator.clipboard.writeText('${signLink}').then(()=>notify('Link copied'))">🔗 Copy Link</button>
-           <button class="btn-xs" style="background:rgba(239,68,68,.15);color:#ef4444;border:1px solid rgba(239,68,68,.3)" onclick="cancelAgrRequest('${rid}')">✕</button>`
-        :r.status==='signed'
-          ?`<button class="btn-xs btn-out" onclick="nav('vault')">📁 Vault</button>`
-          :'<span class="t-sm t-muted">—</span>';
-      return `<tr>
-        <td><span style="font-weight:600;font-size:12px">${esc(label)}</span></td>
-        <td>${esc(r.carrier_name)}</td>
-        <td style="font-size:12px;color:var(--muted)">${esc(r.carrier_email)}</td>
-        <td style="font-size:12px">${esc(r.carrier_dot||'—')}</td>
-        <td>${statusBadge(r.status)}</td>
-        <td style="font-size:11px;color:var(--muted)">${sent}</td>
-        <td style="font-size:11px;color:var(--muted)">${signed}</td>
-        <td style="white-space:nowrap">${actions}</td>
-      </tr>`;
-    }).join('')}</tbody></table></div>`;
+    filterAgreements();
   }catch(e){t.innerHTML=`<div style="padding:20px;color:var(--red)">Could not load agreements: ${esc(e.message)}</div>`;}
+}
+
+function filterAgreements(){
+  const t=document.getElementById('agr-table');
+  if(!t||!_agrAllRows.length){
+    if(t&&!_agrAllRows.length)t.innerHTML='<div style="padding:40px;text-align:center;color:var(--muted)">No signature requests yet — use the Send for Signature button to get started.</div>';
+    return;
+  }
+  const q=(document.getElementById('agr-search')?.value||'').toLowerCase();
+  const st=document.getElementById('agr-filter-status')?.value||'';
+  const tp=document.getElementById('agr-filter-type')?.value||'';
+  const rows=_agrAllRows.filter(r=>{
+    if(st&&r.status!==st)return false;
+    if(tp&&r.agreement_type!==tp)return false;
+    if(q){
+      const meta=r.metadata||{};
+      const hay=[r.carrier_name,r.carrier_email,r.carrier_dot,meta.carrier_mc,meta.agreement_no,meta.service_plan].filter(Boolean).join(' ').toLowerCase();
+      if(!hay.includes(q))return false;
+    }
+    return true;
+  });
+  const cl=document.getElementById('agr-count-label');
+  if(cl)cl.textContent=`${rows.length} of ${_agrAllRows.length}`;
+  if(!rows.length){t.innerHTML='<div style="padding:40px;text-align:center;color:var(--muted)">No results match your filters.</div>';return;}
+  _renderAgrTable(rows);
+}
+
+function _renderAgrTable(rows){
+  const t=document.getElementById('agr-table');
+  const statusBadge=s=>{
+    const map={pending:'orange',signed:'green',expired:'red',cancelled:'red'};
+    return `<span class="badge badge-${map[s]||'orange'}" style="font-size:10px;text-transform:capitalize">${s}</span>`;
+  };
+  t.innerHTML=`<div class="tbl-wrap"><table class="tbl"><thead><tr>
+    <th>Agreement #</th><th>Type</th><th>Carrier / Party</th><th>MC #</th><th style="width:80px">Status</th>
+    <th>Plan</th><th style="width:100px">Sent</th><th style="width:100px">Signed</th><th style="width:130px">Actions</th>
+  </tr></thead><tbody>${rows.map(r=>{
+    const label=AGR_LABELS[r.agreement_type]||r.agreement_type;
+    const meta=r.metadata||{};
+    const agrNo=meta.agreement_no||'—';
+    const mc=meta.carrier_mc||r.carrier_dot||'—';
+    const plan=meta.service_plan||'—';
+    const sent=r.created_at?new Date(r.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'2-digit'}):'—';
+    const signed=r.signed_at?new Date(r.signed_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'2-digit'}):'—';
+    const rid=esc(r.id),tok=esc(r.token||'');
+    const email=esc(r.carrier_email);
+    const siteUrl='https://www.3lakeslogistics.com';
+    const signLink=`${siteUrl}/sign.html?token=${tok}`;
+    let actions='';
+    if(r.status==='pending'){
+      actions=`<button class="btn-xs btn-out" title="Copy link" onclick="navigator.clipboard.writeText('${signLink}').then(()=>notify('Link copied'))">🔗</button>
+               <button class="btn-xs btn-out" title="Resend email" onclick="resendAgreement('${rid}','${email}')">📧</button>
+               <button class="btn-xs" title="View" onclick="viewAgreementDetail('${rid}')">👁</button>
+               <button class="btn-xs" style="background:rgba(239,68,68,.15);color:#ef4444;border:1px solid rgba(239,68,68,.3)" title="Cancel" onclick="cancelAgrRequest('${rid}')">✕</button>`;
+    }else if(r.status==='signed'){
+      actions=`<button class="btn-xs btn-out" onclick="viewAgreementDetail('${rid}')">👁 View</button>
+               <button class="btn-xs btn-out" onclick="nav('vault')">📁 Vault</button>`;
+    }else{
+      actions=`<button class="btn-xs btn-out" onclick="viewAgreementDetail('${rid}')">👁 View</button>`;
+    }
+    return `<tr>
+      <td style="font-family:var(--ff-m);font-size:11px;color:#6366f1;font-weight:700">${esc(agrNo)}</td>
+      <td style="font-size:11px;font-weight:600">${esc(label)}</td>
+      <td>${esc(r.carrier_name)}<div style="font-size:11px;color:var(--muted)">${esc(r.carrier_email)}</div></td>
+      <td style="font-size:12px">${esc(mc)}</td>
+      <td>${statusBadge(r.status)}</td>
+      <td style="font-size:11px;color:var(--muted);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(plan)}">${esc(plan)}</td>
+      <td style="font-size:11px;color:var(--muted)">${sent}</td>
+      <td style="font-size:11px;color:var(--muted)">${signed}</td>
+      <td style="white-space:nowrap">${actions}</td>
+    </tr>`;
+  }).join('')}</tbody></table></div>`;
+}
+
+function agrTypeChanged(){
+  const type=document.getElementById('agr-send-type')?.value||'';
+  const row=document.getElementById('agr-plan-row');
+  if(row)row.style.display=AGR_PLAN_TYPES.has(type)?'block':'none';
 }
 
 function openSendAgreementModal(type='carrier_agreement'){
   const sel=document.getElementById('agr-send-type');
   if(sel)sel.value=type;
-  ['agr-send-name','agr-send-email','agr-send-dot'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
-  const r=document.getElementById('agr-send-result');if(r){r.style.display='none';}
+  ['agr-send-name','agr-send-email','agr-send-dot','agr-send-mc','agr-send-phone'].forEach(id=>{
+    const el=document.getElementById(id);if(el)el.value='';
+  });
+  const planEl=document.getElementById('agr-send-plan');if(planEl)planEl.value='';
+  const noDisp=document.getElementById('agr-send-no-display');
+  if(noDisp)noDisp.textContent='Auto-generated on send';
+  const r=document.getElementById('agr-send-result');if(r)r.style.display='none';
   const btn=document.getElementById('agr-send-btn');if(btn){btn.disabled=false;btn.textContent='✍️ Send Link';}
+  agrTypeChanged();
   document.getElementById('agr-send-modal').style.display='flex';
 }
 function closeAgrModal(){document.getElementById('agr-send-modal').style.display='none';}
@@ -7117,6 +7171,9 @@ async function submitSendAgreement(){
   const name=(document.getElementById('agr-send-name')?.value||'').trim();
   const email=(document.getElementById('agr-send-email')?.value||'').trim();
   const dot=(document.getElementById('agr-send-dot')?.value||'').trim();
+  const mc=(document.getElementById('agr-send-mc')?.value||'').trim();
+  const phone=(document.getElementById('agr-send-phone')?.value||'').trim();
+  const plan=(document.getElementById('agr-send-plan')?.value||'').trim();
   const resEl=document.getElementById('agr-send-result');
   const btn=document.getElementById('agr-send-btn');
   if(!name||!email){
@@ -7125,11 +7182,19 @@ async function submitSendAgreement(){
   }
   btn.disabled=true;btn.textContent='Sending…';
   try{
-    const res=await apiFetch('/api/agreements/send',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({agreement_type:type,carrier_name:name,carrier_email:email,carrier_dot:dot||null})});
+    const payload={agreement_type:type,carrier_name:name,carrier_email:email};
+    if(dot)payload.carrier_dot=dot;
+    if(mc)payload.carrier_mc=mc;
+    if(phone)payload.carrier_phone=phone;
+    if(plan)payload.service_plan=plan;
+    const res=await apiFetch('/api/agreements/send',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
     const d=await res.json();
-    if(!res.ok){throw new Error(d.detail||'Send failed');}
-    if(resEl){resEl.style.display='block';resEl.style.background='rgba(34,197,94,.1)';resEl.style.color='#16a34a';resEl.textContent=`✓ Signing link sent to ${email}`;}
-    setTimeout(()=>{closeAgrModal();loadAgreements();},1800);
+    if(!res.ok)throw new Error(d.detail||'Send failed');
+    const noDisp=document.getElementById('agr-send-no-display');
+    if(noDisp&&d.agreement_no)noDisp.textContent=d.agreement_no;
+    if(resEl){resEl.style.display='block';resEl.style.background='rgba(34,197,94,.1)';resEl.style.color='#16a34a';
+      resEl.textContent=`✓ Signing link sent to ${email}${d.agreement_no?' · '+d.agreement_no:''}`;}
+    setTimeout(()=>{closeAgrModal();loadAgreements();},2000);
   }catch(e){
     if(resEl){resEl.style.display='block';resEl.style.background='rgba(239,68,68,.1)';resEl.style.color='#ef4444';resEl.textContent=e.message;}
     btn.disabled=false;btn.textContent='✍️ Send Link';
@@ -7141,6 +7206,64 @@ async function cancelAgrRequest(id){
   await apiFetch(`/api/agreements/requests/${id}`,{method:'DELETE'});
   loadAgreements();
 }
+
+async function resendAgreement(id,email){
+  if(!confirm(`Resend signing link to ${email}?`))return;
+  notify('Resending…');
+  try{
+    const res=await apiFetch(`/api/agreements/requests/${id}/resend`,{method:'POST'});
+    if(res.ok)notify('Signing link resent');
+    else notify('Resend failed — copy the link manually','error');
+  }catch{notify('Resend failed — copy the link manually','error');}
+}
+
+function viewAgreementDetail(id){
+  const row=_agrAllRows.find(r=>r.id===id);
+  if(!row)return;
+  const modal=document.getElementById('agr-detail-modal');
+  const title=document.getElementById('agr-det-title');
+  const noEl=document.getElementById('agr-det-no');
+  const body=document.getElementById('agr-det-body');
+  const acts=document.getElementById('agr-det-actions');
+  if(!modal)return;
+  const meta=row.metadata||{};
+  const label=AGR_LABELS[row.agreement_type]||row.agreement_type;
+  if(title)title.textContent=label;
+  if(noEl)noEl.textContent=meta.agreement_no||row.id?.slice(0,8)||'';
+  const fmt=d=>d?new Date(d).toLocaleString('en-US',{month:'short',day:'numeric',year:'numeric',hour:'2-digit',minute:'2-digit'}):'—';
+  const row_=([k,v])=>`<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px">
+    <span style="color:var(--muted);font-weight:500">${k}</span><span style="font-weight:600;text-align:right;max-width:60%">${esc(String(v||'—'))}</span></div>`;
+  const fields=[
+    ['Agreement #',meta.agreement_no||'—'],
+    ['Type',label],
+    ['Status',row.status],
+    ['Carrier Name',row.carrier_name],
+    ['Email',row.carrier_email],
+    ['DOT #',row.carrier_dot||'—'],
+    ['MC #',meta.carrier_mc||'—'],
+    ['Phone',meta.carrier_phone||'—'],
+    ['Service Plan',meta.service_plan||'—'],
+    ['Sent',fmt(row.created_at)],
+    ['Expires',fmt(row.expires_at)],
+    ['Signed',fmt(row.signed_at)],
+    ['Signed By',row.signatory_name||'—'],
+  ];
+  if(body)body.innerHTML=fields.map(row_).join('');
+  if(acts){
+    const tok=esc(row.token||'');
+    const siteUrl='https://www.3lakeslogistics.com';
+    const signLink=`${siteUrl}/sign.html?token=${tok}`;
+    let btns=`<button class="btn-out" onclick="closeAgrDetail()">Close</button>`;
+    if(row.status==='pending'){
+      btns+=` <button class="btn-out" onclick="navigator.clipboard.writeText('${signLink}').then(()=>notify('Link copied'))">🔗 Copy Link</button>`;
+      btns+=` <button class="btn-gold" onclick="resendAgreement('${esc(row.id)}','${esc(row.carrier_email)}')">📧 Resend Email</button>`;
+    }
+    if(row.status==='signed')btns+=` <button class="btn-out" onclick="nav('vault')">📁 Open Vault</button>`;
+    acts.innerHTML=btns;
+  }
+  modal.style.display='flex';
+}
+function closeAgrDetail(){const m=document.getElementById('agr-detail-modal');if(m)m.style.display='none';}
 
 // ── Vault ─────────────────────────────────────────────────────────────────────
 let _vaultDocs=[];
