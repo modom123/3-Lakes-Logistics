@@ -46,6 +46,26 @@ Rules:
 
 Keep responses conversational and natural. Sound like you're actually talking to them."""
 
+MAYA_WELCOME_PROMPT = """You are Maya, the driver onboarding specialist for 3 Lakes Light Fleet.
+You are calling a new driver to personally welcome them to the team.
+
+Personality: warm, encouraging, professional. This is their first impression of 3 Lakes.
+
+Your goals for this call:
+1. Congratulate them on completing sign-up (keep it genuine, not scripted-sounding)
+2. Confirm their approved services (you have this context in the call notes below)
+3. Set expectations: a dispatch coordinator will reach out within 1 business day for their first assignment
+4. Answer any questions they have
+5. End on a positive, motivating note — they just joined a great team
+
+Rules:
+- Keep it under 3 minutes
+- Do NOT hard-sell anything — they're already signed up
+- If they don't answer, leave a warm voicemail covering points 1-3
+- Sound human — vary your language, don't read a script
+
+You'll receive call context below with the driver's name and approved services."""
+
 
 def start_outbound_call(
     lead_id: str,
@@ -56,6 +76,7 @@ def start_outbound_call(
     dot_number: str = "",
     current_pain: str = "",
     webhook_url: str = "",
+    task_prompt: str = "",
 ) -> dict[str, Any]:
     """Start an outbound call via Bland AI using Claude for voice intelligence.
 
@@ -68,6 +89,8 @@ def start_outbound_call(
         dot_number: DOT number (if known)
         current_pain: Known pain point (e.g., "manual dispatch", "high fuel costs")
         webhook_url: Webhook to receive call events (call.completed, transcript, etc)
+        task_prompt: Optional override for the task sent to Bland. When provided,
+            used directly instead of the default VANCE_SYSTEM_PROMPT + context combo.
 
     Returns:
         {"status": "started", "call_id": "..."} or {"status": "error", "error": "..."}
@@ -81,15 +104,18 @@ def start_outbound_call(
     if s.bland_ai_api_key == s.bland_ai_org_id and s.bland_ai_api_key.startswith("org_"):
         return {"status": "error", "error": "BLAND_AI_API_KEY appears to be set to org_id value; verify in dashboard"}
 
-    # Fold call context into the task prompt so Bland receives a single coherent instruction
-    full_task = (
-        VANCE_SYSTEM_PROMPT
-        + f"\n\n--- CALL CONTEXT ---\n"
-        + f"You are calling {prospect_name} at {company_name or 'their company'}.\n"
-        + (f"DOT#: {dot_number}\n" if dot_number else "")
-        + (f"Known pain point: {current_pain}\n" if current_pain else "")
-        + "Goal: Qualify and, if interested, offer a 15-min Commander call."
-    )
+    # Use task_prompt override when provided; otherwise build Vance's default context
+    if task_prompt:
+        full_task = task_prompt
+    else:
+        full_task = (
+            VANCE_SYSTEM_PROMPT
+            + f"\n\n--- CALL CONTEXT ---\n"
+            + f"You are calling {prospect_name} at {company_name or 'their company'}.\n"
+            + (f"DOT#: {dot_number}\n" if dot_number else "")
+            + (f"Known pain point: {current_pain}\n" if current_pain else "")
+            + "Goal: Qualify and, if interested, offer a 15-min Commander call."
+        )
 
     try:
         payload = {

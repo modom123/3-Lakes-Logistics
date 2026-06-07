@@ -119,19 +119,17 @@ class MayaCallRequest(BaseModel):
 @router.post("/maya-call")
 def trigger_maya_call(req: MayaCallRequest) -> dict:
     """Place an immediate Bland AI call using Maya's persona."""
-    from ..agents.bland_client import start_outbound_call
-    script = req.message or (
-        "You are Maya, a friendly onboarding specialist at 3 Lakes Logistics. "
-        f"You are calling {req.name}. Introduce yourself warmly, let them know the "
-        "Light Fleet driver onboarding is now fully automated — new drivers automatically "
-        "receive a welcome SMS, a welcome email, and a personal welcome call the moment "
-        "they complete sign-up. Ask if they have any questions or want to walk through "
-        "anything. Keep it under 3 minutes and end positively."
+    from ..agents.bland_client import start_outbound_call, MAYA_WELCOME_PROMPT
+    task_prompt = req.message or (
+        MAYA_WELCOME_PROMPT
+        + f"\n\nCall context:\nDriver: {req.name}\nApproved services: not specified\n"
+        "Goal: Welcome call — see prompt above."
     )
     result = start_outbound_call(
         lead_id="owner-maya-check-in",
         phone=req.phone,
         prospect_name=req.name,
+        task_prompt=task_prompt,
     )
     log_agent("maya", "trigger.maya_call", payload={"phone": req.phone, "name": req.name}, result=str(result))
     return {"ok": True, "bland": result}

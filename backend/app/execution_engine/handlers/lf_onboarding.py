@@ -341,58 +341,35 @@ and you are approved for the following services:</p>
         return {"email_sent": False, "error": str(e)}
 
 
-# ── Step 210: activate.app_access + send welcome email + welcome call ─────────
+# ── Step 210: activate.app_access + launch Maya welcome workflow ──────────────
 
 def h210_activate_app_access(carrier_id, contract_id, payload) -> dict:
     try:
         driver_id = payload.get("driver_id") or carrier_id
-        d = _driver(driver_id)
 
-        # Send welcome email
-        email_result = _send_welcome_email(driver_id, d)
-
-        # Welcome phone call via Bland AI
-        call_result: dict = {"call_placed": False, "note": "not_attempted"}
-        phone = d.get("phone") or payload.get("phone")
-        name = d.get("name") or "there"
-        if phone:
-            try:
-                from ...agents.bland_client import start_outbound_call
-                services = d.get("approved_services") or []
-                services_str = ", ".join(services) if services else "light fleet services"
-                welcome_script = (
-                    f"You are Maya, a friendly onboarding specialist at 3 Lakes Logistics. "
-                    f"You are calling {name} to personally welcome them to the 3 Lakes Light Fleet. "
-                    f"They just completed sign-up and are approved for: {services_str}. "
-                    f"Key points to cover:\n"
-                    f"1. Congratulate them on completing onboarding.\n"
-                    f"2. Confirm their approved services: {services_str}.\n"
-                    f"3. Let them know a dispatch coordinator will be in touch within 1 business day for first assignment.\n"
-                    f"4. Ask if they have any immediate questions.\n"
-                    f"5. Keep it warm, friendly, and under 3 minutes.\n"
-                    f"Personality: warm, encouraging, professional. This is their first impression of 3 Lakes."
-                )
-                bland_result = start_outbound_call(
-                    lead_id=str(driver_id),
-                    phone=phone,
-                    prospect_name=name,
-                )
-                if bland_result.get("status") == "started":
-                    call_result = {"call_placed": True, "call_id": bland_result.get("call_id")}
-                    log.info("Welcome call placed to %s driver_id=%s call_id=%s", phone, driver_id, bland_result.get("call_id"))
-                else:
-                    call_result = {"call_placed": False, "error": bland_result.get("error")}
-            except Exception as e:  # noqa: BLE001
-                log.warning("Welcome call failed for driver_id=%s: %s", driver_id, e)
-                call_result = {"call_placed": False, "error": str(e)}
-
-        return {
-            "driver_id": str(driver_id) if driver_id else None,
-            "app_activated": True,
-            "login_instructions": "Download the 3 Lakes Driver app and log in with your phone number.",
-            "welcome_email": email_result,
-            "welcome_call": call_result,
-        }
+        # Delegate the full welcome workflow to Maya
+        try:
+            from ...agents import maya_welcome  # noqa: PLC0415
+            workflow_result = maya_welcome.run_welcome_workflow(str(driver_id))
+            log.info("Maya welcome workflow launched driver_id=%s", driver_id)
+            return {
+                "driver_id": str(driver_id) if driver_id else None,
+                "app_activated": True,
+                "login_instructions": "Download the 3 Lakes Driver app and log in with your phone number.",
+                "welcome_workflow": workflow_result,
+            }
+        except Exception as e:  # noqa: BLE001
+            # Fallback: fire step 209 SMS inline if the workflow module is unavailable
+            log.warning("maya_welcome unavailable, falling back to inline SMS driver_id=%s: %s", driver_id, e)
+            d = _driver(driver_id)
+            email_result = _send_welcome_email(driver_id, d)
+            return {
+                "driver_id": str(driver_id) if driver_id else None,
+                "app_activated": True,
+                "login_instructions": "Download the 3 Lakes Driver app and log in with your phone number.",
+                "welcome_email": email_result,
+                "workflow_error": str(e),
+            }
     except Exception as e:  # noqa: BLE001
         return {"app_activated": False, "error": str(e)}
 

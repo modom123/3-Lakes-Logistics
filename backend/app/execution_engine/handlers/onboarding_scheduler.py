@@ -133,6 +133,21 @@ def execute_due_tasks() -> dict[str, Any]:
                 run_step(153, carrier_id, None, {"trigger": "scheduled_insurance_alert"})
                 executed += 1
 
+            elif task_type == "lf_welcome_call":
+                from ...agents import maya_welcome  # noqa: PLC0415
+                maya_welcome.send_welcome_call(str(carrier_id) if carrier_id else "")
+                executed += 1
+
+            elif task_type == "lf_day1_sms":
+                from ...agents import maya_welcome  # noqa: PLC0415
+                maya_welcome.send_day1_sms(str(carrier_id) if carrier_id else "")
+                executed += 1
+
+            elif task_type == "lf_day2_email":
+                from ...agents import maya_welcome  # noqa: PLC0415
+                maya_welcome.send_day2_email(str(carrier_id) if carrier_id else "")
+                executed += 1
+
             elif task_type == "partial_reminder_sent":
                 skipped += 1
                 continue
