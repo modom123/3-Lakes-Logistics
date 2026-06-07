@@ -780,6 +780,7 @@ select.form-input option{background:var(--surface);}
     <div class="sb-item" onclick="nav('lf-executive')"><span class="sb-icon">🚗</span> Executive</div>
     <div class="sb-item" onclick="nav('lf-courier')"><span class="sb-icon">📦</span> Courier</div>
     <div class="sb-item" onclick="nav('lf-gig')"><span class="sb-icon">👥</span> Gig Fleet</div>
+    <div class="sb-item" onclick="nav('lf-bizdev')"><span class="sb-icon">🤝</span> LF Business Dev <span class="sb-badge" id="lf-bizdev-notif" style="display:none;background:#f59e0b;color:#000">!</span></div>
   </div>
 
   <div class="sb-section">
@@ -3943,7 +3944,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 let allCarriers=[], allLoads=[], allInvoices=[], currentInvFilter='all', loadCounter=3849;
 
-const pageNames={dashboard:'Dashboard',dispatch:'Dispatch Board','fleet-map':'Fleet Map',carriers:'Carriers',drivers:'Drivers',loads:'Load Manager',invoices:'Invoices & Billing',compliance:'DOT Compliance',ifta:'IFTA / Permits',insurance:'Insurance',revenue:'Revenue Tracker',providers:'Compliance Providers',checklist:'Daily Checklist',notes:'Dispatcher Notes',reports:'Team Reports','exec-command':'Exec Command',agents:'AI Agents',founders:'Founders Program',crm:'Lead CRM',leads:'Lead Pipeline',execution:'Execution Engine',factoring:'Factoring',email:'Email Center',vault:'Document Vault',clm:'CLM Scanner',ledger:'Atomic Ledger',agreements:'Agreements','lf-map':'Light Fleet Live Map','lf-nemt':'NEMT — Medical Transport','lf-medical':'Medical Courier','lf-executive':'Executive Transport','lf-courier':'Courier & Last-Mile','lf-gig':'Gig Fleet Management','mark-office':'Mark Odom — CEO Office','ccg-office':'CC Gulley Office','trading-desk':'Trading Desk','broker-division':'N. American Trading — Hub','broker-shippers':'Shipper Pipeline','broker-docs':'Docs & Invoices','trading-desk':'Trading Desk',costs:'Cost Tracking — IEBC','tech-monitor':'Tech Monitor — Marcus Reid & Jamie Park'};
+const pageNames={dashboard:'Dashboard',dispatch:'Dispatch Board','fleet-map':'Fleet Map',carriers:'Carriers',drivers:'Drivers',loads:'Load Manager',invoices:'Invoices & Billing',compliance:'DOT Compliance',ifta:'IFTA / Permits',insurance:'Insurance',revenue:'Revenue Tracker',providers:'Compliance Providers',checklist:'Daily Checklist',notes:'Dispatcher Notes',reports:'Team Reports','exec-command':'Exec Command',agents:'AI Agents',founders:'Founders Program',crm:'Lead CRM',leads:'Lead Pipeline',execution:'Execution Engine',factoring:'Factoring',email:'Email Center',vault:'Document Vault',clm:'CLM Scanner',ledger:'Atomic Ledger',agreements:'Agreements','lf-map':'Light Fleet Live Map','lf-nemt':'NEMT — Medical Transport','lf-medical':'Medical Courier','lf-executive':'Executive Transport','lf-courier':'Courier & Last-Mile','lf-gig':'Gig Fleet Management','lf-bizdev':'Light Fleet — Business Development','mark-office':'Mark Odom — CEO Office','ccg-office':'CC Gulley Office','trading-desk':'Trading Desk','broker-division':'N. American Trading — Hub','broker-shippers':'Shipper Pipeline','broker-docs':'Docs & Invoices','trading-desk':'Trading Desk',costs:'Cost Tracking — IEBC','tech-monitor':'Tech Monitor — Marcus Reid & Jamie Park'};
 
 // ── 3 Lakes Logistics Backend API (FastAPI) ──
 const API_BASE = (window.__3LL_API_BASE || 'https://three-lakes-logistics-api.onrender.com').replace(/\/$/,'');
@@ -4038,7 +4039,7 @@ function nav(id){
   document.querySelectorAll('.sb-item').forEach(n=>{if(n.getAttribute('onclick')?.includes("'"+id+"'"))n.classList.add('active');});
   document.getElementById('page-title').textContent=pageNames[id]||id;
   // LF pages use full-page layout — hero acts as page header, topbar title hidden
-  const _lfFullPages=['lf-nemt','lf-medical','lf-executive','lf-courier','lf-gig','lf-map','broker-division','trading-desk','broker-shippers','broker-docs'];
+  const _lfFullPages=['lf-nemt','lf-medical','lf-executive','lf-courier','lf-gig','lf-bizdev','lf-map','broker-division','trading-desk','broker-shippers','broker-docs'];
   document.querySelector('.content').classList.toggle('lf-fullpage',_lfFullPages.includes(id));
   document.getElementById('main').classList.toggle('lf-fullpage',_lfFullPages.includes(id));
   // Fixed full-page overlays: always measure actual header stack
@@ -4080,6 +4081,7 @@ function nav(id){
   if(id==='lf-executive'){lfRunExpert('victor_nash','executive');}
   if(id==='lf-courier'){lfRunExpert('felix_grant','courier');}
   if(id==='lf-gig'){lfRunExpert('morgan_hayes','gig');}
+  if(id==='lf-bizdev'){initLfBizDev();}
   if(id==='execution'){loadExecutionDomains();loadExecutionSteps();}
   if(id==='email'&&typeof mailInit==='function'){mailInit();}
   if(id==='costs'){loadCostData();}
@@ -18037,6 +18039,464 @@ function lfRenderExpertReport(segment, d) {
         el.innerHTML = `<span class="iebc-status-pill ${cls}"><span class="iebc-status-dot" style="background:currentColor"></span>${s}</span>`;
       }
     });
+  }
+}
+</script>
+
+<!-- ═══════════════════════════════════════════════════════════════════════
+     LIGHT FLEET — BUSINESS DEVELOPMENT
+════════════════════════════════════════════════════════════════════════ -->
+<div class="page" id="page-lf-bizdev">
+<style>
+.bd-wrap{padding:20px;max-width:1400px;}
+.bd-team-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:16px;margin-bottom:28px;}
+.bd-rep-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden;}
+.bd-rep-header{padding:16px 18px;display:flex;align-items:flex-start;gap:14px;}
+.bd-rep-avatar{width:52px;height:52px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0;}
+.bd-rep-info{flex:1;min-width:0;}
+.bd-rep-name{font-family:var(--ff-h);font-weight:800;font-size:15px;color:var(--navy);}
+.bd-rep-title{font-size:11px;color:var(--muted);margin-top:2px;line-height:1.4;}
+.bd-rep-node{font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:2px 8px;border-radius:10px;display:inline-block;margin-top:4px;}
+.bd-rep-body{padding:0 18px 16px;}
+.bd-rep-sector{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px;}
+.bd-rep-targets{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:12px;}
+.bd-rep-target-chip{font-size:10px;padding:3px 9px;border-radius:12px;font-weight:600;}
+.bd-rep-metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px;}
+.bd-rep-metric{background:var(--off);border-radius:8px;padding:8px;text-align:center;}
+.bd-rep-metric-val{font-size:18px;font-weight:800;color:var(--navy);}
+.bd-rep-metric-lbl{font-size:9px;color:var(--muted);font-weight:600;text-transform:uppercase;}
+.bd-rep-actions{display:flex;gap:6px;flex-wrap:wrap;}
+.bd-pipeline-wrap{background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:24px;}
+.bd-pipeline-hd{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+.bd-pipeline-title{font-family:var(--ff-h);font-weight:800;font-size:16px;color:var(--navy);}
+.bd-sector-tabs{display:flex;gap:4px;flex-wrap:wrap;}
+.bd-sector-tab{padding:5px 14px;border:1px solid var(--border);border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;background:var(--surface);color:var(--muted);transition:all .15s;}
+.bd-sector-tab.active{background:var(--navy);color:#fff;border-color:var(--navy);}
+.bd-kpis{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;padding:16px 20px;border-bottom:1px solid var(--border);}
+.bd-kpi{text-align:center;}
+.bd-kpi-val{font-size:24px;font-weight:800;color:var(--navy);}
+.bd-kpi-lbl{font-size:10px;color:var(--muted);font-weight:600;text-transform:uppercase;}
+.bd-prospect-table{width:100%;border-collapse:collapse;font-size:13px;}
+.bd-prospect-table thead th{background:var(--off);padding:10px 16px;text-align:left;font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--border);}
+.bd-prospect-table tbody td{padding:11px 16px;border-bottom:1px solid var(--border);vertical-align:middle;}
+.bd-prospect-table tbody tr:last-child td{border-bottom:none;}
+.bd-prospect-table tbody tr:hover{background:rgba(0,0,0,.02);}
+.bd-status-badge{display:inline-block;font-size:10px;font-weight:700;padding:3px 9px;border-radius:10px;text-transform:uppercase;letter-spacing:.5px;}
+.bd-status-prospecting{background:#f1f5f9;color:#475569;}
+.bd-status-contacted{background:#fef3c7;color:#92400e;}
+.bd-status-proposal{background:#dbeafe;color:#1e40af;}
+.bd-status-negotiating{background:#ede9fe;color:#5b21b6;}
+.bd-status-contract{background:#d1fae5;color:#065f46;}
+.bd-status-active{background:#dcfce7;color:#15803d;}
+.bd-status-lost{background:#fee2e2;color:#991b1b;}
+.bd-add-form{padding:16px 20px;border-top:1px solid var(--border);display:none;}
+.bd-add-form.open{display:block;}
+</style>
+<div class="lf-wrap bd-wrap">
+
+  <!-- Page Header -->
+  <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:24px;gap:12px;flex-wrap:wrap;">
+    <div>
+      <div style="font-family:var(--ff-m);font-size:10px;font-weight:700;letter-spacing:2px;color:#8b5cf6;text-transform:uppercase;margin-bottom:6px;">IEBC · NODE 300-302 · LIGHT FLEET DIVISION</div>
+      <h2 style="font-family:var(--ff-h);font-size:26px;font-weight:900;color:var(--navy);margin:0;">Business Development Team</h2>
+      <p style="font-size:13px;color:var(--muted);margin:6px 0 0;">Three specialized account executives targeting healthcare contracts, enterprise B2B, and platform partnerships.</p>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <button class="btn-out" onclick="loadLfBizDevProspects()">↻ Refresh</button>
+      <button class="btn-gold" onclick="openBdAddProspect()">+ Add Prospect</button>
+    </div>
+  </div>
+
+  <!-- Sales Rep Team Cards -->
+  <div class="bd-team-grid">
+
+    <!-- Marcus Webb — NEMT & Healthcare -->
+    <div class="bd-rep-card">
+      <div class="bd-rep-header">
+        <div class="bd-rep-avatar" style="background:linear-gradient(135deg,#1e3a5f,#3b82f6);">🏥</div>
+        <div class="bd-rep-info">
+          <div class="bd-rep-name">Marcus Webb</div>
+          <div class="bd-rep-title">NEMT &amp; Healthcare Account Executive<br>Medical Transport · Dialysis · VA Facilities</div>
+          <div class="bd-rep-node" style="background:rgba(59,130,246,.1);color:#1d4ed8;">NODE 300 · HEALTHCARE</div>
+        </div>
+      </div>
+      <div class="bd-rep-body">
+        <div class="bd-rep-sector">Target Sectors</div>
+        <div class="bd-rep-targets">
+          <span class="bd-rep-target-chip" style="background:#dbeafe;color:#1e40af;">Hospitals</span>
+          <span class="bd-rep-target-chip" style="background:#dbeafe;color:#1e40af;">Dialysis Centers</span>
+          <span class="bd-rep-target-chip" style="background:#dbeafe;color:#1e40af;">VA Facilities</span>
+          <span class="bd-rep-target-chip" style="background:#dbeafe;color:#1e40af;">Nursing Homes</span>
+          <span class="bd-rep-target-chip" style="background:#dbeafe;color:#1e40af;">Senior Living</span>
+          <span class="bd-rep-target-chip" style="background:#dbeafe;color:#1e40af;">Rehab Centers</span>
+        </div>
+        <div class="bd-rep-metrics">
+          <div class="bd-rep-metric"><div class="bd-rep-metric-val" id="bd-marcus-prospects">—</div><div class="bd-rep-metric-lbl">Prospects</div></div>
+          <div class="bd-rep-metric"><div class="bd-rep-metric-val" id="bd-marcus-active">—</div><div class="bd-rep-metric-lbl">Active Deals</div></div>
+          <div class="bd-rep-metric"><div class="bd-rep-metric-val" id="bd-marcus-value">—</div><div class="bd-rep-metric-lbl">Pipeline $</div></div>
+        </div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:12px;font-style:italic;">"We provide HIPAA-aware dispatch, ADA vehicle options, and same-day scheduling for recurring medical transport — no monthly fee, 10% per completed trip."</div>
+        <div class="bd-rep-actions">
+          <button class="btn-out" style="font-size:11px;padding:5px 12px;" onclick="openBdAddProspect('healthcare','marcus_webb')">+ Add Lead</button>
+          <button style="font-size:11px;padding:5px 12px;background:#dbeafe;color:#1e40af;border:none;border-radius:6px;cursor:pointer;font-weight:600;" onclick="filterBdSector('healthcare')">View Pipeline →</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Jordan Vale — Enterprise & B2B -->
+    <div class="bd-rep-card">
+      <div class="bd-rep-header">
+        <div class="bd-rep-avatar" style="background:linear-gradient(135deg,#1a1a2e,#6366f1);">🏢</div>
+        <div class="bd-rep-info">
+          <div class="bd-rep-name">Jordan Vale</div>
+          <div class="bd-rep-title">Enterprise &amp; B2B Account Executive<br>Corporate Courier · Executive Transport · Same-Day</div>
+          <div class="bd-rep-node" style="background:rgba(99,102,241,.1);color:#4338ca;">NODE 301 · ENTERPRISE</div>
+        </div>
+      </div>
+      <div class="bd-rep-body">
+        <div class="bd-rep-sector">Target Sectors</div>
+        <div class="bd-rep-targets">
+          <span class="bd-rep-target-chip" style="background:#ede9fe;color:#5b21b6;">Law Firms</span>
+          <span class="bd-rep-target-chip" style="background:#ede9fe;color:#5b21b6;">Car Dealerships</span>
+          <span class="bd-rep-target-chip" style="background:#ede9fe;color:#5b21b6;">Hotels</span>
+          <span class="bd-rep-target-chip" style="background:#ede9fe;color:#5b21b6;">Restaurants</span>
+          <span class="bd-rep-target-chip" style="background:#ede9fe;color:#5b21b6;">Corporations</span>
+          <span class="bd-rep-target-chip" style="background:#ede9fe;color:#5b21b6;">Real Estate</span>
+        </div>
+        <div class="bd-rep-metrics">
+          <div class="bd-rep-metric"><div class="bd-rep-metric-val" id="bd-jordan-prospects">—</div><div class="bd-rep-metric-lbl">Prospects</div></div>
+          <div class="bd-rep-metric"><div class="bd-rep-metric-val" id="bd-jordan-active">—</div><div class="bd-rep-metric-lbl">Active Deals</div></div>
+          <div class="bd-rep-metric"><div class="bd-rep-metric-val" id="bd-jordan-value">—</div><div class="bd-rep-metric-lbl">Pipeline $</div></div>
+        </div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:12px;font-style:italic;">"Reliable same-day courier and executive car service with real-time tracking, dedicated dispatch, and flat 10% fee — no contracts, scale up or down anytime."</div>
+        <div class="bd-rep-actions">
+          <button class="btn-out" style="font-size:11px;padding:5px 12px;" onclick="openBdAddProspect('enterprise','jordan_vale')">+ Add Lead</button>
+          <button style="font-size:11px;padding:5px 12px;background:#ede9fe;color:#5b21b6;border:none;border-radius:6px;cursor:pointer;font-weight:600;" onclick="filterBdSector('enterprise')">View Pipeline →</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Priya Santos — Platform Partnerships -->
+    <div class="bd-rep-card">
+      <div class="bd-rep-header">
+        <div class="bd-rep-avatar" style="background:linear-gradient(135deg,#1a2e1a,#22c55e);">🔗</div>
+        <div class="bd-rep-info">
+          <div class="bd-rep-name">Priya Santos</div>
+          <div class="bd-rep-title">Platform Partnerships Director<br>Gig Networks · Delivery Platforms · Driver Supply</div>
+          <div class="bd-rep-node" style="background:rgba(34,197,94,.1);color:#15803d;">NODE 302 · PLATFORMS</div>
+        </div>
+      </div>
+      <div class="bd-rep-body">
+        <div class="bd-rep-sector">Target Platforms</div>
+        <div class="bd-rep-targets">
+          <span class="bd-rep-target-chip" style="background:#dcfce7;color:#166534;">Curri</span>
+          <span class="bd-rep-target-chip" style="background:#dcfce7;color:#166534;">Roadie</span>
+          <span class="bd-rep-target-chip" style="background:#dcfce7;color:#166534;">Amazon Flex</span>
+          <span class="bd-rep-target-chip" style="background:#dcfce7;color:#166534;">DoorDash</span>
+          <span class="bd-rep-target-chip" style="background:#dcfce7;color:#166534;">Instacart</span>
+          <span class="bd-rep-target-chip" style="background:#dcfce7;color:#166534;">GoShare</span>
+        </div>
+        <div class="bd-rep-metrics">
+          <div class="bd-rep-metric"><div class="bd-rep-metric-val" id="bd-priya-prospects">—</div><div class="bd-rep-metric-lbl">Prospects</div></div>
+          <div class="bd-rep-metric"><div class="bd-rep-metric-val" id="bd-priya-active">—</div><div class="bd-rep-metric-lbl">Active Deals</div></div>
+          <div class="bd-rep-metric"><div class="bd-rep-metric-val" id="bd-priya-value">—</div><div class="bd-rep-metric-lbl">Pipeline $</div></div>
+        </div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:12px;font-style:italic;">"Our pre-vetted, insured driver network supplements your last-mile capacity on demand — bulk driver supply agreements, volume pricing, white-label dispatch available."</div>
+        <div class="bd-rep-actions">
+          <button class="btn-out" style="font-size:11px;padding:5px 12px;" onclick="openBdAddProspect('platform','priya_santos')">+ Add Lead</button>
+          <button style="font-size:11px;padding:5px 12px;background:#dcfce7;color:#166534;border:none;border-radius:6px;cursor:pointer;font-weight:600;" onclick="filterBdSector('platform')">View Pipeline →</button>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /team grid -->
+
+  <!-- Pipeline Section -->
+  <div class="bd-pipeline-wrap">
+    <div class="bd-pipeline-hd">
+      <div class="bd-pipeline-title">📊 Prospect Pipeline</div>
+      <div class="bd-sector-tabs">
+        <button class="bd-sector-tab active" onclick="filterBdSector('all')" id="bd-tab-all">All</button>
+        <button class="bd-sector-tab" onclick="filterBdSector('healthcare')" id="bd-tab-healthcare">🏥 Healthcare</button>
+        <button class="bd-sector-tab" onclick="filterBdSector('enterprise')" id="bd-tab-enterprise">🏢 Enterprise</button>
+        <button class="bd-sector-tab" onclick="filterBdSector('platform')" id="bd-tab-platform">🔗 Platforms</button>
+      </div>
+      <input type="text" id="bd-search" placeholder="🔍 Search…" oninput="renderBdProspects()" style="padding:6px 12px;border:1px solid var(--border);border-radius:6px;font-size:12px;width:180px;background:var(--surface);margin-left:auto;">
+    </div>
+
+    <!-- KPIs -->
+    <div class="bd-kpis">
+      <div class="bd-kpi"><div class="bd-kpi-val" id="bd-kpi-total">—</div><div class="bd-kpi-lbl">Total Prospects</div></div>
+      <div class="bd-kpi"><div class="bd-kpi-val" id="bd-kpi-active">—</div><div class="bd-kpi-lbl">Active Deals</div></div>
+      <div class="bd-kpi"><div class="bd-kpi-val" id="bd-kpi-contracts">—</div><div class="bd-kpi-lbl">Contracts Won</div></div>
+      <div class="bd-kpi"><div class="bd-kpi-val" id="bd-kpi-pipeline">—</div><div class="bd-kpi-lbl">Pipeline Value</div></div>
+      <div class="bd-kpi"><div class="bd-kpi-val" id="bd-kpi-mrr">—</div><div class="bd-kpi-lbl">Est. Monthly Rev</div></div>
+    </div>
+
+    <!-- Table -->
+    <div style="overflow-x:auto;">
+      <table class="bd-prospect-table">
+        <thead>
+          <tr>
+            <th>Company / Contact</th>
+            <th>Sector</th>
+            <th>Rep</th>
+            <th>Status</th>
+            <th>Est. Monthly Value</th>
+            <th>Last Contact</th>
+            <th>Next Action</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="bd-prospect-tbody">
+          <tr><td colspan="8" style="padding:40px;text-align:center;color:var(--muted);">No prospects yet — add your first target above.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Add Prospect Form -->
+    <div class="bd-add-form" id="bd-add-form">
+      <div style="font-weight:700;font-size:14px;margin-bottom:14px;color:var(--navy);">Add New Prospect</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;margin-bottom:12px;">
+        <div>
+          <label style="font-size:11px;font-weight:600;color:var(--muted);display:block;margin-bottom:3px;">COMPANY NAME *</label>
+          <input id="bd-new-company" type="text" placeholder="e.g. DaVita Dialysis" style="width:100%;padding:7px;border:1px solid var(--border);border-radius:6px;font-size:13px;box-sizing:border-box;">
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:600;color:var(--muted);display:block;margin-bottom:3px;">CONTACT NAME</label>
+          <input id="bd-new-contact" type="text" placeholder="e.g. Sarah Johnson" style="width:100%;padding:7px;border:1px solid var(--border);border-radius:6px;font-size:13px;box-sizing:border-box;">
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:600;color:var(--muted);display:block;margin-bottom:3px;">PHONE</label>
+          <input id="bd-new-phone" type="text" placeholder="555-000-0000" style="width:100%;padding:7px;border:1px solid var(--border);border-radius:6px;font-size:13px;box-sizing:border-box;">
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:600;color:var(--muted);display:block;margin-bottom:3px;">EMAIL</label>
+          <input id="bd-new-email" type="email" placeholder="contact@company.com" style="width:100%;padding:7px;border:1px solid var(--border);border-radius:6px;font-size:13px;box-sizing:border-box;">
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:600;color:var(--muted);display:block;margin-bottom:3px;">SECTOR</label>
+          <select id="bd-new-sector" style="width:100%;padding:7px;border:1px solid var(--border);border-radius:6px;font-size:13px;">
+            <option value="healthcare">🏥 Healthcare / NEMT</option>
+            <option value="enterprise">🏢 Enterprise / B2B</option>
+            <option value="platform">🔗 Platform Partnership</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:600;color:var(--muted);display:block;margin-bottom:3px;">ASSIGNED REP</label>
+          <select id="bd-new-rep" style="width:100%;padding:7px;border:1px solid var(--border);border-radius:6px;font-size:13px;">
+            <option value="marcus_webb">Marcus Webb — Healthcare</option>
+            <option value="jordan_vale">Jordan Vale — Enterprise</option>
+            <option value="priya_santos">Priya Santos — Platforms</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:600;color:var(--muted);display:block;margin-bottom:3px;">EST. MONTHLY VALUE</label>
+          <input id="bd-new-value" type="number" placeholder="e.g. 2500" style="width:100%;padding:7px;border:1px solid var(--border);border-radius:6px;font-size:13px;box-sizing:border-box;">
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:600;color:var(--muted);display:block;margin-bottom:3px;">STATUS</label>
+          <select id="bd-new-status" style="width:100%;padding:7px;border:1px solid var(--border);border-radius:6px;font-size:13px;">
+            <option value="prospecting">Prospecting</option>
+            <option value="contacted">Contacted</option>
+            <option value="proposal">Proposal Sent</option>
+            <option value="negotiating">Negotiating</option>
+            <option value="contract">Contract</option>
+            <option value="active">Active Client</option>
+          </select>
+        </div>
+      </div>
+      <div style="margin-bottom:12px;">
+        <label style="font-size:11px;font-weight:600;color:var(--muted);display:block;margin-bottom:3px;">NOTES / NEXT ACTION</label>
+        <textarea id="bd-new-notes" rows="2" placeholder="e.g. Spoke with operations director — they need 6am pickup windows. Follow up Tuesday." style="width:100%;padding:7px;border:1px solid var(--border);border-radius:6px;font-size:13px;resize:vertical;box-sizing:border-box;"></textarea>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn-gold" onclick="saveBdProspect()">Save Prospect</button>
+        <button class="btn-out" onclick="closeBdAddForm()">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /bd-wrap -->
+</div><!-- /page-lf-bizdev -->
+
+<script>
+// ── Light Fleet Business Development ─────────────────────────────────────────
+const BD_REPS={marcus_webb:'Marcus Webb',jordan_vale:'Jordan Vale',priya_santos:'Priya Santos'};
+const BD_REP_SECTORS={marcus_webb:'healthcare',jordan_vale:'enterprise',priya_santos:'platform'};
+const BD_SECTOR_LABELS={healthcare:'🏥 Healthcare',enterprise:'🏢 Enterprise',platform:'🔗 Platform'};
+const BD_STORAGE_KEY='3ll_lf_bizdev_prospects';
+
+let _bdProspects=[];
+let _bdSectorFilter='all';
+
+function initLfBizDev(){
+  _bdProspects=JSON.parse(localStorage.getItem(BD_STORAGE_KEY)||'[]');
+  loadLfBizDevProspects();
+}
+
+function loadLfBizDevProspects(){
+  _bdProspects=JSON.parse(localStorage.getItem(BD_STORAGE_KEY)||'[]');
+  renderBdProspects();
+  updateBdRepMetrics();
+}
+
+function filterBdSector(sector){
+  _bdSectorFilter=sector;
+  document.querySelectorAll('.bd-sector-tab').forEach(t=>t.classList.remove('active'));
+  const tab=document.getElementById('bd-tab-'+sector);
+  if(tab)tab.classList.add('active');
+  renderBdProspects();
+}
+
+function renderBdProspects(){
+  const tbody=document.getElementById('bd-prospect-tbody');
+  if(!tbody)return;
+  const search=(document.getElementById('bd-search')?.value||'').toLowerCase();
+  const filtered=_bdProspects.filter(p=>{
+    if(_bdSectorFilter!=='all'&&p.sector!==_bdSectorFilter)return false;
+    if(search&&!((p.company||'').toLowerCase().includes(search)||(p.contact||'').toLowerCase().includes(search)||(p.notes||'').toLowerCase().includes(search)))return false;
+    return true;
+  });
+
+  // KPIs
+  const active=filtered.filter(p=>['contacted','proposal','negotiating'].includes(p.status)).length;
+  const contracts=filtered.filter(p=>['contract','active'].includes(p.status)).length;
+  const pipeline=filtered.filter(p=>!['active','lost'].includes(p.status)).reduce((s,p)=>s+(+p.value||0),0);
+  const mrr=filtered.filter(p=>p.status==='active').reduce((s,p)=>s+(+p.value||0),0);
+  const set=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
+  set('bd-kpi-total',filtered.length);set('bd-kpi-active',active);set('bd-kpi-contracts',contracts);
+  set('bd-kpi-pipeline',pipeline?'$'+pipeline.toLocaleString():'—');
+  set('bd-kpi-mrr',mrr?'$'+mrr.toLocaleString()+'/mo':'—');
+
+  if(!filtered.length){tbody.innerHTML='<tr><td colspan="8" style="padding:40px;text-align:center;color:var(--muted);">No prospects in this segment — click "+ Add Prospect" to start building your pipeline.</td></tr>';return;}
+
+  const statusClass=s=>'bd-status-badge bd-status-'+s;
+  const statusLabel={prospecting:'Prospecting',contacted:'Contacted',proposal:'Proposal Sent',negotiating:'Negotiating',contract:'Contract',active:'Active Client',lost:'Lost'};
+  const sectorColor={healthcare:'#1e40af',enterprise:'#4338ca',platform:'#15803d'};
+
+  tbody.innerHTML=filtered.map((p,i)=>{
+    const idx=_bdProspects.indexOf(p);
+    const repName=BD_REPS[p.rep]||p.rep||'—';
+    const sectorLabel=BD_SECTOR_LABELS[p.sector]||p.sector||'—';
+    const lastTouch=p.last_contact?new Date(p.last_contact).toLocaleDateString('en-US',{month:'short',day:'numeric'}):'Never';
+    const value=p.value?'$'+(+p.value).toLocaleString()+'/mo':'—';
+    return`<tr>
+      <td>
+        <div style="font-weight:700;font-size:13px">${esc(p.company||'—')}</div>
+        ${p.contact?`<div style="font-size:11px;color:var(--muted)">${esc(p.contact)}</div>`:''}
+        ${p.phone?`<div style="font-size:11px;color:var(--muted)">${esc(p.phone)}</div>`:''}
+      </td>
+      <td><span style="font-size:11px;font-weight:600;color:${sectorColor[p.sector]||'var(--muted)'}">${sectorLabel}</span></td>
+      <td style="font-size:12px;color:var(--muted)">${esc(repName)}</td>
+      <td><span class="${statusClass(p.status)}">${statusLabel[p.status]||p.status}</span></td>
+      <td style="font-size:13px;font-weight:600;color:var(--navy)">${value}</td>
+      <td style="font-size:12px;color:var(--muted)">${lastTouch}</td>
+      <td style="font-size:12px;color:var(--muted);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(p.notes||'')}">${esc(p.notes||'—')}</td>
+      <td style="white-space:nowrap">
+        <select onchange="updateBdStatus(${idx},this.value)" style="font-size:11px;padding:3px 6px;border:1px solid var(--border);border-radius:4px;background:var(--surface);cursor:pointer;margin-right:4px;">
+          <option value="">Update Status</option>
+          <option value="prospecting">Prospecting</option>
+          <option value="contacted">Contacted</option>
+          <option value="proposal">Proposal Sent</option>
+          <option value="negotiating">Negotiating</option>
+          <option value="contract">Contract</option>
+          <option value="active">Active Client</option>
+          <option value="lost">Lost</option>
+        </select>
+        <button onclick="bdEmailProspect(${idx})" title="Send email" style="padding:3px 7px;font-size:11px;border:1px solid var(--border);border-radius:4px;cursor:pointer;background:var(--surface)">📧</button>
+        <button onclick="deleteBdProspect(${idx})" title="Remove" style="padding:3px 7px;font-size:11px;border:1px solid rgba(239,68,68,.3);border-radius:4px;cursor:pointer;background:rgba(239,68,68,.05);color:var(--red);margin-left:2px">✕</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function updateBdRepMetrics(){
+  const repFields={marcus_webb:['bd-marcus-prospects','bd-marcus-active','bd-marcus-value'],jordan_vale:['bd-jordan-prospects','bd-jordan-active','bd-jordan-value'],priya_santos:['bd-priya-prospects','bd-priya-active','bd-priya-value']};
+  Object.entries(repFields).forEach(([rep,[f1,f2,f3]])=>{
+    const rp=_bdProspects.filter(p=>p.rep===rep);
+    const active=rp.filter(p=>['contacted','proposal','negotiating'].includes(p.status)).length;
+    const pipeline=rp.filter(p=>!['active','lost'].includes(p.status)).reduce((s,p)=>s+(+p.value||0),0);
+    const set=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
+    set(f1,rp.length);set(f2,active);set(f3,pipeline?'$'+pipeline.toLocaleString():'$0');
+  });
+}
+
+function openBdAddProspect(sector='healthcare',rep='marcus_webb'){
+  const f=document.getElementById('bd-add-form');
+  if(f){f.classList.add('open');}
+  const s=document.getElementById('bd-new-sector');if(s)s.value=sector;
+  const r=document.getElementById('bd-new-rep');if(r)r.value=rep;
+  ['bd-new-company','bd-new-contact','bd-new-phone','bd-new-email','bd-new-notes'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  const v=document.getElementById('bd-new-value');if(v)v.value='';
+  const st=document.getElementById('bd-new-status');if(st)st.value='prospecting';
+  f?.scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+function closeBdAddForm(){
+  const f=document.getElementById('bd-add-form');if(f)f.classList.remove('open');
+}
+
+function saveBdProspect(){
+  const company=(document.getElementById('bd-new-company')?.value||'').trim();
+  if(!company){alert('Company name is required.');return;}
+  const prospect={
+    id:Date.now(),
+    company,
+    contact:(document.getElementById('bd-new-contact')?.value||'').trim(),
+    phone:(document.getElementById('bd-new-phone')?.value||'').trim(),
+    email:(document.getElementById('bd-new-email')?.value||'').trim(),
+    sector:document.getElementById('bd-new-sector')?.value||'healthcare',
+    rep:document.getElementById('bd-new-rep')?.value||'marcus_webb',
+    value:document.getElementById('bd-new-value')?.value||'',
+    status:document.getElementById('bd-new-status')?.value||'prospecting',
+    notes:(document.getElementById('bd-new-notes')?.value||'').trim(),
+    last_contact:new Date().toISOString(),
+    created_at:new Date().toISOString(),
+  };
+  _bdProspects.unshift(prospect);
+  localStorage.setItem(BD_STORAGE_KEY,JSON.stringify(_bdProspects));
+  closeBdAddForm();
+  renderBdProspects();
+  updateBdRepMetrics();
+  if(typeof notify==='function')notify('Prospect added: '+company);
+}
+
+function updateBdStatus(idx,status){
+  if(!status)return;
+  if(!_bdProspects[idx])return;
+  _bdProspects[idx].status=status;
+  _bdProspects[idx].last_contact=new Date().toISOString();
+  localStorage.setItem(BD_STORAGE_KEY,JSON.stringify(_bdProspects));
+  renderBdProspects();
+  updateBdRepMetrics();
+}
+
+function deleteBdProspect(idx){
+  if(!confirm('Remove this prospect?'))return;
+  _bdProspects.splice(idx,1);
+  localStorage.setItem(BD_STORAGE_KEY,JSON.stringify(_bdProspects));
+  renderBdProspects();
+  updateBdRepMetrics();
+}
+
+function bdEmailProspect(idx){
+  const p=_bdProspects[idx];
+  if(!p)return;
+  if(!p.email){alert('No email on file for this prospect.');return;}
+  // Open email compose pre-filled
+  if(typeof mailCompose==='function'){
+    nav('email');
+    setTimeout(()=>{
+      mailCompose();
+      const to=document.getElementById('mail-compose-to');if(to)to.value=p.email;
+      const sub=document.getElementById('mail-compose-subject');
+      if(sub)sub.value='3 Lakes Light Fleet — Partnership Opportunity';
+      const body=document.getElementById('mail-compose-body');
+      const rep=BD_REPS[p.rep]||'Our team';
+      const pitches={healthcare:`Hi ${p.contact||'there'},\n\nI'm reaching out from 3 Lakes Logistics regarding our NEMT and medical transport services. We specialize in reliable, HIPAA-aware dispatch with ADA vehicle options and same-day scheduling for recurring medical trips.\n\nNo monthly fee — just 10% per completed trip. We'd love to discuss how we can support your transport needs.\n\nWould you have 15 minutes this week for a quick call?\n\nBest,\n${rep}\n3 Lakes Light Fleet\n661-466-9932`,enterprise:`Hi ${p.contact||'there'},\n\nI'm reaching out from 3 Lakes Logistics about our corporate courier and executive transport services. We offer reliable same-day delivery and executive car service with real-time tracking and dedicated dispatch — flat 10% fee, no monthly contracts.\n\nI'd love to show you how we're serving businesses in your area.\n\nBest,\n${rep}\n3 Lakes Light Fleet\n661-466-9932`,platform:`Hi ${p.contact||'there'},\n\nI'm ${rep} from 3 Lakes Logistics. We have a network of pre-vetted, insured Light Fleet drivers available for platform partnerships and driver supply agreements.\n\nWe offer bulk driver supply, volume pricing, and white-label dispatch integration. I'd love to explore how our fleet can extend your network capacity.\n\nBest,\n${rep}\n3 Lakes Light Fleet\n661-466-9932`};
+      if(body)body.value=pitches[p.sector]||pitches.enterprise;
+    },400);
   }
 }
 </script>
