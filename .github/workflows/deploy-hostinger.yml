@@ -23,6 +23,9 @@ jobs:
           mkdir -p dist
           # All root-level public HTML pages
           cp *.html dist/
+          # website.html is the source-of-truth public site —
+          # Hostinger serves index.html as the default, so keep them in sync.
+          cp website.html dist/index.html
           # eagleeye.html is the INTERNAL command center (hosted on Vercel) —
           # never publish it to the public Hostinger site.
           rm -f dist/eagleeye.html
