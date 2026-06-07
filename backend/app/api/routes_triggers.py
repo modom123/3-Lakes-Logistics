@@ -110,6 +110,33 @@ def trigger_analytics(bg: BackgroundTasks) -> dict:
     return {"ok": True, "domain": "analytics"}
 
 
+class MayaCallRequest(BaseModel):
+    phone: str
+    name: str = "Boss"
+    message: str = ""
+
+
+@router.post("/maya-call")
+def trigger_maya_call(req: MayaCallRequest) -> dict:
+    """Place an immediate Bland AI call using Maya's persona."""
+    from ..agents.bland_client import start_outbound_call
+    script = req.message or (
+        "You are Maya, a friendly onboarding specialist at 3 Lakes Logistics. "
+        f"You are calling {req.name}. Introduce yourself warmly, let them know the "
+        "Light Fleet driver onboarding is now fully automated — new drivers automatically "
+        "receive a welcome SMS, a welcome email, and a personal welcome call the moment "
+        "they complete sign-up. Ask if they have any questions or want to walk through "
+        "anything. Keep it under 3 minutes and end positively."
+    )
+    result = start_outbound_call(
+        lead_id="owner-maya-check-in",
+        phone=req.phone,
+        prospect_name=req.name,
+    )
+    log_agent("maya", "trigger.maya_call", payload={"phone": req.phone, "name": req.name}, result=str(result))
+    return {"ok": True, "bland": result}
+
+
 @router.get("/status")
 def trigger_status() -> dict:
     """Return recent trigger events from agent_log (agent=atlas)."""
