@@ -18520,127 +18520,146 @@ function lfRenderExpertReport(segment, d) {
 
   <!-- Hero -->
   <div class="mil-hero">
-    <div class="mil-hero-tag">Light Fleet Division — Revenue Roadmap</div>
-    <div class="mil-hero-title">The $1,000,000 Blueprint</div>
-    <div class="mil-hero-sub">10% automated dispatch at scale. 100 active drivers. Multiple revenue streams. One focused team.</div>
+    <div class="mil-hero-tag">Light Fleet Division — Profit Roadmap</div>
+    <div class="mil-hero-title">NET $1,000,000 Blueprint</div>
+    <div class="mil-hero-sub">The goal is to pocket $1M — not just process it. 100 drivers + 2 enterprise contracts + lean ops = $1,095,000 NET annually.</div>
     <div class="mil-hero-kpis">
       <div class="mil-hero-kpi gold">
         <div class="val" id="mil-cur-drivers">—</div>
         <div class="lbl">Active Drivers</div>
       </div>
       <div class="mil-hero-kpi">
-        <div class="val" id="mil-target-drivers">100</div>
-        <div class="lbl">Driver Target</div>
-      </div>
-      <div class="mil-hero-kpi green">
-        <div class="val" id="mil-weekly-rev">—</div>
-        <div class="lbl">Est. Weekly Revenue</div>
+        <div class="val" id="mil-annual-gross">—</div>
+        <div class="lbl">Annual Gross</div>
       </div>
       <div class="mil-hero-kpi">
+        <div class="val" id="mil-annual-opex">$206K</div>
+        <div class="lbl">Annual OpEx</div>
+      </div>
+      <div class="mil-hero-kpi green">
         <div class="val" id="mil-annual-rev">—</div>
-        <div class="lbl">Annual Run Rate</div>
+        <div class="lbl">Est. Annual NET</div>
       </div>
       <div class="mil-hero-kpi gold">
         <div class="val" id="mil-pct-goal">—</div>
-        <div class="lbl">% to $1M Goal</div>
+        <div class="lbl">% to $1M NET</div>
       </div>
     </div>
   </div>
 
-  <!-- Progress to $1M -->
+  <!-- Progress to $1M NET -->
   <div class="mil-progress-card">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
-      <div style="font-weight:800;font-size:14px">Progress to $1,000,000 Annual Revenue</div>
-      <div style="font-size:12px;color:var(--muted)">Target: 100 drivers → $19,375/week</div>
+      <div style="font-weight:800;font-size:14px">Progress to $1,000,000 NET Annual Profit</div>
+      <div style="font-size:12px;color:var(--muted)">Need $1.21M gross → minus $206K ops = $1M NET</div>
     </div>
     <div class="mil-progress-bar-outer">
       <div class="mil-progress-bar-inner" id="mil-progress-bar" style="width:0%"></div>
     </div>
     <div class="mil-progress-labels">
-      <span>$0</span>
+      <span>$0 NET</span>
       <span id="mil-progress-label">0%</span>
-      <span>$1,000,000</span>
+      <span>$1,000,000 NET</span>
+    </div>
+  </div>
+
+  <!-- P&L Waterfall -->
+  <div class="mil-math" style="margin-bottom:20px">
+    <div style="font-weight:800;font-size:15px;margin-bottom:4px">💵 Full P&L — Path to $1M NET</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:12px">All revenue streams minus lean operating costs. This is what hits your account.</div>
+    <table class="mil-math-table">
+      <thead><tr><th>Line Item</th><th>Basis</th><th class="num">Annual Amount</th></tr></thead>
+      <tbody>
+        <tr style="background:rgba(34,197,94,.04)">
+          <td style="font-weight:700">⚡ Dispatch Fees (10%)</td><td style="font-size:11px;color:var(--muted)">100 drivers avg $2,000 gross/wk</td><td class="num green">+ $1,007,500</td>
+        </tr>
+        <tr style="background:rgba(34,197,94,.04)">
+          <td style="font-weight:700">⭐ Pro Fleet Subscriptions</td><td style="font-size:11px;color:var(--muted)">20 drivers × $199/mo</td><td class="num green">+ $47,760</td>
+        </tr>
+        <tr style="background:rgba(34,197,94,.04)">
+          <td style="font-weight:700">🏥 Enterprise Contracts</td><td style="font-size:11px;color:var(--muted)">2 contracts × $7,500/mo — <strong>critical unlock</strong></td><td class="num green">+ $180,000</td>
+        </tr>
+        <tr style="background:rgba(34,197,94,.04)">
+          <td style="font-weight:700">🔗 Platform & Factoring</td><td style="font-size:11px;color:var(--muted)">GoShare/Lugg placement + referral fees</td><td class="num green">+ $65,000</td>
+        </tr>
+        <tr style="background:rgba(34,197,94,.06);border-top:2px solid var(--border)">
+          <td colspan="2" style="font-weight:800">Total Gross Revenue</td><td class="num green" style="font-size:15px">$1,300,260</td>
+        </tr>
+        <tr style="background:rgba(239,68,68,.04)">
+          <td style="font-weight:700">👥 2 Senior Coordinators</td><td style="font-size:11px;color:var(--muted)">$55K each — handle negotiation + driver relations</td><td class="num" style="color:#ef4444">− $110,000</td>
+        </tr>
+        <tr style="background:rgba(239,68,68,.04)">
+          <td style="font-weight:700">🤖 Tech & Automation Stack</td><td style="font-size:11px;color:var(--muted)">Load boards, AI dispatch tools, Eagle Eye hosting</td><td class="num" style="color:#ef4444">− $24,000</td>
+        </tr>
+        <tr style="background:rgba(239,68,68,.04)">
+          <td style="font-weight:700">📢 Driver Recruitment</td><td style="font-size:11px;color:var(--muted)">Ads, outreach, onboarding incentives</td><td class="num" style="color:#ef4444">− $30,000</td>
+        </tr>
+        <tr style="background:rgba(239,68,68,.04)">
+          <td style="font-weight:700">⚖️ Legal, Compliance & Admin</td><td style="font-size:11px;color:var(--muted)">Agreements, DOT, insurance, misc tools</td><td class="num" style="color:#ef4444">− $42,000</td>
+        </tr>
+        <tr style="background:rgba(239,68,68,.06);border-top:2px solid var(--border)">
+          <td colspan="2" style="font-weight:800">Total Operating Costs</td><td class="num" style="color:#ef4444;font-size:15px">− $206,000</td>
+        </tr>
+        <tr style="background:linear-gradient(90deg,rgba(34,197,94,.12),rgba(34,197,94,.05));border-top:3px solid #22c55e">
+          <td colspan="2" style="font-weight:900;font-size:16px;color:#15803d">💰 NET PROFIT — IN YOUR POCKET</td>
+          <td class="num green" style="font-size:20px;color:#15803d">$1,094,260</td>
+        </tr>
+      </tbody>
+    </table>
+    <div style="margin-top:12px;padding:10px 14px;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.3);border-radius:8px;font-size:12px">
+      <strong style="color:#92400e">⚠️ The Enterprise Contract is the unlock:</strong> Without 2 enterprise contracts, you net ~$897K. Those 2 contracts are the difference between almost-there and $1M+. Marcus Webb (Healthcare) is your fastest path.
     </div>
   </div>
 
   <!-- Phase Roadmap -->
-  <div style="font-weight:800;font-size:15px;margin-bottom:12px;color:var(--navy)">📍 Phase Roadmap</div>
+  <div style="font-weight:800;font-size:15px;margin-bottom:4px;color:var(--navy)">📍 NET Profit Phase Roadmap</div>
+  <div style="font-size:12px;color:var(--muted);margin-bottom:12px">OpEx is fixed at ~$17,167/mo from Day 1. Early phases are investment. Break-even at Phase 2. $1M NET by Phase 5.</div>
   <div class="mil-phases">
     <div class="mil-phase" id="mil-phase-1">
       <div class="mil-phase-check" id="mil-phase-1-check"></div>
-      <div class="mil-phase-num">Phase 1</div>
+      <div class="mil-phase-num">Phase 1 · Investment</div>
       <div class="mil-phase-title">Launch</div>
       <div class="mil-phase-period">Month 1–2</div>
-      <div class="mil-phase-metric">$14,300</div>
-      <div class="mil-phase-sublabel">/ month to 3LL</div>
-      <div class="mil-phase-drivers">10 drivers · 7 vans · 2 SUVs · 1 car</div>
+      <div class="mil-phase-metric" style="color:#ef4444">−$8,800</div>
+      <div class="mil-phase-sublabel">/ month NET (building)</div>
+      <div class="mil-phase-drivers">10 drivers · $8,400 gross · $17,167 OpEx</div>
     </div>
     <div class="mil-phase" id="mil-phase-2">
       <div class="mil-phase-check" id="mil-phase-2-check"></div>
-      <div class="mil-phase-num">Phase 2</div>
+      <div class="mil-phase-num">Phase 2 · Break-Even</div>
       <div class="mil-phase-title">Traction</div>
       <div class="mil-phase-period">Month 3–4</div>
-      <div class="mil-phase-metric">$35,750</div>
-      <div class="mil-phase-sublabel">/ month to 3LL</div>
-      <div class="mil-phase-drivers">25 drivers · 15 vans · 6 SUVs · 4 cars</div>
+      <div class="mil-phase-metric" style="color:#f59e0b">+$3,900</div>
+      <div class="mil-phase-sublabel">/ month NET</div>
+      <div class="mil-phase-drivers">25 drivers · $21,000 gross · $17,167 OpEx</div>
     </div>
     <div class="mil-phase" id="mil-phase-3">
       <div class="mil-phase-check" id="mil-phase-3-check"></div>
-      <div class="mil-phase-num">Phase 3</div>
+      <div class="mil-phase-num">Phase 3 · Profitable</div>
       <div class="mil-phase-title">Scale</div>
       <div class="mil-phase-period">Month 5–7</div>
-      <div class="mil-phase-metric">$71,500</div>
-      <div class="mil-phase-sublabel">/ month to 3LL</div>
-      <div class="mil-phase-drivers">50 drivers · 30 vans · 12 SUVs · 8 cars</div>
+      <div class="mil-phase-metric">+$25,900</div>
+      <div class="mil-phase-sublabel">/ month NET ($311K/yr)</div>
+      <div class="mil-phase-drivers">50 drivers · $43,000 gross · $17,167 OpEx</div>
     </div>
     <div class="mil-phase" id="mil-phase-4">
       <div class="mil-phase-check" id="mil-phase-4-check"></div>
-      <div class="mil-phase-num">Phase 4</div>
+      <div class="mil-phase-num">Phase 4 · Accelerate</div>
       <div class="mil-phase-title">Momentum</div>
       <div class="mil-phase-period">Month 8–9</div>
-      <div class="mil-phase-metric">$107,250</div>
-      <div class="mil-phase-sublabel">/ month to 3LL</div>
-      <div class="mil-phase-drivers">75 drivers · 45 vans · 18 SUVs · 12 cars</div>
+      <div class="mil-phase-metric">+$55,400</div>
+      <div class="mil-phase-sublabel">/ month NET ($665K/yr)</div>
+      <div class="mil-phase-drivers">75 drivers + 1 enterprise · $72,500 gross</div>
     </div>
     <div class="mil-phase" id="mil-phase-5">
       <div class="mil-phase-check" id="mil-phase-5-check"></div>
-      <div class="mil-phase-num">Phase 5</div>
-      <div class="mil-phase-title">Million</div>
+      <div class="mil-phase-num">Phase 5 · Million</div>
+      <div class="mil-phase-title">NET $1M</div>
       <div class="mil-phase-period">Month 10–12</div>
-      <div class="mil-phase-metric" style="color:#16a34a">$84,000+</div>
-      <div class="mil-phase-sublabel">/ month (all streams)</div>
-      <div class="mil-phase-drivers">100 drivers + enterprise contracts</div>
+      <div class="mil-phase-metric" style="color:#16a34a">+$91,200</div>
+      <div class="mil-phase-sublabel">/ month NET ($1.09M/yr) 🎯</div>
+      <div class="mil-phase-drivers">100 drivers + 2 enterprise · $108K gross</div>
     </div>
-  </div>
-
-  <!-- Vehicle Revenue Math -->
-  <div class="mil-math">
-    <div style="font-weight:800;font-size:15px;margin-bottom:4px">🔢 The Revenue Math — 100-Driver Roster</div>
-    <div style="font-size:12px;color:var(--muted);margin-bottom:4px">Based on documented weekly gross averages. 10% dispatch fee. 52-week year.</div>
-    <table class="mil-math-table">
-      <thead><tr>
-        <th>Vehicle Type</th><th>Drivers</th><th>Est. Weekly Gross / Driver</th>
-        <th class="num">Your 10%</th><th class="num">Roster Weekly</th><th class="num green">Annual</th>
-      </tr></thead>
-      <tbody>
-        <tr>
-          <td>🚐 Cargo Van</td><td>50</td><td>$2,750</td>
-          <td class="num">$275</td><td class="num">$13,750</td><td class="num green">$715,000</td>
-        </tr>
-        <tr>
-          <td>🚙 SUV</td><td>25</td><td>$1,400</td>
-          <td class="num">$140</td><td class="num">$3,500</td><td class="num green">$182,000</td>
-        </tr>
-        <tr>
-          <td>🚗 Passenger Car</td><td>25</td><td>$850</td>
-          <td class="num">$85</td><td class="num">$2,125</td><td class="num green">$110,500</td>
-        </tr>
-        <tr>
-          <td colspan="4" style="font-size:12px;color:var(--muted)">Core Dispatch Revenue</td>
-          <td class="num">$19,375</td><td class="num green">$1,007,500</td>
-        </tr>
-      </tbody>
-    </table>
   </div>
 
   <!-- Live Vehicle Tracker -->
@@ -18998,25 +19017,40 @@ async function initMillionBlueprint(){
   const cars  =drivers.filter(d=>/(car|sedan|passenger)/i.test(d.vehicle_type||'')).length;
   const total =drivers.length||0;
 
-  // Revenue estimates (weekly, 10% fee)
+  // Revenue estimates (10% dispatch fee)
   const vanWeekly  =vans  *275;
   const suvWeekly  =suvs  *140;
   const carWeekly  =cars  * 85;
   const totalWeekly=vanWeekly+suvWeekly+carWeekly;
-  const annualRev  =totalWeekly*52;
-  const pctGoal    =Math.min(100,Math.round(annualRev/10000));// $1M = 100%
+  const dispatchAnnual=totalWeekly*52;
 
-  const fmt$=v=>'$'+v.toLocaleString('en-US',{maximumFractionDigits:0});
+  // Scale-based estimates for other streams (rough based on driver count)
+  const proDrivers   =Math.min(20,Math.floor(total*0.2));
+  const proMRR       =proDrivers*199*12;
+  const enterpriseRev=total>=75?180000:total>=50?90000:total>=25?45000:0;
+  const otherRev     =Math.floor(total*650); // factoring + platform referrals
+  const totalGross   =dispatchAnnual+proMRR+enterpriseRev+otherRev;
+
+  // Fixed operating costs
+  const OPEX=206000;
+  const netAnnual=totalGross-OPEX;
+  const pctGoal=Math.min(100,Math.max(0,Math.round(netAnnual/10000)));// $1M NET = 100%
+
+  const fmt$=v=>'$'+(v<0?'-':'')+Math.abs(v).toLocaleString('en-US',{maximumFractionDigits:0});
   const set=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
 
   set('mil-cur-drivers',total);
-  set('mil-weekly-rev',fmt$(totalWeekly));
-  set('mil-annual-rev',fmt$(annualRev));
+  set('mil-annual-gross',fmt$(totalGross));
+  set('mil-annual-opex',fmt$(OPEX));
+  set('mil-annual-rev',(netAnnual>=0?'':'-')+fmt$(Math.abs(netAnnual)));
   set('mil-pct-goal',pctGoal+'%');
+
+  const netEl=document.getElementById('mil-annual-rev');
+  if(netEl)netEl.style.color=netAnnual>=1000000?'#16a34a':netAnnual>=0?'#f59e0b':'#ef4444';
 
   const bar=document.getElementById('mil-progress-bar');
   if(bar){bar.style.width=pctGoal+'%';}
-  set('mil-progress-label',pctGoal+'%  ·  '+fmt$(annualRev)+' of $1,000,000');
+  set('mil-progress-label',pctGoal+'%  ·  '+fmt$(netAnnual)+' NET of $1,000,000 goal');
 
   // Vehicle bars (targets: 50 vans, 25 SUVs, 25 cars)
   _milBar('mil-van-bar' ,vans,50);
@@ -19053,17 +19087,17 @@ function _milBar(id,val,max){
 
 async function milBriefExecTeam(){
   const drivers=parseInt(document.getElementById('mil-cur-drivers')?.textContent||'0')||0;
-  const weekly=document.getElementById('mil-weekly-rev')?.textContent||'—';
+  const netRev=document.getElementById('mil-annual-rev')?.textContent||'—';
   const pct=document.getElementById('mil-pct-goal')?.textContent||'—';
   const phase=drivers<10?1:drivers<25?2:drivers<50?3:drivers<75?4:5;
   const directives=[
-    {exec:'Mark Odom',role:'CEO',task:'Approve Phase '+phase+' resource allocation. Review enterprise contract pipeline. Set $1M milestone deadline.'},
+    {exec:'Mark Odom',role:'CEO',task:'Approve Phase '+phase+' resource allocation. Enterprise contracts are the NET $1M unlock — 2 contracts needed. Current NET run rate: '+netRev+'.'},
     {exec:'CC Gulley',role:'CSO',task:'Generate LF $1M 30/60/90 roadmap. Brief all 9 workstream leads by EOW. Weekly progress KPI to CMD.'},
     {exec:'Alexander Wright',role:'Market Intel',task:'Deliver top-10 RPM load boards for cargo vans. Competitive analysis on GoShare & Amazon DSP rates.'},
     {exec:'Naomi Kensington',role:'Targeting',task:'Build 50-driver recruitment list. Identify Inland Empire cargo van owner communities.'},
     {exec:'Dr. Evelyn Sterling',role:'COO',task:'Add LF driver utilization & load fill rate to daily brief. Escalate idle drivers at 48hr mark.'},
     {exec:'Diana Cole',role:'LF Division Lead',task:'Phase '+phase+' is active. Current roster: '+drivers+' drivers. Report weekly vs. phase target.'},
-    {exec:'Eleanor Wei',role:'Finance',task:'Track weekly 10% fee revenue. Current run rate: '+weekly+'/wk ('+pct+' to $1M). Pro Fleet MRR pipeline.'},
+    {exec:'Eleanor Wei',role:'Finance',task:'Track NET profit (not just revenue). Current NET annual: '+netRev+' ('+pct+' to $1M goal). Pro Fleet MRR + enterprise contract P&L.'},
     {exec:'Winston Carmichael',role:'Retention',task:'Launch 30/60/90 driver check-in cadence. Identify Pro Fleet upgrade candidates. Churn < 10%/mo.'},
     {exec:'Marcus Reid',role:'Tech Lead',task:'Sprint: load board API #1, backhaul stitching v1, IC agreement auto-send on driver signup.'},
   ];
