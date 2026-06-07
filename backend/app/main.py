@@ -142,8 +142,48 @@ def _start_scheduler(app: FastAPI) -> None:
         log.error("APScheduler failed to start: %s", exc)
 
 
+def _run_startup_migrations() -> None:
+    """Idempotent migrations that run once on every server start."""
+    try:
+        from .supabase_client import get_supabase
+        sb = get_supabase()
+
+        # Migration 020 — deduplicate light_vehicle_drivers by email then phone
+        rows = sb.table("light_vehicle_drivers").select("id,email,phone,created_at").execute().data or []
+        rows_sorted = sorted(rows, key=lambda r: (r.get("created_at") or "", r.get("id") or ""))
+        seen_emails: dict = {}
+        seen_phones: dict = {}
+        deleted = 0
+        for r in rows_sorted:
+            rid = str(r.get("id") or "")
+            email = (r.get("email") or "").strip().lower()
+            phone = (r.get("phone") or "").strip()
+            is_dup = False
+            if email:
+                if email in seen_emails:
+                    is_dup = True
+                else:
+                    seen_emails[email] = rid
+            if not is_dup and phone:
+                if phone in seen_phones:
+                    is_dup = True
+                else:
+                    seen_phones[phone] = rid
+            if is_dup:
+                try:
+                    sb.table("light_vehicle_drivers").delete().eq("id", rid).execute()
+                    deleted += 1
+                except Exception:  # noqa: BLE001
+                    pass
+        if deleted:
+            log.info("Migration 020: removed %d duplicate LF driver records", deleted)
+    except Exception as e:  # noqa: BLE001
+        log.warning("Startup migration error (non-fatal): %s", e)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    _run_startup_migrations()
     _start_scheduler(app)
     yield
     scheduler = getattr(app.state, "scheduler", None)
