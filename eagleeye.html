@@ -781,6 +781,7 @@ select.form-input option{background:var(--surface);}
     <div class="sb-item" onclick="nav('lf-executive')"><span class="sb-icon">🚗</span> Executive</div>
     <div class="sb-item" onclick="nav('lf-courier')"><span class="sb-icon">📦</span> Courier</div>
     <div class="sb-item" onclick="nav('lf-gig')"><span class="sb-icon">👥</span> Gig Fleet</div>
+    <div class="sb-item" onclick="nav('lf-drivers')"><span class="sb-icon">🎯</span> Driver Command <span class="sb-badge" id="lf-drivers-flag-badge" style="display:none;background:#ef4444;color:#fff">0</span></div>
     <div class="sb-item" onclick="nav('lf-bizdev')"><span class="sb-icon">🤝</span> LF Business Dev <span class="sb-badge" id="lf-bizdev-notif" style="display:none;background:#f59e0b;color:#000">!</span></div>
     <div class="sb-item" onclick="nav('lf-million')"><span class="sb-icon">💰</span> $1M Blueprint</div>
   </div>
@@ -4235,7 +4236,7 @@ function nav(id){
   document.querySelectorAll('.sb-item').forEach(n=>{if(n.getAttribute('onclick')?.includes("'"+id+"'"))n.classList.add('active');});
   document.getElementById('page-title').textContent=pageNames[id]||id;
   // LF pages use full-page layout — hero acts as page header, topbar title hidden
-  const _lfFullPages=['lf-nemt','lf-medical','lf-executive','lf-courier','lf-gig','lf-bizdev','lf-million','lf-map','broker-division','trading-desk','broker-shippers','broker-docs'];
+  const _lfFullPages=['lf-nemt','lf-medical','lf-executive','lf-courier','lf-gig','lf-bizdev','lf-million','lf-map','lf-drivers','broker-division','trading-desk','broker-shippers','broker-docs'];
   document.querySelector('.content').classList.toggle('lf-fullpage',_lfFullPages.includes(id));
   document.getElementById('main').classList.toggle('lf-fullpage',_lfFullPages.includes(id));
   // Fixed full-page overlays: always measure actual header stack
@@ -4277,6 +4278,7 @@ function nav(id){
   if(id==='lf-executive'){lfRunExpert('victor_nash','executive');}
   if(id==='lf-courier'){lfRunExpert('felix_grant','courier');}
   if(id==='lf-gig'){lfRunExpert('morgan_hayes','gig');}
+  if(id==='lf-drivers'){initLFDriverCommand();}
   if(id==='lf-bizdev'){initLfBizDev();}
   if(id==='lf-million'){initMillionBlueprint();}
   if(id==='load-hunter'){initLoadHunter();}
@@ -19197,6 +19199,85 @@ function lfRenderExpertReport(segment, d) {
 </div><!-- /mil-wrap -->
 </div><!-- /page-lf-million -->
 
+<!-- ══ IEBC DRIVER COMMAND CENTER ══════════════════════════════════════════ -->
+<style>
+.lfdc-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;transition:border-color .2s;margin-bottom:10px;}
+.lfdc-card:hover{border-color:rgba(124,58,237,.35);}
+.lfdc-card.lfdc-open{border-color:#7c3aed;}
+.lfdc-card-header{display:flex;align-items:center;gap:16px;padding:16px 20px;cursor:pointer;user-select:none;}
+.lfdc-card.lfdc-open .lfdc-chevron{transform:rotate(180deg);}
+.lfdc-report-card{display:none;border-top:1px solid var(--border);}
+.lfdc-card.lfdc-open .lfdc-report-card{display:block;}
+.lfdc-tab{padding:10px 16px;font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:all .18s;white-space:nowrap;}
+.lfdc-tab:hover:not(.lfdc-tab-active){color:var(--text);}
+.lfdc-tab.lfdc-tab-active{color:var(--navy);border-bottom-color:#7c3aed;}
+.lfdc-kpi-strip{display:flex;gap:1px;background:var(--border);border-bottom:1px solid var(--border);}
+.lfdc-kpi{flex:1;background:var(--surface);padding:14px 16px;text-align:center;}
+.lfdc-kpi-val{font-size:22px;font-weight:800;color:var(--navy);}
+.lfdc-kpi-lbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-top:2px;}
+.lfdc-toolbar{padding:14px 20px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;border-bottom:1px solid var(--border);background:var(--slate);}
+.lfdc-search{flex:1;min-width:180px;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;color:var(--text);background:var(--surface);outline:none;}
+.lfdc-search:focus{border-color:#7c3aed;}
+.lfdc-fbtn{padding:7px 13px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--muted);font-size:12px;font-weight:600;cursor:pointer;transition:all .18s;}
+.lfdc-fbtn:hover,.lfdc-fbtn.lfdc-factive{background:#7c3aed;border-color:#7c3aed;color:#fff;}
+.lfdc-sort{padding:7px 11px;border:1px solid var(--border);border-radius:8px;font-size:12px;color:var(--text);background:var(--surface);outline:none;cursor:pointer;}
+.lfdc-hdr-bar{display:flex;align-items:center;justify-content:space-between;padding:14px 20px 10px;border-bottom:1px solid var(--border);}
+.lfdc-div-score-wrap{display:flex;align-items:center;gap:8px;padding:6px 14px;border:1px solid var(--border);border-radius:10px;background:var(--slate);}
+</style>
+<div class="page" id="page-lf-drivers">
+  <!-- Header -->
+  <div class="lfdc-hdr-bar">
+    <div>
+      <div style="font-family:var(--ff-h);font-size:20px;font-weight:800;color:var(--navy)">IEBC Driver Command Center</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:2px">Light Fleet Operations · All Segments</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px">
+      <div class="lfdc-div-score-wrap">
+        <span style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Division Health</span>
+        <span id="lfdc-div-score" style="font-size:22px;font-weight:800;color:var(--green)">—</span>
+      </div>
+      <button class="btn-sync" onclick="initLFDriverCommand()">↻ Refresh</button>
+    </div>
+  </div>
+  <!-- KPI strip -->
+  <div class="lfdc-kpi-strip">
+    <div class="lfdc-kpi"><div class="lfdc-kpi-val" id="lfdc-kpi-active" style="color:var(--green)">—</div><div class="lfdc-kpi-lbl">Active Drivers</div></div>
+    <div class="lfdc-kpi"><div class="lfdc-kpi-val" id="lfdc-kpi-trips" style="color:#7c3aed">—</div><div class="lfdc-kpi-lbl">Trips Today</div></div>
+    <div class="lfdc-kpi"><div class="lfdc-kpi-val" id="lfdc-kpi-rev" style="color:var(--gold)">—</div><div class="lfdc-kpi-lbl">Est. Revenue Today</div></div>
+    <div class="lfdc-kpi"><div class="lfdc-kpi-val" id="lfdc-kpi-acc">—</div><div class="lfdc-kpi-lbl">Avg Acceptance Rate</div></div>
+    <div class="lfdc-kpi"><div class="lfdc-kpi-val" id="lfdc-kpi-flags" style="color:var(--red)">—</div><div class="lfdc-kpi-lbl">Compliance Flags</div></div>
+  </div>
+  <!-- Toolbar -->
+  <div class="lfdc-toolbar">
+    <input class="lfdc-search" id="lfdc-search" type="text" placeholder="Search name, location, vehicle…" oninput="_dcRenderDrivers()" />
+    <button class="lfdc-fbtn lfdc-factive" data-dc-f="all" onclick="_dcSetFilter(this,'all')">All</button>
+    <button class="lfdc-fbtn" data-dc-f="active" onclick="_dcSetFilter(this,'active')">Active</button>
+    <button class="lfdc-fbtn" data-dc-f="nemt" onclick="_dcSetFilter(this,'nemt')">NEMT</button>
+    <button class="lfdc-fbtn" data-dc-f="courier" onclick="_dcSetFilter(this,'courier')">Courier</button>
+    <button class="lfdc-fbtn" data-dc-f="executive" onclick="_dcSetFilter(this,'executive')">Executive</button>
+    <button class="lfdc-fbtn" data-dc-f="gig" onclick="_dcSetFilter(this,'gig')">Gig</button>
+    <select class="lfdc-sort" id="lfdc-sort" onchange="_dcRenderDrivers()">
+      <option value="name">Sort: Name</option>
+      <option value="trips">Sort: Most Trips</option>
+      <option value="acceptance">Sort: Acceptance Rate</option>
+      <option value="rating">Sort: Rating</option>
+    </select>
+  </div>
+  <!-- Driver list -->
+  <div style="flex:1;overflow-y:auto;padding:16px 20px" id="lfdc-drivers-wrap">
+    <div style="text-align:center;padding:60px;color:var(--muted)">Select "Driver Command" to load.</div>
+  </div>
+</div>
+<script>
+function _dcSetFilter(btn, val){
+  document.querySelectorAll('[data-dc-f]').forEach(b=>b.classList.remove('lfdc-factive'));
+  btn.classList.add('lfdc-factive');
+  _lfdc_filter=val;
+  _dcRenderDrivers();
+}
+</script>
+<!-- ══ /IEBC DRIVER COMMAND CENTER ══════════════════════════════════════════ -->
+
 <script>
 // ── $1M Blueprint ──────────────────────────────────────────────────────────────
 async function initMillionBlueprint(){
@@ -21046,6 +21127,309 @@ function _lhRenderTable(loads) {
   </table>`;
 }
 // ── END LOAD HUNTER ───────────────────────────────────────────────────────────
+
+// ══════════════════════════════════════════════════════════════════════════════
+// IEBC DRIVER COMMAND CENTER  (page-lf-drivers)
+// ══════════════════════════════════════════════════════════════════════════════
+let _lfdc_drivers = [];
+let _lfdc_trips   = {};
+let _lfdc_filter  = 'all';
+
+const _AVATAR_COLORS_DC = ['#7c3aed','#1d4ed8','#065f46','#9d174d','#92400e','#1e40af','#047857','#be123c'];
+function _dcAvatarColor(n){ let h=0; for(const c of(n||'X'))h=(h*31+c.charCodeAt(0))&0xffff; return _AVATAR_COLORS_DC[h%_AVATAR_COLORS_DC.length]; }
+function _dcInitials(n){ if(!n)return'?'; return n.trim().split(/\s+/).map(w=>w[0]).slice(0,2).join('').toUpperCase(); }
+function _dcFmtDate(d){ if(!d)return'—'; return new Date(d).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}); }
+function _dcFmtMoney(v){ if(v==null)return'—'; return'$'+Number(v).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function _dcExpiry(ds){
+  if(!ds)return{label:'Unknown',cls:'dc-warn'};
+  const days=Math.ceil((new Date(ds)-Date.now())/86400000);
+  if(days<0) return{label:'EXPIRED',cls:'dc-bad'};
+  if(days<30)return{label:days+'d left',cls:'dc-warn'};
+  return{label:_dcFmtDate(ds),cls:'dc-ok'};
+}
+function _dcGrade(p){ if(p>=90)return'A'; if(p>=80)return'B'; if(p>=70)return'C'; if(p>=60)return'D'; return'F'; }
+function _dcGradeDesc(g){ return{A:'Excellent',B:'Good',C:'Average',D:'Below expectations',F:'Needs attention'}[g]||''; }
+function _dcBarColor(p){ if(p>=80)return'#10b981'; if(p>=60)return'#60a5fa'; if(p>=40)return'#f59e0b'; return'#ef4444'; }
+function _dcAccRate(trips){
+  const done=trips.filter(t=>t.status==='completed').length;
+  const canc=trips.filter(t=>t.status==='cancelled').length;
+  const tot=done+canc; if(!tot)return null;
+  return Math.round(done/tot*100);
+}
+function _dcTopPOI(trips){
+  const c={};
+  for(const t of trips){ const city=(t.pickup_address||'').split(',').pop()?.trim()||''; if(city)c[city]=(c[city]||0)+1; }
+  return Object.entries(c).sort((a,b)=>b[1]-a[1]).slice(0,5);
+}
+function _dcFlags(d){
+  const f=[];
+  if(d.mvr_status==='flagged')f.push({label:'MVR Flagged',u:'bad'});
+  if(d.background_check_status==='flagged')f.push({label:'Background Check Flagged',u:'bad'});
+  const le=_dcExpiry(d.license_expires); if(le.cls!=='dc-ok')f.push({label:'License Expiry',u:le.cls==='dc-bad'?'bad':'warn'});
+  const ie=_dcExpiry(d.vehicle_insurance_expires); if(ie.cls!=='dc-ok')f.push({label:'Vehicle Insurance',u:ie.cls==='dc-bad'?'bad':'warn'});
+  return f;
+}
+
+async function initLFDriverCommand(){
+  const wrap=document.getElementById('lfdc-drivers-wrap');
+  if(!wrap)return;
+  wrap.innerHTML='<div style="text-align:center;padding:60px;color:var(--muted)"><div class="lf-empty-state-icon" style="font-size:32px;margin-bottom:12px">⏳</div>Loading drivers…</div>';
+
+  const [dRes,tRes]=await Promise.all([
+    apiFetch('/api/light-fleet/drivers?limit=500'),
+    apiFetch('/api/light-fleet/trips?limit=2000')
+  ]);
+  _lfdc_drivers=[];_lfdc_trips={};
+  if(dRes.ok){ const d=await dRes.json(); _lfdc_drivers=Array.isArray(d)?d:(d.drivers||d.items||[]); }
+  if(tRes.ok){ const t=await tRes.json(); const arr=Array.isArray(t)?t:(t.trips||t.items||[]); for(const tr of arr){if(!_lfdc_trips[tr.driver_id])_lfdc_trips[tr.driver_id]=[]; _lfdc_trips[tr.driver_id].push(tr);} }
+
+  _dcUpdateKPIs();
+  _dcRenderDrivers();
+}
+
+function _dcUpdateKPIs(){
+  const active=_lfdc_drivers.filter(d=>d.status==='active').length;
+  document.getElementById('lfdc-kpi-active').textContent=active;
+  const today=new Date().toISOString().slice(0,10);
+  let todayTrips=0,todayRev=0;
+  for(const trips of Object.values(_lfdc_trips))for(const t of trips){if((t.created_at||'').startsWith(today)){todayTrips++;todayRev+=Number(t.rate_total||0);}}
+  document.getElementById('lfdc-kpi-trips').textContent=todayTrips;
+  document.getElementById('lfdc-kpi-rev').textContent='$'+todayRev.toLocaleString('en-US',{minimumFractionDigits:0});
+  let rates=[];
+  for(const d of _lfdc_drivers){const r=_dcAccRate(_lfdc_trips[d.id]||[]);if(r!==null)rates.push(r);}
+  const avgAcc=rates.length?Math.round(rates.reduce((a,b)=>a+b,0)/rates.length):null;
+  const kpiAcc=document.getElementById('lfdc-kpi-acc');
+  kpiAcc.textContent=avgAcc!==null?avgAcc+'%':'—';
+  kpiAcc.style.color=avgAcc>=80?'var(--green)':avgAcc>=60?'var(--gold)':'var(--red)';
+  let flags=0;
+  for(const d of _lfdc_drivers)flags+=_dcFlags(d).length;
+  const fb=document.getElementById('lfdc-kpi-flags');
+  fb.textContent=flags;
+  fb.style.color=flags?'var(--red)':'var(--green)';
+  const badge=document.getElementById('lf-drivers-flag-badge');
+  if(badge){badge.textContent=flags;badge.style.display=flags?'':'none';}
+  const score=Math.max(0,Math.min(100,Math.round((avgAcc??70)-Math.min(flags*5,30)+(active>5?5:0))));
+  const sv=document.getElementById('lfdc-div-score');
+  if(sv){sv.textContent=score;sv.style.color=score>=80?'var(--green)':score>=60?'#f59e0b':'var(--red)';}
+}
+
+function _dcFilterSort(){
+  const q=(document.getElementById('lfdc-search')||{}).value||'';
+  const sort=(document.getElementById('lfdc-sort')||{}).value||'name';
+  let out=_lfdc_drivers.filter(d=>{
+    if(q&&!((d.name||'').toLowerCase().includes(q.toLowerCase())||(d.location||'').toLowerCase().includes(q.toLowerCase())||(d.vehicle_make||'').toLowerCase().includes(q.toLowerCase())))return false;
+    if(_lfdc_filter==='all')return true;
+    if(_lfdc_filter==='active')return d.status==='active';
+    return(d.approved_services||[]).includes(_lfdc_filter);
+  });
+  out.sort((a,b)=>{
+    if(sort==='trips')return(b.total_trips||0)-(a.total_trips||0);
+    if(sort==='acceptance'){const ra=_dcAccRate(_lfdc_trips[a.id]||[])??-1,rb=_dcAccRate(_lfdc_trips[b.id]||[])??-1;return rb-ra;}
+    if(sort==='rating')return(b.rating||0)-(a.rating||0);
+    return(a.name||'').localeCompare(b.name||'');
+  });
+  return out;
+}
+
+function _dcRenderDrivers(){
+  const wrap=document.getElementById('lfdc-drivers-wrap');
+  if(!wrap)return;
+  const drivers=_dcFilterSort();
+  if(!drivers.length){wrap.innerHTML='<div style="text-align:center;padding:40px;color:var(--muted)">No drivers match your filters.</div>';return;}
+  wrap.innerHTML=drivers.map(d=>_dcDriverCard(d)).join('');
+  wrap.querySelectorAll('.lfdc-card-header').forEach(hdr=>{
+    hdr.addEventListener('click',()=>{
+      const card=hdr.closest('.lfdc-card');
+      const was=card.classList.contains('lfdc-open');
+      wrap.querySelectorAll('.lfdc-card.lfdc-open').forEach(c=>c.classList.remove('lfdc-open'));
+      if(!was){card.classList.add('lfdc-open');setTimeout(()=>_dcAnimateBars(card),50);}
+    });
+  });
+  wrap.querySelectorAll('.lfdc-tab').forEach(tab=>{
+    tab.addEventListener('click',e=>{
+      e.stopPropagation();
+      const card=tab.closest('.lfdc-card');
+      card.querySelectorAll('.lfdc-tab').forEach(t=>t.classList.remove('lfdc-tab-active'));
+      card.querySelectorAll('.lfdc-panel').forEach(p=>p.style.display='none');
+      tab.classList.add('lfdc-tab-active');
+      const panel=card.querySelector('[data-dc-panel="'+tab.dataset.dcTab+'"]');
+      if(panel)panel.style.display='block';
+    });
+  });
+}
+
+function _dcDriverCard(d){
+  const trips=_lfdc_trips[d.id]||[];
+  const acc=_dcAccRate(trips);
+  const flags=_dcFlags(d);
+  const color=_dcAvatarColor(d.name);
+  const dotColor={active:'#10b981',inactive:'#64748b',suspended:'#ef4444'}[d.status]||'#64748b';
+  const services=(d.approved_services||[]);
+  const pct=acc??0;
+  const r=20,circ=2*Math.PI*r,dash=(pct/100)*circ;
+  const ringColor=pct>=80?'#10b981':pct>=60?'#f59e0b':'#ef4444';
+  const completed=trips.filter(t=>t.status==='completed');
+  const compRate=trips.length?Math.round(completed.length/trips.length*100):null;
+  const ratingPct=d.rating?Math.round(Number(d.rating)*20):null;
+  const scores=[acc,compRate,ratingPct].filter(x=>x!==null);
+  const overall=scores.length?Math.round(scores.reduce((a,b)=>a+b,0)/scores.length):null;
+  const g=overall!==null?_dcGrade(overall):'—';
+
+  const servicePills=services.map(s=>`<span class="lf-seg-badge lf-seg-${s}">${s.toUpperCase()}</span>`).join('');
+  const flagPill=flags.length?`<span class="lf-seg-badge" style="background:rgba(239,68,68,.15);color:#fca5a5;border:1px solid rgba(239,68,68,.25)">⚠ ${flags.length} flag${flags.length>1?'s':''}</span>`:'';
+  const badgeCss={active:'background:rgba(5,150,105,.12);color:#34d399;border:1px solid rgba(5,150,105,.25)',inactive:'background:rgba(100,116,139,.12);color:#94a3b8;border:1px solid rgba(100,116,139,.25)',suspended:'background:rgba(220,38,38,.12);color:#fca5a5;border:1px solid rgba(220,38,38,.25)'}[d.status]||'';
+
+  return `<div class="lfdc-card" data-driver-id="${d.id}">
+  <div class="lfdc-card-header">
+    <div style="position:relative;flex-shrink:0">
+      <div style="width:48px;height:48px;border-radius:12px;background:${color};display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:800;color:#fff">${_dcInitials(d.name)}</div>
+      <span style="position:absolute;bottom:-2px;right:-2px;width:13px;height:13px;border-radius:50%;background:${dotColor};border:2px solid var(--surface)"></span>
+    </div>
+    <div style="flex:1;min-width:0">
+      <div style="font-size:15px;font-weight:700;color:var(--text)">${d.name||'Unknown'}</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:2px">📍 ${d.location||'—'} &nbsp;·&nbsp; ${d.vehicle_year||''} ${d.vehicle_make||''} ${d.vehicle_model||''}</div>
+      <div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:5px">${servicePills}${flagPill}</div>
+    </div>
+    <div style="display:flex;gap:18px;align-items:center;flex-shrink:0">
+      <div style="text-align:center"><div style="font-size:16px;font-weight:800;color:var(--text)">${d.total_trips??completed.length}</div><div style="font-size:10px;color:var(--muted)">Trips</div></div>
+      <div style="text-align:center"><div style="font-size:16px;font-weight:800;color:var(--text)">${d.rating?Number(d.rating).toFixed(1):'—'}</div><div style="font-size:10px;color:var(--muted)">Rating</div></div>
+      <div style="position:relative;width:52px;height:52px;flex-shrink:0">
+        <svg width="52" height="52" viewBox="0 0 52 52" style="transform:rotate(-90deg)">
+          <circle cx="26" cy="26" r="${r}" fill="none" stroke="rgba(0,0,0,.08)" stroke-width="5"/>
+          <circle cx="26" cy="26" r="${r}" fill="none" stroke="${ringColor}" stroke-width="5" stroke-dasharray="${dash.toFixed(1)} ${circ.toFixed(1)}" stroke-linecap="round"/>
+        </svg>
+        <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:var(--text)">${acc!==null?acc+'%':'—'}</div>
+      </div>
+      <span style="font-size:11px;font-weight:700;padding:4px 10px;border-radius:20px;${badgeCss}">${(d.status||'inactive').toUpperCase()}</span>
+      <span style="color:var(--muted);font-size:18px;transition:transform .25s" class="lfdc-chevron">⌄</span>
+    </div>
+  </div>
+  <div class="lfdc-report-card">
+    <div style="display:flex;border-bottom:1px solid var(--border);background:var(--slate)">
+      ${['overview','trips','performance','places','compliance'].map((t,i)=>
+        `<div class="lfdc-tab${i===0?' lfdc-tab-active':''}" data-dc-tab="${t}">${{overview:'📋 Overview',trips:'🚗 Load Details',performance:'📊 Performance',places:'📍 Places',compliance:'🛡 Compliance'}[t]}</div>`
+      ).join('')}
+    </div>
+    <div class="lfdc-panel" data-dc-panel="overview" style="display:block;padding:20px">
+      <div style="display:flex;align-items:center;gap:16px;padding:16px;background:var(--slate);border-radius:10px;border:1px solid var(--border);margin-bottom:18px">
+        <div style="width:68px;height:68px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-direction:column;flex-shrink:0;border:3px solid ${_dcBarColor(overall??0)};color:${_dcBarColor(overall??0)}">
+          <div style="font-size:24px;font-weight:800;line-height:1">${g}</div><div style="font-size:9px;color:var(--muted)">GRADE</div>
+        </div>
+        <div><div style="font-size:16px;font-weight:700;color:var(--text)">${d.name}</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:3px">${_dcGradeDesc(g)} · ${(d.plan||'starter').replace('_',' ').toUpperCase()} PLAN</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:5px">${trips.filter(t=>t.status==='in_progress').length?'🟢 Currently on an active trip':'⚪ Off-duty'}</div></div>
+      </div>
+      <div style="font-size:10px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:.1em;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border)">Driver Information</div>
+      <table style="width:100%;border-collapse:collapse;border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:18px">
+        ${[['Phone',d.phone||'—'],['Email',d.email||'—'],['Home Base',d.location||'—'],['Vehicle',`${d.vehicle_year||''} ${d.vehicle_make||''} ${d.vehicle_model||''}`],['Vehicle Type',(d.vehicle_type||'—').replace('_',' ')],['License',`${d.license_number||'—'} (${d.license_state||'?'})`],['MVR Status',(d.mvr_status||'pending').toUpperCase()],['Background',(d.background_check_status||'pending').toUpperCase()],['Member Since',_dcFmtDate(d.created_at)],['Activated',_dcFmtDate(d.activated_at)]].map((r,i)=>`
+        <tr style="${i%2?'background:rgba(0,0,0,.02)':''}"><td style="padding:9px 14px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;white-space:nowrap;width:160px">${r[0]}</td><td style="padding:9px 14px;font-size:13px;font-weight:500;color:var(--text)">${r[1]}</td></tr>`).join('')}
+      </table>
+      <div style="font-size:10px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px">Approved Services</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px">${services.length?servicePills:'<span style="color:var(--muted);font-size:13px">None assigned</span>'}</div>
+      <div style="font-size:10px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px">Opted-In Platforms</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">${(d.platforms_opted_in||[]).length?(d.platforms_opted_in||[]).map(p=>`<span style="font-size:11px;padding:3px 9px;border-radius:20px;background:var(--slate);color:var(--muted);border:1px solid var(--border)">${p}</span>`).join(''):'<span style="color:var(--muted);font-size:13px">None yet</span>'}</div>
+    </div>
+    <div class="lfdc-panel" data-dc-panel="trips" style="display:none;padding:20px">${_dcTripsHTML(trips)}</div>
+    <div class="lfdc-panel" data-dc-panel="performance" style="display:none;padding:20px">${_dcPerfHTML(d,trips,acc)}</div>
+    <div class="lfdc-panel" data-dc-panel="places" style="display:none;padding:20px">${_dcPlacesHTML(d,trips)}</div>
+    <div class="lfdc-panel" data-dc-panel="compliance" style="display:none;padding:20px">${_dcComplianceHTML(d,flags)}</div>
+  </div>
+</div>`;
+}
+
+function _dcTripsHTML(trips){
+  const active=trips.filter(t=>['in_progress','assigned','pending'].includes(t.status));
+  const recent=trips.filter(t=>t.status==='completed').slice(0,10);
+  const typeColor={nemt:'#3b82f6',courier:'#f59e0b',executive:'#8b5cf6',gig:'#22c55e'};
+  const stColor={completed:'#10b981',in_progress:'#8b5cf6',pending:'#f59e0b',cancelled:'#ef4444',assigned:'#3b82f6'};
+  const row=(t,cols)=>`<tr>${cols.map(c=>`<td style="padding:8px 10px;font-size:12px;border-bottom:1px solid var(--border);color:var(--text)">${c}</td>`).join('')}</tr>`;
+  const typeB=(t)=>`<span style="font-size:10px;font-weight:600;padding:2px 7px;border-radius:20px;background:${typeColor[t]||'#64748b'}22;color:${typeColor[t]||'#64748b'}">${(t||'gig').toUpperCase()}</span>`;
+  const stB=(s)=>`<span style="font-size:10px;padding:2px 7px;border-radius:20px;background:${stColor[s]||'#64748b'}22;color:${stColor[s]||'#64748b'}">${(s||'').replace('_',' ').toUpperCase()}</span>`;
+  const th=cols=>`<thead><tr>${cols.map(c=>`<th style="padding:6px 10px 10px;font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;text-align:left;border-bottom:2px solid var(--border)">${c}</th>`).join('')}</tr></thead>`;
+  let html='';
+  if(active.length){
+    html+=`<div style="font-size:10px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:.1em;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border)">Active Loads (${active.length})</div>
+    <div style="overflow-x:auto;margin-bottom:20px"><table style="width:100%;border-collapse:collapse">${th(['Type','Pickup','Dropoff','Rate','Status','Scheduled'])}
+    <tbody>${active.map(t=>row(t,[typeB(t.trip_type),t.pickup_address||'—',t.dropoff_address||'—',_dcFmtMoney(t.rate_total),stB(t.status),_dcFmtDate(t.scheduled_at)])).join('')}</tbody></table></div>`;
+  }
+  html+=`<div style="font-size:10px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:.1em;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border)">Recent Completed Loads (${recent.length})</div>`;
+  if(!recent.length)return html+'<div style="text-align:center;padding:30px;color:var(--muted)">No completed trips yet.</div>';
+  return html+`<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse">${th(['Type','Pickup','Dropoff','Miles','Rate','Payout','Date'])}
+  <tbody>${recent.map(t=>row(t,[typeB(t.trip_type),t.pickup_address||'—',t.dropoff_address||'—',t.estimated_miles?Number(t.estimated_miles).toFixed(0)+'mi':'—',_dcFmtMoney(t.rate_total),_dcFmtMoney(t.driver_payout),_dcFmtDate(t.completed_at)])).join('')}</tbody></table></div>`;
+}
+
+function _dcPerfHTML(d,trips,acc){
+  const comp=trips.filter(t=>t.status==='completed');
+  const canc=trips.filter(t=>t.status==='cancelled');
+  const compRate=trips.length?Math.round(comp.length/trips.length*100):null;
+  const ratingPct=d.rating?Math.round(Number(d.rating)*20):null;
+  const metrics=[{name:'Acceptance Rate',val:acc,suf:'%'},{name:'Completion Rate',val:compRate,suf:'%'},{name:'Driver Rating',val:ratingPct,suf:'%',disp:d.rating?Number(d.rating).toFixed(1)+' / 5.0':null}];
+  const totalEarnings=comp.reduce((s,t)=>s+(t.driver_payout||0),0);
+  const avgEarnings=comp.length?totalEarnings/comp.length:0;
+  let html=`<div style="font-size:10px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:.1em;margin-bottom:14px;padding-bottom:6px;border-bottom:1px solid var(--border)">Performance Metrics</div>`;
+  html+=metrics.map(m=>{
+    if(m.val===null)return`<div style="margin-bottom:14px"><div style="display:flex;justify-content:space-between;margin-bottom:5px"><span style="font-size:13px;color:var(--text)">${m.name}</span><span style="font-size:14px;font-weight:700;color:var(--muted)">No data</span></div><div style="height:7px;background:var(--slate);border-radius:10px"></div></div>`;
+    const g=_dcGrade(m.val);
+    return`<div style="margin-bottom:14px"><div style="display:flex;justify-content:space-between;margin-bottom:5px"><span style="font-size:13px;color:var(--text)">${m.name}</span><span style="font-size:14px;font-weight:700;color:${_dcBarColor(m.val)}">${m.disp||(m.val+m.suf)} <small style="font-size:10px;color:var(--muted)">(${g})</small></span></div><div style="height:7px;background:var(--slate);border-radius:10px;overflow:hidden"><div class="lfdc-bar" data-w="${m.val}" style="height:100%;width:0;background:${_dcBarColor(m.val)};border-radius:10px;transition:width .8s cubic-bezier(.34,1.56,.64,1)"></div></div></div>`;
+  }).join('');
+  html+=`<div style="font-size:10px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:.1em;margin:20px 0 10px;padding-bottom:6px;border-bottom:1px solid var(--border)">Earnings Summary</div>
+  <table style="width:100%;border-collapse:collapse;border:1px solid var(--border);border-radius:8px;overflow:hidden">
+    ${[['Total Completed',comp.length+' trips'],['Cancelled',canc.length+' trips'],['Total Earnings',`<span style="color:var(--green);font-weight:700">${_dcFmtMoney(totalEarnings)}</span>`],['Avg Earnings / Trip',_dcFmtMoney(avgEarnings)]].map((r,i)=>`<tr style="${i%2?'background:rgba(0,0,0,.02)':''}"><td style="padding:9px 14px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;width:200px">${r[0]}</td><td style="padding:9px 14px;font-size:13px;font-weight:500">${r[1]}</td></tr>`).join('')}
+  </table>`;
+  const byType={};
+  for(const t of comp)byType[t.trip_type||'unknown']=(byType[t.trip_type||'unknown']||0)+1;
+  const typeColor={nemt:'#3b82f6',courier:'#f59e0b',executive:'#8b5cf6',gig:'#22c55e'};
+  if(Object.keys(byType).length){html+=`<div style="font-size:10px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:.1em;margin:18px 0 10px;padding-bottom:6px;border-bottom:1px solid var(--border)">Trip Type Breakdown</div><div style="display:flex;gap:8px;flex-wrap:wrap">${Object.entries(byType).map(([tp,cnt])=>`<span style="font-size:12px;padding:4px 12px;border-radius:20px;background:${typeColor[tp]||'#64748b'}22;color:${typeColor[tp]||'#64748b'};font-weight:600">${tp.toUpperCase()} · ${cnt}</span>`).join('')}</div>`;}
+  return html;
+}
+
+function _dcPlacesHTML(d,trips){
+  const poi=_dcTopPOI(trips);
+  const max=poi.length?poi[0][1]:1;
+  let html=`<div style="font-size:10px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:.1em;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border)">Home Base</div>
+  <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;border:1px solid var(--border);border-radius:10px;margin-bottom:18px;background:var(--slate)">
+    <div style="width:30px;height:30px;border-radius:8px;background:rgba(200,144,42,.15);color:var(--gold);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">🏠</div>
+    <div><div style="font-size:13px;font-weight:500;color:var(--text)">${d.location||d.city||'Not set'}</div><div style="font-size:11px;color:var(--muted)">Registered home location</div></div>
+  </div>`;
+  if(d.last_lat&&d.last_lng){
+    html+=`<div style="font-size:10px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:.1em;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border)">Last Known Location</div>
+    <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;border:1px solid var(--border);border-radius:10px;margin-bottom:18px;background:var(--slate)">
+      <div style="width:30px;height:30px;border-radius:8px;background:rgba(37,99,235,.15);color:#3b82f6;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">📡</div>
+      <div><div style="font-size:13px;font-weight:500;color:var(--text)">${Number(d.last_lat).toFixed(4)}, ${Number(d.last_lng).toFixed(4)}</div><div style="font-size:11px;color:var(--muted)">Last ping: ${_dcFmtDate(d.last_ping_at)}</div></div>
+    </div>`;
+  }
+  html+=`<div style="font-size:10px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:.1em;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border)">Top Pickup Zones</div>`;
+  if(!poi.length)return html+'<div style="text-align:center;padding:30px;color:var(--muted)">No trip history to build location data.</div>';
+  return html+`<div style="display:flex;flex-direction:column;gap:8px">${poi.map(([city,cnt],i)=>`<div style="display:flex;align-items:center;gap:12px;padding:10px 14px;border:1px solid var(--border);border-radius:10px;background:var(--slate)"><div style="width:28px;height:28px;border-radius:8px;background:rgba(124,58,237,.12);color:#7c3aed;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;flex-shrink:0">${i+1}</div><div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:500;color:var(--text)">${city}</div><div style="font-size:11px;color:var(--muted)">${cnt} pickup${cnt>1?'s':''}</div></div><div style="flex:1;height:4px;background:var(--border);border-radius:10px;overflow:hidden"><div style="height:100%;background:#7c3aed;border-radius:10px;width:${Math.round(cnt/max*100)}%"></div></div></div>`).join('')}</div>`;
+}
+
+function _dcComplianceHTML(d,flags){
+  const items=[
+    {icon:'🪪',label:"Driver's License",sub:`${d.license_number||'—'} · ${d.license_state||'?'}`,..._dcExpiry(d.license_expires)},
+    {icon:'🚗',label:'Vehicle Insurance',sub:'Required for all trips',..._dcExpiry(d.vehicle_insurance_expires)},
+    {icon:'🔍',label:'MVR Check',sub:d.mvr_checked_at?'Checked '+_dcFmtDate(d.mvr_checked_at):'Not checked',label2:(d.mvr_status||'pending').toUpperCase(),cls:d.mvr_status==='clear'?'dc-ok':d.mvr_status==='flagged'?'dc-bad':'dc-warn'},
+    {icon:'✅',label:'Background Check',sub:d.background_checked_at?'Checked '+_dcFmtDate(d.background_checked_at):'Pending',label2:(d.background_check_status||'pending').toUpperCase(),cls:d.background_check_status==='clear'?'dc-ok':d.background_check_status==='flagged'?'dc-bad':'dc-warn'},
+  ];
+  const clsMap={'dc-ok':['rgba(5,150,105,.1)','#34d399'],'dc-warn':['rgba(245,158,11,.1)','#f59e0b'],'dc-bad':['rgba(220,38,38,.1)','#f87171']};
+  const compRow=(it)=>{
+    const [bg,fg]=clsMap[it.cls]||clsMap['dc-warn'];
+    return`<div style="display:flex;align-items:center;gap:12px;padding:10px 14px;border:1px solid var(--border);border-radius:10px;background:var(--slate)"><div style="font-size:18px;flex-shrink:0">${it.icon}</div><div style="flex:1"><div style="font-size:13px;font-weight:500;color:var(--text)">${it.label}</div><div style="font-size:11px;color:var(--muted);margin-top:1px">${it.sub||''}</div></div><span style="font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px;background:${bg};color:${fg}">${it.label2||it.label||''}</span></div>`;
+  };
+  let html=`<div style="font-size:10px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:.1em;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border)">Compliance Status</div>
+  <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:18px">${items.map(compRow).join('')}</div>`;
+  if(flags.length){
+    html+=`<div style="font-size:10px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:.1em;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border)">Open Flags (${flags.length})</div>
+    <div style="display:flex;flex-direction:column;gap:8px">${flags.map(f=>{const[bg,fg]=f.u==='bad'?['rgba(220,38,38,.1)','#f87171']:['rgba(245,158,11,.1)','#f59e0b'];return`<div style="display:flex;align-items:center;gap:12px;padding:10px 14px;border:1px solid var(--border);border-radius:10px;background:var(--slate)"><div style="font-size:18px">${f.u==='bad'?'🚨':'⚠️'}</div><div style="flex:1"><div style="font-size:13px;font-weight:500;color:var(--text)">${f.label}</div><div style="font-size:11px;color:var(--muted)">Requires attention</div></div><span style="font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px;background:${bg};color:${fg}">${f.u==='bad'?'CRITICAL':'WARNING'}</span></div>`;}).join('')}</div>`;
+  }else{
+    html+=`<div style="padding:14px;background:rgba(5,150,105,.06);border:1px solid rgba(5,150,105,.2);border-radius:10px;text-align:center;font-size:13px;color:var(--green)">✓ All compliance checks clear</div>`;
+  }
+  return html;
+}
+
+function _dcAnimateBars(card){
+  card.querySelectorAll('.lfdc-bar[data-w]').forEach(el=>{ el.style.width=el.dataset.w+'%'; });
+}
+// ── END IEBC DRIVER COMMAND ────────────────────────────────────────────────────
 
 </script>
 
