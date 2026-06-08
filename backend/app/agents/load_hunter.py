@@ -257,6 +257,67 @@ def _to_dict(r: Any, hot_rpm: float) -> dict:
     }
 
 
+def hunt_for_driver(driver_id: str, overrides: dict[str, Any] | None = None) -> dict[str, Any]:
+    """Run a load hunt scoped to a specific driver using their agent card fields."""
+    db = _db()
+    if not db:
+        return {"error": "db_unavailable", "driver_id": driver_id}
+
+    res = db.table("light_vehicle_drivers").select("*").eq("id", driver_id).execute()
+    if not res.data:
+        return {"error": "driver_not_found", "driver_id": driver_id}
+
+    d = res.data[0]
+
+    # Build hunt config from driver card, then apply any caller overrides
+    service_areas: list = d.get("service_areas") or []
+    # Use first service area city/state if provided (format: "Portland, OR")
+    origin_city  = DEFAULT_CONFIG["origin_city"]
+    origin_state = DEFAULT_CONFIG["origin_state"]
+    origin_zip   = DEFAULT_CONFIG["origin_zip"]
+    if service_areas:
+        parts = [p.strip() for p in service_areas[0].split(",")]
+        if len(parts) >= 2:
+            origin_city  = parts[0]
+            origin_state = parts[1]
+
+    driver_cfg: dict[str, Any] = {
+        "origin_city":   origin_city,
+        "origin_state":  origin_state,
+        "origin_zip":    origin_zip,
+        "max_dh_miles":  d.get("max_deadhead_mi") or DEFAULT_CONFIG["max_dh_miles"],
+        "min_rpm":       float(d.get("min_rpm") or DEFAULT_CONFIG["min_rpm"]),
+        "trailer_type":  d.get("vehicle_cargo_type") or d.get("vehicle_type") or DEFAULT_CONFIG["trailer_type"],
+    }
+    if overrides:
+        driver_cfg.update(overrides)
+
+    result = hunt(driver_cfg)
+
+    # Tag all matched loads with this driver_id and persist
+    if db and result.get("loads"):
+        for load in result["loads"]:
+            try:
+                db.table("load_hunter_results").upsert(
+                    {"source": load["source"], "load_id": load["load_id"], "driver_id": driver_id},
+                    on_conflict="source,load_id",
+                ).execute()
+            except Exception as exc:
+                log.debug("tag driver_id failed: %s", exc)
+
+        # Update driver's last_hunted_at and matched_loads_count
+        try:
+            db.table("light_vehicle_drivers").update({
+                "last_hunted_at": _now(),
+                "matched_loads_count": (d.get("matched_loads_count") or 0) + len(result["loads"]),
+            }).eq("id", driver_id).execute()
+        except Exception as exc:
+            log.debug("driver stat update failed: %s", exc)
+
+    log_agent(_NAME, "hunt_for_driver", payload={"driver_id": driver_id}, result=f"found={result.get('total',0)}")
+    return {"agent": _NAME, "driver_id": driver_id, **result}
+
+
 def run(payload: dict[str, Any]) -> dict[str, Any]:
     action = str(payload.get("action", "hunt")).lower()
 
@@ -278,5 +339,15 @@ def run(payload: dict[str, Any]) -> dict[str, Any]:
         if cfg:
             _save_config({**_load_config(), **cfg})
         return {"agent": _NAME, "ok": True, "saved": cfg}
+
+    if action == "hunt_driver":
+        driver_id = payload.get("driver_id")
+        if not driver_id:
+            return {"agent": _NAME, "error": "driver_id required"}
+        overrides = {k: payload[k] for k in (
+            "origin_city","origin_state","origin_zip",
+            "max_dh_miles","min_rpm","trailer_type","boards",
+        ) if k in payload}
+        return hunt_for_driver(driver_id, overrides or None)
 
     return {"agent": _NAME, "error": f"unknown action: {action}"}

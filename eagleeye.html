@@ -19197,6 +19197,191 @@ function lfRenderExpertReport(segment, d) {
 </div><!-- /mil-wrap -->
 </div><!-- /page-lf-million -->
 
+<!-- ══ LIGHT FLEET — DRIVERS · PROFILE · REPORT CARDS ══════════════════════ -->
+<style>
+/* ── Shared dark LF page tokens ── */
+.lf-dc-banner{background:linear-gradient(135deg,#080f1f 0%,#0e1f3a 50%,#0a1628 100%);padding:62px 32px 20px;flex-shrink:0;border-bottom:1px solid rgba(255,255,255,.07);}
+.lf-dc-title{font-family:var(--ff-h);font-size:26px;font-weight:900;color:#fff;line-height:1.15;}
+.lf-dc-eyebrow{font-family:var(--ff-m);font-size:10px;color:var(--gold2);letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;}
+.lf-dc-score-chip{display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:10px 18px;}
+.lf-dc-score-val{font-size:28px;font-weight:900;line-height:1;}
+.lf-dc-score-lbl{font-size:9px;color:rgba(255,255,255,.4);letter-spacing:1.5px;text-transform:uppercase;}
+/* KPI strip */
+.lf-dc-kpis{display:flex;border-top:1px solid rgba(255,255,255,.06);border-bottom:1px solid rgba(255,255,255,.06);background:rgba(0,0,0,.2);flex-shrink:0;}
+.lf-dc-kpi{flex:1;padding:14px 0;text-align:center;border-right:1px solid rgba(255,255,255,.05);}
+.lf-dc-kpi:last-child{border-right:none;}
+.lf-dc-kpi-val{font-size:22px;font-weight:800;color:#fff;}
+.lf-dc-kpi-lbl{font-size:9px;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:1.5px;margin-top:2px;font-family:var(--ff-m);}
+/* Toolbar */
+.lf-dc-toolbar{display:flex;align-items:center;gap:8px;padding:10px 32px;background:rgba(0,0,0,.25);border-bottom:1px solid rgba(255,255,255,.06);flex-shrink:0;flex-wrap:wrap;}
+.lf-dc-search{flex:1;min-width:180px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:7px;padding:7px 12px;color:#fff;font-size:13px;outline:none;}
+.lf-dc-search::placeholder{color:rgba(255,255,255,.3);}
+.lf-dc-search:focus{border-color:var(--gold2);}
+.lf-dc-fbtn{padding:6px 13px;border-radius:7px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.05);color:rgba(255,255,255,.5);font-size:12px;font-weight:600;cursor:pointer;transition:all .18s;}
+.lf-dc-fbtn:hover,.lf-dc-fbtn.dc-factive{background:var(--gold);border-color:var(--gold);color:var(--navy);}
+.lf-dc-sort{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:7px;padding:6px 10px;color:#fff;font-size:12px;outline:none;cursor:pointer;}
+.lf-dc-sort option{background:#0f1b30;}
+/* Scroll content area */
+.lf-dc-scroll{flex:1;overflow-y:auto;background:#080f1f;}
+/* Status pills */
+.dc-status{font-size:10px;font-weight:700;padding:3px 9px;border-radius:20px;}
+.dc-status-active{background:rgba(16,185,129,.15);color:#6ee7b7;border:1px solid rgba(16,185,129,.25);}
+.dc-status-inactive{background:rgba(100,116,139,.12);color:#94a3b8;border:1px solid rgba(100,116,139,.2);}
+.dc-status-suspended{background:rgba(239,68,68,.15);color:#fca5a5;border:1px solid rgba(239,68,68,.25);}
+/* Segment pills */
+.dc-pill{font-size:9px;font-weight:700;padding:2px 6px;border-radius:20px;letter-spacing:.03em;}
+.dc-pill-nemt{background:rgba(59,130,246,.18);color:#93c5fd;}
+.dc-pill-courier{background:rgba(245,158,11,.18);color:#fcd34d;}
+.dc-pill-executive{background:rgba(124,58,237,.2);color:#c4b5fd;}
+.dc-pill-gig{background:rgba(34,197,94,.15);color:#86efac;}
+.dc-pill-medical{background:rgba(6,182,212,.15);color:#67e8f9;}
+.dc-pill-flag{background:rgba(239,68,68,.18);color:#fca5a5;}
+/* Info row — full width */
+.dc-info-row{display:flex;align-items:baseline;padding:9px 28px;border-bottom:1px solid rgba(255,255,255,.04);}
+.dc-info-row:nth-child(even){background:rgba(255,255,255,.012);}
+.dc-info-lbl{font-family:var(--ff-m);font-size:10px;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:1px;width:180px;flex-shrink:0;}
+.dc-info-val{font-size:13px;color:#e2e8f0;font-weight:500;flex:1;}
+/* Section header */
+.dc-sec{padding:14px 28px 8px;font-family:var(--ff-m);font-size:9px;font-weight:700;color:var(--gold2);text-transform:uppercase;letter-spacing:2px;border-bottom:1px solid rgba(228,168,48,.15);background:rgba(0,0,0,.18);}
+/* Metric bar */
+.dc-metric{padding:10px 28px;border-bottom:1px solid rgba(255,255,255,.04);}
+.dc-metric-top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;}
+.dc-metric-name{font-size:13px;color:rgba(255,255,255,.7);}
+.dc-metric-val{font-size:14px;font-weight:800;}
+.dc-bar-track{height:6px;background:rgba(255,255,255,.07);border-radius:10px;overflow:hidden;}
+.dc-bar-fill{height:100%;border-radius:10px;transition:width .8s cubic-bezier(.34,1.56,.64,1);}
+/* Trip table */
+.dc-trip-table{width:100%;border-collapse:collapse;font-size:12px;}
+.dc-trip-table th{text-align:left;padding:8px 14px;font-size:9px;font-weight:700;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:1.2px;border-bottom:1px solid rgba(255,255,255,.08);font-family:var(--ff-m);background:rgba(0,0,0,.2);}
+.dc-trip-table td{padding:9px 14px;border-bottom:1px solid rgba(255,255,255,.04);color:#e2e8f0;vertical-align:middle;}
+.dc-trip-table tr:hover td{background:rgba(255,255,255,.025);}
+/* Grade badge */
+.dc-grade{width:60px;height:60px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-direction:column;flex-shrink:0;font-weight:900;border-width:3px;border-style:solid;}
+.dc-grade-letter{font-size:22px;line-height:1;}
+.dc-grade-sub{font-size:8px;opacity:.5;}
+/* Roster table */
+.lf-roster-table{width:100%;border-collapse:collapse;}
+.lf-roster-table th{padding:9px 14px;font-size:9px;font-weight:700;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:1.2px;text-align:left;border-bottom:1px solid rgba(255,255,255,.08);background:rgba(0,0,0,.28);font-family:var(--ff-m);white-space:nowrap;position:sticky;top:0;z-index:1;}
+.lf-roster-table td{padding:11px 14px;border-bottom:1px solid rgba(255,255,255,.04);vertical-align:middle;}
+.lf-roster-table tr:hover td{background:rgba(255,255,255,.025);cursor:pointer;}
+.lf-roster-link{color:var(--gold2);font-weight:700;font-size:13px;cursor:pointer;}
+.lf-roster-link:hover{text-decoration:underline;}
+.ac-input{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:7px;padding:7px 10px;font-size:12px;color:#fff;font-family:var(--ff-m);outline:none;box-sizing:border-box;}
+.ac-input:focus{border-color:rgba(167,139,250,.45);background:rgba(167,139,250,.06);}
+.ac-input::placeholder{color:rgba(255,255,255,.2);}
+.ac-input[type=time]::-webkit-calendar-picker-indicator{filter:invert(.4);}
+</style>
+
+<!-- ── Driver Roster ─────────────────────────────────────────── -->
+<div class="page" id="page-lf-drivers">
+  <div class="lf-wrap">
+    <div class="lf-dc-banner iebc-banner">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;">
+        <div>
+          <div class="lf-dc-eyebrow">LIGHT FLEET · NODE 200</div>
+          <div class="lf-dc-title">Driver Roster</div>
+          <div style="font-size:12px;color:rgba(255,255,255,.4);margin-top:6px;">All segments · Click a driver to view full profile</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;">
+          <div class="lf-dc-score-chip"><div><div id="lfdc-div-score" class="lf-dc-score-val" style="color:#4ade80;">—</div><div class="lf-dc-score-lbl">Division<br>Health</div></div></div>
+          <button class="iebc-run-btn" onclick="initLFRoster()">↻ Refresh</button>
+        </div>
+      </div>
+    </div>
+    <div class="lf-dc-kpis">
+      <div class="lf-dc-kpi"><div class="lf-dc-kpi-val" id="lfdc-kpi-active" style="color:#4ade80;">—</div><div class="lf-dc-kpi-lbl">Active</div></div>
+      <div class="lf-dc-kpi"><div class="lf-dc-kpi-val" id="lfdc-kpi-trips" style="color:#a78bfa;">—</div><div class="lf-dc-kpi-lbl">Trips Today</div></div>
+      <div class="lf-dc-kpi"><div class="lf-dc-kpi-val" id="lfdc-kpi-rev" style="color:var(--gold2);">—</div><div class="lf-dc-kpi-lbl">Revenue Today</div></div>
+      <div class="lf-dc-kpi"><div class="lf-dc-kpi-val" id="lfdc-kpi-acc">—</div><div class="lf-dc-kpi-lbl">Avg Acceptance</div></div>
+      <div class="lf-dc-kpi"><div class="lf-dc-kpi-val" id="lfdc-kpi-flags" style="color:#f87171;">—</div><div class="lf-dc-kpi-lbl">Flags</div></div>
+    </div>
+    <div class="lf-dc-toolbar">
+      <input class="lf-dc-search" id="lfdc-search" type="text" placeholder="Search driver, location, vehicle…" oninput="_dcRenderRoster()" />
+      <button class="lf-dc-fbtn dc-factive" data-dc-f="all" onclick="_dcSetFilter(this,'all')">All</button>
+      <button class="lf-dc-fbtn" data-dc-f="active" onclick="_dcSetFilter(this,'active')">Active</button>
+      <button class="lf-dc-fbtn" data-dc-f="nemt" onclick="_dcSetFilter(this,'nemt')">NEMT</button>
+      <button class="lf-dc-fbtn" data-dc-f="courier" onclick="_dcSetFilter(this,'courier')">Courier</button>
+      <button class="lf-dc-fbtn" data-dc-f="executive" onclick="_dcSetFilter(this,'executive')">Executive</button>
+      <button class="lf-dc-fbtn" data-dc-f="gig" onclick="_dcSetFilter(this,'gig')">Gig</button>
+      <select class="lf-dc-sort" id="lfdc-sort" onchange="_dcRenderRoster()">
+        <option value="name">Name A–Z</option>
+        <option value="trips">Most Trips</option>
+        <option value="acceptance">Acceptance Rate</option>
+        <option value="rating">Rating</option>
+        <option value="flags">Flags First</option>
+      </select>
+    </div>
+    <div class="lf-dc-scroll" id="lfdc-drivers-wrap">
+      <div style="text-align:center;padding:80px;color:rgba(255,255,255,.3);font-size:14px;">Click "Drivers" in the sidebar to load.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Single Driver Profile ─────────────────────────────────── -->
+<div class="page" id="page-lf-driver">
+  <div class="lf-wrap">
+    <div class="lf-dc-banner iebc-banner" id="lfdp-banner">
+      <div style="margin-bottom:14px;"><button class="lf-dc-fbtn" onclick="nav('lf-drivers')" style="font-size:11px;padding:5px 12px;">← Roster</button></div>
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;">
+        <div style="display:flex;align-items:center;gap:18px;">
+          <div id="lfdp-avatar" style="width:64px;height:64px;border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:900;color:#fff;flex-shrink:0;background:#7c3aed;position:relative;">
+            <span id="lfdp-initials">—</span>
+            <span id="lfdp-dot" style="position:absolute;bottom:-2px;right:-2px;width:14px;height:14px;border-radius:50%;border:2.5px solid #080f1f;background:#64748b;"></span>
+          </div>
+          <div>
+            <div class="lf-dc-eyebrow" id="lfdp-node">LIGHT FLEET · NODE 200</div>
+            <div class="lf-dc-title" id="lfdp-name">—</div>
+            <div style="font-size:12px;color:rgba(255,255,255,.4);margin-top:5px;" id="lfdp-vehicle">—</div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;flex-shrink:0;">
+          <span class="dc-status dc-status-inactive" id="lfdp-status-badge">—</span>
+          <button class="iebc-run-btn" onclick="initLFDriverProfile()">↻ Refresh</button>
+        </div>
+      </div>
+    </div>
+    <div class="lf-dc-kpis">
+      <div class="lf-dc-kpi"><div class="lf-dc-kpi-val" id="lfdp-kpi-trips" style="color:#a78bfa;">—</div><div class="lf-dc-kpi-lbl">Trips Completed</div></div>
+      <div class="lf-dc-kpi"><div class="lf-dc-kpi-val" id="lfdp-kpi-acc">—</div><div class="lf-dc-kpi-lbl">Acceptance Rate</div></div>
+      <div class="lf-dc-kpi"><div class="lf-dc-kpi-val" id="lfdp-kpi-earn" style="color:#4ade80;">—</div><div class="lf-dc-kpi-lbl">Avg / Trip</div></div>
+      <div class="lf-dc-kpi"><div class="lf-dc-kpi-val" id="lfdp-kpi-rating">—</div><div class="lf-dc-kpi-lbl">Rating</div></div>
+      <div class="lf-dc-kpi"><div class="lf-dc-kpi-val" id="lfdp-kpi-grade" style="font-size:28px;">—</div><div class="lf-dc-kpi-lbl">Overall Grade</div></div>
+    </div>
+    <div class="lf-dc-scroll" id="lfdp-content">
+      <div style="text-align:center;padding:80px;color:rgba(255,255,255,.3);font-size:14px;">Select a driver from the <span style="color:var(--gold2);cursor:pointer" onclick="nav('lf-drivers')">Roster</span> to view their profile.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── IEBC Report Cards ──────────────────────────────────────── -->
+<div class="page" id="page-lf-reports">
+  <div class="lf-wrap">
+    <div class="lf-dc-banner iebc-banner">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;">
+        <div>
+          <div class="lf-dc-eyebrow">IEBC · LIGHT FLEET · NODE 200</div>
+          <div class="lf-dc-title">Driver Report Cards</div>
+          <div style="font-size:12px;color:rgba(255,255,255,.4);margin-top:6px;">Performance grades · Compliance status · Division health</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;">
+          <div class="lf-dc-score-chip"><div><div id="lfrep-div-score" class="lf-dc-score-val" style="color:#4ade80;">—</div><div class="lf-dc-score-lbl">Division<br>Health</div></div></div>
+          <button class="iebc-run-btn" onclick="initLFReports()">↻ Refresh</button>
+        </div>
+      </div>
+    </div>
+    <div class="lf-dc-kpis">
+      <div class="lf-dc-kpi"><div class="lf-dc-kpi-val" id="lfrep-kpi-a" style="color:#4ade80;">—</div><div class="lf-dc-kpi-lbl">Grade A</div></div>
+      <div class="lf-dc-kpi"><div class="lf-dc-kpi-val" id="lfrep-kpi-b" style="color:#60a5fa;">—</div><div class="lf-dc-kpi-lbl">Grade B</div></div>
+      <div class="lf-dc-kpi"><div class="lf-dc-kpi-val" id="lfrep-kpi-c" style="color:var(--gold2);">—</div><div class="lf-dc-kpi-lbl">Grade C</div></div>
+      <div class="lf-dc-kpi"><div class="lf-dc-kpi-val" id="lfrep-kpi-df" style="color:#f87171;">—</div><div class="lf-dc-kpi-lbl">D / F</div></div>
+      <div class="lf-dc-kpi"><div class="lf-dc-kpi-val" id="lfrep-kpi-flags" style="color:#f87171;">—</div><div class="lf-dc-kpi-lbl">Flags</div></div>
+    </div>
+    <div class="lf-dc-scroll" id="lfrep-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:16px;padding:24px 32px;align-content:start;">
+      <div style="text-align:center;padding:80px;color:rgba(255,255,255,.3);font-size:14px;grid-column:1/-1;">Click "Report Cards" to load.</div>
+    </div>
+  </div>
+</div>
+<!-- ══ /IEBC DRIVER COMMAND CENTER ══════════════════════════════════════════ -->
 <script>
 // ── $1M Blueprint ──────────────────────────────────────────────────────────────
 async function initMillionBlueprint(){
@@ -21047,6 +21232,564 @@ function _lhRenderTable(loads) {
 }
 // ── END LOAD HUNTER ───────────────────────────────────────────────────────────
 
+// ══════════════════════════════════════════════════════════════════════════════
+// LIGHT FLEET — DRIVER ROSTER · PROFILE · REPORT CARDS
+// ══════════════════════════════════════════════════════════════════════════════
+let _lfdc_drivers = [];
+let _lfdc_trips   = {};
+let _lfdc_filter  = 'all';
+let _lfSelectedDriver = null;
+
+const _AVATAR_COLORS_DC = ['#7c3aed','#1d4ed8','#065f46','#9d174d','#92400e','#1e40af','#047857','#be123c'];
+function _dcAvatarColor(n){ let h=0; for(const c of(n||'X'))h=(h*31+c.charCodeAt(0))&0xffff; return _AVATAR_COLORS_DC[h%_AVATAR_COLORS_DC.length]; }
+function _dcInitials(n){ if(!n)return'?'; return n.trim().split(/\s+/).map(w=>w[0]).slice(0,2).join('').toUpperCase(); }
+function _dcFmtDate(d){ if(!d)return'—'; return new Date(d).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}); }
+function _dcFmtMoney(v){ if(v==null)return'—'; return'$'+Number(v).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function _dcExpiry(ds){
+  if(!ds)return{label:'Unknown',cls:'dc-warn'};
+  const days=Math.ceil((new Date(ds)-Date.now())/86400000);
+  if(days<0) return{label:'EXPIRED',cls:'dc-bad'};
+  if(days<30)return{label:days+'d left',cls:'dc-warn'};
+  return{label:_dcFmtDate(ds),cls:'dc-ok'};
+}
+function _dcGrade(p){ if(p>=90)return'A'; if(p>=80)return'B'; if(p>=70)return'C'; if(p>=60)return'D'; return'F'; }
+function _dcGradeDesc(g){ return{A:'Excellent',B:'Good',C:'Average',D:'Below expectations',F:'Needs attention'}[g]||''; }
+function _dcBarColor(p){ if(p>=80)return'#10b981'; if(p>=60)return'#60a5fa'; if(p>=40)return'#f59e0b'; return'#ef4444'; }
+function _dcAccRate(trips){
+  const done=trips.filter(t=>t.status==='completed').length;
+  const canc=trips.filter(t=>t.status==='cancelled').length;
+  const tot=done+canc; if(!tot)return null;
+  return Math.round(done/tot*100);
+}
+function _dcTopPOI(trips){
+  const c={};
+  for(const t of trips){ const city=(t.pickup_address||'').split(',').pop()?.trim()||''; if(city)c[city]=(c[city]||0)+1; }
+  return Object.entries(c).sort((a,b)=>b[1]-a[1]).slice(0,5);
+}
+function _dcFlags(d){
+  const f=[];
+  if(d.mvr_status==='flagged')f.push({label:'MVR Flagged',u:'bad'});
+  if(d.background_check_status==='flagged')f.push({label:'Background Check Flagged',u:'bad'});
+  const le=_dcExpiry(d.license_expires); if(le.cls!=='dc-ok')f.push({label:'License Expiry',u:le.cls==='dc-bad'?'bad':'warn'});
+  const ie=_dcExpiry(d.vehicle_insurance_expires); if(ie.cls!=='dc-ok')f.push({label:'Vehicle Insurance',u:ie.cls==='dc-bad'?'bad':'warn'});
+  return f;
+}
+
+// ── Shared data fetch ─────────────────────────────────────────────────────────
+
+async function _lfFetchAll(loadingEl){
+  if(loadingEl)loadingEl.innerHTML='<div style="text-align:center;padding:60px;color:rgba(255,255,255,.3);font-size:14px;">⏳ Loading…</div>';
+  const [dRes,tRes]=await Promise.all([
+    apiFetch('/api/light-fleet/drivers?limit=500'),
+    apiFetch('/api/light-fleet/trips?limit=2000')
+  ]);
+  _lfdc_drivers=[];_lfdc_trips={};
+  if(dRes.ok){const d=await dRes.json();_lfdc_drivers=Array.isArray(d)?d:(d.drivers||d.items||[]);}
+  if(tRes.ok){const t=await tRes.json();const arr=Array.isArray(t)?t:(t.trips||t.items||[]);for(const tr of arr){if(!_lfdc_trips[tr.driver_id])_lfdc_trips[tr.driver_id]=[];_lfdc_trips[tr.driver_id].push(tr);}}
+}
+
+function _dcKpiSummary(){
+  const active=_lfdc_drivers.filter(d=>d.status==='active').length;
+  const today=new Date().toISOString().slice(0,10);
+  let todayTrips=0,todayRev=0;
+  for(const trips of Object.values(_lfdc_trips))for(const t of trips){if((t.created_at||'').startsWith(today)){todayTrips++;todayRev+=Number(t.rate_total||0);}}
+  const rates=_lfdc_drivers.map(d=>_dcAccRate(_lfdc_trips[d.id]||[])).filter(r=>r!==null);
+  const avgAcc=rates.length?Math.round(rates.reduce((a,b)=>a+b,0)/rates.length):null;
+  const flags=_lfdc_drivers.reduce((n,d)=>n+_dcFlags(d).length,0);
+  const score=Math.max(0,Math.min(100,Math.round((avgAcc??70)-Math.min(flags*5,30)+(active>5?5:0))));
+  return{active,todayTrips,todayRev,avgAcc,flags,score};
+}
+
+function _dcSetFilter(btn,val){
+  document.querySelectorAll('[data-dc-f]').forEach(b=>b.classList.remove('dc-factive'));
+  btn.classList.add('dc-factive');
+  _lfdc_filter=val;
+  _dcRenderRoster();
+}
+
+function _dcFilterSort(){
+  const q=(document.getElementById('lfdc-search')||{}).value||'';
+  const sort=(document.getElementById('lfdc-sort')||{}).value||'name';
+  let out=_lfdc_drivers.filter(d=>{
+    if(q&&!((d.name||'').toLowerCase().includes(q.toLowerCase())||(d.location||'').toLowerCase().includes(q.toLowerCase())||(d.vehicle_make||'').toLowerCase().includes(q.toLowerCase())))return false;
+    if(_lfdc_filter==='all')return true;
+    if(_lfdc_filter==='active')return d.status==='active';
+    return(d.approved_services||[]).includes(_lfdc_filter);
+  });
+  out.sort((a,b)=>{
+    if(sort==='trips')return(b.total_trips||0)-(a.total_trips||0);
+    if(sort==='acceptance'){const ra=_dcAccRate(_lfdc_trips[a.id]||[])??-1,rb=_dcAccRate(_lfdc_trips[b.id]||[])??-1;return rb-ra;}
+    if(sort==='rating')return(b.rating||0)-(a.rating||0);
+    if(sort==='flags')return _dcFlags(b).length-_dcFlags(a).length;
+    return(a.name||'').localeCompare(b.name||'');
+  });
+  return out;
+}
+
+// ── ROSTER PAGE ───────────────────────────────────────────────────────────────
+
+async function initLFRoster(){
+  const wrap=document.getElementById('lfdc-drivers-wrap');
+  await _lfFetchAll(wrap);
+  const k=_dcKpiSummary();
+  const set=(id,v,clr)=>{const el=document.getElementById(id);if(el){el.textContent=v;if(clr)el.style.color=clr;}};
+  set('lfdc-kpi-active',k.active);
+  set('lfdc-kpi-trips',k.todayTrips);
+  set('lfdc-kpi-rev','$'+k.todayRev.toLocaleString('en-US',{minimumFractionDigits:0}));
+  set('lfdc-kpi-acc',k.avgAcc!==null?k.avgAcc+'%':'—',k.avgAcc>=80?'#4ade80':k.avgAcc>=60?'#f59e0b':'#f87171');
+  set('lfdc-kpi-flags',k.flags,k.flags?'#f87171':'#4ade80');
+  set('lfdc-div-score',k.score,k.score>=80?'#4ade80':k.score>=60?'#f59e0b':'#f87171');
+  const badge=document.getElementById('lf-drivers-flag-badge');
+  if(badge){badge.textContent=k.flags;badge.style.display=k.flags?'':'none';}
+  _dcRenderRoster();
+}
+
+function _dcRenderRoster(){
+  const wrap=document.getElementById('lfdc-drivers-wrap');
+  if(!wrap)return;
+  const drivers=_dcFilterSort();
+  if(!drivers.length){wrap.innerHTML='<div style="text-align:center;padding:80px;color:rgba(255,255,255,.3);font-size:14px;">No drivers match your filters.</div>';return;}
+  const statusCls={active:'dc-status-active',inactive:'dc-status-inactive',suspended:'dc-status-suspended'};
+  wrap.innerHTML=`<table class="lf-roster-table">
+  <thead><tr>
+    <th>#</th><th>Driver</th><th>Segment</th><th>Vehicle</th><th>Status</th>
+    <th>Trips</th><th>Acc %</th><th>Avg / Trip</th><th>Grade</th><th>Flags</th>
+  </tr></thead>
+  <tbody>${drivers.map((d,i)=>{
+    const trips=_lfdc_trips[d.id]||[];
+    const acc=_dcAccRate(trips);
+    const comp=trips.filter(t=>t.status==='completed');
+    const compRate=trips.length?Math.round(comp.length/trips.length*100):null;
+    const ratingPct=d.rating?Math.round(Number(d.rating)*20):null;
+    const scores=[acc,compRate,ratingPct].filter(x=>x!==null);
+    const overall=scores.length?Math.round(scores.reduce((a,b)=>a+b,0)/scores.length):null;
+    const g=overall!==null?_dcGrade(overall):'—';
+    const flags=_dcFlags(d);
+    const avgEarn=comp.length?comp.reduce((s,t)=>s+(t.driver_payout||0),0)/comp.length:null;
+    const segs=(d.approved_services||[]).map(s=>`<span class="dc-pill dc-pill-${s}">${s.toUpperCase()}</span>`).join(' ')||'<span style="color:rgba(255,255,255,.2);font-size:11px">—</span>';
+    const veh=[d.vehicle_year,d.vehicle_make,d.vehicle_model].filter(Boolean).join(' ')||'—';
+    const color=_dcAvatarColor(d.name);
+    const dotColor={active:'#10b981',inactive:'#64748b',suspended:'#ef4444'}[d.status]||'#64748b';
+    return`<tr onclick="_lfOpenDriver('${d.id}')">
+      <td style="color:rgba(255,255,255,.2);font-size:11px;font-family:var(--ff-m)">${i+1}</td>
+      <td><div style="display:flex;align-items:center;gap:10px">
+        <div style="position:relative;flex-shrink:0"><div style="width:32px;height:32px;border-radius:8px;background:${color};display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#fff">${_dcInitials(d.name)}</div><span style="position:absolute;bottom:-2px;right:-2px;width:9px;height:9px;border-radius:50%;background:${dotColor};border:1.5px solid #080f1f"></span></div>
+        <div><div class="lf-roster-link">${d.name||'—'}</div><div style="font-size:10px;color:rgba(255,255,255,.28);margin-top:1px">📍 ${d.location||'—'}</div></div>
+      </div></td>
+      <td>${segs}</td>
+      <td style="font-size:12px;color:rgba(255,255,255,.5)">${veh}</td>
+      <td><span class="dc-status ${statusCls[d.status]||'dc-status-inactive'}">${(d.status||'inactive').toUpperCase()}</span></td>
+      <td style="font-size:14px;font-weight:800;color:#fff">${d.total_trips??comp.length}</td>
+      <td style="font-size:14px;font-weight:800;color:${acc!==null?_dcBarColor(acc):'rgba(255,255,255,.25)'}">${acc!==null?acc+'%':'—'}</td>
+      <td style="font-size:13px;font-weight:600;color:${avgEarn?'#4ade80':'rgba(255,255,255,.25)'}">${avgEarn?'$'+avgEarn.toFixed(0):'—'}</td>
+      <td style="font-size:16px;font-weight:900;color:${_dcBarColor(overall??0)}">${g}</td>
+      <td>${flags.length?`<span style="font-size:11px;font-weight:700;padding:2px 7px;border-radius:20px;background:rgba(239,68,68,.15);color:#f87171">⚠ ${flags.length}</span>`:'<span style="color:#4ade80;font-size:12px">✓</span>'}</td>
+    </tr>`;
+  }).join('')}</tbody></table>`;
+}
+
+function _lfOpenDriver(driverId){
+  const d=_lfdc_drivers.find(x=>String(x.id)===String(driverId));
+  if(!d)return;
+  _lfSelectedDriver={driver:d,trips:_lfdc_trips[d.id]||[]};
+  nav('lf-driver');
+}
+
+// ── SINGLE DRIVER PROFILE PAGE ────────────────────────────────────────────────
+
+async function initLFDriverProfile(){
+  const content=document.getElementById('lfdp-content');
+  if(!content)return;
+  if(!_lfSelectedDriver){
+    if(!_lfdc_drivers.length)await _lfFetchAll(content);
+    if(!_lfSelectedDriver){
+      content.innerHTML='<div style="text-align:center;padding:80px;color:rgba(255,255,255,.3);font-size:14px;">Select a driver from the <span style="color:var(--gold2);cursor:pointer" onclick="nav(\'lf-drivers\')">Roster</span>.</div>';
+      return;
+    }
+  }
+  if(!_lfdc_drivers.length){
+    await _lfFetchAll(content);
+    const fresh=_lfdc_drivers.find(x=>String(x.id)===String(_lfSelectedDriver.driver.id));
+    if(fresh)_lfSelectedDriver={driver:fresh,trips:_lfdc_trips[fresh.id]||[]};
+  }
+
+  const {driver:d,trips}=_lfSelectedDriver;
+  const acc=_dcAccRate(trips);
+  const comp=trips.filter(t=>t.status==='completed');
+  const compRate=trips.length?Math.round(comp.length/trips.length*100):null;
+  const ratingPct=d.rating?Math.round(Number(d.rating)*20):null;
+  const scores=[acc,compRate,ratingPct].filter(x=>x!==null);
+  const overall=scores.length?Math.round(scores.reduce((a,b)=>a+b,0)/scores.length):null;
+  const g=overall!==null?_dcGrade(overall):'—';
+  const flags=_dcFlags(d);
+  const totalEarn=comp.reduce((s,t)=>s+(t.driver_payout||0),0);
+  const avgEarn=comp.length?totalEarn/comp.length:0;
+  const canc=trips.filter(t=>t.status==='cancelled');
+  const active=trips.filter(t=>['in_progress','assigned','pending'].includes(t.status));
+  const recent=comp.slice(0,15);
+  const poi=_dcTopPOI(trips);
+  const maxPoi=poi.length?poi[0][1]:1;
+  const veh=[d.vehicle_year,d.vehicle_make,d.vehicle_model].filter(Boolean).join(' ')||'—';
+  const segs=(d.approved_services||[]);
+  const color=_dcAvatarColor(d.name);
+  const dotColor={active:'#10b981',inactive:'#64748b',suspended:'#ef4444'}[d.status]||'#64748b';
+  const statusCls={active:'dc-status-active',inactive:'dc-status-inactive',suspended:'dc-status-suspended'}[d.status]||'dc-status-inactive';
+
+  const set=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
+  set('lfdp-initials',_dcInitials(d.name));
+  document.getElementById('lfdp-avatar').style.background=color;
+  document.getElementById('lfdp-dot').style.background=dotColor;
+  set('lfdp-name',d.name||'Unknown');
+  set('lfdp-vehicle',`${veh} · ${(d.vehicle_type||'vehicle').replace('_',' ')} · 📍 ${d.location||'—'}`);
+  set('lfdp-node',`LIGHT FLEET${segs.length?' · '+segs.map(s=>s.toUpperCase()).join(' · '):''}`);
+  const stEl=document.getElementById('lfdp-status-badge');
+  if(stEl){stEl.textContent=(d.status||'inactive').toUpperCase();stEl.className='dc-status '+statusCls;}
+
+  const sk=(id,v,clr)=>{const el=document.getElementById(id);if(el){el.textContent=v;if(clr)el.style.color=clr;}};
+  sk('lfdp-kpi-trips',comp.length,'#a78bfa');
+  sk('lfdp-kpi-acc',acc!==null?acc+'%':'—',acc!==null?_dcBarColor(acc):'rgba(255,255,255,.3)');
+  sk('lfdp-kpi-earn',avgEarn?'$'+avgEarn.toFixed(0):'—','#4ade80');
+  sk('lfdp-kpi-rating',d.rating?Number(d.rating).toFixed(1):'—',ratingPct?_dcBarColor(ratingPct):'rgba(255,255,255,.3)');
+  sk('lfdp-kpi-grade',g,_dcBarColor(overall??0));
+
+  const typeColor={nemt:'#3b82f6',courier:'#f59e0b',executive:'#8b5cf6',gig:'#22c55e'};
+  const stColor={completed:'#10b981',in_progress:'#8b5cf6',pending:'#f59e0b',cancelled:'#ef4444',assigned:'#3b82f6'};
+  const typeB=tp=>`<span style="font-size:10px;font-weight:600;padding:2px 6px;border-radius:20px;background:${typeColor[tp]||'#64748b'}22;color:${typeColor[tp]||'#64748b'}">${(tp||'—').toUpperCase()}</span>`;
+  const stB=s=>`<span style="font-size:10px;padding:2px 6px;border-radius:20px;background:${stColor[s]||'#64748b'}22;color:${stColor[s]||'#64748b'}">${(s||'').replace('_',' ').toUpperCase()}</span>`;
+  const th=cols=>`<thead><tr>${cols.map(c=>`<th>${c}</th>`).join('')}</tr></thead>`;
+  const tr=cols=>`<tr>${cols.map(c=>`<td>${c}</td>`).join('')}</tr>`;
+  const infoRow=(l,v)=>`<div class="dc-info-row"><span class="dc-info-lbl">${l}</span><span class="dc-info-val">${v}</span></div>`;
+  const clrMap={'dc-ok':'#4ade80','dc-warn':'#f59e0b','dc-bad':'#f87171'};
+  const metBar=(name,val,disp)=>val===null
+    ?`<div class="dc-metric"><div class="dc-metric-top"><span class="dc-metric-name">${name}</span><span class="dc-metric-val" style="color:rgba(255,255,255,.3)">No data</span></div><div class="dc-bar-track"></div></div>`
+    :`<div class="dc-metric"><div class="dc-metric-top"><span class="dc-metric-name">${name}</span><span class="dc-metric-val" style="color:${_dcBarColor(val)}">${disp||val+'%'} <small style="font-size:10px;color:rgba(255,255,255,.3)">(${_dcGrade(val)})</small></span></div><div class="dc-bar-track"><div class="dc-bar-fill" data-w="${val}" style="width:0;background:${_dcBarColor(val)}"></div></div></div>`;
+
+  const byType={};for(const t of comp)byType[t.trip_type||'unknown']=(byType[t.trip_type||'unknown']||0)+1;
+
+  content.innerHTML=`
+    <div class="dc-sec">Driver Profile</div>
+    ${infoRow('Phone',d.phone||'—')}
+    ${infoRow('Email',d.email||'—')}
+    ${infoRow('Home Base',d.location||'—')}
+    ${infoRow('Vehicle',veh)}
+    ${infoRow('Vehicle Type',(d.vehicle_type||'—').replace('_',' '))}
+    ${infoRow('License',`${d.license_number||'—'} (${d.license_state||'?'})`)}
+    ${infoRow('MVR Status',(d.mvr_status||'pending').toUpperCase())}
+    ${infoRow('Background',(d.background_check_status||'pending').toUpperCase())}
+    ${infoRow('Member Since',_dcFmtDate(d.created_at))}
+    ${infoRow('Plan',(d.plan||'starter').replace('_',' ').toUpperCase())}
+    ${infoRow('On-Trip Now',active.length?'🟢 Yes — '+active.length+' active':'⚪ Off-duty')}
+    ${segs.length?`<div class="dc-sec">Approved Segments</div><div style="padding:12px 28px;display:flex;gap:6px;flex-wrap:wrap">${segs.map(s=>`<span class="dc-pill dc-pill-${s}">${s.toUpperCase()}</span>`).join('')}</div>`:''}
+    ${(d.platforms_opted_in||[]).length?`<div class="dc-sec">Opted-In Platforms</div><div style="padding:12px 28px;display:flex;gap:6px;flex-wrap:wrap">${(d.platforms_opted_in||[]).map(p=>`<span style="font-size:11px;padding:3px 9px;border-radius:20px;background:rgba(255,255,255,.06);color:rgba(255,255,255,.45);border:1px solid rgba(255,255,255,.08)">${p}</span>`).join('')}</div>`:''}
+
+    ${active.length?`<div class="dc-sec">Active Loads (${active.length})</div><div style="overflow-x:auto"><table class="dc-trip-table">${th(['Type','Pickup','Dropoff','Rate','Status','Scheduled'])}<tbody>${active.map(t=>tr([typeB(t.trip_type),t.pickup_address||'—',t.dropoff_address||'—',_dcFmtMoney(t.rate_total),stB(t.status),_dcFmtDate(t.scheduled_at)])).join('')}</tbody></table></div>`:''}
+
+    <div class="dc-sec">Recent Trips (${recent.length} completed)</div>
+    ${recent.length
+      ?`<div style="overflow-x:auto"><table class="dc-trip-table">${th(['Type','Pickup','Dropoff','Miles','Rate','Payout','Date'])}<tbody>${recent.map(t=>tr([typeB(t.trip_type),t.pickup_address||'—',t.dropoff_address||'—',t.estimated_miles?Number(t.estimated_miles).toFixed(0)+'mi':'—',_dcFmtMoney(t.rate_total),_dcFmtMoney(t.driver_payout),_dcFmtDate(t.completed_at)])).join('')}</tbody></table></div>`
+      :`<div style="text-align:center;padding:30px;color:rgba(255,255,255,.3);font-size:13px">No completed trips yet.</div>`}
+
+    <div class="dc-sec">Performance</div>
+    ${metBar('Acceptance Rate',acc)}
+    ${metBar('Completion Rate',compRate)}
+    ${metBar('Driver Rating',ratingPct,d.rating?Number(d.rating).toFixed(1)+' / 5.0':null)}
+
+    <div class="dc-sec">Earnings</div>
+    ${infoRow('Total Completed',comp.length+' trips')}
+    ${infoRow('Cancelled',canc.length+' trips')}
+    ${infoRow('Total Earnings','<span style="color:#4ade80;font-weight:700">'+_dcFmtMoney(totalEarn)+'</span>')}
+    ${infoRow('Avg per Trip',_dcFmtMoney(avgEarn))}
+
+    ${Object.keys(byType).length?`<div class="dc-sec">Trip Type Breakdown</div><div style="padding:12px 28px;display:flex;gap:8px;flex-wrap:wrap">${Object.entries(byType).map(([tp,cnt])=>`<span style="font-size:12px;padding:4px 12px;border-radius:20px;background:${typeColor[tp]||'#64748b'}22;color:${typeColor[tp]||'#64748b'};font-weight:600">${tp.toUpperCase()} · ${cnt}</span>`).join('')}</div>`:''}
+
+    <div class="dc-sec">Areas of Focus</div>
+    ${infoRow('🏠 Home Base',d.location||d.city||'Not set')}
+    ${d.last_lat&&d.last_lng?infoRow('📡 Last Location',Number(d.last_lat).toFixed(4)+', '+Number(d.last_lng).toFixed(4)+' · pinged '+_dcFmtDate(d.last_ping_at)):''}
+    ${poi.length
+      ?poi.map(([city,cnt],i)=>`<div class="dc-info-row"><span class="dc-info-lbl" style="display:flex;align-items:center;gap:7px"><span style="width:18px;height:18px;border-radius:4px;background:rgba(124,58,237,.2);color:#a78bfa;display:inline-flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;flex-shrink:0">${i+1}</span>${city}</span><span class="dc-info-val" style="display:flex;align-items:center;gap:10px"><span style="flex:1;height:4px;background:rgba(255,255,255,.07);border-radius:10px;overflow:hidden"><span style="display:block;height:100%;background:#7c3aed;border-radius:10px;width:${Math.round(cnt/maxPoi*100)}%"></span></span><span style="font-size:11px;color:rgba(255,255,255,.35)">${cnt} pickup${cnt>1?'s':''}</span></span></div>`).join('')
+      :`<div style="text-align:center;padding:20px;color:rgba(255,255,255,.3);font-size:13px">No trip history to build location data.</div>`}
+
+    <div class="dc-sec">Compliance</div>
+    ${[{icon:'🪪',name:"Driver's License",sub:d.license_number+'  · '+( d.license_state||'?'),exp:_dcExpiry(d.license_expires)},
+       {icon:'🚗',name:'Vehicle Insurance',sub:'Required for all trips',exp:_dcExpiry(d.vehicle_insurance_expires)},
+       {icon:'🔍',name:'MVR Check',sub:d.mvr_checked_at?'Checked '+_dcFmtDate(d.mvr_checked_at):'Not checked',exp:{label:(d.mvr_status||'pending').toUpperCase(),cls:d.mvr_status==='clear'?'dc-ok':d.mvr_status==='flagged'?'dc-bad':'dc-warn'}},
+       {icon:'✅',name:'Background Check',sub:d.background_checked_at?'Checked '+_dcFmtDate(d.background_checked_at):'Pending',exp:{label:(d.background_check_status||'pending').toUpperCase(),cls:d.background_check_status==='clear'?'dc-ok':d.background_check_status==='flagged'?'dc-bad':'dc-warn'}}
+    ].map(it=>`<div class="dc-info-row"><span class="dc-info-lbl">${it.icon} ${it.name}</span><span class="dc-info-val" style="display:flex;flex-direction:column;gap:2px"><span style="color:${clrMap[it.exp.cls]||'#f59e0b'};font-weight:600">${it.exp.label}</span>${it.sub?`<span style="font-size:11px;color:rgba(255,255,255,.3)">${it.sub}</span>`:''}</span></div>`).join('')}
+    ${flags.length
+      ?`<div class="dc-sec">Open Flags (${flags.length})</div>${flags.map(f=>`<div class="dc-info-row"><span class="dc-info-lbl">${f.u==='bad'?'🚨':'⚠️'} Flag</span><span class="dc-info-val" style="display:flex;align-items:center;gap:8px"><span style="color:${f.u==='bad'?'#f87171':'#f59e0b'};font-weight:600">${f.label}</span><span style="font-size:10px;padding:1px 7px;border-radius:10px;background:${f.u==='bad'?'rgba(220,38,38,.15)':'rgba(245,158,11,.1)'};color:${f.u==='bad'?'#f87171':'#f59e0b'}">${f.u==='bad'?'CRITICAL':'WARNING'}</span></span></div>`).join('')}`
+      :`<div style="margin:16px 28px;padding:12px 16px;background:rgba(16,185,129,.06);border:1px solid rgba(16,185,129,.2);border-radius:8px;text-align:center;font-size:13px;color:#4ade80">✓ All compliance checks clear</div>`}
+
+    <!-- ── AGENT CARD ───────────────────────────────────────────────────── -->
+    <div class="dc-sec" style="display:flex;align-items:center;justify-content:space-between">
+      <span>🤖 Agent Card — Load Matching</span>
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;color:rgba(255,255,255,.55)">
+        <span>Hunt Enabled</span>
+        <input type="checkbox" id="ac-hunt-enabled" ${d.hunt_enabled?'checked':''} style="width:16px;height:16px;cursor:pointer;accent-color:#a78bfa">
+      </label>
+    </div>
+    <div style="padding:0 28px 8px">
+      <div style="background:rgba(167,139,250,.04);border:1px solid rgba(167,139,250,.12);border-radius:10px;padding:18px 20px">
+
+        <div style="font-size:11px;font-weight:700;letter-spacing:.08em;color:rgba(255,255,255,.35);text-transform:uppercase;margin-bottom:12px">Vehicle &amp; Cargo</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px">
+          <div>
+            <div style="font-size:10px;color:rgba(255,255,255,.35);margin-bottom:4px">Cargo Type</div>
+            <input id="ac-cargo-type" class="ac-input" value="${d.vehicle_cargo_type||''}" placeholder="cargo_van / flatbed…" style="width:100%">
+          </div>
+          <div>
+            <div style="font-size:10px;color:rgba(255,255,255,.35);margin-bottom:4px">Capacity (lbs)</div>
+            <input id="ac-capacity" class="ac-input" type="number" value="${d.vehicle_capacity_lbs||''}" placeholder="e.g. 2500" style="width:100%">
+          </div>
+          <div>
+            <div style="font-size:10px;color:rgba(255,255,255,.35);margin-bottom:4px">Max Length (ft)</div>
+            <input id="ac-max-len" class="ac-input" type="number" step="0.5" value="${d.vehicle_max_length_ft||''}" placeholder="e.g. 8.5" style="width:100%">
+          </div>
+        </div>
+
+        <div style="font-size:11px;font-weight:700;letter-spacing:.08em;color:rgba(255,255,255,.35);text-transform:uppercase;margin-bottom:12px">Rate Thresholds</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px">
+          <div>
+            <div style="font-size:10px;color:rgba(255,255,255,.35);margin-bottom:4px">Min RPM ($)</div>
+            <input id="ac-min-rpm" class="ac-input" type="number" step="0.01" value="${d.min_rpm||1.50}" style="width:100%">
+          </div>
+          <div>
+            <div style="font-size:10px;color:rgba(255,255,255,.35);margin-bottom:4px">Min Total Rate ($)</div>
+            <input id="ac-min-rate" class="ac-input" type="number" step="1" value="${d.min_rate_total||25}" style="width:100%">
+          </div>
+          <div>
+            <div style="font-size:10px;color:rgba(255,255,255,.35);margin-bottom:4px">Auto-Accept RPM ($)</div>
+            <input id="ac-auto-accept" class="ac-input" type="number" step="0.01" value="${d.auto_accept_threshold||''}" placeholder="leave blank to disable" style="width:100%">
+          </div>
+        </div>
+
+        <div style="font-size:11px;font-weight:700;letter-spacing:.08em;color:rgba(255,255,255,.35);text-transform:uppercase;margin-bottom:12px">Routing</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">
+          <div>
+            <div style="font-size:10px;color:rgba(255,255,255,.35);margin-bottom:4px">Max Deadhead (mi)</div>
+            <input id="ac-max-dh" class="ac-input" type="number" value="${d.max_deadhead_mi||50}" style="width:100%">
+          </div>
+          <div>
+            <div style="font-size:10px;color:rgba(255,255,255,.35);margin-bottom:4px">Max Trip (mi)</div>
+            <input id="ac-max-trip" class="ac-input" type="number" value="${d.max_trip_miles||300}" style="width:100%">
+          </div>
+        </div>
+        <div style="margin-bottom:16px">
+          <div style="font-size:10px;color:rgba(255,255,255,.35);margin-bottom:4px">Service Areas (one per line, format: City, ST)</div>
+          <textarea id="ac-service-areas" class="ac-input" rows="3" style="width:100%;resize:vertical">${(d.service_areas||[]).join('\n')}</textarea>
+        </div>
+
+        <div style="font-size:11px;font-weight:700;letter-spacing:.08em;color:rgba(255,255,255,.35);text-transform:uppercase;margin-bottom:12px">Preferences &amp; Availability</div>
+        <div style="margin-bottom:16px">
+          <div style="font-size:10px;color:rgba(255,255,255,.35);margin-bottom:4px">Preferred Load Types (comma-separated)</div>
+          <input id="ac-load-types" class="ac-input" value="${(d.preferred_load_types||[]).join(', ')}" placeholder="medical, courier, parcel…" style="width:100%">
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">
+          <div>
+            <div style="font-size:10px;color:rgba(255,255,255,.35);margin-bottom:4px">Available Days (comma-sep)</div>
+            <input id="ac-avail-days" class="ac-input" value="${(d.available_days||['mon','tue','wed','thu','fri','sat']).join(', ')}" style="width:100%">
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <div>
+              <div style="font-size:10px;color:rgba(255,255,255,.35);margin-bottom:4px">Start</div>
+              <input id="ac-hours-start" class="ac-input" type="time" value="${d.hours_start||'07:00'}" style="width:100%">
+            </div>
+            <div>
+              <div style="font-size:10px;color:rgba(255,255,255,.35);margin-bottom:4px">End</div>
+              <input id="ac-hours-end" class="ac-input" type="time" value="${d.hours_end||'20:00'}" style="width:100%">
+            </div>
+          </div>
+        </div>
+
+        <div style="display:flex;gap:10px;margin-top:4px">
+          <button class="iebc-run-btn" onclick="_lfSaveAgentCard('${d.id}')" style="flex:1;background:rgba(167,139,250,.15);border-color:rgba(167,139,250,.3)">💾 Save Agent Card</button>
+          <button class="iebc-run-btn" id="ac-hunt-btn" onclick="_lfHuntNow('${d.id}')" style="flex:1;background:rgba(16,185,129,.1);border-color:rgba(16,185,129,.3);color:#4ade80">🎯 Hunt Loads Now</button>
+        </div>
+        <div id="ac-msg" style="margin-top:10px;font-size:12px;text-align:center;min-height:18px"></div>
+      </div>
+
+      <!-- Matched Loads Feed -->
+      <div id="ac-loads-wrap" style="margin-top:16px">
+        <div style="font-size:11px;font-weight:700;letter-spacing:.08em;color:rgba(255,255,255,.35);text-transform:uppercase;margin-bottom:10px">
+          Matched Loads
+          ${d.last_hunted_at?`<span style="font-size:10px;font-weight:400;margin-left:8px;color:rgba(255,255,255,.25)">Last hunt: ${_dcFmtDate(d.last_hunted_at)}</span>`:''}
+          ${d.matched_loads_count?`<span style="font-size:10px;font-weight:400;margin-left:8px;color:#a78bfa">${d.matched_loads_count} total found</span>`:''}
+        </div>
+        <div id="ac-loads" style="font-size:12px;color:rgba(255,255,255,.3);padding:20px 0;text-align:center">Loading matched loads…</div>
+      </div>
+    </div>
+    <div style="height:48px"></div>`;
+
+  setTimeout(()=>content.querySelectorAll('.dc-bar-fill[data-w]').forEach(el=>{el.style.width=el.dataset.w+'%';}),80);
+  // Async-load matched loads for this driver
+  _lfRenderMatchedLoads(d.id);
+}
+
+// ── AGENT CARD HELPERS ────────────────────────────────────────────────────────
+
+async function _lfSaveAgentCard(driverId){
+  const msg=document.getElementById('ac-msg');
+  const val=id=>document.getElementById(id)?.value?.trim();
+  const numVal=id=>{const v=val(id);return v?parseFloat(v):null;};
+  const intVal=id=>{const v=val(id);return v?parseInt(v):null;};
+  const arrVal=id=>{const v=val(id);return v?v.split(',').map(s=>s.trim()).filter(Boolean):[];};
+  const linesVal=id=>{const v=val(id);return v?v.split('\n').map(s=>s.trim()).filter(Boolean):[];};
+
+  const payload={
+    vehicle_cargo_type:       val('ac-cargo-type')||null,
+    vehicle_capacity_lbs:     intVal('ac-capacity'),
+    vehicle_max_length_ft:    numVal('ac-max-len'),
+    min_rpm:                  numVal('ac-min-rpm'),
+    min_rate_total:           numVal('ac-min-rate'),
+    auto_accept_threshold:    numVal('ac-auto-accept'),
+    max_deadhead_mi:          intVal('ac-max-dh'),
+    max_trip_miles:           intVal('ac-max-trip'),
+    service_areas:            linesVal('ac-service-areas'),
+    preferred_load_types:     arrVal('ac-load-types'),
+    available_days:           arrVal('ac-avail-days'),
+    hours_start:              val('ac-hours-start')||'07:00',
+    hours_end:                val('ac-hours-end')||'20:00',
+    hunt_enabled:             document.getElementById('ac-hunt-enabled')?.checked||false,
+  };
+  // remove null numeric fields so PATCH doesn't overwrite with null unintentionally
+  Object.keys(payload).forEach(k=>{if(payload[k]===null)delete payload[k];});
+
+  if(msg)msg.textContent='Saving…';
+  try{
+    const r=await apiFetch(`/api/light-fleet/drivers/${driverId}`,'PATCH',payload);
+    if(r&&r.ok){
+      if(msg){msg.style.color='#4ade80';msg.textContent='✓ Agent card saved';}
+      // update local driver state
+      if(_lfSelectedDriver){Object.assign(_lfSelectedDriver.driver,payload);}
+      setTimeout(()=>{if(msg)msg.textContent='';},3000);
+    } else {
+      if(msg){msg.style.color='#f87171';msg.textContent='Save failed — check console';}
+    }
+  } catch(e){
+    if(msg){msg.style.color='#f87171';msg.textContent='Error: '+e.message;}
+  }
+}
+
+async function _lfHuntNow(driverId){
+  const btn=document.getElementById('ac-hunt-btn');
+  const msg=document.getElementById('ac-msg');
+  if(btn){btn.disabled=true;btn.textContent='⏳ Hunting…';}
+  if(msg){msg.style.color='rgba(255,255,255,.4)';msg.textContent='Scanning load boards…';}
+  try{
+    const r=await apiFetch(`/api/light-fleet/drivers/${driverId}/hunt`,'POST',{});
+    if(r&&r.ok!==false){
+      const total=r.total||0;
+      const hot=r.hot||0;
+      if(msg){msg.style.color='#4ade80';msg.textContent=`✓ Hunt complete — ${total} loads found${hot?' ('+hot+' 🔥 HOT)':''}`;}
+      // refresh matched loads panel
+      await _lfRenderMatchedLoads(driverId);
+    } else {
+      if(msg){msg.style.color='#f87171';msg.textContent='Hunt failed: '+(r?.error||'unknown error');}
+    }
+  } catch(e){
+    if(msg){msg.style.color='#f87171';msg.textContent='Hunt error: '+e.message;}
+  } finally {
+    if(btn){btn.disabled=false;btn.textContent='🎯 Hunt Loads Now';}
+  }
+}
+
+async function _lfRenderMatchedLoads(driverId){
+  const wrap=document.getElementById('ac-loads');
+  if(!wrap)return;
+  wrap.textContent='Loading…';
+  try{
+    const r=await apiFetch(`/api/light-fleet/loads/matched?driver_id=${driverId}&limit=20`,'GET');
+    const loads=(r&&r.loads)||[];
+    if(!loads.length){
+      wrap.innerHTML='<span style="color:rgba(255,255,255,.25)">No matched loads yet — run a hunt to find loads.</span>';
+      return;
+    }
+    const hotBadge=is_hot=>`<span style="font-size:9px;padding:1px 6px;border-radius:20px;background:rgba(239,68,68,.2);color:#f87171;font-weight:700;margin-left:6px">${is_hot?'🔥 HOT':''}</span>`;
+    const rows=loads.map(l=>`<tr>
+      <td>${l.source||'—'}</td>
+      <td>${l.origin_city||'—'}, ${l.origin_state||''}</td>
+      <td>${l.dest_city||'—'}, ${l.dest_state||''}</td>
+      <td>${l.miles?Number(l.miles).toFixed(0)+'mi':'—'}</td>
+      <td style="color:#4ade80;font-weight:600">$${l.rate_total?Number(l.rate_total).toFixed(0):'—'}</td>
+      <td style="color:#a78bfa;font-weight:600">$${l.rpm?Number(l.rpm).toFixed(2):'—'}/mi${l.is_hot?hotBadge(true):''}</td>
+      <td>${l.broker_name||'—'}</td>
+      <td style="color:rgba(255,255,255,.3)">${l.pickup_date||'—'}</td>
+    </tr>`).join('');
+    wrap.innerHTML=`<div style="overflow-x:auto"><table class="dc-trip-table">
+      <thead><tr><th>Board</th><th>Origin</th><th>Dest</th><th>Miles</th><th>Rate</th><th>RPM</th><th>Broker</th><th>Pickup</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table></div>`;
+  } catch(e){
+    wrap.innerHTML='<span style="color:#f87171">Error loading loads: '+e.message+'</span>';
+  }
+}
+
+// ── REPORT CARDS PAGE ─────────────────────────────────────────────────────────
+
+async function initLFReports(){
+  const grid=document.getElementById('lfrep-grid');
+  await _lfFetchAll(grid);
+  const k=_dcKpiSummary();
+  const grades={A:0,B:0,C:0,D:0,F:0};
+
+  const overallScore=d=>{
+    const trips=_lfdc_trips[d.id]||[];
+    const acc=_dcAccRate(trips);
+    const comp=trips.filter(t=>t.status==='completed');
+    const compRate=trips.length?Math.round(comp.length/trips.length*100):null;
+    const ratingPct=d.rating?Math.round(Number(d.rating)*20):null;
+    const scores=[acc,compRate,ratingPct].filter(x=>x!==null);
+    return scores.length?Math.round(scores.reduce((a,b)=>a+b,0)/scores.length):null;
+  };
+
+  const sorted=[..._lfdc_drivers].sort((a,b)=>(overallScore(b)??-1)-(overallScore(a)??-1));
+  for(const d of sorted){const s=overallScore(d);const g=s!==null?_dcGrade(s):'F';grades[g]=(grades[g]||0)+1;}
+
+  const set=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
+  set('lfrep-kpi-a',grades.A);set('lfrep-kpi-b',grades.B);set('lfrep-kpi-c',grades.C);
+  set('lfrep-kpi-df',(grades.D||0)+(grades.F||0));set('lfrep-kpi-flags',k.flags);
+  const sv=document.getElementById('lfrep-div-score');
+  if(sv){sv.textContent=k.score;sv.style.color=k.score>=80?'#4ade80':k.score>=60?'#f59e0b':'#f87171';}
+
+  const metRow=(lbl,val)=>{
+    const c=val!==null?_dcBarColor(val):'rgba(255,255,255,.3)';
+    return`<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px"><span style="font-size:9px;color:rgba(255,255,255,.28);font-family:var(--ff-m);text-transform:uppercase;letter-spacing:.8px;width:84px;flex-shrink:0">${lbl}</span><span style="flex:1;height:3px;background:rgba(255,255,255,.07);border-radius:10px;overflow:hidden"><span style="display:block;height:100%;background:${c};border-radius:10px;width:${val??0}%"></span></span><span style="font-size:11px;font-weight:700;color:${c};width:34px;text-align:right">${val!==null?val+'%':'—'}</span></div>`;
+  };
+
+  grid.style.display='grid';
+  grid.innerHTML=sorted.map(d=>{
+    const trips=_lfdc_trips[d.id]||[];
+    const acc=_dcAccRate(trips);
+    const comp=trips.filter(t=>t.status==='completed');
+    const compRate=trips.length?Math.round(comp.length/trips.length*100):null;
+    const ratingPct=d.rating?Math.round(Number(d.rating)*20):null;
+    const overall=overallScore(d);
+    const g=overall!==null?_dcGrade(overall):'—';
+    const gColor=_dcBarColor(overall??0);
+    const flags=_dcFlags(d);
+    const segs=(d.approved_services||[]).map(s=>`<span class="dc-pill dc-pill-${s}">${s.toUpperCase()}</span>`).join(' ')||'';
+    const statusCls={active:'dc-status-active',inactive:'dc-status-inactive',suspended:'dc-status-suspended'}[d.status]||'dc-status-inactive';
+    const veh=[d.vehicle_make,d.vehicle_model].filter(Boolean).join(' ')||'—';
+    return`<div style="background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.055);border-radius:12px;padding:18px 20px;cursor:pointer;transition:background .15s" onmouseenter="this.style.background='rgba(255,255,255,.048)'" onmouseleave="this.style.background='rgba(255,255,255,.025)'" onclick="_lfOpenDriver('${d.id}')">
+      <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:14px">
+        <div style="width:50px;height:50px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:900;flex-shrink:0;border:2.5px solid ${gColor};color:${gColor}">${g}</div>
+        <div style="min-width:0;flex:1"><div style="font-size:13px;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${d.name||'—'}</div><div style="font-size:10px;color:rgba(255,255,255,.3);margin-top:2px">${_dcGradeDesc(g)}</div><div style="margin-top:5px;display:flex;gap:4px;flex-wrap:wrap">${segs}</div></div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0"><span class="dc-status ${statusCls}" style="font-size:9px">${(d.status||'—').toUpperCase()}</span>${flags.length?`<span style="font-size:9px;font-weight:700;padding:2px 6px;border-radius:20px;background:rgba(239,68,68,.15);color:#f87171">⚠ ${flags.length}</span>`:`<span style="font-size:9px;color:#4ade80">✓ Clear</span>`}</div>
+      </div>
+      ${metRow('Acceptance',acc)}
+      ${metRow('Completion',compRate)}
+      ${metRow('Rating',ratingPct)}
+      <div style="display:flex;justify-content:space-between;margin-top:12px;padding-top:10px;border-top:1px solid rgba(255,255,255,.05)">
+        <span style="font-size:10px;color:rgba(255,255,255,.28)">📍 ${d.location||'—'}</span>
+        <span style="font-size:10px;color:rgba(255,255,255,.28)">${comp.length} trips · ${veh}</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── Aliases ───────────────────────────────────────────────────────────────────
+function _dcRenderDrivers(){ _dcRenderRoster(); }
+function _dcAnimateBars(el){ el.querySelectorAll('.dc-bar-fill[data-w]').forEach(b=>{b.style.width=b.dataset.w+'%';}); }
+// ── END LIGHT FLEET DRIVER SYSTEM ─────────────────────────────────────────────
 </script>
 
 </html>
