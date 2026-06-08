@@ -179,8 +179,34 @@ def h206_classify_vehicle(carrier_id, contract_id, payload) -> dict:
         supports_executive = vt in ("suv", "sedan", "luxury")
         supports_courier = vt in ("suv", "cargo_van", "minivan")
         supports_gig = True
+
+        # Derive cargo_type and default capacity from vehicle classification
+        cargo_type_map = {
+            "cargo_van":      ("cargo_van",  2500, 10.0),
+            "suv":            ("passenger",  500,  None),
+            "minivan":        ("passenger",  800,  None),
+            "wheelchair_van": ("accessible_passenger", 600, None),
+            "luxury":         ("passenger",  400,  None),
+            "sedan":          ("passenger",  300,  None),
+        }
+        cargo_type, default_cap, default_len = cargo_type_map.get(vt, ("passenger", 300, None))
+
+        sb = _db()
+        if sb and driver_id:
+            update = {"vehicle_cargo_type": cargo_type}
+            # Only set defaults if not already provided
+            if not d.get("vehicle_capacity_lbs"):
+                update["vehicle_capacity_lbs"] = default_cap
+            if default_len and not d.get("vehicle_max_length_ft"):
+                update["vehicle_max_length_ft"] = default_len
+            try:
+                sb.table("light_vehicle_drivers").update(update).eq("id", str(driver_id)).execute()
+            except Exception:  # noqa: BLE001
+                pass
+
         return {
             "vehicle_type": vehicle_type,
+            "vehicle_cargo_type": cargo_type,
             "vehicle_year": d.get("vehicle_year"),
             "vehicle_make": d.get("vehicle_make"),
             "vehicle_model": d.get("vehicle_model"),
@@ -234,19 +260,53 @@ def h208_create_driver_profile(carrier_id, contract_id, payload) -> dict:
         activated_at = _NOW()
         sb = _db()
         if sb and driver_id:
+            # Fetch current record to avoid overwriting values already set
+            d = _driver(driver_id)
+
+            # Agent card defaults — only write if column is still NULL
+            agent_card_defaults: dict = {}
+            if d.get("min_rpm") is None:
+                agent_card_defaults["min_rpm"] = 1.50
+            if d.get("min_rate_total") is None:
+                agent_card_defaults["min_rate_total"] = 25.00
+            if d.get("max_deadhead_mi") is None:
+                agent_card_defaults["max_deadhead_mi"] = 50
+            if d.get("max_trip_miles") is None:
+                agent_card_defaults["max_trip_miles"] = 300
+            if not d.get("available_days"):
+                agent_card_defaults["available_days"] = ["mon", "tue", "wed", "thu", "fri", "sat"]
+            if not d.get("hours_start"):
+                agent_card_defaults["hours_start"] = "07:00"
+            if not d.get("hours_end"):
+                agent_card_defaults["hours_end"] = "20:00"
+            if not d.get("service_areas") and (d.get("city") or d.get("location")):
+                # Seed service area from their home city/state
+                city = d.get("city") or (d.get("location") or "").split(",")[0].strip()
+                state = d.get("state") or (d.get("location") or "").split(",")[-1].strip()
+                if city:
+                    agent_card_defaults["service_areas"] = [f"{city}, {state}".strip(", ")]
+            # Seed preferred_load_types from approved_services
+            if not d.get("preferred_load_types"):
+                services = d.get("approved_services") or payload.get("services_assigned") or []
+                if services:
+                    agent_card_defaults["preferred_load_types"] = list(services)
+
             try:
                 sb.table("light_vehicle_drivers").update({
                     "status": "active",
                     "activated_at": activated_at,
+                    **agent_card_defaults,
                 }).eq("id", str(driver_id)).execute()
             except Exception:  # noqa: BLE001
                 pass
+
         d = _driver(driver_id)
         return {
             "driver_id": str(driver_id) if driver_id else None,
             "name": d.get("name"),
             "status": "active",
             "activated_at": activated_at,
+            "agent_card_seeded": bool(agent_card_defaults) if sb else False,
         }
     except Exception as e:  # noqa: BLE001
         return {"driver_id": None, "status": "error", "error": str(e)}
@@ -589,12 +649,30 @@ def h220_onboarding_complete(carrier_id, contract_id, payload) -> dict:
         driver_id = payload.get("driver_id") or carrier_id
         d = _driver(driver_id)
         approved_services = d.get("approved_services") or payload.get("approved_services") or []
+
+        # Auto-enable hunt for courier/gig drivers with a vehicle_cargo_type set
+        sb = _db()
+        hunt_enabled = False
+        if sb and driver_id:
+            cargo_type = d.get("vehicle_cargo_type")
+            courier_capable = any(s in approved_services for s in ("courier", "gig"))
+            if cargo_type and courier_capable and not d.get("hunt_enabled"):
+                try:
+                    sb.table("light_vehicle_drivers").update({
+                        "hunt_enabled": True,
+                    }).eq("id", str(driver_id)).execute()
+                    hunt_enabled = True
+                    log.info("hunt_enabled set for driver %s at onboarding complete", driver_id)
+                except Exception:  # noqa: BLE001
+                    pass
+
         result = {
             "completed": True,
             "driver_id": str(driver_id) if driver_id else None,
             "name": d.get("name"),
             "vehicle_type": d.get("vehicle_type"),
             "approved_services": approved_services,
+            "hunt_enabled": hunt_enabled,
             "completed_at": _NOW(),
         }
         # Notify CC Gulley — new driver expands fleet capacity and changes strategic metrics

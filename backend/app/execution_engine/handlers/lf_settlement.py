@@ -207,15 +207,34 @@ def h263_ledger_write(carrier_id, contract_id, payload) -> dict:
 
 # ── Step 264: lf_settlement.driver_performance ───────────────────────────────
 
+def _extract_city_state(address: str) -> tuple[str, str] | None:
+    """Parse 'City, ST' or 'Street, City, ST ZIP' → (City, ST) or None."""
+    if not address:
+        return None
+    parts = [p.strip() for p in address.split(",")]
+    if len(parts) >= 2:
+        city = parts[-2].strip()
+        state_zip = parts[-1].strip().split()
+        state = state_zip[0] if state_zip else ""
+        if len(state) == 2 and state.isalpha():
+            return city, state.upper()
+    return None
+
+
 def h264_driver_performance(carrier_id, contract_id, payload) -> dict:
     trip_id = payload.get("trip_id")
-    driver_id = payload.get("driver_id") or str(carrier_id) if carrier_id else None
+    driver_id = payload.get("driver_id") or (str(carrier_id) if carrier_id else None)
     sb = _db()
     new_rating = 5.0
     total_trips = 0
+    service_areas_updated = False
+    load_types_updated = False
+
     if sb and driver_id:
         try:
-            r = sb.table("light_vehicle_drivers").select("rating,total_trips").eq("id", driver_id).maybe_single().execute()
+            r = sb.table("light_vehicle_drivers").select(
+                "rating,total_trips,service_areas,preferred_load_types,approved_services"
+            ).eq("id", driver_id).maybe_single().execute()
             data = r.data or {}
             current_rating = data.get("rating")
             total_trips = data.get("total_trips", 0) or 0
@@ -223,15 +242,42 @@ def h264_driver_performance(carrier_id, contract_id, payload) -> dict:
                 new_rating = round((float(current_rating) * total_trips + 5.0) / (total_trips + 1), 2)
             else:
                 new_rating = 5.0
-            sb.table("light_vehicle_drivers").update({"rating": new_rating}).eq("id", driver_id).execute()
+
+            updates: dict = {"rating": new_rating, "total_trips": total_trips + 1}
+
+            # ── Learn service area from pickup location ──────────────────────
+            pickup = payload.get("pickup_address", "")
+            cs = _extract_city_state(pickup)
+            if cs:
+                city, state = cs
+                area_str = f"{city}, {state}"
+                existing = list(data.get("service_areas") or [])
+                if area_str not in existing:
+                    existing.append(area_str)
+                    updates["service_areas"] = existing[:10]  # cap at 10 areas
+                    service_areas_updated = True
+
+            # ── Learn load type preference from trip type ────────────────────
+            trip_type = payload.get("trip_type", "")
+            if trip_type:
+                existing_lt = list(data.get("preferred_load_types") or data.get("approved_services") or [])
+                if trip_type not in existing_lt:
+                    existing_lt.append(trip_type)
+                    updates["preferred_load_types"] = existing_lt[:8]
+                    load_types_updated = True
+
+            sb.table("light_vehicle_drivers").update(updates).eq("id", driver_id).execute()
         except Exception:  # noqa: BLE001
             pass
+
     return {
         "rating_updated": True,
         "new_rating": new_rating,
         "driver_id": driver_id,
-        "total_trips": total_trips,
+        "total_trips": total_trips + 1,
         "trip_id": trip_id,
+        "service_areas_updated": service_areas_updated,
+        "load_types_updated": load_types_updated,
     }
 
 
