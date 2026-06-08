@@ -21277,47 +21277,36 @@ function _dcFlags(d){
   return f;
 }
 
-async function initLFDriverCommand(){
-  const wrap=document.getElementById('lfdc-drivers-wrap');
-  if(!wrap)return;
-  wrap.innerHTML='<div style="text-align:center;padding:60px;color:var(--muted)"><div class="lf-empty-state-icon" style="font-size:32px;margin-bottom:12px">⏳</div>Loading drivers…</div>';
+// ── Shared data fetch ─────────────────────────────────────────────────────────
 
+async function _lfFetchAll(loadingEl){
+  if(loadingEl)loadingEl.innerHTML='<div style="text-align:center;padding:60px;color:rgba(255,255,255,.3);font-size:14px;">⏳ Loading…</div>';
   const [dRes,tRes]=await Promise.all([
     apiFetch('/api/light-fleet/drivers?limit=500'),
     apiFetch('/api/light-fleet/trips?limit=2000')
   ]);
   _lfdc_drivers=[];_lfdc_trips={};
-  if(dRes.ok){ const d=await dRes.json(); _lfdc_drivers=Array.isArray(d)?d:(d.drivers||d.items||[]); }
-  if(tRes.ok){ const t=await tRes.json(); const arr=Array.isArray(t)?t:(t.trips||t.items||[]); for(const tr of arr){if(!_lfdc_trips[tr.driver_id])_lfdc_trips[tr.driver_id]=[]; _lfdc_trips[tr.driver_id].push(tr);} }
-
-  _dcUpdateKPIs();
-  _dcRenderDrivers();
+  if(dRes.ok){const d=await dRes.json();_lfdc_drivers=Array.isArray(d)?d:(d.drivers||d.items||[]);}
+  if(tRes.ok){const t=await tRes.json();const arr=Array.isArray(t)?t:(t.trips||t.items||[]);for(const tr of arr){if(!_lfdc_trips[tr.driver_id])_lfdc_trips[tr.driver_id]=[];_lfdc_trips[tr.driver_id].push(tr);}}
 }
 
-function _dcUpdateKPIs(){
+function _dcKpiSummary(){
   const active=_lfdc_drivers.filter(d=>d.status==='active').length;
-  document.getElementById('lfdc-kpi-active').textContent=active;
   const today=new Date().toISOString().slice(0,10);
   let todayTrips=0,todayRev=0;
   for(const trips of Object.values(_lfdc_trips))for(const t of trips){if((t.created_at||'').startsWith(today)){todayTrips++;todayRev+=Number(t.rate_total||0);}}
-  document.getElementById('lfdc-kpi-trips').textContent=todayTrips;
-  document.getElementById('lfdc-kpi-rev').textContent='$'+todayRev.toLocaleString('en-US',{minimumFractionDigits:0});
-  let rates=[];
-  for(const d of _lfdc_drivers){const r=_dcAccRate(_lfdc_trips[d.id]||[]);if(r!==null)rates.push(r);}
+  const rates=_lfdc_drivers.map(d=>_dcAccRate(_lfdc_trips[d.id]||[])).filter(r=>r!==null);
   const avgAcc=rates.length?Math.round(rates.reduce((a,b)=>a+b,0)/rates.length):null;
-  const kpiAcc=document.getElementById('lfdc-kpi-acc');
-  kpiAcc.textContent=avgAcc!==null?avgAcc+'%':'—';
-  kpiAcc.style.color=avgAcc>=80?'var(--green)':avgAcc>=60?'var(--gold)':'var(--red)';
-  let flags=0;
-  for(const d of _lfdc_drivers)flags+=_dcFlags(d).length;
-  const fb=document.getElementById('lfdc-kpi-flags');
-  fb.textContent=flags;
-  fb.style.color=flags?'var(--red)':'var(--green)';
-  const badge=document.getElementById('lf-drivers-flag-badge');
-  if(badge){badge.textContent=flags;badge.style.display=flags?'':'none';}
+  const flags=_lfdc_drivers.reduce((n,d)=>n+_dcFlags(d).length,0);
   const score=Math.max(0,Math.min(100,Math.round((avgAcc??70)-Math.min(flags*5,30)+(active>5?5:0))));
-  const sv=document.getElementById('lfdc-div-score');
-  if(sv){sv.textContent=score;sv.style.color=score>=80?'var(--green)':score>=60?'#f59e0b':'var(--red)';}
+  return{active,todayTrips,todayRev,avgAcc,flags,score};
+}
+
+function _dcSetFilter(btn,val){
+  document.querySelectorAll('[data-dc-f]').forEach(b=>b.classList.remove('dc-factive'));
+  btn.classList.add('dc-factive');
+  _lfdc_filter=val;
+  _dcRenderRoster();
 }
 
 function _dcFilterSort(){
@@ -21333,206 +21322,276 @@ function _dcFilterSort(){
     if(sort==='trips')return(b.total_trips||0)-(a.total_trips||0);
     if(sort==='acceptance'){const ra=_dcAccRate(_lfdc_trips[a.id]||[])??-1,rb=_dcAccRate(_lfdc_trips[b.id]||[])??-1;return rb-ra;}
     if(sort==='rating')return(b.rating||0)-(a.rating||0);
+    if(sort==='flags')return _dcFlags(b).length-_dcFlags(a).length;
     return(a.name||'').localeCompare(b.name||'');
   });
   return out;
 }
 
-function _dcRenderDrivers(){
+// ── ROSTER PAGE ───────────────────────────────────────────────────────────────
+
+async function initLFRoster(){
+  const wrap=document.getElementById('lfdc-drivers-wrap');
+  await _lfFetchAll(wrap);
+  const k=_dcKpiSummary();
+  const set=(id,v,clr)=>{const el=document.getElementById(id);if(el){el.textContent=v;if(clr)el.style.color=clr;}};
+  set('lfdc-kpi-active',k.active);
+  set('lfdc-kpi-trips',k.todayTrips);
+  set('lfdc-kpi-rev','$'+k.todayRev.toLocaleString('en-US',{minimumFractionDigits:0}));
+  set('lfdc-kpi-acc',k.avgAcc!==null?k.avgAcc+'%':'—',k.avgAcc>=80?'#4ade80':k.avgAcc>=60?'#f59e0b':'#f87171');
+  set('lfdc-kpi-flags',k.flags,k.flags?'#f87171':'#4ade80');
+  set('lfdc-div-score',k.score,k.score>=80?'#4ade80':k.score>=60?'#f59e0b':'#f87171');
+  const badge=document.getElementById('lf-drivers-flag-badge');
+  if(badge){badge.textContent=k.flags;badge.style.display=k.flags?'':'none';}
+  _dcRenderRoster();
+}
+
+function _dcRenderRoster(){
   const wrap=document.getElementById('lfdc-drivers-wrap');
   if(!wrap)return;
   const drivers=_dcFilterSort();
   if(!drivers.length){wrap.innerHTML='<div style="text-align:center;padding:80px;color:rgba(255,255,255,.3);font-size:14px;">No drivers match your filters.</div>';return;}
-  wrap.innerHTML=drivers.map(d=>_dcDriverCard(d)).join('');
-  wrap.querySelectorAll('.dc-row-head').forEach(hdr=>{
-    hdr.addEventListener('click',()=>{
-      const row=hdr.closest('.dc-row');
-      const was=row.classList.contains('dc-open');
-      wrap.querySelectorAll('.dc-row.dc-open').forEach(r=>r.classList.remove('dc-open'));
-      if(!was){row.classList.add('dc-open');setTimeout(()=>_dcAnimateBars(row),50);}
-    });
-  });
-  wrap.querySelectorAll('.dc-tab').forEach(tab=>{
-    tab.addEventListener('click',e=>{
-      e.stopPropagation();
-      const row=tab.closest('.dc-row');
-      row.querySelectorAll('.dc-tab').forEach(t=>t.classList.remove('dc-tab-on'));
-      row.querySelectorAll('.dc-panel').forEach(p=>p.classList.remove('dc-panel-on'));
-      tab.classList.add('dc-tab-on');
-      const panel=row.querySelector('[data-dc-panel="'+tab.dataset.dcTab+'"]');
-      if(panel){panel.classList.add('dc-panel-on');setTimeout(()=>_dcAnimateBars(row),50);}
-    });
-  });
+  const statusCls={active:'dc-status-active',inactive:'dc-status-inactive',suspended:'dc-status-suspended'};
+  wrap.innerHTML=`<table class="lf-roster-table">
+  <thead><tr>
+    <th>#</th><th>Driver</th><th>Segment</th><th>Vehicle</th><th>Status</th>
+    <th>Trips</th><th>Acc %</th><th>Avg / Trip</th><th>Grade</th><th>Flags</th>
+  </tr></thead>
+  <tbody>${drivers.map((d,i)=>{
+    const trips=_lfdc_trips[d.id]||[];
+    const acc=_dcAccRate(trips);
+    const comp=trips.filter(t=>t.status==='completed');
+    const compRate=trips.length?Math.round(comp.length/trips.length*100):null;
+    const ratingPct=d.rating?Math.round(Number(d.rating)*20):null;
+    const scores=[acc,compRate,ratingPct].filter(x=>x!==null);
+    const overall=scores.length?Math.round(scores.reduce((a,b)=>a+b,0)/scores.length):null;
+    const g=overall!==null?_dcGrade(overall):'—';
+    const flags=_dcFlags(d);
+    const avgEarn=comp.length?comp.reduce((s,t)=>s+(t.driver_payout||0),0)/comp.length:null;
+    const segs=(d.approved_services||[]).map(s=>`<span class="dc-pill dc-pill-${s}">${s.toUpperCase()}</span>`).join(' ')||'<span style="color:rgba(255,255,255,.2);font-size:11px">—</span>';
+    const veh=[d.vehicle_year,d.vehicle_make,d.vehicle_model].filter(Boolean).join(' ')||'—';
+    const color=_dcAvatarColor(d.name);
+    const dotColor={active:'#10b981',inactive:'#64748b',suspended:'#ef4444'}[d.status]||'#64748b';
+    return`<tr onclick="_lfOpenDriver('${d.id}')">
+      <td style="color:rgba(255,255,255,.2);font-size:11px;font-family:var(--ff-m)">${i+1}</td>
+      <td><div style="display:flex;align-items:center;gap:10px">
+        <div style="position:relative;flex-shrink:0"><div style="width:32px;height:32px;border-radius:8px;background:${color};display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#fff">${_dcInitials(d.name)}</div><span style="position:absolute;bottom:-2px;right:-2px;width:9px;height:9px;border-radius:50%;background:${dotColor};border:1.5px solid #080f1f"></span></div>
+        <div><div class="lf-roster-link">${d.name||'—'}</div><div style="font-size:10px;color:rgba(255,255,255,.28);margin-top:1px">📍 ${d.location||'—'}</div></div>
+      </div></td>
+      <td>${segs}</td>
+      <td style="font-size:12px;color:rgba(255,255,255,.5)">${veh}</td>
+      <td><span class="dc-status ${statusCls[d.status]||'dc-status-inactive'}">${(d.status||'inactive').toUpperCase()}</span></td>
+      <td style="font-size:14px;font-weight:800;color:#fff">${d.total_trips??comp.length}</td>
+      <td style="font-size:14px;font-weight:800;color:${acc!==null?_dcBarColor(acc):'rgba(255,255,255,.25)'}">${acc!==null?acc+'%':'—'}</td>
+      <td style="font-size:13px;font-weight:600;color:${avgEarn?'#4ade80':'rgba(255,255,255,.25)'}">${avgEarn?'$'+avgEarn.toFixed(0):'—'}</td>
+      <td style="font-size:16px;font-weight:900;color:${_dcBarColor(overall??0)}">${g}</td>
+      <td>${flags.length?`<span style="font-size:11px;font-weight:700;padding:2px 7px;border-radius:20px;background:rgba(239,68,68,.15);color:#f87171">⚠ ${flags.length}</span>`:'<span style="color:#4ade80;font-size:12px">✓</span>'}</td>
+    </tr>`;
+  }).join('')}</tbody></table>`;
 }
 
-function _dcDriverCard(d){
-  const trips=_lfdc_trips[d.id]||[];
+function _lfOpenDriver(driverId){
+  const d=_lfdc_drivers.find(x=>String(x.id)===String(driverId));
+  if(!d)return;
+  _lfSelectedDriver={driver:d,trips:_lfdc_trips[d.id]||[]};
+  nav('lf-driver');
+}
+
+// ── SINGLE DRIVER PROFILE PAGE ────────────────────────────────────────────────
+
+async function initLFDriverProfile(){
+  const content=document.getElementById('lfdp-content');
+  if(!content)return;
+  if(!_lfSelectedDriver){
+    if(!_lfdc_drivers.length)await _lfFetchAll(content);
+    if(!_lfSelectedDriver){
+      content.innerHTML='<div style="text-align:center;padding:80px;color:rgba(255,255,255,.3);font-size:14px;">Select a driver from the <span style="color:var(--gold2);cursor:pointer" onclick="nav(\'lf-drivers\')">Roster</span>.</div>';
+      return;
+    }
+  }
+  if(!_lfdc_drivers.length){
+    await _lfFetchAll(content);
+    const fresh=_lfdc_drivers.find(x=>String(x.id)===String(_lfSelectedDriver.driver.id));
+    if(fresh)_lfSelectedDriver={driver:fresh,trips:_lfdc_trips[fresh.id]||[]};
+  }
+
+  const {driver:d,trips}=_lfSelectedDriver;
   const acc=_dcAccRate(trips);
-  const flags=_dcFlags(d);
-  const color=_dcAvatarColor(d.name);
-  const dotColor={active:'#10b981',inactive:'#64748b',suspended:'#ef4444'}[d.status]||'#64748b';
-  const services=(d.approved_services||[]);
-  const pct=acc??0;
-  const r=19,circ=2*Math.PI*r,dash=(pct/100)*circ;
-  const ringColor=pct>=80?'#10b981':pct>=60?'#f59e0b':'#ef4444';
-  const completed=trips.filter(t=>t.status==='completed');
-  const compRate=trips.length?Math.round(completed.length/trips.length*100):null;
+  const comp=trips.filter(t=>t.status==='completed');
+  const compRate=trips.length?Math.round(comp.length/trips.length*100):null;
   const ratingPct=d.rating?Math.round(Number(d.rating)*20):null;
   const scores=[acc,compRate,ratingPct].filter(x=>x!==null);
   const overall=scores.length?Math.round(scores.reduce((a,b)=>a+b,0)/scores.length):null;
   const g=overall!==null?_dcGrade(overall):'—';
+  const flags=_dcFlags(d);
+  const totalEarn=comp.reduce((s,t)=>s+(t.driver_payout||0),0);
+  const avgEarn=comp.length?totalEarn/comp.length:0;
+  const canc=trips.filter(t=>t.status==='cancelled');
+  const active=trips.filter(t=>['in_progress','assigned','pending'].includes(t.status));
+  const recent=comp.slice(0,15);
+  const poi=_dcTopPOI(trips);
+  const maxPoi=poi.length?poi[0][1]:1;
   const veh=[d.vehicle_year,d.vehicle_make,d.vehicle_model].filter(Boolean).join(' ')||'—';
-  const servicePills=services.map(s=>`<span class="dc-pill dc-pill-${s}">${s.toUpperCase()}</span>`).join('');
-  const flagPill=flags.length?`<span class="dc-pill dc-pill-flag">⚠ ${flags.length} flag${flags.length>1?'s':''}</span>`:'';
+  const segs=(d.approved_services||[]);
+  const color=_dcAvatarColor(d.name);
+  const dotColor={active:'#10b981',inactive:'#64748b',suspended:'#ef4444'}[d.status]||'#64748b';
   const statusCls={active:'dc-status-active',inactive:'dc-status-inactive',suspended:'dc-status-suspended'}[d.status]||'dc-status-inactive';
 
-  const overviewHTML=`
-    <div class="dc-sec">Overview</div>
-    <div style="display:flex;align-items:center;gap:16px;padding:16px 28px;border-bottom:1px solid rgba(255,255,255,.06)">
-      <div class="dc-grade" style="border-color:${_dcBarColor(overall??0)};color:${_dcBarColor(overall??0)}"><div class="dc-grade-letter">${g}</div><div class="dc-grade-sub">GRADE</div></div>
-      <div><div style="font-size:15px;font-weight:700;color:#fff">${d.name||'—'}</div>
-      <div style="font-size:11px;color:rgba(255,255,255,.4);margin-top:3px">${_dcGradeDesc(g)} · ${(d.plan||'starter').replace('_',' ').toUpperCase()} PLAN</div>
-      <div style="font-size:11px;color:rgba(255,255,255,.3);margin-top:4px">${trips.filter(t=>t.status==='in_progress').length?'🟢 Currently on an active trip':'⚪ Off-duty'}</div></div>
-    </div>
-    <div class="dc-sec">Driver Information</div>
-    ${[['Phone',d.phone||'—'],['Email',d.email||'—'],['Home Base',d.location||'—'],['Vehicle',veh],['Vehicle Type',(d.vehicle_type||'—').replace('_',' ')],['License',`${d.license_number||'—'} (${d.license_state||'?'})`],['MVR Status',(d.mvr_status||'pending').toUpperCase()],['Background',(d.background_check_status||'pending').toUpperCase()],['Member Since',_dcFmtDate(d.created_at)],['Activated',_dcFmtDate(d.activated_at)]].map(([l,v])=>`<div class="dc-info-row"><span class="dc-info-lbl">${l}</span><span class="dc-info-val">${v}</span></div>`).join('')}
-    <div class="dc-sec">Approved Services</div>
-    <div style="padding:12px 28px;display:flex;gap:6px;flex-wrap:wrap;border-bottom:1px solid rgba(255,255,255,.04)">${services.length?servicePills:'<span style="font-size:12px;color:rgba(255,255,255,.3)">None assigned</span>'}</div>
-    ${(d.platforms_opted_in||[]).length?`<div class="dc-sec">Opted-In Platforms</div><div style="padding:12px 28px;display:flex;gap:6px;flex-wrap:wrap">${(d.platforms_opted_in||[]).map(p=>`<span style="font-size:11px;padding:3px 9px;border-radius:20px;background:rgba(255,255,255,.06);color:rgba(255,255,255,.45);border:1px solid rgba(255,255,255,.08)">${p}</span>`).join('')}</div>`:''}`;
+  const set=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
+  set('lfdp-initials',_dcInitials(d.name));
+  document.getElementById('lfdp-avatar').style.background=color;
+  document.getElementById('lfdp-dot').style.background=dotColor;
+  set('lfdp-name',d.name||'Unknown');
+  set('lfdp-vehicle',`${veh} · ${(d.vehicle_type||'vehicle').replace('_',' ')} · 📍 ${d.location||'—'}`);
+  set('lfdp-node',`LIGHT FLEET${segs.length?' · '+segs.map(s=>s.toUpperCase()).join(' · '):''}`);
+  const stEl=document.getElementById('lfdp-status-badge');
+  if(stEl){stEl.textContent=(d.status||'inactive').toUpperCase();stEl.className='dc-status '+statusCls;}
 
-  return `<div class="dc-row" data-driver-id="${d.id}">
-  <div class="dc-row-head">
-    <div class="dc-col-avatar"><div class="dc-avatar" style="background:${color}">${_dcInitials(d.name)}<span class="dc-dot" style="background:${dotColor}"></span></div></div>
-    <div class="dc-col-name">
-      <div class="dc-name">${d.name||'Unknown'}</div>
-      <div class="dc-vehicle">📍 ${d.location||'—'} · ${veh}</div>
-      <div class="dc-services">${servicePills}${flagPill}</div>
-    </div>
-    <div class="dc-col-stat"><div class="dc-stat-val">${d.total_trips??completed.length}</div><div class="dc-stat-lbl">Trips</div></div>
-    <div class="dc-col-stat"><div class="dc-stat-val">${d.rating?Number(d.rating).toFixed(1):'—'}</div><div class="dc-stat-lbl">Rating</div></div>
-    <div class="dc-col-ring"><div class="dc-ring-wrap">
-      <svg width="48" height="48" viewBox="0 0 48 48" style="transform:rotate(-90deg)">
-        <circle cx="24" cy="24" r="${r}" fill="none" stroke="rgba(255,255,255,.08)" stroke-width="5"/>
-        <circle cx="24" cy="24" r="${r}" fill="none" stroke="${ringColor}" stroke-width="5" stroke-dasharray="${dash.toFixed(1)} ${circ.toFixed(1)}" stroke-linecap="round"/>
-      </svg>
-      <div class="dc-ring-val">${acc!==null?acc+'%':'—'}</div>
-    </div></div>
-    <div class="dc-col-status"><span class="dc-status ${statusCls}">${(d.status||'inactive').toUpperCase()}</span></div>
-    <div class="dc-col-chev"><span class="dc-chev">⌄</span></div>
-  </div>
-  <div class="dc-report">
-    <div class="dc-tabs">
-      ${['overview','trips','performance','places','compliance'].map((t,i)=>`<div class="dc-tab${i===0?' dc-tab-on':''}" data-dc-tab="${t}">${{overview:'📋 Overview',trips:'🚗 Loads',performance:'📊 Performance',places:'📍 Places',compliance:'🛡 Compliance'}[t]}</div>`).join('')}
-    </div>
-    <div class="dc-panels">
-      <div class="dc-panel dc-panel-on" data-dc-panel="overview">${overviewHTML}</div>
-      <div class="dc-panel" data-dc-panel="trips">${_dcTripsHTML(trips)}</div>
-      <div class="dc-panel" data-dc-panel="performance">${_dcPerfHTML(d,trips,acc)}</div>
-      <div class="dc-panel" data-dc-panel="places">${_dcPlacesHTML(d,trips)}</div>
-      <div class="dc-panel" data-dc-panel="compliance">${_dcComplianceHTML(d,flags)}</div>
-    </div>
-  </div>
-</div>`;
-}
+  const sk=(id,v,clr)=>{const el=document.getElementById(id);if(el){el.textContent=v;if(clr)el.style.color=clr;}};
+  sk('lfdp-kpi-trips',comp.length,'#a78bfa');
+  sk('lfdp-kpi-acc',acc!==null?acc+'%':'—',acc!==null?_dcBarColor(acc):'rgba(255,255,255,.3)');
+  sk('lfdp-kpi-earn',avgEarn?'$'+avgEarn.toFixed(0):'—','#4ade80');
+  sk('lfdp-kpi-rating',d.rating?Number(d.rating).toFixed(1):'—',ratingPct?_dcBarColor(ratingPct):'rgba(255,255,255,.3)');
+  sk('lfdp-kpi-grade',g,_dcBarColor(overall??0));
 
-function _dcTripsHTML(trips){
-  const active=trips.filter(t=>['in_progress','assigned','pending'].includes(t.status));
-  const recent=trips.filter(t=>t.status==='completed').slice(0,10);
   const typeColor={nemt:'#3b82f6',courier:'#f59e0b',executive:'#8b5cf6',gig:'#22c55e'};
   const stColor={completed:'#10b981',in_progress:'#8b5cf6',pending:'#f59e0b',cancelled:'#ef4444',assigned:'#3b82f6'};
-  const typeB=t=>`<span style="font-size:10px;font-weight:600;padding:2px 7px;border-radius:20px;background:${typeColor[t]||'#64748b'}22;color:${typeColor[t]||'#64748b'}">${(t||'gig').toUpperCase()}</span>`;
-  const stB=s=>`<span style="font-size:10px;padding:2px 7px;border-radius:20px;background:${stColor[s]||'#64748b'}22;color:${stColor[s]||'#64748b'}">${(s||'').replace('_',' ').toUpperCase()}</span>`;
+  const typeB=tp=>`<span style="font-size:10px;font-weight:600;padding:2px 6px;border-radius:20px;background:${typeColor[tp]||'#64748b'}22;color:${typeColor[tp]||'#64748b'}">${(tp||'—').toUpperCase()}</span>`;
+  const stB=s=>`<span style="font-size:10px;padding:2px 6px;border-radius:20px;background:${stColor[s]||'#64748b'}22;color:${stColor[s]||'#64748b'}">${(s||'').replace('_',' ').toUpperCase()}</span>`;
   const th=cols=>`<thead><tr>${cols.map(c=>`<th>${c}</th>`).join('')}</tr></thead>`;
   const tr=cols=>`<tr>${cols.map(c=>`<td>${c}</td>`).join('')}</tr>`;
-  let html='';
-  if(active.length){
-    html+=`<div class="dc-sec">Active Loads (${active.length})</div>
-    <div style="overflow-x:auto"><table class="dc-trip-table">${th(['Type','Pickup','Dropoff','Rate','Status','Scheduled'])}
-    <tbody>${active.map(t=>tr([typeB(t.trip_type),t.pickup_address||'—',t.dropoff_address||'—',_dcFmtMoney(t.rate_total),stB(t.status),_dcFmtDate(t.scheduled_at)])).join('')}</tbody></table></div>`;
-  }
-  html+=`<div class="dc-sec">Recent Completed (${recent.length})</div>`;
-  if(!recent.length)return html+`<div style="text-align:center;padding:40px;color:rgba(255,255,255,.3);font-size:13px">No completed trips yet.</div>`;
-  return html+`<div style="overflow-x:auto"><table class="dc-trip-table">${th(['Type','Pickup','Dropoff','Miles','Rate','Payout','Date'])}
-  <tbody>${recent.map(t=>tr([typeB(t.trip_type),t.pickup_address||'—',t.dropoff_address||'—',t.estimated_miles?Number(t.estimated_miles).toFixed(0)+'mi':'—',_dcFmtMoney(t.rate_total),_dcFmtMoney(t.driver_payout),_dcFmtDate(t.completed_at)])).join('')}</tbody></table></div>`;
+  const infoRow=(l,v)=>`<div class="dc-info-row"><span class="dc-info-lbl">${l}</span><span class="dc-info-val">${v}</span></div>`;
+  const clrMap={'dc-ok':'#4ade80','dc-warn':'#f59e0b','dc-bad':'#f87171'};
+  const metBar=(name,val,disp)=>val===null
+    ?`<div class="dc-metric"><div class="dc-metric-top"><span class="dc-metric-name">${name}</span><span class="dc-metric-val" style="color:rgba(255,255,255,.3)">No data</span></div><div class="dc-bar-track"></div></div>`
+    :`<div class="dc-metric"><div class="dc-metric-top"><span class="dc-metric-name">${name}</span><span class="dc-metric-val" style="color:${_dcBarColor(val)}">${disp||val+'%'} <small style="font-size:10px;color:rgba(255,255,255,.3)">(${_dcGrade(val)})</small></span></div><div class="dc-bar-track"><div class="dc-bar-fill" data-w="${val}" style="width:0;background:${_dcBarColor(val)}"></div></div></div>`;
+
+  const byType={};for(const t of comp)byType[t.trip_type||'unknown']=(byType[t.trip_type||'unknown']||0)+1;
+
+  content.innerHTML=`
+    <div class="dc-sec">Driver Profile</div>
+    ${infoRow('Phone',d.phone||'—')}
+    ${infoRow('Email',d.email||'—')}
+    ${infoRow('Home Base',d.location||'—')}
+    ${infoRow('Vehicle',veh)}
+    ${infoRow('Vehicle Type',(d.vehicle_type||'—').replace('_',' '))}
+    ${infoRow('License',`${d.license_number||'—'} (${d.license_state||'?'})`)}
+    ${infoRow('MVR Status',(d.mvr_status||'pending').toUpperCase())}
+    ${infoRow('Background',(d.background_check_status||'pending').toUpperCase())}
+    ${infoRow('Member Since',_dcFmtDate(d.created_at))}
+    ${infoRow('Plan',(d.plan||'starter').replace('_',' ').toUpperCase())}
+    ${infoRow('On-Trip Now',active.length?'🟢 Yes — '+active.length+' active':'⚪ Off-duty')}
+    ${segs.length?`<div class="dc-sec">Approved Segments</div><div style="padding:12px 28px;display:flex;gap:6px;flex-wrap:wrap">${segs.map(s=>`<span class="dc-pill dc-pill-${s}">${s.toUpperCase()}</span>`).join('')}</div>`:''}
+    ${(d.platforms_opted_in||[]).length?`<div class="dc-sec">Opted-In Platforms</div><div style="padding:12px 28px;display:flex;gap:6px;flex-wrap:wrap">${(d.platforms_opted_in||[]).map(p=>`<span style="font-size:11px;padding:3px 9px;border-radius:20px;background:rgba(255,255,255,.06);color:rgba(255,255,255,.45);border:1px solid rgba(255,255,255,.08)">${p}</span>`).join('')}</div>`:''}
+
+    ${active.length?`<div class="dc-sec">Active Loads (${active.length})</div><div style="overflow-x:auto"><table class="dc-trip-table">${th(['Type','Pickup','Dropoff','Rate','Status','Scheduled'])}<tbody>${active.map(t=>tr([typeB(t.trip_type),t.pickup_address||'—',t.dropoff_address||'—',_dcFmtMoney(t.rate_total),stB(t.status),_dcFmtDate(t.scheduled_at)])).join('')}</tbody></table></div>`:''}
+
+    <div class="dc-sec">Recent Trips (${recent.length} completed)</div>
+    ${recent.length
+      ?`<div style="overflow-x:auto"><table class="dc-trip-table">${th(['Type','Pickup','Dropoff','Miles','Rate','Payout','Date'])}<tbody>${recent.map(t=>tr([typeB(t.trip_type),t.pickup_address||'—',t.dropoff_address||'—',t.estimated_miles?Number(t.estimated_miles).toFixed(0)+'mi':'—',_dcFmtMoney(t.rate_total),_dcFmtMoney(t.driver_payout),_dcFmtDate(t.completed_at)])).join('')}</tbody></table></div>`
+      :`<div style="text-align:center;padding:30px;color:rgba(255,255,255,.3);font-size:13px">No completed trips yet.</div>`}
+
+    <div class="dc-sec">Performance</div>
+    ${metBar('Acceptance Rate',acc)}
+    ${metBar('Completion Rate',compRate)}
+    ${metBar('Driver Rating',ratingPct,d.rating?Number(d.rating).toFixed(1)+' / 5.0':null)}
+
+    <div class="dc-sec">Earnings</div>
+    ${infoRow('Total Completed',comp.length+' trips')}
+    ${infoRow('Cancelled',canc.length+' trips')}
+    ${infoRow('Total Earnings','<span style="color:#4ade80;font-weight:700">'+_dcFmtMoney(totalEarn)+'</span>')}
+    ${infoRow('Avg per Trip',_dcFmtMoney(avgEarn))}
+
+    ${Object.keys(byType).length?`<div class="dc-sec">Trip Type Breakdown</div><div style="padding:12px 28px;display:flex;gap:8px;flex-wrap:wrap">${Object.entries(byType).map(([tp,cnt])=>`<span style="font-size:12px;padding:4px 12px;border-radius:20px;background:${typeColor[tp]||'#64748b'}22;color:${typeColor[tp]||'#64748b'};font-weight:600">${tp.toUpperCase()} · ${cnt}</span>`).join('')}</div>`:''}
+
+    <div class="dc-sec">Areas of Focus</div>
+    ${infoRow('🏠 Home Base',d.location||d.city||'Not set')}
+    ${d.last_lat&&d.last_lng?infoRow('📡 Last Location',Number(d.last_lat).toFixed(4)+', '+Number(d.last_lng).toFixed(4)+' · pinged '+_dcFmtDate(d.last_ping_at)):''}
+    ${poi.length
+      ?poi.map(([city,cnt],i)=>`<div class="dc-info-row"><span class="dc-info-lbl" style="display:flex;align-items:center;gap:7px"><span style="width:18px;height:18px;border-radius:4px;background:rgba(124,58,237,.2);color:#a78bfa;display:inline-flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;flex-shrink:0">${i+1}</span>${city}</span><span class="dc-info-val" style="display:flex;align-items:center;gap:10px"><span style="flex:1;height:4px;background:rgba(255,255,255,.07);border-radius:10px;overflow:hidden"><span style="display:block;height:100%;background:#7c3aed;border-radius:10px;width:${Math.round(cnt/maxPoi*100)}%"></span></span><span style="font-size:11px;color:rgba(255,255,255,.35)">${cnt} pickup${cnt>1?'s':''}</span></span></div>`).join('')
+      :`<div style="text-align:center;padding:20px;color:rgba(255,255,255,.3);font-size:13px">No trip history to build location data.</div>`}
+
+    <div class="dc-sec">Compliance</div>
+    ${[{icon:'🪪',name:"Driver's License",sub:d.license_number+'  · '+( d.license_state||'?'),exp:_dcExpiry(d.license_expires)},
+       {icon:'🚗',name:'Vehicle Insurance',sub:'Required for all trips',exp:_dcExpiry(d.vehicle_insurance_expires)},
+       {icon:'🔍',name:'MVR Check',sub:d.mvr_checked_at?'Checked '+_dcFmtDate(d.mvr_checked_at):'Not checked',exp:{label:(d.mvr_status||'pending').toUpperCase(),cls:d.mvr_status==='clear'?'dc-ok':d.mvr_status==='flagged'?'dc-bad':'dc-warn'}},
+       {icon:'✅',name:'Background Check',sub:d.background_checked_at?'Checked '+_dcFmtDate(d.background_checked_at):'Pending',exp:{label:(d.background_check_status||'pending').toUpperCase(),cls:d.background_check_status==='clear'?'dc-ok':d.background_check_status==='flagged'?'dc-bad':'dc-warn'}}
+    ].map(it=>`<div class="dc-info-row"><span class="dc-info-lbl">${it.icon} ${it.name}</span><span class="dc-info-val" style="display:flex;flex-direction:column;gap:2px"><span style="color:${clrMap[it.exp.cls]||'#f59e0b'};font-weight:600">${it.exp.label}</span>${it.sub?`<span style="font-size:11px;color:rgba(255,255,255,.3)">${it.sub}</span>`:''}</span></div>`).join('')}
+    ${flags.length
+      ?`<div class="dc-sec">Open Flags (${flags.length})</div>${flags.map(f=>`<div class="dc-info-row"><span class="dc-info-lbl">${f.u==='bad'?'🚨':'⚠️'} Flag</span><span class="dc-info-val" style="display:flex;align-items:center;gap:8px"><span style="color:${f.u==='bad'?'#f87171':'#f59e0b'};font-weight:600">${f.label}</span><span style="font-size:10px;padding:1px 7px;border-radius:10px;background:${f.u==='bad'?'rgba(220,38,38,.15)':'rgba(245,158,11,.1)'};color:${f.u==='bad'?'#f87171':'#f59e0b'}">${f.u==='bad'?'CRITICAL':'WARNING'}</span></span></div>`).join('')}`
+      :`<div style="margin:16px 28px;padding:12px 16px;background:rgba(16,185,129,.06);border:1px solid rgba(16,185,129,.2);border-radius:8px;text-align:center;font-size:13px;color:#4ade80">✓ All compliance checks clear</div>`}
+    <div style="height:48px"></div>`;
+
+  setTimeout(()=>content.querySelectorAll('.dc-bar-fill[data-w]').forEach(el=>{el.style.width=el.dataset.w+'%';}),80);
 }
 
-function _dcPerfHTML(d,trips,acc){
-  const comp=trips.filter(t=>t.status==='completed');
-  const canc=trips.filter(t=>t.status==='cancelled');
-  const compRate=trips.length?Math.round(comp.length/trips.length*100):null;
-  const ratingPct=d.rating?Math.round(Number(d.rating)*20):null;
-  const metrics=[{name:'Acceptance Rate',val:acc,suf:'%'},{name:'Completion Rate',val:compRate,suf:'%'},{name:'Driver Rating',val:ratingPct,suf:'%',disp:d.rating?Number(d.rating).toFixed(1)+' / 5.0':null}];
-  const totalEarnings=comp.reduce((s,t)=>s+(t.driver_payout||0),0);
-  const avgEarnings=comp.length?totalEarnings/comp.length:0;
-  let html=`<div class="dc-sec">Performance Metrics</div>`;
-  html+=metrics.map(m=>{
-    if(m.val===null)return`<div class="dc-metric"><div class="dc-metric-top"><span class="dc-metric-name">${m.name}</span><span class="dc-metric-val" style="color:rgba(255,255,255,.3)">No data</span></div><div class="dc-bar-track"><div class="dc-bar-fill" style="width:0;background:rgba(255,255,255,.1)"></div></div></div>`;
-    const g=_dcGrade(m.val);
-    return`<div class="dc-metric"><div class="dc-metric-top"><span class="dc-metric-name">${m.name}</span><span class="dc-metric-val" style="color:${_dcBarColor(m.val)}">${m.disp||(m.val+m.suf)} <small style="font-size:10px;color:rgba(255,255,255,.3)">(${g})</small></span></div><div class="dc-bar-track"><div class="dc-bar-fill" data-w="${m.val}" style="width:0;background:${_dcBarColor(m.val)}"></div></div></div>`;
+// ── REPORT CARDS PAGE ─────────────────────────────────────────────────────────
+
+async function initLFReports(){
+  const grid=document.getElementById('lfrep-grid');
+  await _lfFetchAll(grid);
+  const k=_dcKpiSummary();
+  const grades={A:0,B:0,C:0,D:0,F:0};
+
+  const overallScore=d=>{
+    const trips=_lfdc_trips[d.id]||[];
+    const acc=_dcAccRate(trips);
+    const comp=trips.filter(t=>t.status==='completed');
+    const compRate=trips.length?Math.round(comp.length/trips.length*100):null;
+    const ratingPct=d.rating?Math.round(Number(d.rating)*20):null;
+    const scores=[acc,compRate,ratingPct].filter(x=>x!==null);
+    return scores.length?Math.round(scores.reduce((a,b)=>a+b,0)/scores.length):null;
+  };
+
+  const sorted=[..._lfdc_drivers].sort((a,b)=>(overallScore(b)??-1)-(overallScore(a)??-1));
+  for(const d of sorted){const s=overallScore(d);const g=s!==null?_dcGrade(s):'F';grades[g]=(grades[g]||0)+1;}
+
+  const set=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
+  set('lfrep-kpi-a',grades.A);set('lfrep-kpi-b',grades.B);set('lfrep-kpi-c',grades.C);
+  set('lfrep-kpi-df',(grades.D||0)+(grades.F||0));set('lfrep-kpi-flags',k.flags);
+  const sv=document.getElementById('lfrep-div-score');
+  if(sv){sv.textContent=k.score;sv.style.color=k.score>=80?'#4ade80':k.score>=60?'#f59e0b':'#f87171';}
+
+  const metRow=(lbl,val)=>{
+    const c=val!==null?_dcBarColor(val):'rgba(255,255,255,.3)';
+    return`<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px"><span style="font-size:9px;color:rgba(255,255,255,.28);font-family:var(--ff-m);text-transform:uppercase;letter-spacing:.8px;width:84px;flex-shrink:0">${lbl}</span><span style="flex:1;height:3px;background:rgba(255,255,255,.07);border-radius:10px;overflow:hidden"><span style="display:block;height:100%;background:${c};border-radius:10px;width:${val??0}%"></span></span><span style="font-size:11px;font-weight:700;color:${c};width:34px;text-align:right">${val!==null?val+'%':'—'}</span></div>`;
+  };
+
+  grid.style.display='grid';
+  grid.innerHTML=sorted.map(d=>{
+    const trips=_lfdc_trips[d.id]||[];
+    const acc=_dcAccRate(trips);
+    const comp=trips.filter(t=>t.status==='completed');
+    const compRate=trips.length?Math.round(comp.length/trips.length*100):null;
+    const ratingPct=d.rating?Math.round(Number(d.rating)*20):null;
+    const overall=overallScore(d);
+    const g=overall!==null?_dcGrade(overall):'—';
+    const gColor=_dcBarColor(overall??0);
+    const flags=_dcFlags(d);
+    const segs=(d.approved_services||[]).map(s=>`<span class="dc-pill dc-pill-${s}">${s.toUpperCase()}</span>`).join(' ')||'';
+    const statusCls={active:'dc-status-active',inactive:'dc-status-inactive',suspended:'dc-status-suspended'}[d.status]||'dc-status-inactive';
+    const veh=[d.vehicle_make,d.vehicle_model].filter(Boolean).join(' ')||'—';
+    return`<div style="background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.055);border-radius:12px;padding:18px 20px;cursor:pointer;transition:background .15s" onmouseenter="this.style.background='rgba(255,255,255,.048)'" onmouseleave="this.style.background='rgba(255,255,255,.025)'" onclick="_lfOpenDriver('${d.id}')">
+      <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:14px">
+        <div style="width:50px;height:50px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:900;flex-shrink:0;border:2.5px solid ${gColor};color:${gColor}">${g}</div>
+        <div style="min-width:0;flex:1"><div style="font-size:13px;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${d.name||'—'}</div><div style="font-size:10px;color:rgba(255,255,255,.3);margin-top:2px">${_dcGradeDesc(g)}</div><div style="margin-top:5px;display:flex;gap:4px;flex-wrap:wrap">${segs}</div></div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0"><span class="dc-status ${statusCls}" style="font-size:9px">${(d.status||'—').toUpperCase()}</span>${flags.length?`<span style="font-size:9px;font-weight:700;padding:2px 6px;border-radius:20px;background:rgba(239,68,68,.15);color:#f87171">⚠ ${flags.length}</span>`:`<span style="font-size:9px;color:#4ade80">✓ Clear</span>`}</div>
+      </div>
+      ${metRow('Acceptance',acc)}
+      ${metRow('Completion',compRate)}
+      ${metRow('Rating',ratingPct)}
+      <div style="display:flex;justify-content:space-between;margin-top:12px;padding-top:10px;border-top:1px solid rgba(255,255,255,.05)">
+        <span style="font-size:10px;color:rgba(255,255,255,.28)">📍 ${d.location||'—'}</span>
+        <span style="font-size:10px;color:rgba(255,255,255,.28)">${comp.length} trips · ${veh}</span>
+      </div>
+    </div>`;
   }).join('');
-  html+=`<div class="dc-sec">Earnings Summary</div>`;
-  html+=[['Total Completed',comp.length+' trips'],['Cancelled',canc.length+' trips'],['Total Earnings',`<span style="color:#4ade80;font-weight:700">${_dcFmtMoney(totalEarnings)}</span>`],['Avg per Trip',_dcFmtMoney(avgEarnings)]].map(([l,v])=>`<div class="dc-info-row"><span class="dc-info-lbl">${l}</span><span class="dc-info-val">${v}</span></div>`).join('');
-  const byType={};
-  for(const t of comp)byType[t.trip_type||'unknown']=(byType[t.trip_type||'unknown']||0)+1;
-  const typeColor={nemt:'#3b82f6',courier:'#f59e0b',executive:'#8b5cf6',gig:'#22c55e'};
-  if(Object.keys(byType).length){
-    html+=`<div class="dc-sec">Trip Type Breakdown</div><div style="padding:12px 28px;display:flex;gap:8px;flex-wrap:wrap">${Object.entries(byType).map(([tp,cnt])=>`<span style="font-size:12px;padding:4px 12px;border-radius:20px;background:${typeColor[tp]||'#64748b'}22;color:${typeColor[tp]||'#64748b'};font-weight:600">${tp.toUpperCase()} · ${cnt}</span>`).join('')}</div>`;
-  }
-  return html;
 }
 
-function _dcPlacesHTML(d,trips){
-  const poi=_dcTopPOI(trips);
-  const max=poi.length?poi[0][1]:1;
-  let html=`<div class="dc-sec">Home Base</div>`;
-  html+=`<div class="dc-info-row"><span class="dc-info-lbl">🏠 Location</span><span class="dc-info-val">${d.location||d.city||'Not set'}</span></div>`;
-  if(d.last_lat&&d.last_lng){
-    html+=`<div class="dc-sec">Last Known Location</div>`;
-    html+=`<div class="dc-info-row"><span class="dc-info-lbl">📡 Coordinates</span><span class="dc-info-val">${Number(d.last_lat).toFixed(4)}, ${Number(d.last_lng).toFixed(4)}</span></div>`;
-    html+=`<div class="dc-info-row"><span class="dc-info-lbl">Last Ping</span><span class="dc-info-val">${_dcFmtDate(d.last_ping_at)}</span></div>`;
-  }
-  html+=`<div class="dc-sec">Top Pickup Zones</div>`;
-  if(!poi.length)return html+`<div style="text-align:center;padding:40px;color:rgba(255,255,255,.3);font-size:13px">No trip history to build location data.</div>`;
-  return html+poi.map(([city,cnt],i)=>`<div class="dc-info-row">
-    <span class="dc-info-lbl" style="display:flex;align-items:center;gap:8px"><span style="width:20px;height:20px;border-radius:5px;background:rgba(124,58,237,.2);color:#a78bfa;display:inline-flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;flex-shrink:0">${i+1}</span>${city}</span>
-    <span class="dc-info-val" style="display:flex;align-items:center;gap:10px"><span style="flex:1;height:4px;background:rgba(255,255,255,.07);border-radius:10px;overflow:hidden"><span style="display:block;height:100%;background:#7c3aed;border-radius:10px;width:${Math.round(cnt/max*100)}%"></span></span><span style="font-size:11px;color:rgba(255,255,255,.35);white-space:nowrap">${cnt} pickup${cnt>1?'s':''}</span></span>
-  </div>`).join('');
-}
-
-function _dcComplianceHTML(d,flags){
-  const items=[
-    {icon:'🪪',name:"Driver's License",sub:`${d.license_number||'—'} · ${d.license_state||'?'}`,exp:_dcExpiry(d.license_expires)},
-    {icon:'🚗',name:'Vehicle Insurance',sub:'Required for all trips',exp:_dcExpiry(d.vehicle_insurance_expires)},
-    {icon:'🔍',name:'MVR Check',sub:d.mvr_checked_at?'Checked '+_dcFmtDate(d.mvr_checked_at):'Not checked',
-      exp:{label:(d.mvr_status||'pending').toUpperCase(),cls:d.mvr_status==='clear'?'dc-ok':d.mvr_status==='flagged'?'dc-bad':'dc-warn'}},
-    {icon:'✅',name:'Background Check',sub:d.background_checked_at?'Checked '+_dcFmtDate(d.background_checked_at):'Pending',
-      exp:{label:(d.background_check_status||'pending').toUpperCase(),cls:d.background_check_status==='clear'?'dc-ok':d.background_check_status==='flagged'?'dc-bad':'dc-warn'}},
-  ];
-  const clr={'dc-ok':'#4ade80','dc-warn':'#f59e0b','dc-bad':'#f87171'};
-  let html=`<div class="dc-sec">Compliance Status</div>`;
-  html+=items.map(it=>`<div class="dc-info-row">
-    <span class="dc-info-lbl">${it.icon} ${it.name}</span>
-    <span class="dc-info-val" style="display:flex;flex-direction:column;gap:2px">
-      <span style="color:${clr[it.exp.cls]||'#f59e0b'};font-weight:600">${it.exp.label}</span>
-      ${it.sub?`<span style="font-size:11px;color:rgba(255,255,255,.3)">${it.sub}</span>`:''}
-    </span>
-  </div>`).join('');
-  if(flags.length){
-    html+=`<div class="dc-sec">Open Flags (${flags.length})</div>`;
-    html+=flags.map(f=>`<div class="dc-info-row">
-      <span class="dc-info-lbl">${f.u==='bad'?'🚨':'⚠️'} ${f.label}</span>
-      <span class="dc-info-val"><span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;background:${f.u==='bad'?'rgba(220,38,38,.15)':'rgba(245,158,11,.1)'};color:${f.u==='bad'?'#f87171':'#f59e0b'}">${f.u==='bad'?'CRITICAL':'WARNING'}</span></span>
-    </div>`).join('');
-  }else{
-    html+=`<div style="margin:16px 28px;padding:12px 16px;background:rgba(16,185,129,.06);border:1px solid rgba(16,185,129,.2);border-radius:8px;text-align:center;font-size:13px;color:#4ade80">✓ All compliance checks clear</div>`;
-  }
-  return html;
-}
-
-function _dcAnimateBars(card){
-  card.querySelectorAll('.dc-bar-fill[data-w]').forEach(el=>{ el.style.width=el.dataset.w+'%'; });
-}
-// ── END IEBC DRIVER COMMAND ────────────────────────────────────────────────────
+// ── Aliases ───────────────────────────────────────────────────────────────────
+function _dcRenderDrivers(){ _dcRenderRoster(); }
+function _dcAnimateBars(el){ el.querySelectorAll('.dc-bar-fill[data-w]').forEach(b=>{b.style.width=b.dataset.w+'%';}); }
+// ── END LIGHT FLEET DRIVER SYSTEM ─────────────────────────────────────────────
 
 </script>
 
