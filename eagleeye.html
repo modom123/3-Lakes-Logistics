@@ -781,7 +781,8 @@ select.form-input option{background:var(--surface);}
     <div class="sb-item" onclick="nav('lf-executive')"><span class="sb-icon">🚗</span> Executive</div>
     <div class="sb-item" onclick="nav('lf-courier')"><span class="sb-icon">📦</span> Courier</div>
     <div class="sb-item" onclick="nav('lf-gig')"><span class="sb-icon">👥</span> Gig Fleet</div>
-    <div class="sb-item" onclick="nav('lf-drivers')"><span class="sb-icon">🎯</span> Driver Command <span class="sb-badge" id="lf-drivers-flag-badge" style="display:none;background:#ef4444;color:#fff">0</span></div>
+    <div class="sb-item" onclick="nav('lf-drivers')"><span class="sb-icon">👥</span> Drivers <span class="sb-badge" id="lf-drivers-flag-badge" style="display:none;background:#ef4444;color:#fff">0</span></div>
+    <div class="sb-item" onclick="nav('lf-reports')"><span class="sb-icon">📋</span> Report Cards</div>
     <div class="sb-item" onclick="nav('lf-bizdev')"><span class="sb-icon">🤝</span> LF Business Dev <span class="sb-badge" id="lf-bizdev-notif" style="display:none;background:#f59e0b;color:#000">!</span></div>
     <div class="sb-item" onclick="nav('lf-million')"><span class="sb-icon">💰</span> $1M Blueprint</div>
   </div>
@@ -4236,7 +4237,7 @@ function nav(id){
   document.querySelectorAll('.sb-item').forEach(n=>{if(n.getAttribute('onclick')?.includes("'"+id+"'"))n.classList.add('active');});
   document.getElementById('page-title').textContent=pageNames[id]||id;
   // LF pages use full-page layout — hero acts as page header, topbar title hidden
-  const _lfFullPages=['lf-nemt','lf-medical','lf-executive','lf-courier','lf-gig','lf-bizdev','lf-million','lf-map','lf-drivers','broker-division','trading-desk','broker-shippers','broker-docs'];
+  const _lfFullPages=['lf-nemt','lf-medical','lf-executive','lf-courier','lf-gig','lf-bizdev','lf-million','lf-map','lf-drivers','lf-driver','lf-reports','broker-division','trading-desk','broker-shippers','broker-docs'];
   document.querySelector('.content').classList.toggle('lf-fullpage',_lfFullPages.includes(id));
   document.getElementById('main').classList.toggle('lf-fullpage',_lfFullPages.includes(id));
   // Fixed full-page overlays: always measure actual header stack
@@ -4278,7 +4279,9 @@ function nav(id){
   if(id==='lf-executive'){lfRunExpert('victor_nash','executive');}
   if(id==='lf-courier'){lfRunExpert('felix_grant','courier');}
   if(id==='lf-gig'){lfRunExpert('morgan_hayes','gig');}
-  if(id==='lf-drivers'){initLFDriverCommand();}
+  if(id==='lf-drivers'){initLFRoster();}
+  if(id==='lf-driver'){initLFDriverProfile();}
+  if(id==='lf-reports'){initLFReports();}
   if(id==='lf-bizdev'){initLfBizDev();}
   if(id==='lf-million'){initMillionBlueprint();}
   if(id==='load-hunter'){initLoadHunter();}
@@ -19199,94 +19202,52 @@ function lfRenderExpertReport(segment, d) {
 </div><!-- /mil-wrap -->
 </div><!-- /page-lf-million -->
 
-<!-- ══ IEBC DRIVER COMMAND CENTER ══════════════════════════════════════════ -->
+<!-- ══ LIGHT FLEET — DRIVERS · PROFILE · REPORT CARDS ══════════════════════ -->
 <style>
-/* ── Driver Command: full-bleed dark LF page ── */
-#page-lf-drivers .dc-banner{
-  background:linear-gradient(135deg,#080f1f 0%,#0e1f3a 50%,#0a1628 100%);
-  padding:62px 32px 20px;flex-shrink:0;
-  border-bottom:1px solid rgba(255,255,255,.07);
-}
-#page-lf-drivers .dc-banner-top{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;}
-#page-lf-drivers .dc-title{font-family:var(--ff-h);font-size:26px;font-weight:900;color:#fff;line-height:1.15;}
-#page-lf-drivers .dc-sub{font-family:var(--ff-m);font-size:10px;color:var(--gold2);letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;}
-#page-lf-drivers .dc-score-chip{display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:10px 18px;}
-#page-lf-drivers .dc-score-val{font-size:28px;font-weight:900;line-height:1;}
-#page-lf-drivers .dc-score-lbl{font-size:9px;color:rgba(255,255,255,.4);letter-spacing:1.5px;text-transform:uppercase;}
+/* ── Shared dark LF page tokens ── */
+.lf-dc-banner{background:linear-gradient(135deg,#080f1f 0%,#0e1f3a 50%,#0a1628 100%);padding:62px 32px 20px;flex-shrink:0;border-bottom:1px solid rgba(255,255,255,.07);}
+.lf-dc-title{font-family:var(--ff-h);font-size:26px;font-weight:900;color:#fff;line-height:1.15;}
+.lf-dc-eyebrow{font-family:var(--ff-m);font-size:10px;color:var(--gold2);letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;}
+.lf-dc-score-chip{display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:10px 18px;}
+.lf-dc-score-val{font-size:28px;font-weight:900;line-height:1;}
+.lf-dc-score-lbl{font-size:9px;color:rgba(255,255,255,.4);letter-spacing:1.5px;text-transform:uppercase;}
 /* KPI strip */
-#page-lf-drivers .dc-kpis{display:flex;border-top:1px solid rgba(255,255,255,.06);border-bottom:1px solid rgba(255,255,255,.06);background:rgba(0,0,0,.2);flex-shrink:0;}
-#page-lf-drivers .dc-kpi{flex:1;padding:14px 0;text-align:center;border-right:1px solid rgba(255,255,255,.05);}
-#page-lf-drivers .dc-kpi:last-child{border-right:none;}
-#page-lf-drivers .dc-kpi-val{font-size:22px;font-weight:800;color:#fff;}
-#page-lf-drivers .dc-kpi-lbl{font-size:9px;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:1.5px;margin-top:2px;font-family:var(--ff-m);}
+.lf-dc-kpis{display:flex;border-top:1px solid rgba(255,255,255,.06);border-bottom:1px solid rgba(255,255,255,.06);background:rgba(0,0,0,.2);flex-shrink:0;}
+.lf-dc-kpi{flex:1;padding:14px 0;text-align:center;border-right:1px solid rgba(255,255,255,.05);}
+.lf-dc-kpi:last-child{border-right:none;}
+.lf-dc-kpi-val{font-size:22px;font-weight:800;color:#fff;}
+.lf-dc-kpi-lbl{font-size:9px;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:1.5px;margin-top:2px;font-family:var(--ff-m);}
 /* Toolbar */
-#page-lf-drivers .dc-toolbar{display:flex;align-items:center;gap:8px;padding:10px 32px;background:rgba(0,0,0,.25);border-bottom:1px solid rgba(255,255,255,.06);flex-shrink:0;flex-wrap:wrap;}
-#page-lf-drivers .dc-search{flex:1;min-width:180px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:7px;padding:7px 12px;color:#fff;font-size:13px;outline:none;}
-#page-lf-drivers .dc-search::placeholder{color:rgba(255,255,255,.3);}
-#page-lf-drivers .dc-search:focus{border-color:var(--gold2);}
-#page-lf-drivers .dc-fbtn{padding:6px 13px;border-radius:7px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.05);color:rgba(255,255,255,.5);font-size:12px;font-weight:600;cursor:pointer;transition:all .18s;}
-#page-lf-drivers .dc-fbtn:hover,#page-lf-drivers .dc-fbtn.dc-factive{background:var(--gold);border-color:var(--gold);color:var(--navy);}
-#page-lf-drivers .dc-sort{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:7px;padding:6px 10px;color:#fff;font-size:12px;outline:none;cursor:pointer;}
-#page-lf-drivers .dc-sort option{background:#0f1b30;}
-/* Driver list scroll area */
-#page-lf-drivers .dc-list{flex:1;overflow-y:auto;background:#080f1f;}
-/* Driver row */
-.dc-row{border-bottom:1px solid rgba(255,255,255,.05);transition:background .15s;}
-.dc-row:hover{background:rgba(255,255,255,.02);}
-.dc-row.dc-open{background:rgba(255,255,255,.03);}
-.dc-row-head{display:flex;align-items:center;gap:0;cursor:pointer;user-select:none;}
-/* Avatar col */
-.dc-col-avatar{width:64px;flex-shrink:0;display:flex;align-items:center;justify-content:center;padding:14px 0;}
-.dc-avatar{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:#fff;position:relative;}
-.dc-avatar .dc-dot{position:absolute;bottom:-2px;right:-2px;width:11px;height:11px;border-radius:50%;border:2px solid #080f1f;}
-/* Name col */
-.dc-col-name{flex:2;padding:14px 8px 14px 0;min-width:0;}
-.dc-name{font-size:14px;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.dc-vehicle{font-size:11px;color:rgba(255,255,255,.35);margin-top:2px;}
-.dc-services{display:flex;gap:4px;flex-wrap:wrap;margin-top:5px;}
+.lf-dc-toolbar{display:flex;align-items:center;gap:8px;padding:10px 32px;background:rgba(0,0,0,.25);border-bottom:1px solid rgba(255,255,255,.06);flex-shrink:0;flex-wrap:wrap;}
+.lf-dc-search{flex:1;min-width:180px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:7px;padding:7px 12px;color:#fff;font-size:13px;outline:none;}
+.lf-dc-search::placeholder{color:rgba(255,255,255,.3);}
+.lf-dc-search:focus{border-color:var(--gold2);}
+.lf-dc-fbtn{padding:6px 13px;border-radius:7px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.05);color:rgba(255,255,255,.5);font-size:12px;font-weight:600;cursor:pointer;transition:all .18s;}
+.lf-dc-fbtn:hover,.lf-dc-fbtn.dc-factive{background:var(--gold);border-color:var(--gold);color:var(--navy);}
+.lf-dc-sort{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:7px;padding:6px 10px;color:#fff;font-size:12px;outline:none;cursor:pointer;}
+.lf-dc-sort option{background:#0f1b30;}
+/* Scroll content area */
+.lf-dc-scroll{flex:1;overflow-y:auto;background:#080f1f;}
+/* Status pills */
+.dc-status{font-size:10px;font-weight:700;padding:3px 9px;border-radius:20px;}
+.dc-status-active{background:rgba(16,185,129,.15);color:#6ee7b7;border:1px solid rgba(16,185,129,.25);}
+.dc-status-inactive{background:rgba(100,116,139,.12);color:#94a3b8;border:1px solid rgba(100,116,139,.2);}
+.dc-status-suspended{background:rgba(239,68,68,.15);color:#fca5a5;border:1px solid rgba(239,68,68,.25);}
+/* Segment pills */
 .dc-pill{font-size:9px;font-weight:700;padding:2px 6px;border-radius:20px;letter-spacing:.03em;}
 .dc-pill-nemt{background:rgba(59,130,246,.18);color:#93c5fd;}
 .dc-pill-courier{background:rgba(245,158,11,.18);color:#fcd34d;}
 .dc-pill-executive{background:rgba(124,58,237,.2);color:#c4b5fd;}
 .dc-pill-gig{background:rgba(34,197,94,.15);color:#86efac;}
+.dc-pill-medical{background:rgba(6,182,212,.15);color:#67e8f9;}
 .dc-pill-flag{background:rgba(239,68,68,.18);color:#fca5a5;}
-/* Stat cols */
-.dc-col-stat{width:80px;flex-shrink:0;padding:14px 8px;text-align:center;border-left:1px solid rgba(255,255,255,.04);}
-.dc-stat-val{font-size:15px;font-weight:800;color:#fff;}
-.dc-stat-lbl{font-size:9px;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:1px;margin-top:2px;font-family:var(--ff-m);}
-/* Acceptance ring col */
-.dc-col-ring{width:68px;flex-shrink:0;display:flex;align-items:center;justify-content:center;border-left:1px solid rgba(255,255,255,.04);}
-.dc-ring-wrap{position:relative;width:48px;height:48px;}
-.dc-ring-val{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:#fff;}
-/* Status col */
-.dc-col-status{width:100px;flex-shrink:0;display:flex;align-items:center;justify-content:center;border-left:1px solid rgba(255,255,255,.04);}
-.dc-status{font-size:10px;font-weight:700;padding:3px 9px;border-radius:20px;}
-.dc-status-active{background:rgba(16,185,129,.15);color:#6ee7b7;border:1px solid rgba(16,185,129,.25);}
-.dc-status-inactive{background:rgba(100,116,139,.12);color:#94a3b8;border:1px solid rgba(100,116,139,.2);}
-.dc-status-suspended{background:rgba(239,68,68,.15);color:#fca5a5;border:1px solid rgba(239,68,68,.25);}
-/* Chevron col */
-.dc-col-chev{width:44px;flex-shrink:0;display:flex;align-items:center;justify-content:center;border-left:1px solid rgba(255,255,255,.04);}
-.dc-chev{color:rgba(255,255,255,.25);font-size:16px;transition:transform .22s;}
-.dc-open .dc-chev{transform:rotate(180deg);}
-/* Report card panel */
-.dc-report{display:none;border-top:1px solid rgba(255,255,255,.06);}
-.dc-open .dc-report{display:flex;flex-direction:row;min-height:0;}
-/* Left: tabs */
-.dc-tabs{width:160px;flex-shrink:0;background:rgba(0,0,0,.3);border-right:1px solid rgba(255,255,255,.06);display:flex;flex-direction:column;padding:8px 0;}
-.dc-tab{padding:11px 18px;font-size:12px;font-weight:600;color:rgba(255,255,255,.35);cursor:pointer;border-left:2px solid transparent;transition:all .18s;white-space:nowrap;}
-.dc-tab:hover{color:rgba(255,255,255,.7);background:rgba(255,255,255,.04);}
-.dc-tab.dc-tab-on{color:var(--gold2);border-left-color:var(--gold2);background:rgba(228,168,48,.06);}
-/* Right: panel content */
-.dc-panels{flex:1;overflow-y:auto;max-height:480px;}
-.dc-panel{display:none;padding:0;}
-.dc-panel.dc-panel-on{display:block;}
-/* Info row — full width, no columns */
+/* Info row — full width */
 .dc-info-row{display:flex;align-items:baseline;padding:9px 28px;border-bottom:1px solid rgba(255,255,255,.04);}
-.dc-info-row:nth-child(even){background:rgba(255,255,255,.015);}
+.dc-info-row:nth-child(even){background:rgba(255,255,255,.012);}
 .dc-info-lbl{font-family:var(--ff-m);font-size:10px;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:1px;width:180px;flex-shrink:0;}
 .dc-info-val{font-size:13px;color:#e2e8f0;font-weight:500;flex:1;}
-/* Section header inside panel */
-.dc-sec{padding:14px 28px 8px;font-family:var(--ff-m);font-size:9px;font-weight:700;color:var(--gold2);text-transform:uppercase;letter-spacing:2px;border-bottom:1px solid rgba(228,168,48,.15);background:rgba(0,0,0,.2);}
+/* Section header */
+.dc-sec{padding:14px 28px 8px;font-family:var(--ff-m);font-size:9px;font-weight:700;color:var(--gold2);text-transform:uppercase;letter-spacing:2px;border-bottom:1px solid rgba(228,168,48,.15);background:rgba(0,0,0,.18);}
 /* Metric bar */
 .dc-metric{padding:10px 28px;border-bottom:1px solid rgba(255,255,255,.04);}
 .dc-metric-top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;}
@@ -19294,7 +19255,7 @@ function lfRenderExpertReport(segment, d) {
 .dc-metric-val{font-size:14px;font-weight:800;}
 .dc-bar-track{height:6px;background:rgba(255,255,255,.07);border-radius:10px;overflow:hidden;}
 .dc-bar-fill{height:100%;border-radius:10px;transition:width .8s cubic-bezier(.34,1.56,.64,1);}
-/* Trip table inside panel */
+/* Trip table */
 .dc-trip-table{width:100%;border-collapse:collapse;font-size:12px;}
 .dc-trip-table th{text-align:left;padding:8px 14px;font-size:9px;font-weight:700;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:1.2px;border-bottom:1px solid rgba(255,255,255,.08);font-family:var(--ff-m);background:rgba(0,0,0,.2);}
 .dc-trip-table td{padding:9px 14px;border-bottom:1px solid rgba(255,255,255,.04);color:#e2e8f0;vertical-align:middle;}
@@ -19303,44 +19264,47 @@ function lfRenderExpertReport(segment, d) {
 .dc-grade{width:60px;height:60px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-direction:column;flex-shrink:0;font-weight:900;border-width:3px;border-style:solid;}
 .dc-grade-letter{font-size:22px;line-height:1;}
 .dc-grade-sub{font-size:8px;opacity:.5;}
+/* Roster table */
+.lf-roster-table{width:100%;border-collapse:collapse;}
+.lf-roster-table th{padding:9px 14px;font-size:9px;font-weight:700;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:1.2px;text-align:left;border-bottom:1px solid rgba(255,255,255,.08);background:rgba(0,0,0,.28);font-family:var(--ff-m);white-space:nowrap;position:sticky;top:0;z-index:1;}
+.lf-roster-table td{padding:11px 14px;border-bottom:1px solid rgba(255,255,255,.04);vertical-align:middle;}
+.lf-roster-table tr:hover td{background:rgba(255,255,255,.025);cursor:pointer;}
+.lf-roster-link{color:var(--gold2);font-weight:700;font-size:13px;cursor:pointer;}
+.lf-roster-link:hover{text-decoration:underline;}
 </style>
 
+<!-- ── Driver Roster ─────────────────────────────────────────── -->
 <div class="page" id="page-lf-drivers">
   <div class="lf-wrap">
-    <!-- Banner -->
-    <div class="dc-banner iebc-banner" style="padding-top:62px;">
-      <div class="dc-banner-top">
+    <div class="lf-dc-banner iebc-banner">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;">
         <div>
-          <div class="dc-sub">IEBC · NODE 200 · LIGHT FLEET</div>
-          <div class="dc-title">Driver Command Center</div>
-          <div style="font-size:12px;color:rgba(255,255,255,.4);margin-top:6px;">All segments · Live compliance · Report cards</div>
+          <div class="lf-dc-eyebrow">LIGHT FLEET · NODE 200</div>
+          <div class="lf-dc-title">Driver Roster</div>
+          <div style="font-size:12px;color:rgba(255,255,255,.4);margin-top:6px;">All segments · Click a driver to view full profile</div>
         </div>
         <div style="display:flex;align-items:center;gap:12px;">
-          <div class="dc-score-chip">
-            <div><div id="lfdc-div-score" class="dc-score-val" style="color:#4ade80;">—</div><div class="dc-score-lbl">Division<br>Health</div></div>
-          </div>
-          <button class="iebc-run-btn" onclick="initLFDriverCommand()">↻ Refresh</button>
+          <div class="lf-dc-score-chip"><div><div id="lfdc-div-score" class="lf-dc-score-val" style="color:#4ade80;">—</div><div class="lf-dc-score-lbl">Division<br>Health</div></div></div>
+          <button class="iebc-run-btn" onclick="initLFRoster()">↻ Refresh</button>
         </div>
       </div>
     </div>
-    <!-- KPI strip -->
-    <div class="dc-kpis">
-      <div class="dc-kpi"><div class="dc-kpi-val" id="lfdc-kpi-active" style="color:#4ade80;">—</div><div class="dc-kpi-lbl">Active Drivers</div></div>
-      <div class="dc-kpi"><div class="dc-kpi-val" id="lfdc-kpi-trips" style="color:#a78bfa;">—</div><div class="dc-kpi-lbl">Trips Today</div></div>
-      <div class="dc-kpi"><div class="dc-kpi-val" id="lfdc-kpi-rev" style="color:var(--gold2);">—</div><div class="dc-kpi-lbl">Revenue Today</div></div>
-      <div class="dc-kpi"><div class="dc-kpi-val" id="lfdc-kpi-acc">—</div><div class="dc-kpi-lbl">Avg Acceptance</div></div>
-      <div class="dc-kpi"><div class="dc-kpi-val" id="lfdc-kpi-flags" style="color:#f87171;">—</div><div class="dc-kpi-lbl">Compliance Flags</div></div>
+    <div class="lf-dc-kpis">
+      <div class="lf-dc-kpi"><div class="lf-dc-kpi-val" id="lfdc-kpi-active" style="color:#4ade80;">—</div><div class="lf-dc-kpi-lbl">Active</div></div>
+      <div class="lf-dc-kpi"><div class="lf-dc-kpi-val" id="lfdc-kpi-trips" style="color:#a78bfa;">—</div><div class="lf-dc-kpi-lbl">Trips Today</div></div>
+      <div class="lf-dc-kpi"><div class="lf-dc-kpi-val" id="lfdc-kpi-rev" style="color:var(--gold2);">—</div><div class="lf-dc-kpi-lbl">Revenue Today</div></div>
+      <div class="lf-dc-kpi"><div class="lf-dc-kpi-val" id="lfdc-kpi-acc">—</div><div class="lf-dc-kpi-lbl">Avg Acceptance</div></div>
+      <div class="lf-dc-kpi"><div class="lf-dc-kpi-val" id="lfdc-kpi-flags" style="color:#f87171;">—</div><div class="lf-dc-kpi-lbl">Flags</div></div>
     </div>
-    <!-- Toolbar -->
-    <div class="dc-toolbar">
-      <input class="dc-search" id="lfdc-search" type="text" placeholder="Search driver, location, vehicle…" oninput="_dcRenderDrivers()" />
-      <button class="dc-fbtn dc-factive" data-dc-f="all" onclick="_dcSetFilter(this,'all')">All</button>
-      <button class="dc-fbtn" data-dc-f="active" onclick="_dcSetFilter(this,'active')">Active</button>
-      <button class="dc-fbtn" data-dc-f="nemt" onclick="_dcSetFilter(this,'nemt')">NEMT</button>
-      <button class="dc-fbtn" data-dc-f="courier" onclick="_dcSetFilter(this,'courier')">Courier</button>
-      <button class="dc-fbtn" data-dc-f="executive" onclick="_dcSetFilter(this,'executive')">Executive</button>
-      <button class="dc-fbtn" data-dc-f="gig" onclick="_dcSetFilter(this,'gig')">Gig</button>
-      <select class="dc-sort" id="lfdc-sort" onchange="_dcRenderDrivers()">
+    <div class="lf-dc-toolbar">
+      <input class="lf-dc-search" id="lfdc-search" type="text" placeholder="Search driver, location, vehicle…" oninput="_dcRenderRoster()" />
+      <button class="lf-dc-fbtn dc-factive" data-dc-f="all" onclick="_dcSetFilter(this,'all')">All</button>
+      <button class="lf-dc-fbtn" data-dc-f="active" onclick="_dcSetFilter(this,'active')">Active</button>
+      <button class="lf-dc-fbtn" data-dc-f="nemt" onclick="_dcSetFilter(this,'nemt')">NEMT</button>
+      <button class="lf-dc-fbtn" data-dc-f="courier" onclick="_dcSetFilter(this,'courier')">Courier</button>
+      <button class="lf-dc-fbtn" data-dc-f="executive" onclick="_dcSetFilter(this,'executive')">Executive</button>
+      <button class="lf-dc-fbtn" data-dc-f="gig" onclick="_dcSetFilter(this,'gig')">Gig</button>
+      <select class="lf-dc-sort" id="lfdc-sort" onchange="_dcRenderRoster()">
         <option value="name">Name A–Z</option>
         <option value="trips">Most Trips</option>
         <option value="acceptance">Acceptance Rate</option>
@@ -19348,20 +19312,76 @@ function lfRenderExpertReport(segment, d) {
         <option value="flags">Flags First</option>
       </select>
     </div>
-    <!-- Driver rows -->
-    <div class="dc-list" id="lfdc-drivers-wrap">
-      <div style="text-align:center;padding:80px;color:rgba(255,255,255,.3);font-size:14px;">Click "Driver Command" in the sidebar to load.</div>
+    <div class="lf-dc-scroll" id="lfdc-drivers-wrap">
+      <div style="text-align:center;padding:80px;color:rgba(255,255,255,.3);font-size:14px;">Click "Drivers" in the sidebar to load.</div>
     </div>
   </div>
 </div>
-<script>
-function _dcSetFilter(btn,val){
-  document.querySelectorAll('[data-dc-f]').forEach(b=>b.classList.remove('dc-factive'));
-  btn.classList.add('dc-factive');
-  _lfdc_filter=val;
-  _dcRenderDrivers();
-}
-</script>
+
+<!-- ── Single Driver Profile ─────────────────────────────────── -->
+<div class="page" id="page-lf-driver">
+  <div class="lf-wrap">
+    <div class="lf-dc-banner iebc-banner" id="lfdp-banner">
+      <div style="margin-bottom:14px;"><button class="lf-dc-fbtn" onclick="nav('lf-drivers')" style="font-size:11px;padding:5px 12px;">← Roster</button></div>
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;">
+        <div style="display:flex;align-items:center;gap:18px;">
+          <div id="lfdp-avatar" style="width:64px;height:64px;border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:900;color:#fff;flex-shrink:0;background:#7c3aed;position:relative;">
+            <span id="lfdp-initials">—</span>
+            <span id="lfdp-dot" style="position:absolute;bottom:-2px;right:-2px;width:14px;height:14px;border-radius:50%;border:2.5px solid #080f1f;background:#64748b;"></span>
+          </div>
+          <div>
+            <div class="lf-dc-eyebrow" id="lfdp-node">LIGHT FLEET · NODE 200</div>
+            <div class="lf-dc-title" id="lfdp-name">—</div>
+            <div style="font-size:12px;color:rgba(255,255,255,.4);margin-top:5px;" id="lfdp-vehicle">—</div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;flex-shrink:0;">
+          <span class="dc-status dc-status-inactive" id="lfdp-status-badge">—</span>
+          <button class="iebc-run-btn" onclick="initLFDriverProfile()">↻ Refresh</button>
+        </div>
+      </div>
+    </div>
+    <div class="lf-dc-kpis">
+      <div class="lf-dc-kpi"><div class="lf-dc-kpi-val" id="lfdp-kpi-trips" style="color:#a78bfa;">—</div><div class="lf-dc-kpi-lbl">Trips Completed</div></div>
+      <div class="lf-dc-kpi"><div class="lf-dc-kpi-val" id="lfdp-kpi-acc">—</div><div class="lf-dc-kpi-lbl">Acceptance Rate</div></div>
+      <div class="lf-dc-kpi"><div class="lf-dc-kpi-val" id="lfdp-kpi-earn" style="color:#4ade80;">—</div><div class="lf-dc-kpi-lbl">Avg / Trip</div></div>
+      <div class="lf-dc-kpi"><div class="lf-dc-kpi-val" id="lfdp-kpi-rating">—</div><div class="lf-dc-kpi-lbl">Rating</div></div>
+      <div class="lf-dc-kpi"><div class="lf-dc-kpi-val" id="lfdp-kpi-grade" style="font-size:28px;">—</div><div class="lf-dc-kpi-lbl">Overall Grade</div></div>
+    </div>
+    <div class="lf-dc-scroll" id="lfdp-content">
+      <div style="text-align:center;padding:80px;color:rgba(255,255,255,.3);font-size:14px;">Select a driver from the <span style="color:var(--gold2);cursor:pointer" onclick="nav('lf-drivers')">Roster</span> to view their profile.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── IEBC Report Cards ──────────────────────────────────────── -->
+<div class="page" id="page-lf-reports">
+  <div class="lf-wrap">
+    <div class="lf-dc-banner iebc-banner">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;">
+        <div>
+          <div class="lf-dc-eyebrow">IEBC · LIGHT FLEET · NODE 200</div>
+          <div class="lf-dc-title">Driver Report Cards</div>
+          <div style="font-size:12px;color:rgba(255,255,255,.4);margin-top:6px;">Performance grades · Compliance status · Division health</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;">
+          <div class="lf-dc-score-chip"><div><div id="lfrep-div-score" class="lf-dc-score-val" style="color:#4ade80;">—</div><div class="lf-dc-score-lbl">Division<br>Health</div></div></div>
+          <button class="iebc-run-btn" onclick="initLFReports()">↻ Refresh</button>
+        </div>
+      </div>
+    </div>
+    <div class="lf-dc-kpis">
+      <div class="lf-dc-kpi"><div class="lf-dc-kpi-val" id="lfrep-kpi-a" style="color:#4ade80;">—</div><div class="lf-dc-kpi-lbl">Grade A</div></div>
+      <div class="lf-dc-kpi"><div class="lf-dc-kpi-val" id="lfrep-kpi-b" style="color:#60a5fa;">—</div><div class="lf-dc-kpi-lbl">Grade B</div></div>
+      <div class="lf-dc-kpi"><div class="lf-dc-kpi-val" id="lfrep-kpi-c" style="color:var(--gold2);">—</div><div class="lf-dc-kpi-lbl">Grade C</div></div>
+      <div class="lf-dc-kpi"><div class="lf-dc-kpi-val" id="lfrep-kpi-df" style="color:#f87171;">—</div><div class="lf-dc-kpi-lbl">D / F</div></div>
+      <div class="lf-dc-kpi"><div class="lf-dc-kpi-val" id="lfrep-kpi-flags" style="color:#f87171;">—</div><div class="lf-dc-kpi-lbl">Flags</div></div>
+    </div>
+    <div class="lf-dc-scroll" id="lfrep-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:16px;padding:24px 32px;align-content:start;">
+      <div style="text-align:center;padding:80px;color:rgba(255,255,255,.3);font-size:14px;grid-column:1/-1;">Click "Report Cards" to load.</div>
+    </div>
+  </div>
+</div>
 <!-- ══ /IEBC DRIVER COMMAND CENTER ══════════════════════════════════════════ -->
 
 <script>
@@ -21215,11 +21235,12 @@ function _lhRenderTable(loads) {
 // ── END LOAD HUNTER ───────────────────────────────────────────────────────────
 
 // ══════════════════════════════════════════════════════════════════════════════
-// IEBC DRIVER COMMAND CENTER  (page-lf-drivers)
+// LIGHT FLEET — DRIVER ROSTER · PROFILE · REPORT CARDS
 // ══════════════════════════════════════════════════════════════════════════════
 let _lfdc_drivers = [];
 let _lfdc_trips   = {};
 let _lfdc_filter  = 'all';
+let _lfSelectedDriver = null;
 
 const _AVATAR_COLORS_DC = ['#7c3aed','#1d4ed8','#065f46','#9d174d','#92400e','#1e40af','#047857','#be123c'];
 function _dcAvatarColor(n){ let h=0; for(const c of(n||'X'))h=(h*31+c.charCodeAt(0))&0xffff; return _AVATAR_COLORS_DC[h%_AVATAR_COLORS_DC.length]; }
