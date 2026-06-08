@@ -335,3 +335,27 @@ _reg(
     Step(269, "lf.settle.invoice_record",       "lf_settlement", "Write invoice record to invoices table", requires_steps=[261]),
     Step(270, "lf.settle.settlement_complete",  "lf_settlement", "Settlement domain workflow complete", requires_steps=[262, 263, 265, 266, 267]),
 )
+
+# ── DOMAIN 12: LIGHT FLEET LOAD HUNT (271–290) ───────────────────────────────
+_reg(
+    Step(271, "lf.hunt.read_agent_card",        "lf_load_hunt", "Read driver agent card: vehicle type, rates, service areas, availability"),
+    Step(272, "lf.hunt.build_search_params",    "lf_load_hunt", "Map agent card to loadboard search parameters", requires_steps=[271]),
+    Step(273, "lf.hunt.scan_123loadboard",      "lf_load_hunt", "Scan 123Loadboard for matching loads", requires_steps=[272]),
+    Step(274, "lf.hunt.scan_dat",               "lf_load_hunt", "Scan DAT One for matching loads", requires_steps=[272]),
+    Step(275, "lf.hunt.scan_truckstop",         "lf_load_hunt", "Scan Truckstop.com for matching loads", requires_steps=[272]),
+    Step(276, "lf.hunt.scan_truckerpath",       "lf_load_hunt", "Scan TruckerPath for matching loads", requires_steps=[272]),
+    Step(277, "lf.hunt.scan_chrobinson",        "lf_load_hunt", "Scan C.H. Robinson Navisphere for matching loads", requires_steps=[272]),
+    Step(278, "lf.hunt.deduplicate",            "lf_load_hunt", "Deduplicate results across boards by load_id", requires_steps=[273, 274, 275, 276, 277]),
+    Step(279, "lf.hunt.score_loads",            "lf_load_hunt", "Score each load: RPM, deadhead, pickup date, broker rating", requires_steps=[278]),
+    Step(280, "lf.hunt.filter_hot",             "lf_load_hunt", "Flag HOT loads above driver auto-accept threshold", requires_steps=[279]),
+    Step(281, "lf.hunt.persist_results",        "lf_load_hunt", "Upsert matched loads to load_hunter_results with driver_id", requires_steps=[280]),
+    Step(282, "lf.hunt.auto_accept",            "lf_load_hunt", "Auto-accept HOT loads if driver auto-accept is enabled", requires_steps=[281]),
+    Step(283, "lf.hunt.notify_driver",          "lf_load_hunt", "SMS driver with top 3 matched loads", requires_steps=[281]),
+    Step(284, "lf.hunt.notify_eagle_eye",       "lf_load_hunt", "Push matched load count to Eagle Eye dashboard", requires_steps=[281]),
+    Step(285, "lf.hunt.update_driver_stats",    "lf_load_hunt", "Update driver last_hunted_at and matched_loads_count", requires_steps=[281]),
+    Step(286, "lf.hunt.schedule_next",          "lf_load_hunt", "Schedule next hunt cycle (default: 15 min)", requires_steps=[285]),
+    Step(287, "lf.hunt.rate_index_update",      "lf_load_hunt", "Feed accepted rates into internal rate index", requires_steps=[282]),
+    Step(288, "lf.hunt.broker_blacklist_check", "lf_load_hunt", "Skip loads from blacklisted brokers", requires_steps=[278]),
+    Step(289, "lf.hunt.ledger_write",           "lf_load_hunt", "Write hunt event to atomic ledger", requires_steps=[285]),
+    Step(290, "lf.hunt.hunt_complete",          "lf_load_hunt", "Mark load hunt cycle complete", requires_steps=[283, 284, 285, 286, 289]),
+)

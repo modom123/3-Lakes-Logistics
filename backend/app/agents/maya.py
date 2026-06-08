@@ -194,9 +194,34 @@ def process_intake(payload: dict[str, Any]) -> dict[str, Any]:
                     updates["license_state"] = license_state
                 if platforms_opted_in:
                     updates["platforms_opted_in"] = platforms_opted_in
+                # Refresh agent card fields if provided on re-submission
+                for _ac_field in (
+                    "vehicle_cargo_type", "vehicle_capacity_lbs", "vehicle_max_length_ft",
+                    "min_rpm", "min_rate_total", "max_deadhead_mi", "max_trip_miles",
+                    "service_areas", "preferred_load_types", "available_days",
+                    "hours_start", "hours_end", "hunt_enabled", "auto_accept_threshold",
+                ):
+                    if payload.get(_ac_field) is not None:
+                        updates[_ac_field] = payload[_ac_field]
                 sb.table("light_vehicle_drivers").update(updates).eq("id", str(driver_id)).execute()
                 log_agent(_NAME, "dedup_reuse", payload={"name": name, "driver_id": str(driver_id)})
             else:
+                # Derive vehicle_cargo_type from vehicle_type
+                _vt = vehicle_type.lower() if vehicle_type else ""
+                _cargo_type = (
+                    "cargo_van" if _vt == "cargo_van" else
+                    "accessible_passenger" if _vt in ("minivan", "wheelchair_van") else
+                    "passenger"
+                )
+                # Seed service_area from location (e.g. "Portland, OR")
+                _service_areas: list[str] = []
+                if location:
+                    _city_parts = [p.strip() for p in location.split(",")]
+                    if len(_city_parts) >= 2:
+                        _service_areas = [f"{_city_parts[0]}, {_city_parts[1]}"]
+                    elif _city_parts[0]:
+                        _service_areas = [_city_parts[0]]
+
                 row: dict = {
                     "name": name,
                     "phone": phone,
@@ -218,6 +243,21 @@ def process_intake(payload: dict[str, Any]) -> dict[str, Any]:
                     "background_check_status": "pending",
                     "plan": "starter",
                     "platforms_opted_in": platforms_opted_in or None,
+                    # ── Agent card defaults (override at Step 206/208 if needed) ──
+                    "vehicle_cargo_type":  payload.get("vehicle_cargo_type") or _cargo_type,
+                    "vehicle_capacity_lbs": payload.get("vehicle_capacity_lbs") or None,
+                    "vehicle_max_length_ft": payload.get("vehicle_max_length_ft") or None,
+                    "min_rpm":              float(payload["min_rpm"]) if payload.get("min_rpm") else 1.50,
+                    "min_rate_total":       float(payload["min_rate_total"]) if payload.get("min_rate_total") else 25.00,
+                    "max_deadhead_mi":      int(payload["max_deadhead_mi"]) if payload.get("max_deadhead_mi") else 50,
+                    "max_trip_miles":       int(payload["max_trip_miles"]) if payload.get("max_trip_miles") else 300,
+                    "service_areas":        payload.get("service_areas") or (_service_areas or None),
+                    "preferred_load_types": payload.get("preferred_load_types") or (services or None),
+                    "available_days":       payload.get("available_days") or ["mon","tue","wed","thu","fri","sat"],
+                    "hours_start":          payload.get("hours_start") or "07:00",
+                    "hours_end":            payload.get("hours_end") or "20:00",
+                    "hunt_enabled":         bool(payload.get("hunt_enabled", False)),
+                    "auto_accept_threshold": float(payload["auto_accept_threshold"]) if payload.get("auto_accept_threshold") else None,
                 }
                 result = sb.table("light_vehicle_drivers").insert(row).execute()
                 driver_id = (result.data[0] or {}).get("id") if result.data else None

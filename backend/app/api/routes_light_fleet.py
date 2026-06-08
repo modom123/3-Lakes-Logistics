@@ -453,6 +453,99 @@ def delete_driver(driver_id: str) -> Response:
     return Response(status_code=204)
 
 
+@router.get("/drivers/{driver_id}/agent-card")
+def get_driver_agent_card(driver_id: str) -> dict:
+    """
+    Return a structured agent card for a driver — everything an AI agent needs
+    to search load boards and match/accept loads on behalf of the driver.
+    """
+    sb = get_supabase()
+    res = sb.table("light_vehicle_drivers").select("*").eq("id", driver_id).execute()
+    if not res.data:
+        raise HTTPException(status_code=404, detail="Driver not found")
+    d = res.data[0]
+
+    card = {
+        "driver_id":           d["id"],
+        "name":                f"{d.get('first_name','')} {d.get('last_name','')}".strip(),
+        "status":              d.get("status"),
+        "hunt_enabled":        bool(d.get("hunt_enabled", False)),
+        "vehicle": {
+            "type":            d.get("vehicle_type"),
+            "make":            d.get("vehicle_make"),
+            "model":           d.get("vehicle_model"),
+            "year":            d.get("vehicle_year"),
+            "cargo_type":      d.get("vehicle_cargo_type"),
+            "capacity_lbs":    d.get("vehicle_capacity_lbs"),
+            "max_length_ft":   float(d["vehicle_max_length_ft"]) if d.get("vehicle_max_length_ft") else None,
+        },
+        "rates": {
+            "min_rpm":          float(d["min_rpm"]) if d.get("min_rpm") else 1.50,
+            "min_rate_total":   float(d["min_rate_total"]) if d.get("min_rate_total") else 25.00,
+            "auto_accept_threshold": float(d["auto_accept_threshold"]) if d.get("auto_accept_threshold") else None,
+        },
+        "routing": {
+            "max_deadhead_mi": d.get("max_deadhead_mi") or 50,
+            "max_trip_miles":  d.get("max_trip_miles") or 300,
+            "service_areas":   d.get("service_areas") or [],
+        },
+        "preferences": {
+            "preferred_load_types": d.get("preferred_load_types") or [],
+            "available_days":       d.get("available_days") or ["mon","tue","wed","thu","fri","sat"],
+            "hours_start":          d.get("hours_start") or "07:00",
+            "hours_end":            d.get("hours_end") or "20:00",
+        },
+        "stats": {
+            "total_trips":       d.get("total_trips") or 0,
+            "rating":            float(d["rating"]) if d.get("rating") else None,
+            "matched_loads_count": d.get("matched_loads_count") or 0,
+            "last_hunted_at":    d.get("last_hunted_at"),
+        },
+    }
+    return {"ok": True, "card": card}
+
+
+@router.post("/drivers/{driver_id}/hunt")
+def hunt_for_driver(driver_id: str, payload: dict | None = None) -> dict:
+    """
+    Trigger a load-board hunt specifically for this driver.
+    Uses the driver's agent card fields (min_rpm, max_deadhead_mi, vehicle type,
+    service_areas) as search params.  Stores results tagged with driver_id.
+    """
+    from ..agents.load_hunter import hunt_for_driver as _hunt
+
+    result = _hunt(driver_id, overrides=payload or {})
+    return result
+
+
+# ===========================================================================
+# LOAD HUNT RESULTS
+# ===========================================================================
+
+@router.get("/loads/matched")
+def list_matched_loads(
+    driver_id: str | None = None,
+    limit: int = 50,
+    is_hot: bool | None = None,
+) -> dict:
+    """
+    Fetch load_hunter_results, optionally filtered by driver_id and/or is_hot.
+    """
+    sb = get_supabase()
+    q = (
+        sb.table("load_hunter_results")
+        .select("*")
+        .order("found_at", desc=True)
+        .limit(limit)
+    )
+    if driver_id:
+        q = q.eq("driver_id", driver_id)
+    if is_hot is not None:
+        q = q.eq("is_hot", is_hot)
+    rows = q.execute().data or []
+    return {"loads": rows, "total": len(rows)}
+
+
 # ===========================================================================
 # NEMT CLIENTS
 # ===========================================================================

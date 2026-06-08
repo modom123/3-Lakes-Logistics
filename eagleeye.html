@@ -4237,7 +4237,7 @@ function nav(id){
   document.querySelectorAll('.sb-item').forEach(n=>{if(n.getAttribute('onclick')?.includes("'"+id+"'"))n.classList.add('active');});
   document.getElementById('page-title').textContent=pageNames[id]||id;
   // LF pages use full-page layout — hero acts as page header, topbar title hidden
-  const _lfFullPages=['lf-nemt','lf-medical','lf-executive','lf-courier','lf-gig','lf-bizdev','lf-million','lf-map','lf-drivers','lf-driver','lf-reports','broker-division','trading-desk','broker-shippers','broker-docs'];
+  const _lfFullPages=['lf-nemt','lf-medical','lf-executive','lf-courier','lf-gig','lf-bizdev','lf-million','lf-map','broker-division','trading-desk','broker-shippers','broker-docs','lf-drivers','lf-driver','lf-reports','exec-command','load-hunter'];
   document.querySelector('.content').classList.toggle('lf-fullpage',_lfFullPages.includes(id));
   document.getElementById('main').classList.toggle('lf-fullpage',_lfFullPages.includes(id));
   // Fixed full-page overlays: always measure actual header stack
@@ -16705,6 +16705,10 @@ async function deactivateDriver(driverId) {
 #page-trading-desk > div[style],
 #page-broker-shippers > div[style],
 #page-broker-docs > div[style]{padding:0!important;}
+/* exec-command fullpage: clear floating topbar, remove max-width */
+.content.lf-fullpage #page-exec-command .ec-wrap{padding-top:62px;max-width:none;margin:0;}
+/* load-hunter fullpage: remove max-width centering, clear floating topbar */
+.content.lf-fullpage #page-load-hunter .lh-wrap{max-width:none;margin:0;padding-top:62px;}
 .lf-hero::before{content:'';position:absolute;inset:0;opacity:.07;border-radius:12px;}
 .lf-hero-nemt{background:linear-gradient(135deg,rgba(59,130,246,.18) 0%,rgba(59,130,246,.06) 100%);border:1px solid rgba(59,130,246,.3);}
 .lf-hero-nemt .lf-hero-icon{color:#3b82f6;}
@@ -19271,6 +19275,10 @@ function lfRenderExpertReport(segment, d) {
 .lf-roster-table tr:hover td{background:rgba(255,255,255,.025);cursor:pointer;}
 .lf-roster-link{color:var(--gold2);font-weight:700;font-size:13px;cursor:pointer;}
 .lf-roster-link:hover{text-decoration:underline;}
+.ac-input{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:7px;padding:7px 10px;font-size:12px;color:#fff;font-family:var(--ff-m);outline:none;box-sizing:border-box;}
+.ac-input:focus{border-color:rgba(167,139,250,.45);background:rgba(167,139,250,.06);}
+.ac-input::placeholder{color:rgba(255,255,255,.2);}
+.ac-input[type=time]::-webkit-calendar-picker-indicator{filter:invert(.4);}
 </style>
 
 <!-- ── Driver Roster ─────────────────────────────────────────── -->
@@ -19383,7 +19391,6 @@ function lfRenderExpertReport(segment, d) {
   </div>
 </div>
 <!-- ══ /IEBC DRIVER COMMAND CENTER ══════════════════════════════════════════ -->
-
 <script>
 // ── $1M Blueprint ──────────────────────────────────────────────────────────────
 async function initMillionBlueprint(){
@@ -21520,9 +21527,209 @@ async function initLFDriverProfile(){
     ${flags.length
       ?`<div class="dc-sec">Open Flags (${flags.length})</div>${flags.map(f=>`<div class="dc-info-row"><span class="dc-info-lbl">${f.u==='bad'?'🚨':'⚠️'} Flag</span><span class="dc-info-val" style="display:flex;align-items:center;gap:8px"><span style="color:${f.u==='bad'?'#f87171':'#f59e0b'};font-weight:600">${f.label}</span><span style="font-size:10px;padding:1px 7px;border-radius:10px;background:${f.u==='bad'?'rgba(220,38,38,.15)':'rgba(245,158,11,.1)'};color:${f.u==='bad'?'#f87171':'#f59e0b'}">${f.u==='bad'?'CRITICAL':'WARNING'}</span></span></div>`).join('')}`
       :`<div style="margin:16px 28px;padding:12px 16px;background:rgba(16,185,129,.06);border:1px solid rgba(16,185,129,.2);border-radius:8px;text-align:center;font-size:13px;color:#4ade80">✓ All compliance checks clear</div>`}
+
+    <!-- ── AGENT CARD ───────────────────────────────────────────────────── -->
+    <div class="dc-sec" style="display:flex;align-items:center;justify-content:space-between">
+      <span>🤖 Agent Card — Load Matching</span>
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;color:rgba(255,255,255,.55)">
+        <span>Hunt Enabled</span>
+        <input type="checkbox" id="ac-hunt-enabled" ${d.hunt_enabled?'checked':''} style="width:16px;height:16px;cursor:pointer;accent-color:#a78bfa">
+      </label>
+    </div>
+    <div style="padding:0 28px 8px">
+      <div style="background:rgba(167,139,250,.04);border:1px solid rgba(167,139,250,.12);border-radius:10px;padding:18px 20px">
+
+        <div style="font-size:11px;font-weight:700;letter-spacing:.08em;color:rgba(255,255,255,.35);text-transform:uppercase;margin-bottom:12px">Vehicle &amp; Cargo</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px">
+          <div>
+            <div style="font-size:10px;color:rgba(255,255,255,.35);margin-bottom:4px">Cargo Type</div>
+            <input id="ac-cargo-type" class="ac-input" value="${d.vehicle_cargo_type||''}" placeholder="cargo_van / flatbed…" style="width:100%">
+          </div>
+          <div>
+            <div style="font-size:10px;color:rgba(255,255,255,.35);margin-bottom:4px">Capacity (lbs)</div>
+            <input id="ac-capacity" class="ac-input" type="number" value="${d.vehicle_capacity_lbs||''}" placeholder="e.g. 2500" style="width:100%">
+          </div>
+          <div>
+            <div style="font-size:10px;color:rgba(255,255,255,.35);margin-bottom:4px">Max Length (ft)</div>
+            <input id="ac-max-len" class="ac-input" type="number" step="0.5" value="${d.vehicle_max_length_ft||''}" placeholder="e.g. 8.5" style="width:100%">
+          </div>
+        </div>
+
+        <div style="font-size:11px;font-weight:700;letter-spacing:.08em;color:rgba(255,255,255,.35);text-transform:uppercase;margin-bottom:12px">Rate Thresholds</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px">
+          <div>
+            <div style="font-size:10px;color:rgba(255,255,255,.35);margin-bottom:4px">Min RPM ($)</div>
+            <input id="ac-min-rpm" class="ac-input" type="number" step="0.01" value="${d.min_rpm||1.50}" style="width:100%">
+          </div>
+          <div>
+            <div style="font-size:10px;color:rgba(255,255,255,.35);margin-bottom:4px">Min Total Rate ($)</div>
+            <input id="ac-min-rate" class="ac-input" type="number" step="1" value="${d.min_rate_total||25}" style="width:100%">
+          </div>
+          <div>
+            <div style="font-size:10px;color:rgba(255,255,255,.35);margin-bottom:4px">Auto-Accept RPM ($)</div>
+            <input id="ac-auto-accept" class="ac-input" type="number" step="0.01" value="${d.auto_accept_threshold||''}" placeholder="leave blank to disable" style="width:100%">
+          </div>
+        </div>
+
+        <div style="font-size:11px;font-weight:700;letter-spacing:.08em;color:rgba(255,255,255,.35);text-transform:uppercase;margin-bottom:12px">Routing</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">
+          <div>
+            <div style="font-size:10px;color:rgba(255,255,255,.35);margin-bottom:4px">Max Deadhead (mi)</div>
+            <input id="ac-max-dh" class="ac-input" type="number" value="${d.max_deadhead_mi||50}" style="width:100%">
+          </div>
+          <div>
+            <div style="font-size:10px;color:rgba(255,255,255,.35);margin-bottom:4px">Max Trip (mi)</div>
+            <input id="ac-max-trip" class="ac-input" type="number" value="${d.max_trip_miles||300}" style="width:100%">
+          </div>
+        </div>
+        <div style="margin-bottom:16px">
+          <div style="font-size:10px;color:rgba(255,255,255,.35);margin-bottom:4px">Service Areas (one per line, format: City, ST)</div>
+          <textarea id="ac-service-areas" class="ac-input" rows="3" style="width:100%;resize:vertical">${(d.service_areas||[]).join('\n')}</textarea>
+        </div>
+
+        <div style="font-size:11px;font-weight:700;letter-spacing:.08em;color:rgba(255,255,255,.35);text-transform:uppercase;margin-bottom:12px">Preferences &amp; Availability</div>
+        <div style="margin-bottom:16px">
+          <div style="font-size:10px;color:rgba(255,255,255,.35);margin-bottom:4px">Preferred Load Types (comma-separated)</div>
+          <input id="ac-load-types" class="ac-input" value="${(d.preferred_load_types||[]).join(', ')}" placeholder="medical, courier, parcel…" style="width:100%">
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">
+          <div>
+            <div style="font-size:10px;color:rgba(255,255,255,.35);margin-bottom:4px">Available Days (comma-sep)</div>
+            <input id="ac-avail-days" class="ac-input" value="${(d.available_days||['mon','tue','wed','thu','fri','sat']).join(', ')}" style="width:100%">
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <div>
+              <div style="font-size:10px;color:rgba(255,255,255,.35);margin-bottom:4px">Start</div>
+              <input id="ac-hours-start" class="ac-input" type="time" value="${d.hours_start||'07:00'}" style="width:100%">
+            </div>
+            <div>
+              <div style="font-size:10px;color:rgba(255,255,255,.35);margin-bottom:4px">End</div>
+              <input id="ac-hours-end" class="ac-input" type="time" value="${d.hours_end||'20:00'}" style="width:100%">
+            </div>
+          </div>
+        </div>
+
+        <div style="display:flex;gap:10px;margin-top:4px">
+          <button class="iebc-run-btn" onclick="_lfSaveAgentCard('${d.id}')" style="flex:1;background:rgba(167,139,250,.15);border-color:rgba(167,139,250,.3)">💾 Save Agent Card</button>
+          <button class="iebc-run-btn" id="ac-hunt-btn" onclick="_lfHuntNow('${d.id}')" style="flex:1;background:rgba(16,185,129,.1);border-color:rgba(16,185,129,.3);color:#4ade80">🎯 Hunt Loads Now</button>
+        </div>
+        <div id="ac-msg" style="margin-top:10px;font-size:12px;text-align:center;min-height:18px"></div>
+      </div>
+
+      <!-- Matched Loads Feed -->
+      <div id="ac-loads-wrap" style="margin-top:16px">
+        <div style="font-size:11px;font-weight:700;letter-spacing:.08em;color:rgba(255,255,255,.35);text-transform:uppercase;margin-bottom:10px">
+          Matched Loads
+          ${d.last_hunted_at?`<span style="font-size:10px;font-weight:400;margin-left:8px;color:rgba(255,255,255,.25)">Last hunt: ${_dcFmtDate(d.last_hunted_at)}</span>`:''}
+          ${d.matched_loads_count?`<span style="font-size:10px;font-weight:400;margin-left:8px;color:#a78bfa">${d.matched_loads_count} total found</span>`:''}
+        </div>
+        <div id="ac-loads" style="font-size:12px;color:rgba(255,255,255,.3);padding:20px 0;text-align:center">Loading matched loads…</div>
+      </div>
+    </div>
     <div style="height:48px"></div>`;
 
   setTimeout(()=>content.querySelectorAll('.dc-bar-fill[data-w]').forEach(el=>{el.style.width=el.dataset.w+'%';}),80);
+  // Async-load matched loads for this driver
+  _lfRenderMatchedLoads(d.id);
+}
+
+// ── AGENT CARD HELPERS ────────────────────────────────────────────────────────
+
+async function _lfSaveAgentCard(driverId){
+  const msg=document.getElementById('ac-msg');
+  const val=id=>document.getElementById(id)?.value?.trim();
+  const numVal=id=>{const v=val(id);return v?parseFloat(v):null;};
+  const intVal=id=>{const v=val(id);return v?parseInt(v):null;};
+  const arrVal=id=>{const v=val(id);return v?v.split(',').map(s=>s.trim()).filter(Boolean):[];};
+  const linesVal=id=>{const v=val(id);return v?v.split('\n').map(s=>s.trim()).filter(Boolean):[];};
+
+  const payload={
+    vehicle_cargo_type:       val('ac-cargo-type')||null,
+    vehicle_capacity_lbs:     intVal('ac-capacity'),
+    vehicle_max_length_ft:    numVal('ac-max-len'),
+    min_rpm:                  numVal('ac-min-rpm'),
+    min_rate_total:           numVal('ac-min-rate'),
+    auto_accept_threshold:    numVal('ac-auto-accept'),
+    max_deadhead_mi:          intVal('ac-max-dh'),
+    max_trip_miles:           intVal('ac-max-trip'),
+    service_areas:            linesVal('ac-service-areas'),
+    preferred_load_types:     arrVal('ac-load-types'),
+    available_days:           arrVal('ac-avail-days'),
+    hours_start:              val('ac-hours-start')||'07:00',
+    hours_end:                val('ac-hours-end')||'20:00',
+    hunt_enabled:             document.getElementById('ac-hunt-enabled')?.checked||false,
+  };
+  // remove null numeric fields so PATCH doesn't overwrite with null unintentionally
+  Object.keys(payload).forEach(k=>{if(payload[k]===null)delete payload[k];});
+
+  if(msg)msg.textContent='Saving…';
+  try{
+    const r=await apiFetch(`/api/light-fleet/drivers/${driverId}`,'PATCH',payload);
+    if(r&&r.ok){
+      if(msg){msg.style.color='#4ade80';msg.textContent='✓ Agent card saved';}
+      // update local driver state
+      if(_lfSelectedDriver){Object.assign(_lfSelectedDriver.driver,payload);}
+      setTimeout(()=>{if(msg)msg.textContent='';},3000);
+    } else {
+      if(msg){msg.style.color='#f87171';msg.textContent='Save failed — check console';}
+    }
+  } catch(e){
+    if(msg){msg.style.color='#f87171';msg.textContent='Error: '+e.message;}
+  }
+}
+
+async function _lfHuntNow(driverId){
+  const btn=document.getElementById('ac-hunt-btn');
+  const msg=document.getElementById('ac-msg');
+  if(btn){btn.disabled=true;btn.textContent='⏳ Hunting…';}
+  if(msg){msg.style.color='rgba(255,255,255,.4)';msg.textContent='Scanning load boards…';}
+  try{
+    const r=await apiFetch(`/api/light-fleet/drivers/${driverId}/hunt`,'POST',{});
+    if(r&&r.ok!==false){
+      const total=r.total||0;
+      const hot=r.hot||0;
+      if(msg){msg.style.color='#4ade80';msg.textContent=`✓ Hunt complete — ${total} loads found${hot?' ('+hot+' 🔥 HOT)':''}`;}
+      // refresh matched loads panel
+      await _lfRenderMatchedLoads(driverId);
+    } else {
+      if(msg){msg.style.color='#f87171';msg.textContent='Hunt failed: '+(r?.error||'unknown error');}
+    }
+  } catch(e){
+    if(msg){msg.style.color='#f87171';msg.textContent='Hunt error: '+e.message;}
+  } finally {
+    if(btn){btn.disabled=false;btn.textContent='🎯 Hunt Loads Now';}
+  }
+}
+
+async function _lfRenderMatchedLoads(driverId){
+  const wrap=document.getElementById('ac-loads');
+  if(!wrap)return;
+  wrap.textContent='Loading…';
+  try{
+    const r=await apiFetch(`/api/light-fleet/loads/matched?driver_id=${driverId}&limit=20`,'GET');
+    const loads=(r&&r.loads)||[];
+    if(!loads.length){
+      wrap.innerHTML='<span style="color:rgba(255,255,255,.25)">No matched loads yet — run a hunt to find loads.</span>';
+      return;
+    }
+    const hotBadge=is_hot=>`<span style="font-size:9px;padding:1px 6px;border-radius:20px;background:rgba(239,68,68,.2);color:#f87171;font-weight:700;margin-left:6px">${is_hot?'🔥 HOT':''}</span>`;
+    const rows=loads.map(l=>`<tr>
+      <td>${l.source||'—'}</td>
+      <td>${l.origin_city||'—'}, ${l.origin_state||''}</td>
+      <td>${l.dest_city||'—'}, ${l.dest_state||''}</td>
+      <td>${l.miles?Number(l.miles).toFixed(0)+'mi':'—'}</td>
+      <td style="color:#4ade80;font-weight:600">$${l.rate_total?Number(l.rate_total).toFixed(0):'—'}</td>
+      <td style="color:#a78bfa;font-weight:600">$${l.rpm?Number(l.rpm).toFixed(2):'—'}/mi${l.is_hot?hotBadge(true):''}</td>
+      <td>${l.broker_name||'—'}</td>
+      <td style="color:rgba(255,255,255,.3)">${l.pickup_date||'—'}</td>
+    </tr>`).join('');
+    wrap.innerHTML=`<div style="overflow-x:auto"><table class="dc-trip-table">
+      <thead><tr><th>Board</th><th>Origin</th><th>Dest</th><th>Miles</th><th>Rate</th><th>RPM</th><th>Broker</th><th>Pickup</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table></div>`;
+  } catch(e){
+    wrap.innerHTML='<span style="color:#f87171">Error loading loads: '+e.message+'</span>';
+  }
 }
 
 // ── REPORT CARDS PAGE ─────────────────────────────────────────────────────────
@@ -21592,7 +21799,6 @@ async function initLFReports(){
 function _dcRenderDrivers(){ _dcRenderRoster(); }
 function _dcAnimateBars(el){ el.querySelectorAll('.dc-bar-fill[data-w]').forEach(b=>{b.style.width=b.dataset.w+'%';}); }
 // ── END LIGHT FLEET DRIVER SYSTEM ─────────────────────────────────────────────
-
 </script>
 
 </html>
