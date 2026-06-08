@@ -98,14 +98,14 @@ body{font-family:var(--ff-b);color:var(--text);background:var(--off);display:fle
 #main{flex:1;overflow:hidden;display:flex;flex-direction:column;min-width:0;position:relative;}
 
 .topbar{
-  height:60px;flex-shrink:0;
+  height:42px;flex-shrink:0;
   background:var(--white);
   border-bottom:1px solid var(--border);
   box-shadow:0 1px 12px rgba(11,37,69,.06);
-  display:flex;align-items:center;padding:0 28px;gap:14px;
+  display:flex;align-items:center;padding:0 20px;gap:14px;
 }
 .tb-title{
-  font-family:var(--ff-h);font-size:22px;font-weight:800;
+  font-family:var(--ff-h);font-size:15px;font-weight:800;
   color:var(--navy);flex:1;
 }
 .tb-date{font-family:var(--ff-m);font-size:11px;color:var(--muted);letter-spacing:.5px;}
@@ -886,27 +886,12 @@ select.form-input option{background:var(--surface);}
     <div class="tb-title" id="page-title">Dashboard</div>
     <div class="tb-date" id="topbar-date"></div>
     <div class="tb-live">Live</div>
-    <!-- AI Agent Notification Bell -->
-    <div class="notif-bell" id="notif-bell" onclick="toggleNotifPanel()" title="AI Agent Activity">
-      🤖
-      <span class="notif-count" id="notif-count">0</span>
+    <!-- Hidden globals kept for JS hooks (status dot / unread counters) -->
+    <div id="bond-global-chip" onclick="nav('bond')" style="display:none">
+      <span id="bond-global-dot"></span>
+      <span id="bond-global-unread" style="display:none">0</span>
     </div>
-    <!-- Bond global status chip (click to open Bond Office) -->
-    <div id="bond-global-chip" onclick="nav('bond')" title="James Bond · External Channel" style="
-      display:flex;align-items:center;gap:5px;
-      background:rgba(11,37,69,.8);border:1px solid rgba(228,168,48,.3);
-      border-radius:20px;padding:4px 10px;cursor:pointer;
-      font-family:var(--ff-m);font-size:10px;color:rgba(228,168,48,.8);
-      letter-spacing:.5px;text-transform:uppercase;
-      transition:border-color .2s,background .2s;user-select:none;
-    " onmouseover="this.style.background='rgba(228,168,48,.15)'" onmouseout="this.style.background='rgba(11,37,69,.8)'">
-      <span style="font-size:12px">🕵️</span>
-      <span>JB</span>
-      <span id="bond-global-dot" style="width:6px;height:6px;border-radius:50%;background:#6b7280;transition:background .4s;flex-shrink:0"></span>
-      <span id="bond-global-unread" style="display:none;background:#dc2626;color:#fff;font-size:9px;font-weight:800;border-radius:10px;padding:1px 5px;margin-left:2px">0</span>
-    </div>
-    <button class="btn-sync" onclick="refreshAll()">↻ Sync</button>
-    <button class="btn-sync" style="background:#1a1a2e;font-size:11px;padding:6px 10px" onclick="const b=document.getElementById('diag-banner');b.style.display=b.style.display==='none'?'block':'none'">⚙ Diag</button>
+    <span id="notif-count" style="display:none">0</span>
   </div>
 
   <!-- Notification Panel (outside topbar so it overlays content) -->
@@ -16627,7 +16612,7 @@ async function deactivateDriver(driverId) {
 #main.lf-fullpage .topbar .tb-live{color:rgba(74,222,128,.9);}
 #main.lf-fullpage .topbar .tb-live::before{background:rgba(74,222,128,.9);}
 /* IEBC banner + intel + kpis */
-.content.lf-fullpage .iebc-banner{padding-top:62px;flex-shrink:0;}
+.content.lf-fullpage .iebc-banner{padding-top:48px;flex-shrink:0;}
 .content.lf-fullpage .iebc-intel-row{margin:0;padding:0 32px;flex-shrink:0;}
 .content.lf-fullpage .iebc-kpis{margin:0;margin-top:20px;padding:0 32px;flex-shrink:0;}
 /* Driver roster horizontal strip */
@@ -16707,11 +16692,11 @@ async function deactivateDriver(driverId) {
 #page-broker-shippers > div[style],
 #page-broker-docs > div[style]{padding:0!important;}
 /* exec-command fullpage: clear floating topbar, remove max-width */
-.content.lf-fullpage #page-exec-command .ec-wrap{padding-top:62px;max-width:none;margin:0;}
+.content.lf-fullpage #page-exec-command .ec-wrap{padding-top:54px;max-width:none;margin:0;}
 /* load-hunter fullpage: remove max-width centering, clear floating topbar */
-.content.lf-fullpage #page-load-hunter .lh-wrap{max-width:none;margin:0;padding-top:62px;}
+.content.lf-fullpage #page-load-hunter .lh-wrap{max-width:none;margin:0;padding-top:54px;}
 /* million blueprint + other card-hero pages: clear topbar and remove max-width centering */
-.content.lf-fullpage #page-lf-million .mil-wrap{padding-top:70px;max-width:none;margin:0;}
+.content.lf-fullpage #page-lf-million .mil-wrap{padding-top:54px;max-width:none;margin:0;}
 .lf-hero::before{content:'';position:absolute;inset:0;opacity:.07;border-radius:12px;}
 .lf-hero-nemt{background:linear-gradient(135deg,rgba(59,130,246,.18) 0%,rgba(59,130,246,.06) 100%);border:1px solid rgba(59,130,246,.3);}
 .lf-hero-nemt .lf-hero-icon{color:#3b82f6;}
@@ -19212,7 +19197,7 @@ function lfRenderExpertReport(segment, d) {
 <!-- ══ LIGHT FLEET — DRIVERS · PROFILE · REPORT CARDS ══════════════════════ -->
 <style>
 /* ── Shared dark LF page tokens ── */
-.lf-dc-banner{background:linear-gradient(135deg,#080f1f 0%,#0e1f3a 50%,#0a1628 100%);padding:62px 32px 20px;flex-shrink:0;border-bottom:1px solid rgba(255,255,255,.07);}
+.lf-dc-banner{background:linear-gradient(135deg,#080f1f 0%,#0e1f3a 50%,#0a1628 100%);padding:48px 32px 20px;flex-shrink:0;border-bottom:1px solid rgba(255,255,255,.07);}
 .lf-dc-title{font-family:var(--ff-h);font-size:26px;font-weight:900;color:#fff;line-height:1.15;}
 .lf-dc-eyebrow{font-family:var(--ff-m);font-size:10px;color:var(--gold2);letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;}
 .lf-dc-score-chip{display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:10px 18px;}
