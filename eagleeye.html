@@ -8457,7 +8457,7 @@ async function loadTriggerStatus() {
   <div style="border-bottom:1px solid var(--border)">
     <div style="display:flex;align-items:center;gap:8px;padding:7px 16px;border-bottom:1px solid var(--border)">
       <span style="font-size:11px;font-weight:600;color:var(--muted);width:46px">From</span>
-      <select id="mail-compose-from" style="flex:1;border:none;outline:none;font-size:12px;background:transparent">
+      <select id="mail-compose-from" onchange="mailUpdateComposeWarn()" style="flex:1;border:none;outline:none;font-size:12px;background:transparent">
         <option value="loads">loads@3lakeslogistics.com</option>
         <option value="sales">sales@3lakeslogistics.com</option>
         <option value="info">info@3lakeslogistics.com</option>
@@ -8479,8 +8479,10 @@ async function loadTriggerStatus() {
     </div>
   </div>
   <textarea id="mail-compose-body" placeholder="Write your message…" style="flex:1;min-height:150px;border:none;outline:none;padding:12px 16px;font-size:13px;resize:none;font-family:inherit;background:transparent"></textarea>
-  <div style="padding:10px 16px;border-top:1px solid var(--border);display:flex;gap:8px;align-items:center">
+  <div id="mail-compose-warn" style="display:none;margin:0 16px 6px;padding:8px 11px;border-radius:6px;font-size:11.5px;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.4);color:#b45309"></div>
+  <div style="padding:10px 16px;border-top:1px solid var(--border);display:flex;gap:8px;align-items:center;flex-wrap:wrap">
     <button onclick="mailSend()" id="mail-send-btn" class="btn-navy" style="font-size:13px;padding:7px 18px">Send</button>
+    <button onclick="mailMailtoFallback()" id="mail-mailto-btn" style="display:none;padding:6px 14px;background:none;border:1px solid rgba(245,158,11,.6);border-radius:5px;cursor:pointer;font-size:12px;color:#b45309">✉ Open in mail app</button>
     <span id="mail-send-status" style="font-size:12px;color:var(--muted)"></span>
     <button onclick="mailCloseCompose()" style="margin-left:auto;padding:6px 12px;background:none;border:1px solid var(--border);border-radius:5px;cursor:pointer;font-size:12px;color:var(--muted)">Discard</button>
   </div>
@@ -8494,10 +8496,51 @@ let _mailCurrent='all';
 let _mailEmails=[];
 let _mailSelectedId=null;
 let _mailboxStatuses=[];
+let _mailConfig=null;
 const _MB_COLORS={loads:'#2563eb',sales:'#059669',info:'#7c3aed',mark:'#dc2626',cece:'#d97706'};
 const _MB_ICONS={loads:'📥',sales:'📊',info:'ℹ️',mark:'👤',cece:'👤'};
 
-window.mailInit=function(){mailLoadMailboxes();mailLoadInbox();};
+window.mailInit=function(){mailLoadMailboxes();mailLoadInbox();mailLoadConfig();};
+
+async function mailLoadConfig(){
+  try{
+    const r=await apiFetch('/api/mailboxes/config');
+    if(r.ok)_mailConfig=await r.json();
+  }catch(e){_mailConfig=null;}
+}
+function _mailSendReady(key){
+  if(!_mailConfig||!Array.isArray(_mailConfig.mailboxes))return null;
+  const m=_mailConfig.mailboxes.find(x=>x.key===key);
+  return m?!!m.send_ready:null;
+}
+function mailUpdateComposeWarn(){
+  const warn=document.getElementById('mail-compose-warn');
+  const mailtoBtn=document.getElementById('mail-mailto-btn');
+  if(!warn)return;
+  const key=document.getElementById('mail-compose-from').value;
+  const ready=_mailSendReady(key);
+  if(ready===false){
+    warn.style.display='block';
+    warn.innerHTML=`⚠️ <strong>${esc(key)}@3lakeslogistics.com</strong> isn't set up for sending yet. `
+      +`Ask your admin to set the <code>EMAIL_${key.toUpperCase()}_PASSWORD</code> environment variable, `
+      +`or use the mail-app button to compose in your local client.`;
+    mailtoBtn.style.display='';
+  }else{
+    warn.style.display='none';
+    mailtoBtn.style.display='none';
+  }
+}
+function mailMailtoFallback(){
+  const to=document.getElementById('mail-compose-to').value.trim();
+  const cc=document.getElementById('mail-compose-cc').value.trim();
+  const subject=document.getElementById('mail-compose-subject').value.trim();
+  const bodyText=document.getElementById('mail-compose-body').value;
+  if(!to){document.getElementById('mail-send-status').textContent='Add a recipient first';return;}
+  let url='mailto:'+encodeURIComponent(to)+'?subject='+encodeURIComponent(subject)
+    +'&body='+encodeURIComponent(bodyText);
+  if(cc)url+='&cc='+encodeURIComponent(cc);
+  window.location.href=url;
+}
 
 async function mailLoadMailboxes(){
   const listEl=document.getElementById('mail-mb-list');
@@ -8670,6 +8713,7 @@ function mailCompose(){
   document.getElementById('mail-send-btn').textContent='Send';
   const sel=document.getElementById('mail-compose-from');
   if(_mailCurrent!=='all')sel.value=_mailCurrent;
+  mailUpdateComposeWarn();
   const modal=document.getElementById('mail-compose-modal');
   modal.style.display='flex';
   setTimeout(()=>document.getElementById('mail-compose-to').focus(),60);
@@ -8706,11 +8750,18 @@ async function mailSend(){
     if(cc)payload.cc=[cc];
     if(replyId)payload.in_reply_to_db_id=replyId;
     const r=await apiFetch('/api/mailboxes/compose','POST',payload);
-    const d=await r.json();
-    if(d.sent){
+    let d={};try{d=await r.json();}catch(_){}
+    if(r.ok&&d.sent){
       statusEl.style.color='var(--green)';statusEl.textContent='✅ Sent';
       setTimeout(()=>{mailCloseCompose();mailLoadInbox();},1500);
-    }else{statusEl.style.color='var(--red)';statusEl.textContent=d.error||d.detail||'Send failed';}
+    }else{
+      const msg=d.detail||d.error||d.message||(r.ok?'Send failed':`Server error ${r.status}`);
+      statusEl.style.color='var(--red)';statusEl.textContent=msg;
+      // Show mailto fallback if it looks like a credentials/config problem
+      if(/password|auth|credential|not configured/i.test(msg)){
+        document.getElementById('mail-mailto-btn').style.display='';
+      }
+    }
   }catch(e){statusEl.style.color='var(--red)';statusEl.textContent=e.message;}
   finally{btn.disabled=false;btn.textContent='Send';}
 }

@@ -240,3 +240,25 @@ async def reply_to_email(email_id: str, body: dict, _: str = Depends(require_bea
     except Exception as exc:
         log.error("reply_to_email failed: %s", exc)
         raise HTTPException(502, f"Reply failed: {exc}")
+
+
+# ── Config / send-readiness ───────────────────────────────────────────────────
+
+@router.get("/mailboxes/config")
+def mailbox_config(_: str = Depends(require_bearer)) -> dict:
+    """Report which mailboxes have SMTP credentials configured (no secrets returned)."""
+    from ..settings import get_settings
+    from ..email.smtp_sender import MAILBOX_ADDRESSES, SMTP_HOST, SMTP_PORT
+    s = get_settings()
+    mailboxes = []
+    for key, address in MAILBOX_ADDRESSES.items():
+        configured = bool(getattr(s, f"email_{key}_password", ""))
+        mailboxes.append({"key": key, "address": address, "send_ready": configured})
+    any_ready = any(m["send_ready"] for m in mailboxes)
+    return {
+        "ok": True,
+        "smtp_host": SMTP_HOST,
+        "smtp_port": SMTP_PORT,
+        "any_send_ready": any_ready,
+        "mailboxes": mailboxes,
+    }
