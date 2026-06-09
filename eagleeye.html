@@ -16626,10 +16626,34 @@ async function deactivateDriver(driverId) {
 /* Full-page layout — Mark/Bond Office model: a fixed full-screen panel that
    fills everything below the topbar, edge-to-edge dark, with the page's own
    banner/KPI strip pinned and content scrolling inside. No white margins. */
-.content.lf-fullpage{padding:0;background:#080f1f;}
+/* ════════════════════════════════════════════════════════════════
+   STANDARD PALETTE — Black / Gold / White (dark base)
+   Scoped variable overrides: every var(--navy)/--surface/--text etc.
+   inside a Light Fleet page resolves to the black-gold-white dark scheme.
+   ════════════════════════════════════════════════════════════════ */
+#page-lf-nemt, #page-lf-medical, #page-lf-executive, #page-lf-courier,
+#page-lf-gig, #page-lf-drivers, #page-lf-driver, #page-lf-reports,
+#page-lf-bizdev, #page-lf-million, #page-exec-command, #page-load-hunter,
+#page-broker-division, #page-broker-shippers, #page-broker-docs, #page-trading-desk {
+  --navy:#FFFFFF; --navy2:#F0F0F4; --navy3:#E4E4EC;   /* "navy" headings → white on black */
+  --gold:#F5C842; --gold2:#E4A830; --gold3:#F5C842;
+  --surface:#15151D;          /* cards / panels */
+  --card:#15151D;
+  --bg:#0A0A0F;               /* page background */
+  --off:#101018;              /* subtle raised background */
+  --slate:#1C1C26;            /* table header / chips */
+  --border:rgba(255,255,255,.09);
+  --text:#FFFFFF;
+  --muted:rgba(255,255,255,.5);
+  --shadow:0 2px 20px rgba(0,0,0,.4);
+  --shadow-lg:0 8px 48px rgba(0,0,0,.55);
+  color-scheme:dark;
+}
+
+.content.lf-fullpage{padding:0;background:#0A0A0F;}
 .content.lf-fullpage .page.active{
   position:fixed;top:42px;left:var(--sidebar-w);right:0;bottom:0;z-index:15;
-  display:flex;flex-direction:column;overflow:hidden;background:#080f1f;
+  display:flex;flex-direction:column;overflow:hidden;background:#0A0A0F;
   animation:none;
 }
 @media(max-width:768px){.content.lf-fullpage .page.active{top:54px;left:0;}}
@@ -18444,30 +18468,42 @@ function lfRenderExpertReport(segment, d) {
 .bd-prospect-table thead th{background:var(--off);padding:10px 16px;text-align:left;font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--border);}
 .bd-prospect-table tbody td{padding:11px 16px;border-bottom:1px solid var(--border);vertical-align:middle;}
 .bd-prospect-table tbody tr:last-child td{border-bottom:none;}
-.bd-prospect-table tbody tr:hover{background:rgba(0,0,0,.02);}
+.bd-prospect-table tbody tr:hover td{background:rgba(255,255,255,.04);}
+.bd-prospect-table tbody td{color:rgba(255,255,255,.85);}
+.bd-prospect-table thead th{position:sticky;top:0;z-index:2;}
 .bd-status-badge{display:inline-block;font-size:10px;font-weight:700;padding:3px 9px;border-radius:10px;text-transform:uppercase;letter-spacing:.5px;}
-.bd-status-prospecting{background:#f1f5f9;color:#475569;}
-.bd-status-contacted{background:#fef3c7;color:#92400e;}
-.bd-status-proposal{background:#dbeafe;color:#1e40af;}
-.bd-status-negotiating{background:#ede9fe;color:#5b21b6;}
-.bd-status-contract{background:#d1fae5;color:#065f46;}
-.bd-status-active{background:#dcfce7;color:#15803d;}
-.bd-status-lost{background:#fee2e2;color:#991b1b;}
-.bd-add-form{padding:16px 20px;border-top:1px solid var(--border);display:none;}
+.bd-status-prospecting{background:rgba(148,163,184,.18);color:#cbd5e1;}
+.bd-status-contacted{background:rgba(245,158,11,.18);color:#fbbf24;}
+.bd-status-proposal{background:rgba(59,130,246,.18);color:#60a5fa;}
+.bd-status-negotiating{background:rgba(139,92,246,.2);color:#a78bfa;}
+.bd-status-contract{background:rgba(34,197,94,.18);color:#4ade80;}
+.bd-status-active{background:rgba(34,197,94,.22);color:#4ade80;}
+.bd-status-lost{background:rgba(239,68,68,.18);color:#f87171;}
+.bd-add-form{padding:16px 20px;border-top:1px solid var(--border);display:none;background:rgba(255,255,255,.02);}
 .bd-add-form.open{display:block;}
+/* Dark form inputs for Add Lead */
+.bd-form-input,.bd-form-select,.bd-form-textarea{width:100%;padding:8px 11px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14);border-radius:7px;color:#fff;font-size:13px;outline:none;box-sizing:border-box;font-family:var(--ff-b);}
+.bd-form-input::placeholder,.bd-form-textarea::placeholder{color:rgba(255,255,255,.3);}
+.bd-form-input:focus,.bd-form-select:focus,.bd-form-textarea:focus{border-color:var(--gold);background:rgba(255,255,255,.1);}
+.bd-form-select option{background:#15151D;color:#fff;}
+.bd-form-textarea{resize:vertical;min-height:70px;}
+.bd-form-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;margin-bottom:12px;}
+.bd-form-actions{display:flex;gap:8px;justify-content:flex-end;}
+.bd-form-title{font-size:12px;font-weight:700;color:rgba(255,255,255,.55);text-transform:uppercase;letter-spacing:1px;padding:4px 0 12px;}
+.bd-empty{text-align:center;padding:32px 20px;color:rgba(255,255,255,.4);font-size:13px;}
 </style>
 <div class="lf-wrap bd-wrap">
 
   <!-- Page Header -->
-  <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:24px;gap:12px;flex-wrap:wrap;">
+  <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px;gap:12px;flex-wrap:wrap;padding-bottom:16px;border-bottom:1px solid var(--border);">
     <div>
-      <div style="font-family:var(--ff-m);font-size:10px;font-weight:700;letter-spacing:2px;color:#8b5cf6;text-transform:uppercase;margin-bottom:6px;">IEBC · NODE 300-302 · LIGHT FLEET DIVISION</div>
-      <h2 style="font-family:var(--ff-h);font-size:26px;font-weight:900;color:var(--navy);margin:0;">Business Development Team</h2>
-      <p style="font-size:13px;color:var(--muted);margin:6px 0 0;">Three specialized account executives targeting healthcare contracts, enterprise B2B, and platform partnerships.</p>
+      <div style="font-family:var(--ff-m);font-size:10px;font-weight:700;letter-spacing:2px;color:var(--gold);text-transform:uppercase;margin-bottom:6px;">IEBC · NODE 300-302 · LIGHT FLEET DIVISION</div>
+      <h2 style="font-family:var(--ff-h);font-size:24px;font-weight:900;color:#fff;margin:0;">Business Development Desk</h2>
+      <p style="font-size:13px;color:rgba(255,255,255,.5);margin:5px 0 0;">Three specialized account executives targeting healthcare contracts, enterprise B2B, and platform partnerships.</p>
     </div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;">
-      <button class="btn-out" onclick="loadLfBizDevProspects()">↻ Refresh</button>
-      <button class="btn-gold" onclick="openBdAddProspect()">+ Add Prospect</button>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+      <button class="lf-btn-ghost" onclick="loadLfBizDevProspects()">↻ Refresh</button>
+      <button class="lf-btn" onclick="openBdAddProspect()">+ Add Lead</button>
     </div>
   </div>
 
@@ -18481,28 +18517,28 @@ function lfRenderExpertReport(segment, d) {
         <div class="bd-rep-info">
           <div class="bd-rep-name">Marcus Webb</div>
           <div class="bd-rep-title">NEMT &amp; Healthcare Account Executive<br>Medical Transport · Dialysis · VA Facilities</div>
-          <div class="bd-rep-node" style="background:rgba(59,130,246,.1);color:#1d4ed8;">NODE 300 · HEALTHCARE</div>
+          <div class="bd-rep-node" style="background:rgba(59,130,246,.15);color:#60a5fa;">NODE 300 · HEALTHCARE</div>
         </div>
       </div>
       <div class="bd-rep-body">
         <div class="bd-rep-sector">Target Sectors</div>
         <div class="bd-rep-targets">
-          <span class="bd-rep-target-chip" style="background:#dbeafe;color:#1e40af;">Hospitals</span>
-          <span class="bd-rep-target-chip" style="background:#dbeafe;color:#1e40af;">Dialysis Centers</span>
-          <span class="bd-rep-target-chip" style="background:#dbeafe;color:#1e40af;">VA Facilities</span>
-          <span class="bd-rep-target-chip" style="background:#dbeafe;color:#1e40af;">Nursing Homes</span>
-          <span class="bd-rep-target-chip" style="background:#dbeafe;color:#1e40af;">Senior Living</span>
-          <span class="bd-rep-target-chip" style="background:#dbeafe;color:#1e40af;">Rehab Centers</span>
+          <span class="bd-rep-target-chip" style="background:rgba(59,130,246,.15);color:#60a5fa;">Hospitals</span>
+          <span class="bd-rep-target-chip" style="background:rgba(59,130,246,.15);color:#60a5fa;">Dialysis Centers</span>
+          <span class="bd-rep-target-chip" style="background:rgba(59,130,246,.15);color:#60a5fa;">VA Facilities</span>
+          <span class="bd-rep-target-chip" style="background:rgba(59,130,246,.15);color:#60a5fa;">Nursing Homes</span>
+          <span class="bd-rep-target-chip" style="background:rgba(59,130,246,.15);color:#60a5fa;">Senior Living</span>
+          <span class="bd-rep-target-chip" style="background:rgba(59,130,246,.15);color:#60a5fa;">Rehab Centers</span>
         </div>
         <div class="bd-rep-metrics">
           <div class="bd-rep-metric"><div class="bd-rep-metric-val" id="bd-marcus-prospects">—</div><div class="bd-rep-metric-lbl">Prospects</div></div>
           <div class="bd-rep-metric"><div class="bd-rep-metric-val" id="bd-marcus-active">—</div><div class="bd-rep-metric-lbl">Active Deals</div></div>
           <div class="bd-rep-metric"><div class="bd-rep-metric-val" id="bd-marcus-value">—</div><div class="bd-rep-metric-lbl">Pipeline $</div></div>
         </div>
-        <div style="font-size:12px;color:var(--muted);margin-bottom:12px;font-style:italic;">"We provide HIPAA-aware dispatch, ADA vehicle options, and same-day scheduling for recurring medical transport — no monthly fee, 10% per completed trip."</div>
+        <div style="font-size:12px;color:rgba(255,255,255,.5);margin-bottom:12px;font-style:italic;">"We provide HIPAA-aware dispatch, ADA vehicle options, and same-day scheduling for recurring medical transport — no monthly fee, 10% per completed trip."</div>
         <div class="bd-rep-actions">
           <button class="btn-out" style="font-size:11px;padding:5px 12px;" onclick="openBdAddProspect('healthcare','marcus_webb')">+ Add Lead</button>
-          <button style="font-size:11px;padding:5px 12px;background:#dbeafe;color:#1e40af;border:none;border-radius:6px;cursor:pointer;font-weight:600;" onclick="filterBdSector('healthcare')">View Pipeline →</button>
+          <button class="lf-btn" style="font-size:11px;padding:5px 12px;" onclick="filterBdSector('healthcare')">View Pipeline →</button>
         </div>
       </div>
     </div>
@@ -18514,28 +18550,28 @@ function lfRenderExpertReport(segment, d) {
         <div class="bd-rep-info">
           <div class="bd-rep-name">Jordan Vale</div>
           <div class="bd-rep-title">Enterprise &amp; B2B Account Executive<br>Corporate Courier · Executive Transport · Same-Day</div>
-          <div class="bd-rep-node" style="background:rgba(99,102,241,.1);color:#4338ca;">NODE 301 · ENTERPRISE</div>
+          <div class="bd-rep-node" style="background:rgba(99,102,241,.15);color:#a5b4fc;">NODE 301 · ENTERPRISE</div>
         </div>
       </div>
       <div class="bd-rep-body">
         <div class="bd-rep-sector">Target Sectors</div>
         <div class="bd-rep-targets">
-          <span class="bd-rep-target-chip" style="background:#ede9fe;color:#5b21b6;">Law Firms</span>
-          <span class="bd-rep-target-chip" style="background:#ede9fe;color:#5b21b6;">Car Dealerships</span>
-          <span class="bd-rep-target-chip" style="background:#ede9fe;color:#5b21b6;">Hotels</span>
-          <span class="bd-rep-target-chip" style="background:#ede9fe;color:#5b21b6;">Restaurants</span>
-          <span class="bd-rep-target-chip" style="background:#ede9fe;color:#5b21b6;">Corporations</span>
-          <span class="bd-rep-target-chip" style="background:#ede9fe;color:#5b21b6;">Real Estate</span>
+          <span class="bd-rep-target-chip" style="background:rgba(139,92,246,.18);color:#a78bfa;">Law Firms</span>
+          <span class="bd-rep-target-chip" style="background:rgba(139,92,246,.18);color:#a78bfa;">Car Dealerships</span>
+          <span class="bd-rep-target-chip" style="background:rgba(139,92,246,.18);color:#a78bfa;">Hotels</span>
+          <span class="bd-rep-target-chip" style="background:rgba(139,92,246,.18);color:#a78bfa;">Restaurants</span>
+          <span class="bd-rep-target-chip" style="background:rgba(139,92,246,.18);color:#a78bfa;">Corporations</span>
+          <span class="bd-rep-target-chip" style="background:rgba(139,92,246,.18);color:#a78bfa;">Real Estate</span>
         </div>
         <div class="bd-rep-metrics">
           <div class="bd-rep-metric"><div class="bd-rep-metric-val" id="bd-jordan-prospects">—</div><div class="bd-rep-metric-lbl">Prospects</div></div>
           <div class="bd-rep-metric"><div class="bd-rep-metric-val" id="bd-jordan-active">—</div><div class="bd-rep-metric-lbl">Active Deals</div></div>
           <div class="bd-rep-metric"><div class="bd-rep-metric-val" id="bd-jordan-value">—</div><div class="bd-rep-metric-lbl">Pipeline $</div></div>
         </div>
-        <div style="font-size:12px;color:var(--muted);margin-bottom:12px;font-style:italic;">"Reliable same-day courier and executive car service with real-time tracking, dedicated dispatch, and flat 10% fee — no contracts, scale up or down anytime."</div>
+        <div style="font-size:12px;color:rgba(255,255,255,.5);margin-bottom:12px;font-style:italic;">"Reliable same-day courier and executive car service with real-time tracking, dedicated dispatch, and flat 10% fee — no contracts, scale up or down anytime."</div>
         <div class="bd-rep-actions">
           <button class="btn-out" style="font-size:11px;padding:5px 12px;" onclick="openBdAddProspect('enterprise','jordan_vale')">+ Add Lead</button>
-          <button style="font-size:11px;padding:5px 12px;background:#ede9fe;color:#5b21b6;border:none;border-radius:6px;cursor:pointer;font-weight:600;" onclick="filterBdSector('enterprise')">View Pipeline →</button>
+          <button class="lf-btn" style="font-size:11px;padding:5px 12px;" onclick="filterBdSector('enterprise')">View Pipeline →</button>
         </div>
       </div>
     </div>
@@ -18547,28 +18583,28 @@ function lfRenderExpertReport(segment, d) {
         <div class="bd-rep-info">
           <div class="bd-rep-name">Priya Santos</div>
           <div class="bd-rep-title">Platform Partnerships Director<br>Gig Networks · Delivery Platforms · Driver Supply</div>
-          <div class="bd-rep-node" style="background:rgba(34,197,94,.1);color:#15803d;">NODE 302 · PLATFORMS</div>
+          <div class="bd-rep-node" style="background:rgba(34,197,94,.15);color:#4ade80;">NODE 302 · PLATFORMS</div>
         </div>
       </div>
       <div class="bd-rep-body">
         <div class="bd-rep-sector">Target Platforms</div>
         <div class="bd-rep-targets">
-          <span class="bd-rep-target-chip" style="background:#dcfce7;color:#166534;">Curri</span>
-          <span class="bd-rep-target-chip" style="background:#dcfce7;color:#166534;">Roadie</span>
-          <span class="bd-rep-target-chip" style="background:#dcfce7;color:#166534;">Amazon Flex</span>
-          <span class="bd-rep-target-chip" style="background:#dcfce7;color:#166534;">DoorDash</span>
-          <span class="bd-rep-target-chip" style="background:#dcfce7;color:#166534;">Instacart</span>
-          <span class="bd-rep-target-chip" style="background:#dcfce7;color:#166534;">GoShare</span>
+          <span class="bd-rep-target-chip" style="background:rgba(34,197,94,.15);color:#4ade80;">Curri</span>
+          <span class="bd-rep-target-chip" style="background:rgba(34,197,94,.15);color:#4ade80;">Roadie</span>
+          <span class="bd-rep-target-chip" style="background:rgba(34,197,94,.15);color:#4ade80;">Amazon Flex</span>
+          <span class="bd-rep-target-chip" style="background:rgba(34,197,94,.15);color:#4ade80;">DoorDash</span>
+          <span class="bd-rep-target-chip" style="background:rgba(34,197,94,.15);color:#4ade80;">Instacart</span>
+          <span class="bd-rep-target-chip" style="background:rgba(34,197,94,.15);color:#4ade80;">GoShare</span>
         </div>
         <div class="bd-rep-metrics">
           <div class="bd-rep-metric"><div class="bd-rep-metric-val" id="bd-priya-prospects">—</div><div class="bd-rep-metric-lbl">Prospects</div></div>
           <div class="bd-rep-metric"><div class="bd-rep-metric-val" id="bd-priya-active">—</div><div class="bd-rep-metric-lbl">Active Deals</div></div>
           <div class="bd-rep-metric"><div class="bd-rep-metric-val" id="bd-priya-value">—</div><div class="bd-rep-metric-lbl">Pipeline $</div></div>
         </div>
-        <div style="font-size:12px;color:var(--muted);margin-bottom:12px;font-style:italic;">"Our pre-vetted, insured driver network supplements your last-mile capacity on demand — bulk driver supply agreements, volume pricing, white-label dispatch available."</div>
+        <div style="font-size:12px;color:rgba(255,255,255,.5);margin-bottom:12px;font-style:italic;">"Our pre-vetted, insured driver network supplements your last-mile capacity on demand — bulk driver supply agreements, volume pricing, white-label dispatch available."</div>
         <div class="bd-rep-actions">
           <button class="btn-out" style="font-size:11px;padding:5px 12px;" onclick="openBdAddProspect('platform','priya_santos')">+ Add Lead</button>
-          <button style="font-size:11px;padding:5px 12px;background:#dcfce7;color:#166534;border:none;border-radius:6px;cursor:pointer;font-weight:600;" onclick="filterBdSector('platform')">View Pipeline →</button>
+          <button class="lf-btn" style="font-size:11px;padding:5px 12px;" onclick="filterBdSector('platform')">View Pipeline →</button>
         </div>
       </div>
     </div>
@@ -18585,7 +18621,7 @@ function lfRenderExpertReport(segment, d) {
         <button class="bd-sector-tab" onclick="filterBdSector('enterprise')" id="bd-tab-enterprise">🏢 Enterprise</button>
         <button class="bd-sector-tab" onclick="filterBdSector('platform')" id="bd-tab-platform">🔗 Platforms</button>
       </div>
-      <input type="text" id="bd-search" placeholder="🔍 Search…" oninput="renderBdProspects()" style="padding:6px 12px;border:1px solid var(--border);border-radius:6px;font-size:12px;width:180px;background:var(--surface);margin-left:auto;">
+      <input type="text" id="bd-search" placeholder="🔍 Search…" oninput="renderBdProspects()" class="bd-form-input" style="width:200px;margin-left:auto;padding:6px 12px;">
     </div>
 
     <!-- KPIs -->
@@ -18613,54 +18649,54 @@ function lfRenderExpertReport(segment, d) {
           </tr>
         </thead>
         <tbody id="bd-prospect-tbody">
-          <tr><td colspan="8" style="padding:40px;text-align:center;color:var(--muted);">No prospects yet — add your first target above.</td></tr>
+          <tr><td colspan="8" class="bd-empty">No prospects yet — click <strong style="color:var(--gold)">+ Add Lead</strong> to start building your pipeline.</td></tr>
         </tbody>
       </table>
     </div>
 
-    <!-- Add Prospect Form -->
+    <!-- Add Lead Form -->
     <div class="bd-add-form" id="bd-add-form">
-      <div style="font-weight:700;font-size:14px;margin-bottom:14px;color:var(--navy);">Add New Prospect</div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;margin-bottom:12px;">
-        <div>
-          <label style="font-size:11px;font-weight:600;color:var(--muted);display:block;margin-bottom:3px;">COMPANY NAME *</label>
-          <input id="bd-new-company" type="text" placeholder="e.g. DaVita Dialysis" style="width:100%;padding:7px;border:1px solid var(--border);border-radius:6px;font-size:13px;box-sizing:border-box;">
+      <div class="bd-form-title">Add New Lead</div>
+      <div class="bd-form-grid">
+        <div class="fg">
+          <label class="fl" style="color:rgba(255,255,255,.5)">Company Name *</label>
+          <input id="bd-new-company" type="text" placeholder="e.g. DaVita Dialysis" class="bd-form-input">
         </div>
-        <div>
-          <label style="font-size:11px;font-weight:600;color:var(--muted);display:block;margin-bottom:3px;">CONTACT NAME</label>
-          <input id="bd-new-contact" type="text" placeholder="e.g. Sarah Johnson" style="width:100%;padding:7px;border:1px solid var(--border);border-radius:6px;font-size:13px;box-sizing:border-box;">
+        <div class="fg">
+          <label class="fl" style="color:rgba(255,255,255,.5)">Contact Name</label>
+          <input id="bd-new-contact" type="text" placeholder="e.g. Sarah Johnson" class="bd-form-input">
         </div>
-        <div>
-          <label style="font-size:11px;font-weight:600;color:var(--muted);display:block;margin-bottom:3px;">PHONE</label>
-          <input id="bd-new-phone" type="text" placeholder="555-000-0000" style="width:100%;padding:7px;border:1px solid var(--border);border-radius:6px;font-size:13px;box-sizing:border-box;">
+        <div class="fg">
+          <label class="fl" style="color:rgba(255,255,255,.5)">Phone</label>
+          <input id="bd-new-phone" type="text" placeholder="555-000-0000" class="bd-form-input">
         </div>
-        <div>
-          <label style="font-size:11px;font-weight:600;color:var(--muted);display:block;margin-bottom:3px;">EMAIL</label>
-          <input id="bd-new-email" type="email" placeholder="contact@company.com" style="width:100%;padding:7px;border:1px solid var(--border);border-radius:6px;font-size:13px;box-sizing:border-box;">
+        <div class="fg">
+          <label class="fl" style="color:rgba(255,255,255,.5)">Email</label>
+          <input id="bd-new-email" type="email" placeholder="contact@company.com" class="bd-form-input">
         </div>
-        <div>
-          <label style="font-size:11px;font-weight:600;color:var(--muted);display:block;margin-bottom:3px;">SECTOR</label>
-          <select id="bd-new-sector" style="width:100%;padding:7px;border:1px solid var(--border);border-radius:6px;font-size:13px;">
+        <div class="fg">
+          <label class="fl" style="color:rgba(255,255,255,.5)">Sector</label>
+          <select id="bd-new-sector" class="bd-form-select">
             <option value="healthcare">🏥 Healthcare / NEMT</option>
             <option value="enterprise">🏢 Enterprise / B2B</option>
             <option value="platform">🔗 Platform Partnership</option>
           </select>
         </div>
-        <div>
-          <label style="font-size:11px;font-weight:600;color:var(--muted);display:block;margin-bottom:3px;">ASSIGNED REP</label>
-          <select id="bd-new-rep" style="width:100%;padding:7px;border:1px solid var(--border);border-radius:6px;font-size:13px;">
+        <div class="fg">
+          <label class="fl" style="color:rgba(255,255,255,.5)">Assigned Rep</label>
+          <select id="bd-new-rep" class="bd-form-select">
             <option value="marcus_webb">Marcus Webb — Healthcare</option>
             <option value="jordan_vale">Jordan Vale — Enterprise</option>
             <option value="priya_santos">Priya Santos — Platforms</option>
           </select>
         </div>
-        <div>
-          <label style="font-size:11px;font-weight:600;color:var(--muted);display:block;margin-bottom:3px;">EST. MONTHLY VALUE</label>
-          <input id="bd-new-value" type="number" placeholder="e.g. 2500" style="width:100%;padding:7px;border:1px solid var(--border);border-radius:6px;font-size:13px;box-sizing:border-box;">
+        <div class="fg">
+          <label class="fl" style="color:rgba(255,255,255,.5)">Est. Monthly Value ($)</label>
+          <input id="bd-new-value" type="number" placeholder="e.g. 2500" class="bd-form-input">
         </div>
-        <div>
-          <label style="font-size:11px;font-weight:600;color:var(--muted);display:block;margin-bottom:3px;">STATUS</label>
-          <select id="bd-new-status" style="width:100%;padding:7px;border:1px solid var(--border);border-radius:6px;font-size:13px;">
+        <div class="fg">
+          <label class="fl" style="color:rgba(255,255,255,.5)">Status</label>
+          <select id="bd-new-status" class="bd-form-select">
             <option value="prospecting">Prospecting</option>
             <option value="contacted">Contacted</option>
             <option value="proposal">Proposal Sent</option>
@@ -18670,13 +18706,13 @@ function lfRenderExpertReport(segment, d) {
           </select>
         </div>
       </div>
-      <div style="margin-bottom:12px;">
-        <label style="font-size:11px;font-weight:600;color:var(--muted);display:block;margin-bottom:3px;">NOTES / NEXT ACTION</label>
-        <textarea id="bd-new-notes" rows="2" placeholder="e.g. Spoke with operations director — they need 6am pickup windows. Follow up Tuesday." style="width:100%;padding:7px;border:1px solid var(--border);border-radius:6px;font-size:13px;resize:vertical;box-sizing:border-box;"></textarea>
+      <div class="fg" style="margin-bottom:14px;">
+        <label class="fl" style="color:rgba(255,255,255,.5)">Notes / Next Action</label>
+        <textarea id="bd-new-notes" rows="2" placeholder="e.g. Spoke with operations director — needs 6am windows. Follow up Tuesday." class="bd-form-textarea"></textarea>
       </div>
-      <div style="display:flex;gap:8px;">
-        <button class="btn-gold" onclick="saveBdProspect()">Save Prospect</button>
-        <button class="btn-out" onclick="closeBdAddForm()">Cancel</button>
+      <div class="bd-form-actions">
+        <button class="lf-btn-ghost" onclick="closeBdAddForm()">Cancel</button>
+        <button class="lf-btn" onclick="saveBdProspect()">Save Lead</button>
       </div>
     </div>
   </div>
@@ -18724,7 +18760,7 @@ function lfRenderExpertReport(segment, d) {
 .mil-stream-icon{font-size:24px;margin-bottom:8px}
 .mil-stream-title{font-size:14px;font-weight:800;color:var(--text);margin-bottom:4px}
 .mil-stream-desc{font-size:12px;color:var(--muted);line-height:1.5;margin-bottom:10px}
-.mil-stream-rev{font-size:16px;font-weight:900;color:#16a34a;font-family:var(--ff-h)}
+.mil-stream-rev{font-size:16px;font-weight:900;color:#4ade80;font-family:var(--ff-h)}
 .mil-stream-rev-lbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
 
 .mil-math{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px 24px;margin-bottom:20px}
@@ -18733,7 +18769,7 @@ function lfRenderExpertReport(segment, d) {
 .mil-math-table td{padding:9px 10px;border-bottom:1px solid var(--border)}
 .mil-math-table tr:last-child td{border-bottom:none;font-weight:800;font-size:14px;background:rgba(34,197,94,.06)}
 .mil-math-table .num{text-align:right;font-family:var(--ff-m);font-weight:700}
-.mil-math-table .green{color:#16a34a}
+.mil-math-table .green{color:#4ade80}
 
 .mil-actions-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-bottom:24px}
 .mil-action{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px;display:flex;gap:12px;align-items:flex-start}
@@ -19243,7 +19279,7 @@ function lfRenderExpertReport(segment, d) {
 <!-- ══ LIGHT FLEET — DRIVERS · PROFILE · REPORT CARDS ══════════════════════ -->
 <style>
 /* ── Shared dark LF page tokens ── */
-.lf-dc-banner{background:linear-gradient(135deg,#080f1f 0%,#0e1f3a 50%,#0a1628 100%);padding:18px 32px 16px;flex-shrink:0;border-bottom:1px solid rgba(255,255,255,.07);}
+.lf-dc-banner{background:linear-gradient(135deg,#15151d 0%,#0a0a0f 100%);padding:18px 32px 16px;flex-shrink:0;border-bottom:1px solid rgba(245,200,66,.25);}
 .lf-dc-title{font-family:var(--ff-h);font-size:26px;font-weight:900;color:#fff;line-height:1.15;}
 .lf-dc-eyebrow{font-family:var(--ff-m);font-size:10px;color:var(--gold2);letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;}
 .lf-dc-score-chip{display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:10px 18px;}
@@ -19261,11 +19297,11 @@ function lfRenderExpertReport(segment, d) {
 .lf-dc-search::placeholder{color:rgba(255,255,255,.3);}
 .lf-dc-search:focus{border-color:var(--gold2);}
 .lf-dc-fbtn{padding:6px 13px;border-radius:7px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.05);color:rgba(255,255,255,.5);font-size:12px;font-weight:600;cursor:pointer;transition:all .18s;}
-.lf-dc-fbtn:hover,.lf-dc-fbtn.dc-factive{background:var(--gold);border-color:var(--gold);color:var(--navy);}
+.lf-dc-fbtn:hover,.lf-dc-fbtn.dc-factive{background:var(--gold);border-color:var(--gold);color:#0A0A0F;}
 .lf-dc-sort{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:7px;padding:6px 10px;color:#fff;font-size:12px;outline:none;cursor:pointer;}
-.lf-dc-sort option{background:#0f1b30;}
+.lf-dc-sort option{background:#15151D;}
 /* Scroll content area */
-.lf-dc-scroll{flex:1;overflow-y:auto;background:#080f1f;}
+.lf-dc-scroll{flex:1;overflow-y:auto;background:#0A0A0F;}
 /* Status pills */
 .dc-status{font-size:10px;font-weight:700;padding:3px 9px;border-radius:20px;}
 .dc-status-active{background:rgba(16,185,129,.15);color:#6ee7b7;border:1px solid rgba(16,185,129,.25);}
@@ -19551,17 +19587,31 @@ const BD_STORAGE_KEY='3ll_lf_bizdev_prospects';
 
 let _bdProspects=[];
 let _bdSectorFilter='all';
+let _bdLoading=false;
 
 function initLfBizDev(){
-  _bdProspects=JSON.parse(localStorage.getItem(BD_STORAGE_KEY)||'[]');
   loadLfBizDevProspects();
 }
 
-function loadLfBizDevProspects(){
-  _bdProspects=JSON.parse(localStorage.getItem(BD_STORAGE_KEY)||'[]');
+async function loadLfBizDevProspects(){
+  if(_bdLoading)return;
+  _bdLoading=true;
+  try{
+    const{data,error}=await sb.from('lf_bd_prospects').select('*').order('created_at',{ascending:false});
+    if(error)throw error;
+    _bdProspects=data||[];
+    localStorage.setItem(BD_STORAGE_KEY,JSON.stringify(_bdProspects));
+  }catch(e){
+    console.warn('BizDev DB load failed, using local cache:',e.message);
+    _bdProspects=JSON.parse(localStorage.getItem(BD_STORAGE_KEY)||'[]');
+  }finally{_bdLoading=false;}
   renderBdProspects();
   updateBdRepMetrics();
 }
+
+// normalize monthly value across DB (monthly_value) + legacy local (value)
+function _bdVal(p){return +(p.monthly_value||p.value||0);}
+function _bdTouch(p){return p.last_contact_at||p.last_contact;}
 
 function filterBdSector(sector){
   _bdSectorFilter=sector;
@@ -19584,39 +19634,39 @@ function renderBdProspects(){
   // KPIs
   const active=filtered.filter(p=>['contacted','proposal','negotiating'].includes(p.status)).length;
   const contracts=filtered.filter(p=>['contract','active'].includes(p.status)).length;
-  const pipeline=filtered.filter(p=>!['active','lost'].includes(p.status)).reduce((s,p)=>s+(+p.value||0),0);
-  const mrr=filtered.filter(p=>p.status==='active').reduce((s,p)=>s+(+p.value||0),0);
+  const pipeline=filtered.filter(p=>!['active','lost'].includes(p.status)).reduce((s,p)=>s+_bdVal(p),0);
+  const mrr=filtered.filter(p=>p.status==='active').reduce((s,p)=>s+_bdVal(p),0);
   const set=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
   set('bd-kpi-total',filtered.length);set('bd-kpi-active',active);set('bd-kpi-contracts',contracts);
   set('bd-kpi-pipeline',pipeline?'$'+pipeline.toLocaleString():'—');
   set('bd-kpi-mrr',mrr?'$'+mrr.toLocaleString()+'/mo':'—');
 
-  if(!filtered.length){tbody.innerHTML='<tr><td colspan="8" style="padding:40px;text-align:center;color:var(--muted);">No prospects in this segment — click "+ Add Prospect" to start building your pipeline.</td></tr>';return;}
+  if(!filtered.length){tbody.innerHTML='<tr><td colspan="8" class="bd-empty">No prospects in this segment — click <strong style="color:var(--gold)">+ Add Lead</strong> to start building your pipeline.</td></tr>';return;}
 
   const statusClass=s=>'bd-status-badge bd-status-'+s;
   const statusLabel={prospecting:'Prospecting',contacted:'Contacted',proposal:'Proposal Sent',negotiating:'Negotiating',contract:'Contract',active:'Active Client',lost:'Lost'};
-  const sectorColor={healthcare:'#1e40af',enterprise:'#4338ca',platform:'#15803d'};
+  const sectorColor={healthcare:'#60a5fa',enterprise:'#a78bfa',platform:'#4ade80'};
 
-  tbody.innerHTML=filtered.map((p,i)=>{
-    const idx=_bdProspects.indexOf(p);
+  tbody.innerHTML=filtered.map(p=>{
+    const sid=`'${String(p.id).replace(/'/g,"\\'")}'`;
     const repName=BD_REPS[p.rep]||p.rep||'—';
     const sectorLabel=BD_SECTOR_LABELS[p.sector]||p.sector||'—';
-    const lastTouch=p.last_contact?new Date(p.last_contact).toLocaleDateString('en-US',{month:'short',day:'numeric'}):'Never';
-    const value=p.value?'$'+(+p.value).toLocaleString()+'/mo':'—';
+    const lastTouch=_bdTouch(p)?new Date(_bdTouch(p)).toLocaleDateString('en-US',{month:'short',day:'numeric'}):'Never';
+    const value=_bdVal(p)?'$'+_bdVal(p).toLocaleString()+'/mo':'—';
     return`<tr>
       <td>
-        <div style="font-weight:700;font-size:13px">${esc(p.company||'—')}</div>
-        ${p.contact?`<div style="font-size:11px;color:var(--muted)">${esc(p.contact)}</div>`:''}
-        ${p.phone?`<div style="font-size:11px;color:var(--muted)">${esc(p.phone)}</div>`:''}
+        <div style="font-weight:700;font-size:13px;color:#fff">${esc(p.company||'—')}</div>
+        ${p.contact?`<div style="font-size:11px;color:rgba(255,255,255,.5)">${esc(p.contact)}</div>`:''}
+        ${p.phone?`<div style="font-size:11px;color:rgba(255,255,255,.4)">${esc(p.phone)}</div>`:''}
       </td>
-      <td><span style="font-size:11px;font-weight:600;color:${sectorColor[p.sector]||'var(--muted)'}">${sectorLabel}</span></td>
-      <td style="font-size:12px;color:var(--muted)">${esc(repName)}</td>
+      <td><span style="font-size:11px;font-weight:600;color:${sectorColor[p.sector]||'rgba(255,255,255,.5)'}">${esc(sectorLabel)}</span></td>
+      <td style="font-size:12px;color:rgba(255,255,255,.55)">${esc(repName)}</td>
       <td><span class="${statusClass(p.status)}">${statusLabel[p.status]||p.status}</span></td>
-      <td style="font-size:13px;font-weight:600;color:var(--navy)">${value}</td>
-      <td style="font-size:12px;color:var(--muted)">${lastTouch}</td>
-      <td style="font-size:12px;color:var(--muted);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(p.notes||'')}">${esc(p.notes||'—')}</td>
+      <td style="font-size:13px;font-weight:700;color:var(--gold)">${value}</td>
+      <td style="font-size:12px;color:rgba(255,255,255,.45)">${lastTouch}</td>
+      <td style="font-size:12px;color:rgba(255,255,255,.55);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(p.notes||'')}">${esc(p.notes||'—')}</td>
       <td style="white-space:nowrap">
-        <select onchange="updateBdStatus(${idx},this.value)" style="font-size:11px;padding:3px 6px;border:1px solid var(--border);border-radius:4px;background:var(--surface);cursor:pointer;margin-right:4px;">
+        <select onchange="updateBdStatus(${sid},this.value)" class="bd-form-select" style="padding:3px 6px;font-size:11px;max-width:130px;margin-right:4px;">
           <option value="">Update Status</option>
           <option value="prospecting">Prospecting</option>
           <option value="contacted">Contacted</option>
@@ -19626,8 +19676,8 @@ function renderBdProspects(){
           <option value="active">Active Client</option>
           <option value="lost">Lost</option>
         </select>
-        <button onclick="bdEmailProspect(${idx})" title="Send email" style="padding:3px 7px;font-size:11px;border:1px solid var(--border);border-radius:4px;cursor:pointer;background:var(--surface)">📧</button>
-        <button onclick="deleteBdProspect(${idx})" title="Remove" style="padding:3px 7px;font-size:11px;border:1px solid rgba(239,68,68,.3);border-radius:4px;cursor:pointer;background:rgba(239,68,68,.05);color:var(--red);margin-left:2px">✕</button>
+        <button onclick="bdEmailProspect(${sid})" title="Send email" style="padding:3px 8px;font-size:11px;border:1px solid var(--border);border-radius:5px;cursor:pointer;background:rgba(255,255,255,.05);color:#fff">📧</button>
+        <button onclick="deleteBdProspect(${sid})" title="Remove" style="padding:3px 8px;font-size:11px;border:1px solid rgba(239,68,68,.3);border-radius:5px;cursor:pointer;background:rgba(239,68,68,.08);color:#f87171;margin-left:2px">✕</button>
       </td>
     </tr>`;
   }).join('');
@@ -19638,7 +19688,7 @@ function updateBdRepMetrics(){
   Object.entries(repFields).forEach(([rep,[f1,f2,f3]])=>{
     const rp=_bdProspects.filter(p=>p.rep===rep);
     const active=rp.filter(p=>['contacted','proposal','negotiating'].includes(p.status)).length;
-    const pipeline=rp.filter(p=>!['active','lost'].includes(p.status)).reduce((s,p)=>s+(+p.value||0),0);
+    const pipeline=rp.filter(p=>!['active','lost'].includes(p.status)).reduce((s,p)=>s+_bdVal(p),0);
     const set=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
     set(f1,rp.length);set(f2,active);set(f3,pipeline?'$'+pipeline.toLocaleString():'$0');
   });
@@ -19652,58 +19702,85 @@ function openBdAddProspect(sector='healthcare',rep='marcus_webb'){
   ['bd-new-company','bd-new-contact','bd-new-phone','bd-new-email','bd-new-notes'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   const v=document.getElementById('bd-new-value');if(v)v.value='';
   const st=document.getElementById('bd-new-status');if(st)st.value='prospecting';
-  f?.scrollIntoView({behavior:'smooth',block:'start'});
+  // Scroll inside the fixed panel's own scroller (avoid scrollIntoView fighting position:fixed = screen shake)
+  const wrap=document.querySelector('#page-lf-bizdev .bd-wrap');
+  if(wrap)setTimeout(()=>wrap.scrollTo({top:wrap.scrollHeight,behavior:'smooth'}),60);
+  setTimeout(()=>document.getElementById('bd-new-company')?.focus(),120);
 }
 
 function closeBdAddForm(){
   const f=document.getElementById('bd-add-form');if(f)f.classList.remove('open');
 }
 
-function saveBdProspect(){
+async function saveBdProspect(){
   const company=(document.getElementById('bd-new-company')?.value||'').trim();
   if(!company){alert('Company name is required.');return;}
-  const prospect={
-    id:Date.now(),
+  const mv=document.getElementById('bd-new-value')?.value||'';
+  const payload={
     company,
-    contact:(document.getElementById('bd-new-contact')?.value||'').trim(),
-    phone:(document.getElementById('bd-new-phone')?.value||'').trim(),
-    email:(document.getElementById('bd-new-email')?.value||'').trim(),
+    contact:(document.getElementById('bd-new-contact')?.value||'').trim()||null,
+    phone:(document.getElementById('bd-new-phone')?.value||'').trim()||null,
+    email:(document.getElementById('bd-new-email')?.value||'').trim()||null,
     sector:document.getElementById('bd-new-sector')?.value||'healthcare',
     rep:document.getElementById('bd-new-rep')?.value||'marcus_webb',
-    value:document.getElementById('bd-new-value')?.value||'',
+    monthly_value:mv?parseFloat(mv):null,
     status:document.getElementById('bd-new-status')?.value||'prospecting',
-    notes:(document.getElementById('bd-new-notes')?.value||'').trim(),
-    last_contact:new Date().toISOString(),
-    created_at:new Date().toISOString(),
+    notes:(document.getElementById('bd-new-notes')?.value||'').trim()||null,
+    last_contact_at:new Date().toISOString(),
   };
-  _bdProspects.unshift(prospect);
-  localStorage.setItem(BD_STORAGE_KEY,JSON.stringify(_bdProspects));
-  closeBdAddForm();
-  renderBdProspects();
-  updateBdRepMetrics();
-  if(typeof notify==='function')notify('Prospect added: '+company);
+  const btn=document.querySelector('#bd-add-form .lf-btn');
+  if(btn){btn.textContent='Saving…';btn.disabled=true;}
+  try{
+    const{data,error}=await sb.from('lf_bd_prospects').insert(payload).select().single();
+    if(error)throw error;
+    _bdProspects.unshift(data);
+    localStorage.setItem(BD_STORAGE_KEY,JSON.stringify(_bdProspects));
+    closeBdAddForm();
+    renderBdProspects();updateBdRepMetrics();
+    if(typeof notify==='function')notify('Lead saved: '+company);
+  }catch(e){
+    console.error('BD save failed:',e);
+    alert('Could not save to database ('+e.message+'). Saved locally instead.');
+    _bdProspects.unshift({...payload,id:Date.now(),created_at:new Date().toISOString()});
+    localStorage.setItem(BD_STORAGE_KEY,JSON.stringify(_bdProspects));
+    closeBdAddForm();renderBdProspects();updateBdRepMetrics();
+  }finally{
+    if(btn){btn.textContent='Save Lead';btn.disabled=false;}
+  }
 }
 
-function updateBdStatus(idx,status){
+async function updateBdStatus(id,status){
   if(!status)return;
-  if(!_bdProspects[idx])return;
+  const idx=_bdProspects.findIndex(p=>String(p.id)===String(id));
+  if(idx<0)return;
+  const prev=_bdProspects[idx].status;
   _bdProspects[idx].status=status;
-  _bdProspects[idx].last_contact=new Date().toISOString();
-  localStorage.setItem(BD_STORAGE_KEY,JSON.stringify(_bdProspects));
-  renderBdProspects();
-  updateBdRepMetrics();
+  _bdProspects[idx].last_contact_at=new Date().toISOString();
+  renderBdProspects();updateBdRepMetrics();
+  try{
+    const{error}=await sb.from('lf_bd_prospects').update({status,last_contact_at:new Date().toISOString(),updated_at:new Date().toISOString()}).eq('id',id);
+    if(error)throw error;
+    localStorage.setItem(BD_STORAGE_KEY,JSON.stringify(_bdProspects));
+  }catch(e){
+    console.warn('BD status update failed:',e.message);
+    _bdProspects[idx].status=prev;renderBdProspects();
+  }
 }
 
-function deleteBdProspect(idx){
+async function deleteBdProspect(id){
   if(!confirm('Remove this prospect?'))return;
+  const idx=_bdProspects.findIndex(p=>String(p.id)===String(id));
+  if(idx<0)return;
   _bdProspects.splice(idx,1);
-  localStorage.setItem(BD_STORAGE_KEY,JSON.stringify(_bdProspects));
-  renderBdProspects();
-  updateBdRepMetrics();
+  renderBdProspects();updateBdRepMetrics();
+  try{
+    await sb.from('lf_bd_prospects').delete().eq('id',id);
+    localStorage.setItem(BD_STORAGE_KEY,JSON.stringify(_bdProspects));
+  }catch(e){console.warn('BD delete failed:',e.message);}
 }
 
-function bdEmailProspect(idx){
-  const p=_bdProspects[idx];
+function bdEmailProspect(id){
+  const p=_bdProspects.find(x=>String(x.id)===String(id));
   if(!p)return;
   if(!p.email){alert('No email on file for this prospect.');return;}
   // Open email compose pre-filled
