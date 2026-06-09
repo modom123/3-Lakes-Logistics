@@ -2,6 +2,7 @@
 
 Endpoints:
   GET  /api/mailboxes                  — list mailboxes with status + unread count
+  GET  /api/mailboxes/config           — per-mailbox SMTP send-readiness (no secrets)
   POST /api/mailboxes/poll             — trigger IMAP poll for all mailboxes
   POST /api/mailboxes/{name}/poll      — poll a single mailbox
   GET  /api/mailboxes/inbox            — unified inbox (all mailboxes)
@@ -33,6 +34,30 @@ def list_mailboxes(_: str = Depends(require_bearer)) -> dict:
     """List all 5 mailboxes with IMAP connection status and unread counts."""
     from ..email.imap_poller import get_mailbox_statuses
     return {"ok": True, "mailboxes": get_mailbox_statuses()}
+
+
+@router.get("/mailboxes/config")
+def mailbox_config(_: str = Depends(require_bearer)) -> dict:
+    """Report which mailboxes have an SMTP password configured (no secrets returned).
+
+    Lets the Email Center flag mailboxes that cannot send yet so the UI can show a
+    clear message and offer a fallback instead of failing on Send.
+    """
+    from ..settings import get_settings
+    from ..email.smtp_sender import MAILBOX_ADDRESSES, SMTP_HOST, SMTP_PORT
+    s = get_settings()
+    mailboxes = []
+    for key, address in MAILBOX_ADDRESSES.items():
+        configured = bool(getattr(s, f"email_{key}_password", ""))
+        mailboxes.append({"key": key, "address": address, "send_ready": configured})
+    any_ready = any(m["send_ready"] for m in mailboxes)
+    return {
+        "ok": True,
+        "smtp_host": SMTP_HOST,
+        "smtp_port": SMTP_PORT,
+        "any_send_ready": any_ready,
+        "mailboxes": mailboxes,
+    }
 
 
 @router.post("/mailboxes/poll")
