@@ -207,6 +207,28 @@ def list_vault(
     return q.order("uploaded_at", desc=True).limit(500).execute().data
 
 
+def _object_exists(storage_path: str, bucket: str = "documents") -> bool:
+    """Return True if an actual file lives at storage_path in the given bucket.
+
+    Many document_vault rows are inserted by the execution engine / onboarding
+    handlers as metadata-only placeholders (folders, agreement stubs) whose
+    storage_path points at an object that was never uploaded. Signing those
+    paths succeeds, but opening the URL 404s. We verify existence by listing the
+    parent prefix and matching the filename.
+    """
+    if not storage_path or storage_path.endswith("/"):
+        return False  # folder marker, not a file
+    folder, _, name = storage_path.rpartition("/")
+    for b in (bucket, "documents", "driver-documents"):
+        try:
+            entries = get_supabase().storage.from_(b).list(folder, {"search": name})
+            if any(e.get("name") == name for e in (entries or [])):
+                return True
+        except Exception:
+            continue
+    return False
+
+
 def _signed_url(storage_path: str, bucket: str = "documents", expires: int = 3600) -> str | None:
     """Generate a Supabase Storage signed URL. Returns None on any error."""
     try:
@@ -245,7 +267,20 @@ def vault_doc_url(doc_id: str, expires: int = 3600, _: str = Depends(require_bea
         raise HTTPException(404, "Document not found")
     doc = res.data[0]
     bucket = doc.get("bucket") or "documents"
-    url = _signed_url(doc["storage_path"], bucket, expires=min(expires, 86400))
+    storage_path = doc.get("storage_path") or ""
+
+    # Folder markers / metadata-only placeholder rows have no retrievable file.
+    if doc.get("doc_type") == "folder" or storage_path.endswith("/"):
+        raise HTTPException(404, f"'{doc['filename']}' is a folder marker, not a downloadable file.")
+    if not _object_exists(storage_path, bucket):
+        raise HTTPException(
+            404,
+            f"No file is stored for '{doc['filename']}'. This is a placeholder record "
+            f"(created during onboarding) — the actual document was never uploaded. "
+            f"Use the Upload button to attach the file.",
+        )
+
+    url = _signed_url(storage_path, bucket, expires=min(expires, 86400))
     if not url:
         raise HTTPException(502, f"Could not generate signed URL for {doc['filename']} — check Supabase Storage bucket '{bucket}'")
     return {"ok": True, "doc_id": doc_id, "filename": doc["filename"], "url": url, "expires_in": expires}

@@ -7561,21 +7561,29 @@ function _renderVaultDocs(docs){
       <td>${sentBadge}</td>
       <td style="font-size:12px;color:var(--muted);white-space:nowrap">${ts}</td>
       <td style="white-space:nowrap">
-        <button onclick="vaultView('${did}')" style="padding:4px 8px;font-size:11px;border:1px solid var(--border);border-radius:4px;cursor:pointer;background:var(--surface);margin-right:3px" title="Preview">👁 View</button>
+        ${d.doc_type==='folder'||!d.storage_path||String(d.storage_path).endsWith('/')
+          ? `<span style="font-size:11px;color:var(--muted);font-style:italic">No file</span>`
+          : `<button onclick="vaultView('${did}')" style="padding:4px 8px;font-size:11px;border:1px solid var(--border);border-radius:4px;cursor:pointer;background:var(--surface);margin-right:3px" title="Preview">👁 View</button>
         <button onclick="vaultDownload('${did}')" style="padding:4px 8px;font-size:11px;border:1px solid var(--border);border-radius:4px;cursor:pointer;background:var(--surface);margin-right:3px" title="Download">⬇</button>
-        <button onclick="openVaultSend('${did}','${fn}')" style="padding:4px 8px;font-size:11px;border:1px solid var(--gold);border-radius:4px;cursor:pointer;background:rgba(212,170,0,.08);color:var(--gold);font-weight:600;margin-right:3px" title="Send via email">✉</button>
+        <button onclick="openVaultSend('${did}','${fn}')" style="padding:4px 8px;font-size:11px;border:1px solid var(--gold);border-radius:4px;cursor:pointer;background:rgba(212,170,0,.08);color:var(--gold);font-weight:600;margin-right:3px" title="Send via email">✉</button>`}
         <button onclick="vaultScan('${did}','${fn}')" style="padding:4px 8px;font-size:11px;border:1px solid #7c3aed;border-radius:4px;cursor:pointer;background:rgba(124,58,237,.08);color:#7c3aed;font-weight:600" title="Extract data with AI">${d.extracted_at?'✅':'🔍'} Scan</button>
       </td>
     </tr>`;
   }).join('')}</tbody></table></div>`;
 }
 
+async function _vaultSignedUrl(docId){
+  const res=await apiFetch(`/api/clm/vault/${docId}/url?expires=3600`);
+  let d={};try{d=await res.json();}catch(_){}
+  if(!res.ok){throw new Error(d.detail||d.message||`Server returned ${res.status}`);}
+  if(!d.url)throw new Error('No signed URL returned');
+  return d;
+}
+
 async function vaultView(docId){
   try{
     toast('Loading preview…');
-    const res=await apiFetch(`/api/clm/vault/${docId}/url?expires=3600`);
-    const d=await res.json();
-    if(!d.url)throw new Error('No signed URL returned');
+    const d=await _vaultSignedUrl(docId);
     document.getElementById('vault-preview-title').textContent=d.filename||'Document';
     document.getElementById('vault-preview-dl').href=d.url;
     document.getElementById('vault-preview-dl').download=d.filename||'document';
@@ -7587,9 +7595,7 @@ async function vaultView(docId){
 
 async function vaultDownload(docId){
   try{
-    const res=await apiFetch(`/api/clm/vault/${docId}/url?expires=3600`);
-    const d=await res.json();
-    if(!d.url)throw new Error('No signed URL');
+    const d=await _vaultSignedUrl(docId);
     const a=document.createElement('a');a.href=d.url;a.download=d.filename||'document';a.style.display='none';
     document.body.appendChild(a);a.click();document.body.removeChild(a);
   }catch(e){toast('Download failed: '+e.message,'error');}
