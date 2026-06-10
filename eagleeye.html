@@ -19986,14 +19986,28 @@ async function bdSubmitFactoring() {
 <div style="padding:0 0 40px;">
   <!-- Hero -->
   <div class="td-hero">
-    <div class="td-hero-title">📈 Trading Desk</div>
-    <div class="td-hero-sub">Rex · Jordan · Casey — Brokered load book, live margin tracking</div>
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px">
+      <div>
+        <div class="td-hero-title">📈 Trading Desk</div>
+        <div class="td-hero-sub">Rex · Jordan · Casey — Brokered load book, live margin tracking</div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <button id="td-hunt-btn" onclick="tdHuntAllBoards()" style="background:#15803d;color:#fff;border:none;border-radius:10px;padding:12px 22px;font-size:14px;font-weight:800;cursor:pointer;display:flex;align-items:center;gap:6px;font-family:var(--ff-h)">
+          <span id="td-hunt-icon">🚀</span> <span id="td-hunt-text">Hunt All Boards</span>
+        </button>
+        <div style="font-size:11px;color:rgba(255,255,255,.4)">Last: <span id="td-last-hunt">—</span></div>
+      </div>
+    </div>
     <div class="td-stat-row">
       <div class="td-stat"><div class="td-stat-n" id="td-open-loads">—</div><div class="td-stat-l">Open Positions</div></div>
       <div class="td-stat"><div class="td-stat-n" id="td-uncovered">—</div><div class="td-stat-l">Need Coverage</div></div>
       <div class="td-stat"><div class="td-stat-n" id="td-today-margin">—</div><div class="td-stat-l">Today's Margin</div></div>
       <div class="td-stat"><div class="td-stat-n" id="td-today-settled">—</div><div class="td-stat-l">Settled Today</div></div>
+      <div class="td-stat"><div class="td-stat-n" id="td-hunt-sourced" style="color:#fbbf24">—</div><div class="td-stat-l">Sourced Today</div></div>
+      <div class="td-stat"><div class="td-stat-n" id="td-hunt-posted" style="color:#4ade80">—</div><div class="td-stat-l">Posted (Rex ≥7)</div></div>
     </div>
+    <!-- Hunt status bar -->
+    <div id="td-hunt-status" style="display:none;margin-top:12px;padding:8px 14px;background:rgba(0,0,0,.25);border-radius:8px;font-size:12px;color:rgba(255,255,255,.75)" id="td-hunt-status"></div>
   </div>
 
   <!-- 3 Trader Cards -->
@@ -20284,6 +20298,74 @@ async function tdLoadPositions() {
     const data = await r.json();
     tdRenderPositions(data.positions || []);
   } catch(e) {}
+}
+
+const TD_HUNT_PROFILES = [
+  {label:'OR Cargo Van',    origin_state:'OR', trailer_type:'cargo_van', min_rate_per_mile:1.00, max_deadhead_mi:100},
+  {label:'WA Cargo Van',    origin_state:'WA', trailer_type:'cargo_van', min_rate_per_mile:1.00, max_deadhead_mi:100},
+  {label:'OR Dry Van',      origin_state:'OR', trailer_type:'dry_van',   min_rate_per_mile:2.10, max_deadhead_mi:200},
+  {label:'WA Dry Van',      origin_state:'WA', trailer_type:'dry_van',   min_rate_per_mile:2.10, max_deadhead_mi:200},
+  {label:'CA Dry Van',      origin_state:'CA', trailer_type:'dry_van',   min_rate_per_mile:2.20, max_deadhead_mi:200},
+  {label:'OR Reefer',       origin_state:'OR', trailer_type:'reefer',    min_rate_per_mile:2.40, max_deadhead_mi:200},
+  {label:'WA Reefer',       origin_state:'WA', trailer_type:'reefer',    min_rate_per_mile:2.40, max_deadhead_mi:200},
+  {label:'OR Flatbed',      origin_state:'OR', trailer_type:'flatbed',   min_rate_per_mile:2.30, max_deadhead_mi:200},
+];
+
+async function tdHuntAllBoards() {
+  const btn  = document.getElementById('td-hunt-btn');
+  const icon = document.getElementById('td-hunt-icon');
+  const txt  = document.getElementById('td-hunt-text');
+  const bar  = document.getElementById('td-hunt-status');
+  if (btn) btn.disabled = true;
+  if (icon) icon.textContent = '⏳';
+  if (txt)  txt.textContent  = 'Hunting…';
+  if (bar)  { bar.style.display = 'block'; bar.textContent = 'Starting hunt across 8 profiles…'; }
+
+  let totalSourced = 0, totalPosted = 0;
+
+  for (const prof of TD_HUNT_PROFILES) {
+    if (bar) bar.textContent = `Scanning ${prof.label}…`;
+    try {
+      // Jordan sources
+      const sourced = await tdAgentCall('jordan', { action:'source_loads', ...prof, min_margin_pct:12 });
+      const candidates = sourced.top_loads || sourced.loads || [];
+      totalSourced += candidates.length;
+
+      // Rex scores each candidate; post the ones >= 7
+      for (const load of candidates) {
+        try {
+          const scored = await tdAgentCall('rex', { action:'score_load', ...load });
+          if ((scored.score || 0) >= 7) {
+            await tdAgentCall('jordan', { action:'post_load', ...load, source_platform: prof.label });
+            totalPosted++;
+            // Queue Casey to find coverage (fire and forget)
+            tdAgentCall('casey', { action:'find_coverage', ...load }).catch(()=>{});
+          }
+        } catch(e) { /* individual load failure — continue */ }
+      }
+    } catch(e) {
+      if (bar) bar.textContent = `${prof.label}: ${e.message} — continuing…`;
+      await new Promise(r => setTimeout(r, 400));
+    }
+  }
+
+  // Final summary
+  const now = new Date().toLocaleTimeString();
+  const el = (id,v) => { const e=document.getElementById(id); if(e) e.textContent=v; };
+  el('td-hunt-sourced', totalSourced);
+  el('td-hunt-posted',  totalPosted);
+  el('td-last-hunt', now);
+  if (bar) bar.textContent = `✅ Hunt complete — ${totalSourced} sourced, ${totalPosted} posted to book — ${now}`;
+
+  if (totalPosted > 0) toast(`🚀 ${totalPosted} loads posted to book — Rex approved!`, 'success');
+
+  // Refresh positions table
+  tdLoadPositions();
+  tdRunRex('book_status', false);
+
+  if (btn) btn.disabled = false;
+  if (icon) icon.textContent = '🚀';
+  if (txt)  txt.textContent  = 'Hunt All Boards';
 }
 
 function tdRenderPositions(rows) {

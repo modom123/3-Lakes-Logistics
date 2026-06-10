@@ -472,6 +472,97 @@ def fire_jamie_park() -> None:
     _bg(_run)
 
 
+def fire_broker_hunt() -> None:
+    """Scheduled every 2 hours — Jordan sources loads, Rex scores them, Casey queues coverage.
+
+    Scans multiple origin states and trailer types so both light fleet and heavy fleet
+    lanes are covered. Top-scoring loads (Rex score >= 7) are auto-posted for Casey.
+    """
+    def _run():
+        try:
+            from .agents.jordan import source_loads, post_load  # noqa: PLC0415
+            from .agents.rex import score_load                   # noqa: PLC0415
+            from .agents.casey import find_coverage              # noqa: PLC0415
+
+            hunt_profiles = [
+                # Light fleet lanes (cargo vans)
+                {"origin_state": "OR", "trailer_type": "cargo_van",  "min_rate_per_mile": 1.00, "max_deadhead_mi": 100},
+                {"origin_state": "WA", "trailer_type": "cargo_van",  "min_rate_per_mile": 1.00, "max_deadhead_mi": 100},
+                # Heavy fleet lanes
+                {"origin_state": "OR", "trailer_type": "dry_van",    "min_rate_per_mile": 2.10, "max_deadhead_mi": 200},
+                {"origin_state": "WA", "trailer_type": "dry_van",    "min_rate_per_mile": 2.10, "max_deadhead_mi": 200},
+                {"origin_state": "CA", "trailer_type": "dry_van",    "min_rate_per_mile": 2.20, "max_deadhead_mi": 200},
+                {"origin_state": "OR", "trailer_type": "reefer",     "min_rate_per_mile": 2.40, "max_deadhead_mi": 200},
+                {"origin_state": "WA", "trailer_type": "reefer",     "min_rate_per_mile": 2.40, "max_deadhead_mi": 200},
+                {"origin_state": "OR", "trailer_type": "flatbed",    "min_rate_per_mile": 2.30, "max_deadhead_mi": 200},
+            ]
+
+            total_sourced = 0
+            total_posted  = 0
+            total_queued  = 0
+
+            for profile in hunt_profiles:
+                try:
+                    result = source_loads(profile)
+                    candidates = result.get("top_loads") or result.get("loads") or []
+                    total_sourced += len(candidates)
+
+                    for load in candidates:
+                        try:
+                            scored = score_load({"load": load})
+                            score  = int(scored.get("score", 0))
+                            if score >= 7:
+                                posted = post_load({**load, "source": profile["origin_state"]})
+                                brokered_id = posted.get("id") or posted.get("load_id")
+                                total_posted += 1
+                                if brokered_id:
+                                    find_coverage({"load_id": brokered_id, **load})
+                                    total_queued += 1
+                        except Exception as exc:  # noqa: BLE001
+                            log.debug("broker_hunt score/post failed: %s", exc)
+                except Exception as exc:  # noqa: BLE001
+                    log.warning("broker_hunt profile=%s failed: %s", profile, exc)
+
+            log.info(
+                "broker_hunt done sourced=%d posted=%d coverage_queued=%d",
+                total_sourced, total_posted, total_queued,
+            )
+        except Exception as exc:  # noqa: BLE001
+            log.error("fire_broker_hunt failed: %s", exc)
+    _bg(_run)
+
+
+def fire_drew_prospect() -> None:
+    """Daily 09:00 UTC — Drew calls shipper prospects to build the brokerage book."""
+    def _run():
+        try:
+            from .agents.drew import run as drew_run  # noqa: PLC0415
+            log.info("daily_agent: drew starting shipper prospecting")
+            result = drew_run({"action": "prospect", "limit": 20})
+            log.info(
+                "daily_agent: drew done calls_attempted=%s contacts_updated=%s",
+                result.get("calls_attempted", 0), result.get("contacts_updated", 0),
+            )
+        except Exception as exc:  # noqa: BLE001
+            log.error("daily_agent: drew failed: %s", exc)
+    _bg(_run)
+
+
+def fire_quinn_docs() -> None:
+    """Daily 17:00 UTC — Quinn generates pending RCs + invoices, flags overdue docs."""
+    def _run():
+        try:
+            from .agents.quinn import run as quinn_run  # noqa: PLC0415
+            log.info("daily_agent: quinn docs sweep starting")
+            queue = quinn_run({"action": "docs_queue"})
+            pending_rcs  = len(queue.get("pending_rcs")  or [])
+            unpaid_inv   = len(queue.get("unpaid_invoices") or [])
+            log.info("daily_agent: quinn docs_queue rc=%d invoices=%d", pending_rcs, unpaid_inv)
+        except Exception as exc:  # noqa: BLE001
+            log.error("daily_agent: quinn failed: %s", exc)
+    _bg(_run)
+
+
 def fire_vault_scan(doc_id: str) -> None:
     """Trigger background AI extraction for a vault document.
 
