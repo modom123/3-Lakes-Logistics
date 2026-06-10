@@ -1,4 +1,4 @@
-const CACHE = '3ll-driver-v2';
+const CACHE = '3ll-driver-v3';
 const ASSETS = [
   '/', '/driver-pwa/',
   '/driver-pwa/index.html',

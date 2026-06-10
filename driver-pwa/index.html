@@ -2,24 +2,49 @@
 <html lang="en">
 <head>
   <script>
-    // Auth check — redirect to login if no token
-    const token = localStorage.getItem('3ll_token');
-    const expiresAt = localStorage.getItem('3ll_expires_at');
-    if (!token || (expiresAt && new Date(expiresAt) < new Date())) {
-      window.location.href = './login.html';
-    }
+    // Auth check — prefer sessionStorage, migrate legacy localStorage tokens on first load
+    (function() {
+      var token = sessionStorage.getItem('3ll_token');
+      if (!token) {
+        var legacyToken = localStorage.getItem('3ll_token');
+        if (legacyToken) {
+          // Migrate existing session to sessionStorage
+          sessionStorage.setItem('3ll_token',      legacyToken);
+          sessionStorage.setItem('3ll_api_token',  localStorage.getItem('3ll_api_token') || legacyToken);
+          sessionStorage.setItem('3ll_expires_at', localStorage.getItem('3ll_expires_at') || '');
+          localStorage.removeItem('3ll_token');
+          localStorage.removeItem('3ll_api_token');
+          localStorage.removeItem('3ll_expires_at');
+          token = legacyToken;
+        }
+      }
+      var expiresAt = sessionStorage.getItem('3ll_expires_at');
+      if (!token || (expiresAt && new Date(expiresAt) < new Date())) {
+        window.location.href = './login.html';
+      }
+    })();
   </script>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <meta name="theme-color" content="#0a0f1e" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://browser.sentry-cdn.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; connect-src 'self' https://zngipootstubwvgdmckt.supabase.co wss://realtime.supabase.co https://three-lakes-logistics-api.onrender.com https://*.ingest.sentry.io; frame-ancestors 'none'; base-uri 'self';" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <title>3 Lakes Driver</title>
   <link rel="manifest" href="manifest.json" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.41.0"></script>
+  <script src="https://browser.sentry-cdn.com/7.99.0/bundle.min.js" crossorigin="anonymous"></script>
   <script src="../shared/config.js"></script>
-<script src="../shared/tk.js"></script>
+  <script src="../shared/tk.js"></script>
+  <script>
+    (function() {
+      var dsn = (window.__3LL_CONFIG || {}).SENTRY_DSN;
+      if (dsn && window.Sentry) {
+        Sentry.init({ dsn: dsn, environment: 'production', release: '3ll-driver@1.0.0' });
+      }
+    })();
+  </script>
   <style>
     :root {
       --bg:       #0a0f1e;
@@ -1018,7 +1043,7 @@
 
 <script>
 // ── DEMO MODE ────────────────────────────────────────────────────────────────
-const DEMO_MODE = localStorage.getItem('3ll_token') === 'demo-token-3lakes';
+const DEMO_MODE = (sessionStorage.getItem('3ll_token') || localStorage.getItem('3ll_token')) === 'demo-token-3lakes';
 
 const DEMO_LOAD = {
   id: 'LOAD-2847', load_number: 'LD-2847', status: 'in_transit',
@@ -1060,7 +1085,11 @@ const API = API_PRIMARY;
 const SUPABASE_URL = 'https://zngipootstubwvgdmckt.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpuZ2lwb290c3R1Ynd2Z2RtY2t0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMxMjk3ODUsImV4cCI6MjA4ODcwNTc4NX0.6MXR8q-CKVuiiJaJKuckxABAUQ-siuyP0-KoaLkt33g';
 
-const TOKEN     = localStorage.getItem('3ll_token')       || '';
+// Read auth token from sessionStorage (canonical); never from localStorage
+function _getAuthToken() {
+  return sessionStorage.getItem('3ll_api_token') || sessionStorage.getItem('3ll_token') || '';
+}
+const TOKEN     = _getAuthToken();
 const DRIVER_ID = localStorage.getItem('3ll_driver_id')   || 'DRV-001';
 const MY_PHONE  = localStorage.getItem('3ll_phone')        || '';
 
@@ -2292,7 +2321,7 @@ async function handleUpload(docType, input) {
   if (!file) return;
 
   showToast(`📤 Uploading ${docType.toUpperCase()}…`);
-  const token      = localStorage.getItem('3ll_api_token') || localStorage.getItem('3ll_token') || '';
+  const token      = _getAuthToken();
   const driverCode = localStorage.getItem('3ll_driver_code') || DRIVER_ID;
   const loadEl     = document.getElementById('load-number');
   const loadNum    = loadEl ? loadEl.textContent.trim() : '';
@@ -2485,8 +2514,7 @@ function renderHOS(hos) {
 
 // ── HELPERS ───────────────────────────────────────────────────────────────────
 async function apiFetch(path, method = 'GET', body = null) {
-  // Prefer the real API session token; fall back to any stored token
-  const token = localStorage.getItem('3ll_api_token') || localStorage.getItem('3ll_token') || TOKEN;
+  const token = _getAuthToken();
   const opts = {
     method,
     headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
@@ -2529,6 +2557,7 @@ async function logout() {
     await apiFetch('/api/driver-auth/logout', 'POST');
   } catch {}
   localStorage.clear();
+  sessionStorage.clear();
   window.location.href = './login.html';
 }
 
@@ -2536,7 +2565,7 @@ async function logout() {
 let _lfActiveTrip = null;
 
 async function loadLfTrips() {
-  const token = localStorage.getItem('3ll_token') || '';
+  const token = _getAuthToken();
   const driverCode = localStorage.getItem('3ll_driver_code') || localStorage.getItem('3ll_driver_id') || '';
 
   document.getElementById('lf-active-trip-card').style.display = 'none';
@@ -2612,7 +2641,7 @@ async function loadLfTrips() {
 }
 
 async function lfStartTrip(id) {
-  const token = localStorage.getItem('3ll_api_token') || localStorage.getItem('3ll_token') || '';
+  const token = _getAuthToken();
   try {
     const res = await fetch(API_PRIMARY + '/api/light-fleet/trips/' + id + '/start', {
       method: 'POST',
@@ -2630,7 +2659,7 @@ async function lfStartTrip(id) {
 
 async function lfCompleteTrip() {
   if (!_lfActiveTrip) return;
-  const token = localStorage.getItem('3ll_api_token') || localStorage.getItem('3ll_token') || '';
+  const token = _getAuthToken();
   try {
     const res = await fetch(API_PRIMARY + '/api/light-fleet/trips/' + _lfActiveTrip.id + '/complete', {
       method: 'POST',
@@ -2746,7 +2775,7 @@ async function loadEarningsView() {
   }
 
   try {
-    const token = localStorage.getItem('3ll_token') || '';
+    const token = _getAuthToken();
     const res = await fetch(
       `${window.API_BASE || ''}/api/light-fleet/drivers/${driverLfId}/earnings?period=${_earnPeriod}`,
       { headers: { 'Authorization': 'Bearer ' + token } }
@@ -2936,7 +2965,7 @@ async function submitInstantPay() {
   const btn = document.getElementById('ipm-submit-btn');
   btn.textContent = 'Processing…'; btn.disabled = true;
   try {
-    const token = localStorage.getItem('3ll_token') || '';
+    const token = _getAuthToken();
     const res = await fetch(`${window.API_BASE || ''}/api/light-fleet/drivers/${driverLfId}/instant-pay`, {
       method: 'POST',
       headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },

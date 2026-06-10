@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <meta name="theme-color" content="#0a0f1e" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://browser.sentry-cdn.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://zngipootstubwvgdmckt.supabase.co wss://realtime.supabase.co https://three-lakes-logistics-api.onrender.com https://*.ingest.sentry.io; frame-ancestors 'none'; base-uri 'self';" />
   <title>3 Lakes Driver — Login</title>
   <link rel="manifest" href="manifest.json" />
   <style>
@@ -137,6 +138,15 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://browser.sentry-cdn.com/7.99.0/bundle.min.js" crossorigin="anonymous"></script>
+<script>
+(function() {
+  var dsn = (window.__3LL_CONFIG || {}).SENTRY_DSN;
+  if (dsn && window.Sentry) {
+    Sentry.init({ dsn: dsn, environment: 'production', release: '3ll-driver@1.0.0' });
+  }
+})();
+</script>
 <script>
 
 var _cfg = window.__3LL_CONFIG || {};
@@ -167,17 +177,25 @@ function handleSubmit(event) {
 }
 
 function _storeSession(data, normalizedPhone) {
-  localStorage.setItem('3ll_token',       data.token || data.api_token || '');
-  localStorage.setItem('3ll_api_token',   data.token || data.api_token || '');
+  var token     = data.token || data.api_token || '';
+  var expiresAt = data.expires_at || new Date(Date.now() + 86400000 * 30).toISOString();
+  // Auth tokens go in sessionStorage — cleared when the WebView session ends
+  sessionStorage.setItem('3ll_token',     token);
+  sessionStorage.setItem('3ll_api_token', token);
+  sessionStorage.setItem('3ll_expires_at', expiresAt);
+  // Driver identity/preferences remain in localStorage for UX persistence
   localStorage.setItem('3ll_driver_id',   String(data.driver_id || data.id || ''));
   localStorage.setItem('3ll_driver_name', data.driver_name || data.name || '');
   localStorage.setItem('3ll_phone',       normalizedPhone);
-  localStorage.setItem('3ll_expires_at',  data.expires_at || new Date(Date.now() + 86400000 * 30).toISOString());
   localStorage.setItem('3ll_driver_mode', 'truck');
   if (data.carrier_id) localStorage.setItem('3ll_carrier_id', String(data.carrier_id));
   if (data.driver_code) localStorage.setItem('3ll_driver_code', data.driver_code);
   if (data.truck_number) localStorage.setItem('3ll_truck', data.truck_number);
   localStorage.removeItem('3ll_lf_driver_id');
+  // Remove any legacy token values that may have been stored in localStorage
+  localStorage.removeItem('3ll_token');
+  localStorage.removeItem('3ll_api_token');
+  localStorage.removeItem('3ll_expires_at');
 }
 
 async function handleLogin(event) {
@@ -225,19 +243,23 @@ async function handleLogin(event) {
     var driverCode = rpc.data.driver_code || rpc.data.id;
     var driverName = [rpc.data.first_name, rpc.data.last_name].filter(Boolean).join(' ') || driverCode;
 
-    // Persist Supabase identity for realtime subscriptions
+    // Persist driver identity in localStorage for UX persistence
     localStorage.setItem('3ll_driver_id',   String(rpc.data.id));
     localStorage.setItem('3ll_driver_name', driverName);
     localStorage.setItem('3ll_phone',       normalizedPhone);
-    localStorage.setItem('3ll_expires_at',  new Date(Date.now() + 86400000 * 30).toISOString());
     localStorage.setItem('3ll_driver_code',  driverCode);
     localStorage.setItem('3ll_driver_mode',  'truck');
     if (rpc.data.carrier_id) localStorage.setItem('3ll_carrier_id', String(rpc.data.carrier_id));
     if (rpc.data.truck_number) localStorage.setItem('3ll_truck', rpc.data.truck_number);
     localStorage.removeItem('3ll_lf_driver_id');
+    // Remove any legacy token values from localStorage
+    localStorage.removeItem('3ll_token');
+    localStorage.removeItem('3ll_api_token');
+    localStorage.removeItem('3ll_expires_at');
 
-    // Also fetch a REST session token for protected endpoints
+    // Fetch REST session token and store in sessionStorage only
     var API_BASE = (_cfg.API_BASE || 'https://three-lakes-logistics-api.onrender.com');
+    var sessionToken = 'sb-' + driverCode;
     try {
       var apiRes = await fetch(API_BASE + '/api/driver-auth/login', {
         method: 'POST',
@@ -246,15 +268,13 @@ async function handleLogin(event) {
       });
       if (apiRes.ok) {
         var apiData = await apiRes.json();
-        localStorage.setItem('3ll_token',     apiData.token);
-        localStorage.setItem('3ll_api_token', apiData.token);
+        sessionToken = apiData.token;
         if (apiData.carrier_id) localStorage.setItem('3ll_carrier_id', String(apiData.carrier_id));
-      } else {
-        localStorage.setItem('3ll_token', 'sb-' + driverCode);
       }
-    } catch (_) {
-      localStorage.setItem('3ll_token', 'sb-' + driverCode);
-    }
+    } catch (_) {}
+    sessionStorage.setItem('3ll_token',      sessionToken);
+    sessionStorage.setItem('3ll_api_token',  sessionToken);
+    sessionStorage.setItem('3ll_expires_at', new Date(Date.now() + 86400000 * 30).toISOString());
     window.location.href = './index.html';
 
   } catch (err) {

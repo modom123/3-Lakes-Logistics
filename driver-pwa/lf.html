@@ -2,21 +2,45 @@
 <html lang="en">
 <head>
   <script>
-    const _t = localStorage.getItem('3ll_token');
-    const _e = localStorage.getItem('3ll_expires_at');
-    if (!_t || (_e && new Date(_e) < new Date())) window.location.href = './login-lf.html';
+    (function() {
+      var _t = sessionStorage.getItem('3ll_token');
+      if (!_t) {
+        var _legacy = localStorage.getItem('3ll_token');
+        if (_legacy) {
+          sessionStorage.setItem('3ll_token',      _legacy);
+          sessionStorage.setItem('3ll_api_token',  localStorage.getItem('3ll_api_token') || _legacy);
+          sessionStorage.setItem('3ll_expires_at', localStorage.getItem('3ll_expires_at') || '');
+          localStorage.removeItem('3ll_token');
+          localStorage.removeItem('3ll_api_token');
+          localStorage.removeItem('3ll_expires_at');
+          _t = _legacy;
+        }
+      }
+      var _e = sessionStorage.getItem('3ll_expires_at');
+      if (!_t || (_e && new Date(_e) < new Date())) window.location.href = './login-lf.html';
+    })();
   </script>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <meta name="theme-color" content="#0a0a1a" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://browser.sentry-cdn.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; connect-src 'self' https://zngipootstubwvgdmckt.supabase.co wss://realtime.supabase.co https://three-lakes-logistics-api.onrender.com https://*.ingest.sentry.io; frame-ancestors 'none'; base-uri 'self';" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <title>3 Lakes Light Fleet</title>
   <link rel="manifest" href="manifest-lf.json" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.41.0"></script>
+  <script src="https://browser.sentry-cdn.com/7.99.0/bundle.min.js" crossorigin="anonymous"></script>
   <script src="../shared/config.js"></script>
   <script src="../shared/tk.js"></script>
+  <script>
+    (function() {
+      var dsn = (window.__3LL_CONFIG || {}).SENTRY_DSN;
+      if (dsn && window.Sentry) {
+        Sentry.init({ dsn: dsn, environment: 'production', release: '3ll-driver@1.0.0' });
+      }
+    })();
+  </script>
   <style>
     :root {
       --bg:       #0a0a1a;
@@ -574,7 +598,12 @@
 <script>
 // ── CONSTANTS ─────────────────────────────────────────────────────────────────
 const DRIVER_MODE = 'light'; // Hard-coded — this is the LF-only app
-const DEMO_MODE   = localStorage.getItem('3ll_token') === 'demo-token-3lakes';
+
+function _getAuthToken() {
+  return sessionStorage.getItem('3ll_api_token') || sessionStorage.getItem('3ll_token') || '';
+}
+
+const DEMO_MODE   = _getAuthToken() === 'demo-token-3lakes';
 const DRIVER_ID   = localStorage.getItem('3ll_lf_driver_id') || localStorage.getItem('3ll_driver_id') || 'DRV-LF-001';
 const MY_PHONE    = localStorage.getItem('3ll_phone') || '';
 
@@ -643,7 +672,7 @@ function showView(name) {
 
 // ── LF TRIPS ─────────────────────────────────────────────────────────────────
 async function loadLfTrips() {
-  const token = localStorage.getItem('3ll_token') || '';
+  const token = _getAuthToken();
   const driverCode = DRIVER_ID;
   document.getElementById('lf-active-trip-card').style.display = 'none';
   document.getElementById('lf-no-active').style.display = 'none';
@@ -745,7 +774,7 @@ function tripCard(t) {
 }
 
 async function lfStartTrip(tripId) {
-  const token = localStorage.getItem('3ll_token') || '';
+  const token = _getAuthToken();
   try {
     await fetch(_apiBase + '/api/light-fleet/trips/' + tripId + '/start', {
       method: 'POST', headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' }
@@ -757,7 +786,7 @@ async function lfStartTrip(tripId) {
 
 async function lfCompleteTrip() {
   if (!_lfActiveTrip) return;
-  const token = localStorage.getItem('3ll_token') || '';
+  const token = _getAuthToken();
   try {
     await fetch(_apiBase + '/api/light-fleet/trips/' + _lfActiveTrip.id + '/complete', {
       method: 'POST', headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' }, body: '{}'
@@ -1006,7 +1035,7 @@ async function handleUpload(docType, input) {
   form.append('file', file);
   form.append('doc_type', docType);
   try {
-    const token = localStorage.getItem('3ll_token') || '';
+    const token = _getAuthToken();
     const r = await fetch(_apiBase + '/api/light-fleet/upload', { method:'POST', headers:{'Authorization':'Bearer '+token}, body:form });
     if (r.ok) { if (statusId) { const el = document.getElementById(statusId); if (el) el.style.display=''; } showToast('✓ Uploaded successfully'); }
     else showToast('Upload failed — check connection');
@@ -1059,7 +1088,7 @@ function showToast(msg, dur = 2800) {
 }
 function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 async function apiFetch(path, method = 'GET', body = null) {
-  const token = localStorage.getItem('3ll_token') || '';
+  const token = _getAuthToken();
   const opts  = { method, headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' } };
   if (body) opts.body = JSON.stringify(body);
   try { return await fetch(_apiBase + path, opts); }

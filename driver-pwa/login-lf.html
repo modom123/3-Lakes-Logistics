@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <meta name="theme-color" content="#0a0a1a" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://browser.sentry-cdn.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://zngipootstubwvgdmckt.supabase.co wss://realtime.supabase.co https://three-lakes-logistics-api.onrender.com https://*.ingest.sentry.io; frame-ancestors 'none'; base-uri 'self';" />
   <title>3 Lakes Light Fleet — Sign In</title>
   <link rel="manifest" href="manifest-lf.json" />
   <script src="../shared/config.js"></script>
@@ -191,14 +192,22 @@ function handleSubmit(event) {
 }
 
 function _storeLFSession(data, normalizedPhone) {
-  var id = data.driver_id || data.lf_driver_id || data.id || '';
-  localStorage.setItem('3ll_token',        data.token || ('lf-' + id));
+  var id        = data.driver_id || data.lf_driver_id || data.id || '';
+  var token     = data.token || ('lf-' + id);
+  var expiresAt = data.expires_at || new Date(Date.now() + 86400000 * 30).toISOString();
+  // Auth tokens in sessionStorage only
+  sessionStorage.setItem('3ll_token',     token);
+  sessionStorage.setItem('3ll_api_token', token);
+  sessionStorage.setItem('3ll_expires_at', expiresAt);
+  // Driver identity persists in localStorage
   localStorage.setItem('3ll_driver_id',    String(id));
   localStorage.setItem('3ll_lf_driver_id', String(data.lf_driver_id || id));
   localStorage.setItem('3ll_driver_mode',  'light');
   localStorage.setItem('3ll_driver_name',  data.driver_name || data.name || '');
   localStorage.setItem('3ll_phone',        normalizedPhone);
-  localStorage.setItem('3ll_expires_at',   data.expires_at || new Date(Date.now() + 86400000 * 30).toISOString());
+  localStorage.removeItem('3ll_token');
+  localStorage.removeItem('3ll_api_token');
+  localStorage.removeItem('3ll_expires_at');
   ['3ll_driver_code','3ll_truck','3ll_trailer','3ll_carrier_id'].forEach(function(k){ localStorage.removeItem(k); });
 }
 
