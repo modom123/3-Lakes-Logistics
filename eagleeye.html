@@ -2579,8 +2579,11 @@ select.form-input option{background:var(--surface);}
         </div>
       </div>
 
+      <!-- PIPELINE SUMMARY -->
+      <div id="crm-summary" style="padding:10px 16px 0;display:flex;gap:8px;flex-wrap:wrap;align-items:center"></div>
+
       <!-- LIST VIEW -->
-      <div id="crm-view-list" style="display:grid;grid-template-columns:350px 1fr;gap:16px;padding:16px;height:calc(100vh - 120px);overflow:hidden">
+      <div id="crm-view-list" style="display:grid;grid-template-columns:350px 1fr;gap:16px;padding:12px 16px 16px;height:calc(100vh - 168px);overflow:hidden">
         <div style="display:flex;flex-direction:column;border-right:1px solid var(--border);padding-right:16px">
           <div style="flex:1;overflow-y:auto;border:1px solid var(--border);border-radius:6px">
             <div id="crm-leads-list" style="min-height:200px"><div class="loading"><div class="spin"></div>Loading leads…</div></div>
@@ -2595,12 +2598,12 @@ select.form-input option{background:var(--surface);}
       </div>
 
       <!-- KANBAN VIEW -->
-      <div id="crm-view-kanban" style="display:none;padding:16px;overflow-x:auto;overflow-y:hidden;height:calc(100vh - 120px)">
+      <div id="crm-view-kanban" style="display:none;padding:16px;overflow-x:auto;overflow-y:hidden;height:calc(100vh - 168px)">
         <div id="crm-kanban-board" style="display:flex;gap:12px;min-width:max-content;height:100%"></div>
       </div>
 
       <!-- OUTREACH CAMPAIGNS VIEW -->
-      <div id="crm-view-outreach" style="display:none;padding:16px;overflow-y:auto;height:calc(100vh - 120px)">
+      <div id="crm-view-outreach" style="display:none;padding:16px;overflow-y:auto;height:calc(100vh - 168px)">
         <div id="crm-oe-root"></div>
       </div>
     </div>
@@ -9057,15 +9060,62 @@ function _crmStatus(l){ return l.status || l.stage || 'New'; }
 async function loadCrmLeads(){
   crmLoadHeat(); crmOeLoad();
   try {
-    const r = await apiFetch('/api/leads?limit=15');
+    const r = await apiFetch('/api/leads?limit=500');
     const d = await r.json();
     crmAllLeads = d.items || [];
     document.getElementById('crm-leads-count').textContent = crmAllLeads.length;
+    renderCrmSummary();
     renderCrmLeadsList();
   } catch (e) {
     document.getElementById('crm-leads-list').innerHTML = `<div style="color:var(--red);padding:8px">Error loading leads</div>`;
   }
 }
+
+// Pipeline-at-a-glance: totals, stage breakdown, and who needs outreach/follow-up.
+function renderCrmSummary(){
+  const el = document.getElementById('crm-summary');
+  if(!el) return;
+  const leads = crmAllLeads || [];
+  const now = new Date();
+  const norm = s => (s||'New').replace(' ','_');
+  const cnt = stage => leads.filter(l => norm(_crmStatus(l)) === stage).length;
+  const touched = l => l.last_touch_at || l.last_contact_at;
+  const contacted = leads.filter(touched).length;
+  const neverContacted = leads.length - contacted;
+  const dueFollowup = leads.filter(l => l.next_touch_at && new Date(l.next_touch_at) <= now).length;
+  const upcoming = leads.filter(l => l.next_touch_at && new Date(l.next_touch_at) > now).length;
+  const emailed = leads.filter(l => (l.outreach_channel||'').toLowerCase().includes('email')).length;
+  const called = leads.filter(l => (l.outreach_channel||'').toLowerCase().match(/call|sms|phone/)).length;
+
+  const chip = (label, val, color, onclick, title) =>
+    `<button onclick="${onclick||''}" title="${title||''}" style="display:flex;flex-direction:column;align-items:flex-start;gap:1px;padding:7px 12px;border:1px solid var(--border);border-radius:8px;background:var(--surface,#fff);cursor:${onclick?'pointer':'default'};min-width:84px">
+      <span style="font-size:18px;font-weight:800;color:${color||'var(--navy)'};line-height:1">${val}</span>
+      <span style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px">${label}</span>
+    </button>`;
+  const stageChip = (label, stage, color) =>
+    chip(label, cnt(stage), color, `crmFilterStage('${stage}')`, `Show ${label} leads`);
+
+  el.innerHTML =
+    chip('Total Leads', leads.length, 'var(--navy)', `crmFilterStage('')`, 'All leads') +
+    stageChip('New', 'New', '#f97316') +
+    stageChip('Contacted', 'Contacted', '#3b82f6') +
+    stageChip('Interested', 'Interested', '#16a34a') +
+    stageChip('Won', 'Won', '#d97706') +
+    `<span style="width:1px;height:34px;background:var(--border);margin:0 2px"></span>` +
+    chip('Need 1st Touch', neverContacted, '#b45309', '', 'Leads with no recorded outreach yet') +
+    chip('Follow-up Due', dueFollowup, dueFollowup?'#ef4444':'var(--muted)', '', 'Next-touch date has arrived/passed') +
+    chip('Upcoming', upcoming, 'var(--navy)', '', 'Follow-up scheduled in the future') +
+    `<span style="width:1px;height:34px;background:var(--border);margin:0 2px"></span>` +
+    chip('Emailed', emailed, '#6366f1', '', 'Last outreach was email') +
+    chip('Called', called, '#0ea5e9', '', 'Last outreach was a call/SMS');
+}
+
+// Set the stage filter from a summary chip and re-render the active view.
+window.crmFilterStage = function(stage){
+  const sel = document.getElementById('crm-filter-stage');
+  if(sel){ sel.value = stage; }
+  renderCrmCurrentView();
+};
 
 function renderCrmLeadsList(){
   const stage = document.getElementById('crm-filter-stage').value;
