@@ -6,15 +6,16 @@ steps and reports which of the 200 automation steps respond correctly.
 Run from repo root:
     py -m pytest tests/test_5_carriers_full.py -v -s
 """
+import os
 import time
 import pytest
 import requests
 from datetime import datetime, timezone
 
-BASE_URL = "https://three-lakes-logistics-api.onrender.com"
+BASE_URL = os.environ.get("API_BASE_URL", "https://three-lakes-logistics-api.onrender.com")
 HEADERS = {
     "Content-Type": "application/json",
-    "Authorization": "Bearer taiOFL40cCr5V0pH89hUks8jXVPlOkm2WxKvd3f6BoE",
+    "Authorization": f"Bearer {os.environ.get('API_BEARER_TOKEN', '')}",
 }
 
 # ── 5 Carrier Payloads from PDF ───────────────────────────────────────────────

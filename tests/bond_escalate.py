@@ -23,7 +23,7 @@ import urllib.request
 BASE_URL = os.environ.get(
     "API_BASE_URL", "https://three-lakes-logistics-api.onrender.com"
 )
-TOKEN = os.environ.get("API_BEARER_TOKEN", "taiOFL40cCr5V0pH89hUks8jXVPlOkm2WxKvd3f6BoE")
+TOKEN = os.environ.get("API_BEARER_TOKEN", "")
 
 HEADERS = {
     "Authorization": f"Bearer {TOKEN}",

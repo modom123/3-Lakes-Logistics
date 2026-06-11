@@ -2811,7 +2811,7 @@ async function bizSubmit(e) {
     const API = (window.__3LL_API_BASE || 'https://three-lakes-logistics-api.onrender.com').replace(/\/$/, '');
     const r = await fetch(API + '/api/light-fleet/executive/accounts', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer taiOFL40cCr5V0pH89hUks8jXVPlOkm2WxKvd3f6BoE' },
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + ((window.__3LL_CONFIG || {}).BOND_API_KEY || '') },
       body: JSON.stringify(payload),
     });
     if (r.ok) {

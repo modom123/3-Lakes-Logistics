@@ -28,7 +28,7 @@ KNOWN_VARS = {
     "PORT":                  "8080",
     "SUPABASE_URL":          "https://zngipootstubwvgdmckt.supabase.co",
     "SUPABASE_ANON_KEY":     "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpuZ2lwb290c3R1Ynd2Z2RtY2t0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMxMjk3ODUsImV4cCI6MjA4ODcwNTc4NX0.6MXR8q-CKVuiiJaJKuckxABAUQ-siuyP0-KoaLkt33g",
-    "API_BEARER_TOKEN":      "taiOFL40cCr5V0pH89hUks8jXVPlOkm2WxKvd3f6BoE",
+    "API_BEARER_TOKEN":      os.environ.get("API_BEARER_TOKEN", ""),  # Set via env — do not hardcode
     "BOND_API_KEY":          "xUvzgCnQZ-j-0HYTh749E1t6AKX3RNYFqNfoNVcnH1Z0KFCQUy693Q",
     "DAYTONA_SANDBOX_ID":    "2a50d3c2-f813-49c0-8dec-f9248581c5c6",
     "TWILIO_FROM_NUMBER":    "+13135469006",

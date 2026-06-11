@@ -25,7 +25,7 @@ import requests
 import pytest
 
 BASE_URL = os.environ.get("TEST_API_BASE_URL", "http://localhost:8080")
-API_TOKEN = os.environ.get("TEST_API_TOKEN", "taiOFL40cCr5V0pH89hUks8jXVPlOkm2WxKvd3f6BoE")
+API_TOKEN = os.environ.get("TEST_API_TOKEN", os.environ.get("API_BEARER_TOKEN", ""))
 HEADERS = {"Content-Type": "application/json", "Authorization": f"Bearer {API_TOKEN}"}
 
 # Unique suffix so parallel runs don't collide
