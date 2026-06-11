@@ -1,0 +1,64 @@
+name: Bond — Apply Migrations & Redeploy
+
+# The James Bond office can run this whenever Supabase SQL needs applying and/or
+# Render needs a redeploy. It calls the live /api/bond/deploy endpoint, which
+# applies pending repo migrations (tracked, idempotent) and triggers a Render
+# redeploy — no manual SQL-editor or dashboard trips.
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: 'sync (migrate + redeploy) | migrate | redeploy | deploy-status'
+        required: false
+        default: 'sync'
+      reason:
+        description: 'Why Bond is deploying (logged to the audit trail)'
+        required: false
+        default: 'automated Bond deploy'
+
+jobs:
+  deploy:
+    name: Bond apply migrations + redeploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Bond — Report deploy started
+        env:
+          API_BEARER_TOKEN: ${{ secrets.API_BEARER_TOKEN }}
+        run: |
+          python tests/bond_escalate.py report "bond_deploy_start" \
+            "Bond deploy started — action=${{ inputs.action }} reason: ${{ inputs.reason }}"
+        continue-on-error: true
+
+      - name: Apply migrations + redeploy
+        env:
+          API_BEARER_TOKEN: ${{ secrets.API_BEARER_TOKEN }}
+          ACTION:           ${{ inputs.action }}
+        run: python scripts/bond_deploy.py
+
+      - name: Bond — Report deploy complete
+        if: success()
+        env:
+          API_BEARER_TOKEN: ${{ secrets.API_BEARER_TOKEN }}
+        run: |
+          python tests/bond_escalate.py report "bond_deploy_complete" \
+            "Bond deploy complete — action=${{ inputs.action }} reason=${{ inputs.reason }}"
+        continue-on-error: true
+
+      - name: Bond — Report deploy failed
+        if: failure()
+        env:
+          API_BEARER_TOKEN: ${{ secrets.API_BEARER_TOKEN }}
+        run: |
+          python tests/bond_escalate.py report "bond_deploy_failed" \
+            "Bond deploy FAILED — action=${{ inputs.action }} reason=${{ inputs.reason }} — manual review required"
+        continue-on-error: true

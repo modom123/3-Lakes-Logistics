@@ -4,7 +4,7 @@ from __future__ import annotations
 from typing import Any, Callable
 
 from . import (
-    alexander, atlas, audit, beacon, bond_courier, casey, cash, chloe_sinclair, diana_cole,
+    alexander, atlas, audit, beacon, bond_courier, bond_devops, casey, cash, chloe_sinclair, diana_cole,
     drew, dr_james_nemt, echo, elena_ross, felix_grant, isabella, jamie_park, james_bond,
     jordan, kai, katerina, load_hunter, lucas_sterling, marcus_reid, maya, morgan_hayes,
     naomi, nova, orbit, outside_bond, penny, pulse, quinn, rex, rio, scout, settler, shield,
@@ -36,6 +36,7 @@ _DISPATCH: dict[str, Callable[[dict[str, Any]], dict[str, Any]]] = {
     "james_bond":       james_bond.run,
     "outside_bond":     outside_bond.run,
     "bond_courier":     bond_courier.run,
+    "bond_devops":      bond_devops.run,
     "technical_team":   technical_team.run,
     "lucas_sterling":   lucas_sterling.run,
     "chloe_sinclair":   chloe_sinclair.run,

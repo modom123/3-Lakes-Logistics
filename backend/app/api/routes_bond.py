@@ -135,6 +135,40 @@ def intel_snapshot() -> dict:
     }
 
 
+class DeployIn(BaseModel):
+    redeploy: bool = True
+
+
+@_internal.post("/deploy")
+def bond_deploy(body: DeployIn | None = None) -> dict:
+    """Bond Office one-click deploy: apply pending Supabase migrations, then
+    trigger a Render redeploy, then report. Replaces manual SQL-editor +
+    dashboard trips."""
+    from ..agents import bond_devops
+    return bond_devops.run({"action": "sync", "redeploy": (body.redeploy if body else True)})
+
+
+@_internal.post("/migrate")
+def bond_migrate() -> dict:
+    """Apply pending Supabase SQL migrations only (no redeploy)."""
+    from ..agents import bond_devops
+    return bond_devops.run({"action": "migrate"})
+
+
+@_internal.post("/redeploy")
+def bond_redeploy() -> dict:
+    """Trigger a Render redeploy only."""
+    from ..agents import bond_devops
+    return bond_devops.run({"action": "redeploy"})
+
+
+@_internal.get("/deploy-status")
+def bond_deploy_status() -> dict:
+    """Pending migrations + last deploy-log entry for the Bond Office tab."""
+    from ..agents import bond_devops
+    return bond_devops.run({"action": "status"})
+
+
 @_internal.patch("/message/{msg_id}")
 def update_message_status(msg_id: str, body: StatusPatch) -> dict:
     sb = get_supabase()

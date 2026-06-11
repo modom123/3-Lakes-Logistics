@@ -45,7 +45,8 @@ _RENDER_URL      = "https://api.render.com/v1"
 _RENDER_SVC      = "three-lakes-logistics-api"
 _OPENROUTER_URL  = "https://openrouter.ai/api/v1/chat/completions"
 
-_KNOWN_TASKS = ["bland_ai_allowlist", "render_env", "render_restart", "api_probe", "generic"]
+_KNOWN_TASKS = ["bland_ai_allowlist", "render_env", "render_restart", "api_probe",
+                "apply_sql", "deploy_sync", "generic"]
 
 _QWEN_SYSTEM = """You are Outside Bond, an autonomous IEBC field operative for 3 Lakes Logistics.
 James Bond (your inside auditor) has handed you a failed test phase with raw error details.
@@ -64,6 +65,8 @@ Classification rules:
 - "bland_ai_allowlist"  → error mentions 'allowlist', '403', 'host not in allowlist', 'bland', or Vance/carrier call failures
 - "render_restart"      → error mentions '502', '503', 'connection refused', 'service unavailable', 'timeout' on the main API
 - "render_env"          → error mentions missing env var, configuration, secret, or key not found
+- "apply_sql"           → error mentions missing table, 'does not exist', 'undefined column', schema, or migration not applied
+- "deploy_sync"         → need to apply pending DB migrations AND redeploy together
 - "api_probe"           → need to health-check a specific endpoint to confirm status
 - "generic"             → no automated fix available; should_automate must be false
 
@@ -91,6 +94,11 @@ def _fallback_classify(error_details: str, phase: str) -> dict:
     if any(p in err for p in ("502", "503", "connection refused", "service unavailable")):
         return {"task": "render_restart", "should_automate": True,
                 "reasoning": "Service unavailable pattern — restart Render service.",
+                "context": {}, "manual_instructions": ""}
+    if any(p in err for p in ("does not exist", "missing table", "undefined column",
+                              "relation", "schema", "migration")):
+        return {"task": "apply_sql", "should_automate": True,
+                "reasoning": "Missing schema pattern — apply pending Supabase migrations.",
                 "context": {}, "manual_instructions": ""}
     if phase in ("carriers", "integration", "live"):
         return {"task": "bland_ai_allowlist", "should_automate": True,
@@ -358,6 +366,29 @@ def _handle_generic(context: dict) -> dict:
     return {"automated": False, "reason": "No automated handler for this task type", "server_ip": _server_ip()}
 
 
+def _handle_apply_sql(context: dict) -> dict:
+    """Apply pending repo Supabase migrations via the Bond DevOps runner."""
+    from . import bond_devops
+    res = bond_devops.run({"action": "migrate"})
+    if res.get("failed"):
+        return {"automated": False,
+                "reason": "Migration(s) failed: "
+                          + "; ".join(f"{f['file']}: {f['error']}" for f in res["failed"])[:200],
+                "server_ip": None}
+    return {"automated": True,
+            "action": f"Applied {res.get('applied_count', 0)} migration(s) "
+                      f"({res.get('skipped', 0)} already current)"}
+
+
+def _handle_deploy_sync(context: dict) -> dict:
+    """Apply pending migrations AND trigger a Render redeploy via Bond DevOps."""
+    from . import bond_devops
+    res = bond_devops.run({"action": "sync", "redeploy": True})
+    if res.get("ok"):
+        return {"automated": True, "action": res.get("summary", "deploy sync complete")}
+    return {"automated": False, "reason": res.get("summary", "deploy sync failed"), "server_ip": None}
+
+
 def _handle_lf_platform_connect(context: dict) -> dict:
     """Test and verify Light Fleet platform API connections (Curri, Roadie)."""
     from . import curri_client, roadie_client
@@ -535,6 +566,8 @@ _HANDLERS: dict[str, Any] = {
     "lf_platform_connect":     _handle_lf_platform_connect,
     "lf_register_webhooks":    _handle_lf_register_webhooks,
     "stripe_identity_setup":   _handle_stripe_identity_setup,
+    "apply_sql":               _handle_apply_sql,
+    "deploy_sync":             _handle_deploy_sync,
     "generic":                 _handle_generic,
 }
 

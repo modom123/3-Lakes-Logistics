@@ -17,6 +17,12 @@ class Settings(BaseSettings):
     supabase_anon_key: str = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpuZ2lwb290c3R1Ynd2Z2RtY2t0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMxMjk3ODUsImV4cCI6MjA4ODcwNTc4NX0.6MXR8q-CKVuiiJaJKuckxABAUQ-siuyP0-KoaLkt33g"
     supabase_service_role_key: str = ""
 
+    # Direct Postgres connection string — used ONLY by bond_devops to apply
+    # migrations (DDL) over psycopg2. Get it from Supabase → Project Settings →
+    # Database → Connection string (Session pooler / URI). Either name works.
+    database_url: str = ""
+    supabase_db_url: str = ""
+
     stripe_secret_key: str = ""
     stripe_webhook_secret: str = ""
     stripe_identity_webhook_secret: str = ""   # separate secret for Identity webhook endpoint
