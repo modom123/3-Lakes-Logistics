@@ -738,19 +738,9 @@ select.form-input option{background:var(--surface);}
 </head>
 <body>
 
-<!-- ── DIAGNOSTIC BANNER (visible without F12) ─────────────────── -->
-<div id="diag-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:99999;background:#1a1a2e;color:#fff;font-family:monospace;font-size:12px;padding:8px 14px;border-top:2px solid #e74c3c;max-height:140px;overflow-y:auto">
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
-    <b style="color:#f1c40f">Eagle Eye Diagnostics</b>
-    <button onclick="document.getElementById('diag-banner').style.display='none'" style="background:none;border:1px solid #555;color:#fff;cursor:pointer;padding:2px 8px;border-radius:4px">✕</button>
-  </div>
-  <div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap">
-    <span>API: <span id="diag-url" style="color:#3498db">—</span></span>
-    <span>Health: <span id="diag-health" style="color:#e74c3c">checking…</span></span>
-    <span id="diag-auto-fix-status" style="font-size:11px;color:#94a3b8"></span>
-  </div>
-  <div id="diag-errors" style="color:#e74c3c;margin-top:2px"></div>
-</div>
+<!-- Diagnostics moved into the Test Suite page (page-tests). The old fixed
+     pop-up banner was removed so diagnostics no longer cover the screen —
+     view them on demand under 🧪 Test Suite. -->
 
 <!-- ── LOGIN SCREEN ─────────────────────────────────────── -->
 <div id="login-screen">
@@ -6316,6 +6306,15 @@ async function _diagAutoDispatch() {
     // If more errors piled up while we were working, schedule another run
     if (_diagErrorQueue.length > 0) _diagMaybeDispatch();
   }
+}
+
+function diagToggle(){
+  const body = document.getElementById('diag-panel-body');
+  const caret = document.getElementById('diag-toggle-caret');
+  if (!body) return;
+  const collapsed = body.style.display === 'none';
+  body.style.display = collapsed ? 'block' : 'none';
+  if (caret) caret.textContent = collapsed ? '▾' : '▸';
 }
 
 function diagLog(msg, isError=false){
@@ -14984,6 +14983,24 @@ setInterval(bondGlobalPoll, 180000);
     <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
       <button class="ts-runall" onclick="tsRunAll()">▶ Run All Domains</button>
       <button class="ts-unleash-btn" id="ts-unleash-btn" onclick="tsUnleashBothBonds()">🕵️🕵️ Unleash Both Bonds</button>
+    </div>
+  </div>
+
+  <!-- ── Eagle Eye Diagnostics (relocated from the fixed pop-up banner) ── -->
+  <div id="diag-panel" style="background:var(--surface);border:1px solid var(--border);border-radius:10px;margin-bottom:20px;overflow:hidden;">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--border);cursor:pointer;" onclick="diagToggle()">
+      <div style="display:flex;align-items:center;gap:8px;font-weight:700;font-size:14px;">
+        <span style="font-size:16px;">🩺</span> Eagle Eye Diagnostics
+      </div>
+      <span id="diag-toggle-caret" style="color:var(--muted);font-size:12px;">▾</span>
+    </div>
+    <div id="diag-panel-body" style="padding:12px 16px;">
+      <div style="display:flex;gap:18px;align-items:center;flex-wrap:wrap;font-family:var(--ff-m);font-size:12px;margin-bottom:8px;">
+        <span>API: <span id="diag-url" style="color:#3498db">—</span></span>
+        <span>Health: <span id="diag-health" style="color:var(--muted)">checking…</span></span>
+        <span id="diag-auto-fix-status" style="font-size:11px;color:#94a3b8"></span>
+      </div>
+      <div id="diag-errors" style="font-family:var(--ff-m);font-size:11px;color:#e74c3c;max-height:200px;overflow-y:auto;"></div>
     </div>
   </div>
 
