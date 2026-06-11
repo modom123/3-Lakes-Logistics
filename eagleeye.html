@@ -11191,17 +11191,12 @@ window.moTodoClear = function(){
 };
 
 window.moTodoToggle = function(id){
-  const todos=moTodos();const t=todos.find(x=>x.id===id);if(t)t.done=!t.done;
-  moTodosSave(todos);
-  const filter=document.getElementById('mo-todo-filter')?.value||'open';
-  if(t&&t.done&&filter!=='all'&&filter!=='done'){
-    // Animate the row out, then re-render
-    const row=document.getElementById('mo-row-'+id);
-    if(row){row.style.transition='opacity .35s,transform .35s';row.style.opacity='0';row.style.transform='translateX(12px)';setTimeout(moTodoRender,370);}
-    else{moTodoRender();}
-  } else {
-    moTodoRender();
-  }
+  // Checking a task off deletes it permanently (and removes it from the shared
+  // office store), so completed tasks never reappear on reload.
+  moTodosSave(moTodos().filter(x=>x.id!==id));
+  const row=document.getElementById('mo-row-'+id);
+  if(row){row.style.transition='opacity .35s,transform .35s';row.style.opacity='0';row.style.transform='translateX(12px)';setTimeout(moTodoRender,370);}
+  else{moTodoRender();}
 };
 
 window.moTodoDel = function(id){
@@ -11491,16 +11486,9 @@ window.moEmailSend = async function(){
   }catch(e){if(st)st.textContent='Send failed: '+e.message;}
 };
 
-if(!moTodos().length){
-  const d=n=>new Date(Date.now()+n*86400000).toISOString().slice(0,10);
-  moTodosSave([
-    {id:'seed1',title:'Review Q3 carrier acquisition strategy with CC',desc:'CC to present updated Tier A carrier target list and hot market analysis. Review Alexander and Naomi outputs together.',due:d(1),pri:'high',cat:'strategy',done:false,created:new Date().toISOString()},
-    {id:'seed2',title:'Approve North American Trading load mix report',desc:'Rex to present weekly load board performance. Approve lane strategy adjustments for TX/FL corridors.',due:d(0),pri:'high',cat:'trading',done:false,created:new Date().toISOString()},
-    {id:'seed3',title:'DOT compliance file review — end of month',desc:'All carrier compliance reviews must be complete. CC to ensure Winston has flagged at-risk carriers.',due:d(7),pri:'med',cat:'compliance',done:false,created:new Date().toISOString()},
-    {id:'seed4',title:'Light Fleet expansion — Lugg segment KPI review',desc:'CC to pull gig fleet KPIs and present retention summary. Review Lugg onboarding numbers.',due:d(7),pri:'med',cat:'operations',done:false,created:new Date().toISOString()},
-    {id:'seed5',title:'Request James Bond IEBC Q2 integration report',desc:'Ask Bond to deliver full tech gap analysis and system health report for Q2 close.',due:d(10),pri:'low',cat:'other',done:false,created:new Date().toISOString()},
-  ]);
-}
+// (Removed dummy-todo auto-seed: it re-injected sample tasks on every load
+//  whenever the list was empty, so deleted/completed tasks kept reappearing.
+//  The list now starts empty and only holds tasks the user creates.)
 
 })();
 </script>
@@ -12698,16 +12686,15 @@ function ccgDueLbl(due){
 }
 
 window.ccgMarkDone = function(id, done){
-  const todos=JSON.parse(localStorage.getItem('mo_todos')||'[]');
-  const t=todos.find(x=>x.id===id);
-  if(t){
-    t.done=done;
-    if(done)t.done_by_cece=new Date().toISOString();
-    localStorage.setItem('mo_todos',JSON.stringify(todos));
-    if(typeof moTodoRender==='function')moTodoRender();
-  }
+  if(!done){ ccgFromMarkRender(); return; }   // unchecking is a no-op once deleted
+  // Completing a task deletes it permanently and syncs the deletion to the
+  // shared office store so it cannot reappear on reload or on another device.
+  const todos=JSON.parse(localStorage.getItem('mo_todos')||'[]').filter(x=>x.id!==id);
+  localStorage.setItem('mo_todos',JSON.stringify(todos));
+  try{ apiFetch('/api/office/state/mo_todos','PUT',{value:todos}).catch(()=>{}); }catch(e){}
+  if(typeof moTodoRender==='function')moTodoRender();
   ccgFromMarkRender();
-  toast(done?'Task marked complete ✓':'Task reopened');
+  toast('Task completed & cleared ✓');
 };
 
 /* ── KPI Drill ── */
