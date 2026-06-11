@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Android Network Security Configuration for 3 Lakes Driver app.
+  Applied via android:networkSecurityConfig in AndroidManifest.xml.
+
+  After running `npx cap add android`, copy this file to:
+    android/app/src/main/res/xml/network_security_config.xml
+
+  Then add to android/app/src/main/AndroidManifest.xml <application> tag:
+    android:networkSecurityConfig="@xml/network_security_config"
+-->
+<network-security-config>
+
+  <!-- Production API — only allow valid CA-signed TLS; no user certs -->
+  <domain-config cleartextTrafficPermitted="false">
+    <domain includeSubdomains="false">three-lakes-logistics-api.onrender.com</domain>
+    <trust-anchors>
+      <certificates src="system" />
+    </trust-anchors>
+  </domain-config>
+
+  <!-- Supabase realtime + REST -->
+  <domain-config cleartextTrafficPermitted="false">
+    <domain includeSubdomains="true">supabase.co</domain>
+    <trust-anchors>
+      <certificates src="system" />
+    </trust-anchors>
+  </domain-config>
+
+  <!-- Block all cleartext (HTTP) traffic globally -->
+  <base-config cleartextTrafficPermitted="false">
+    <trust-anchors>
+      <certificates src="system" />
+    </trust-anchors>
+  </base-config>
+
+  <!-- Allow cleartext only to localhost for Capacitor dev server -->
+  <domain-config cleartextTrafficPermitted="true">
+    <domain includeSubdomains="false">localhost</domain>
+  </domain-config>
+
+</network-security-config>

@@ -17,6 +17,7 @@ on:
           - live
           - carriers
           - driver
+          - e2e
 
 concurrency:
   group: nightly-tests
@@ -26,21 +27,34 @@ jobs:
   test:
     name: 3 Lakes Logistics — Full API Test Suite
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
 
     steps:
       - uses: actions/checkout@v4
 
+      # ── Python setup (API tests) ───────────────────────────────────────────
       - name: Set up Python 3.11
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
-      - name: Install test dependencies
+      - name: Install Python test dependencies
         run: pip install pytest requests
 
+      # ── Node setup (E2E tests) ─────────────────────────────────────────────
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install Node dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install chromium --with-deps
+
       # Render free tier sleeps after 15 min of inactivity.
-      # Ping twice with a gap to make sure it's fully awake before tests start.
       - name: Wake Render service
         run: |
           echo "→ Pinging Render (cold-start warmup)…"
@@ -51,10 +65,20 @@ jobs:
             --max-time 15 || true
           echo "→ Render is warm."
 
-      # ── Phase 1: Security (no data writes — safe to run first) ─────────────
+      # Bond opening brief — log mission start to internal command
+      - name: Bond — Mission start report
+        env:
+          API_BEARER_TOKEN: ${{ secrets.API_BEARER_TOKEN }}
+          GITHUB_TOKEN:     ${{ secrets.GITHUB_TOKEN }}
+        run: python tests/bond_escalate.py report "mission_start" "Nightly CI suite started — suite=${{ inputs.suite || 'all (scheduled)' }}"
+        continue-on-error: true
+
+      # ── Phase 1: Security (no data writes — safe to run first) ────────────
       - name: 'Phase 1 — Security & Authorization'
         id: security
         if: inputs.suite == 'all' || inputs.suite == 'security' || inputs.suite == ''
+        env:
+          API_BEARER_TOKEN: ${{ secrets.API_BEARER_TOKEN }}
         run: pytest tests/test_security.py -v --tb=short --no-header
         continue-on-error: true
 
@@ -62,12 +86,15 @@ jobs:
         if: always() && steps.security.outcome == 'failure'
         env:
           API_BEARER_TOKEN: ${{ secrets.API_BEARER_TOKEN }}
+          GITHUB_TOKEN:     ${{ secrets.GITHUB_TOKEN }}
         run: python tests/bond_escalate.py security
 
       # ── Phase 2: Smoke (read-only) ─────────────────────────────────────────
       - name: 'Phase 2 — Live API smoke tests'
         id: live
         if: inputs.suite == 'all' || inputs.suite == 'live' || inputs.suite == ''
+        env:
+          API_BEARER_TOKEN: ${{ secrets.API_BEARER_TOKEN }}
         run: pytest tests/test_live_api.py -v --tb=short --no-header
         continue-on-error: true
 
@@ -75,12 +102,15 @@ jobs:
         if: always() && steps.live.outcome == 'failure'
         env:
           API_BEARER_TOKEN: ${{ secrets.API_BEARER_TOKEN }}
+          GITHUB_TOKEN:     ${{ secrets.GITHUB_TOKEN }}
         run: python tests/bond_escalate.py live
 
       # ── Phase 3: Driver auth guards (read-only) ────────────────────────────
       - name: 'Phase 3 — Driver API live tests'
         id: driver
         if: inputs.suite == 'all' || inputs.suite == 'driver' || inputs.suite == ''
+        env:
+          API_BEARER_TOKEN: ${{ secrets.API_BEARER_TOKEN }}
         run: pytest tests/test_driver_live.py -v --tb=short --no-header
         continue-on-error: true
 
@@ -88,12 +118,15 @@ jobs:
         if: always() && steps.driver.outcome == 'failure'
         env:
           API_BEARER_TOKEN: ${{ secrets.API_BEARER_TOKEN }}
+          GITHUB_TOKEN:     ${{ secrets.GITHUB_TOKEN }}
         run: python tests/bond_escalate.py driver
 
-      # ── Phase 4: Integration & concurrency (writes telemetry + triggers) ───
+      # ── Phase 4: Integration & concurrency ───────────────────────────────
       - name: 'Phase 4 — Integration, concurrency & webhook tracing'
         id: integration
         if: inputs.suite == 'all' || inputs.suite == 'integration' || inputs.suite == ''
+        env:
+          API_BEARER_TOKEN: ${{ secrets.API_BEARER_TOKEN }}
         run: pytest tests/test_integration.py -v --tb=short --no-header
         continue-on-error: true
 
@@ -101,12 +134,15 @@ jobs:
         if: always() && steps.integration.outcome == 'failure'
         env:
           API_BEARER_TOKEN: ${{ secrets.API_BEARER_TOKEN }}
+          GITHUB_TOKEN:     ${{ secrets.GITHUB_TOKEN }}
         run: python tests/bond_escalate.py integration
 
-      # ── Phase 5: Full carrier lifecycle (data writes — run last) ───────────
+      # ── Phase 5: Full carrier lifecycle (data writes — run last) ──────────
       - name: 'Phase 5 — 5-Carriers full lifecycle'
         id: carriers
         if: inputs.suite == 'all' || inputs.suite == 'carriers' || inputs.suite == ''
+        env:
+          API_BEARER_TOKEN: ${{ secrets.API_BEARER_TOKEN }}
         run: pytest tests/test_5_carriers_full.py -v --tb=short --no-header
         continue-on-error: true
 
@@ -114,9 +150,43 @@ jobs:
         if: always() && steps.carriers.outcome == 'failure'
         env:
           API_BEARER_TOKEN: ${{ secrets.API_BEARER_TOKEN }}
+          GITHUB_TOKEN:     ${{ secrets.GITHUB_TOKEN }}
         run: python tests/bond_escalate.py carriers
 
-      # ── Cleanup — delete all test data written during this run ──────────────
+      # ── Phase 6: E2E Mobile App (Playwright) ──────────────────────────────
+      - name: Start PWA dev server
+        if: inputs.suite == 'all' || inputs.suite == 'e2e' || inputs.suite == ''
+        run: |
+          npx serve . -p 8080 --no-clipboard &
+          echo "PWA_SERVER_PID=$!" >> $GITHUB_ENV
+          sleep 4
+          curl -sf http://localhost:8080/driver-pwa/login.html --max-time 10 || true
+          echo "→ PWA server ready on :8080"
+
+      - name: 'Phase 6 — E2E Mobile App (Playwright)'
+        id: e2e
+        if: inputs.suite == 'all' || inputs.suite == 'e2e' || inputs.suite == ''
+        env:
+          APP_BASE_URL: http://localhost:8080
+        run: npm run test:e2e
+        continue-on-error: true
+
+      - name: Upload Playwright report
+        if: always() && steps.e2e.outcome != 'skipped'
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-${{ github.run_number }}
+          path: playwright-report/
+          retention-days: 14
+
+      - name: 'Bond Handoff — E2E failures'
+        if: always() && steps.e2e.outcome == 'failure'
+        env:
+          API_BEARER_TOKEN: ${{ secrets.API_BEARER_TOKEN }}
+          GITHUB_TOKEN:     ${{ secrets.GITHUB_TOKEN }}
+        run: python tests/bond_escalate.py e2e
+
+      # ── Cleanup ───────────────────────────────────────────────────────────
       - name: Cleanup test data
         if: always()
         env:
@@ -124,7 +194,23 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: python tests/cleanup_test_data.py
 
-      # ── Final report — collect all results and set job status ───────────────
+      # ── Bond mission complete report ──────────────────────────────────────
+      - name: Bond — Mission complete report
+        if: always()
+        env:
+          API_BEARER_TOKEN: ${{ secrets.API_BEARER_TOKEN }}
+          GITHUB_TOKEN:     ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python tests/bond_escalate.py report "mission_complete" \
+            "security=${{ steps.security.outcome || 'skipped' }} \
+             live=${{ steps.live.outcome || 'skipped' }} \
+             driver=${{ steps.driver.outcome || 'skipped' }} \
+             integration=${{ steps.integration.outcome || 'skipped' }} \
+             carriers=${{ steps.carriers.outcome || 'skipped' }} \
+             e2e=${{ steps.e2e.outcome || 'skipped' }}"
+        continue-on-error: true
+
+      # ── Final report ─────────────────────────────────────────────────────
       - name: Final summary
         if: always()
         run: |
@@ -142,6 +228,7 @@ jobs:
           echo "  Phase 3 Driver:      ${{ steps.driver.outcome      || 'skipped' }}"
           echo "  Phase 4 Integration: ${{ steps.integration.outcome || 'skipped' }}"
           echo "  Phase 5 Carriers:    ${{ steps.carriers.outcome    || 'skipped' }}"
+          echo "  Phase 6 E2E Mobile:  ${{ steps.e2e.outcome         || 'skipped' }}"
           echo ""
           echo "Agents on duty:"
           echo "  🔴 Shield       — Security domain"
@@ -150,7 +237,8 @@ jobs:
           echo "  🟢 Alexander    — Bond Channel, Integration"
           echo "  🔵 Winston      — Carriers, Fleet"
           echo "  🩷 Penny        — Driver, Payout"
-          echo "  🕵️  Bond         — Escalation handler (fires on any failure)"
+          echo "  🎭 Playwright   — E2E Mobile App (Phase 6)"
+          echo "  🕵️  Bond         — Escalation handler + internal reporting"
           echo ""
-          echo "Failed phases auto-route to Bond → executive escalation created."
-          echo "Check Eagle Eye → IEBC Executive Command for active escalations."
+          echo "Bond mission reports filed to Eagle Eye → IEBC Executive Command."
+          echo "Playwright report artifact: playwright-report-${{ github.run_number }}"

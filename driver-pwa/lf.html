@@ -1077,6 +1077,7 @@ function savePhone() {
 // ── AUTH ──────────────────────────────────────────────────────────────────────
 function logout() {
   ['3ll_token','3ll_expires_at','3ll_driver_id','3ll_lf_driver_id','3ll_driver_mode','3ll_driver_name','3ll_phone'].forEach(k => localStorage.removeItem(k));
+  ['3ll_token','3ll_api_token','3ll_expires_at'].forEach(k => sessionStorage.removeItem(k));
   window.location.href = './login-lf.html';
 }
 

@@ -5,13 +5,14 @@ Usage:
 
 Requires the backend to be live at RENDER_URL below.
 """
+import os
 import pytest
 import requests
 
-BASE_URL = "https://three-lakes-logistics-api.onrender.com"
+BASE_URL = os.environ.get("API_BASE_URL", "https://three-lakes-logistics-api.onrender.com")
 HEADERS = {
     "Content-Type": "application/json",
-    "Authorization": "Bearer taiOFL40cCr5V0pH89hUks8jXVPlOkm2WxKvd3f6BoE",
+    "Authorization": f"Bearer {os.environ.get('API_BEARER_TOKEN', '')}",
 }
 
 

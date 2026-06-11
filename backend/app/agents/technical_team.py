@@ -1345,7 +1345,7 @@ FAILURE: {test}
 ERROR:   {error}
 
 STEP 1 — Diagnose:
-  curl -H "Authorization: Bearer taiOFL40cCr5V0pH89hUks8jXVPlOkm2WxKvd3f6BoE" \\
+  curl -H "Authorization: Bearer $API_BEARER_TOKEN" \\
        {_API_BASE}/api/{domain.lower().replace(' ','-')}/
   -- If HTTP 500: check Render Logs for traceback
   -- If wrong shape: route returns raw list instead of {{count, items}}
@@ -1367,7 +1367,7 @@ STEP 4 — Push fix:
   -- Render auto-deploys on push to main (~90s)
 
 VERIFY (after deploy):
-  curl -H "Authorization: Bearer taiOFL40cCr5V0pH89hUks8jXVPlOkm2WxKvd3f6BoE" \\
+  curl -H "Authorization: Bearer $API_BEARER_TOKEN" \\
        {_API_BASE}/api/{domain.lower().replace(' ','-')}/
   -- Expected: {{"count": N, "items": [...]}}
 
@@ -1405,7 +1405,7 @@ FIX {fix_num} [DIAGNOSE + FIX]: {domain} — {test}
 {sep}
 ERROR: {error}
 
-STEP 1: curl -H "Authorization: Bearer taiOFL40cCr5V0pH89hUks8jXVPlOkm2WxKvd3f6BoE" \\
+STEP 1: curl -H "Authorization: Bearer $API_BEARER_TOKEN" \\
              {_API_BASE}/api/{domain.lower().replace(' ','-')}/
 
 STEP 2: Check Render Logs for exceptions at that timestamp.

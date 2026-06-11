@@ -11,7 +11,7 @@ class Settings(BaseSettings):
     env: str = "development"
     log_level: str = "INFO"
     cors_origins: str = "http://localhost:3000,http://localhost:8080,https://3-lakes-logistics.vercel.app,https://3-lakes-logistic.vercel.app,https://3lakeslogistics.com,https://www.3lakeslogistics.com"
-    api_bearer_token: str = "taiOFL40cCr5V0pH89hUks8jXVPlOkm2WxKvd3f6BoE"
+    api_bearer_token: str = ""
 
     supabase_url: str = "https://zngipootstubwvgdmckt.supabase.co"
     supabase_anon_key: str = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpuZ2lwb290c3R1Ynd2Z2RtY2t0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMxMjk3ODUsImV4cCI6MjA4ODcwNTc4NX0.6MXR8q-CKVuiiJaJKuckxABAUQ-siuyP0-KoaLkt33g"
