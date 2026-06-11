@@ -37,7 +37,7 @@ def kpis() -> dict:
         "mtd_loads": loads.count or 0,
         "mtd_gross": float(gross_mtd),
         "avg_rpm": float(avg_rpm),
-        "mtd_dispatch_fees": float(gross_mtd) * 0.10,  # 10% full-service
+        "mtd_dispatch_fees": float(gross_mtd) * 0.15,  # 15% Light Fleet platform fee
         "unpaid_invoices": unpaid.count or 0,
         "unpaid_total": float(unpaid_total),
     }

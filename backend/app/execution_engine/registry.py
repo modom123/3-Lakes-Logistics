@@ -321,7 +321,7 @@ _reg(
 _reg(
     Step(256, "lf.settle.confirm_completion",   "lf_settlement", "Verify trip completed and POD captured"),
     Step(257, "lf.settle.apply_rate",           "lf_settlement", "Calculate and confirm final trip rate", requires_steps=[256]),
-    Step(258, "lf.settle.platform_fee",         "lf_settlement", "Deduct platform fee (15% Starter / 3% Pro)", requires_steps=[257]),
+    Step(258, "lf.settle.platform_fee",         "lf_settlement", "Deduct platform fee (15% flat)", requires_steps=[257]),
     Step(259, "lf.settle.driver_net",           "lf_settlement", "Calculate driver net earnings after fee", requires_steps=[258]),
     Step(260, "lf.settle.nemt_billing",         "lf_settlement", "Queue NEMT trip for Medicaid/Medicare billing", requires_steps=[257]),
     Step(261, "lf.settle.corporate_invoice",    "lf_settlement", "Generate invoice for corporate executive account", requires_steps=[257]),
