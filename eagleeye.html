@@ -11254,15 +11254,17 @@ window.moRefreshAll = function(){
   const feed=document.getElementById('mo-home-feed');
   const open=moTodos().filter(t=>!t.done);
   const urgent=open.filter(t=>moDueCls(t.due)==='urgent');
+  const cs = (typeof ocStats==='function') ? ocStats('mark') : null;
   if(feed){
     feed.innerHTML=[
       {cls:'gold',from:'Todo Summary',text:`${open.length} open tasks for CC Gulley${urgent.length?`. ${urgent.length} overdue or due today.`:'.'}` },
+      cs && cs.total ? {cls:'gold',from:'My CRM Pipeline',text:`${cs.total} contacts · Open pipeline $${Math.round(cs.openValue).toLocaleString()} · Won $${Math.round(cs.wonValue).toLocaleString()} (${cs.wonCount})${cs.followupDue?` · ⏰ ${cs.followupDue} need follow-up`:''}`} : null,
       {cls:'green',from:'CC Gulley — Strategy',text:'Strategy unit active. Alexander scanning markets, Naomi targeting Tier A carriers, Winston monitoring retention.'},
       {cls:'amber',from:'North American Trading',text:'7 active loads · 4 booked today · $84k MTD revenue · 94% coverage · Jordan: TX→IL and FL→GA lanes hot.'},
       {cls:'green',from:'Light Fleet',text:'88 total drivers active across 5 segments · 138 trips/deliveries today · Fleet health 91% · Revenue $18.4k MTD.'},
       {cls:'purple',from:'Operations',text:'Dispatch board and fleet tracker online. DOT compliance monitor active.'},
       {cls:'green',from:'James Bond — IEBC',text:'System integration health: normal. No critical alerts. Intel channel active.'},
-    ].map(f=>`<div class="mo-feed-item ${f.cls}"><div class="mo-feed-from">${f.from}</div><div class="mo-feed-text">${f.text}</div></div>`).join('');
+    ].filter(Boolean).map(f=>`<div class="mo-feed-item ${f.cls}"><div class="mo-feed-from">${f.from}</div><div class="mo-feed-text">${f.text}</div></div>`).join('');
   }
   moTodoRender();moTodoSync();moLoadDirectives();
 };
@@ -12970,8 +12972,46 @@ window.ocBoardDrop = function(owner,stage,e){
   c.pipeline_stage=newStage;
   ocSaveAll(owner,arr);
   if(!_ocIsLocal(id)){ apiFetch('/api/crm/contacts/'+id,'PATCH',{pipeline_stage:newStage}).catch(()=>{}); }
+  ocSyncLeadStage(c);
   ocRenderBoard(owner);
   if(typeof toast!=='undefined') toast(`Moved to ${stage}`);
+};
+
+// ── Two-way lead sync: push a converted contact's stage back to its lead ──
+const _ocStageToLeadStatus={'New Lead':'New','Contacted':'Contacted','Interested':'Interested','Negotiating':'Interested','Won':'Won','Lost':'Lost'};
+function ocSyncLeadStage(c){
+  if(!c || !c.source_lead_id) return;
+  const status=_ocStageToLeadStatus[c.pipeline_stage||''];
+  if(!status) return;
+  apiFetch('/api/leads/'+c.source_lead_id,'PATCH',{status}).catch(()=>{});
+}
+
+// ── Follow-up reminders: a contact in an active stage with no recent touch ──
+const OC_FOLLOWUP_DAYS=7;
+function ocDaysSince(ts){ if(!ts) return Infinity; return (Date.now()-new Date(ts).getTime())/86400000; }
+function ocNeedsFollowup(c){
+  const s=c.pipeline_stage||'';
+  if(s==='Won'||s==='Lost'||s==='On Hold') return false;
+  return ocDaysSince(c.last_contacted) >= OC_FOLLOWUP_DAYS;
+}
+
+// ── Pipeline stats for the office home summary ──
+window.ocStats = function(owner){
+  const list = ocContacts(owner);
+  const byStage={}; let totalValue=0, openValue=0;
+  list.forEach(c=>{
+    const s=c.pipeline_stage||'Unstaged';
+    byStage[s]=(byStage[s]||0)+1;
+    const v=parseFloat(c.deal_value)||0; totalValue+=v;
+    if(s!=='Won'&&s!=='Lost') openValue+=v;
+  });
+  const won=list.filter(c=>c.pipeline_stage==='Won');
+  return {
+    total:list.length, byStage, totalValue, openValue,
+    wonValue: won.reduce((s,c)=>s+(parseFloat(c.deal_value)||0),0),
+    wonCount: won.length,
+    followupDue: list.filter(ocNeedsFollowup).length,
+  };
 };
 
 function ocShowEmpty(owner){
@@ -13000,7 +13040,7 @@ window.ocRenderList = function(owner){
     <div class="oc-item${c.id===cur?' active':''}" onclick="ocOpen('${owner}','${c.id}')">
       <div class="oc-dot ${c.priority||'none'}"></div>
       <div class="oc-item-body">
-        <div class="oc-item-name">${esc(c.name)}<span class="oc-tag">${c.type||''}</span></div>
+        <div class="oc-item-name">${esc(c.name)}<span class="oc-tag">${c.type||''}</span>${ocNeedsFollowup(c)?'<span class="oc-tag" style="background:rgba(239,68,68,.18);color:#ef4444;" title="No contact in '+OC_FOLLOWUP_DAYS+'+ days">⏰ Follow up</span>':''}</div>
         <div class="oc-item-co">${esc(c.company||'')}</div>
         <div class="oc-item-meta">${c.last_contacted?'Last: '+new Date(c.last_contacted).toLocaleDateString():c.phone||c.email||''}</div>
       </div>
@@ -13180,6 +13220,7 @@ window.ocSaveContact = async function(owner){
     try{ await apiFetch('/api/crm/contacts/'+c.id,'PATCH',c); }catch(e){}
   }
   ocSaveAll(owner, arr);
+  ocSyncLeadStage(c);
   s.editingId = c.id;
   ocRenderList(owner);
   ocOpen(owner, c.id);
