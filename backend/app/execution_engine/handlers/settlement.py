@@ -361,7 +361,6 @@ def h105_settler_ach_initiate(carrier_id, contract_id, payload):
 # ── Step 106: nova.settlement_email ──────────────────────────────────────────
 
 def h106_nova_settlement_email(carrier_id, contract_id, payload):
-    s = get_settings()
     driver_email = payload.get("driver_email")
     net_pay = payload.get("net_pay", 0)
     load_number = payload.get("load_number")
@@ -378,17 +377,17 @@ def h106_nova_settlement_email(carrier_id, contract_id, payload):
         f"Net Pay:        ${net_pay:.2f}\n\n"
         f"— 3 Lakes Logistics"
     )
-    if s.postmark_server_token:
-        try:
-            from postmarker.core import PostmarkClient  # type: ignore
-            PostmarkClient(server_token=s.postmark_server_token).emails.send(
-                From=s.postmark_from_email, To=driver_email,
-                Subject=f"Settlement — Load {load_number} — ${net_pay:.2f}",
-                TextBody=body)
-            return {"sent": True, "to": driver_email, "net_pay": net_pay}
-        except Exception as e:  # noqa: BLE001
-            return {"sent": False, "error": str(e)}
-    return {"sent": False, "note": "postmark_not_configured", "would_send_to": driver_email}
+    from ...email.smtp_sender import send_transactional
+    result = send_transactional(
+        to=driver_email,
+        subject=f"Settlement — Load {load_number} — ${net_pay:.2f}",
+        body_text=body,
+        mailbox="loads",
+    )
+    if result.get("ok"):
+        return {"sent": True, "to": driver_email, "net_pay": net_pay}
+    return {"sent": False, "error": result.get("error"),
+            "note": result.get("reason"), "would_send_to": driver_email}
 
 
 # ── Step 107: factoring.submit_invoice ────────────────────────────────────────
@@ -645,7 +644,6 @@ def h117_carrier_revenue_update(carrier_id, contract_id, payload):
 # ── Step 118: nova.broker_invoice_email ──────────────────────────────────────
 
 def h118_nova_broker_invoice_email(carrier_id, contract_id, payload):
-    s = get_settings()
     broker_email = payload.get("broker_email")
     rate_total = payload.get("rate_total", 0)
     load_number = payload.get("load_number")
@@ -656,17 +654,17 @@ def h118_nova_broker_invoice_email(carrier_id, contract_id, payload):
             f"Payment Terms: {payload.get('payment_terms','Net-30')}\n"
             f"POD: {payload.get('pod_url','attached')}\n\n"
             f"— 3 Lakes Logistics Billing")
-    if s.postmark_server_token:
-        try:
-            from postmarker.core import PostmarkClient  # type: ignore
-            PostmarkClient(server_token=s.postmark_server_token).emails.send(
-                From=s.postmark_from_email, To=broker_email,
-                Subject=f"Invoice #{load_number} — ${rate_total}",
-                TextBody=body)
-            return {"sent": True, "to": broker_email, "amount": rate_total}
-        except Exception as e:  # noqa: BLE001
-            return {"sent": False, "error": str(e)}
-    return {"sent": False, "note": "postmark_not_configured", "would_send_to": broker_email}
+    from ...email.smtp_sender import send_transactional
+    result = send_transactional(
+        to=broker_email,
+        subject=f"Invoice #{load_number} — ${rate_total}",
+        body_text=body,
+        mailbox="loads",
+    )
+    if result.get("ok"):
+        return {"sent": True, "to": broker_email, "amount": rate_total}
+    return {"sent": False, "error": result.get("error"),
+            "note": result.get("reason"), "would_send_to": broker_email}
 
 
 # ── Step 119: dispute.check_variance ─────────────────────────────────────────

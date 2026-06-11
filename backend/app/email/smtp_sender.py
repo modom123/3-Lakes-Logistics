@@ -121,3 +121,55 @@ def send_from_mailbox(
 
     log.info("smtp sent from=%s to=%s subject=%r", from_address, to, subject)
     return {"sent": True, "from": from_address, "to": to, "subject": subject}
+
+
+def send_transactional(
+    to: str | list[str],
+    subject: str,
+    body_html: str = "",
+    body_text: str = "",
+    *,
+    mailbox: str = "info",
+    cc: list[str] | None = None,
+) -> dict:
+    """Send an automated/transactional email through an internal Hostinger mailbox.
+
+    This is the consolidated path for all automated emails (welcome, onboarding,
+    dispatch, settlement, agreements, reminders, internal reports). Cold-outreach
+    blasts still go through Postmark — everything else routes here so it sends
+    directly from loads@/sales@/info@ and shows up in the unified Email Center.
+
+    Degrades gracefully: if the mailbox password isn't configured or the send
+    fails, this logs and returns {"ok": False, ...} rather than raising, so
+    background jobs and request handlers never crash on email delivery.
+
+    Args:
+        to: recipient address or list of addresses
+        subject: subject line
+        body_html: HTML body (preferred)
+        body_text: plain-text body / fallback
+        mailbox: which mailbox to send from — loads|sales|info|mark|cece
+        cc: optional CC list
+    """
+    recipients = [to] if isinstance(to, str) else [r for r in (to or []) if r]
+    recipients = [r for r in recipients if r]
+    if not recipients:
+        return {"ok": False, "reason": "no_recipient"}
+
+    try:
+        result = send_from_mailbox(
+            mailbox=mailbox,
+            to=recipients,
+            subject=subject,
+            body_html=body_html,
+            body_text=body_text,
+            cc=cc,
+        )
+        return {"ok": True, **result}
+    except ValueError as exc:
+        # Unknown mailbox or missing SMTP password — expected when not configured.
+        log.info("send_transactional skipped (mailbox=%s): %s", mailbox, exc)
+        return {"ok": False, "reason": str(exc)}
+    except Exception as exc:  # noqa: BLE001
+        log.warning("send_transactional failed (mailbox=%s): %s", mailbox, exc)
+        return {"ok": False, "error": str(exc)}

@@ -130,12 +130,6 @@ async def send_test_email(to_email: str, template: str) -> dict:
         to_email: Recipient email address
         template: Template name (dispatch_sheet, broker_confirm, payout_summary)
     """
-    from ..settings import get_settings
-
-    s = get_settings()
-    if not s.postmark_server_token:
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Postmark not configured")
-
     try:
         sb = get_supabase()
 
@@ -187,47 +181,32 @@ async def send_test_email(to_email: str, template: str) -> dict:
             body_html = body_html.replace(placeholder, str(value))
             body_text = body_text.replace(placeholder, str(value))
 
-        # Send via Postmark
-        try:
-            import httpx
+        # Send via internal Hostinger mailbox
+        from ..email.smtp_sender import send_transactional
+        send_result = send_transactional(
+            to=to_email,
+            subject=subject,
+            body_html=body_html,
+            body_text=body_text or subject,
+            mailbox="info",
+        )
+        if not send_result.get("ok"):
+            log.error("Test email send failed: %s", send_result.get("error") or send_result.get("reason"))
+            raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR,
+                                f"send failed: {send_result.get('error') or send_result.get('reason')}")
 
-            postmark_client = httpx.AsyncClient()
-            response = await postmark_client.post(
-                "https://api.postmarkapp.com/email",
-                headers={
-                    "X-Postmark-Server-Token": s.postmark_server_token,
-                    "Content-Type": "application/json",
-                },
-                json={
-                    "From": s.postmark_from_email,
-                    "To": to_email,
-                    "Subject": subject,
-                    "HtmlBody": body_html,
-                    "TextBody": body_text or subject,
-                    "MessageStream": "outbound",
-                    "Tag": f"test-{template}",
-                },
-            )
+        # Update template usage count
+        sb.table("email_templates").update({
+            "usage_count": template_record.get("usage_count", 0) + 1,
+            "last_used_at": "now()",
+        }).eq("id", template_record["id"]).execute()
 
-            if response.status_code != 200:
-                log.error(f"Postmark send failed: {response.text}")
-                raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, "postmark send failed")
-
-            # Update template usage count
-            sb.table("email_templates").update({
-                "usage_count": template_record.get("usage_count", 0) + 1,
-                "last_used_at": "now()",
-            }).eq("id", template_record["id"]).execute()
-
-            return {
-                "ok": True,
-                "message": f"Test email sent to {to_email}",
-                "template": template,
-                "subject": subject,
-            }
-
-        finally:
-            await postmark_client.aclose()
+        return {
+            "ok": True,
+            "message": f"Test email sent to {to_email}",
+            "template": template,
+            "subject": subject,
+        }
 
     except HTTPException:
         raise
@@ -566,34 +545,17 @@ async def send_rate_confirmation(body: RateConSendReq) -> dict:
     </div>
     """
 
-    from ..settings import get_settings
-    import httpx
-    s = get_settings()
-    if not s.postmark_server_token:
-        log.warning("Postmark not configured — rate confirmation email not sent")
-        return {"ok": False, "reason": "postmark_not_configured"}
-
-    try:
-        async with httpx.AsyncClient(timeout=10) as client:
-            resp = await client.post(
-                "https://api.postmarkapp.com/email",
-                headers={"X-Postmark-Server-Token": s.postmark_server_token, "Content-Type": "application/json"},
-                json={
-                    "From":          s.postmark_from_email,
-                    "To":            body.to_email,
-                    "Subject":       f"Rate Confirmation — Load #{load.get('load_number','N/A')} — 3 Lakes Logistics",
-                    "HtmlBody":      html,
-                    "TextBody":      f"Rate Confirmation\nLoad #{load.get('load_number','—')}\n{origin} → {dest}\nRate: {rate}\nDispatch Fee: {fee}\n\n3 Lakes Logistics\n661-466-9932",
-                    "MessageStream": "outbound",
-                    "Tag":           "rate-confirmation",
-                },
-            )
-            if resp.status_code != 200:
-                log.error("Postmark rate-con send failed: %s", resp.text)
-                return {"ok": False, "reason": resp.text}
-    except Exception as exc:
-        log.error("Rate confirmation email send failed: %s", exc)
-        return {"ok": False, "reason": str(exc)}
+    from ..email.smtp_sender import send_transactional
+    send_result = send_transactional(
+        to=body.to_email,
+        subject=f"Rate Confirmation — Load #{load.get('load_number','N/A')} — 3 Lakes Logistics",
+        body_html=html,
+        body_text=f"Rate Confirmation\nLoad #{load.get('load_number','—')}\n{origin} → {dest}\nRate: {rate}\nDispatch Fee: {fee}\n\n3 Lakes Logistics\n661-466-9932",
+        mailbox="loads",
+    )
+    if not send_result.get("ok"):
+        log.error("Rate confirmation email send failed: %s", send_result.get("error") or send_result.get("reason"))
+        return {"ok": False, "reason": send_result.get("error") or send_result.get("reason")}
 
     log.info("Rate confirmation sent for load %s to %s", body.load_id, body.to_email)
     return {"ok": True, "load_id": body.load_id, "to": body.to_email}

@@ -245,9 +245,6 @@ def _send_report(report: dict, silent: bool) -> bool:
         return False  # no issues — no email needed
 
     try:
-        from ..email.postmark_client import PostmarkClient
-        s = get_settings()
-
         api_rows = "".join(
             f"<tr><td>{r['service']}</td>"
             f"<td style='color:{'red' if r['status'] in ('down','timeout','error') else 'green'}'><b>{r['status']}</b></td>"
@@ -294,14 +291,14 @@ def _send_report(report: dict, silent: bool) -> bool:
 </body></html>"""
 
         subject_tag = "🚨 CRITICAL" if critical_count else "⚠️ WARNING"
-        pm = PostmarkClient(s.postmark_server_token)
-        pm.send(
-            from_email="platform@3lakeslogistics.com",
-            to_email="mark@3lakeslogistics.com",
+        from ..email.smtp_sender import send_transactional
+        result = send_transactional(
+            to="mark@3lakeslogistics.com",
             subject=f"{subject_tag} — Jamie Park Platform Health | {report['timestamp'][:10]}",
-            html_body=html,
+            body_html=html,
+            mailbox="info",
         )
-        return True
+        return bool(result.get("ok"))
     except Exception:
         return False
 

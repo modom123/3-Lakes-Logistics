@@ -10,7 +10,6 @@ from datetime import date, datetime, timezone
 from typing import Any
 
 from ..logging_service import get_logger, log_agent
-from ..settings import get_settings
 from ..supabase_client import get_supabase
 
 log = get_logger("cost.reporter")
@@ -228,8 +227,7 @@ def send_report(
     period_label: str | None = None,
     recipients: list[str] | None = None,
 ) -> dict:
-    """Generate and send the HTML cost report via Postmark."""
-    s = get_settings()
+    """Generate and send the HTML cost report via the internal info@ mailbox."""
     period_label = period_label or summary.get("period", datetime.now(timezone.utc).strftime("%Y-%m"))
     to_list = recipients or [MARK_ODOM_EMAIL, IEBC_EMAIL]
     html = _build_html_report(summary, alerts, period_label)
@@ -237,27 +235,17 @@ def send_report(
 
     result: dict[str, Any] = {"sent": False, "recipients": to_list, "period": period_label}
 
-    if not s.postmark_server_token:
-        result["note"] = "postmark_not_configured"
-        log.warning("cost report: postmark not configured, skipping email")
-        return result
-
-    try:
-        from postmarker.core import PostmarkClient  # type: ignore
-        client = PostmarkClient(server_token=s.postmark_server_token)
-        for addr in to_list:
-            client.emails.send(
-                From=s.postmark_from_email,
-                To=addr,
-                Subject=subject,
-                HtmlBody=html,
-                MessageStream="outbound",
-            )
+    from ..email.smtp_sender import send_transactional
+    send_result = send_transactional(
+        to=to_list, subject=subject, body_html=html, mailbox="info",
+    )
+    if send_result.get("ok"):
         result["sent"] = True
         log.info("cost report sent to %s", to_list)
-    except Exception as exc:  # noqa: BLE001
-        result["error"] = str(exc)
-        log.error("cost report send failed: %s", exc)
+    else:
+        result["error"] = send_result.get("error")
+        result["note"] = send_result.get("reason")
+        log.warning("cost report send failed: %s", send_result.get("error") or send_result.get("reason"))
 
     # Store report record
     try:

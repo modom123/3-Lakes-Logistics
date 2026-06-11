@@ -473,28 +473,25 @@ def h18_inventory_decrement(carrier_id, contract_id, payload):
 
 def h19_nova_welcome_email(carrier_id, contract_id, payload):
     c = _carrier(carrier_id)
-    s = get_settings()
     email = c.get("email")
     name = c.get("company_name", "Carrier")
     if not email:
         return {"sent": False, "reason": "no_email"}
-    if s.postmark_server_token:
-        try:
-            from postmarker.core import PostmarkClient  # type: ignore
-            PostmarkClient(server_token=s.postmark_server_token).emails.send(
-                From=s.postmark_from_email,
-                To=email,
-                Subject="Welcome to 3 Lakes Logistics — You're Active!",
-                TextBody=(
-                    f"Hi {name},\n\nYour carrier account is now active. "
-                    "You'll receive your first load offer shortly.\n\n— 3 Lakes Logistics"
-                ),
-            )
-            result = {"sent": True, "to": email}
-        except Exception as e:  # noqa: BLE001
-            result = {"sent": False, "error": str(e)}
+    from ...email.smtp_sender import send_transactional
+    send_result = send_transactional(
+        to=email,
+        subject="Welcome to 3 Lakes Logistics — You're Active!",
+        body_text=(
+            f"Hi {name},\n\nYour carrier account is now active. "
+            "You'll receive your first load offer shortly.\n\n— 3 Lakes Logistics"
+        ),
+        mailbox="info",
+    )
+    if send_result.get("ok"):
+        result = {"sent": True, "to": email}
     else:
-        result = {"sent": False, "note": "postmark_not_configured", "would_send_to": email}
+        result = {"sent": False, "error": send_result.get("error"),
+                  "note": send_result.get("reason"), "would_send_to": email}
     try:
         from ...onboarding.phase_tracker import advance_phase_notification
         advance_phase_notification(str(carrier_id) if carrier_id else "", 7)

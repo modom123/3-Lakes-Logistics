@@ -350,12 +350,9 @@ class _SendPayload:
 
 @router.post("/vault/{doc_id}/send")
 async def send_vault_doc(doc_id: str, body: dict, _: str = Depends(require_bearer)) -> dict:
-    """Email a vault document link to a recipient via Postmark.
+    """Email a vault document link to a recipient via the internal loads@ mailbox.
     Body: {to: str, subject: str, message: str}
     """
-    from ..settings import get_settings
-    import httpx
-
     to_email   = body.get("to", "").strip()
     subject    = body.get("subject", "Document from 3 Lakes Logistics")
     message    = body.get("message", "Please find the attached document via the link below.")
@@ -375,7 +372,6 @@ async def send_vault_doc(doc_id: str, body: dict, _: str = Depends(require_beare
     if not url:
         raise HTTPException(502, "Could not generate signed URL — check Supabase Storage configuration")
 
-    s = get_settings()
     doc_label = {
         "pod": "Proof of Delivery", "bol": "Bill of Lading", "rate_con": "Rate Confirmation",
         "invoice": "Invoice", "compliance": "Compliance Document", "agreement": "Carrier Agreement",
@@ -401,17 +397,11 @@ async def send_vault_doc(doc_id: str, body: dict, _: str = Depends(require_beare
   </div>
 </div>"""
 
-    sent = False
-    if s.postmark_server_token:
-        async with httpx.AsyncClient() as client:
-            resp = await client.post(
-                "https://api.postmarkapp.com/email",
-                headers={"X-Postmark-Server-Token": s.postmark_server_token, "Content-Type": "application/json"},
-                json={"From": s.postmark_from_email, "To": to_email, "Subject": subject,
-                      "HtmlBody": html_body, "MessageStream": "outbound", "Tag": "vault-send"},
-                timeout=15,
-            )
-        sent = resp.status_code == 200
+    from ..email.smtp_sender import send_transactional
+    send_result = send_transactional(
+        to=to_email, subject=subject, body_html=html_body, mailbox="loads",
+    )
+    sent = bool(send_result.get("ok"))
 
     # Update vault record
     old_count = int(doc.get("sent_count") or 0)
@@ -434,7 +424,7 @@ async def send_vault_doc(doc_id: str, body: dict, _: str = Depends(require_beare
         "sent": sent,
         "to": to_email,
         "doc_id": doc_id,
-        "note": "Email sent via Postmark" if sent else "Postmark not configured — send logged only",
+        "note": "Email sent via loads@ mailbox" if sent else "Mailbox not configured — send logged only",
         "signed_url": url,
     }
 

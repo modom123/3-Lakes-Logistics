@@ -294,36 +294,34 @@ def h40_clm_create_load_contract(carrier_id, contract_id, payload):
 # ── Step 41: dispatch.confirm_broker ─────────────────────────────────────────
 
 def h41_dispatch_confirm_broker(carrier_id, contract_id, payload):
-    s = get_settings()
     broker_email = payload.get("broker_email")
     load_id = payload.get("load_id")
     load_number = payload.get("load_number")
     driver_name = payload.get("driver_name", "on file")
     truck_id = payload.get("truck_id", "on file")
-    if s.postmark_server_token and broker_email:
-        try:
-            from postmarker.core import PostmarkClient  # type: ignore
-            PostmarkClient(server_token=s.postmark_server_token).emails.send(
-                From=s.postmark_from_email,
-                To=broker_email,
-                Subject=f"Load {load_number} — Carrier Accepted",
-                TextBody=(
-                    f"Load {load_number} has been accepted.\n"
-                    f"Driver: {driver_name} | Unit: {truck_id}\n"
-                    f"— 3 Lakes Logistics Dispatch"
-                ),
-            )
+    if broker_email:
+        from ...email.smtp_sender import send_transactional
+        result = send_transactional(
+            to=broker_email,
+            subject=f"Load {load_number} — Carrier Accepted",
+            body_text=(
+                f"Load {load_number} has been accepted.\n"
+                f"Driver: {driver_name} | Unit: {truck_id}\n"
+                f"— 3 Lakes Logistics Dispatch"
+            ),
+            mailbox="loads",
+        )
+        if result.get("ok"):
             return {"confirmed": True, "to": broker_email, "load_id": load_id}
-        except Exception as e:  # noqa: BLE001
-            return {"confirmed": False, "error": str(e)}
-    return {"confirmed": False, "note": "postmark_not_configured",
+        return {"confirmed": False, "error": result.get("error"),
+                "note": result.get("reason"), "would_send_to": broker_email, "load_id": load_id}
+    return {"confirmed": False, "note": "no_broker_email",
             "would_send_to": broker_email, "load_id": load_id}
 
 
 # ── Step 42: nova.dispatch_email ──────────────────────────────────────────────
 
 def h42_nova_dispatch_email(carrier_id, contract_id, payload):
-    s = get_settings()
     driver_email = payload.get("driver_email")
     broker_email = payload.get("broker_email")
     body = (
@@ -337,22 +335,23 @@ def h42_nova_dispatch_email(carrier_id, contract_id, payload):
         f"Unit:    {payload.get('truck_id', 'TBD')}\n\n"
         f"— 3 Lakes Logistics"
     )
+    from ...email.smtp_sender import send_transactional
     sent_to = []
-    if s.postmark_server_token:
-        try:
-            from postmarker.core import PostmarkClient  # type: ignore
-            client = PostmarkClient(server_token=s.postmark_server_token)
-            for addr in filter(None, [driver_email, broker_email]):
-                client.emails.send(From=s.postmark_from_email, To=addr,
-                                   Subject=f"Dispatch Sheet — Load {payload.get('load_number')}",
-                                   TextBody=body)
-                sent_to.append(addr)
-        except Exception as e:  # noqa: BLE001
-            return {"sent": False, "error": str(e)}
+    last_error = None
+    for addr in filter(None, [driver_email, broker_email]):
+        result = send_transactional(
+            to=addr,
+            subject=f"Dispatch Sheet — Load {payload.get('load_number')}",
+            body_text=body,
+            mailbox="loads",
+        )
+        if result.get("ok"):
+            sent_to.append(addr)
+        else:
+            last_error = result.get("error") or result.get("reason")
     log_agent("nova", "dispatch_email", carrier_id=str(carrier_id) if carrier_id else None,
               result=f"sent_to={sent_to}")
-    return {"sent": bool(sent_to), "sent_to": sent_to,
-            "note": "postmark_not_configured" if not s.postmark_server_token else None}
+    return {"sent": bool(sent_to), "sent_to": sent_to, "note": last_error if not sent_to else None}
 
 
 # ── Step 43: signal.dispatch_sms ─────────────────────────────────────────────
@@ -556,17 +555,16 @@ def h51_dispatch_notify_shipper(carrier_id, contract_id, payload):
     eta = payload.get("eta", "on schedule")
     load_number = payload.get("load_number")
     notified = []
-    if s.postmark_server_token and shipper_email:
-        try:
-            from postmarker.core import PostmarkClient  # type: ignore
-            PostmarkClient(server_token=s.postmark_server_token).emails.send(
-                From=s.postmark_from_email, To=shipper_email,
-                Subject=f"Driver En Route — Load {load_number}",
-                TextBody=(f"Driver {driver_name} | Unit {truck_id} is en route.\nETA: {eta}\n— 3 Lakes Logistics"),
-            )
+    if shipper_email:
+        from ...email.smtp_sender import send_transactional
+        result = send_transactional(
+            to=shipper_email,
+            subject=f"Driver En Route — Load {load_number}",
+            body_text=f"Driver {driver_name} | Unit {truck_id} is en route.\nETA: {eta}\n— 3 Lakes Logistics",
+            mailbox="loads",
+        )
+        if result.get("ok"):
             notified.append(shipper_email)
-        except Exception:  # noqa: BLE001
-            pass
     if s.twilio_account_sid and shipper_phone:
         try:
             from twilio.rest import Client  # type: ignore

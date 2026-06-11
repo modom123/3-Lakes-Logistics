@@ -16,12 +16,10 @@ import random
 import string
 from datetime import datetime, timezone
 
-import httpx
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 
 from ..logging_service import get_logger
-from ..settings import get_settings
 from ..supabase_client import get_supabase
 from .deps import require_bearer
 from fastapi import Depends
@@ -298,11 +296,6 @@ async def _send_signing_email(
     carrier_mc: str | None = None,
     service_plan: str | None = None,
 ) -> None:
-    s = get_settings()
-    if not s.postmark_server_token:
-        log.warning("Postmark not configured — signing email not sent to %s", to)
-        return
-
     detail_rows = ""
     if agreement_no:
         detail_rows += f'<tr><td style="color:#666;padding:4px 0">Agreement #</td><td style="font-weight:bold;padding:4px 0">{agreement_no}</td></tr>'
@@ -336,22 +329,13 @@ async def _send_signing_email(
       </div>
     </div>
     """
-    try:
-        async with httpx.AsyncClient(timeout=10) as client:
-            resp = await client.post(
-                "https://api.postmarkapp.com/email",
-                headers={"X-Postmark-Server-Token": s.postmark_server_token, "Content-Type": "application/json"},
-                json={
-                    "From":          s.postmark_from_email,
-                    "To":            to,
-                    "Subject":       f"Please sign: {label} — 3 Lakes Logistics",
-                    "HtmlBody":      html,
-                    "TextBody":      f"Hi {name},\n\nPlease sign your {label}: {sign_url}\n\nAgreement #: {agreement_no or 'N/A'}\nThis link expires in 30 days.\n\n3 Lakes Logistics",
-                    "MessageStream": "outbound",
-                    "Tag":           "esign",
-                },
-            )
-            if resp.status_code != 200:
-                log.error("Postmark esign send failed: %s", resp.text)
-    except Exception as exc:
-        log.error("Failed to send signing email: %s", exc)
+    from ..email.smtp_sender import send_transactional
+    result = send_transactional(
+        to=to,
+        subject=f"Please sign: {label} — 3 Lakes Logistics",
+        body_html=html,
+        body_text=f"Hi {name},\n\nPlease sign your {label}: {sign_url}\n\nAgreement #: {agreement_no or 'N/A'}\nThis link expires in 30 days.\n\n3 Lakes Logistics",
+        mailbox="info",
+    )
+    if not result.get("ok"):
+        log.error("Failed to send signing email: %s", result.get("error") or result.get("reason"))

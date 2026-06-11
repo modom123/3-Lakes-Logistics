@@ -13,12 +13,10 @@ from __future__ import annotations
 import os
 from datetime import datetime, timezone
 
-import httpx
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 
 from ..logging_service import get_logger
-from ..settings import get_settings
 from ..supabase_client import get_supabase
 from .deps import require_bearer
 
@@ -172,10 +170,6 @@ async def resend_noa(fid: str) -> dict:
 
 
 async def _send_noa_email(to: str, carrier_name: str, factor_company: str, sign_url: str) -> None:
-    s = get_settings()
-    if not s.postmark_server_token:
-        log.warning("Postmark not configured — NOA email not sent to %s", to)
-        return
     html = f"""
     <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;color:#333">
       <div style="background:#1e288b;padding:20px 24px">
@@ -199,22 +193,13 @@ async def _send_noa_email(to: str, carrier_name: str, factor_company: str, sign_
       </div>
     </div>
     """
-    try:
-        async with httpx.AsyncClient(timeout=10) as client:
-            resp = await client.post(
-                "https://api.postmarkapp.com/email",
-                headers={"X-Postmark-Server-Token": s.postmark_server_token, "Content-Type": "application/json"},
-                json={
-                    "From":          s.postmark_from_email,
-                    "To":            to,
-                    "Subject":       f"Action Required: Sign Factoring Notice of Assignment — 3 Lakes Logistics",
-                    "HtmlBody":      html,
-                    "TextBody":      f"Hi {carrier_name},\n\nPlease sign your Factoring NOA with {factor_company}: {sign_url}\n\nThis link expires in 30 days.\n\n3 Lakes Logistics — 661-466-9932",
-                    "MessageStream": "outbound",
-                    "Tag":           "factoring-noa",
-                },
-            )
-            if resp.status_code != 200:
-                log.error("Postmark NOA send failed: %s", resp.text)
-    except Exception as exc:
-        log.error("Failed to send NOA email: %s", exc)
+    from ..email.smtp_sender import send_transactional
+    result = send_transactional(
+        to=to,
+        subject="Action Required: Sign Factoring Notice of Assignment — 3 Lakes Logistics",
+        body_html=html,
+        body_text=f"Hi {carrier_name},\n\nPlease sign your Factoring NOA with {factor_company}: {sign_url}\n\nThis link expires in 30 days.\n\n3 Lakes Logistics — 661-466-9932",
+        mailbox="info",
+    )
+    if not result.get("ok"):
+        log.error("Failed to send NOA email: %s", result.get("error") or result.get("reason"))

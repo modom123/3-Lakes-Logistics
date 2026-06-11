@@ -214,12 +214,6 @@ def _html_standard_email(company_name: str, carrier_id: str, missing: list[str],
 
 async def _send_welcome_email(email: str, company_name: str, carrier_id: str, missing: list[str], plan: str = "founders") -> None:
     try:
-        import httpx
-        from ..settings import get_settings
-        s = get_settings()
-        if not s.postmark_server_token:
-            return
-
         completion_url = f"https://3lakeslogistics.com/complete-onboarding?carrier_id={carrier_id}"
         is_founders = plan in ("founders", "pro", "enterprise", "discuss")
 
@@ -233,18 +227,14 @@ async def _send_welcome_email(email: str, company_name: str, carrier_id: str, mi
             subject = f"Welcome to 3 Lakes Logistics — {action}"
             text_body = f"Welcome {company_name}! You're on the Standard Plan (8% per load, $0/month). {'Complete your profile: ' + completion_url if missing else 'All set — activating now.'}\n\nQuestions? dispatch@3lakeslogistics.com"
 
-        async with httpx.AsyncClient(timeout=15) as client:
-            await client.post(
-                "https://api.postmarkapp.com/email",
-                headers={"X-Postmark-Server-Token": s.postmark_server_token, "Content-Type": "application/json"},
-                json={
-                    "From": s.postmark_from_email, "To": email,
-                    "Subject": subject, "HtmlBody": body_html,
-                    "TextBody": text_body,
-                    "MessageStream": "outbound", "Tag": "carrier-welcome",
-                },
-            )
-        log.info(f"Welcome email sent to {email} (plan={plan}, missing={len(missing)})")
+        from ..email.smtp_sender import send_transactional
+        result = send_transactional(
+            to=email, subject=subject, body_html=body_html, body_text=text_body, mailbox="info",
+        )
+        if result.get("ok"):
+            log.info(f"Welcome email sent to {email} (plan={plan}, missing={len(missing)})")
+        else:
+            log.error(f"Welcome email failed: {result.get('error') or result.get('reason')}")
     except Exception as e:  # noqa: BLE001
         log.error(f"Welcome email failed: {e}")
 

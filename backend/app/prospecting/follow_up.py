@@ -112,38 +112,26 @@ def send_follow_up_email(
     company_name: str,
     **_kwargs: Any,
 ) -> dict[str, Any]:
-    s = get_settings()
-    if not s.postmark_server_token or not prospect_email:
-        return {"status": "skipped", "reason": "postmark not configured or no email"}
+    if not prospect_email:
+        return {"status": "skipped", "reason": "no email"}
 
     first = prospect_name.split()[0] if prospect_name else "there"
     subject = f"Your 3 Lakes onboarding link, {first} — lock in Founders pricing"
 
-    try:
-        r = httpx.post(
-            "https://api.postmarkapp.com/email",
-            headers={
-                "X-Postmark-Server-Token": s.postmark_server_token,
-                "Content-Type": "application/json",
-            },
-            json={
-                "From": s.postmark_from_email,
-                "To": prospect_email,
-                "Subject": subject,
-                "HtmlBody": _build_follow_up_html(prospect_name, company_name),
-                "MessageStream": "outbound",
-                "Metadata": {"lead_id": lead_id, "type": "vance_follow_up"},
-            },
-            timeout=15,
-        )
-        r.raise_for_status()
-        msg_id = r.json().get("MessageID")
+    from ..email.smtp_sender import send_transactional
+    result = send_transactional(
+        to=prospect_email,
+        subject=subject,
+        body_html=_build_follow_up_html(prospect_name, company_name),
+        mailbox="sales",
+    )
+    if result.get("ok"):
         log_agent("vance_follow_up", "email_sent",
-                  payload={"lead_id": lead_id, "to": prospect_email}, result=msg_id)
-        return {"status": "sent", "message_id": msg_id}
-    except Exception as exc:  # noqa: BLE001
-        log_agent("vance_follow_up", "email_failed", payload={"lead_id": lead_id}, error=str(exc))
-        return {"status": "error", "error": str(exc)}
+                  payload={"lead_id": lead_id, "to": prospect_email})
+        return {"status": "sent"}
+    log_agent("vance_follow_up", "email_failed", payload={"lead_id": lead_id},
+              error=result.get("error") or result.get("reason"))
+    return {"status": "error", "error": result.get("error") or result.get("reason")}
 
 
 def send_follow_up_sms(

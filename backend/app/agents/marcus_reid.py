@@ -372,10 +372,6 @@ def tech_stack_review() -> dict[str, Any]:
 
 def _send_weekly_report(result: dict) -> dict:
     """Email weekly CTO report to Mark Odom."""
-    s = get_settings()
-    if not s.postmark_server_token:
-        return {"sent": False, "note": "postmark_not_configured"}
-
     score = result["system_integrity_score"]
     proposals = result["upgrade_proposals"]
     risks = result["risk_flags"]
@@ -453,24 +449,17 @@ def _send_weekly_report(result: dict) -> dict:
   </p>
 </body></html>"""
 
-    try:
-        from postmarker.core import PostmarkClient  # type: ignore
-        PostmarkClient(server_token=s.postmark_server_token).emails.send(
-            From=s.postmark_from_email,
-            To="mark@3lakeslogistics.com",
-            Subject=f"[CTO Report] System Integrity {score}/100 · {len(proposals)} Upgrade Proposals — {ts}",
-            HtmlBody=html,
-            MessageStream="outbound",
-        )
-        try:
-            from ..cost_tracking import track_postmark as _tp
-            _tp(1, template="marcus_reid_weekly_report")
-        except Exception:
-            pass
+    from ..email.smtp_sender import send_transactional
+    result_send = send_transactional(
+        to="mark@3lakeslogistics.com",
+        subject=f"[CTO Report] System Integrity {score}/100 · {len(proposals)} Upgrade Proposals — {ts}",
+        body_html=html,
+        mailbox="info",
+    )
+    if result_send.get("ok"):
         return {"sent": True, "to": "mark@3lakeslogistics.com"}
-    except Exception as e:  # noqa: BLE001
-        log.warning("marcus_reid report email failed: %s", e)
-        return {"sent": False, "error": str(e)}
+    log.warning("marcus_reid report email failed: %s", result_send.get("error") or result_send.get("reason"))
+    return {"sent": False, "error": result_send.get("error") or result_send.get("reason")}
 
 
 def run(payload: dict[str, Any]) -> dict[str, Any]:

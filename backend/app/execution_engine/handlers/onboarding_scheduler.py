@@ -56,40 +56,11 @@ def _send_sms(phone: str, body: str) -> bool:
 
 
 def _send_email(to: str, subject: str, body_html: str) -> bool:
-    s = get_settings()
-    if not s.postmark_server_token:
-        return False
-    try:
-        try:
-            from postmarker.core import PostmarkClient  # type: ignore  # noqa: PLC0415
-            PostmarkClient(server_token=s.postmark_server_token).emails.send(
-                From=s.postmark_from_email,
-                To=to,
-                Subject=subject,
-                HtmlBody=body_html,
-            )
-        except ImportError:
-            import httpx  # noqa: PLC0415
-            r = httpx.post(
-                "https://api.postmarkapp.com/email",
-                headers={
-                    "X-Postmark-Server-Token": s.postmark_server_token,
-                    "Content-Type": "application/json",
-                },
-                json={
-                    "From": s.postmark_from_email,
-                    "To": to,
-                    "Subject": subject,
-                    "HtmlBody": body_html,
-                    "MessageStream": "outbound",
-                },
-                timeout=15,
-            )
-            r.raise_for_status()
-        return True
-    except Exception as exc:  # noqa: BLE001
-        log.warning("Email send failed to %s: %s", to, exc)
-        return False
+    from ...email.smtp_sender import send_transactional  # noqa: PLC0415
+    result = send_transactional(to=to, subject=subject, body_html=body_html, mailbox="info")
+    if not result.get("ok"):
+        log.warning("Email send failed to %s: %s", to, result.get("error") or result.get("reason"))
+    return bool(result.get("ok"))
 
 
 # ── Scheduled Task Executor ───────────────────────────────────────────────────

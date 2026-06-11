@@ -266,11 +266,6 @@ def send_stall_reminder(carrier_id: str, stalled_days: int) -> bool:
         next_action = phase_data.get("next_action", "complete your application")
 
         from .email_templates import build_stall_reminder_email
-        from ..settings import get_settings
-        s = get_settings()
-        if not s.postmark_server_token:
-            log.info("Stall reminder would send to %s (postmark not configured)", carrier_email)
-            return False
 
         email_data = build_stall_reminder_email(
             carrier_name=carrier_name,
@@ -279,20 +274,19 @@ def send_stall_reminder(carrier_id: str, stalled_days: int) -> bool:
             next_action=next_action,
             stalled_days=stalled_days,
         )
-        try:
-            from postmarker.core import PostmarkClient  # type: ignore
-            PostmarkClient(server_token=s.postmark_server_token).emails.send(
-                From=s.postmark_from_email,
-                To=carrier_email,
-                Subject=email_data["subject"],
-                HtmlBody=email_data["html"],
-                TextBody=email_data["text"],
-            )
+        from ..email.smtp_sender import send_transactional
+        result = send_transactional(
+            to=carrier_email,
+            subject=email_data["subject"],
+            body_html=email_data["html"],
+            body_text=email_data["text"],
+            mailbox="info",
+        )
+        if result.get("ok"):
             log.info("Stall reminder sent to %s (phase %d, stalled %d days)", carrier_email, current_phase, stalled_days)
             return True
-        except Exception as e:
-            log.warning("Postmark stall reminder failed for %s: %s", carrier_id, e)
-            return False
+        log.warning("Stall reminder failed for %s: %s", carrier_id, result.get("error") or result.get("reason"))
+        return False
     except Exception as e:
         log.error("send_stall_reminder failed carrier=%s: %s", carrier_id, e)
         return False
