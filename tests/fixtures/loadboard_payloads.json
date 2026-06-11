@@ -1,0 +1,82 @@
+{
+  "_comment": "Mock load-board API payloads for offline tests. Shapes mirror the real endpoint responses consumed by backend/app/prospecting/loadboard_clients.py (_dat_map, _123_map). Used so the suite can exercise the real parsing/mapping code without any live HTTP, rate limits, or charges. All loads are small-vehicle (cargo van) freight.",
+
+  "dat_search_response": {
+    "results": [
+      {
+        "id": "DAT-CV-100245",
+        "company": { "name": "Cascade Freight Brokers" },
+        "origin": { "city": "Portland", "stateProv": "OR" },
+        "destination": { "city": "Seattle", "stateProv": "WA" },
+        "computedMiles": 174,
+        "rateInfo": { "amount": 525.00, "ratePerMile": 3.02 },
+        "loadWeight": 1800,
+        "equipment": { "trailerType": "CARGO_VAN" },
+        "earliestPickupDate": "2026-06-12"
+      },
+      {
+        "id": "DAT-CV-100246",
+        "company": { "name": "Rainier Expedite LLC" },
+        "origin": { "city": "Portland", "stateProv": "OR" },
+        "destination": { "city": "Boise", "stateProv": "ID" },
+        "computedMiles": 430,
+        "rateInfo": { "amount": 945.00, "ratePerMile": 2.20 },
+        "loadWeight": 2200,
+        "equipment": { "trailerType": "CARGO_VAN" },
+        "earliestPickupDate": "2026-06-13"
+      }
+    ]
+  },
+
+  "loadboard123_search_response": {
+    "loads": [
+      {
+        "id": "123-CV-55012",
+        "companyName": "Evergreen Hotshot Logistics",
+        "originCity": "Portland",
+        "originState": "OR",
+        "destinationCity": "Spokane",
+        "destinationState": "WA",
+        "miles": 350,
+        "rate": 812.50,
+        "ratePerMile": 2.32,
+        "weight": 1500,
+        "equipType": "cargo_van",
+        "pickupDate": "2026-06-12"
+      }
+    ]
+  },
+
+  "expected": {
+    "dat_first": {
+      "source": "dat",
+      "load_id": "DAT-CV-100245",
+      "broker_name": "Cascade Freight Brokers",
+      "origin_city": "Portland",
+      "origin_state": "OR",
+      "dest_city": "Seattle",
+      "dest_state": "WA",
+      "miles": 174,
+      "rate_total": 525.00,
+      "rate_per_mile": 3.02,
+      "weight_lbs": 1800,
+      "trailer_type": "CARGO_VAN",
+      "pickup_date": "2026-06-12"
+    },
+    "loadboard123_first": {
+      "source": "123loadboard",
+      "load_id": "123-CV-55012",
+      "broker_name": "Evergreen Hotshot Logistics",
+      "origin_city": "Portland",
+      "origin_state": "OR",
+      "dest_city": "Spokane",
+      "dest_state": "WA",
+      "miles": 350,
+      "rate_total": 812.50,
+      "rate_per_mile": 2.32,
+      "weight_lbs": 1500,
+      "trailer_type": "cargo_van",
+      "pickup_date": "2026-06-12"
+    }
+  }
+}

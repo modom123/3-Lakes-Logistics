@@ -1,28 +1,37 @@
-"""3 Lakes Logistics — production-grade system test suite.
+"""3 Lakes Logistics — offline system/unit test suite.
 
-Adapted from the generic scaffold to the real codebase. Validates:
+Adapted from the generic scaffold to the real codebase, and wired with mock
+load-board payloads so the real parsing/mapping code runs with zero live HTTP,
+rate limits, or charges. Validates:
+
   1. Syntax / script integrity   — every backend .py file compiles
   2. Python logic                — the 10% Starter dispatch fee + payout math
                                     and light-fleet vehicle eligibility
-  3. API connectivity (mocked)   — load-board auth + timeout handling, with
-                                    all external HTTP calls patched so no real
-                                    requests, rate limits, or charges occur.
+  3. API connectivity (mocked)   — load-board auth, timeout handling, and
+                                    full cargo-van payload → LoadResult mapping
 
-Run it (matches the deployment interpreter — see backend/Dockerfile: python:3.12):
-    python3.12 -m unittest test_system.py          # quiet
-    python3.12 -m unittest -v test_system.py        # verbose, per-test
+This is an OFFLINE suite (no network), distinct from the live integration
+tests in tests/test_*_live.py / test_integration.py. It is collected by pytest
+and also runnable directly:
+
+    # matches the deployment interpreter — see backend/Dockerfile (python:3.12)
+    pytest tests/test_system.py -v
+    python3.12 -m unittest tests.test_system -v
 
 NOTE on Python version: the backend uses PEP 701 nested f-strings (e.g.
-backend/app/email/welcome_packet.py), which require Python >= 3.12. The
-integrity sweep below is therefore only meaningful on 3.12+, matching prod.
+backend/app/email/welcome_packet.py), which require Python >= 3.12. On older
+interpreters the integrity sweep and import-dependent tests skip cleanly
+rather than reporting false failures.
 """
+import json
 import os
 import sys
 import unittest
 from unittest.mock import MagicMock, patch
 
-# Anchor imports to the project root (this file lives there).
-PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
+# Anchor to the repository root (this file lives in <root>/tests/).
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+FIXTURES_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "fixtures")
 if PROJECT_ROOT not in sys.path:
     sys.path.insert(0, PROJECT_ROOT)
 
@@ -32,6 +41,11 @@ _SKIP_DIRS = {
     "android-security", "driver-pwa", "fastlane", "play-store-graphics",
     "deploy", "marketing", "public", ".github", "tests",
 }
+
+
+def _load_payloads() -> dict:
+    with open(os.path.join(FIXTURES_DIR, "loadboard_payloads.json"), encoding="utf-8") as f:
+        return json.load(f)
 
 
 class Test3LakesLogistics(unittest.TestCase):
@@ -129,7 +143,6 @@ class Test3LakesLogistics(unittest.TestCase):
         except (ImportError, SyntaxError) as e:
             self.skipTest(f"loadboard_clients not importable ({e}).")
 
-        # Mock a successful token endpoint response.
         token_resp = MagicMock(status_code=200)
         token_resp.json.return_value = {"access_token": "mock_token_abc123", "expires_in": 3600}
         with patch("httpx.post", return_value=token_resp) as mock_post:
@@ -140,7 +153,6 @@ class Test3LakesLogistics(unittest.TestCase):
         self.assertEqual(token, "mock_token_abc123", "Should return the issued access token.")
         self.assertEqual(expires_in, 3600)
 
-        # The token cache should then report the credential as valid.
         cache = lb._TokenCache()
         cache.set(token, expires_in)
         self.assertTrue(cache.valid())
@@ -159,6 +171,58 @@ class Test3LakesLogistics(unittest.TestCase):
         with patch("httpx.post", side_effect=httpx.TimeoutException("timed out")):
             result = lb.dat_search(params)
         self.assertEqual(result, [], "Timeouts must yield a safe empty dataset.")
+
+    def test_dat_cargo_van_payload_mapping(self):
+        """Mock DAT cargo-van loads flow end-to-end through dat_search → LoadResult."""
+        try:
+            from backend.app.prospecting import loadboard_clients as lb
+        except (ImportError, SyntaxError) as e:
+            self.skipTest(f"loadboard_clients not importable ({e}).")
+
+        payloads = _load_payloads()
+        search_resp = MagicMock(status_code=200)
+        search_resp.json.return_value = payloads["dat_search_response"]
+        params = lb.SearchParams(origin_state="OR", trailer_type="cargo_van")
+
+        # Force a valid token so dat_search proceeds to the (mocked) load search.
+        with patch.object(lb, "_dat_token", return_value="mock_tok"), \
+             patch("httpx.post", return_value=search_resp):
+            results = lb.dat_search(params)
+
+        self.assertEqual(len(results), 2, "Both mock cargo-van loads should map.")
+        exp = payloads["expected"]["dat_first"]
+        first = results[0]
+        for field_name, expected_value in exp.items():
+            self.assertEqual(getattr(first, field_name), expected_value,
+                             f"DAT mapping mismatch on '{field_name}'.")
+        # Payout sanity: a real-looking cargo-van rate, parsed as a number.
+        self.assertEqual(first.rate_total, 525.00)
+        self.assertAlmostEqual(first.rate_total / first.miles, first.rate_per_mile, places=1)
+
+    def test_loadboard123_cargo_van_payload_mapping(self):
+        """Mock 123Loadboard cargo-van load flows through loadboard123_search → LoadResult."""
+        try:
+            from backend.app.prospecting import loadboard_clients as lb
+        except (ImportError, SyntaxError) as e:
+            self.skipTest(f"loadboard_clients not importable ({e}).")
+
+        payloads = _load_payloads()
+        get_resp = MagicMock(status_code=200)
+        get_resp.json.return_value = payloads["loadboard123_search_response"]
+        params = lb.SearchParams(origin_state="OR", trailer_type="cargo_van", origin_city="Portland")
+
+        fake_settings = MagicMock(loadboard_123_api_key="mock_key")
+        with patch.object(lb, "get_settings", return_value=fake_settings), \
+             patch("httpx.get", return_value=get_resp):
+            results = lb.loadboard123_search(params)
+
+        self.assertEqual(len(results), 1, "The single mock cargo-van load should map.")
+        exp = payloads["expected"]["loadboard123_first"]
+        only = results[0]
+        for field_name, expected_value in exp.items():
+            self.assertEqual(getattr(only, field_name), expected_value,
+                             f"123Loadboard mapping mismatch on '{field_name}'.")
+        self.assertEqual(only.trailer_type, "cargo_van", "Equipment must round-trip as cargo_van.")
 
 
 if __name__ == "__main__":
