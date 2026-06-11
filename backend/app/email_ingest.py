@@ -160,12 +160,26 @@ async def receive_inbound_email(request: Request) -> dict[str, Any]:
                 try:
                     pdf_bytes = await file.read()
 
+                    # Persist the attachment to storage, then log it to the vault.
+                    # Uploading first ensures the vault row points at a real file
+                    # (otherwise View/Download in Eagle Eye 404s).
+                    vault_path = f"email_ingest/{email_id}/{file.filename}"
+                    try:
+                        sb.storage.from_("documents").upload(
+                            path=vault_path,
+                            file=pdf_bytes,
+                            file_options={"content-type": "application/pdf"},
+                        )
+                    except Exception as _se:  # noqa: BLE001
+                        log.warning("storage upload failed for email attachment %s: %s", vault_path, _se)
+
                     # Log attachment to document vault immediately (regardless of extraction result)
                     try:
                         sb.table("document_vault").insert({
                             "doc_type": "rate_con",
                             "filename": file.filename,
-                            "storage_path": f"email_ingest/{email_id}/{file.filename}",
+                            "storage_path": vault_path,
+                            "bucket": "documents",
                             "file_size_kb": round(len(pdf_bytes) / 1024, 1),
                             "scan_status": "pending",
                         }).execute()

@@ -204,7 +204,13 @@ def list_vault(
         q = q.eq("scan_status", scan_status)
     if search:
         q = q.ilike("filename", f"%{search}%")
-    return q.order("uploaded_at", desc=True).limit(500).execute().data
+    docs = q.order("uploaded_at", desc=True).limit(500).execute().data or []
+    # Annotate each row with whether a retrievable file actually exists, so the
+    # UI can hide View/Download for placeholder rows instead of 404ing.
+    availability = _bulk_file_availability(docs)
+    for d in docs:
+        d["file_available"] = availability.get(str(d.get("id")), True)
+    return docs
 
 
 def _object_exists(storage_path: str, bucket: str = "documents") -> bool:
@@ -227,6 +233,55 @@ def _object_exists(storage_path: str, bucket: str = "documents") -> bool:
         except Exception:
             continue
     return False
+
+
+def _bulk_file_availability(docs: list[dict]) -> dict[str, bool]:
+    """Return {doc_id: file_available} for a batch of vault rows.
+
+    Many vault rows are metadata-only placeholders (folder markers, signed-
+    agreement stubs, un-generated invoices, BOL/POD rows created before the file
+    arrives). Surfacing which rows actually have a retrievable file lets the UI
+    hide the View/Download buttons instead of letting them 404.
+
+    Efficient: lists each distinct (bucket, folder) prefix once rather than doing
+    a storage round-trip per document. For very large vaults the check is skipped
+    (returns True) so the listing stays fast.
+    """
+    result: dict[str, bool] = {}
+    groups: dict[tuple[str, str], list[tuple[str, str]]] = {}
+    for d in docs:
+        did = str(d.get("id"))
+        sp = d.get("storage_path") or ""
+        if d.get("doc_type") == "folder" or not sp or sp.endswith("/"):
+            result[did] = False
+            continue
+        bucket = d.get("bucket") or "documents"
+        folder, _, name = sp.rpartition("/")
+        groups.setdefault((bucket, folder), []).append((did, name))
+
+    # Safety valve: skip checking enormous vaults to keep the request fast.
+    if len(groups) > 300:
+        for members in groups.values():
+            for did, _ in members:
+                result.setdefault(did, True)
+        return result
+
+    for (bucket, folder), members in groups.items():
+        names: set[str] = set()
+        for b in (bucket, "documents", "driver-documents"):
+            try:
+                entries = get_supabase().storage.from_(b).list(folder, {"limit": 1000}) or []
+                for e in entries:
+                    n = e.get("name")
+                    if n:
+                        names.add(n)
+                if names:
+                    break
+            except Exception:
+                continue
+        for did, name in members:
+            result[did] = name in names
+    return result
 
 
 def _signed_url(storage_path: str, bucket: str = "documents", expires: int = 3600) -> str | None:

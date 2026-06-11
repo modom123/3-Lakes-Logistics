@@ -7561,12 +7561,12 @@ function _renderVaultDocs(docs){
       <td>${sentBadge}</td>
       <td style="font-size:12px;color:var(--muted);white-space:nowrap">${ts}</td>
       <td style="white-space:nowrap">
-        ${d.doc_type==='folder'||!d.storage_path||String(d.storage_path).endsWith('/')
-          ? `<span style="font-size:11px;color:var(--muted);font-style:italic">No file</span>`
+        ${d.file_available===false||d.doc_type==='folder'||!d.storage_path||String(d.storage_path).endsWith('/')
+          ? `<span style="font-size:11px;color:var(--muted);font-style:italic" title="No file is stored for this record yet — it's a placeholder created during onboarding/dispatch, or awaiting upload.">No file</span>`
           : `<button onclick="vaultView('${did}')" style="padding:4px 8px;font-size:11px;border:1px solid var(--border);border-radius:4px;cursor:pointer;background:var(--surface);margin-right:3px" title="Preview">👁 View</button>
         <button onclick="vaultDownload('${did}')" style="padding:4px 8px;font-size:11px;border:1px solid var(--border);border-radius:4px;cursor:pointer;background:var(--surface);margin-right:3px" title="Download">⬇</button>
-        <button onclick="openVaultSend('${did}','${fn}')" style="padding:4px 8px;font-size:11px;border:1px solid var(--gold);border-radius:4px;cursor:pointer;background:rgba(212,170,0,.08);color:var(--gold);font-weight:600;margin-right:3px" title="Send via email">✉</button>`}
-        <button onclick="vaultScan('${did}','${fn}')" style="padding:4px 8px;font-size:11px;border:1px solid #7c3aed;border-radius:4px;cursor:pointer;background:rgba(124,58,237,.08);color:#7c3aed;font-weight:600" title="Extract data with AI">${d.extracted_at?'✅':'🔍'} Scan</button>
+        <button onclick="openVaultSend('${did}','${fn}')" style="padding:4px 8px;font-size:11px;border:1px solid var(--gold);border-radius:4px;cursor:pointer;background:rgba(212,170,0,.08);color:var(--gold);font-weight:600;margin-right:3px" title="Send via email">✉</button>
+        <button onclick="vaultScan('${did}','${fn}')" style="padding:4px 8px;font-size:11px;border:1px solid #7c3aed;border-radius:4px;cursor:pointer;background:rgba(124,58,237,.08);color:#7c3aed;font-weight:600" title="Extract data with AI">${d.extracted_at?'✅':'🔍'} Scan</button>`}
       </td>
     </tr>`;
   }).join('')}</tbody></table></div>`;
@@ -7682,7 +7682,7 @@ async function submitVaultSend(){
     res.style.display='block';
     if(d.ok){
       res.style.background='rgba(34,197,94,.1)';res.style.color='var(--green)';
-      res.textContent=`✅ ${d.sent?'Email sent to '+to:'Logged (Postmark not configured)'}`;
+      res.textContent=`✅ ${d.sent?'Email sent to '+to+' (from loads@3lakeslogistics.com)':'Logged (loads@ mailbox not configured)'}`;
       setTimeout(()=>{closeVaultSend();loadVault();},2000);
     }else{
       res.style.background='rgba(239,68,68,.1)';res.style.color='var(--red)';
