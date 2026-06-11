@@ -195,6 +195,24 @@ def _run_startup_migrations() -> None:
     except Exception as e:  # noqa: BLE001
         log.warning("Startup migration error (non-fatal): %s", e)
 
+    # Migration 023 — add CRM columns the Lead CRM writes (notes, last_contact_at,
+    # outreach_channel, heat). Attempted via the exec_sql RPC; if that isn't
+    # available the DDL must be applied from sql/023_leads_crm_columns.sql.
+    try:
+        from .agents.technical_team import _exec_sql_via_rpc
+        ddl = (
+            "alter table public.leads add column if not exists notes text;"
+            "alter table public.leads add column if not exists last_contact_at timestamptz;"
+            "alter table public.leads add column if not exists outreach_channel text;"
+            "alter table public.leads add column if not exists heat text;"
+            "update public.leads set last_contact_at = last_touch_at "
+            "where last_contact_at is null and last_touch_at is not null;"
+        )
+        ok, msg = _exec_sql_via_rpc(ddl)
+        log.info("Migration 023 (leads CRM columns): %s — %s", "ok" if ok else "skipped", msg)
+    except Exception as e:  # noqa: BLE001
+        log.warning("Migration 023 error (non-fatal): %s", e)
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):

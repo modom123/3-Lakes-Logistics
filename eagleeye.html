@@ -9063,6 +9063,10 @@ async function loadCrmLeads(){
     const r = await apiFetch('/api/leads?limit=500');
     const d = await r.json();
     crmAllLeads = d.items || [];
+    // Hydrate heat from the server (column persists across devices), keeping any
+    // local-only tags that haven't synced yet.
+    crmAllLeads.forEach(l => { if(l.heat) crmHeatMap[String(l.id)] = l.heat; });
+    crmSaveHeat();
     document.getElementById('crm-leads-count').textContent = crmAllLeads.length;
     renderCrmSummary();
     renderCrmLeadsList();
@@ -9417,7 +9421,7 @@ async function crmVanceCall(leadId, name, phone){
       const existing = lead?.notes || '';
       const sep = existing.trim() ? '\n\n' : '';
       const entry = `[${ts}] 🤖 VANCE CALL — Dialing ${phone}. Call ID: ${d.call_id||'—'}`;
-      await crmPatch(leadId, {notes: existing + sep + entry, status:'Contacted', last_contact_at: new Date().toISOString()});
+      await crmPatch(leadId, {notes: existing + sep + entry, status:'Contacted', last_contact_at: new Date().toISOString(), outreach_channel:'call'});
       renderCrmLeadsList();
     } else {
       if (statusEl){ statusEl.style.background='rgba(239,68,68,.1)'; statusEl.style.color='var(--red)'; statusEl.textContent=`❌ Vance failed: ${d.result?.error||JSON.stringify(d)}`; }
@@ -9441,10 +9445,12 @@ async function crmSaveCallLog(leadId){
     const existing = lead?.notes || '';
     const sep = existing.trim() ? '\n\n' : '';
     const contactedOutcomes = ['Answered','Zoom Meeting — Completed','Teams Meeting — Completed'];
+    const channel = /zoom|teams/i.test(outcome) ? 'video' : 'call';
     await crmPatch(leadId, {
       notes: existing + sep + entry,
       status: contactedOutcomes.includes(outcome) ? 'Contacted' : (lead?.status || 'Contacted'),
-      last_contact_at: new Date().toISOString()
+      last_contact_at: new Date().toISOString(),
+      outreach_channel: channel
     });
     if (statusEl){ statusEl.style.display='block'; statusEl.style.background='rgba(34,197,94,.1)'; statusEl.style.color='var(--green)'; statusEl.textContent='✅ Call logged!'; }
     setTimeout(()=>{ document.getElementById('crm-call-panel').style.display='none'; }, 1200);
@@ -9514,6 +9520,8 @@ function crmSetHeat(leadId, heat){
   if(heat) crmHeatMap[String(leadId)] = heat;
   else delete crmHeatMap[String(leadId)];
   crmSaveHeat();
+  // Persist on the lead so the tag survives across devices/sessions.
+  crmPatch(leadId, {heat: heat || null}).catch(()=>{});
   renderCrmLeadsList();
   if(crmCurrentView==='kanban') renderCrmKanban();
   const lead = crmAllLeads.find(l => l.id === leadId);

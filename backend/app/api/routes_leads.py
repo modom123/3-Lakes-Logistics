@@ -73,6 +73,12 @@ def update_lead(lead_id: str, patch: dict) -> dict:
         patch["status"] = patch["stage"]
     if "status" in patch and "stage" not in patch:
         patch["stage"] = patch["status"]
+    # Keep the two "last contacted" columns in sync so the CRM detail view and
+    # the pipeline summary (which reads last_touch_at) agree.
+    if "last_contact_at" in patch and "last_touch_at" not in patch:
+        patch["last_touch_at"] = patch["last_contact_at"]
+    if "last_touch_at" in patch and "last_contact_at" not in patch:
+        patch["last_contact_at"] = patch["last_touch_at"]
     try:
         get_supabase().table("leads").update(patch).eq("id", lead_id).execute()
     except Exception as exc:
