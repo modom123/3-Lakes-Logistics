@@ -18747,7 +18747,7 @@ function lfRenderExpertReport(segment, d) {
           <div class="bd-rep-metric"><div class="bd-rep-metric-val" id="bd-marcus-active">—</div><div class="bd-rep-metric-lbl">Active Deals</div></div>
           <div class="bd-rep-metric"><div class="bd-rep-metric-val" id="bd-marcus-value">—</div><div class="bd-rep-metric-lbl">Pipeline $</div></div>
         </div>
-        <div style="font-size:12px;color:rgba(255,255,255,.5);margin-bottom:12px;font-style:italic;">"We provide HIPAA-aware dispatch, ADA vehicle options, and same-day scheduling for recurring medical transport — no monthly fee, 10% per completed trip."</div>
+        <div style="font-size:12px;color:rgba(255,255,255,.5);margin-bottom:12px;font-style:italic;">"We provide HIPAA-aware dispatch, ADA vehicle options, and same-day scheduling for recurring medical transport — no monthly fee, 15% per completed trip."</div>
         <div class="bd-rep-actions">
           <button class="btn-out" style="font-size:11px;padding:5px 12px;" onclick="openBdAddProspect('healthcare','marcus_webb')">+ Add Lead</button>
           <button class="lf-btn" style="font-size:11px;padding:5px 12px;" onclick="filterBdSector('healthcare')">View Pipeline →</button>
@@ -18780,7 +18780,7 @@ function lfRenderExpertReport(segment, d) {
           <div class="bd-rep-metric"><div class="bd-rep-metric-val" id="bd-jordan-active">—</div><div class="bd-rep-metric-lbl">Active Deals</div></div>
           <div class="bd-rep-metric"><div class="bd-rep-metric-val" id="bd-jordan-value">—</div><div class="bd-rep-metric-lbl">Pipeline $</div></div>
         </div>
-        <div style="font-size:12px;color:rgba(255,255,255,.5);margin-bottom:12px;font-style:italic;">"Reliable same-day courier and executive car service with real-time tracking, dedicated dispatch, and flat 10% fee — no contracts, scale up or down anytime."</div>
+        <div style="font-size:12px;color:rgba(255,255,255,.5);margin-bottom:12px;font-style:italic;">"Reliable same-day courier and executive car service with real-time tracking, dedicated dispatch, and flat 15% fee — no contracts, scale up or down anytime."</div>
         <div class="bd-rep-actions">
           <button class="btn-out" style="font-size:11px;padding:5px 12px;" onclick="openBdAddProspect('enterprise','jordan_vale')">+ Add Lead</button>
           <button class="lf-btn" style="font-size:11px;padding:5px 12px;" onclick="filterBdSector('enterprise')">View Pipeline →</button>
@@ -19058,7 +19058,7 @@ function lfRenderExpertReport(segment, d) {
       <thead><tr><th>Line Item</th><th>Basis</th><th class="num">Annual Amount</th></tr></thead>
       <tbody>
         <tr style="background:rgba(34,197,94,.04)">
-          <td style="font-weight:700">⚡ Dispatch Fees (10%)</td><td style="font-size:11px;color:var(--muted)">100 drivers avg $2,000 gross/wk</td><td class="num green">+ $1,007,500</td>
+          <td style="font-weight:700">⚡ Dispatch Fees (15%)</td><td style="font-size:11px;color:var(--muted)">100 drivers avg $2,000 gross/wk</td><td class="num green">+ $1,560,000</td>
         </tr>
         <tr style="background:rgba(34,197,94,.04)">
           <td style="font-weight:700">⭐ Pro Fleet Subscriptions</td><td style="font-size:11px;color:var(--muted)">20 drivers × $199/mo</td><td class="num green">+ $47,760</td>
@@ -19196,7 +19196,7 @@ function lfRenderExpertReport(segment, d) {
     <div class="mil-stream">
       <div class="mil-stream-icon">⚡</div>
       <div class="mil-stream-title">Automated Dispatch (Core)</div>
-      <div class="mil-stream-desc">10% of every load booked. Automation scans 15+ boards simultaneously — speed-to-book beats every human dispatcher. Smart backhaul stitching eliminates empty miles.</div>
+      <div class="mil-stream-desc">15% of every load booked. Automation scans 15+ boards simultaneously — speed-to-book beats every human dispatcher. Smart backhaul stitching eliminates empty miles.</div>
       <div class="mil-stream-rev">$715K–$1M+</div>
       <div class="mil-stream-rev-lbl">annual at 100 drivers</div>
     </div>
@@ -19414,7 +19414,7 @@ function lfRenderExpertReport(segment, d) {
             <div style="width:34px;height:34px;border-radius:50%;background:#4a1942;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;color:#f0abfc;flex-shrink:0">EW</div>
             <div>
               <div style="font-size:13px;font-weight:700">Eleanor Wei — Finance</div>
-              <div style="font-size:11px;color:var(--muted);line-height:1.4;margin-top:2px">Tracks weekly 10% fee revenue vs. phase targets. Monitors Pro Fleet MRR pipeline. Flags RPM variance >15% per driver. Owns the $1M annual P&L dashboard.</div>
+              <div style="font-size:11px;color:var(--muted);line-height:1.4;margin-top:2px">Tracks weekly 15% fee revenue vs. phase targets. Monitors Pro Fleet MRR pipeline. Flags RPM variance >15% per driver. Owns the $1M annual P&L dashboard.</div>
             </div>
           </div>
           <div style="display:flex;align-items:flex-start;gap:10px">
@@ -19689,10 +19689,10 @@ async function initMillionBlueprint(){
   const cars  =drivers.filter(d=>/(car|sedan|passenger)/i.test(d.vehicle_type||'')).length;
   const total =drivers.length||0;
 
-  // Revenue estimates (10% dispatch fee)
-  const vanWeekly  =vans  *275;
-  const suvWeekly  =suvs  *140;
-  const carWeekly  =cars  * 85;
+  // Revenue estimates (15% dispatch fee — van $412/wk, suv $210/wk, car $128/wk at avg $2,750/$1,400/$850 driver gross)
+  const vanWeekly  =vans  *412;
+  const suvWeekly  =suvs  *210;
+  const carWeekly  =cars  *128;
   const totalWeekly=vanWeekly+suvWeekly+carWeekly;
   const dispatchAnnual=totalWeekly*52;
 
@@ -20005,7 +20005,7 @@ function bdEmailProspect(id){
       if(sub)sub.value='3 Lakes Light Fleet — Partnership Opportunity';
       const body=document.getElementById('mail-compose-body');
       const rep=BD_REPS[p.rep]||'Our team';
-      const pitches={healthcare:`Hi ${p.contact||'there'},\n\nI'm reaching out from 3 Lakes Logistics regarding our NEMT and medical transport services. We specialize in reliable, HIPAA-aware dispatch with ADA vehicle options and same-day scheduling for recurring medical trips.\n\nNo monthly fee — just 10% per completed trip. We'd love to discuss how we can support your transport needs.\n\nWould you have 15 minutes this week for a quick call?\n\nBest,\n${rep}\n3 Lakes Light Fleet\n661-466-9932`,enterprise:`Hi ${p.contact||'there'},\n\nI'm reaching out from 3 Lakes Logistics about our corporate courier and executive transport services. We offer reliable same-day delivery and executive car service with real-time tracking and dedicated dispatch — flat 10% fee, no monthly contracts.\n\nI'd love to show you how we're serving businesses in your area.\n\nBest,\n${rep}\n3 Lakes Light Fleet\n661-466-9932`,platform:`Hi ${p.contact||'there'},\n\nI'm ${rep} from 3 Lakes Logistics. We have a network of pre-vetted, insured Light Fleet drivers available for platform partnerships and driver supply agreements.\n\nWe offer bulk driver supply, volume pricing, and white-label dispatch integration. I'd love to explore how our fleet can extend your network capacity.\n\nBest,\n${rep}\n3 Lakes Light Fleet\n661-466-9932`};
+      const pitches={healthcare:`Hi ${p.contact||'there'},\n\nI'm reaching out from 3 Lakes Logistics regarding our NEMT and medical transport services. We specialize in reliable, HIPAA-aware dispatch with ADA vehicle options and same-day scheduling for recurring medical trips.\n\nNo monthly fee — just 15% per completed trip. We'd love to discuss how we can support your transport needs.\n\nWould you have 15 minutes this week for a quick call?\n\nBest,\n${rep}\n3 Lakes Light Fleet\n661-466-9932`,enterprise:`Hi ${p.contact||'there'},\n\nI'm reaching out from 3 Lakes Logistics about our corporate courier and executive transport services. We offer reliable same-day delivery and executive car service with real-time tracking and dedicated dispatch — flat 15% fee, no monthly contracts.\n\nI'd love to show you how we're serving businesses in your area.\n\nBest,\n${rep}\n3 Lakes Light Fleet\n661-466-9932`,platform:`Hi ${p.contact||'there'},\n\nI'm ${rep} from 3 Lakes Logistics. We have a network of pre-vetted, insured Light Fleet drivers available for platform partnerships and driver supply agreements.\n\nWe offer bulk driver supply, volume pricing, and white-label dispatch integration. I'd love to explore how our fleet can extend your network capacity.\n\nBest,\n${rep}\n3 Lakes Light Fleet\n661-466-9932`};
       if(body)body.value=pitches[p.sector]||pitches.enterprise;
     },400);
   }

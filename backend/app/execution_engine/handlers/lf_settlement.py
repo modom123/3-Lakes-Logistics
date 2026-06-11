@@ -74,7 +74,7 @@ def h258_platform_fee_deduction(carrier_id, contract_id, payload) -> dict:
     trip_id = payload.get("trip_id")
     rate_total = payload.get("rate_total") or payload.get("final_rate", 0.0)
     pro_plan = payload.get("pro_plan", False)
-    fee_pct = 0.03 if pro_plan else 0.08
+    fee_pct = 0.03 if pro_plan else 0.15
     fee_plan = "pro" if pro_plan else "starter"
     try:
         platform_fee = round(float(rate_total) * fee_pct, 2)

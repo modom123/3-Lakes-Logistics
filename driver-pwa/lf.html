@@ -427,7 +427,7 @@
       <div class="section-header">This Period</div>
       <div class="card">
         <div class="cdl-row"><div class="cdl-label">Gross Earnings</div><div class="cdl-value" style="color:var(--green)" id="pay-week-gross">—</div></div>
-        <div class="cdl-row"><div class="cdl-label">Platform Fee (10%)</div><div class="cdl-value" style="color:var(--red)" id="ded-dispatch">—</div></div>
+        <div class="cdl-row"><div class="cdl-label">Platform Fee (15%)</div><div class="cdl-value" style="color:var(--red)" id="ded-dispatch">—</div></div>
         <div class="cdl-row" style="border-top:1px solid var(--border);padding-top:10px;margin-top:4px">
           <div class="cdl-label" style="font-weight:700;color:var(--text)">Your Net</div>
           <div class="cdl-value" id="pay-net" style="color:var(--green);font-size:18px;font-weight:700">—</div>
@@ -852,7 +852,7 @@ function renderDemoEarnings() {
   document.getElementById('earn-trips').textContent    = '22';
   document.getElementById('earn-net').textContent      = '$' + net.toFixed(2);
   document.getElementById('pay-week-gross').textContent = '$' + gross.toFixed(2);
-  document.getElementById('ded-dispatch').textContent  = '-$' + (gross * 0.10).toFixed(2);
+  document.getElementById('ded-dispatch').textContent  = '-$' + (gross * 0.15).toFixed(2);
   document.getElementById('pay-net').textContent       = '$' + net.toFixed(2);
   const platList = document.getElementById('earn-platform-list');
   const demo = [['3lakes',420],['modivcare',210],['curri',145],['lugg',72.50]];
@@ -882,7 +882,7 @@ function renderEarnings(data) {
   document.getElementById('earn-trips').textContent    = s.trips || 0;
   document.getElementById('earn-net').textContent      = '$' + net.toFixed(2);
   document.getElementById('pay-week-gross').textContent = '$' + gross.toFixed(2);
-  document.getElementById('ded-dispatch').textContent  = '-$' + (s.fees || gross * 0.10).toFixed(2);
+  document.getElementById('ded-dispatch').textContent  = '-$' + (s.fees || gross * 0.15).toFixed(2);
   document.getElementById('pay-net').textContent       = '$' + net.toFixed(2);
   const breakdown = data.breakdown || {};
   const platEl = document.getElementById('earn-platform-list');
@@ -1093,7 +1093,43 @@ async function apiFetch(path, method = 'GET', body = null) {
 
 function _lfRegisterServiceWorker() {
   if (!('serviceWorker' in navigator)) return;
-  navigator.serviceWorker.register('sw.js').catch(() => {});
+  navigator.serviceWorker.register('sw.js')
+    .then(reg => { _registerFCMToken(reg); })
+    .catch(() => {});
+}
+
+// ── FCM TOKEN REGISTRATION ────────────────────────────────────────────────────
+async function _registerFCMToken(swReg) {
+  if (DEMO_MODE) return;
+  if (!('Notification' in window)) return;
+  try {
+    const permission = await Notification.requestPermission();
+    if (permission !== 'granted') return;
+
+    const existing = await swReg.pushManager.getSubscription();
+    const sub = existing || await swReg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: _urlBase64ToUint8Array(
+        'BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgDzkrxZJjSgSnfckjZJgcObFVLsTqkKGjkyh1-1cAi4'
+      ),
+    });
+    const token = sub.endpoint || '';
+    if (!token) return;
+
+    await apiFetch('/api/notifications/register-fcm', 'POST', {
+      token,
+      device_type: window.__capacitor ? 'native_android' : 'web',
+    });
+  } catch (e) {
+    console.debug('FCM registration skipped:', e.message);
+  }
+}
+
+function _urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const rawData = atob(base64);
+  return Uint8Array.from([...rawData].map(c => c.charCodeAt(0)));
 }
 
 // ── CHECK-IN ──────────────────────────────────────────────────────────────────
@@ -1176,11 +1212,11 @@ footer{margin-top:32px;font-size:11px;color:#9ca3af;border-top:1px solid #e5e7eb
 <h1>3 Lakes Light Fleet — Pay Stub</h1><h2>${name} &nbsp;·&nbsp; ${period} &nbsp;·&nbsp; Printed ${today}</h2>
 <table>
   <tr><td>Gross Earnings (all platforms)</td><td class="green">${gross}</td></tr>
-  <tr><td>Platform Fee (10%)</td><td class="red">${fee}</td></tr>
+  <tr><td>Platform Fee (15%)</td><td class="red">${fee}</td></tr>
   <tr class="total"><td>Your Net Pay</td><td class="green">${net}</td></tr>
 </table>
 <button onclick="window.print()" style="margin-top:24px;padding:10px 24px;background:#7c3aed;color:#fff;border:none;border-radius:8px;font-size:14px;cursor:pointer">🖨 Print / Save PDF</button>
-<footer>3 Lakes Logistics · info@3lakeslogistics.com · 661-466-9932 · 10% flat commission — no monthly fee</footer>
+<footer>3 Lakes Logistics · info@3lakeslogistics.com · 661-466-9932 · 15% flat commission — no monthly fee</footer>
 </body></html>`;
   const w = window.open('', '_blank');
   if (w) { w.document.write(html); w.document.close(); }
