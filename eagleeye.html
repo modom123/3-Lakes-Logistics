@@ -10994,7 +10994,7 @@ window.moTab = function(id){
   const pn=document.getElementById('mopane-'+id);
   if(tb)tb.classList.add('active');
   if(pn)pn.classList.add('active');
-  if(id==='todo')moTodoRender();
+  if(id==='todo'){moTodoRender();moTodoSync();}
   if(id==='crm')ocInit('mark');
   if(id==='directives')moLoadDirectives();
   if(id==='lf')moLFRefresh();
@@ -11002,9 +11002,39 @@ window.moTab = function(id){
   if(id==='email')moEmailLoad();
 };
 
-/* ── Todo: localStorage persistence ── */
-function moTodos(){return JSON.parse(localStorage.getItem('mo_todos')||'[]');}
+/* ── Todo: server persistence (Supabase) with localStorage mirror/fallback ──
+   Tasks live in the backend `ceo_tasks` table via /api/tasks so they persist
+   across browsers/devices. localStorage is kept as a synchronous render cache
+   and an offline fallback. Server-backed tasks have UUID ids; tasks created
+   while the backend is unreachable get a local `todo_` id and are pushed up on
+   the next successful sync. */
+function moTodos(){try{return JSON.parse(localStorage.getItem('mo_todos')||'[]');}catch(e){return[];}}
 function moTodosSave(t){localStorage.setItem('mo_todos',JSON.stringify(t));}
+function _moTodoIsLocal(id){return String(id||'').startsWith('todo_');}
+
+async function moTodoSync(){
+  // Pull the authoritative list from the backend; if it's reachable, first
+  // push up any offline-created tasks so nothing is lost, then mirror locally.
+  let r;
+  try{ r = await apiFetch('/api/tasks/?owner=mark','GET'); }
+  catch(e){ moTodoRender(); return false; }
+  if(!r || !r.ok){ moTodoRender(); return false; }
+
+  const localOnly = moTodos().filter(t=>_moTodoIsLocal(t.id));
+  if(localOnly.length){
+    for(const t of localOnly){
+      try{ await apiFetch('/api/tasks/','POST',{title:t.title,desc:t.desc,due:t.due,pri:t.pri,cat:t.cat,owner:'mark'}); }catch(e){}
+    }
+    try{ r = await apiFetch('/api/tasks/?owner=mark','GET'); }catch(e){}
+  }
+  try{
+    const data = await r.json();
+    const items = (data.items||[]).map(t=>({id:t.id,title:t.title,desc:t.desc||'',due:t.due||'',pri:t.pri||'med',cat:t.cat||'strategy',done:!!t.done,created:t.created}));
+    moTodosSave(items);
+  }catch(e){ /* keep local cache on parse failure */ }
+  moTodoRender();
+  return true;
+}
 
 function moDueCls(due){
   if(!due)return'ok';
@@ -11095,16 +11125,29 @@ window.moTodoEdit = function(id){
   document.getElementById('mo-todo-save-status').textContent='';
 };
 
-window.moTodoSave = function(){
+window.moTodoSave = async function(){
   const title=(document.getElementById('mo-todo-inp-title')?.value||'').trim();
   const status=document.getElementById('mo-todo-save-status');
   if(!title){if(status)status.textContent='Title is required.';return;}
-  const todos=moTodos();
   const editId=document.getElementById('mo-todo-edit-id').value;
-  const data={title,desc:(document.getElementById('mo-todo-inp-desc')?.value||'').trim(),due:document.getElementById('mo-todo-inp-due')?.value||'',pri:document.getElementById('mo-todo-inp-pri')?.value||'med',cat:document.getElementById('mo-todo-inp-cat')?.value||'strategy',done:false,created:new Date().toISOString()};
-  if(editId){const i=todos.findIndex(x=>x.id===editId);if(i>=0){const done=todos[i].done;todos[i]={...data,id:editId,done};}}
-  else{todos.unshift({...data,id:'todo_'+Date.now()});}
-  moTodosSave(todos);moTodoRender();moTodoClear();
+  const data={title,desc:(document.getElementById('mo-todo-inp-desc')?.value||'').trim(),due:document.getElementById('mo-todo-inp-due')?.value||'',pri:document.getElementById('mo-todo-inp-pri')?.value||'med',cat:document.getElementById('mo-todo-inp-cat')?.value||'strategy'};
+  if(editId){
+    // Optimistic local update, then persist to the server (if it's a server id).
+    const todos=moTodos();const i=todos.findIndex(x=>x.id===editId);
+    if(i>=0){todos[i]={...todos[i],...data};moTodosSave(todos);}
+    moTodoRender();moTodoClear();
+    if(!_moTodoIsLocal(editId)){try{await apiFetch('/api/tasks/'+editId,'PATCH',data);}catch(e){}}
+  } else {
+    // Create on the server first so we get a durable UUID; fall back to a local id.
+    let task=null;
+    try{
+      const r=await apiFetch('/api/tasks/','POST',{...data,owner:'mark',assigned_to:'cc_gulley'});
+      if(r.ok){const j=await r.json();task=j.task;}
+    }catch(e){}
+    if(!task)task={...data,id:'todo_'+Date.now(),done:false,created:new Date().toISOString()};
+    const todos=moTodos();todos.unshift(task);moTodosSave(todos);
+    moTodoRender();moTodoClear();
+  }
   if(status){status.textContent=editId?'Task updated!':'Task added!';setTimeout(()=>{if(status)status.textContent='';},2000);}
 };
 
@@ -11119,6 +11162,7 @@ window.moTodoClear = function(){
 window.moTodoToggle = function(id){
   const todos=moTodos();const t=todos.find(x=>x.id===id);if(t)t.done=!t.done;
   moTodosSave(todos);
+  if(t&&!_moTodoIsLocal(id)){apiFetch('/api/tasks/'+id,'PATCH',{done:t.done}).catch(()=>{});}
   const filter=document.getElementById('mo-todo-filter')?.value||'open';
   if(t&&t.done&&filter!=='all'&&filter!=='done'){
     // Animate the row out, then re-render
@@ -11132,17 +11176,24 @@ window.moTodoToggle = function(id){
 
 window.moTodoDel = function(id){
   moTodosSave(moTodos().filter(x=>x.id!==id));moTodoRender();
+  if(!_moTodoIsLocal(id)){apiFetch('/api/tasks/'+id,'DELETE').catch(()=>{});}
 };
 
-window.moTodoSendToCC = function(){
+window.moTodoSendToCC = async function(){
   const open=moTodos().filter(t=>!t.done);
   const st=document.getElementById('mo-todo-cc-status');
   if(!open.length){if(st)st.textContent='No open tasks to send.';return;}
+  const done=()=>{if(st){st.textContent='✓ '+open.length+' tasks sent to CC Gulley';setTimeout(()=>{if(st)st.textContent='';},3500);}};
+  // Preferred: server reads its own persisted open tasks and writes them into
+  // CC Gulley's NEXUS memory as a standing task list.
+  try{
+    const r=await apiFetch('/api/tasks/send-to-agent','POST',{owner:'mark',agent:'cc_gulley'});
+    if(r.ok){done();return;}
+  }catch(e){}
+  // Fallback (offline / table missing): broadcast the local list as a directive.
   const msg='CEO TASK DIRECTIVE — MARK ODOM → CC GULLEY\n\n'+open.map((t,i)=>`${i+1}. [${(t.pri||'med').toUpperCase()}] ${t.title}${t.due?' (Due: '+t.due+')':''}${t.desc?'\n   Notes: '+t.desc:''}`).join('\n\n');
-  const doSend=()=>{if(st){st.textContent='✓ '+open.length+' tasks sent to CC Gulley';setTimeout(()=>{if(st)st.textContent='';},3500);}};
-  if(typeof API!=='undefined'){
-    API.post('/api/agents/directive',{agent:'cc_gulley',subject:'CEO Task List — Mark Odom',message:msg}).then(doSend).catch(doSend);
-  } else {doSend();}
+  try{await apiFetch('/api/agents/directive','POST',{agent:'cc_gulley',subject:'CEO Task List — Mark Odom',message:msg});}catch(e){}
+  done();
 };
 
 /* ── Directives ── */
@@ -11188,7 +11239,7 @@ window.moRefreshAll = function(){
       {cls:'green',from:'James Bond — IEBC',text:'System integration health: normal. No critical alerts. Intel channel active.'},
     ].map(f=>`<div class="mo-feed-item ${f.cls}"><div class="mo-feed-from">${f.from}</div><div class="mo-feed-text">${f.text}</div></div>`).join('');
   }
-  moTodoRender();moLoadDirectives();
+  moTodoRender();moTodoSync();moLoadDirectives();
 };
 
 window.moRunAgent = function(agent,name){
