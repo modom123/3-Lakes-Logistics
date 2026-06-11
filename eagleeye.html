@@ -11151,9 +11151,35 @@ window.moTab = function(id){
   if(id==='email')moEmailLoad();
 };
 
-/* ── Todo: localStorage persistence ── */
+/* ── Office shared state: localStorage cache + best-effort DB sync ──
+   Keeps the synchronous read/write API intact, and mirrors to the backend
+   (/api/office/state/{key}) so TODOs and contacts are shared across users and
+   devices. Falls back silently to localStorage-only if the API/table isn't
+   live yet (no regression). */
+async function _officeStateGet(key){
+  try{ const r=await apiFetch(`/api/office/state/${key}`); const d=await r.json();
+    return (d&&d.ok&&Array.isArray(d.value))?d.value:null; }catch(e){ return null; }
+}
+function _officeStatePut(key,value){
+  try{ apiFetch(`/api/office/state/${key}`,'PUT',{value}).catch(()=>{}); }catch(e){}
+}
+
+/* ── Todo: localStorage cache, mirrored to the shared office store ── */
 function moTodos(){return JSON.parse(localStorage.getItem('mo_todos')||'[]');}
-function moTodosSave(t){localStorage.setItem('mo_todos',JSON.stringify(t));}
+function moTodosSave(t){localStorage.setItem('mo_todos',JSON.stringify(t));_officeStatePut('mo_todos',t);}
+
+let _moTodosSynced=false;
+async function moTodosServerSync(force){
+  if(_moTodosSynced&&!force) return;
+  _moTodosSynced=true;
+  const server=await _officeStateGet('mo_todos');
+  if(server===null) return;                       // API/table not available — stay local
+  const local=moTodos();
+  if(server.length===0&&local.length>0){ _officeStatePut('mo_todos',local); return; }  // seed server once
+  localStorage.setItem('mo_todos',JSON.stringify(server));
+  if(typeof moTodoRender==='function')moTodoRender();
+  if(typeof ccgFromMarkRender==='function')ccgFromMarkRender();
+}
 
 function moDueCls(due){
   if(!due)return'ok';
@@ -11370,7 +11396,7 @@ window.moTVCustom = function(){
 
 /* ── Initial load + seed sample todos ── */
 window.moLoadOfficeData = function(){
-  moTodoRender();moLoadDirectives();moRefreshAll();moLFRefresh();moTDRefresh();moLoadEmailCount();
+  moTodoRender();moTodosServerSync();moLoadDirectives();moRefreshAll();moLFRefresh();moTDRefresh();moLoadEmailCount();
 };
 
 async function moLoadEmailCount(){
@@ -12342,6 +12368,7 @@ window.ccgRefreshAll = function(){
 };
 
 async function ccgLoadOfficeData(){
+  if(typeof moTodosServerSync==='function')moTodosServerSync();
   try{
     const mems=await API.agentBrain('cc_gulley').catch(()=>null);
     const list=(mems?.memories)||[];
@@ -12918,7 +12945,20 @@ function pfx(owner){ return owner==='mark'?'mo':'cece'; }
 function el(owner, s){ return document.getElementById(`${pfx(owner)}-crm-${s}`); }
 
 function ocContacts(owner){ try{return JSON.parse(localStorage.getItem(`oc_${owner}`)||'[]');}catch(e){return[];} }
-function ocSaveAll(owner,arr){ localStorage.setItem(`oc_${owner}`,JSON.stringify(arr)); }
+function ocSaveAll(owner,arr){ localStorage.setItem(`oc_${owner}`,JSON.stringify(arr)); _officeStatePut(`oc_${owner}`,arr); }
+
+// Pull shared contacts from the office store into the local cache, then re-render.
+const _ocSynced={};
+async function ocServerSync(owner){
+  if(_ocSynced[owner]) return;
+  _ocSynced[owner]=true;
+  const server=await _officeStateGet(`oc_${owner}`);
+  if(server===null) return;                                   // API/table not live — stay local
+  const local=ocContacts(owner);
+  if(server.length===0&&local.length>0){ _officeStatePut(`oc_${owner}`,local); return; }  // seed once
+  localStorage.setItem(`oc_${owner}`,JSON.stringify(server));
+  if(typeof ocRenderList==='function')ocRenderList(owner);
+}
 
 // per-owner state
 const _oc = {};
@@ -12932,6 +12972,7 @@ window.ocInit = function(owner){
   el(owner,'st-contacts')?.classList.add('active');
   el(owner,'st-leads')?.classList.remove('active');
   el(owner,'new-btn') && (el(owner,'new-btn').style.display='');
+  ocServerSync(owner);
   ocRenderList(owner);
   ocShowEmpty(owner);
 };
