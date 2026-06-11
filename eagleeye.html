@@ -9498,11 +9498,13 @@ function renderCrmKanban(){
   const board = document.getElementById('crm-kanban-board');
   if(!board) return;
   const heatF = document.getElementById('crm-filter-heat')?.value||'';
+  const stageF = document.getElementById('crm-filter-stage')?.value||'';
   const search = (document.getElementById('crm-search')?.value||'').toLowerCase();
   let leads = crmAllLeads;
   if(heatF) leads = leads.filter(l => crmGetHeat(l.id)===heatF);
   if(search) leads = leads.filter(l => _crmName(l).toLowerCase().includes(search)||(l.phone||'').includes(search));
-  board.innerHTML = CRM_STAGES.map(stage => {
+  const stages = stageF ? CRM_STAGES.filter(s => s===stageF) : CRM_STAGES;
+  board.innerHTML = stages.map(stage => {
     const items = leads.filter(l => (_crmStatus(l)||'New').replace(' ','_') === stage);
     const totalVal = items.reduce((s,l) => s+(Number(l.fleet_size)||0)*300, 0);
     return `<div style="width:220px;flex-shrink:0;background:var(--surface2,#f1f5f9);border-radius:10px;padding:10px;display:flex;flex-direction:column;height:100%">
@@ -10079,6 +10081,8 @@ if (typeof nav === 'function') {
 .mo-fl{font-size:9px;font-family:var(--ff-m);color:rgba(255,255,255,.45);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:5px;}
 .mo-label{font-weight:700;font-size:13px;color:#fff;margin-bottom:8px;}
 .mo-input{width:100%;padding:9px 12px;border:1.5px solid rgba(255,255,255,.12);border-radius:8px;font-size:12px;color:#fff;background:rgba(255,255,255,.05);outline:none;font-family:var(--ff-b);box-sizing:border-box;}
+.mo-input[type=date]::-webkit-calendar-picker-indicator{filter:invert(1);opacity:.85;cursor:pointer;}
+.mo-input[type=date]{color-scheme:dark;}
 .mo-input:focus{border-color:#f5c842;}
 .mo-select{width:100%;padding:9px 12px;border:1.5px solid rgba(255,255,255,.12);border-radius:8px;font-size:12px;color:#fff;background:rgba(30,10,5,.9);outline:none;font-family:var(--ff-b);box-sizing:border-box;}
 .mo-select:focus{border-color:#f5c842;}
@@ -11440,6 +11444,8 @@ if(!moTodos().length){
 .ccg-fl{font-size:9px;font-family:var(--ff-m);color:rgba(255,255,255,.45);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:5px;}
 .ccg-label{font-weight:700;font-size:13px;color:#fff;margin-bottom:8px;}
 .ccg-input{width:100%;padding:9px 12px;border:1.5px solid rgba(255,255,255,.12);border-radius:8px;font-size:12px;color:#fff;background:rgba(255,255,255,.05);outline:none;font-family:var(--ff-b);box-sizing:border-box;}
+.ccg-input[type=date]::-webkit-calendar-picker-indicator{filter:invert(1);opacity:.85;cursor:pointer;}
+.ccg-input[type=date]{color-scheme:dark;}
 .ccg-input:focus{border-color:#38bdf8;}
 .ccg-textarea{width:100%;min-height:100px;padding:10px 12px;border:1.5px solid rgba(255,255,255,.12);border-radius:8px;font-size:12px;color:#fff;background:rgba(255,255,255,.05);outline:none;resize:vertical;font-family:var(--ff-b);box-sizing:border-box;}
 .ccg-textarea:focus{border-color:#38bdf8;}
@@ -12211,9 +12217,14 @@ window.ccgDirSend=async function(){
   const focus=document.getElementById('ccg-dir-focus')?.value.trim();
   const instruction=document.getElementById('ccg-dir-instruction')?.value.trim();
   if(!instruction&&!focus){toast('Enter a directive first','error');return;}
-  const payload={focus,instruction,markets:document.getElementById('ccg-dir-alex-markets')?.value,segments:document.getElementById('ccg-dir-naomi-segs')?.value,retention:document.getElementById('ccg-dir-winston-ret')?.value};
+  const extra=[
+    document.getElementById('ccg-dir-alex-markets')?.value&&`Priority markets: ${document.getElementById('ccg-dir-alex-markets').value}`,
+    document.getElementById('ccg-dir-naomi-segs')?.value&&`Target segments: ${document.getElementById('ccg-dir-naomi-segs').value}`,
+    document.getElementById('ccg-dir-winston-ret')?.value&&`Retention priority: ${document.getElementById('ccg-dir-winston-ret').value}`,
+  ].filter(Boolean).join('\n');
+  const message=[instruction,extra].filter(Boolean).join('\n\n');
   try{
-    await API.post('/api/memory/write',{agent:_ccgDirAgent,key:`directive_from_cc_gulley`,value:{...payload,issued_at:new Date().toISOString()}});
+    await API.post('/api/agents/directive',{agent:_ccgDirAgent,subject:focus||'CC Gulley Directive',message});
     document.getElementById('ccg-dir-status').textContent='✓ Directive sent';
     toast(`Directive sent to ${_ccgDirAgent}`,'success');
     setTimeout(()=>{if(document.getElementById('ccg-dir-status'))document.getElementById('ccg-dir-status').textContent='';},3000);
@@ -13017,8 +13028,8 @@ window.ocOpenLead = function(owner, id){
         ${vf('Status',esc(l.status||'—'))}
       </div>
       <div class="oc-2col">
-        ${vf('Phone',l.contact_phone?`<a href="tel:${l.contact_phone}" style="color:var(--oc-a,#f5c842)">${esc(l.contact_phone)}</a>`:'—')}
-        ${vf('Email',l.contact_email?`<a href="mailto:${l.contact_email}" style="color:var(--oc-a,#f5c842)">${esc(l.contact_email)}</a>`:'—')}
+        ${vf('Phone',(l.phone||l.phone_number)?`<a href="tel:${l.phone||l.phone_number}" style="color:var(--oc-a,#f5c842)">${esc(l.phone||l.phone_number)}</a>`:'—')}
+        ${vf('Email',l.email?`<a href="mailto:${l.email}" style="color:var(--oc-a,#f5c842)">${esc(l.email)}</a>`:'—')}
       </div>
       ${vf('DOT / MC',`${l.dot_number||'—'} / ${l.mc_number||'—'}`)}
       ${vf('Source',esc(l.source||'—'))}
@@ -13061,8 +13072,8 @@ window.ocPullLead = function(owner, id){
     created: new Date().toISOString(),
     name: l.contact_name||name,
     company: name,
-    phone: l.contact_phone||'',
-    email: l.contact_email||'',
+    phone: l.phone||l.phone_number||'',
+    email: l.email||'',
     type: 'Carrier',
     priority: 'none',
     notes: `Pulled from CRM (lead ID: ${l.id})\nStatus: ${l.status||''}\nDOT: ${l.dot_number||'—'} MC: ${l.mc_number||'—'}`,
