@@ -24,10 +24,13 @@ test.describe('Light Fleet Login Flow', () => {
     await page.goto(`${BASE}/driver-pwa/login-lf.html`);
     await page.evaluate(() => { localStorage.clear(); sessionStorage.clear(); });
 
-    await page.route('**/api/driver-auth/lf-login', route => route.fulfill({
+    // login-lf.html authenticates via the Supabase RPC lf_driver_login
+    // (sb.rpc), which POSTs to /rest/v1/rpc/lf_driver_login — not a REST
+    // /api/driver-auth endpoint. Mock the RPC the page actually calls.
+    await page.route('**/rpc/lf_driver_login', route => route.fulfill({
       status: 200,
       contentType: 'application/json',
-      body: JSON.stringify({ token: 'lf-jwt-token-xyz', lf_driver_id: 'lf-001', driver_id: 'lf-001', driver_name: 'LF Driver' }),
+      body: JSON.stringify({ id: 'lf-001', name: 'LF Driver' }),
     }));
 
     await page.fill('#phone', '(312) 555-0100');

@@ -34,7 +34,7 @@ test.describe('Driver App — Navigation', () => {
   test('loads main app with valid session', async ({ page }) => {
     await page.goto(`${BASE}/driver-pwa/index.html`);
     await expect(page.locator('#header')).toBeVisible();
-    await expect(page.locator('#nav-bar')).toBeVisible();
+    await expect(page.locator('#bottom-nav')).toBeVisible();
   });
 
   test('bottom nav has expected tabs', async ({ page }) => {
@@ -103,7 +103,7 @@ test.describe('Driver App — Load Board', () => {
     await page.goto(`${BASE}/driver-pwa/index.html`);
     await page.click('#nav-loads');
     await page.waitForTimeout(800);
-    const loadList = page.locator('#load-list');
+    const loadList = page.locator('#available-loads-list');
     await expect(loadList).toBeVisible();
   });
 

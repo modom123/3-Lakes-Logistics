@@ -2981,9 +2981,12 @@ async function submitInstantPay() {
   finally { btn.textContent = '⚡ Get Paid Now'; btn.disabled = false; }
 }
 
-// Hook compliance + earnings into showView
+// Hook compliance + earnings into showView.
+// NB: must be an assignment, not a `function showView` declaration — a second
+// hoisted declaration would make _origShowView capture *this* wrapper instead
+// of the original, causing infinite recursion (stack overflow) on every tab tap.
 const _origShowView = showView;
-function showView(name) {
+showView = function(name) {
   _origShowView(name);
   if (name === 'pay') { loadEarningsView(); loadComplianceStatus(); }
   if (name === 'profile') { loadComplianceStatus(); }

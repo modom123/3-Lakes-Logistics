@@ -44,7 +44,9 @@ test.describe('Driver Login Flow', () => {
 
   test('PIN input only accepts digits', async ({ page }) => {
     await page.goto(`${BASE}/driver-pwa/login.html`);
-    await page.fill('#pin', 'abc1def2');
+    // Stay within maxlength=4 — otherwise the browser truncates the raw string
+    // ('abc1def2' -> 'abc1') before the digit-strip handler runs, leaving '1'.
+    await page.fill('#pin', 'a1b2');
     const pinValue = await page.$eval('#pin', el => el.value);
     expect(pinValue).toBe('12');
   });
