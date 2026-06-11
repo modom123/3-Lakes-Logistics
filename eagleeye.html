@@ -10234,6 +10234,21 @@ select.oc-inp option{background:#1a1a2e;color:#fff;}
 .oc-btn-out{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.2);color:rgba(255,255,255,.8);border-radius:6px;padding:6px 14px;font-size:12px;font-weight:600;cursor:pointer;font-family:var(--ff-b);white-space:nowrap;}
 .oc-btn-out:hover{background:rgba(255,255,255,.14);}
 .oc-btn-danger{background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.35);color:#ef4444;border-radius:6px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer;font-family:var(--ff-b);}
+/* ── Pipeline board (kanban) ── */
+.oc-board{flex:1;display:none;overflow-x:auto;overflow-y:hidden;gap:10px;padding:14px;align-items:stretch;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.15) transparent;}
+.oc-col{min-width:205px;width:205px;flex-shrink:0;display:flex;flex-direction:column;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:8px;overflow:hidden;}
+.oc-col.drop{border-color:var(--oc-a,#f5c842);background:rgba(245,200,66,.06);}
+.oc-col-hd{padding:8px 10px;font-size:11px;font-weight:800;color:#fff;display:flex;justify-content:space-between;align-items:center;gap:6px;background:rgba(0,0,0,.22);}
+.oc-col-ct{font-size:9px;font-weight:700;color:rgba(255,255,255,.5);font-family:var(--ff-m);white-space:nowrap;}
+.oc-col-body{flex:1;overflow-y:auto;padding:8px;display:flex;flex-direction:column;gap:7px;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.15) transparent;}
+.oc-col-empty{text-align:center;color:rgba(255,255,255,.18);font-size:11px;padding:14px 0;}
+.oc-card{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:8px 9px;cursor:grab;transition:border-color .12s;}
+.oc-card:hover{border-color:var(--oc-a,#f5c842);}
+.oc-card:active{cursor:grabbing;}
+.oc-card-top{display:flex;align-items:center;gap:6px;}
+.oc-card-name{font-size:11px;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.oc-card-co{font-size:10px;color:rgba(255,255,255,.45);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.oc-card-deal{font-size:10px;font-weight:700;color:#10b981;margin-top:3px;}
 </style>
 
 <div class="mo">
@@ -10899,6 +10914,7 @@ select.oc-inp option{background:#1a1a2e;color:#fff;}
           <div class="oc-subtabs">
             <button class="oc-subtab active" id="mo-crm-st-contacts" onclick="ocSubTab('mark','contacts')">📇 My Contacts</button>
             <button class="oc-subtab"        id="mo-crm-st-leads"    onclick="ocSubTab('mark','leads')">🎯 CRM Leads</button>
+            <button class="oc-subtab"        id="mo-crm-st-pipeline" onclick="ocSubTab('mark','pipeline')">📊 Pipeline</button>
           </div>
           <div class="oc-search-bar">
             <input class="oc-search" id="mo-crm-search" placeholder="🔍 Search…" oninput="ocFilter('mark')">
@@ -10915,6 +10931,7 @@ select.oc-inp option{background:#1a1a2e;color:#fff;}
             <div style="font-size:13px">Select a contact or click + New</div>
           </div>
           <div id="mo-crm-detail" style="display:none;flex-direction:column;height:100%;overflow:hidden;"></div>
+          <div class="oc-board" id="mo-crm-board"></div>
         </div>
       </div>
     </div><!-- /crm -->
@@ -12125,6 +12142,7 @@ if(!moTodos().length){
           <div class="oc-subtabs">
             <button class="oc-subtab active" id="cece-crm-st-contacts" onclick="ocSubTab('cece','contacts')">📇 My Contacts</button>
             <button class="oc-subtab"        id="cece-crm-st-leads"    onclick="ocSubTab('cece','leads')">🎯 CRM Leads</button>
+            <button class="oc-subtab"        id="cece-crm-st-pipeline" onclick="ocSubTab('cece','pipeline')">📊 Pipeline</button>
           </div>
           <div class="oc-search-bar">
             <input class="oc-search" id="cece-crm-search" placeholder="🔍 Search…" oninput="ocFilter('cece')">
@@ -12140,6 +12158,7 @@ if(!moTodos().length){
             <div style="font-size:13px">Select a contact or click + New</div>
           </div>
           <div id="cece-crm-detail" style="display:none;flex-direction:column;height:100%;overflow:hidden;"></div>
+          <div class="oc-board" id="cece-crm-board"></div>
         </div>
       </div>
     </div><!-- /crm -->
@@ -12841,6 +12860,7 @@ async function ocSync(owner){
   try{ const data = await r.json(); ocSaveAll(owner,(data.items||[])); }
   catch(e){ return false; }
   if(st(owner).tab==='contacts') ocRenderList(owner);
+  else if(st(owner).tab==='pipeline'){ ocRenderList(owner); ocRenderBoard(owner); }
   return true;
 }
 
@@ -12867,8 +12887,20 @@ window.ocSubTab = function(owner, tab){
   st(owner).isNew = false;
   el(owner,'st-contacts')?.classList.toggle('active', tab==='contacts');
   el(owner,'st-leads')?.classList.toggle('active', tab==='leads');
+  el(owner,'st-pipeline')?.classList.toggle('active', tab==='pipeline');
   const nb = el(owner,'new-btn');
   if(nb) nb.style.display = tab==='contacts'?'':'none';
+  const board = el(owner,'board');
+  if(tab==='pipeline'){
+    // Board takes over the right pane; left list still shows contacts.
+    if(el(owner,'empty')) el(owner,'empty').style.display='none';
+    if(el(owner,'detail')) el(owner,'detail').style.display='none';
+    if(board) board.style.display='flex';
+    ocRenderList(owner);
+    ocRenderBoard(owner);
+    return;
+  }
+  if(board) board.style.display='none';
   if(tab==='contacts') ocRenderList(owner);
   else ocLoadLeads(owner);
   ocShowEmpty(owner);
@@ -12877,7 +12909,61 @@ window.ocSubTab = function(owner, tab){
 window.ocFilter = function(owner){
   st(owner).search = el(owner,'search')?.value.toLowerCase()||'';
   if(st(owner).tab==='contacts') ocRenderList(owner);
+  else if(st(owner).tab==='pipeline'){ ocRenderList(owner); ocRenderBoard(owner); }
   else ocRenderLeads(owner);
+};
+
+// ── Pipeline board (kanban by stage) ─────────────────
+const _ocStageColor={'New Lead':'#6366f1','Contacted':'#38bdf8','Interested':'#f5c842','Negotiating':'#f59e0b','Won':'#10b981','Lost':'#ef4444','On Hold':'#6b7280','Unstaged':'rgba(255,255,255,.3)'};
+const _ocBoardCols=['Unstaged','New Lead','Contacted','Interested','Negotiating','Won','Lost','On Hold'];
+
+window.ocRenderBoard = function(owner){
+  const board = el(owner,'board');
+  if(!board) return;
+  const q = st(owner).search;
+  const contacts = ocContacts(owner).filter(c=>{
+    if(!q) return true;
+    return (c.name+c.company+c.email+c.phone+c.type).toLowerCase().includes(q);
+  });
+  board.innerHTML = _ocBoardCols.map(stage=>{
+    const want = stage==='Unstaged'?'':stage;
+    const items = contacts.filter(c=>(c.pipeline_stage||'')===want);
+    const total = items.reduce((s,c)=>s+(parseFloat(c.deal_value)||0),0);
+    const color = _ocStageColor[stage]||'#888';
+    const cards = items.length
+      ? items.map(c=>ocCard(owner,c)).join('')
+      : '<div class="oc-col-empty">—</div>';
+    return `<div class="oc-col" ondragover="event.preventDefault();this.classList.add('drop')" ondragleave="this.classList.remove('drop')" ondrop="ocBoardDrop('${owner}','${stage}',event)">
+      <div class="oc-col-hd" style="border-top:3px solid ${color}"><span>${stage}</span><span class="oc-col-ct">${items.length}${total?` · $${total.toLocaleString()}`:''}</span></div>
+      <div class="oc-col-body">${cards}</div>
+    </div>`;
+  }).join('');
+};
+
+function ocCard(owner,c){
+  const deal = parseFloat(c.deal_value)||0;
+  return `<div class="oc-card" draggable="true" ondragstart="ocBoardDrag(event,'${c.id}')" onclick="ocSubTab('${owner}','contacts');setTimeout(()=>ocOpen('${owner}','${c.id}'),30)">
+    <div class="oc-card-top"><span class="oc-dot ${c.priority||'none'}"></span><span class="oc-card-name">${esc(c.name)}</span></div>
+    ${c.company?`<div class="oc-card-co">${esc(c.company)}</div>`:''}
+    ${deal?`<div class="oc-card-deal">$${deal.toLocaleString()}</div>`:''}
+  </div>`;
+}
+
+window.ocBoardDrag = function(e,id){ e.dataTransfer.setData('text/plain',id); e.dataTransfer.effectAllowed='move'; };
+
+window.ocBoardDrop = function(owner,stage,e){
+  e.preventDefault();
+  const col=e.currentTarget; if(col) col.classList.remove('drop');
+  const id=e.dataTransfer.getData('text/plain');
+  const arr=ocContacts(owner); const c=arr.find(x=>x.id===id);
+  if(!c) return;
+  const newStage = stage==='Unstaged'?'':stage;
+  if((c.pipeline_stage||'')===newStage){ return; }
+  c.pipeline_stage=newStage;
+  ocSaveAll(owner,arr);
+  if(!_ocIsLocal(id)){ apiFetch('/api/crm/contacts/'+id,'PATCH',{pipeline_stage:newStage}).catch(()=>{}); }
+  ocRenderBoard(owner);
+  if(typeof toast!=='undefined') toast(`Moved to ${stage}`);
 };
 
 function ocShowEmpty(owner){
