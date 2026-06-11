@@ -79,8 +79,26 @@ def update_lead(lead_id: str, patch: dict) -> dict:
         patch["last_touch_at"] = patch["last_contact_at"]
     if "last_touch_at" in patch and "last_contact_at" not in patch:
         patch["last_contact_at"] = patch["last_touch_at"]
-    try:
-        get_supabase().table("leads").update(patch).eq("id", lead_id).execute()
-    except Exception as exc:
-        raise HTTPException(500, f"Database error updating lead: {exc}") from exc
-    return {"ok": True}
+    # Resilient update: if a column doesn't exist yet (e.g. migration 023 hasn't
+    # been applied), drop the offending field and retry instead of failing the
+    # whole save. `dropped` tells the client which fields couldn't persist.
+    import re
+    sb = get_supabase()
+    attempt = dict(patch)
+    dropped: list[str] = []
+    for _ in range(len(attempt) + 1):
+        if not attempt:
+            break
+        try:
+            sb.table("leads").update(attempt).eq("id", lead_id).execute()
+            return {"ok": True, "dropped": dropped}
+        except Exception as exc:  # noqa: BLE001
+            msg = str(exc)
+            m = re.search(r"'([a-z_]+)' column|column \"?([a-z_]+)\"?", msg, re.I)
+            col = (m.group(1) or m.group(2)) if m else None
+            if col and col in attempt:
+                attempt.pop(col, None)
+                dropped.append(col)
+                continue
+            raise HTTPException(500, f"Database error updating lead: {exc}") from exc
+    return {"ok": True, "dropped": dropped}
