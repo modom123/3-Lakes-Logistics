@@ -69,6 +69,7 @@ jobs:
       - name: Bond — Mission start report
         env:
           API_BEARER_TOKEN: ${{ secrets.API_BEARER_TOKEN }}
+          GITHUB_TOKEN:     ${{ secrets.GITHUB_TOKEN }}
         run: python tests/bond_escalate.py report "mission_start" "Nightly CI suite started — suite=${{ inputs.suite || 'all (scheduled)' }}"
         continue-on-error: true
 
@@ -85,6 +86,7 @@ jobs:
         if: always() && steps.security.outcome == 'failure'
         env:
           API_BEARER_TOKEN: ${{ secrets.API_BEARER_TOKEN }}
+          GITHUB_TOKEN:     ${{ secrets.GITHUB_TOKEN }}
         run: python tests/bond_escalate.py security
 
       # ── Phase 2: Smoke (read-only) ─────────────────────────────────────────
@@ -100,6 +102,7 @@ jobs:
         if: always() && steps.live.outcome == 'failure'
         env:
           API_BEARER_TOKEN: ${{ secrets.API_BEARER_TOKEN }}
+          GITHUB_TOKEN:     ${{ secrets.GITHUB_TOKEN }}
         run: python tests/bond_escalate.py live
 
       # ── Phase 3: Driver auth guards (read-only) ────────────────────────────
@@ -115,6 +118,7 @@ jobs:
         if: always() && steps.driver.outcome == 'failure'
         env:
           API_BEARER_TOKEN: ${{ secrets.API_BEARER_TOKEN }}
+          GITHUB_TOKEN:     ${{ secrets.GITHUB_TOKEN }}
         run: python tests/bond_escalate.py driver
 
       # ── Phase 4: Integration & concurrency ───────────────────────────────
@@ -130,6 +134,7 @@ jobs:
         if: always() && steps.integration.outcome == 'failure'
         env:
           API_BEARER_TOKEN: ${{ secrets.API_BEARER_TOKEN }}
+          GITHUB_TOKEN:     ${{ secrets.GITHUB_TOKEN }}
         run: python tests/bond_escalate.py integration
 
       # ── Phase 5: Full carrier lifecycle (data writes — run last) ──────────
@@ -145,6 +150,7 @@ jobs:
         if: always() && steps.carriers.outcome == 'failure'
         env:
           API_BEARER_TOKEN: ${{ secrets.API_BEARER_TOKEN }}
+          GITHUB_TOKEN:     ${{ secrets.GITHUB_TOKEN }}
         run: python tests/bond_escalate.py carriers
 
       # ── Phase 6: E2E Mobile App (Playwright) ──────────────────────────────
@@ -177,6 +183,7 @@ jobs:
         if: always() && steps.e2e.outcome == 'failure'
         env:
           API_BEARER_TOKEN: ${{ secrets.API_BEARER_TOKEN }}
+          GITHUB_TOKEN:     ${{ secrets.GITHUB_TOKEN }}
         run: python tests/bond_escalate.py e2e
 
       # ── Cleanup ───────────────────────────────────────────────────────────
@@ -192,6 +199,7 @@ jobs:
         if: always()
         env:
           API_BEARER_TOKEN: ${{ secrets.API_BEARER_TOKEN }}
+          GITHUB_TOKEN:     ${{ secrets.GITHUB_TOKEN }}
         run: |
           python tests/bond_escalate.py report "mission_complete" \
             "security=${{ steps.security.outcome || 'skipped' }} \

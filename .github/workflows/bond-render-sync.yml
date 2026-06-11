@@ -1,0 +1,83 @@
+name: Bond — Render Env Sync & Redeploy
+
+# Bond calls this workflow via the GitHub API (workflow_dispatch) whenever it
+# detects that Render env vars need updating (token rotation, new secrets, etc.).
+# After patching vars it triggers a Render redeploy automatically.
+
+on:
+  workflow_dispatch:
+    inputs:
+      patch_vars:
+        description: 'Space-separated KEY=VALUE pairs to patch (e.g. API_BEARER_TOKEN=abc FOO=bar)'
+        required: false
+        default: ''
+      deploy:
+        description: 'Trigger Render redeploy after patching (true/false)'
+        required: false
+        default: 'true'
+      reason:
+        description: 'Why Bond is syncing (logged to audit trail)'
+        required: false
+        default: 'automated env sync'
+
+jobs:
+  sync:
+    name: Patch Render env + redeploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Bond — Report sync started
+        env:
+          API_BEARER_TOKEN: ${{ secrets.API_BEARER_TOKEN }}
+        run: |
+          python tests/bond_escalate.py report "render_sync_start" \
+            "Bond Render sync started — reason: ${{ inputs.reason }}"
+        continue-on-error: true
+
+      - name: Patch Render env vars
+        env:
+          RENDER_API_KEY:         ${{ secrets.RENDER_API_KEY }}
+          RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+          # Expose current token so full-sync mode can read it
+          API_BEARER_TOKEN:       ${{ secrets.API_BEARER_TOKEN }}
+        run: |
+          DEPLOY_FLAG=""
+          if [ "${{ inputs.deploy }}" = "true" ]; then
+            DEPLOY_FLAG="--deploy"
+          fi
+
+          if [ -n "${{ inputs.patch_vars }}" ]; then
+            echo "Patch mode: ${{ inputs.patch_vars }}"
+            python3 scripts/render-env-setup.py \
+              --patch ${{ inputs.patch_vars }} \
+              $DEPLOY_FLAG
+          else
+            echo "Full sync mode"
+            python3 scripts/render-env-setup.py $DEPLOY_FLAG
+          fi
+
+      - name: Bond — Report sync complete
+        if: success()
+        env:
+          API_BEARER_TOKEN: ${{ secrets.API_BEARER_TOKEN }}
+        run: |
+          python tests/bond_escalate.py report "render_sync_complete" \
+            "Bond Render sync complete — deploy=${{ inputs.deploy }} reason=${{ inputs.reason }}"
+        continue-on-error: true
+
+      - name: Bond — Report sync failed
+        if: failure()
+        env:
+          API_BEARER_TOKEN: ${{ secrets.API_BEARER_TOKEN }}
+        run: |
+          python tests/bond_escalate.py report "render_sync_failed" \
+            "Bond Render sync FAILED — reason=${{ inputs.reason }} — manual intervention required"
+        continue-on-error: true
