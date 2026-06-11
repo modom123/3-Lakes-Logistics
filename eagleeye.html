@@ -2436,12 +2436,13 @@ select.form-input option{background:var(--surface);}
           <div style="font-size:12px;color:var(--muted)">PDF, JPG, PNG, DOCX — max 25MB</div>
           <div id="vault-file-name" style="margin-top:8px;font-size:13px;color:var(--gold);font-weight:600"></div>
         </div>
-        <input type="file" id="vault-file-input" style="display:none" accept=".pdf,.jpg,.jpeg,.png,.docx,.xlsx" onchange="previewVaultFile(this)">
+        <input type="file" id="vault-file-input" style="display:none" onchange="previewVaultFile(this)">
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
           <div>
             <label style="font-size:11px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px">DOCUMENT TYPE</label>
             <select id="vault-up-type" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:13px;background:var(--surface)">
               <option value="other">Other</option>
+              <option value="corporate">Corporate</option>
               <option value="pod">POD</option>
               <option value="rate_con">Rate Confirmation</option>
               <option value="bol">BOL</option>
@@ -7485,9 +7486,9 @@ function closeAgrDetail(){const m=document.getElementById('agr-detail-modal');if
 
 // ── Vault ─────────────────────────────────────────────────────────────────────
 let _vaultDocs=[];
-const DOC_LABELS={pod:'POD',rate_con:'Rate Con',bol:'BOL',invoice:'Invoice',compliance:'Compliance',agreement:'Agreement',folder:'Folder',other:'Other'};
-const DOC_ICONS ={pod:'🚚',rate_con:'📋',bol:'📄',invoice:'🧾',compliance:'✅',agreement:'📝',folder:'📁',other:'📎'};
-const DOC_COLORS={pod:'#22c55e',rate_con:'#f59e0b',bol:'#3b82f6',invoice:'#8b5cf6',compliance:'#10b981',agreement:'#6366f1',other:'#6b7280'};
+const DOC_LABELS={pod:'POD',rate_con:'Rate Con',bol:'BOL',invoice:'Invoice',compliance:'Compliance',agreement:'Agreement',corporate:'Corporate',folder:'Folder',other:'Other'};
+const DOC_ICONS ={pod:'🚚',rate_con:'📋',bol:'📄',invoice:'🧾',compliance:'✅',agreement:'📝',corporate:'🏢',folder:'📁',other:'📎'};
+const DOC_COLORS={pod:'#22c55e',rate_con:'#f59e0b',bol:'#3b82f6',invoice:'#8b5cf6',compliance:'#10b981',agreement:'#6366f1',corporate:'#0ea5e9',other:'#6b7280'};
 
 async function loadVault(){
   const t=document.getElementById('vault-table');
@@ -11800,7 +11801,7 @@ if(!moTodos().length){
               <div style="font-size:32px;margin-bottom:8px;">📁</div>
               <div style="font-weight:700;font-size:14px;color:#fff;margin-bottom:4px;">Drop files here or click to upload</div>
               <div style="font-size:11px;">PDF, DOCX, XLSX, PNG, JPG, TXT — up to 25 MB each</div>
-              <input type="file" id="ccg-file-input" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.txt,.csv" style="display:none" onchange="ccgHandleFileSelect(event)"/>
+              <input type="file" id="ccg-file-input" multiple style="display:none" onchange="ccgHandleFileSelect(event)"/>
             </div>
             <div style="display:flex;gap:10px;margin-top:12px;align-items:center;">
               <select id="ccg-doc-category" class="ccg-input" style="max-width:220px;">
@@ -12430,16 +12431,14 @@ async function ccgUploadFile(file, statusEl){
   try {
     const fd = new FormData();
     fd.append('file', file);
-    fd.append('folder', 'ccg-office');
-    fd.append('category', category);
-    fd.append('uploaded_by', 'cc_gulley');
-    fd.append('description', `${category} document — CC Gulley Office`);
-    // Try vault upload endpoint
-    const r = await fetch(API_BASE+'/api/vault/upload', {method:'POST', headers:{'Authorization':'Bearer '+API_TOKEN}, body:fd});
-    if(!r.ok) throw new Error(await r.text());
+    // Store corporate docs in the shared document vault, tagged for CC's office.
+    fd.append('doc_type', 'corporate');
+    fd.append('notes', `${category} · CC Gulley Office`);
+    const r = await fetch(API_BASE+'/api/clm/vault/upload', {method:'POST', headers:{'Authorization':'Bearer '+API_TOKEN}, body:fd});
+    if(!r.ok) throw new Error((await r.text())||('HTTP '+r.status));
     const data = await r.json();
-    if(statusEl) statusEl.textContent = '✓ Uploaded';
-    if(statusEl) statusEl.style.color='#10b981';
+    if(!data.ok) throw new Error(data.detail||'upload failed');
+    if(statusEl){statusEl.textContent = '✓ Uploaded';statusEl.style.color='#10b981';}
     if(st) st.textContent = `✓ ${file.name} uploaded`;
     setTimeout(()=>{if(st)st.textContent='';},4000);
     ccgLoadDocs();
@@ -12454,9 +12453,8 @@ window.ccgLoadDocs = async function(){
   if(!el) return;
   el.innerHTML='<div style="font-size:12px;padding:16px 0;text-align:center;">Loading…</div>';
   try {
-    const r = await API.get('/api/vault?folder=ccg-office').catch(()=>null)
-           || await API.get('/api/vault/files?uploaded_by=cc_gulley').catch(()=>null);
-    _ccgAllDocs = (r?.files||r?.documents||r?.data||[]);
+    const r = await API.get('/api/clm/vault/docs?doc_type=corporate');
+    _ccgAllDocs = Array.isArray(r) ? r : (r?.data||[]);
     ccgRenderDocs();
   } catch(e){
     el.innerHTML='<div style="font-size:11px;padding:16px 0;text-align:center;opacity:.6;">No documents found — upload files above to get started.</div>';
@@ -12466,27 +12464,30 @@ window.ccgFilterDocs = function(cat){_ccgDocFilter=cat;ccgRenderDocs();};
 function ccgRenderDocs(){
   const el = document.getElementById('ccg-docs-list');
   if(!el) return;
-  const docs = _ccgDocFilter ? _ccgAllDocs.filter(d=>(d.category||d.folder||'').includes(_ccgDocFilter)) : _ccgAllDocs;
+  const docs = _ccgDocFilter ? _ccgAllDocs.filter(d=>(d.notes||'').toLowerCase().includes(_ccgDocFilter)) : _ccgAllDocs;
   if(!docs.length){
     el.innerHTML='<div style="font-size:11px;padding:24px 0;text-align:center;opacity:.6;">No documents yet — drop files in the upload zone above.</div>';
     return;
   }
   el.innerHTML = docs.map(d=>{
-    const name = d.file_name||d.name||d.filename||'Document';
-    const ext = name.split('.').pop().toLowerCase();
-    const icon = ext==='pdf'?'📄':ext.match(/^doc/)? '📝':ext.match(/^xls|csv/)?'📊':ext.match(/^png|jpg|jpeg/)?'🖼️':'📎';
-    const size = d.file_size ? `${(d.file_size/1024).toFixed(0)} KB` : '';
-    const date = d.created_at ? new Date(d.created_at).toLocaleDateString() : '';
-    const url  = d.url||d.file_url||d.download_url||'#';
+    const name = d.filename||d.name||'Document';
+    const ext = String(name).split('.').pop().toLowerCase();
+    const icon = ext==='pdf'?'📄':ext.match(/^docx?$/)?'📝':ext.match(/^(xlsx?|csv)$/)?'📊':ext.match(/^(png|jpe?g|gif|webp)$/)?'🖼️':'📎';
+    const size = d.file_size_kb ? `${d.file_size_kb} KB` : '';
+    const date = d.uploaded_at ? new Date(d.uploaded_at).toLocaleDateString() : '';
+    const cat = (d.notes||'').split('·')[0].trim();
+    const did = esc(d.id||'');
+    const hasFile = d.file_available!==false;
     return `<div style="display:flex;align-items:center;gap:10px;padding:9px 12px;background:rgba(255,255,255,.03);border-radius:8px;border:1px solid rgba(255,255,255,.08);transition:border-color .15s;" onmouseover="this.style.borderColor='rgba(56,189,248,.3)'" onmouseout="this.style.borderColor='rgba(255,255,255,.08)'">
       <span style="font-size:22px;flex-shrink:0;">${icon}</span>
       <div style="flex:1;min-width:0;">
-        <div style="font-weight:700;font-size:12px;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${name}</div>
-        <div style="font-size:10px;opacity:.6;">${[d.category||'',size,date].filter(Boolean).join(' · ')}</div>
+        <div style="font-weight:700;font-size:12px;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${esc(name)}">${esc(name)}</div>
+        <div style="font-size:10px;opacity:.6;">${[cat,size,date].filter(Boolean).join(' · ')}</div>
       </div>
       <div style="display:flex;gap:6px;flex-shrink:0;">
-        ${url!=='#'?`<a href="${url}" target="_blank" class="ccg-hdr-btn" style="font-size:10px;padding:3px 8px;text-decoration:none;">↗ Open</a>`:''}
-        <button class="ccg-hdr-btn" style="font-size:10px;padding:3px 8px;color:#ef4444;border-color:rgba(239,68,68,.3);" onclick="ccgDeleteDoc('${d.id||d.file_id||''}','${name}')">🗑</button>
+        ${hasFile?`<button class="ccg-hdr-btn" style="font-size:10px;padding:3px 8px;" onclick="vaultView('${did}')">👁 View</button>
+        <button class="ccg-hdr-btn" style="font-size:10px;padding:3px 8px;" onclick="vaultDownload('${did}')">⬇</button>`:'<span style="font-size:10px;opacity:.5;font-style:italic;">No file</span>'}
+        <button class="ccg-hdr-btn" style="font-size:10px;padding:3px 8px;color:#ef4444;border-color:rgba(239,68,68,.3);" onclick="ccgDeleteDoc('${did}','${esc(name)}')">🗑</button>
       </div>
     </div>`;
   }).join('');
@@ -12494,7 +12495,7 @@ function ccgRenderDocs(){
 window.ccgDeleteDoc = async function(id, name){
   if(!id||!confirm(`Delete "${name}"?`)) return;
   try{
-    await API.delete(`/api/vault/${id}`);
+    await API.delete(`/api/clm/vault/${id}`);
     toast(`Deleted ${name}`);
     ccgLoadDocs();
   }catch(e){toast('Delete failed','error');}
