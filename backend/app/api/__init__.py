@@ -38,6 +38,7 @@ from .routes_stripe_identity_webhook import router as stripe_identity_webhook_ro
 from .routes_onboarding_status import router as onboarding_status_router
 from .routes_cost_tracking     import router as cost_tracking_router
 from .routes_tasks          import router as tasks_router
+from .routes_crm            import router as crm_router
 
 from ..clm             import clm_router
 from ..email_ingest    import router as email_ingest_router
@@ -96,4 +97,5 @@ __all__ = [
     "onboarding_status_router",
     "cost_tracking_router",
     "tasks_router",
+    "crm_router",
 ]

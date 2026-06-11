@@ -63,6 +63,7 @@ from .api import (
     onboarding_status_router,
     cost_tracking_router,
     tasks_router,
+    crm_router,
 )
 from .logging_service import get_logger
 from .settings import get_settings
@@ -271,6 +272,7 @@ def create_app() -> FastAPI:
     app.include_router(onboarding_status_router, prefix="/api",           tags=["onboarding-status"])
     app.include_router(cost_tracking_router,    prefix="/api/costs",      tags=["cost-tracking"])
     app.include_router(tasks_router,           prefix="/api/tasks",        tags=["tasks"])
+    app.include_router(crm_router,             prefix="/api/crm",          tags=["crm"])
     app.include_router(health_router,                                      tags=["health"])
 
     _marketing_dir = os.path.normpath(

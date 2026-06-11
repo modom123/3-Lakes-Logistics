@@ -12822,6 +12822,28 @@ function el(owner, s){ return document.getElementById(`${pfx(owner)}-crm-${s}`);
 function ocContacts(owner){ try{return JSON.parse(localStorage.getItem(`oc_${owner}`)||'[]');}catch(e){return[];} }
 function ocSaveAll(owner,arr){ localStorage.setItem(`oc_${owner}`,JSON.stringify(arr)); }
 
+// Server persistence (Supabase crm_contacts via /api/crm) with a localStorage
+// mirror/offline fallback. Server contacts have UUID ids (contain '-'); contacts
+// created offline get a base36 local id and are pushed up on the next sync.
+function _ocIsLocal(id){ return !String(id||'').includes('-'); }
+
+async function ocSync(owner){
+  let r;
+  try{ r = await apiFetch('/api/crm/contacts?owner='+encodeURIComponent(owner),'GET'); }
+  catch(e){ return false; }
+  if(!r || !r.ok) return false;
+  // Push any offline-created contacts up before mirroring the server list down.
+  const localOnly = ocContacts(owner).filter(c=>_ocIsLocal(c.id));
+  if(localOnly.length){
+    for(const c of localOnly){ try{ await apiFetch('/api/crm/contacts','POST',{...c,owner}); }catch(e){} }
+    try{ r = await apiFetch('/api/crm/contacts?owner='+encodeURIComponent(owner),'GET'); }catch(e){}
+  }
+  try{ const data = await r.json(); ocSaveAll(owner,(data.items||[])); }
+  catch(e){ return false; }
+  if(st(owner).tab==='contacts') ocRenderList(owner);
+  return true;
+}
+
 // per-owner state
 const _oc = {};
 function st(owner){
@@ -12836,6 +12858,7 @@ window.ocInit = function(owner){
   el(owner,'new-btn') && (el(owner,'new-btn').style.display='');
   ocRenderList(owner);
   ocShowEmpty(owner);
+  ocSync(owner);
 };
 
 window.ocSubTab = function(owner, tab){
@@ -12976,6 +12999,7 @@ window.ocTouchContact = function(owner, id){
   if(!c) return;
   c.last_contacted = new Date().toISOString();
   ocSaveAll(owner, arr);
+  if(!_ocIsLocal(id)){ apiFetch('/api/crm/contacts/'+id,'PATCH',{last_contacted:c.last_contacted}).catch(()=>{}); }
   ocOpen(owner, id);
   if(typeof toast!=='undefined') toast('Marked as contacted today');
 };
@@ -13034,7 +13058,7 @@ function ocRenderForm(owner, c, isNew){
     </div>`;
 }
 
-window.ocSaveContact = function(owner){
+window.ocSaveContact = async function(owner){
   const name = document.getElementById('oc-f-name')?.value.trim();
   if(!name){ if(typeof toast!=='undefined') toast('Name is required','error'); return; }
   const arr = ocContacts(owner);
@@ -13053,7 +13077,14 @@ window.ocSaveContact = function(owner){
   c.last_contacted = document.getElementById('oc-f-lc')?.value||null;
   c.notes          = document.getElementById('oc-f-notes')?.value||'';
   if(!c.activities) c.activities=[];
-  if(isNew){ arr.push(c); s.isNew=false; }
+  // Persist: create on the server first to get a durable UUID; PATCH existing
+  // server contacts. Falls back to the local id when the backend is offline.
+  if(isNew){
+    try{ const r=await apiFetch('/api/crm/contacts','POST',{...c,owner}); if(r.ok){const j=await r.json(); if(j.contact?.id) c.id=j.contact.id;} }catch(e){}
+    arr.push(c); s.isNew=false;
+  } else if(!_ocIsLocal(c.id)){
+    try{ await apiFetch('/api/crm/contacts/'+c.id,'PATCH',c); }catch(e){}
+  }
   ocSaveAll(owner, arr);
   s.editingId = c.id;
   ocRenderList(owner);
@@ -13070,6 +13101,7 @@ window.ocDelete = function(owner, id){
   if(!id || !confirm('Delete this contact?')) return;
   const arr = ocContacts(owner).filter(c=>c.id!==id);
   ocSaveAll(owner, arr);
+  if(!_ocIsLocal(id)){ apiFetch('/api/crm/contacts/'+id,'DELETE').catch(()=>{}); }
   st(owner).editingId = null;
   ocRenderList(owner);
   ocShowEmpty(owner);
@@ -13157,16 +13189,17 @@ window.ocSaveActivity = function(owner, id){
   c.activities.push({id:Date.now().toString(36),type,note,ts:new Date(ts).toISOString()});
   c.last_contacted=new Date().toISOString();
   ocSaveAll(owner,arr);
+  if(!_ocIsLocal(id)){ apiFetch('/api/crm/contacts/'+id,'PATCH',{activities:c.activities,last_contacted:c.last_contacted}).catch(()=>{}); }
   if(typeof toast!=='undefined')toast('Activity logged');
   ocOpen(owner,id);
 };
 
-window.ocPullLead = function(owner, id){
+window.ocPullLead = async function(owner, id){
   const l = (st(owner).leads||[]).find(x=>String(x.id)===String(id));
   if(!l) return;
   const arr = ocContacts(owner);
   const name = l.business_name||l.company_name||'Unknown';
-  const existing = arr.find(c=>c.name===name && c.company===name);
+  const existing = arr.find(c=>String(c.source_lead_id||'')===String(l.id) || (c.name===name && c.company===name));
   if(existing){ if(typeof toast!=='undefined') toast('Already in My Contacts'); return; }
   const c = {
     id: Date.now().toString(36)+Math.random().toString(36).slice(2),
@@ -13177,9 +13210,14 @@ window.ocPullLead = function(owner, id){
     email: l.email||'',
     type: 'Carrier',
     priority: 'none',
+    pipeline_stage: 'New Lead',
+    source_lead_id: String(l.id),
     notes: `Pulled from CRM (lead ID: ${l.id})\nStatus: ${l.status||''}\nDOT: ${l.dot_number||'—'} MC: ${l.mc_number||'—'}`,
     last_contacted: null,
+    activities: [],
   };
+  // Persist to the server so the converted contact survives across devices.
+  try{ const r=await apiFetch('/api/crm/contacts','POST',{...c,owner}); if(r.ok){const j=await r.json(); if(j.contact?.id) c.id=j.contact.id;} }catch(e){}
   arr.push(c);
   ocSaveAll(owner, arr);
   if(typeof toast!=='undefined') toast(`"${c.name}" added to My Contacts`);
