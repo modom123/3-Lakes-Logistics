@@ -6,6 +6,8 @@ on:
     paths:
       - '*.html'
       - 'public/**'
+      - 'driver-pwa/**'
+      - 'shared/**'
       - '.github/workflows/deploy-hostinger.yml'
   workflow_dispatch:
 
@@ -29,6 +31,12 @@ jobs:
           # eagleeye.html is the INTERNAL command center (hosted on Vercel) —
           # never publish it to the public Hostinger site.
           rm -f dist/eagleeye.html
+          # Falcon driver portal (PWA) — served at /driver-pwa/ on the same
+          # domain the backend texts to drivers (FALCON_URL). It loads
+          # /shared/config.js, so ship shared/ too.
+          mkdir -p dist/driver-pwa dist/shared
+          cp -r driver-pwa/. dist/driver-pwa/
+          cp -r shared/. dist/shared/
           # Google site verification + any other public files
           cp -r public/. dist/
           echo "Files to deploy:"
