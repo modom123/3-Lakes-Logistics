@@ -46,5 +46,5 @@ jobs:
           pip install --prefer-binary -r backend/requirements.txt
           pip install pytest
 
-      - name: Run offline system suite
-        run: pytest tests/test_system.py -v --tb=short --no-header
+      - name: Run offline system + whole-system suites
+        run: pytest tests/test_system.py tests/test_whole_system.py -v --tb=short --no-header
