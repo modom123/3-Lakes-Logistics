@@ -84,15 +84,34 @@ def trigger_invoice(contract_id: UUID) -> dict:
         },
     }).execute()
 
-    # Write invoice record to document vault so it appears in EAGLE EYE
+    # Generate a real invoice PDF, store it, and log it to the vault so it
+    # appears in EAGLE EYE with a working view/download.
     load_num = contract.get("load_number") or str(contract_id)[:8]
+    storage_path = f"invoices/{str(contract_id)}/invoice_{load_num}.pdf"
+    try:
+        from ..documents.pdf import render_invoice_pdf, store_document_bytes
+        pdf_bytes = render_invoice_pdf(
+            invoice_no=f"INV-{load_num}",
+            bill_to=contract.get("counterparty_name") or "Customer",
+            rate_total=float(contract.get("rate_total") or 0),
+            payment_terms=contract.get("payment_terms") or "Net-30",
+            issued_at=datetime.now(timezone.utc).isoformat(),
+            load_number=contract.get("load_number"),
+            origin=contract.get("origin_city"),
+            destination=contract.get("destination_city"),
+        )
+        store_document_bytes(storage_path, pdf_bytes)
+    except Exception as exc:  # noqa: BLE001 — never block revenue recognition on PDF
+        log.warning("invoice PDF generation failed contract=%s: %s", contract_id, exc)
     try:
         sb.table("document_vault").insert({
             "carrier_id": contract.get("carrier_id"),
             "contract_id": str(contract_id),
             "doc_type": "invoice",
             "filename": f"invoice_{load_num}.pdf",
-            "storage_path": f"invoices/{str(contract_id)}/invoice_{load_num}.pdf",
+            "storage_path": storage_path,
+            "bucket": "documents",
+            "mime_type": "application/pdf",
             "scan_status": "complete",
         }).execute()
     except Exception as exc:  # noqa: BLE001

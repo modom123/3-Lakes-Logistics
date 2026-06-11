@@ -232,13 +232,33 @@ async def submit_signature(token: str, body: SignBody, request: Request) -> dict
         "user_agent": request.headers.get("user-agent", ""),
     }).execute()
 
-    # Create document_vault record
+    # Generate a real signed-agreement PDF and store it so the vault entry
+    # resolves to a downloadable file (no more 404 on view/download).
     label = AGREEMENT_LABELS.get(row["agreement_type"], row["agreement_type"])
+    meta = row.get("metadata") or {}
+    storage_path = f"agreements/signed/{row['id']}.pdf"
+    try:
+        from ..documents.pdf import render_agreement_pdf, store_document_bytes
+        pdf_bytes = render_agreement_pdf(
+            label=label,
+            carrier_name=row["carrier_name"],
+            signatory_name=body.signatory_name.strip(),
+            signed_at=now,
+            signatory_ip=ip,
+            agreement_no=meta.get("agreement_no"),
+            carrier_mc=meta.get("carrier_mc"),
+            carrier_dot=row.get("carrier_dot"),
+            agreement_url=f"{SITE_URL}{AGREEMENT_PATHS.get(row['agreement_type'], '')}",
+        )
+        store_document_bytes(storage_path, pdf_bytes)
+    except Exception as exc:  # noqa: BLE001 — never block signing on PDF generation
+        log.error("signed-agreement PDF generation failed for %s: %s", row["id"], exc)
+
     vault_row = {
         "doc_type":     "agreement",
-        "filename":     f"{label} — {row['carrier_name']}.html",
-        "storage_path": f"agreements/signed/{row['id']}",
-        "mime_type":    "text/html",
+        "filename":     f"{label} — {row['carrier_name']}.pdf",
+        "storage_path": storage_path,
+        "mime_type":    "application/pdf",
         "scan_status":  "complete",
         "notes":        f"Signed by {body.signatory_name.strip()} on {now[:10]}",
         "bucket":       "documents",

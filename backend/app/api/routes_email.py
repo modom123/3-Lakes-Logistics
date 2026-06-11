@@ -557,5 +557,23 @@ async def send_rate_confirmation(body: RateConSendReq) -> dict:
         log.error("Rate confirmation email send failed: %s", send_result.get("error") or send_result.get("reason"))
         return {"ok": False, "reason": send_result.get("error") or send_result.get("reason")}
 
+    # Generate + store a PDF copy of the rate confirmation in the vault.
+    try:
+        from ..documents.pdf import render_rate_confirmation_pdf, store_document_bytes
+        ln = load.get("load_number") or str(body.load_id)[:8]
+        sp = f"rate_cons/{body.load_id}/rate_confirmation_{ln}.pdf"
+        if store_document_bytes(sp, render_rate_confirmation_pdf(load=load)):
+            sb.table("document_vault").insert({
+                "doc_type": "rate_con",
+                "filename": f"rate_confirmation_{ln}.pdf",
+                "storage_path": sp,
+                "bucket": "documents",
+                "mime_type": "application/pdf",
+                "scan_status": "complete",
+                "load_number": load.get("load_number"),
+            }).execute()
+    except Exception as exc:  # noqa: BLE001 — never block the send on vault copy
+        log.warning("rate confirmation PDF/vault copy failed for load %s: %s", body.load_id, exc)
+
     log.info("Rate confirmation sent for load %s to %s", body.load_id, body.to_email)
     return {"ok": True, "load_id": body.load_id, "to": body.to_email}
