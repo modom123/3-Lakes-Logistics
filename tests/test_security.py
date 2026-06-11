@@ -8,11 +8,12 @@ Covers the executive QA blueprint:
 Run:
     pytest tests/test_security.py -v
 """
+import os
 import time
 import requests
 
-BASE_URL = "https://three-lakes-logistics-api.onrender.com"
-API_TOKEN = "taiOFL40cCr5V0pH89hUks8jXVPlOkm2WxKvd3f6BoE"
+BASE_URL = os.getenv("API_BASE_URL", "https://three-lakes-logistics-api.onrender.com")
+API_TOKEN = os.getenv("API_BEARER_TOKEN", "")
 HEADERS = {"Content-Type": "application/json", "Authorization": f"Bearer {API_TOKEN}"}
 
 # A driver-style token (not the IEBC API token) — used for privilege escalation tests.
