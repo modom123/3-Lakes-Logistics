@@ -294,17 +294,30 @@ async def get_driver_me(session: DriverSession):
 
     try:
         result = get_supabase().table("drivers").select(
-            "id, first_name, last_name, phone_e164, carrier_id, cdl_number"
+            "id, first_name, last_name, phone_e164, carrier_id, cdl_number, truck_id"
         ).eq("id", driver_id).single().execute()
 
         driver = result.data
+
+        # Resolve truck number from fleet_assets if available
+        truck_number: str | None = None
+        if driver.get("truck_id"):
+            try:
+                asset = get_supabase().table("fleet_assets").select(
+                    "unit_number"
+                ).eq("id", driver["truck_id"]).single().execute()
+                if asset.data:
+                    truck_number = asset.data.get("unit_number")
+            except Exception:
+                truck_number = driver["truck_id"]
 
         return DriverMe(
             driver_id=driver["id"],
             driver_name=f"{driver['first_name']} {driver['last_name']}".strip(),
             phone=driver["phone_e164"],
             carrier_id=driver["carrier_id"],
-            cdl_number=driver.get("cdl_number")
+            cdl_number=driver.get("cdl_number"),
+            truck_number=truck_number,
         )
     except Exception as e:
         log.error("Failed to fetch driver profile: %s", e)
@@ -479,12 +492,66 @@ async def setup_driver_pin(req: SetupPinRequest):
     )
 
 
+@router.post("/login-lf")
+async def lf_driver_login(req: DriverLoginRequest):
+    """Light Fleet driver login: phone + 4-digit PIN.
+
+    Returns a real session token (stored in driver_sessions, 30-day expiry).
+    """
+    if not req.pin or len(req.pin) != 4 or not req.pin.isdigit():
+        raise HTTPException(status_code=400, detail="PIN must be 4 digits")
+
+    try:
+        phone_e164 = normalize_phone(req.phone)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    pin_hash = hash_pin(req.pin)
+
+    try:
+        result = get_supabase().table("light_vehicle_drivers").select(
+            "id, name, phone, phone_e164, pin_hash, status"
+        ).or_(f"phone.eq.{phone_e164},phone_e164.eq.{phone_e164}").limit(1).execute()
+        driver = result.data[0] if result.data else None
+    except Exception:
+        driver = None
+
+    if not driver or not driver.get("pin_hash") or driver["pin_hash"] != pin_hash:
+        raise HTTPException(status_code=401, detail="invalid phone or PIN")
+
+    token = secrets.token_urlsafe(32)
+    expires_at = datetime.now(timezone.utc) + timedelta(days=30)
+
+    try:
+        get_supabase().table("driver_sessions").insert({
+            "driver_id":  driver["id"],
+            "token":      token,
+            "expires_at": expires_at.isoformat(),
+            "ip_address": "unknown",
+            "user_agent": "lf-mobile-app",
+        }).execute()
+    except Exception as e:
+        log.error("LF driver session creation failed: %s", e)
+        raise HTTPException(status_code=500, detail="login failed")
+
+    name = driver.get("name") or ""
+    return {
+        "ok":           True,
+        "token":        token,
+        "driver_id":    str(driver["id"]),
+        "lf_driver_id": str(driver["id"]),
+        "driver_name":  name,
+        "phone":        phone_e164,
+        "expires_at":   expires_at.isoformat(),
+    }
+
+
 @router.post("/setup-pin-lf")
 async def setup_lf_driver_pin(req: SetupPinRequest):
     """First-login PIN setup for Light Fleet drivers — only works when pin_hash IS NULL.
 
-    Returns driver data so the frontend can store the session and enter Falcon LF.
-    Does not use driver_sessions (LF auth uses a synthetic token pattern).
+    Stores a real session token in driver_sessions and returns it so the driver
+    lands straight in Falcon LF.
     """
     if not req.pin or len(req.pin) != 4 or not req.pin.isdigit():
         raise HTTPException(status_code=400, detail="PIN must be 4 digits")
@@ -514,6 +581,16 @@ async def setup_lf_driver_pin(req: SetupPinRequest):
         "phone_e164": phone_e164,
     }).eq("id", driver["id"]).execute()
 
+    token = secrets.token_urlsafe(32)
+    expires_at = datetime.now(timezone.utc) + timedelta(days=30)
+    get_supabase().table("driver_sessions").insert({
+        "driver_id":  driver["id"],
+        "token":      token,
+        "expires_at": expires_at.isoformat(),
+        "ip_address": "unknown",
+        "user_agent": "lf-mobile-app",
+    }).execute()
+
     log.info("LF driver %s set PIN via first-login flow", driver["id"])
 
     name = driver.get("name") or ""
@@ -521,15 +598,15 @@ async def setup_lf_driver_pin(req: SetupPinRequest):
     last_name  = " ".join(name.split()[1:]) if len(name.split()) > 1 else ""
 
     return {
-        "ok":         True,
-        "token":      f"lf-{driver['id']}",
-        "driver_id":  str(driver["id"]),
+        "ok":           True,
+        "token":        token,
+        "driver_id":    str(driver["id"]),
         "lf_driver_id": str(driver["id"]),
-        "driver_name": name,
-        "first_name": first_name,
-        "last_name":  last_name,
-        "phone":      phone_e164,
-        "expires_at": (datetime.now(timezone.utc) + timedelta(days=30)).isoformat(),
+        "driver_name":  name,
+        "first_name":   first_name,
+        "last_name":    last_name,
+        "phone":        phone_e164,
+        "expires_at":   expires_at.isoformat(),
     }
 
 

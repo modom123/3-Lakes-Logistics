@@ -23,10 +23,17 @@ def _now() -> str:
 
 
 def _driver_phone(driver_id: str) -> str | None:
+    """Resolve driver phone — checks both CDL drivers and light fleet drivers."""
+    sb = get_supabase()
+    try:
+        r = sb.table("drivers").select("phone_e164").eq("id", driver_id).maybe_single().execute()
+        if r.data and r.data.get("phone_e164"):
+            return r.data["phone_e164"]
+    except Exception:
+        pass
     try:
         r = (
-            get_supabase()
-            .table("light_vehicle_drivers")
+            sb.table("light_vehicle_drivers")
             .select("phone")
             .eq("id", driver_id)
             .maybe_single()

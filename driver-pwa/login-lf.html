@@ -242,32 +242,24 @@ async function handleLogin(e) {
 
   try {
     var normalizedPhone = '+1' + digits;
+    var API_BASE = (window.__3LL_CONFIG || {}).API_BASE || 'https://three-lakes-logistics-api.onrender.com';
 
-    // Primary: lf_driver_login RPC (light_vehicle_drivers table)
-    var lfRpc = await sb.rpc('lf_driver_login', { p_phone: normalizedPhone, p_pin: pin });
-    if (!lfRpc.error && lfRpc.data) {
-      var d = lfRpc.data;
-      _storeLFSession({
-        token: 'lf-' + d.id, driver_id: d.id, lf_driver_id: d.id,
-        driver_name: d.name || [d.first_name, d.last_name].filter(Boolean).join(' '),
-      }, normalizedPhone);
+    var res = await fetch(API_BASE + '/api/driver-auth/login-lf', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone: digits, pin: pin }),
+    });
+
+    var data = await res.json().catch(function(){ return {}; });
+
+    if (res.ok && data.token) {
+      _storeLFSession(data, normalizedPhone);
       window.location.href = './lf.html';
       return;
     }
 
-    // Fallback: universal driver_login RPC (drivers table)
-    var uRpc = await sb.rpc('driver_login', { p_phone: normalizedPhone, p_pin: pin });
-    if (!uRpc.error && uRpc.data) {
-      var u = uRpc.data;
-      _storeLFSession({
-        token: 'lf-' + (u.lf_driver_id || u.id), driver_id: u.id, lf_driver_id: u.lf_driver_id || u.id,
-        driver_name: [u.first_name, u.last_name].filter(Boolean).join(' ') || u.name,
-      }, normalizedPhone);
-      window.location.href = './lf.html';
-      return;
-    }
-
-    errorEl.textContent = 'Incorrect phone or PIN. Contact dispatch to get set up.';
+    var msg = data.detail || 'Incorrect phone or PIN. Contact dispatch to get set up.';
+    errorEl.textContent = msg;
     errorEl.classList.add('show');
     loadEl.classList.remove('show'); btnEl.disabled = false;
 

@@ -2153,15 +2153,12 @@ async function confirmPickup() {
       });
     } catch {}
 
-    // Update load status to in_transit via API if we have a current load ID
+    // Confirm pickup via dedicated driver endpoint
     if (_currentLoadId) {
       try {
-        await apiFetch('/api/loads/' + _currentLoadId, 'PATCH', {
-          status: 'in_transit', driver_id: driverId,
-          pickup_confirmed_at: ts,
-        });
+        await apiFetch('/api/driver/loads/' + _currentLoadId + '/pickup', 'POST', {});
       } catch (err) {
-        console.debug('Load status update error:', err);
+        console.debug('Pickup confirm error:', err);
       }
     }
     startGpsTracking(); // Begin continuous GPS tracking now that we're in transit
@@ -2182,15 +2179,12 @@ async function confirmDelivery() {
       });
     } catch {}
 
-    // Update load status to delivered — execution engine settlement domain picks this up
+    // Confirm delivery via dedicated driver endpoint
     if (_currentLoadId) {
       try {
-        await apiFetch('/api/loads/' + _currentLoadId, 'PATCH', {
-          status: 'delivered', driver_id: driverId,
-          delivery_confirmed_at: ts,
-        });
+        await apiFetch('/api/driver/loads/' + _currentLoadId + '/deliver', 'POST', {});
       } catch (err) {
-        console.debug('Load delivery update error:', err);
+        console.debug('Delivery confirm error:', err);
       }
     }
     stopGpsTracking();
@@ -2207,34 +2201,18 @@ async function acceptLoad(loadId, loadNumber) {
     return;
   }
   try {
-    const driverCode = localStorage.getItem('3ll_driver_code') || '';
-    if (!supabaseClient || !driverCode) {
-      showToast('Driver not identified');
+    const res = await apiFetch('/api/driver/loads/' + loadId + '/accept', 'POST', {});
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      showToast('Error: ' + (err.detail || 'could not accept load'));
       return;
     }
-
-    // Update load with driver_code
-    const { error } = await supabaseClient
-      .from('loads')
-      .update({ driver_code: driverCode, status: 'dispatched' })
-      .eq('id', loadId);
-
-    if (error) {
-      console.error('Accept load error:', error);
-      showToast('Error accepting load — try again');
-      return;
-    }
-
     showToast('✅ Load accepted! Dispatcher will confirm.');
-
-    // Send acceptance message
+    // Also send an SMS-style message to dispatch for visibility
     if (MY_PHONE && loadNumber) {
-      await supabaseClient.from('driver_messages').insert({
-        driver_phone: MY_PHONE,
-        direction: 'outbound',
+      await apiFetch('/api/messages/send', 'POST', {
+        phone: MY_PHONE,
         body: `YES - accepting load ${loadNumber}`,
-        msg_type: 'acceptance',
-        load_id: loadId
       });
     }
     showView('home');
@@ -2246,6 +2224,9 @@ async function acceptLoad(loadId, loadNumber) {
 }
 
 async function declineLoad(loadId) {
+  if (!DEMO_MODE) {
+    try { await apiFetch('/api/driver/loads/' + loadId + '/decline', 'POST', {}); } catch(e) {}
+  }
   showToast('Passed on load.');
   loadAvailableLoads();
 }
@@ -2460,40 +2441,22 @@ async function sendDriverLocation() {
 
 // ── HOS ───────────────────────────────────────────────────────────────────────
 async function pollHOS() {
-  const carrierId = localStorage.getItem('3ll_carrier_id') || '';
   try {
-    // Use API endpoint — powers Eagle Eye HOS widgets with the same data
-    const res = await apiFetch('/api/telemetry/hos' + (carrierId ? '?carrier_id=' + carrierId : ''));
+    // Driver-authenticated HOS endpoint — always returns this driver's data
+    const res = await apiFetch('/api/driver/hos');
     if (!res.ok) throw new Error('HOS API ' + res.status);
-    const data = await res.json();
-    const driverId = localStorage.getItem('3ll_driver_id') || '';
-    // Find this driver's HOS record
-    const items = data.items || data || [];
-    const hosData = items.find(h => h.driver_id === driverId) || items[0];
-    if (!hosData) return;
+    const hos = await res.json();
     renderHOS({
-      drive_remaining: (hosData.drive_remaining_min || 0) / 60,
-      shift_remaining: (hosData.shift_remaining_min || 0) / 60,
-      cycle_remaining: (hosData.cycle_remaining_min || 0) / 60,
+      drive_remaining: (hos.drive_remaining_min || 0) / 60,
+      shift_remaining: (hos.shift_remaining_min || 0) / 60,
+      cycle_remaining: (hos.cycle_remaining_min || 0) / 60,
     });
-  } catch {
-    // Fallback to direct Supabase
-    if (!supabaseClient) return;
-    try {
-      const driverId = localStorage.getItem('3ll_driver_id') || '';
-      if (!driverId) return;
-      const { data: hos } = await supabaseClient
-        .from('driver_hos_status').select('*')
-        .eq('driver_id', driverId).order('ts', { ascending: false }).limit(1);
-      if (!hos?.length) return;
-      renderHOS({
-        drive_remaining: (hos[0].drive_remaining_min || 0) / 60,
-        shift_remaining: (hos[0].shift_remaining_min || 0) / 60,
-        cycle_remaining: (hos[0].cycle_remaining_min || 0) / 60,
-      });
-    } catch (err) {
-      console.error('pollHOS fallback error:', err);
+    // Show violation warning if flagged
+    if (hos.violation_flag && (hos.violation_flags || []).length > 0) {
+      showToast('⚠️ HOS violation: ' + hos.violation_flags[0]);
     }
+  } catch (err) {
+    console.warn('pollHOS error:', err);
   }
 }
 

@@ -812,10 +812,8 @@ async function loadLFHomeStats() {
     document.getElementById('home-platforms-today').textContent = '3';
     return;
   }
-  const lfId = localStorage.getItem('3ll_lf_driver_id');
-  if (!lfId) return;
   try {
-    const res  = await apiFetch('/api/light-fleet/drivers/' + lfId + '/earnings?period=week');
+    const res  = await apiFetch('/api/driver/lf/earnings?period=week');
     const data = res.ok ? await res.json() : null;
     if (!data) return;
     document.getElementById('home-trips-today').textContent    = data.summary?.trips || '0';
@@ -840,10 +838,9 @@ function setEarnPeriod(p) {
 }
 
 async function loadEarningsView() {
-  const lfId = localStorage.getItem('3ll_lf_driver_id');
-  if (!lfId || DEMO_MODE) { renderDemoEarnings(); return; }
+  if (DEMO_MODE) { renderDemoEarnings(); return; }
   try {
-    const res  = await apiFetch('/api/light-fleet/drivers/' + lfId + '/earnings?period=' + _earnPeriod);
+    const res  = await apiFetch('/api/driver/lf/earnings?period=' + _earnPeriod);
     const data = res.ok ? await res.json() : null;
     if (data) renderEarnings(data); else renderDemoEarnings();
   } catch(e) { renderDemoEarnings(); }
@@ -913,10 +910,9 @@ function renderEarnings(data) {
 
 // ── COMPLIANCE ────────────────────────────────────────────────────────────────
 async function loadComplianceStatus() {
-  const lfId = localStorage.getItem('3ll_lf_driver_id');
-  if (!lfId || DEMO_MODE) { renderDemoCompliance(); return; }
+  if (DEMO_MODE) { renderDemoCompliance(); return; }
   try {
-    const res2 = await fetch(_apiBase + '/api/light-fleet/drivers/' + lfId + '/compliance-status');
+    const res2 = await apiFetch('/api/driver/lf/compliance');
     const comp = res2.ok ? await res2.json() : null;
     if (comp) renderCompliance(comp); else renderDemoCompliance();
   } catch(e) { renderDemoCompliance(); }
@@ -968,11 +964,10 @@ function showInstantPay() {
 }
 function closeInstantPay() { document.getElementById('instant-pay-modal').classList.remove('open'); }
 async function submitInstantPay() {
-  const lfId = localStorage.getItem('3ll_lf_driver_id');
-  if (!lfId || DEMO_MODE) { showToast('⚡ Instant pay initiated (demo)'); closeInstantPay(); return; }
+  if (DEMO_MODE) { showToast('⚡ Instant pay initiated (demo)'); closeInstantPay(); return; }
   const gross = parseFloat(document.getElementById('ipm-balance').textContent.replace(/[^0-9.]/g,'')) || 0;
   try {
-    const r = await apiFetch('/api/light-fleet/drivers/' + lfId + '/instant-pay', 'POST', { amount: gross });
+    const r = await apiFetch('/api/driver/lf/instant-pay', 'POST', { amount: gross });
     if (r.ok) { showToast('⚡ Transfer initiated — arrives in 2–8 hrs'); closeInstantPay(); }
     else showToast('Transfer failed — try again');
   } catch(e) { showToast('Error processing payment'); }

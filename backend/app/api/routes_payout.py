@@ -121,11 +121,12 @@ async def setup_driver_payout(session: DriverSession):
             }).eq("id", driver_id).execute()
 
         # Create onboarding link
+        base = "https://www.3lakeslogistics.com/driver-pwa"
         onboarding_link = stripe_client.AccountLink.create(
             account=account_id,
             type="account_onboarding",
-            refresh_url=f"https://3lakes.driver/payout/setup",
-            return_url=f"https://3lakes.driver/payout/success"
+            refresh_url=f"{base}/index.html?payout=refresh",
+            return_url=f"{base}/index.html?payout=success",
         )
 
         return PayoutSetupResponse(

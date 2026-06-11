@@ -7,17 +7,50 @@ Endpoints:
 """
 from __future__ import annotations
 
+import json
 from typing import Annotated
 from pydantic import BaseModel
 from fastapi import APIRouter, HTTPException, Depends, status
 
 from ..supabase_client import get_supabase
 from ..logging_service import get_logger
+from ..settings import get_settings
 from .routes_driver_auth import require_driver_token
 from .deps import require_bearer
 
 log = get_logger(__name__)
 router = APIRouter(prefix="/notifications", tags=["notifications"])
+
+# ────────────────────────────────────────────────────────────────────────────
+# FIREBASE ADMIN SDK — lazy init, one app per process
+# ────────────────────────────────────────────────────────────────────────────
+
+_firebase_app = None
+
+
+def _get_firebase_app():
+    """Return (and lazily initialise) the Firebase Admin app."""
+    global _firebase_app
+    if _firebase_app is not None:
+        return _firebase_app
+
+    sa_json = get_settings().firebase_service_account
+    if not sa_json:
+        log.warning("FIREBASE_SERVICE_ACCOUNT not set — push notifications disabled")
+        return None
+
+    try:
+        import firebase_admin
+        from firebase_admin import credentials
+
+        sa_dict = json.loads(sa_json) if isinstance(sa_json, str) else sa_json
+        cred = credentials.Certificate(sa_dict)
+        _firebase_app = firebase_admin.initialize_app(cred)
+        log.info("Firebase Admin SDK initialised (project: %s)", sa_dict.get("project_id"))
+        return _firebase_app
+    except Exception as exc:
+        log.error("Firebase Admin SDK init failed: %s", exc)
+        return None
 
 DriverSession = Annotated[dict, Depends(require_driver_token)]
 
@@ -84,24 +117,36 @@ async def register_fcm_token(req: FCMTokenRequest, session: DriverSession):
 # ────────────────────────────────────────────────────────────────────────────
 
 async def send_fcm_message(fcm_token: str, title: str, body: str, data: dict | None = None):
-    """Send FCM message to device.
-
-    In production: use Firebase Admin SDK (python-firebase-admin)
-    For now: placeholder that would call Firebase REST API
-    """
+    """Send FCM push notification to a device token via Firebase Admin SDK."""
     if not fcm_token:
         return
 
-    # This is a placeholder — production would use:
-    # from firebase_admin import messaging
-    # message = messaging.Message(
-    #     token=fcm_token,
-    #     notification=messaging.Notification(title=title, body=body),
-    #     data=data or {}
-    # )
-    # response = messaging.send(message)
+    app = _get_firebase_app()
+    if app is None:
+        log.warning("FCM not available — FIREBASE_SERVICE_ACCOUNT missing")
+        return
 
-    log.info(f"FCM → {fcm_token[:20]}... : {title}")
+    try:
+        from firebase_admin import messaging
+
+        # Stringify all data values — FCM requires dict[str, str]
+        str_data = {k: str(v) for k, v in (data or {}).items()}
+
+        message = messaging.Message(
+            token=fcm_token,
+            notification=messaging.Notification(title=title, body=body),
+            data=str_data,
+            android=messaging.AndroidConfig(priority="high"),
+            apns=messaging.APNSConfig(
+                payload=messaging.APNSPayload(
+                    aps=messaging.Aps(sound="default", badge=1)
+                )
+            ),
+        )
+        response = messaging.send(message)
+        log.info("FCM sent to %s... : %s (msg_id=%s)", fcm_token[:20], title, response)
+    except Exception as exc:
+        log.error("FCM send failed for token %s...: %s", fcm_token[:20], exc)
 
 
 @router.post("/send", dependencies=[Depends(require_bearer)])
