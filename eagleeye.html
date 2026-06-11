@@ -2558,6 +2558,7 @@ select.form-input option{background:var(--surface);}
             <div style="display:flex;border:1px solid var(--border);border-radius:6px;overflow:hidden">
               <button id="crm-btn-list" onclick="crmSetView('list')" style="padding:5px 12px;font-size:12px;border:none;background:var(--navy);color:#fff;cursor:pointer;font-weight:600">☰ List</button>
               <button id="crm-btn-kanban" onclick="crmSetView('kanban')" style="padding:5px 12px;font-size:12px;border:none;background:transparent;color:var(--navy);cursor:pointer;font-weight:600;border-left:1px solid var(--border)">⬛ Kanban</button>
+              <button id="crm-btn-followups" onclick="crmSetView('followups')" style="padding:5px 12px;font-size:12px;border:none;background:transparent;color:var(--navy);cursor:pointer;font-weight:600;border-left:1px solid var(--border)">📅 Follow-ups</button>
               <button id="crm-btn-outreach" onclick="crmSetView('outreach')" style="padding:5px 12px;font-size:12px;border:none;background:transparent;color:var(--navy);cursor:pointer;font-weight:600;border-left:1px solid var(--border)">📡 Campaigns</button>
             </div>
             <select id="crm-filter-heat" onchange="renderCrmCurrentView()" style="padding:6px 10px;border:1px solid var(--border);border-radius:4px;font-size:13px">
@@ -2600,6 +2601,11 @@ select.form-input option{background:var(--surface);}
       <!-- KANBAN VIEW -->
       <div id="crm-view-kanban" style="display:none;padding:16px;overflow-x:auto;overflow-y:hidden;height:calc(100vh - 168px)">
         <div id="crm-kanban-board" style="display:flex;gap:12px;min-width:max-content;height:100%"></div>
+      </div>
+
+      <!-- FOLLOW-UPS DUE VIEW -->
+      <div id="crm-view-followups" style="display:none;padding:16px;overflow-y:auto;height:calc(100vh - 168px)">
+        <div id="crm-followups-root"></div>
       </div>
 
       <!-- OUTREACH CAMPAIGNS VIEW -->
@@ -9103,8 +9109,8 @@ function renderCrmSummary(){
     stageChip('Won', 'Won', '#d97706') +
     `<span style="width:1px;height:34px;background:var(--border);margin:0 2px"></span>` +
     chip('Need 1st Touch', neverContacted, '#b45309', '', 'Leads with no recorded outreach yet') +
-    chip('Follow-up Due', dueFollowup, dueFollowup?'#ef4444':'var(--muted)', '', 'Next-touch date has arrived/passed') +
-    chip('Upcoming', upcoming, 'var(--navy)', '', 'Follow-up scheduled in the future') +
+    chip('Follow-up Due', dueFollowup, dueFollowup?'#ef4444':'var(--muted)', `crmSetView('followups')`, 'Next-touch date has arrived/passed — open the queue') +
+    chip('Upcoming', upcoming, 'var(--navy)', `crmSetView('followups')`, 'Follow-up scheduled in the future') +
     `<span style="width:1px;height:34px;background:var(--border);margin:0 2px"></span>` +
     chip('Emailed', emailed, '#6366f1', '', 'Last outreach was email') +
     chip('Called', called, '#0ea5e9', '', 'Last outreach was a call/SMS');
@@ -9207,7 +9213,35 @@ function renderCrmLeadDetail(lead){
           ${lead.phone ? `<button class="btn-gold" onclick="crmVanceCall('${lead.id}','${_crmName(lead).replace(/'/g,"\\'")}','${lead.phone}')" style="padding:6px 12px;font-size:12px">🤖 Vance</button>` : ''}
           <button onclick="crmOpenVideoCall('${lead.id}','zoom','${lead.email||''}')" style="padding:6px 12px;font-size:12px;background:#2D8CFF;color:#fff;border:none;border-radius:4px;cursor:pointer">📹 Zoom</button>
           <button onclick="crmOpenVideoCall('${lead.id}','teams','${lead.email||''}')" style="padding:6px 12px;font-size:12px;background:#464EB8;color:#fff;border:none;border-radius:4px;cursor:pointer">💬 Teams</button>
+          <button onclick="crmLogEmail('${lead.id}')" style="padding:6px 12px;font-size:12px;background:#6366f1;color:#fff;border:none;border-radius:4px;cursor:pointer">✉️ Log Email</button>
         </div>
+      </div>
+
+      <!-- Email log panel (shown after clicking Log Email) -->
+      <div id="crm-email-panel" style="display:none;margin-bottom:14px;padding:12px;background:rgba(99,102,241,.07);border:1px solid rgba(99,102,241,.3);border-radius:6px">
+        <div style="font-size:12px;font-weight:700;margin-bottom:8px;color:#4f46e5">✉️ Log Email</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+          <div>
+            <div style="font-size:11px;color:var(--muted);margin-bottom:3px">Outcome</div>
+            <select id="crm-email-outcome" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:4px;font-size:13px">
+              <option value="Sent">📤 Sent</option>
+              <option value="Replied — Interested">✅ Replied — Interested</option>
+              <option value="Replied — Not Interested">🚫 Replied — Not Interested</option>
+              <option value="No Response">📭 No Response</option>
+              <option value="Bounced">↩️ Bounced</option>
+            </select>
+          </div>
+          <div>
+            <div style="font-size:11px;color:var(--muted);margin-bottom:3px">Subject</div>
+            <input type="text" id="crm-email-subject" placeholder="Email subject…" style="width:100%;box-sizing:border-box;padding:6px 8px;border:1px solid var(--border);border-radius:4px;font-size:13px">
+          </div>
+        </div>
+        <textarea id="crm-email-notes" rows="2" placeholder="Summary / notes…" style="width:100%;box-sizing:border-box;padding:8px;border:1px solid var(--border);border-radius:4px;font-size:13px;resize:vertical;font-family:inherit;margin-bottom:8px"></textarea>
+        <div style="display:flex;gap:8px">
+          <button onclick="crmSaveEmailLog('${lead.id}')" style="padding:6px 16px;background:#6366f1;color:#fff;border:none;border-radius:4px;font-size:12px;cursor:pointer;font-weight:600">Save Email Log</button>
+          <button onclick="document.getElementById('crm-email-panel').style.display='none'" style="padding:6px 12px;background:#e5e7eb;color:#374151;border:none;border-radius:4px;font-size:12px;cursor:pointer">Cancel</button>
+        </div>
+        <div id="crm-email-panel-status" style="display:none;margin-top:6px;font-size:12px;padding:6px 8px;border-radius:4px"></div>
       </div>
 
       <!-- Call panel (shown after clicking Call or Vance) -->
@@ -9440,17 +9474,68 @@ async function crmSaveCallLog(leadId){
     const lead = crmAllLeads.find(l => l.id === leadId);
     const existing = lead?.notes || '';
     const sep = existing.trim() ? '\n\n' : '';
-    const contactedOutcomes = ['Answered','Zoom Meeting — Completed','Teams Meeting — Completed'];
-    await crmPatch(leadId, {
-      notes: existing + sep + entry,
-      status: contactedOutcomes.includes(outcome) ? 'Contacted' : (lead?.status || 'Contacted'),
-      last_contact_at: new Date().toISOString()
-    });
+    const patch = { notes: existing + sep + entry, last_contact_at: new Date().toISOString() };
+    const nextStage = _crmAutoStage(lead?.status, outcome);
+    if(nextStage) patch.status = nextStage;
+    await crmPatch(leadId, patch);
     if (statusEl){ statusEl.style.display='block'; statusEl.style.background='rgba(34,197,94,.1)'; statusEl.style.color='var(--green)'; statusEl.textContent='✅ Call logged!'; }
     setTimeout(()=>{ document.getElementById('crm-call-panel').style.display='none'; }, 1200);
-    renderCrmLeadsList();
+    renderCrmLeadsList(); renderCrmSummary();
     const updatedLead = crmAllLeads.find(l => l.id === leadId);
     if (updatedLead) renderCrmLeadDetail(updatedLead);
+  } catch(e){
+    if (statusEl){ statusEl.style.display='block'; statusEl.style.background='rgba(239,68,68,.1)'; statusEl.style.color='var(--red)'; statusEl.textContent=`❌ ${e.message}`; }
+  }
+}
+
+// Decide the next stage from an outreach outcome. Never downgrades Won/Lost.
+function _crmAutoStage(currentStatus, outcome){
+  const cur = (currentStatus||'New').toLowerCase().replace(' ','_');
+  if(cur==='won' || cur==='lost') return null;
+  const o = (outcome||'').toLowerCase();
+  if(o.includes('not interested') || o.includes('wrong number') || o.includes('bounced')){
+    return (cur==='new'||cur==='contacted'||cur==='interested') ? 'Not_Interested' : null;
+  }
+  if(o.includes('interested') || o.includes('callback') || o.includes('completed') || o.includes('replied — interested')){
+    return cur==='interested' ? null : 'Interested';
+  }
+  // Any other logged contact moves an untouched lead to Contacted.
+  return (cur==='new'||cur==='') ? 'Contacted' : null;
+}
+
+window.crmLogEmail = function(leadId){
+  const panel = document.getElementById('crm-email-panel');
+  if(!panel) return;
+  document.getElementById('crm-email-outcome').value = 'Sent';
+  document.getElementById('crm-email-subject').value = '';
+  document.getElementById('crm-email-notes').value = '';
+  const stEl = document.getElementById('crm-email-panel-status'); if(stEl) stEl.style.display='none';
+  panel.style.display = 'block';
+  panel.scrollIntoView({behavior:'smooth', block:'nearest'});
+};
+
+async function crmSaveEmailLog(leadId){
+  const outcome = document.getElementById('crm-email-outcome')?.value || 'Sent';
+  const subject = (document.getElementById('crm-email-subject')?.value||'').trim();
+  const notes = (document.getElementById('crm-email-notes')?.value||'').trim();
+  const statusEl = document.getElementById('crm-email-panel-status');
+  const ts = new Date().toLocaleString('en-US',{month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit'});
+  const subjStr = subject ? ` — ${subject}` : '';
+  const notesStr = notes ? `\n   Notes: ${notes}` : '';
+  const entry = `[${ts}] 📧 EMAIL — ${outcome}${subjStr}${notesStr}`;
+  try {
+    const lead = crmAllLeads.find(l => l.id === leadId);
+    const existing = lead?.notes || '';
+    const sep = existing.trim() ? '\n\n' : '';
+    const patch = { notes: existing + sep + entry, last_contact_at: new Date().toISOString() };
+    const nextStage = _crmAutoStage(lead?.status, outcome);
+    if(nextStage) patch.status = nextStage;
+    await crmPatch(leadId, patch);
+    if (statusEl){ statusEl.style.display='block'; statusEl.style.background='rgba(34,197,94,.1)'; statusEl.style.color='var(--green)'; statusEl.textContent='✅ Email logged!'; }
+    setTimeout(()=>{ document.getElementById('crm-email-panel').style.display='none'; }, 1100);
+    renderCrmLeadsList(); renderCrmSummary();
+    const updated = crmAllLeads.find(l => l.id === leadId);
+    if (updated) renderCrmLeadDetail(updated);
   } catch(e){
     if (statusEl){ statusEl.style.display='block'; statusEl.style.background='rgba(239,68,68,.1)'; statusEl.style.color='var(--red)'; statusEl.textContent=`❌ ${e.message}`; }
   }
@@ -9525,20 +9610,84 @@ let crmCurrentView = 'list';
 
 function crmSetView(v){
   crmCurrentView = v;
-  ['list','kanban','outreach'].forEach(k => {
+  ['list','kanban','followups','outreach'].forEach(k => {
     const el = document.getElementById('crm-view-'+k);
     const btn = document.getElementById('crm-btn-'+k);
     if(el) el.style.display = k===v ? (k==='list'?'grid':'block') : 'none';
     if(btn){ btn.style.background = k===v?'var(--navy)':'transparent'; btn.style.color = k===v?'#fff':'var(--navy)'; }
   });
   if(v==='kanban') renderCrmKanban();
+  if(v==='followups') renderCrmFollowups();
   if(v==='outreach') initCrmOutreach();
 }
 
 function renderCrmCurrentView(){
   if(crmCurrentView==='list') renderCrmLeadsList();
   else if(crmCurrentView==='kanban') renderCrmKanban();
+  else if(crmCurrentView==='followups') renderCrmFollowups();
 }
+
+// ── FOLLOW-UPS DUE QUEUE ──────────────────────────────────────────────────────
+// Who do we owe a touch today? Built from each lead's next_touch_at (overdue +
+// due today first, then upcoming). Quick actions resolve or snooze inline.
+function renderCrmFollowups(){
+  const root = document.getElementById('crm-followups-root');
+  if(!root) return;
+  const now = new Date();
+  const endToday = new Date(); endToday.setHours(23,59,59,999);
+  const scheduled = (crmAllLeads||[]).filter(l => l.next_touch_at && !l.do_not_contact);
+  scheduled.sort((a,b)=> new Date(a.next_touch_at) - new Date(b.next_touch_at));
+  const overdue  = scheduled.filter(l => new Date(l.next_touch_at) < now);
+  const today    = scheduled.filter(l => { const d=new Date(l.next_touch_at); return d>=now && d<=endToday; });
+  const upcoming = scheduled.filter(l => new Date(l.next_touch_at) > endToday);
+
+  const row = l => {
+    const d = new Date(l.next_touch_at);
+    const od = d < now;
+    const due = d.toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});
+    const st = _crmStatus(l);
+    return `<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--border);border-radius:8px;background:var(--surface,#fff);margin-bottom:7px">
+      <div class="crm-heat-dot crm-heat-${crmGetHeat(l.id)||'none'}" style="flex-shrink:0"></div>
+      <div style="flex:1;min-width:0;cursor:pointer" onclick="crmOpenFromFollowup('${l.id}')">
+        <div style="font-weight:600;font-size:13px;color:var(--navy);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(_crmName(l))}</div>
+        <div style="font-size:11px;color:var(--muted)">${esc(l.phone||l.email||'No contact')} · <span class="badge badge-${st.toLowerCase().match(/interested|won/)?'green':st.toLowerCase().match(/contacted/)?'blue':'orange'}" style="font-size:9px">${esc(st)}</span></div>
+      </div>
+      <div style="font-size:11px;font-weight:700;color:${od?'#ef4444':'#b45309'};white-space:nowrap">${od?'⚠ ':'📅 '}${due}</div>
+      <div style="display:flex;gap:5px;flex-shrink:0">
+        ${l.phone?`<button onclick="crmVanceCall('${l.id}','${esc(_crmName(l)).replace(/'/g,"\\'")}','${l.phone}')" title="Vance call" style="padding:4px 8px;font-size:11px;border:1px solid var(--border);border-radius:4px;background:var(--surface);cursor:pointer">🤖</button>`:''}
+        <button onclick="crmOpenFromFollowup('${l.id}')" title="Open" style="padding:4px 8px;font-size:11px;border:1px solid var(--border);border-radius:4px;background:var(--surface);cursor:pointer">Open</button>
+        <button onclick="crmSnoozeFollowup('${l.id}',1)" title="Snooze 1 day" style="padding:4px 8px;font-size:11px;border:1px solid var(--border);border-radius:4px;background:var(--surface);cursor:pointer">+1d</button>
+        <button onclick="crmDoneFollowup('${l.id}')" title="Mark done (clear)" style="padding:4px 8px;font-size:11px;border:1px solid rgba(22,163,74,.4);border-radius:4px;background:rgba(22,163,74,.08);color:#16a34a;cursor:pointer">✓</button>
+      </div>
+    </div>`;
+  };
+  const section = (title, arr, color) => arr.length
+    ? `<div style="margin-bottom:18px"><div style="font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:${color};margin-bottom:8px">${title} (${arr.length})</div>${arr.map(row).join('')}</div>`
+    : '';
+
+  if(!scheduled.length){
+    root.innerHTML = `<div style="text-align:center;color:var(--muted);padding:48px 20px">No follow-ups scheduled.<br><span style="font-size:12px">Schedule a follow-up date on any lead to build your queue.</span></div>`;
+    return;
+  }
+  root.innerHTML =
+    `<div style="max-width:760px;margin:0 auto">` +
+    section('⚠ Overdue', overdue, '#ef4444') +
+    section('📅 Due Today', today, '#b45309') +
+    section('Upcoming', upcoming, 'var(--muted)') +
+    `</div>`;
+}
+window.crmOpenFromFollowup = function(id){ crmSetView('list'); setTimeout(()=>selectCrmLead(id), 50); };
+window.crmDoneFollowup = async function(id){
+  try{ await crmPatch(id, {next_touch_at:null, last_contact_at:new Date().toISOString()}); renderCrmFollowups(); renderCrmSummary(); }
+  catch(e){ if(typeof toast!=='undefined') toast('Failed to update','error'); }
+};
+window.crmSnoozeFollowup = async function(id, days){
+  const lead = crmAllLeads.find(l=>l.id===id); if(!lead) return;
+  const base = lead.next_touch_at ? new Date(lead.next_touch_at) : new Date();
+  base.setDate(base.getDate()+days);
+  try{ await crmPatch(id, {next_touch_at: base.toISOString()}); renderCrmFollowups(); renderCrmSummary(); }
+  catch(e){ if(typeof toast!=='undefined') toast('Failed to snooze','error'); }
+};
 
 // ── CRM KANBAN ───────────────────────────────────────────────────────────────
 const CRM_STAGES = ['New','Contacted','Interested','Not_Interested','Won','Lost'];
@@ -9601,8 +9750,8 @@ function renderCrmActivityLog(lead){
   });
   if(!entries.length) return '<div style="text-align:center;color:var(--muted);padding:24px;font-size:13px">No activity logged yet.<br><span style="font-size:11px">Calls and emails will appear here.</span></div>';
   return entries.reverse().map(e => {
-    const icon = e.isEmail?'📧':e.text.includes('VANCE')?'🤖':e.text.includes('Zoom')?'📹':e.text.includes('Teams')?'💬':e.text.includes('CALL')||e.text.includes('Answered')||e.text.includes('Voicemail')?'📞':'📝';
-    const color = e.isEmail?'#2563eb':e.text.includes('VANCE')?'#d97706':e.text.includes('Answered')||e.text.includes('Completed')?'#16a34a':'#6b7280';
+    const icon = e.isEmail||e.text.includes('EMAIL')?'📧':e.text.includes('VANCE')?'🤖':e.text.includes('Zoom')?'📹':e.text.includes('Teams')?'💬':e.text.includes('CALL')||e.text.includes('Answered')||e.text.includes('Voicemail')?'📞':'📝';
+    const color = e.isEmail||e.text.includes('EMAIL')?'#6366f1':e.text.includes('VANCE')?'#d97706':e.text.includes('Answered')||e.text.includes('Completed')?'#16a34a':'#6b7280';
     return `<div style="display:flex;gap:10px;padding:9px 0;border-bottom:1px solid var(--border)">
       <div style="font-size:18px;flex-shrink:0;width:24px;text-align:center">${icon}</div>
       <div style="flex:1">
