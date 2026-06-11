@@ -32,6 +32,74 @@ def generate_welcome_packet_html(
     services_html = _render_services(approved_services)
     faq_html = _render_faq()
 
+    # Section bodies are hoisted into locals (rather than nested f-strings inside
+    # the main return f-string) so the module compiles on Python 3.11 as well as
+    # 3.12+. Nested same-delimiter f-strings are a PEP 701 / 3.12 feature.
+    welcome_body = f"""
+              <p style="{_p_style()}">
+                We are thrilled to have you join the <strong>3 Lakes Light Fleet</strong> — a growing network of
+                professional drivers delivering excellence across medical transport, executive transfers, same-day
+                courier, and gig logistics. You were carefully selected because we believe you have the reliability,
+                professionalism, and hustle it takes to thrive with us.
+              </p>
+              <p style="{_p_style()}margin-bottom:0;">
+                This packet contains everything you need to hit the ground running: your approved service types,
+                how our platform works, how you get paid, and who to call when you need us. Read it once carefully —
+                then keep it bookmarked. We&rsquo;re excited for what&rsquo;s ahead and we&rsquo;re here every step of the way.
+              </p>
+              <p style="margin:16px 0 0;color:#6b7280;font-size:13px;font-style:italic;">— The 3 Lakes Team</p>
+            """
+
+    paid_body = f"""
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+                {_info_card("💳", "Weekly Payouts", "Earnings are calculated each Sunday night and deposited every Monday morning via direct deposit. No waiting, no manual requests.")}
+                {_info_card("🏦", "Direct Deposit", "Set up your bank account in the driver app under Settings → Payout Method. ACH transfers typically clear within 1 business day.")}
+                {_info_card("📊", "How Earnings Work", "You earn a percentage of the trip rate displayed at acceptance. Rates vary by service type, distance, and time-of-day surge pricing.")}
+                {_info_card("🎯", "Bonus Tiers", "Complete 20+ trips/month to unlock the Pro bonus tier. Consistently high ratings (4.8+) qualify you for premium dispatch priority.")}
+              </div>
+              <div style="margin-top:20px;padding:16px;background:#fffbeb;border-left:4px solid #f59e0b;border-radius:0 8px 8px 0;">
+                <strong style="color:#92400e;font-size:13px;">Important:</strong>
+                <span style="color:#78350f;font-size:13px;"> You are an independent contractor. 3 Lakes does not withhold taxes. Set aside approximately 25–30% of gross earnings for self-employment tax obligations.</span>
+              </div>
+            """
+
+    vehicle_req = (
+        f"Your {_esc(vehicle_type)} must be no more than 10 years old, pass a visual "
+        "cleanliness check, and be fully insured at all times. Annual inspection required."
+    )
+    standards_body = f"""
+              <p style="{_p_style()}">Maintaining high standards protects your ratings, your earnings, and the 3 Lakes brand. Every driver is expected to uphold the following:</p>
+              <table width="100%" cellpadding="0" cellspacing="0">
+                {_standard_row("👔", "Professional Appearance", "Clean, pressed clothing (business casual minimum). No strong fragrances. Presentable at all times when on duty.")}
+                {_standard_row("🚗", "Vehicle Requirements", vehicle_req)}
+                {_standard_row("⏱️", "On-Time Rate", "We expect a 90%+ on-time rate. Repeated late arrivals will trigger a performance review. Always communicate proactively if delayed.")}
+                {_standard_row("⭐", "Rating Minimum", "Maintain a 4.6+ star average across all platforms. Ratings below 4.4 for two consecutive months may result in suspension from premium trips.")}
+                {_standard_row("📵", "Device Policy", "No phone use while driving unless via hands-free. Violations reported by clients or platform GPS data are grounds for immediate deactivation.")}
+                {_standard_row("🔒", "Confidentiality", "Passenger information, medical details (for NEMT), and client addresses are confidential. Never share or discuss trip details with third parties.")}
+              </table>
+            """
+
+    downloads_body = f"""
+              <p style="{_p_style()}">Depending on your approved services, you may receive trips through one or more partner platforms. Download and set up each app that matches your services.</p>
+              <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
+                {_platform_row("Curri", "courier", "Parcel & pallet delivery for businesses. Download the Curri Driver app on iOS or Android. Use invite code provided in your onboarding email.", "#6366f1")}
+                {_platform_row("Roadie", "courier / gig", "Same-day package delivery for major retailers. Download Roadie Driver on iOS or Android and create your account with the email on file.", "#f97316")}
+                {_platform_row("Modivcare", "nemt", "Non-emergency medical transport network. You will receive a separate activation email from Modivcare. Complete their driver orientation video before your first trip.", "#10b981")}
+                {_platform_row("MTM (Medical Transport Mgmt)", "nemt", "Medical transport brokerage trips. Activation handled by your onboarding coordinator. Download the MTM Link driver app.", "#0ea5e9")}
+                {_platform_row("Uber for Business / Lyft Business", "executive", "Executive corporate accounts. Your profile will be linked by the 3 Lakes ops team. Ensure your personal Uber/Lyft account is active and in good standing.", "#1a4fa8")}
+                {_platform_row("3 Lakes Driver Portal", "all services", "Your primary dashboard for trip history, pay stubs, document uploads, and compliance status. Visit <a href='https://3lakeslogistics.com/driver' style='color:#1a4fa8'>3lakeslogistics.com/driver</a> or download the app.", "#f59e0b")}
+              </table>
+            """
+
+    contacts_body = f"""
+              <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
+                {_contact_row("📦", "Dispatch &amp; Load Coordination", "loads@3lakeslogistics.com", "For trip assignments, schedule changes, and urgent dispatch issues")}
+                {_contact_row("🛟", "Driver Support", "info@3lakeslogistics.com", "For onboarding questions, document uploads, payout issues, and general support")}
+                {_contact_row("🌐", "Driver Portal &amp; Resources", "3lakeslogistics.com", "Access your trip history, pay stubs, compliance docs, and training materials")}
+                {_contact_row("🚨", "Emergency / Safety", "911 first, then loads@3lakeslogistics.com", "In any safety emergency, contact 911 immediately. Notify dispatch as soon as safe to do so.")}
+              </table>
+            """
+
     return f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -71,20 +139,7 @@ def generate_welcome_packet_html(
           <td style="padding:0 40px 40px;">
 
             <!-- ── Welcome message ── -->
-            {_section("Welcome to the Team", f"""
-              <p style="{_p_style()}">
-                We are thrilled to have you join the <strong>3 Lakes Light Fleet</strong> — a growing network of
-                professional drivers delivering excellence across medical transport, executive transfers, same-day
-                courier, and gig logistics. You were carefully selected because we believe you have the reliability,
-                professionalism, and hustle it takes to thrive with us.
-              </p>
-              <p style="{_p_style()}margin-bottom:0;">
-                This packet contains everything you need to hit the ground running: your approved service types,
-                how our platform works, how you get paid, and who to call when you need us. Read it once carefully —
-                then keep it bookmarked. We&rsquo;re excited for what&rsquo;s ahead and we&rsquo;re here every step of the way.
-              </p>
-              <p style="margin:16px 0 0;color:#6b7280;font-size:13px;font-style:italic;">— The 3 Lakes Team</p>
-            """)}
+            {_section("Welcome to the Team", welcome_body)}
 
             <!-- ── Approved Services ── -->
             {_section("Your Approved Services", services_html)}
@@ -93,54 +148,16 @@ def generate_welcome_packet_html(
             {_section("How It Works", _render_how_it_works())}
 
             <!-- ── Getting Paid ── -->
-            {_section("Getting Paid", f"""
-              <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-                {_info_card("💳", "Weekly Payouts", "Earnings are calculated each Sunday night and deposited every Monday morning via direct deposit. No waiting, no manual requests.")}
-                {_info_card("🏦", "Direct Deposit", "Set up your bank account in the driver app under Settings → Payout Method. ACH transfers typically clear within 1 business day.")}
-                {_info_card("📊", "How Earnings Work", "You earn a percentage of the trip rate displayed at acceptance. Rates vary by service type, distance, and time-of-day surge pricing.")}
-                {_info_card("🎯", "Bonus Tiers", "Complete 20+ trips/month to unlock the Pro bonus tier. Consistently high ratings (4.8+) qualify you for premium dispatch priority.")}
-              </div>
-              <div style="margin-top:20px;padding:16px;background:#fffbeb;border-left:4px solid #f59e0b;border-radius:0 8px 8px 0;">
-                <strong style="color:#92400e;font-size:13px;">Important:</strong>
-                <span style="color:#78350f;font-size:13px;"> You are an independent contractor. 3 Lakes does not withhold taxes. Set aside approximately 25–30% of gross earnings for self-employment tax obligations.</span>
-              </div>
-            """)}
+            {_section("Getting Paid", paid_body)}
 
             <!-- ── Service Standards ── -->
-            {_section("Service Standards", f"""
-              <p style="{_p_style()}">Maintaining high standards protects your ratings, your earnings, and the 3 Lakes brand. Every driver is expected to uphold the following:</p>
-              <table width="100%" cellpadding="0" cellspacing="0">
-                {_standard_row("👔", "Professional Appearance", "Clean, pressed clothing (business casual minimum). No strong fragrances. Presentable at all times when on duty.")}
-                {_standard_row("🚗", "Vehicle Requirements", f"Your {_esc(vehicle_type)} must be no more than 10 years old, pass a visual cleanliness check, and be fully insured at all times. Annual inspection required.")}
-                {_standard_row("⏱️", "On-Time Rate", "We expect a 90%+ on-time rate. Repeated late arrivals will trigger a performance review. Always communicate proactively if delayed.")}
-                {_standard_row("⭐", "Rating Minimum", "Maintain a 4.6+ star average across all platforms. Ratings below 4.4 for two consecutive months may result in suspension from premium trips.")}
-                {_standard_row("📵", "Device Policy", "No phone use while driving unless via hands-free. Violations reported by clients or platform GPS data are grounds for immediate deactivation.")}
-                {_standard_row("🔒", "Confidentiality", "Passenger information, medical details (for NEMT), and client addresses are confidential. Never share or discuss trip details with third parties.")}
-              </table>
-            """)}
+            {_section("Service Standards", standards_body)}
 
             <!-- ── Platform Downloads ── -->
-            {_section("Platform Downloads & Setup", f"""
-              <p style="{_p_style()}">Depending on your approved services, you may receive trips through one or more partner platforms. Download and set up each app that matches your services.</p>
-              <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
-                {_platform_row("Curri", "courier", "Parcel & pallet delivery for businesses. Download the Curri Driver app on iOS or Android. Use invite code provided in your onboarding email.", "#6366f1")}
-                {_platform_row("Roadie", "courier / gig", "Same-day package delivery for major retailers. Download Roadie Driver on iOS or Android and create your account with the email on file.", "#f97316")}
-                {_platform_row("Modivcare", "nemt", "Non-emergency medical transport network. You will receive a separate activation email from Modivcare. Complete their driver orientation video before your first trip.", "#10b981")}
-                {_platform_row("MTM (Medical Transport Mgmt)", "nemt", "Medical transport brokerage trips. Activation handled by your onboarding coordinator. Download the MTM Link driver app.", "#0ea5e9")}
-                {_platform_row("Uber for Business / Lyft Business", "executive", "Executive corporate accounts. Your profile will be linked by the 3 Lakes ops team. Ensure your personal Uber/Lyft account is active and in good standing.", "#1a4fa8")}
-                {_platform_row("3 Lakes Driver Portal", "all services", "Your primary dashboard for trip history, pay stubs, document uploads, and compliance status. Visit <a href='https://3lakeslogistics.com/driver' style='color:#1a4fa8'>3lakeslogistics.com/driver</a> or download the app.", "#f59e0b")}
-              </table>
-            """)}
+            {_section("Platform Downloads & Setup", downloads_body)}
 
             <!-- ── Key Contacts ── -->
-            {_section("Key Contacts", f"""
-              <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
-                {_contact_row("📦", "Dispatch &amp; Load Coordination", "loads@3lakeslogistics.com", "For trip assignments, schedule changes, and urgent dispatch issues")}
-                {_contact_row("🛟", "Driver Support", "info@3lakeslogistics.com", "For onboarding questions, document uploads, payout issues, and general support")}
-                {_contact_row("🌐", "Driver Portal &amp; Resources", "3lakeslogistics.com", "Access your trip history, pay stubs, compliance docs, and training materials")}
-                {_contact_row("🚨", "Emergency / Safety", "911 first, then loads@3lakeslogistics.com", "In any safety emergency, contact 911 immediately. Notify dispatch as soon as safe to do so.")}
-              </table>
-            """)}
+            {_section("Key Contacts", contacts_body)}
 
             <!-- ── FAQ ── -->
             {_section("Frequently Asked Questions", faq_html)}
