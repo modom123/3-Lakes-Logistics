@@ -110,21 +110,122 @@ def h259_driver_net_calc(carrier_id, contract_id, payload) -> dict:
 
 # ── Step 260: lf_settlement.nemt_billing_queue ───────────────────────────────
 
+# HCPCS procedure codes for NEMT
+_NEMT_PROCEDURE_CODES = {
+    "wheelchair": "A0130",   # wheelchair van / accessible vehicle
+    "ambulatory": "A0100",   # standard sedan/car transport
+    "stretcher":  "A0225",   # stretcher van
+    "default":    "A0130",   # fallback
+}
+
+
 def h260_nemt_billing_queue(carrier_id, contract_id, payload) -> dict:
-    trip_id = payload.get("trip_id")
+    """Write a complete billing claim to nemt_billing_claims for submission to payer.
+
+    Pulls patient demographics from nemt_clients and trip data from
+    light_vehicle_trips to build a CMS-1500 / 837P-ready record.
+    The batch processor (POST /admin/lf/billing/nemt/submit-batch) submits
+    queued claims to the configured clearinghouse.
+    """
+    trip_id   = payload.get("trip_id")
     trip_type = payload.get("trip_type", "")
     if trip_type != "nemt":
         return {"skipped": True, "reason": "not_nemt", "trip_id": trip_id}
+
     rate_total = payload.get("rate_total", 0.0)
-    insurance_auth_number = payload.get("insurance_auth_number", "")
-    insurance_provider = payload.get("insurance_provider", "")
+    sb = _db()
+
+    # ── Resolve trip record ───────────────────────────────────────────────────
+    trip: dict = {}
+    if sb and trip_id:
+        try:
+            r = sb.table("light_vehicle_trips").select("*").eq("id", str(trip_id)).maybe_single().execute()
+            trip = r.data or {}
+        except Exception:  # noqa: BLE001
+            pass
+
+    # ── Resolve patient demographics ─────────────────────────────────────────
+    patient: dict = {}
+    nemt_client_id = trip.get("nemt_client_id") or payload.get("nemt_client_id")
+    if sb and nemt_client_id:
+        try:
+            r = sb.table("nemt_clients").select("*").eq("id", str(nemt_client_id)).maybe_single().execute()
+            patient = r.data or {}
+        except Exception:  # noqa: BLE001
+            pass
+
+    # ── Resolve provider NPI (from carrier settings if stored) ───────────────
+    provider_npi = payload.get("provider_npi", "")
+    if not provider_npi and sb and carrier_id:
+        try:
+            r = sb.table("carriers").select("npi").eq("id", str(carrier_id)).maybe_single().execute()
+            provider_npi = (r.data or {}).get("npi", "")
+        except Exception:  # noqa: BLE001
+            pass
+
+    # ── Pick procedure code from mobility_needs ───────────────────────────────
+    mobility = (trip.get("mobility_needs") or payload.get("mobility_needs") or "").lower()
+    if "wheelchair" in mobility or "wav" in mobility:
+        proc_code = _NEMT_PROCEDURE_CODES["wheelchair"]
+    elif "stretcher" in mobility:
+        proc_code = _NEMT_PROCEDURE_CODES["stretcher"]
+    else:
+        proc_code = _NEMT_PROCEDURE_CODES["ambulatory"]
+
+    # ── Build claim record ────────────────────────────────────────────────────
+    dos_raw = trip.get("completed_at") or trip.get("scheduled_at") or payload.get("completed_at")
+    date_of_service = dos_raw[:10] if dos_raw else _NOW()[:10]
+
+    claim = {
+        "trip_id":              str(trip_id) if trip_id else None,
+        "nemt_client_id":       str(nemt_client_id) if nemt_client_id else None,
+        "carrier_id":           str(carrier_id) if carrier_id else None,
+        "driver_id":            str(trip.get("driver_id") or payload.get("driver_id") or ""),
+        # Patient
+        "patient_name":         patient.get("name") or trip.get("passenger_name") or payload.get("passenger_name", ""),
+        "patient_dob":          str(patient.get("dob")) if patient.get("dob") else None,
+        "patient_medicaid_id":  patient.get("insurance_id") or payload.get("patient_medicaid_id", ""),
+        # Payer
+        "insurance_provider":   trip.get("insurance_provider") or patient.get("insurance_provider") or payload.get("insurance_provider", ""),
+        "insurance_auth_number":trip.get("insurance_auth_number") or payload.get("insurance_auth_number", ""),
+        "insurance_member_id":  patient.get("insurance_id") or "",
+        # Service
+        "date_of_service":      date_of_service,
+        "pickup_address":       trip.get("pickup_address") or payload.get("pickup_address", ""),
+        "dropoff_address":      trip.get("dropoff_address") or payload.get("dropoff_address", ""),
+        "trip_miles":           float(trip.get("estimated_miles") or payload.get("estimated_miles") or 0),
+        # Billing codes
+        "procedure_code":       proc_code,
+        "units":                1,
+        "billed_amount":        float(rate_total) if rate_total is not None else 0.0,
+        # Provider
+        "provider_npi":         provider_npi,
+        # Status
+        "status":               "queued",
+        "created_at":           _NOW(),
+    }
+
+    claim_id = None
+    if sb:
+        try:
+            rec = sb.table("nemt_billing_claims").insert(claim).execute()
+            claim_id = (rec.data or [{}])[0].get("id")
+        except Exception as exc:  # noqa: BLE001
+            import logging
+            logging.getLogger("3ll.execution.lf_settlement").warning(
+                "h260 claim insert failed trip=%s: %s", trip_id, exc
+            )
+
     return {
-        "billing_queued": True,
-        "trip_id": trip_id,
-        "insurance_auth_number": insurance_auth_number,
-        "insurance_provider": insurance_provider,
-        "billing_amount": float(rate_total) if rate_total is not None else 0.0,
-        "queued_at": _NOW(),
+        "billing_queued":        True,
+        "claim_id":              claim_id,
+        "trip_id":               trip_id,
+        "patient":               claim["patient_name"],
+        "insurance_provider":    claim["insurance_provider"],
+        "insurance_auth_number": claim["insurance_auth_number"],
+        "procedure_code":        proc_code,
+        "billing_amount":        float(rate_total) if rate_total is not None else 0.0,
+        "queued_at":             _NOW(),
     }
 
 

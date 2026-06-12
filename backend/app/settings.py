@@ -166,6 +166,12 @@ class Settings(BaseSettings):
     checkr_api_key: str = ""
     checkr_webhook_secret: str = ""
 
+    # NEMT Billing — clearinghouse for 837P Medicaid claim submission
+    # Supported: 'change_healthcare' | 'trizetto' | 'manual' (default)
+    nemt_clearinghouse: str = "manual"
+    nemt_clearinghouse_url: str = ""      # e.g. https://sandbox.apigw.changehealthcare.com/medicalnetwork/claims/v3
+    nemt_clearinghouse_api_key: str = ""  # Bearer token / API key
+
     @property
     def cors_list(self) -> list[str]:
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]

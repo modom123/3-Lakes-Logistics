@@ -742,6 +742,176 @@ def get_driver_compliance(driver_id: str) -> dict:
     return compliance_autopilot.get_compliance_status(driver_id)
 
 
+@router.get("/billing/nemt/claims")
+def list_nemt_claims(
+    status: str | None = None,
+    limit: int = 100,
+) -> dict:
+    """List NEMT billing claims with optional status filter."""
+    sb = get_supabase()
+    q = sb.table("nemt_billing_claims").select("*").order("created_at", desc=True).limit(limit)
+    if status:
+        q = q.eq("status", status)
+    res = q.execute()
+    items = res.data or []
+    return {"items": items, "total": len(items)}
+
+
+@router.post("/billing/nemt/submit-batch")
+def submit_nemt_billing_batch(payload: dict | None = None) -> dict:
+    """Submit all queued NEMT billing claims to the configured clearinghouse.
+
+    Supports Change Healthcare and Trizetto via HTTP.  When no clearinghouse
+    credentials are configured, claims are marked 'submitted' with a manual
+    reference so staff can submit them on the payer portal directly — the
+    queue is still drained so claims don't pile up indefinitely.
+
+    Payload (optional):
+      clearinghouse  — 'change_healthcare' | 'trizetto' | 'manual' (default)
+      limit          — max claims to process in one run (default 50)
+    """
+    from ..settings import get_settings
+    from datetime import datetime, timezone
+    import httpx
+
+    s     = get_settings()
+    sb    = get_supabase()
+    now   = datetime.now(timezone.utc)
+    p     = payload or {}
+    limit = int(p.get("limit", 50))
+    clearinghouse = p.get("clearinghouse") or getattr(s, "nemt_clearinghouse", None) or "manual"
+
+    # Load queued claims
+    queued = sb.table("nemt_billing_claims").select("*").eq("status", "queued").limit(limit).execute().data or []
+    if not queued:
+        return {"ok": True, "submitted": 0, "note": "no queued claims"}
+
+    ch_url     = getattr(s, "nemt_clearinghouse_url", None)
+    ch_api_key = getattr(s, "nemt_clearinghouse_api_key", None)
+
+    results  = []
+    submitted = 0
+    failed    = 0
+
+    for claim in queued:
+        claim_id = claim["id"]
+        ref = f"3LL-{claim_id[:8].upper()}"   # internal reference until clearinghouse assigns one
+
+        if clearinghouse != "manual" and ch_url and ch_api_key:
+            # ── Real clearinghouse submission ─────────────────────────────────
+            # Build an 837P-style JSON payload (clearinghouse-agnostic structure;
+            # Change Healthcare and Trizetto both accept similar JSON envelopes).
+            body_837p = {
+                "transactionType": "837P",
+                "tradingPartner":   claim.get("payer_id") or "",
+                "subscriber": {
+                    "memberId":      claim.get("patient_medicaid_id") or "",
+                    "firstName":     (claim.get("patient_name") or "").split(" ")[0],
+                    "lastName":      (claim.get("patient_name") or "").split(" ")[-1],
+                    "dateOfBirth":   str(claim.get("patient_dob") or ""),
+                    "insuredId":     claim.get("insurance_member_id") or "",
+                },
+                "provider": {
+                    "npi":           claim.get("provider_npi") or "",
+                    "taxonomyCode":  claim.get("provider_taxonomy") or "341600000X",
+                },
+                "claim": {
+                    "patientControlNumber": ref,
+                    "authorizationNumber":  claim.get("insurance_auth_number") or "",
+                    "dateOfService":        str(claim.get("date_of_service") or ""),
+                    "placeOfService":       "41",   # 41 = Ambulance – Land (NEMT)
+                    "billedAmount":         float(claim.get("billed_amount") or 0),
+                    "serviceLines": [{
+                        "procedureCode":    claim.get("procedure_code") or "A0130",
+                        "procedureModifier":claim.get("procedure_modifier") or "",
+                        "diagnosisCode":    claim.get("diagnosis_code") or "",
+                        "serviceDate":      str(claim.get("date_of_service") or ""),
+                        "units":            int(claim.get("units") or 1),
+                        "chargeAmount":     float(claim.get("billed_amount") or 0),
+                    }],
+                    "origin": {
+                        "address": claim.get("pickup_address") or "",
+                    },
+                    "destination": {
+                        "address": claim.get("dropoff_address") or "",
+                    },
+                },
+            }
+            try:
+                resp = httpx.post(
+                    ch_url,
+                    json=body_837p,
+                    headers={"Authorization": f"Bearer {ch_api_key}",
+                             "Content-Type": "application/json"},
+                    timeout=15,
+                )
+                resp.raise_for_status()
+                resp_json = resp.json()
+                ref = resp_json.get("claimId") or resp_json.get("referenceNumber") or ref
+                sb.table("nemt_billing_claims").update({
+                    "status":         "submitted",
+                    "clearinghouse":  clearinghouse,
+                    "submission_ref": ref,
+                    "submitted_at":   now.isoformat(),
+                    "updated_at":     now.isoformat(),
+                }).eq("id", claim_id).execute()
+                results.append({"claim_id": claim_id, "status": "submitted", "ref": ref})
+                submitted += 1
+            except Exception as e:
+                sb.table("nemt_billing_claims").update({
+                    "rejection_reason": str(e)[:300],
+                    "updated_at":       now.isoformat(),
+                }).eq("id", claim_id).execute()
+                results.append({"claim_id": claim_id, "status": "error", "reason": str(e)[:200]})
+                failed += 1
+        else:
+            # ── Manual / no clearinghouse configured ──────────────────────────
+            # Mark submitted with a 3LL reference so staff can enter on payer portal.
+            sb.table("nemt_billing_claims").update({
+                "status":         "submitted",
+                "clearinghouse":  "manual",
+                "submission_ref": ref,
+                "submitted_at":   now.isoformat(),
+                "updated_at":     now.isoformat(),
+            }).eq("id", claim_id).execute()
+            results.append({"claim_id": claim_id, "status": "submitted", "ref": ref, "mode": "manual"})
+            submitted += 1
+
+    return {
+        "ok":          True,
+        "submitted":   submitted,
+        "failed":      failed,
+        "clearinghouse": clearinghouse,
+        "processed_at": now.isoformat(),
+        "detail":      results,
+    }
+
+
+@router.patch("/billing/nemt/claims/{claim_id}")
+def update_nemt_claim(claim_id: str, payload: dict) -> dict:
+    """Update a billing claim — record payer response (accepted/rejected/paid)."""
+    sb = get_supabase()
+    res = sb.table("nemt_billing_claims").select("id").eq("id", claim_id).execute()
+    if not res.data:
+        raise HTTPException(status_code=404, detail="claim not found")
+
+    from datetime import datetime, timezone
+    now_iso = datetime.now(timezone.utc).isoformat()
+    update = {**payload, "updated_at": now_iso}
+
+    # Auto-stamp transition timestamps
+    status = payload.get("status")
+    if status == "accepted" and "accepted_at" not in update:
+        update["accepted_at"] = now_iso
+    elif status == "rejected" and "rejected_at" not in update:
+        update["rejected_at"] = now_iso
+    elif status == "paid" and "paid_at" not in update:
+        update["paid_at"] = now_iso
+
+    sb.table("nemt_billing_claims").update(update).eq("id", claim_id).execute()
+    return {"ok": True, "claim_id": claim_id, "status": status}
+
+
 @router.post("/payouts/weekly-batch")
 def run_weekly_payout_batch(payload: dict | None = None) -> dict:
     """Process all queued driver earnings and send one Stripe Transfer per driver.
