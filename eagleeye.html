@@ -4111,10 +4111,13 @@ const API = {
 
 // apiFetch — bearer-authenticated fetch to the backend API.
 async function apiFetch(path, method='GET', body){
+  const isFormData = body instanceof FormData;
+  const headers = {'Authorization':'Bearer '+API_TOKEN};
+  if(!isFormData) headers['Content-Type']='application/json';
   const r = await fetch(API_BASE+path, {
     method,
-    headers:{'Content-Type':'application/json','Authorization':'Bearer '+API_TOKEN},
-    body: body ? JSON.stringify(body) : undefined
+    headers,
+    body: body ? (isFormData ? body : JSON.stringify(body)) : undefined
   });
   if(!r.ok){
     const text = await r.text().catch(()=>'');
@@ -8385,9 +8388,12 @@ async function loadTriggerStatus() {
     </div>
   </div>
   <textarea id="mail-compose-body" placeholder="Write your message…" style="flex:1;min-height:150px;border:none;outline:none;padding:12px 16px;font-size:13px;resize:none;font-family:inherit;background:transparent"></textarea>
+  <div id="mail-attach-list" style="display:none;padding:6px 16px 0;flex-wrap:wrap;gap:6px"></div>
   <div id="mail-compose-warn" style="display:none;margin:0 16px 6px;padding:8px 11px;border-radius:6px;font-size:11.5px;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.4);color:#b45309"></div>
   <div style="padding:10px 16px;border-top:1px solid var(--border);display:flex;gap:8px;align-items:center;flex-wrap:wrap">
     <button onclick="mailSend()" id="mail-send-btn" class="btn-navy" style="font-size:13px;padding:7px 18px">Send</button>
+    <button onclick="document.getElementById('mail-attach-input').click()" title="Attach files" style="padding:6px 12px;background:none;border:1px solid var(--border);border-radius:5px;cursor:pointer;font-size:12px;color:var(--text)">📎 Attach</button>
+    <input type="file" id="mail-attach-input" multiple style="display:none" onchange="mailAttachSelected(this)">
     <button onclick="mailMailtoFallback()" id="mail-mailto-btn" style="display:none;padding:6px 14px;background:none;border:1px solid rgba(245,158,11,.6);border-radius:5px;cursor:pointer;font-size:12px;color:#b45309">✉ Open in mail app</button>
     <span id="mail-send-status" style="font-size:12px;color:var(--muted)"></span>
     <button onclick="mailCloseCompose()" style="margin-left:auto;padding:6px 12px;background:none;border:1px solid var(--border);border-radius:5px;cursor:pointer;font-size:12px;color:var(--muted)">Discard</button>
@@ -8402,6 +8408,29 @@ let _mailCurrent='all';
 let _mailEmails=[];
 let _mailSelectedId=null;
 let _mailboxStatuses=[];
+let _mailAttachments=[];
+
+function mailAttachSelected(input){
+  for(const f of input.files)_mailAttachments.push(f);
+  input.value='';
+  mailRenderAttachments();
+}
+function mailRemoveAttachment(idx){
+  _mailAttachments.splice(idx,1);
+  mailRenderAttachments();
+}
+function mailRenderAttachments(){
+  const el=document.getElementById('mail-attach-list');
+  if(!el)return;
+  if(!_mailAttachments.length){el.style.display='none';el.innerHTML='';return;}
+  el.style.display='flex';
+  el.innerHTML=_mailAttachments.map((f,i)=>
+    `<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 8px;background:var(--surface);border:1px solid var(--border);border-radius:4px;font-size:11px;max-width:200px">
+      <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(f.name)}">📎 ${esc(f.name)}</span>
+      <button onclick="mailRemoveAttachment(${i})" style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:14px;padding:0;line-height:1;flex-shrink:0" title="Remove">×</button>
+    </span>`
+  ).join('');
+}
 let _mailConfig=null;
 const _MB_COLORS={loads:'#2563eb',sales:'#059669',info:'#7c3aed',mark:'#dc2626',cece:'#d97706'};
 const _MB_ICONS={loads:'📥',sales:'📊',info:'ℹ️',mark:'👤',cece:'👤'};
@@ -8617,6 +8646,7 @@ function mailCompose(){
   document.getElementById('mail-compose-title').textContent='New Message';
   document.getElementById('mail-send-status').textContent='';
   document.getElementById('mail-send-btn').textContent='Send';
+  _mailAttachments=[];mailRenderAttachments();
   const sel=document.getElementById('mail-compose-from');
   if(_mailCurrent!=='all')sel.value=_mailCurrent;
   mailUpdateComposeWarn();
@@ -8637,7 +8667,7 @@ function mailForward(id,subject){
   document.getElementById('mail-compose-subject').value=subject.startsWith('Fwd:')?subject:'Fwd: '+subject;
   document.getElementById('mail-compose-title').textContent='Forward';
 }
-function mailCloseCompose(){document.getElementById('mail-compose-modal').style.display='none';}
+function mailCloseCompose(){_mailAttachments=[];mailRenderAttachments();document.getElementById('mail-compose-modal').style.display='none';}
 
 async function mailSend(){
   const btn=document.getElementById('mail-send-btn');
@@ -8652,10 +8682,16 @@ async function mailSend(){
   if(!subject){statusEl.style.color='var(--red)';statusEl.textContent='Subject is required';return;}
   btn.disabled=true;btn.textContent='Sending…';statusEl.textContent='';
   try{
-    const payload={from_mailbox:from,to:[to],subject,body_html:'',body_text:body};
-    if(cc)payload.cc=[cc];
-    if(replyId)payload.in_reply_to_db_id=replyId;
-    const r=await apiFetch('/api/mailboxes/compose','POST',payload);
+    const fd=new FormData();
+    fd.append('from_mailbox',from);
+    fd.append('to',to);
+    fd.append('subject',subject);
+    fd.append('body_text',body);
+    fd.append('body_html','');
+    if(cc)fd.append('cc',cc);
+    if(replyId)fd.append('in_reply_to_db_id',replyId);
+    for(const f of _mailAttachments)fd.append('attachments',f,f.name);
+    const r=await apiFetch('/api/mailboxes/compose','POST',fd);
     let d={};try{d=await r.json();}catch(_){}
     if(r.ok&&d.sent){
       statusEl.style.color='var(--green)';statusEl.textContent='✅ Sent';
@@ -8663,7 +8699,6 @@ async function mailSend(){
     }else{
       const msg=d.detail||d.error||d.message||(r.ok?'Send failed':`Server error ${r.status}`);
       statusEl.style.color='var(--red)';statusEl.textContent=msg;
-      // Show mailto fallback if it looks like a credentials/config problem
       if(/password|auth|credential|not configured/i.test(msg)){
         document.getElementById('mail-mailto-btn').style.display='';
       }
@@ -17053,7 +17088,7 @@ async function deactivateDriver(driverId) {
 .iebc-expert-icon{font-size:22px;margin-right:10px;flex-shrink:0;}
 .iebc-run-btn{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);color:#fff;font-size:12px;font-weight:700;padding:8px 16px;border-radius:8px;cursor:pointer;transition:background .15s;white-space:nowrap;}
 .iebc-run-btn:hover{background:rgba(255,255,255,.25);}
-.iebc-last-run{font-size:10px;color:rgba(255,255,255,.4);margin-top:4px;}
+.iebc-last-run{font-size:10px;color:rgba(255,255,255,.6);margin-top:4px;}
 
 .iebc-intel-row{display:grid;grid-template-columns:100px 1fr 1fr;gap:0;margin:0 32px 0;border-bottom:1px solid var(--border);}
 @media(max-width:768px){.iebc-intel-row{grid-template-columns:1fr;margin:0 16px 0;}}
@@ -17150,7 +17185,7 @@ async function deactivateDriver(driverId) {
     <!-- Driver Roster Strip -->
     <div class="lf-roster-strip">
       <div id="lf-nemt-roster-strip-old" style="display:flex;gap:12px;flex:1;align-items:flex-start;flex-wrap:nowrap;">
-        <div style="color:rgba(255,255,255,.4);font-size:12px">Loading…</div>
+        <div style="color:rgba(255,255,255,.65);font-size:12px">Loading…</div>
       </div>
       <button class="lf-btn" style="flex-shrink:0;align-self:center;background:#10b981;color:#fff;" onclick="lfOpenDriver()">+ Add Driver</button>
     </div>
@@ -17236,7 +17271,7 @@ async function deactivateDriver(driverId) {
     <!-- Driver Roster Strip -->
     <div class="lf-roster-strip">
       <div id="lf-med-roster-strip-old" style="display:flex;gap:12px;flex:1;align-items:flex-start;flex-wrap:nowrap;">
-        <div style="color:rgba(255,255,255,.4);font-size:12px">Loading…</div>
+        <div style="color:rgba(255,255,255,.65);font-size:12px">Loading…</div>
       </div>
       <button class="lf-btn" style="flex-shrink:0;align-self:center;background:#ef4444;color:#fff;" onclick="lfOpenDriver()">+ Add Driver</button>
     </div>
@@ -17311,7 +17346,7 @@ async function deactivateDriver(driverId) {
     <!-- Driver Roster Strip -->
     <div class="lf-roster-strip">
       <div id="lf-exec-roster-strip-old" style="display:flex;gap:12px;flex:1;align-items:flex-start;flex-wrap:nowrap;">
-        <div style="color:rgba(255,255,255,.4);font-size:12px">Loading…</div>
+        <div style="color:rgba(255,255,255,.65);font-size:12px">Loading…</div>
       </div>
       <button class="lf-btn" style="flex-shrink:0;align-self:center;background:#eab308;color:#000;" onclick="lfOpenDriver()">+ Add Driver</button>
     </div>
@@ -17398,7 +17433,7 @@ async function deactivateDriver(driverId) {
     <!-- Driver Roster Strip -->
     <div class="lf-roster-strip">
       <div id="lf-cour-roster-strip-old" style="display:flex;gap:12px;flex:1;align-items:flex-start;flex-wrap:nowrap;">
-        <div style="color:rgba(255,255,255,.4);font-size:12px">Loading…</div>
+        <div style="color:rgba(255,255,255,.65);font-size:12px">Loading…</div>
       </div>
       <button class="lf-btn" style="flex-shrink:0;align-self:center;background:#f59e0b;color:#fff;" onclick="lfOpenDriver()">+ Add Driver</button>
     </div>
@@ -17854,12 +17889,12 @@ function loadLightFleet(id){ lfRefresh(id); }
 async function lfLoadRoster(service, stripId){
   const strip = document.getElementById(stripId);
   if(!strip) return;
-  strip.innerHTML = '<div style="color:rgba(255,255,255,.4);font-size:12px;padding:8px 0">Loading drivers…</div>';
+  strip.innerHTML = '<div style="color:rgba(255,255,255,.65);font-size:12px;padding:8px 0">Loading drivers…</div>';
   try {
     const d = await lfFetch('/api/light-fleet/drivers?limit=200&service=' + encodeURIComponent(service));
     const drivers = d.items || [];
     if(!drivers.length){
-      strip.innerHTML = `<div style="grid-column:1/-1;padding:20px;text-align:center;color:rgba(255,255,255,.35);font-size:12px;">No ${service} drivers yet — add one above.</div>`;
+      strip.innerHTML = `<div style="grid-column:1/-1;padding:20px;text-align:center;color:rgba(255,255,255,.6);font-size:12px;">No ${service} drivers yet — add one above.</div>`;
       return;
     }
     strip.innerHTML = drivers.map(dr => {
@@ -18412,8 +18447,7 @@ async function lfMapRefresh() {
   if (statusEl) statusEl.textContent = 'Refreshing…';
 
   try {
-    const res  = await apiFetch('/api/light-fleet/live-locations');
-    const data = res.ok ? await res.json() : { items: [] };
+    const data = await lfFetch('/api/light-fleet/live-locations');
     let items  = data.items || [];
 
     if (typeFilter) items = items.filter(i => i.trip_type === typeFilter);

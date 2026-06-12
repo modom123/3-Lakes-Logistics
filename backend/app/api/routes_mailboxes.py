@@ -14,7 +14,7 @@ Endpoints:
 """
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 
 from .deps import require_bearer
 from ..supabase_client import get_supabase
@@ -158,35 +158,51 @@ def delete_email(email_id: str, _: str = Depends(require_bearer)) -> None:
 # ── Compose + Reply ───────────────────────────────────────────────────────────
 
 @router.post("/mailboxes/compose")
-async def compose_email(body: dict, _: str = Depends(require_bearer)) -> dict:
-    """Send a new email from one of the Hostinger mailboxes.
+async def compose_email(
+    from_mailbox: str = Form(...),
+    to: str = Form(...),
+    subject: str = Form(...),
+    body_text: str = Form(default=""),
+    body_html: str = Form(default=""),
+    cc: str = Form(default=""),
+    in_reply_to_db_id: str = Form(default=""),
+    attachments: list[UploadFile] = File(default=[]),
+    _: str = Depends(require_bearer),
+) -> dict:
+    """Send a new email from one of the Hostinger mailboxes (multipart/form-data).
 
-    Body: {from_mailbox, to: [str], subject, body_html?, body_text?, cc?: [str]}
+    Fields: from_mailbox, to, subject, body_text?, body_html?, cc?, in_reply_to_db_id?
+    Files:  attachments[] (optional, any file type)
     """
     from ..email.smtp_sender import send_from_mailbox
 
-    mailbox = body.get("from_mailbox", "").strip()
-    to = body.get("to") or []
-    subject = body.get("subject", "").strip()
-    body_html = body.get("body_html", "")
-    body_text = body.get("body_text", "")
-    cc = body.get("cc") or []
+    mailbox = from_mailbox.strip()
+    to_list = [a.strip() for a in to.split(",") if a.strip()]
+    cc_list = [a.strip() for a in cc.split(",") if a.strip()] if cc else []
 
     if not mailbox:
         raise HTTPException(400, "from_mailbox is required")
-    if not to or not to[0]:
+    if not to_list:
         raise HTTPException(400, "At least one recipient (to) is required")
-    if not subject:
+    if not subject.strip():
         raise HTTPException(400, "subject is required")
+
+    attach_data: list[tuple[str, bytes, str]] = []
+    for upload in (attachments or []):
+        if upload.filename:
+            content = await upload.read()
+            attach_data.append((upload.filename, content, upload.content_type or "application/octet-stream"))
 
     try:
         result = send_from_mailbox(
             mailbox=mailbox,
-            to=to if isinstance(to, list) else [to],
-            subject=subject,
+            to=to_list,
+            subject=subject.strip(),
             body_html=body_html,
             body_text=body_text,
-            cc=cc if isinstance(cc, list) else ([cc] if cc else []),
+            cc=cc_list,
+            in_reply_to_db_id=in_reply_to_db_id or None,
+            attachments=attach_data or None,
         )
         return {"ok": True, **result}
     except ValueError as exc:

@@ -11,6 +11,7 @@ from __future__ import annotations
 import logging
 import smtplib
 from datetime import datetime, timezone
+from email.mime.application import MIMEApplication
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
@@ -40,6 +41,7 @@ def send_from_mailbox(
     cc: list[str] | None = None,
     reply_to_message_id: str | None = None,
     in_reply_to_db_id: str | None = None,
+    attachments: list[tuple[str, bytes, str]] | None = None,
 ) -> dict:
     """Send an email from one of the Hostinger mailboxes via SMTP SSL (port 465).
 
@@ -54,6 +56,7 @@ def send_from_mailbox(
         cc: optional CC list
         reply_to_message_id: SMTP Message-ID to set In-Reply-To header
         in_reply_to_db_id: Eagle Eye DB id of the email being replied to
+        attachments: list of (filename, bytes, content_type) tuples
     """
     if mailbox not in MAILBOX_ADDRESSES:
         raise ValueError(f"Unknown mailbox '{mailbox}'. Valid: {list(MAILBOX_ADDRESSES)}")
@@ -67,7 +70,29 @@ def send_from_mailbox(
         )
 
     # Build MIME message
-    msg = MIMEMultipart("alternative")
+    if attachments:
+        msg = MIMEMultipart("mixed")
+        alt = MIMEMultipart("alternative")
+        if body_text:
+            alt.attach(MIMEText(body_text, "plain", "utf-8"))
+        if body_html:
+            alt.attach(MIMEText(body_html, "html", "utf-8"))
+        if not body_text and not body_html:
+            alt.attach(MIMEText("(no content)", "plain", "utf-8"))
+        msg.attach(alt)
+        for filename, data, content_type in attachments:
+            part = MIMEApplication(data, Name=filename)
+            part["Content-Disposition"] = f'attachment; filename="{filename}"'
+            msg.attach(part)
+    else:
+        msg = MIMEMultipart("alternative")
+        if body_text:
+            msg.attach(MIMEText(body_text, "plain", "utf-8"))
+        if body_html:
+            msg.attach(MIMEText(body_html, "html", "utf-8"))
+        if not body_text and not body_html:
+            msg.attach(MIMEText("(no content)", "plain", "utf-8"))
+
     msg["From"] = f"3 Lakes Logistics <{from_address}>"
     msg["To"] = ", ".join(to)
     if cc:
@@ -76,13 +101,6 @@ def send_from_mailbox(
     if reply_to_message_id:
         msg["In-Reply-To"] = reply_to_message_id
         msg["References"] = reply_to_message_id
-
-    if body_text:
-        msg.attach(MIMEText(body_text, "plain", "utf-8"))
-    if body_html:
-        msg.attach(MIMEText(body_html, "html", "utf-8"))
-    if not body_text and not body_html:
-        msg.attach(MIMEText("(no content)", "plain", "utf-8"))
 
     # Send via Hostinger SMTP (SSL on port 465 — use SMTP_SSL, not STARTTLS)
     try:
