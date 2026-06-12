@@ -166,6 +166,10 @@ class Settings(BaseSettings):
     checkr_api_key: str = ""
     checkr_webhook_secret: str = ""
 
+    # AviationStack — real-time flight status for executive airport pickups
+    # Free tier: 500 req/month — https://aviationstack.com
+    aviationstack_api_key: str = ""
+
     # NEMT Billing — clearinghouse for 837P Medicaid claim submission
     # Supported: 'change_healthcare' | 'trizetto' | 'manual' (default)
     nemt_clearinghouse: str = "manual"

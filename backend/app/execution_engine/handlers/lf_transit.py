@@ -148,19 +148,170 @@ def h247_mobility_assist(carrier_id, contract_id, payload) -> dict:
 
 # ── Step 248: lf_transit.flight_monitor ──────────────────────────────────────
 
+def _fetch_flight_status(flight_number: str) -> dict | None:
+    """Call AviationStack to get real-time flight status.
+
+    Returns a normalised dict with keys:
+      status, departure_scheduled, departure_actual, departure_delay_min,
+      arrival_scheduled, arrival_estimated, arrival_actual, arrival_delay_min,
+      terminal, gate, aircraft_type
+    Returns None if the API key is missing or the call fails.
+    """
+    try:
+        from ...settings import get_settings
+        import httpx
+        s = get_settings()
+        if not s.aviationstack_api_key:
+            return None
+
+        # Normalise: "AA 123" → "AA123", "aa123" → "AA123"
+        iata = flight_number.replace(" ", "").upper()
+        resp = httpx.get(
+            "http://api.aviationstack.com/v1/flights",
+            params={"access_key": s.aviationstack_api_key, "flight_iata": iata},
+            timeout=8,
+        )
+        resp.raise_for_status()
+        data = resp.json()
+        flights = data.get("data") or []
+        if not flights:
+            return {"status": "unknown", "flight_number": iata, "note": "no data from API"}
+
+        f = flights[0]   # most recent result for this flight number
+        dep = f.get("departure") or {}
+        arr = f.get("arrival") or {}
+        return {
+            "status":               f.get("flight_status", "unknown"),
+            "flight_number":        iata,
+            "airline":              (f.get("airline") or {}).get("name", ""),
+            "aircraft_type":        (f.get("aircraft") or {}).get("iata", ""),
+            # Departure
+            "departure_airport":    dep.get("iata", ""),
+            "departure_scheduled":  dep.get("scheduled"),
+            "departure_actual":     dep.get("actual"),
+            "departure_delay_min":  dep.get("delay"),
+            # Arrival
+            "arrival_airport":      arr.get("iata", ""),
+            "arrival_scheduled":    arr.get("scheduled"),
+            "arrival_estimated":    arr.get("estimated"),
+            "arrival_actual":       arr.get("actual"),
+            "arrival_delay_min":    arr.get("delay"),
+            "terminal":             arr.get("terminal"),
+            "gate":                 arr.get("gate"),
+            "baggage_claim":        arr.get("baggage"),
+        }
+    except Exception as exc:  # noqa: BLE001
+        import logging
+        logging.getLogger("3ll.execution.lf_transit").warning("AviationStack call failed: %s", exc)
+        return None
+
+
+def _notify_flight_delay(driver_id: str, passenger_phone: str, flight_info: dict) -> None:
+    """SMS the driver and passenger when a significant delay is detected."""
+    delay_min = flight_info.get("arrival_delay_min") or 0
+    if delay_min < 30:
+        return  # only alert on 30+ min delays
+
+    try:
+        from ...settings import get_settings
+        s = get_settings()
+        if not (s.twilio_account_sid and s.twilio_auth_token and s.twilio_from_number):
+            return
+        from twilio.rest import Client
+        client = Client(s.twilio_account_sid, s.twilio_auth_token)
+
+        flight = flight_info.get("flight_number", "")
+        eta    = flight_info.get("arrival_estimated", "")[:16] if flight_info.get("arrival_estimated") else "delayed"
+        gate   = flight_info.get("gate") or "TBD"
+
+        driver_msg = (
+            f"✈️ Flight update: {flight} is delayed {delay_min} min. "
+            f"New arrival ~{eta} UTC, Gate {gate}. Adjust your pickup time."
+        )
+        pax_msg = (
+            f"✈️ 3 Lakes update: Flight {flight} is delayed ~{delay_min} min. "
+            f"Your driver has been notified and will adjust. Gate {gate}."
+        )
+
+        # Notify driver
+        if driver_id:
+            sb = _db()
+            if sb:
+                try:
+                    r = sb.table("light_vehicle_drivers").select("phone_e164,phone").eq("id", str(driver_id)).maybe_single().execute()
+                    drv_phone = (r.data or {}).get("phone_e164") or (r.data or {}).get("phone")
+                    if drv_phone:
+                        client.messages.create(to=drv_phone, from_=s.twilio_from_number, body=driver_msg)
+                except Exception:  # noqa: BLE001
+                    pass
+
+        # Notify passenger
+        if passenger_phone:
+            try:
+                client.messages.create(to=passenger_phone, from_=s.twilio_from_number, body=pax_msg)
+            except Exception:  # noqa: BLE001
+                pass
+
+    except Exception:  # noqa: BLE001
+        pass
+
+
 def h248_flight_monitor(carrier_id, contract_id, payload) -> dict:
-    trip_id = payload.get("trip_id")
-    trip_type = payload.get("trip_type", "")
+    """Check real-time flight status via AviationStack for executive airport pickups.
+
+    If a 30+ minute delay is detected, sends SMS to both driver and passenger.
+    Updates the trip's notes with current gate/terminal info.
+    """
+    trip_id       = payload.get("trip_id")
+    trip_type     = payload.get("trip_type", "")
+    driver_id     = payload.get("driver_id") or (str(carrier_id) if carrier_id else None)
+
+    # Resolve flight_number from payload or trip record
     flight_number = payload.get("flight_number")
-    if trip_type == "executive" and flight_number:
+    passenger_phone = payload.get("passenger_phone", "")
+    if trip_id and not flight_number:
+        trip = _trip(trip_id)
+        flight_number   = trip.get("flight_number") or flight_number
+        passenger_phone = trip.get("passenger_phone") or passenger_phone
+        driver_id       = str(trip.get("driver_id")) if trip.get("driver_id") else driver_id
+
+    if trip_type != "executive" or not flight_number:
+        return {"skipped": True, "trip_id": trip_id, "reason": "not_executive_or_no_flight"}
+
+    flight_info = _fetch_flight_status(flight_number)
+
+    if not flight_info:
         return {
             "flight_monitored": True,
-            "trip_id": trip_id,
-            "flight_number": flight_number,
-            "status": "on_time",
-            "gate": "TBD",
+            "trip_id":          trip_id,
+            "flight_number":    flight_number,
+            "status":           "unknown",
+            "note":             "AviationStack not configured — add AVIATIONSTACK_API_KEY to env",
+            "gate":             "TBD",
         }
-    return {"skipped": True, "trip_id": trip_id, "reason": "not_executive_or_no_flight"}
+
+    # Send delay alerts if warranted
+    _notify_flight_delay(driver_id, passenger_phone, flight_info)
+
+    # Persist gate/terminal to trip notes
+    sb = _db()
+    if sb and trip_id:
+        try:
+            gate_info = f"Gate {flight_info.get('gate') or 'TBD'} | Terminal {flight_info.get('terminal') or 'TBD'}"
+            if flight_info.get("arrival_delay_min", 0) >= 30:
+                gate_info += f" | DELAYED {flight_info['arrival_delay_min']} min"
+            sb.table("light_vehicle_trips").update({
+                "dispatcher_notes": gate_info,
+            }).eq("id", str(trip_id)).execute()
+        except Exception:  # noqa: BLE001
+            pass
+
+    return {
+        "flight_monitored":  True,
+        "trip_id":           trip_id,
+        **flight_info,
+        "delay_alert_sent":  (flight_info.get("arrival_delay_min") or 0) >= 30,
+    }
 
 
 # ── Step 249: lf_transit.detention_check ─────────────────────────────────────
