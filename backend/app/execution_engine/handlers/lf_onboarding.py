@@ -98,50 +98,201 @@ def h202_validate_license(carrier_id, contract_id, payload) -> dict:
 # ── Step 203: run.mvr ─────────────────────────────────────────────────────────
 
 def h203_run_mvr(carrier_id, contract_id, payload) -> dict:
-    try:
-        driver_id = payload.get("driver_id") or carrier_id
-        mvr_flags = payload.get("mvr_flags") or []
-        mvr_status = "flagged" if mvr_flags else "clear"
-        checked_at = _NOW()
-        sb = _db()
+    """Order MVR + criminal background via Checkr.
+
+    Uses 'basic' package (MVR + criminal) for NEMT-eligible vehicles so a single
+    report satisfies both step 203 and step 204.  Non-NEMT vehicles get
+    'mvr_standard' (MVR only); step 204 will order the criminal portion separately.
+
+    Flow A — direct (preferred): we have DOB → create candidate → order report.
+    Flow B — invitation: no DOB → Checkr emails the driver a hosted consent link.
+    """
+    driver_id = payload.get("driver_id") or carrier_id
+    checked_at = _NOW()
+    d = _driver(driver_id)
+    sb = _db()
+
+    # Determine package based on vehicle type
+    vehicle_type = (d.get("vehicle_type") or "").lower()
+    is_nemt_vehicle = vehicle_type in ("suv", "minivan", "wheelchair_van")
+    package = "basic" if is_nemt_vehicle else "mvr_standard"
+
+    def _persist(update: dict) -> None:
         if sb and driver_id:
             try:
-                sb.table("light_vehicle_drivers").update({
-                    "mvr_status": mvr_status,
-                    "mvr_checked_at": checked_at,
-                }).eq("id", str(driver_id)).execute()
+                sb.table("light_vehicle_drivers").update(update).eq("id", str(driver_id)).execute()
             except Exception:  # noqa: BLE001
                 pass
-        return {
-            "mvr_status": mvr_status,
-            "mvr_flags": mvr_flags,
-            "checked_at": checked_at,
-        }
+
+    try:
+        from ...agents import checkr_client as _checkr
+
+        name_raw  = (d.get("name") or "").strip()
+        parts     = name_raw.split(" ", 1)
+        first     = parts[0] if parts else ""
+        last      = parts[1] if len(parts) > 1 else ""
+        email     = d.get("email") or payload.get("email", "")
+        phone     = d.get("phone") or d.get("phone_e164") or ""
+        dob       = d.get("dob") or payload.get("dob")
+        lic_num   = d.get("license_number") or payload.get("license_number", "")
+        lic_state = d.get("license_state")  or payload.get("license_state", "")
+
+        # ── Flow A: direct candidate creation ────────────────────────────────
+        if first and email and dob and lic_num and lic_state:
+            cand = _checkr.create_candidate(
+                first_name=first,
+                last_name=last,
+                email=email,
+                phone=phone,
+                dob=str(dob),
+                license_number=lic_num,
+                license_state=lic_state,
+            )
+            if cand.get("created"):
+                candidate_id = cand["candidate_id"]
+                report = _checkr.create_report(candidate_id, package=package)
+                report_id = report.get("report_id") if report.get("created") else None
+                _persist({
+                    "checkr_candidate_id": candidate_id,
+                    "checkr_report_id":    report_id,
+                    "checkr_package":      package,
+                    "mvr_status":          "pending",
+                    "mvr_checked_at":      checked_at,
+                    # NEMT basic package covers criminal too — pre-mark pending
+                    **({"background_check_status": "pending",
+                        "background_checked_at": checked_at} if is_nemt_vehicle else {}),
+                })
+                return {
+                    "mvr_status":    "pending",
+                    "candidate_id":  candidate_id,
+                    "report_id":     report_id,
+                    "package":       package,
+                    "method":        "direct",
+                    "checked_at":    checked_at,
+                }
+            # Candidate creation failed — fall through to invitation
+            log.warning("Checkr create_candidate failed: %s", cand.get("error"))
+
+        # ── Flow B: invitation (driver fills own PII via Checkr-hosted link) ─
+        if email:
+            inv = _checkr.create_invitation(email=email, package=package, name=name_raw or None)
+            if inv.get("created"):
+                _persist({
+                    "checkr_invitation_id": inv["invitation"].get("id"),
+                    "checkr_package":       package,
+                    "mvr_status":           "pending",
+                    "mvr_checked_at":       checked_at,
+                })
+                return {
+                    "mvr_status":     "pending",
+                    "invitation_url": inv.get("invitation_url"),
+                    "package":        package,
+                    "method":         "invitation",
+                    "checked_at":     checked_at,
+                }
+            log.warning("Checkr create_invitation failed: %s", inv.get("error"))
+
+        return {"mvr_status": "error", "reason": "missing_required_fields_for_checkr",
+                "has_email": bool(email), "has_dob": bool(dob), "has_license": bool(lic_num)}
+
+    except RuntimeError as e:
+        # CHECKR_API_KEY not set — log warning, mark pending so onboarding continues
+        log.warning("Checkr not configured (%s) — MVR check deferred", e)
+        _persist({"mvr_status": "pending", "mvr_checked_at": checked_at})
+        return {"mvr_status": "pending", "reason": "checkr_not_configured"}
     except Exception as e:  # noqa: BLE001
-        return {"mvr_status": "error", "error": str(e)}
+        log.exception("h203_run_mvr unexpected error")
+        return {"mvr_status": "error", "error": str(e)[:300]}
 
 
 # ── Step 204: run.background ──────────────────────────────────────────────────
 
 def h204_run_background(carrier_id, contract_id, payload) -> dict:
-    try:
-        driver_id = payload.get("driver_id") or carrier_id
-        checked_at = _NOW()
-        sb = _db()
+    """Order criminal background check via Checkr.
+
+    NEMT vehicles: the 'basic' package ordered in step 203 covers criminal too —
+    just confirm pending status is already set and return.
+
+    Non-NEMT vehicles: step 203 only ran 'mvr_standard'.  Order a separate
+    'basic' report using the candidate already created in step 203.  If no
+    candidate exists yet (e.g. invitation flow still pending), send a fresh
+    'basic' invitation.
+    """
+    driver_id  = payload.get("driver_id") or carrier_id
+    checked_at = _NOW()
+    d  = _driver(driver_id)
+    sb = _db()
+
+    vehicle_type   = (d.get("vehicle_type") or "").lower()
+    is_nemt_vehicle = vehicle_type in ("suv", "minivan", "wheelchair_van")
+    candidate_id   = d.get("checkr_candidate_id") or payload.get("checkr_candidate_id")
+
+    def _persist(update: dict) -> None:
         if sb and driver_id:
             try:
-                sb.table("light_vehicle_drivers").update({
-                    "background_check_status": "clear",
-                    "background_checked_at": checked_at,
-                }).eq("id", str(driver_id)).execute()
+                sb.table("light_vehicle_drivers").update(update).eq("id", str(driver_id)).execute()
             except Exception:  # noqa: BLE001
                 pass
-        return {
-            "background_check_status": "clear",
-            "checked_at": checked_at,
-        }
+
+    try:
+        from ...agents import checkr_client as _checkr
+
+        # NEMT: basic package (MVR+criminal) was already ordered in step 203 ──
+        if is_nemt_vehicle:
+            if d.get("background_check_status") == "pending":
+                return {"background_check_status": "pending",
+                        "note": "covered_by_basic_package_from_mvr_step"}
+            # Shouldn't happen, but ensure status is set
+            _persist({"background_check_status": "pending", "background_checked_at": checked_at})
+            return {"background_check_status": "pending",
+                    "note": "basic_package_covers_criminal"}
+
+        # Non-NEMT: order criminal-only 'basic' report on existing candidate ──
+        if candidate_id:
+            report = _checkr.create_report(candidate_id, package="basic")
+            if report.get("created"):
+                bg_report_id = report["report_id"]
+                _persist({
+                    "checkr_bg_report_id":    bg_report_id,
+                    "background_check_status": "pending",
+                    "background_checked_at":   checked_at,
+                })
+                return {
+                    "background_check_status": "pending",
+                    "bg_report_id":            bg_report_id,
+                    "candidate_id":            candidate_id,
+                    "method":                  "direct_on_existing_candidate",
+                }
+            log.warning("Checkr bg report creation failed: %s", report.get("error"))
+
+        # No candidate yet (invitation flow) — send a 'basic' invitation ──────
+        email = d.get("email") or payload.get("email", "")
+        if email:
+            inv = _checkr.create_invitation(
+                email=email, package="basic", name=d.get("name") or None
+            )
+            if inv.get("created"):
+                _persist({
+                    "checkr_invitation_id":    inv["invitation"].get("id"),
+                    "background_check_status": "pending",
+                    "background_checked_at":   checked_at,
+                })
+                return {
+                    "background_check_status": "pending",
+                    "invitation_url":          inv.get("invitation_url"),
+                    "method":                  "invitation",
+                }
+
+        return {"background_check_status": "error",
+                "reason": "no_candidate_no_email"}
+
+    except RuntimeError as e:
+        log.warning("Checkr not configured (%s) — background check deferred", e)
+        _persist({"background_check_status": "pending", "background_checked_at": checked_at})
+        return {"background_check_status": "pending", "reason": "checkr_not_configured"}
     except Exception as e:  # noqa: BLE001
-        return {"background_check_status": "error", "error": str(e)}
+        log.exception("h204_run_background unexpected error")
+        return {"background_check_status": "error", "error": str(e)[:300]}
 
 
 # ── Step 205: verify.vehicle_insurance ───────────────────────────────────────

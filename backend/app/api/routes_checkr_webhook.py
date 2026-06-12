@@ -89,26 +89,29 @@ async def checkr_webhook(
 
     sb = get_supabase()
 
-    # Find the driver record
+    # Find the driver record — try candidate_id first (most reliable)
     driver = _find_driver_by_candidate(sb, candidate_id)
 
-    # If candidate not linked yet (invitation flow), try linking via report
-    if not driver and candidate_id:
-        # Store candidate_id on driver matched by report_id if already set
+    # Fallback: match by MVR report_id
+    if not driver and report_id:
         try:
-            r = (
-                sb.table("light_vehicle_drivers")
-                .select("*")
-                .eq("checkr_report_id", report_id)
-                .maybe_single()
-                .execute()
-            )
+            r = (sb.table("light_vehicle_drivers").select("*")
+                 .eq("checkr_report_id", report_id).maybe_single().execute())
+            driver = r.data
+        except Exception:  # noqa: BLE001
+            pass
+
+    # Fallback: match by criminal bg_report_id (non-NEMT flow)
+    if not driver and report_id:
+        try:
+            r = (sb.table("light_vehicle_drivers").select("*")
+                 .eq("checkr_bg_report_id", report_id).maybe_single().execute())
             driver = r.data
         except Exception:  # noqa: BLE001
             pass
 
     if not driver:
-        log.warning("Checkr webhook: no driver found for candidate_id=%s report_id=%s", candidate_id, report_id)
+        log.warning("Checkr webhook: no driver for candidate_id=%s report_id=%s", candidate_id, report_id)
         return {"ok": True, "action": "no_matching_driver"}
 
     driver_id = str(driver["id"])
@@ -118,30 +121,50 @@ async def checkr_webhook(
         try:
             sb.table("light_vehicle_drivers").update({
                 "checkr_candidate_id": candidate_id,
-                "checkr_report_id": report_id,
             }).eq("id", driver_id).execute()
         except Exception:  # noqa: BLE001
             pass
 
+    # Determine which report type fired based on which report_id column matched
+    is_bg_report = (driver.get("checkr_bg_report_id") == report_id)
+    is_mvr_report = (driver.get("checkr_report_id") == report_id)
+    report_label = "background" if is_bg_report else "mvr_or_combined"
+
+    # Persist the resolved status back to the correct column
+    now_iso = report.get("completed_at") or ""
+    _status_col  = "background_check_status" if is_bg_report else "mvr_status"
+    _checked_col = "background_checked_at"   if is_bg_report else "mvr_checked_at"
+
     # ── Route on event type ───────────────────────────────────────────────────
-    if event_type in ("report.completed", "report.updated") or status in _APPROVE_STATUSES | _DENY_STATUSES:
+    if event_type in ("report.completed", "report.updated", "report.suspended") or \
+            status in _APPROVE_STATUSES | _DENY_STATUSES:
         from ..agents import maya
 
         effective_status = adjudication if adjudication else status
 
+        # Always write the resolved status back to the driver row
+        resolved = "clear" if effective_status in _APPROVE_STATUSES else "flagged"
+        try:
+            update: dict = {
+                _status_col:  resolved,
+                _checked_col: now_iso or None,
+            }
+            # combined basic report (NEMT) — update both columns
+            if is_mvr_report and driver.get("checkr_package") == "basic":
+                update["background_check_status"] = resolved
+                update["background_checked_at"]   = now_iso or None
+            sb.table("light_vehicle_drivers").update(update).eq("id", driver_id).execute()
+        except Exception:  # noqa: BLE001
+            pass
+
         if effective_status in _APPROVE_STATUSES:
             result = maya.approve_driver(driver_id, report_id)
-            log.info("Driver approved via Checkr MVR: driver_id=%s", driver_id)
-            return {"ok": True, "action": "driver_approved", **result}
+            log.info("Driver approved via Checkr %s: driver_id=%s", report_label, driver_id)
+            return {"ok": True, "action": "driver_approved", "report_type": report_label, **result}
 
         if effective_status in _DENY_STATUSES:
             result = maya.deny_driver(driver_id, f"checkr_{effective_status}", report_id)
-            log.info("Driver denied via Checkr MVR: driver_id=%s status=%s", driver_id, effective_status)
-            return {"ok": True, "action": "driver_denied", **result}
-
-    if event_type == "report.suspended":
-        from ..agents import maya
-        result = maya.deny_driver(driver_id, "checkr_suspended", report_id)
-        return {"ok": True, "action": "driver_denied_suspended", **result}
+            log.info("Driver denied via Checkr %s: driver_id=%s status=%s", report_label, driver_id, effective_status)
+            return {"ok": True, "action": "driver_denied", "report_type": report_label, **result}
 
     return {"ok": True, "action": "no_op", "event": event_type, "status": status}
