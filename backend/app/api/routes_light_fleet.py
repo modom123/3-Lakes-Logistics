@@ -742,6 +742,35 @@ def get_driver_compliance(driver_id: str) -> dict:
     return compliance_autopilot.get_compliance_status(driver_id)
 
 
+@router.get("/compliance/alerts")
+def list_compliance_alerts(resolved: bool | None = None, limit: int = 100) -> dict:
+    """List LF compliance alerts — used by Eagle Eye Compliance tab."""
+    sb = get_supabase()
+    q = sb.table("lf_compliance_alerts").select("*").order("created_at", desc=True).limit(limit)
+    if resolved is not None:
+        q = q.eq("resolved", resolved)
+    items = q.execute().data or []
+    return {"items": items, "total": len(items)}
+
+
+@router.patch("/compliance/alerts/{alert_id}/resolve")
+def resolve_compliance_alert(alert_id: str) -> dict:
+    """Mark a compliance alert as resolved (e.g. driver renewed their license)."""
+    from datetime import datetime, timezone
+    get_supabase().table("lf_compliance_alerts").update({
+        "resolved": True, "resolved_at": datetime.now(timezone.utc).isoformat()
+    }).eq("id", alert_id).execute()
+    return {"ok": True, "alert_id": alert_id}
+
+
+@router.post("/compliance/sweep")
+def trigger_compliance_sweep() -> dict:
+    """Manually trigger the compliance sweep (normally runs daily at 06:15 UTC)."""
+    from ..agents.compliance_autopilot import check_all_active_drivers
+    result = check_all_active_drivers()
+    return {"ok": True, **result}
+
+
 @router.get("/billing/nemt/claims")
 def list_nemt_claims(
     status: str | None = None,

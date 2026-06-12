@@ -328,13 +328,61 @@ def fire_lf_trip_completed(trip_id: str, payload: dict | None = None) -> None:
 
 
 def fire_lf_compliance_sweep() -> None:
-    """Daily sweep of all light fleet driver compliance (license, insurance, MVR)."""
-    _bg(_run_domain_safe, "lf_onboarding", None, None, "lf_compliance_daily")
+    """Daily sweep: check all LF driver docs, auto-suspend expired, trigger annual MVR re-check."""
+    def _run():
+        try:
+            from .agents.compliance_autopilot import check_all_active_drivers  # noqa: PLC0415
+            result = check_all_active_drivers()
+            log.info(
+                "lf_compliance_sweep checked=%s suspended=%s reactivated=%s mvr_renewals=%s alerts_critical=%s",
+                result.get("total_drivers_checked"),
+                result.get("auto_suspended"),
+                result.get("auto_reactivated"),
+                result.get("mvr_renewals"),
+                (result.get("alert_counts") or {}).get("critical", 0),
+            )
+        except Exception as exc:  # noqa: BLE001
+            log.error("fire_lf_compliance_sweep failed: %s", exc)
+    _bg(_run)
 
 
 def fire_lf_nemt_billing_run() -> None:
-    """Weekly batch — queue all completed NEMT trips for Medicaid/Medicare billing."""
-    _bg(_run_domain_safe, "lf_settlement", None, None, "lf_nemt_billing_weekly")
+    """Weekly batch — submit all queued NEMT billing claims to clearinghouse."""
+    def _run():
+        try:
+            import httpx  # noqa: F401 (imported for side-effect check)
+            from .supabase_client import get_supabase  # noqa: PLC0415
+            from .settings import get_settings  # noqa: PLC0415
+            from datetime import datetime, timezone  # noqa: PLC0415
+            import stripe as _stripe  # noqa: PLC0415, F401
+
+            # Delegate to the billing batch endpoint logic directly
+            from .api.routes_light_fleet import submit_nemt_billing_batch  # noqa: PLC0415
+            result = submit_nemt_billing_batch()
+            log.info(
+                "lf_nemt_billing_run submitted=%s failed=%s",
+                result.get("submitted"), result.get("failed"),
+            )
+        except Exception as exc:  # noqa: BLE001
+            log.error("fire_lf_nemt_billing_run failed: %s", exc)
+    _bg(_run)
+
+
+def fire_lf_weekly_payouts() -> None:
+    """Friday batch — aggregate queued driver earnings and send one Stripe Transfer per driver."""
+    def _run():
+        try:
+            from .api.routes_light_fleet import run_weekly_payout_batch  # noqa: PLC0415
+            result = run_weekly_payout_batch()
+            log.info(
+                "lf_weekly_payouts paid=%s skipped=%s total_usd=%s",
+                result.get("drivers_paid"),
+                result.get("drivers_skipped"),
+                result.get("total_transferred_usd"),
+            )
+        except Exception as exc:  # noqa: BLE001
+            log.error("fire_lf_weekly_payouts failed: %s", exc)
+    _bg(_run)
 
 
 def fire_scheduled_tasks() -> None:

@@ -215,10 +215,68 @@ def check_driver(driver_id: str) -> dict[str, Any]:
     }
 
 
+# Annual MVR renewal threshold
+_MVR_RENEWAL_DAYS = 365
+
+# SMS for MVR renewal reminder
+_MVR_RENEWAL_SMS = (
+    "⚠️ 3 Lakes reminder: Your annual MVR re-check is due. "
+    "We'll run it automatically — no action needed. Questions? 661-466-9932"
+)
+
+
+def _write_alert(sb, driver_id: str, driver_name: str, alert_type: str, alert_level: str,
+                 detail: str, days_remaining: int | None, sms_sent: bool) -> None:
+    try:
+        sb.table("lf_compliance_alerts").insert({
+            "driver_id":     driver_id,
+            "driver_name":   driver_name,
+            "alert_type":    alert_type,
+            "alert_level":   alert_level,
+            "detail":        detail,
+            "days_remaining":days_remaining,
+            "sms_sent":      sms_sent,
+        }).execute()
+    except Exception:  # noqa: BLE001
+        pass
+
+
+def _trigger_mvr_renewal(sb, driver: dict) -> bool:
+    """Re-order an MVR check via Checkr if the last check is >365 days old.
+    Returns True if a renewal was triggered."""
+    driver_id   = str(driver["id"])
+    candidate_id = driver.get("checkr_candidate_id")
+    package     = driver.get("checkr_package") or "mvr_standard"
+
+    if not candidate_id:
+        return False  # can't re-order without a Checkr candidate
+
+    try:
+        from . import checkr_client
+        report = checkr_client.create_report(candidate_id, package)
+        report_id = report.get("id")
+        if report_id:
+            col = "checkr_bg_report_id" if package == "basic" else "checkr_report_id"
+            sb.table("light_vehicle_drivers").update({
+                col: report_id,
+                "mvr_status": "pending",
+            }).eq("id", driver_id).execute()
+            return True
+    except Exception:  # noqa: BLE001
+        pass
+    return False
+
+
 def check_all_active_drivers() -> dict[str, Any]:
     """
-    Query all active drivers, call check_driver for each, and send SMS alerts
-    for any driver whose overall_alert_level is warning, critical, or expired.
+    Query all active (and suspended) drivers, call check_driver for each.
+
+    For each driver:
+    - Sends SMS for license/insurance warning, critical, or expired conditions
+    - Auto-suspends drivers whose license OR insurance has expired
+    - Re-activates suspended drivers who have since renewed their docs
+    - Triggers annual MVR re-check when mvr_checked_at > 365 days ago
+    - Writes every alert to lf_compliance_alerts for Eagle Eye visibility
 
     Returns a summary dict with counts and per-driver results.
     """
@@ -227,78 +285,147 @@ def check_all_active_drivers() -> dict[str, Any]:
         return {"error": "db_unavailable"}
 
     try:
+        # Include suspended so we can re-activate on renewal
         rows = (
             sb.table("light_vehicle_drivers")
-            .select("id")
-            .eq("status", "active")
+            .select(
+                "id,name,phone,status,checkr_candidate_id,checkr_package,"
+                "license_expires,vehicle_insurance_expires,mvr_checked_at"
+            )
+            .in_("status", ["active", "suspended"])
             .execute()
         ).data or []
     except Exception as e:  # noqa: BLE001
         log_agent(_NAME, "check_all_error", error=str(e))
         return {"error": str(e)}
 
+    now = datetime.now(timezone.utc)
     results: list[dict] = []
-    sms_sent = 0
+    sms_sent          = 0
+    auto_suspended    = 0
+    auto_reactivated  = 0
+    mvr_renewals      = 0
     alert_counts: dict[str, int] = {"ok": 0, "warning": 0, "critical": 0, "expired": 0}
 
     for row in rows:
-        driver_id = str(row["id"])
-        status = check_driver(driver_id)
+        driver_id   = str(row["id"])
+        driver_name = row.get("name") or driver_id
+        current_status = row.get("status", "active")
 
-        if "error" in status:
-            results.append(status)
+        check = check_driver(driver_id)
+        if "error" in check:
+            results.append(check)
             continue
 
-        overall = status.get("overall_alert_level", "ok")
+        overall = check.get("overall_alert_level", "ok")
         alert_counts[overall] = alert_counts.get(overall, 0) + 1
-        results.append(status)
+        results.append(check)
 
-        # Send SMS if driver needs action
-        if overall in ("warning", "critical", "expired"):
-            phone_raw = status.get("phone") or ""
-            phone = _normalize_phone(phone_raw)
-            items = status.get("items", {})
+        items = check.get("items", {})
+        lic   = items.get("license", {})
+        ins   = items.get("vehicle_insurance", {})
+        phone_raw = row.get("phone") or ""
+        phone = _normalize_phone(phone_raw)
 
-            if phone:
-                lic  = items.get("license", {})
-                ins  = items.get("vehicle_insurance", {})
+        # ── Auto-suspend on expiry ─────────────────────────────────────────
+        lic_expired = lic.get("alert_level") == "expired"
+        ins_expired = ins.get("alert_level") == "expired"
 
-                # License alert
-                if lic.get("alert_level") in ("warning", "critical", "expired"):
-                    days = lic.get("days_remaining")
-                    if days is not None and days >= 0:
-                        msg = _LICENSE_WARNING_SMS.format(N=days)
-                        if _send_sms(phone, msg):
-                            sms_sent += 1
-                    elif days is not None and days < 0:
-                        msg = _LICENSE_WARNING_SMS.format(N=0).replace("expires in 0 days", "has expired")
-                        if _send_sms(phone, msg):
-                            sms_sent += 1
+        if (lic_expired or ins_expired) and current_status == "active":
+            reason = "license_expired" if lic_expired else "insurance_expired"
+            try:
+                sb.table("light_vehicle_drivers").update({
+                    "status": "suspended",
+                    "notes":  f"Auto-suspended by compliance sweep: {reason}",
+                }).eq("id", driver_id).execute()
+            except Exception:  # noqa: BLE001
+                pass
+            auto_suspended += 1
+            _write_alert(sb, driver_id, driver_name, reason, "expired",
+                         f"Driver auto-suspended: {reason.replace('_', ' ')}", None, False)
+            log_agent(_NAME, "auto_suspended", payload={"driver_id": driver_id, "reason": reason})
 
-                # Insurance alert
-                if ins.get("alert_level") in ("warning", "critical", "expired"):
-                    days = ins.get("days_remaining")
-                    if days is not None and days >= 0:
-                        msg = _INSURANCE_WARNING_SMS.format(N=days)
-                        if _send_sms(phone, msg):
-                            sms_sent += 1
-                    elif days is not None and days < 0:
-                        msg = _INSURANCE_WARNING_SMS.format(N=0).replace("expires in 0 days", "has expired")
-                        if _send_sms(phone, msg):
-                            sms_sent += 1
+        # ── Auto-reactivate if both docs are now valid ─────────────────────
+        elif overall == "ok" and current_status == "suspended":
+            try:
+                sb.table("light_vehicle_drivers").update({
+                    "status": "active",
+                    "notes":  "Auto-reactivated by compliance sweep: documents renewed",
+                }).eq("id", driver_id).execute()
+            except Exception:  # noqa: BLE001
+                pass
+            auto_reactivated += 1
+            log_agent(_NAME, "auto_reactivated", payload={"driver_id": driver_id})
 
-            log_agent(
-                _NAME, "driver_alert_sent",
-                payload={"driver_id": driver_id, "overall": overall, "sms": bool(phone)},
-            )
+        # ── SMS alerts for warning/critical ───────────────────────────────
+        if overall in ("warning", "critical", "expired") and phone:
+            if lic.get("alert_level") in ("warning", "critical", "expired"):
+                days = lic.get("days_remaining")
+                msg = (
+                    _LICENSE_WARNING_SMS.format(N=days)
+                    if days is not None and days >= 0
+                    else _LICENSE_WARNING_SMS.format(N=0).replace("expires in 0 days", "has expired")
+                )
+                sent = _send_sms(phone, msg)
+                if sent:
+                    sms_sent += 1
+                _write_alert(sb, driver_id, driver_name,
+                             "license_expired" if lic.get("alert_level") == "expired" else "license_warning",
+                             lic["alert_level"], msg, days, sent)
 
-    log_agent(_NAME, "check_all_complete", payload={"total": len(rows), "sms_sent": sms_sent, **alert_counts})
+            if ins.get("alert_level") in ("warning", "critical", "expired"):
+                days = ins.get("days_remaining")
+                msg = (
+                    _INSURANCE_WARNING_SMS.format(N=days)
+                    if days is not None and days >= 0
+                    else _INSURANCE_WARNING_SMS.format(N=0).replace("expires in 0 days", "has expired")
+                )
+                sent = _send_sms(phone, msg)
+                if sent:
+                    sms_sent += 1
+                _write_alert(sb, driver_id, driver_name,
+                             "insurance_expired" if ins.get("alert_level") == "expired" else "insurance_warning",
+                             ins["alert_level"], msg, days, sent)
+
+        # ── Annual MVR re-check ────────────────────────────────────────────
+        mvr_checked_at_str = row.get("mvr_checked_at")
+        if mvr_checked_at_str:
+            try:
+                mvr_dt = datetime.fromisoformat(str(mvr_checked_at_str).replace("Z", "+00:00"))
+                if mvr_dt.tzinfo is None:
+                    mvr_dt = mvr_dt.replace(tzinfo=timezone.utc)
+                days_since_mvr = (now - mvr_dt).days
+                if days_since_mvr >= _MVR_RENEWAL_DAYS:
+                    triggered = _trigger_mvr_renewal(sb, row)
+                    if triggered:
+                        mvr_renewals += 1
+                        if phone:
+                            _send_sms(phone, _MVR_RENEWAL_SMS)
+                        _write_alert(sb, driver_id, driver_name, "mvr_renewal_due", "warning",
+                                     f"Annual MVR re-check triggered ({days_since_mvr} days since last check)",
+                                     None, bool(phone))
+            except Exception:  # noqa: BLE001
+                pass
+
+        log_agent(
+            _NAME, "driver_checked",
+            payload={"driver_id": driver_id, "overall": overall, "sms": bool(phone)},
+        )
+
+    log_agent(_NAME, "check_all_complete", payload={
+        "total": len(rows), "sms_sent": sms_sent,
+        "auto_suspended": auto_suspended, "auto_reactivated": auto_reactivated,
+        "mvr_renewals": mvr_renewals, **alert_counts,
+    })
 
     return {
-        "total_active_drivers": len(rows),
-        "alert_counts": alert_counts,
-        "sms_sent": sms_sent,
-        "drivers": results,
+        "total_drivers_checked": len(rows),
+        "alert_counts":          alert_counts,
+        "sms_sent":              sms_sent,
+        "auto_suspended":        auto_suspended,
+        "auto_reactivated":      auto_reactivated,
+        "mvr_renewals":          mvr_renewals,
+        "drivers":               results,
     }
 
 
