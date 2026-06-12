@@ -362,23 +362,71 @@ def h230_lock_assignment(carrier_id, contract_id, payload) -> dict:
 # ── Step 231: notify.passenger ───────────────────────────────────────────────
 
 def h231_notify_passenger(carrier_id, contract_id, payload) -> dict:
+    """SMS the passenger with their driver info and a live tracking link."""
     try:
         trip_id = payload.get("trip_id")
         t = _trip(trip_id)
-        passenger_phone = (
-            t.get("passenger_phone") or payload.get("passenger_phone") or "unknown"
-        )
-        scheduled_at = t.get("scheduled_at") or payload.get("scheduled_at", "TBD")
+        passenger_phone = t.get("passenger_phone") or payload.get("passenger_phone") or ""
+        scheduled_at    = (t.get("scheduled_at") or payload.get("scheduled_at", "TBD"))[:16] if \
+                          (t.get("scheduled_at") or payload.get("scheduled_at")) else "TBD"
+        driver_name     = payload.get("driver_name") or ""
+
+        # Generate a tracking token for the passenger
+        tracking_url = ""
+        if trip_id:
+            sb = _db()
+            if sb:
+                try:
+                    from datetime import timedelta  # noqa: PLC0415
+                    expires_at = datetime.now(timezone.utc) + timedelta(hours=24)
+                    existing = sb.table("lf_tracking_tokens").select("token").eq("trip_id", str(trip_id)).execute().data
+                    if existing:
+                        token = existing[0]["token"]
+                        sb.table("lf_tracking_tokens").update({"expires_at": expires_at.isoformat()}).eq("trip_id", str(trip_id)).execute()
+                    else:
+                        rec = sb.table("lf_tracking_tokens").insert({
+                            "trip_id": str(trip_id), "expires_at": expires_at.isoformat()
+                        }).execute().data or [{}]
+                        token = rec[0].get("token", "")
+                    tracking_url = f"https://www.3lakeslogistics.com/track/{token}"
+                except Exception:  # noqa: BLE001
+                    pass
+
+        driver_part = f"Driver: {driver_name}. " if driver_name else ""
+        track_part  = f"Track live: {tracking_url}" if tracking_url else ""
         message = (
-            f"Your driver is on the way! "
-            f"Expected arrival: {scheduled_at}. "
-            f"Trip ID: {trip_id}."
-        )
-        log.info("Passenger SMS simulated to %s: %s", passenger_phone, message)
+            f"✅ 3 Lakes Light Fleet: Your trip is confirmed! "
+            f"{driver_part}"
+            f"Pickup: {scheduled_at}. "
+            f"{track_part}"
+        ).strip()
+
+        # Send via Twilio
+        sms_sent = False
+        if passenger_phone:
+            import re  # noqa: PLC0415
+            digits = re.sub(r"\D", "", passenger_phone)
+            e164 = f"+1{digits}" if len(digits) == 10 else (f"+{digits}" if len(digits) == 11 else "")
+            if e164:
+                try:
+                    from ...settings import get_settings  # noqa: PLC0415
+                    s = get_settings()
+                    if s.twilio_account_sid and s.twilio_auth_token and s.twilio_from_number:
+                        from twilio.rest import Client  # noqa: PLC0415
+                        Client(s.twilio_account_sid, s.twilio_auth_token).messages.create(
+                            to=e164, from_=s.twilio_from_number, body=message
+                        )
+                        sms_sent = True
+                except Exception:  # noqa: BLE001
+                    pass
+
+        log.info("Passenger notified phone=%s sms=%s tracking=%s", passenger_phone, sms_sent, bool(tracking_url))
         return {
             "notification_sent": True,
-            "phone": passenger_phone,
-            "message": message,
+            "sms_sent":          sms_sent,
+            "phone":             passenger_phone,
+            "tracking_url":      tracking_url,
+            "message":           message,
         }
     except Exception as e:  # noqa: BLE001
         return {"notification_sent": False, "error": str(e)}

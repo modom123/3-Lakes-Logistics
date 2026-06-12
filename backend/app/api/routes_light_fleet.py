@@ -1423,6 +1423,112 @@ def request_instant_pay(driver_id: str, payload: dict) -> dict:
 # LIVE GPS — Light Fleet Map
 # ===========================================================================
 
+@router.post("/trips/{trip_id}/tracking-link")
+def create_tracking_link(trip_id: str) -> dict:
+    """Generate a short-lived public tracking link for a passenger.
+
+    Returns a URL the dispatcher/driver can SMS to the passenger.
+    Link expires when the trip completes or after 24 hours, whichever comes first.
+    """
+    from datetime import timedelta
+    sb  = get_supabase()
+    trip = sb.table("light_vehicle_trips").select("id,status,passenger_phone").eq(
+        "id", trip_id
+    ).maybe_single().execute().data
+    if not trip:
+        raise HTTPException(status_code=404, detail="trip not found")
+    if trip.get("status") in ("completed", "cancelled"):
+        raise HTTPException(status_code=409, detail="trip is already complete")
+
+    expires_at = datetime.now(timezone.utc) + timedelta(hours=24)
+    # Upsert so re-calling refreshes the token expiry
+    existing = sb.table("lf_tracking_tokens").select("id,token").eq("trip_id", trip_id).execute().data
+    if existing:
+        token = existing[0]["token"]
+        sb.table("lf_tracking_tokens").update({
+            "expires_at": expires_at.isoformat(),
+        }).eq("trip_id", trip_id).execute()
+    else:
+        rec = sb.table("lf_tracking_tokens").insert({
+            "trip_id":    trip_id,
+            "expires_at": expires_at.isoformat(),
+        }).execute().data or [{}]
+        token = rec[0].get("token", "")
+
+    tracking_url = f"https://www.3lakeslogistics.com/track/{token}"
+    return {
+        "ok":          True,
+        "trip_id":     trip_id,
+        "tracking_url": tracking_url,
+        "token":       token,
+        "expires_at":  expires_at.isoformat(),
+    }
+
+
+@public_router.get("/track/{token}")
+def get_trip_tracking(token: str) -> dict:
+    """Public endpoint — returns live driver location for a trip.
+
+    No auth required. Called by the passenger's tracking page
+    (3lakeslogistics.com/track/{token}).
+    """
+    sb = get_supabase()
+
+    # Look up token
+    rec = sb.table("lf_tracking_tokens").select("trip_id, expires_at").eq("token", token).maybe_single().execute().data
+    if not rec:
+        raise HTTPException(status_code=404, detail="tracking link not found or expired")
+
+    from datetime import datetime, timezone
+    expires_at = datetime.fromisoformat(rec["expires_at"].replace("Z", "+00:00"))
+    if datetime.now(timezone.utc) > expires_at:
+        raise HTTPException(status_code=410, detail="tracking link has expired")
+
+    trip_id = rec["trip_id"]
+    trip = sb.table("light_vehicle_trips").select(
+        "id,trip_type,status,pickup_address,dropoff_address,passenger_name,"
+        "scheduled_at,started_at,driver_id,current_lat,current_lng"
+    ).eq("id", trip_id).maybe_single().execute().data or {}
+
+    if trip.get("status") in ("completed", "cancelled"):
+        return {
+            "status":        trip["status"],
+            "trip_id":       trip_id,
+            "message":       "Your trip has been completed. Thank you for riding with 3 Lakes Light Fleet!",
+        }
+
+    # Get driver's last-known location
+    driver_lat = trip.get("current_lat")
+    driver_lng = trip.get("current_lng")
+    driver_name = None
+    last_ping   = None
+
+    driver_id = trip.get("driver_id")
+    if driver_id:
+        drv = sb.table("light_vehicle_drivers").select(
+            "name,last_lat,last_lng,last_ping_at"
+        ).eq("id", str(driver_id)).maybe_single().execute().data or {}
+        driver_name = drv.get("name")
+        last_ping   = drv.get("last_ping_at")
+        driver_lat  = driver_lat or drv.get("last_lat")
+        driver_lng  = driver_lng or drv.get("last_lng")
+
+    return {
+        "trip_id":         trip_id,
+        "status":          trip.get("status"),
+        "trip_type":       trip.get("trip_type"),
+        "pickup_address":  trip.get("pickup_address"),
+        "dropoff_address": trip.get("dropoff_address"),
+        "passenger_name":  trip.get("passenger_name"),
+        "scheduled_at":    trip.get("scheduled_at"),
+        "driver_name":     driver_name,
+        "driver_lat":      driver_lat,
+        "driver_lng":      driver_lng,
+        "last_ping_at":    last_ping,
+        "expires_at":      rec["expires_at"],
+    }
+
+
 @public_router.post("/driver-ping")
 def driver_ping(payload: dict) -> dict:
     """
