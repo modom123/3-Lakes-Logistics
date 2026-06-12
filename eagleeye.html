@@ -20277,7 +20277,7 @@ function bdEmailProspect(id){
 // ── BROKER DIVISION JS ───────────────────────────────────────────────────────
 
 async function bdAgentCall(agent, payload) {
-  const token = localStorage.getItem('3ll_token') || '';
+  const token = localStorage.getItem('3ll_token') || API_TOKEN;
   const r = await fetch('/api/agents/' + agent + '/run', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
@@ -20664,7 +20664,7 @@ function tdLoadDashboard() {
 }
 
 async function tdAgentCall(agent, payload) {
-  const token = localStorage.getItem('3ll_token') || '';
+  const token = localStorage.getItem('3ll_token') || API_TOKEN;
   const r = await fetch('/api/agents/' + agent + '/run', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
@@ -20790,7 +20790,7 @@ async function tdFindCoverage() {
 
 async function tdLoadPositions() {
   try {
-    const token = localStorage.getItem('3ll_token') || '';
+    const token = localStorage.getItem('3ll_token') || API_TOKEN;
     const r = await fetch('/api/agents/jordan/run', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
