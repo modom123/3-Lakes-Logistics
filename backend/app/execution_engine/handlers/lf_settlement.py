@@ -232,21 +232,151 @@ def h260_nemt_billing_queue(carrier_id, contract_id, payload) -> dict:
 # ── Step 261: lf_settlement.corporate_invoice ────────────────────────────────
 
 def h261_corporate_invoice(carrier_id, contract_id, payload) -> dict:
-    trip_id = payload.get("trip_id")
+    """Create a Stripe Invoice for executive corporate accounts.
+
+    Supports two billing modes based on executive_accounts.invoice_cycle:
+      'per_trip'  — invoice created and finalized immediately after each trip
+      'weekly' | 'monthly' — invoice item added to a draft; batch finalization
+                              runs via POST /admin/lf/billing/corporate/finalize-batch
+
+    Falls back gracefully when Stripe is not configured.
+    """
+    trip_id  = payload.get("trip_id")
     trip_type = payload.get("trip_type", "")
+
+    # Only runs for executive trips with a corporate account
+    if trip_type != "executive":
+        return {"skipped": True, "reason": "not_executive", "trip_id": trip_id}
+
     trip = _trip(trip_id)
     executive_account_id = trip.get("executive_account_id") or payload.get("executive_account_id")
-    rate_total = trip.get("rate_total") or payload.get("rate_total", 0.0)
-    if trip_type == "executive" and executive_account_id:
+    if not executive_account_id:
+        return {"skipped": True, "reason": "no_executive_account", "trip_id": trip_id}
+
+    rate_total = float(trip.get("rate_total") or payload.get("rate_total") or 0.0)
+    amount_cents = int(round(rate_total * 100))
+    invoice_ref = f"INV-LF-{str(trip_id)[:8].upper()}"
+
+    sb = _db()
+    account: dict = {}
+    if sb:
+        try:
+            r = sb.table("executive_accounts").select(
+                "id,company_name,contact_email,invoice_email,stripe_customer_id,invoice_cycle,net_days"
+            ).eq("id", str(executive_account_id)).maybe_single().execute()
+            account = r.data or {}
+        except Exception:  # noqa: BLE001
+            pass
+
+    if not account:
+        return {"skipped": True, "reason": "executive_account_not_found", "trip_id": trip_id}
+
+    stripe_customer_id = account.get("stripe_customer_id")
+    invoice_cycle      = account.get("invoice_cycle") or "per_trip"
+    net_days           = int(account.get("net_days") or 30)
+    billing_email      = account.get("invoice_email") or account.get("contact_email") or ""
+
+    try:
+        from ...settings import get_settings
+        import stripe as _stripe
+        s = get_settings()
+        if not s.stripe_secret_key:
+            # No Stripe — return internal-ref-only invoice
+            return {
+                "invoice_generated": True,
+                "invoice_ref":       invoice_ref,
+                "account_id":        executive_account_id,
+                "company":           account.get("company_name"),
+                "amount":            rate_total,
+                "trip_id":           trip_id,
+                "generated_at":      _NOW(),
+                "mode":              "internal_only",
+                "note":              "Add STRIPE_SECRET_KEY to enable Stripe Invoicing",
+            }
+        _stripe.api_key = s.stripe_secret_key
+
+        # ── Create Stripe Customer if not already linked ──────────────────────
+        if not stripe_customer_id:
+            customer = _stripe.Customer.create(
+                name=account.get("company_name") or "",
+                email=billing_email,
+                metadata={"executive_account_id": str(executive_account_id)},
+            )
+            stripe_customer_id = customer.id
+            if sb:
+                try:
+                    sb.table("executive_accounts").update({
+                        "stripe_customer_id": stripe_customer_id,
+                    }).eq("id", str(executive_account_id)).execute()
+                except Exception:  # noqa: BLE001
+                    pass
+
+        trip_date = (trip.get("completed_at") or trip.get("scheduled_at") or _NOW())[:10]
+        desc = (
+            f"3 Lakes Light Fleet — Executive Trip {invoice_ref} | "
+            f"{trip.get('pickup_address','')} → {trip.get('dropoff_address','')} | {trip_date}"
+        )
+
+        if invoice_cycle == "per_trip":
+            # ── Immediate invoice: create + add item + finalize ───────────────
+            invoice = _stripe.Invoice.create(
+                customer=stripe_customer_id,
+                collection_method="send_invoice",
+                days_until_due=net_days,
+                description=desc,
+                metadata={"trip_id": str(trip_id), "invoice_ref": invoice_ref,
+                          "executive_account_id": str(executive_account_id)},
+                auto_advance=True,
+            )
+            _stripe.InvoiceItem.create(
+                customer=stripe_customer_id,
+                invoice=invoice.id,
+                amount=amount_cents,
+                currency="usd",
+                description=desc,
+            )
+            finalized = _stripe.Invoice.finalize_invoice(invoice.id)
+            stripe_invoice_id = finalized.id
+            stripe_invoice_url = finalized.hosted_invoice_url or ""
+        else:
+            # ── Batch billing: add invoice item to customer's pending draft ───
+            item = _stripe.InvoiceItem.create(
+                customer=stripe_customer_id,
+                amount=amount_cents,
+                currency="usd",
+                description=desc,
+                metadata={"trip_id": str(trip_id), "invoice_ref": invoice_ref},
+            )
+            stripe_invoice_id  = ""
+            stripe_invoice_url = ""
+
         return {
-            "invoice_generated": True,
-            "account_id": executive_account_id,
-            "amount": float(rate_total) if rate_total is not None else 0.0,
-            "invoice_ref": f"INV-LF-{str(trip_id)[:8].upper()}",
-            "trip_id": trip_id,
-            "generated_at": _NOW(),
+            "invoice_generated":   True,
+            "invoice_ref":         invoice_ref,
+            "stripe_invoice_id":   stripe_invoice_id,
+            "stripe_invoice_url":  stripe_invoice_url,
+            "stripe_customer_id":  stripe_customer_id,
+            "account_id":          executive_account_id,
+            "company":             account.get("company_name"),
+            "amount":              rate_total,
+            "invoice_cycle":       invoice_cycle,
+            "trip_id":             trip_id,
+            "generated_at":        _NOW(),
         }
-    return {"skipped": True, "reason": "not_executive_or_no_account", "trip_id": trip_id}
+
+    except Exception as exc:  # noqa: BLE001
+        import logging
+        logging.getLogger("3ll.execution.lf_settlement").error(
+            "h261 Stripe invoice failed account=%s: %s", executive_account_id, exc
+        )
+        return {
+            "invoice_generated": False,
+            "invoice_ref":       invoice_ref,
+            "account_id":        executive_account_id,
+            "amount":            rate_total,
+            "trip_id":           trip_id,
+            "error":             str(exc)[:200],
+        }
 
 
 # ── Step 262: lf_settlement.ach_initiation ───────────────────────────────────

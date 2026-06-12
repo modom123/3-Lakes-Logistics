@@ -963,6 +963,118 @@ def list_nemt_claims(
     return {"items": items, "total": len(items)}
 
 
+@router.post("/billing/corporate/setup-account/{account_id}")
+def setup_corporate_stripe_account(account_id: str) -> dict:
+    """Create a Stripe Customer for a corporate executive account if not already set up."""
+    from ..settings import get_settings
+    import stripe as _stripe
+    s = get_settings()
+    if not s.stripe_secret_key:
+        raise HTTPException(status_code=503, detail="stripe not configured")
+    _stripe.api_key = s.stripe_secret_key
+
+    sb = get_supabase()
+    acct = sb.table("executive_accounts").select(
+        "id,company_name,contact_email,invoice_email,stripe_customer_id"
+    ).eq("id", account_id).maybe_single().execute().data
+    if not acct:
+        raise HTTPException(status_code=404, detail="executive account not found")
+
+    if acct.get("stripe_customer_id"):
+        return {"ok": True, "stripe_customer_id": acct["stripe_customer_id"], "note": "already set up"}
+
+    billing_email = acct.get("invoice_email") or acct.get("contact_email") or ""
+    try:
+        customer = _stripe.Customer.create(
+            name=acct.get("company_name") or "",
+            email=billing_email,
+            metadata={"executive_account_id": account_id},
+        )
+        sb.table("executive_accounts").update({
+            "stripe_customer_id": customer.id
+        }).eq("id", account_id).execute()
+        return {"ok": True, "stripe_customer_id": customer.id, "account_id": account_id}
+    except _stripe.error.StripeError as e:
+        raise HTTPException(status_code=502, detail=f"stripe error: {e.user_message or str(e)}")
+
+
+@router.post("/billing/corporate/finalize-batch")
+def finalize_corporate_invoices(payload: dict | None = None) -> dict:
+    """Finalize pending Stripe Invoice drafts for weekly/monthly corporate accounts.
+
+    Collects all pending InvoiceItems per customer, creates and finalizes a
+    single Invoice per account.  Run at end of billing period.
+    """
+    from ..settings import get_settings
+    import stripe as _stripe
+    from datetime import datetime, timezone
+    s = get_settings()
+    if not s.stripe_secret_key:
+        raise HTTPException(status_code=503, detail="stripe not configured")
+    _stripe.api_key = s.stripe_secret_key
+
+    p       = payload or {}
+    cycle   = p.get("cycle") or "monthly"   # filter accounts by invoice_cycle
+    now_iso = datetime.now(timezone.utc).isoformat()
+    sb      = get_supabase()
+
+    # Find all corporate accounts on this billing cycle with a Stripe Customer
+    accounts = sb.table("executive_accounts").select(
+        "id,company_name,stripe_customer_id,net_days,invoice_cycle"
+    ).eq("status", "active").eq("invoice_cycle", cycle).execute().data or []
+
+    invoiced = 0
+    skipped  = 0
+    results  = []
+
+    for acct in accounts:
+        cust_id = acct.get("stripe_customer_id")
+        if not cust_id:
+            skipped += 1
+            continue
+
+        try:
+            # Check if there are any pending invoice items for this customer
+            items = _stripe.InvoiceItem.list(customer=cust_id, pending=True, limit=100)
+            if not items.data:
+                skipped += 1
+                continue
+
+            net_days = int(acct.get("net_days") or 30)
+            invoice = _stripe.Invoice.create(
+                customer=cust_id,
+                collection_method="send_invoice",
+                days_until_due=net_days,
+                auto_advance=True,
+                metadata={"account_id": acct["id"], "cycle": cycle, "finalized_at": now_iso},
+            )
+            finalized = _stripe.Invoice.finalize_invoice(invoice.id)
+            invoiced += 1
+            results.append({
+                "account_id":   acct["id"],
+                "company":      acct.get("company_name"),
+                "invoice_id":   finalized.id,
+                "invoice_url":  finalized.hosted_invoice_url or "",
+                "amount_due":   finalized.amount_due / 100,
+                "status":       "sent",
+            })
+        except _stripe.error.StripeError as e:
+            results.append({
+                "account_id": acct["id"],
+                "status":     "failed",
+                "reason":     str(e.user_message or e)[:200],
+            })
+
+    return {
+        "ok":           True,
+        "invoiced":     invoiced,
+        "skipped":      skipped,
+        "cycle":        cycle,
+        "finalized_at": now_iso,
+        "detail":       results,
+    }
+
+
 @router.post("/billing/nemt/submit-batch")
 def submit_nemt_billing_batch(payload: dict | None = None) -> dict:
     """Submit all queued NEMT billing claims to the configured clearinghouse.
