@@ -938,38 +938,131 @@ select.form-input option{background:var(--surface);}
     <div class="page active" id="page-dashboard">
       <div class="page-hdr">
         <div class="page-hdr-l">
-          <div class="chip">Operations Center</div>
-          <h2>Dashboard</h2>
+          <div class="chip">Command Center</div>
+          <h2>Eagle Eye — Business Overview</h2>
+        </div>
+        <div class="page-hdr-acts">
+          <span class="t-sm t-muted" id="dash-last-refresh" style="font-family:var(--ff-m)"></span>
+          <button class="btn-out" style="font-size:11px;padding:6px 12px" onclick="refreshAll()">↻ Sync All</button>
         </div>
       </div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:16px;margin-bottom:16px">
-        <div class="mc" onclick="showDashSummary('carriers')" style="cursor:pointer" title="Click for recent 10"><div class="mc-label">Active Carriers</div><div class="mc-val gold" id="dash-total-carriers">—</div><div class="mc-sub" id="dash-carrier-sub">Loading…</div></div>
-        <div class="mc" onclick="showDashSummary('pending')" style="cursor:pointer" title="Click for recent 10"><div class="mc-label">Pending Carriers</div><div class="mc-val orange" id="dash-pending-carriers">—</div><div class="mc-sub" id="dash-pending-sub">Incomplete profiles</div></div>
-        <div class="mc" onclick="showDashSummary('fees')" style="cursor:pointer" title="Click for recent 10"><div class="mc-label">MTD Dispatch Fees</div><div class="mc-val green" id="dash-mtd-fees">—</div><div class="mc-sub">This month</div></div>
-        <div class="mc" onclick="showDashSummary('loads')" style="cursor:pointer" title="Click for recent 10"><div class="mc-label">Loads This Month</div><div class="mc-val blue" id="dash-loads">—</div><div class="mc-sub" id="dash-rpm-sub">Avg RPM: —</div></div>
-        <div class="mc" onclick="showDashSummary('unpaid')" style="cursor:pointer" title="Click for recent 10"><div class="mc-label">Unpaid Invoices</div><div class="mc-val red" id="dash-unpaid">—</div><div class="mc-sub" id="dash-unpaid-sub">outstanding AR</div></div>
+
+      <!-- ── TOP KPI STRIP ── -->
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(148px,1fr));gap:12px;margin-bottom:20px">
+        <div class="mc" onclick="showDashSummary('loads')" style="cursor:pointer;border-top:3px solid var(--green)" title="Click for load details"><div class="mc-label">MTD Gross Revenue</div><div class="mc-val green" id="dash-kpi-gross">—</div><div class="mc-sub"><span id="dash-loads">—</span> loads · <span id="dash-rpm-sub">Avg RPM: —</span></div></div>
+        <div class="mc" onclick="showDashSummary('fees')" style="cursor:pointer;border-top:3px solid var(--gold)" title="Click for fee details"><div class="mc-label">Dispatch Fees MTD</div><div class="mc-val gold" id="dash-mtd-fees">—</div><div class="mc-sub">15% dispatch margin</div></div>
+        <div class="mc" style="border-top:3px solid var(--blue)"><div class="mc-label">Subscription MRR</div><div class="mc-val blue" id="dash-kpi-mrr">—</div><div class="mc-sub">Founders + Pro plans</div></div>
+        <div class="mc" onclick="showDashSummary('unpaid')" style="cursor:pointer;border-top:3px solid var(--red)" title="Click for AR details"><div class="mc-label">Outstanding AR</div><div class="mc-val red" id="dash-kpi-ar">—</div><div class="mc-sub"><span id="dash-unpaid">—</span> invoices open<span id="dash-unpaid-sub" style="display:none"></span></div></div>
+        <div class="mc" onclick="showDashSummary('carriers')" style="cursor:pointer;border-top:3px solid #1e40af" title="Click for carrier list"><div class="mc-label">Heavy Fleet — Active</div><div class="mc-val" style="color:var(--navy)" id="dash-total-carriers">—</div><div class="mc-sub" id="dash-carrier-sub">Loading…</div></div>
+        <div class="mc" style="border-top:3px solid #8b5cf6;cursor:pointer" onclick="nav('lf-nemt')" title="View light fleet"><div class="mc-label">Light Fleet Drivers</div><div class="mc-val" style="color:#8b5cf6" id="dash-lf-kpi-total">—</div><div class="mc-sub" id="dash-lf-kpi-sub">Across all segments</div></div>
+        <div class="mc" style="border-top:3px solid var(--red)"><div class="mc-label">Critical Issues</div><div class="mc-val red" id="dash-critical-count">—</div><div class="mc-sub">Needs attention now</div></div>
       </div>
-      <div class="g2">
-        <div class="card">
-          <div class="card-hd"><div class="card-title">Recent Loads</div><span class="card-chip">Live Data</span></div>
-          <div id="dash-recent-loads"><div class="loading"><div class="spin"></div>Loading…</div></div>
+
+      <!-- ── ONBOARDING PIPELINE ── -->
+      <div class="card" style="margin-bottom:20px">
+        <div class="card-hd">
+          <div style="display:flex;align-items:center;gap:10px">
+            <div class="card-title">Building Business — Onboarding Pipeline</div>
+            <span class="badge badge-orange" id="dash-pending-carriers">—</span>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <span class="t-sm t-muted" id="dash-pending-sub"></span>
+            <button class="btn-out" style="font-size:11px;padding:4px 10px" onclick="nav('carriers')">Manage →</button>
+          </div>
         </div>
-        <div class="card">
-          <div class="card-hd"><div class="card-title">Action Items</div><span class="card-chip">Today</span></div>
-          <div class="tl">
-            <div class="tl-item">
-              <div class="tl-dot" style="background:#fee2e2;color:var(--red)">!</div>
-              <div class="tl-body"><div class="tl-t">Insurance COI Expiring</div><div class="tl-d">Marcus Davis · Primary Liability expires soon</div><div class="tl-time">⚡ Urgent</div></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+          <div>
+            <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);margin-bottom:10px;padding-bottom:8px;border-bottom:2px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+              <span>🚛 Heavy Fleet Onboarding</span><span id="hf-onboard-count" style="background:var(--navy);color:#fff;border-radius:10px;padding:1px 8px;font-size:10px">—</span>
             </div>
-            <div class="tl-item">
-              <div class="tl-dot" style="background:#fff7ed;color:var(--orange)">📞</div>
-              <div class="tl-body"><div class="tl-t">Check-Call Overdue</div><div class="tl-d">Marcus Davis — CHI→DAL — last check 4.5hrs ago</div><div class="tl-time">🕐 Do Now</div></div>
+            <div id="dash-hf-onboarding"><div class="loading"><div class="spin"></div>Loading…</div></div>
+          </div>
+          <div>
+            <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);margin-bottom:10px;padding-bottom:8px;border-bottom:2px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+              <span>🚐 Light Fleet Onboarding</span><span id="lf-onboard-count" style="background:#7c3aed;color:#fff;border-radius:10px;padding:1px 8px;font-size:10px">—</span>
             </div>
-            <div id="dynamic-actions"></div>
+            <div id="dash-lf-onboarding"><div class="loading"><div class="spin"></div>Loading…</div></div>
           </div>
         </div>
       </div>
-      <div class="g3">
+
+      <!-- ── REVENUE | HEAVY FLEET | LIGHT FLEET ── -->
+      <div class="g3" style="margin-bottom:20px">
+
+        <!-- Revenue -->
+        <div class="card">
+          <div class="card-hd"><div class="card-title">Revenue</div><span class="card-chip">This Month</span></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">
+            <div style="background:var(--surface2);border-radius:8px;padding:10px 12px;border-left:3px solid var(--green)"><div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Gross Revenue</div><div style="font-size:20px;font-weight:800;font-family:var(--ff-h);color:var(--green)" id="dash-rev-gross">—</div></div>
+            <div style="background:var(--surface2);border-radius:8px;padding:10px 12px;border-left:3px solid var(--gold)"><div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Dispatch Fees</div><div style="font-size:20px;font-weight:800;font-family:var(--ff-h);color:var(--gold)" id="dash-rev-fees">—</div></div>
+            <div style="background:var(--surface2);border-radius:8px;padding:10px 12px;border-left:3px solid var(--blue)"><div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Subscription MRR</div><div style="font-size:20px;font-weight:800;font-family:var(--ff-h);color:var(--blue)" id="dash-rev-mrr">—</div></div>
+            <div style="background:var(--surface2);border-radius:8px;padding:10px 12px;border-left:3px solid var(--red)"><div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Outstanding AR</div><div style="font-size:20px;font-weight:800;font-family:var(--ff-h);color:var(--red)" id="dash-rev-ar">—</div></div>
+          </div>
+          <div class="divider"></div>
+          <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin:10px 0 8px">Service Mix</div>
+          <div id="service-mix-display"><div class="loading"><div class="spin"></div>Loading…</div></div>
+        </div>
+
+        <!-- Heavy Fleet -->
+        <div class="card">
+          <div class="card-hd"><div class="card-title">Heavy Fleet</div><button class="btn-out" style="font-size:11px;padding:4px 10px" onclick="nav('carriers')">View All →</button></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">
+            <div style="background:var(--surface2);border-radius:8px;padding:10px 12px"><div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">Active Carriers</div><div style="font-size:24px;font-weight:800;font-family:var(--ff-h);color:var(--green)" id="hf-active">—</div></div>
+            <div style="background:var(--surface2);border-radius:8px;padding:10px 12px"><div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">Total Trucks</div><div style="font-size:24px;font-weight:800;font-family:var(--ff-h);color:var(--navy)" id="hf-trucks">—</div></div>
+            <div style="background:var(--surface2);border-radius:8px;padding:10px 12px"><div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">On Load</div><div style="font-size:24px;font-weight:800;font-family:var(--ff-h);color:var(--blue)" id="hf-on-load">—</div></div>
+            <div style="background:var(--surface2);border-radius:8px;padding:10px 12px"><div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">Available</div><div style="font-size:24px;font-weight:800;font-family:var(--ff-h);color:var(--gold)" id="hf-available">—</div></div>
+          </div>
+          <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:8px">Equipment Breakdown</div>
+          <div id="hf-equip-breakdown" style="margin-bottom:12px"><div class="t-sm t-muted">Loading…</div></div>
+          <div class="divider" style="margin:10px 0"></div>
+          <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:8px">Recent Loads</div>
+          <div id="dash-recent-loads"><div class="loading"><div class="spin"></div>Loading…</div></div>
+        </div>
+
+        <!-- Light Fleet -->
+        <div class="card">
+          <div class="card-hd"><div class="card-title">Light Fleet</div><button class="btn-out" style="font-size:11px;padding:4px 10px" onclick="nav('lf-nemt')">View All →</button></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">
+            <div style="background:var(--surface2);border-radius:8px;padding:10px 12px;border-left:3px solid #8b5cf6"><div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">Total Drivers</div><div style="font-size:24px;font-weight:800;font-family:var(--ff-h);color:#8b5cf6" id="lf-total-d">—</div></div>
+            <div style="background:var(--surface2);border-radius:8px;padding:10px 12px;border-left:3px solid var(--green)"><div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">Active</div><div style="font-size:24px;font-weight:800;font-family:var(--ff-h);color:var(--green)" id="lf-active-d">—</div></div>
+          </div>
+          <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:8px">Segments</div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:14px">
+            <div style="background:var(--surface2);border-radius:8px;padding:8px 10px;text-align:center;cursor:pointer" onclick="nav('lf-nemt')"><div style="font-size:18px;font-weight:800;font-family:var(--ff-h);color:#3b82f6" id="lf-seg-nemt">—</div><div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-top:2px">NEMT</div></div>
+            <div style="background:var(--surface2);border-radius:8px;padding:8px 10px;text-align:center;cursor:pointer" onclick="nav('lf-medical')"><div style="font-size:18px;font-weight:800;font-family:var(--ff-h);color:#10b981" id="lf-seg-medical">—</div><div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-top:2px">Medical</div></div>
+            <div style="background:var(--surface2);border-radius:8px;padding:8px 10px;text-align:center;cursor:pointer" onclick="nav('lf-executive')"><div style="font-size:18px;font-weight:800;font-family:var(--ff-h);color:#f59e0b" id="lf-seg-executive">—</div><div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-top:2px">Executive</div></div>
+            <div style="background:var(--surface2);border-radius:8px;padding:8px 10px;text-align:center;cursor:pointer" onclick="nav('lf-courier')"><div style="font-size:18px;font-weight:800;font-family:var(--ff-h);color:#8b5cf6" id="lf-seg-courier">—</div><div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-top:2px">Courier</div></div>
+            <div style="background:var(--surface2);border-radius:8px;padding:8px 10px;text-align:center;cursor:pointer" onclick="nav('lf-gig')"><div style="font-size:18px;font-weight:800;font-family:var(--ff-h);color:#22c55e" id="lf-seg-gig">—</div><div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-top:2px">Gig</div></div>
+            <div style="background:var(--surface2);border-radius:8px;padding:8px 10px;text-align:center;cursor:pointer" onclick="nav('lf-bizdev')"><div style="font-size:18px;font-weight:800;font-family:var(--ff-h);color:#06b6d4" id="lf-seg-bizdev">—</div><div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-top:2px">Biz Dev</div></div>
+          </div>
+          <div class="divider" style="margin:10px 0"></div>
+          <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:8px">Recently Added</div>
+          <div id="lf-recent-drivers"><div class="t-sm t-muted">Loading…</div></div>
+        </div>
+      </div>
+
+      <!-- ── CRITICAL ISSUES | PAYMENTS DUE ── -->
+      <div class="g2" style="margin-bottom:20px">
+        <div class="card">
+          <div class="card-hd"><div class="card-title">Critical Issues</div><span class="badge badge-red" id="dash-crit-badge">0</span></div>
+          <div id="dash-critical-list"><div class="loading"><div class="spin"></div>Loading…</div></div>
+          <div id="dynamic-actions" style="margin-top:8px"></div>
+        </div>
+        <div class="card">
+          <div class="card-hd"><div class="card-title">Payments Due</div><button class="btn-out" style="font-size:11px;padding:4px 10px" onclick="nav('invoices')">All Invoices →</button></div>
+          <div id="dash-payments-due"><div class="loading"><div class="spin"></div>Loading…</div></div>
+        </div>
+      </div>
+
+      <!-- ── COMPANY STATUS | 8-YEAR TARGET ── -->
+      <div class="g2">
+        <div class="card">
+          <div class="card-hd"><div class="card-title">Company Status</div></div>
+          <div class="comp-item"><div class="comp-left"><span class="comp-ico">📋</span><div><div class="comp-name">USDOT Number</div><div class="comp-desc">Required before commercial ops</div></div></div><span class="badge badge-orange">Pending</span></div>
+          <div class="comp-item"><div class="comp-left"><span class="comp-ico">⚖️</span><div><div class="comp-name">MC Authority</div><div class="comp-desc">$75,000 BMC-84 Surety Bond</div></div></div><span class="badge badge-orange">Pending</span></div>
+          <div class="comp-item"><div class="comp-left"><span class="comp-ico">📜</span><div><div class="comp-name">BOC-3 Filing</div><div class="comp-desc">Process agent registration</div></div></div><span class="badge badge-green">Filed</span></div>
+          <div class="comp-item"><div class="comp-left"><span class="comp-ico">🏛️</span><div><div class="comp-name">LLC Formation</div><div class="comp-desc">Operating Agreement executed</div></div></div><span class="badge badge-green">Active</span></div>
+        </div>
         <div class="card">
           <div class="card-hd"><div class="card-title">8-Year Revenue Target</div></div>
           <div class="rev-row"><div class="rev-lbl">Yr 1</div><div class="rev-bar"><div class="rev-fill" style="width:45%;background:var(--gold)"></div></div><div class="rev-val val-gold">$140K</div></div>
@@ -979,17 +1072,6 @@ select.form-input option{background:var(--surface);}
           <div class="rev-row"><div class="rev-lbl">Yr 8</div><div class="rev-bar"><div class="rev-fill" style="width:6%;background:var(--slate)"></div></div><div class="rev-val t-muted">$10M+</div></div>
           <div class="divider"></div>
           <div class="t-sm t-muted">Goal: 10 trucks · 70–80 dispatch clients · 32% EBITDA</div>
-        </div>
-        <div class="card">
-          <div class="card-hd"><div class="card-title">Service Mix</div></div>
-          <div id="service-mix-display"><div class="loading"><div class="spin"></div>Loading…</div></div>
-        </div>
-        <div class="card">
-          <div class="card-hd"><div class="card-title">Company Status</div></div>
-          <div class="comp-item"><div class="comp-left"><span class="comp-ico">📋</span><div><div class="comp-name">USDOT Number</div><div class="comp-desc">Required before commercial ops</div></div></div><span class="badge badge-orange">Pending</span></div>
-          <div class="comp-item"><div class="comp-left"><span class="comp-ico">⚖️</span><div><div class="comp-name">MC Authority</div><div class="comp-desc">$75,000 BMC-84 Surety Bond</div></div></div><span class="badge badge-orange">Pending</span></div>
-          <div class="comp-item"><div class="comp-left"><span class="comp-ico">📜</span><div><div class="comp-name">BOC-3 Filing</div><div class="comp-desc">Process agent registration</div></div></div><span class="badge badge-green">Filed</span></div>
-          <div class="comp-item"><div class="comp-left"><span class="comp-ico">🏛️</span><div><div class="comp-name">LLC Formation</div><div class="comp-desc">Operating Agreement executed</div></div></div><span class="badge badge-green">Active</span></div>
         </div>
       </div>
     </div>
@@ -5193,6 +5275,131 @@ function updateDashboard(){
       '<div class="tl-time">🆕 Enrolled '+(c.created_at||'').split('T')[0]+'</div></div></div>'
     ).join('');
   }
+
+  // ── NEW DASHBOARD PANELS ──
+  const mtdGross=mtdLoads.reduce((a,l)=>a+(Number(l.rate||0)),0);
+  setText('dash-kpi-gross','$'+mtdGross.toLocaleString());
+  setText('dash-kpi-mrr',totalMRR?'$'+totalMRR.toLocaleString():'$0');
+  setText('dash-kpi-ar','$'+unpaidAmt.toLocaleString());
+  setText('dash-rev-gross','$'+mtdGross.toLocaleString());
+  setText('dash-rev-fees','$'+fees.toLocaleString());
+  setText('dash-rev-mrr',totalMRR?'$'+totalMRR.toLocaleString():'$0');
+  setText('dash-rev-ar','$'+unpaidAmt.toLocaleString());
+  const hfActive=allCarriers.filter(c=>c.status==='active'||c.status==='onboarding');
+  const hfTrucks=hfActive.reduce((a,c)=>a+(Number(c.fleet_size)||1),0);
+  const activeLoadDrivers=new Set(allLoads.filter(l=>l.status&&!['Delivered','Completed','Cancelled'].includes(l.status)).map(l=>(l.driver_name||'').toLowerCase().trim()));
+  const hfOnLoadCt=hfActive.filter(c=>activeLoadDrivers.has((c.company_name||'').toLowerCase().trim())).length;
+  setText('hf-active',hfActive.length);
+  setText('hf-trucks',hfTrucks);
+  setText('hf-on-load',hfOnLoadCt);
+  setText('hf-available',Math.max(0,hfActive.length-hfOnLoadCt));
+  const equipEl=document.getElementById('hf-equip-breakdown');
+  if(equipEl){
+    const eMap={};
+    hfActive.forEach(c=>{const types=(c.equipment_types||[c.trailer_type||'']).filter(Boolean);if(!types.length){eMap['Unknown']=(eMap['Unknown']||0)+1;return;}types.forEach(t=>{const k=t||'Unknown';eMap[k]=(eMap[k]||0)+1;});});
+    const eKeys=Object.keys(eMap).sort((a,b)=>eMap[b]-eMap[a]);
+    if(!eKeys.length){equipEl.innerHTML='<div class="t-sm t-muted">No carriers yet</div>';}
+    else{const tot=hfActive.length||1;equipEl.innerHTML=eKeys.map(k=>{const pct=Math.round(eMap[k]/tot*100);return '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><div style="width:72px;font-size:11px;color:var(--muted);text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(k)+'</div><div style="flex:1;background:var(--surface2);border-radius:4px;height:7px"><div style="width:'+pct+'%;background:var(--navy);border-radius:4px;height:7px;min-width:4px"></div></div><div style="font-size:11px;font-family:var(--ff-m);min-width:22px">'+eMap[k]+'</div></div>';}).join('');}
+  }
+  const hfOnboard=allCarriers.filter(c=>c.status==='onboarding'||c.status==='onboarding_incomplete');
+  const hfObCountEl=document.getElementById('hf-onboard-count');
+  if(hfObCountEl)hfObCountEl.textContent=hfOnboard.length;
+  const hfObEl=document.getElementById('dash-hf-onboarding');
+  if(hfObEl){
+    if(!hfOnboard.length){hfObEl.innerHTML='<div style="padding:12px;text-align:center;color:var(--muted);font-size:12px">No carriers currently onboarding</div>';}
+    else{
+      const now2=Date.now();
+      hfObEl.innerHTML='<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">'+
+        '<thead><tr style="border-bottom:1px solid var(--border)">'+
+        '<th style="padding:6px 8px;text-align:left;color:var(--muted);font-size:10px;font-weight:700;text-transform:uppercase">Carrier</th>'+
+        '<th style="padding:6px 8px;text-align:left;color:var(--muted);font-size:10px;font-weight:700;text-transform:uppercase">Stage</th>'+
+        '<th style="padding:6px 8px;text-align:left;color:var(--muted);font-size:10px;font-weight:700;text-transform:uppercase">Plan</th>'+
+        '<th style="padding:6px 8px;text-align:center;color:var(--muted);font-size:10px;font-weight:700;text-transform:uppercase">Trucks</th>'+
+        '<th style="padding:6px 8px;text-align:left;color:var(--muted);font-size:10px;font-weight:700;text-transform:uppercase">Missing / Notes</th>'+
+        '<th style="padding:6px 8px;text-align:center;color:var(--muted);font-size:10px;font-weight:700;text-transform:uppercase">Days</th>'+
+        '</tr></thead><tbody>'+
+        hfOnboard.map(c=>{
+          const days=c.created_at?Math.floor((now2-new Date(c.created_at))/86400000):'?';
+          const stageHtml=c.status==='onboarding_incomplete'?'<span class="badge badge-orange">Incomplete</span>':'<span class="badge badge-blue">In Progress</span>';
+          const missing=Array.isArray(c.onboarding_missing_fields)&&c.onboarding_missing_fields.length?c.onboarding_missing_fields.slice(0,3).join(', ')+(c.onboarding_missing_fields.length>3?' +more':''):(c.status==='onboarding_incomplete'?'Profile incomplete':'—');
+          const daysColor=days>7?'var(--red)':days>3?'var(--orange)':'var(--muted)';
+          return '<tr style="border-bottom:1px solid var(--border)">'+
+            '<td style="padding:6px 8px;font-weight:600">'+esc(c.company_name||'—')+'</td>'+
+            '<td style="padding:6px 8px">'+stageHtml+'</td>'+
+            '<td style="padding:6px 8px"><span class="badge '+planBadgeClass(c.plan)+'">'+planShort(c.plan)+'</span></td>'+
+            '<td style="padding:6px 8px;text-align:center">'+(c.fleet_size||1)+'</td>'+
+            '<td style="padding:6px 8px;color:#c2410c;font-size:11px;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(missing)+'</td>'+
+            '<td style="padding:6px 8px;text-align:center;font-family:var(--ff-m);font-size:11px;color:'+daysColor+'">'+days+'d</td>'+
+          '</tr>';
+        }).join('')+'</tbody></table></div>';
+    }
+  }
+  const critEl=document.getElementById('dash-critical-list');
+  const critBadge=document.getElementById('dash-crit-badge');
+  const critCount=document.getElementById('dash-critical-count');
+  if(critEl){
+    const issues=[];
+    const overdueInv=allInvoices.filter(i=>i.status==='Overdue');
+    if(overdueInv.length)issues.push({level:'red',icon:'💸',title:overdueInv.length+' Overdue Invoice'+(overdueInv.length>1?'s':''),desc:'$'+overdueInv.reduce((a,i)=>a+(Number(i.amount)||0),0).toLocaleString()+' total overdue — collect now',action:"nav('invoices')"});
+    if(unpaidAmt>5000)issues.push({level:'orange',icon:'⚠️',title:'High Outstanding AR',desc:'$'+unpaidAmt.toLocaleString()+' in '+unpaidCt+' open bills',action:"nav('invoices')"});
+    const staleOnboard=allCarriers.filter(c=>c.status==='onboarding_incomplete'&&c.created_at&&Math.floor((Date.now()-new Date(c.created_at))/86400000)>7);
+    if(staleOnboard.length)issues.push({level:'orange',icon:'👥',title:staleOnboard.length+' Carrier'+(staleOnboard.length>1?'s':'')+' Stuck in Onboarding',desc:staleOnboard.map(c=>c.company_name).join(', ')+' — over 7 days incomplete',action:"nav('carriers')"});
+    const checkDue=allLoads.filter(l=>l.status==='Check Due');
+    if(checkDue.length)issues.push({level:'orange',icon:'📞',title:checkDue.length+' Check-Call'+(checkDue.length>1?'s':'')+' Due',desc:checkDue.map(l=>esc(l.driver_name||l.load_number||'Load')).join(', '),action:"nav('dispatch')"});
+    const podNeeded=allLoads.filter(l=>l.status==='POD Needed');
+    if(podNeeded.length)issues.push({level:'orange',icon:'📄',title:podNeeded.length+' POD'+(podNeeded.length>1?'s':'')+' Needed',desc:podNeeded.map(l=>esc(l.driver_name||l.load_number||'Load')).join(', '),action:"nav('dispatch')"});
+    const critTotal=issues.length;
+    if(critBadge)critBadge.textContent=critTotal;
+    if(critCount)critCount.textContent=critTotal;
+    if(!critTotal){critEl.innerHTML='<div style="display:flex;align-items:center;gap:10px;padding:12px;background:rgba(34,197,94,.08);border-radius:8px;border:1px solid rgba(34,197,94,.2)"><span style="font-size:20px">✅</span><div><div style="font-weight:600;color:var(--green);font-size:13px">All Clear</div><div style="font-size:12px;color:var(--muted)">No critical issues detected</div></div></div>';}
+    else{critEl.innerHTML=issues.map(iss=>{
+      const bg=iss.level==='red'?'rgba(239,68,68,.08)':'rgba(245,158,11,.08)';
+      const border=iss.level==='red'?'rgba(239,68,68,.2)':'rgba(245,158,11,.2)';
+      const color=iss.level==='red'?'var(--red)':'var(--orange)';
+      return '<div style="display:flex;align-items:flex-start;gap:10px;padding:10px 12px;background:'+bg+';border-radius:8px;border:1px solid '+border+';margin-bottom:8px;cursor:pointer" onclick="'+iss.action+'">'+
+        '<span style="font-size:18px;flex-shrink:0">'+iss.icon+'</span>'+
+        '<div style="flex:1"><div style="font-weight:600;color:'+color+';font-size:13px">'+iss.title+'</div>'+
+        '<div style="font-size:11px;color:var(--muted);margin-top:2px">'+iss.desc+'</div></div></div>';
+    }).join('');}
+  }
+  const paymentsEl=document.getElementById('dash-payments-due');
+  if(paymentsEl){
+    const dueInvs=allInvoices.filter(i=>i.status!=='Paid').sort((a,b)=>{
+      const da=a.due_date?new Date(a.due_date):new Date(a.created_at||0);
+      const db=b.due_date?new Date(b.due_date):new Date(b.created_at||0);
+      return da-db;
+    }).slice(0,10);
+    if(!dueInvs.length){paymentsEl.innerHTML='<div style="color:var(--muted);font-size:12px;padding:8px 0">No outstanding payments — all caught up!</div>';}
+    else{
+      const fmtDate=d=>{if(!d)return'—';const dt=new Date(d+'T00:00:00');return dt.toLocaleDateString('en-US',{month:'short',day:'numeric'});};
+      const tod=new Date();tod.setHours(0,0,0,0);
+      paymentsEl.innerHTML='<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">'+
+        '<thead><tr style="border-bottom:1px solid var(--border)">'+
+        '<th style="padding:6px 8px;text-align:left;color:var(--muted);font-size:10px;font-weight:700;text-transform:uppercase">Invoice</th>'+
+        '<th style="padding:6px 8px;text-align:right;color:var(--muted);font-size:10px;font-weight:700;text-transform:uppercase">Amount</th>'+
+        '<th style="padding:6px 8px;text-align:left;color:var(--muted);font-size:10px;font-weight:700;text-transform:uppercase">Due Date</th>'+
+        '<th style="padding:6px 8px;text-align:left;color:var(--muted);font-size:10px;font-weight:700;text-transform:uppercase">Status</th>'+
+        '</tr></thead><tbody>'+
+        dueInvs.map(inv=>{
+          const dDate=inv.due_date?new Date(inv.due_date+'T00:00:00'):null;
+          const isOverdue=dDate&&dDate<tod;
+          const rowBg=isOverdue?'background:rgba(239,68,68,.04);':'';
+          return '<tr style="border-bottom:1px solid var(--border);'+rowBg+'">'+
+            '<td style="padding:6px 8px;font-weight:600">'+esc(inv.invoice_number||('INV-'+(inv.id||'').slice(0,6)))+'</td>'+
+            '<td style="padding:6px 8px;font-family:var(--ff-m);color:var(--green);text-align:right">$'+Number(inv.amount||0).toLocaleString()+'</td>'+
+            '<td style="padding:6px 8px;font-family:var(--ff-m);font-size:11px;color:'+(isOverdue?'var(--red)':'var(--muted)')+'">'+
+              (isOverdue?'⚠️ ':'')+fmtDate(inv.due_date)+'</td>'+
+            '<td style="padding:6px 8px"><span class="badge '+invStatusBadge(inv.status||'Unpaid')+'">'+esc(inv.status||'Unpaid')+'</span></td>'+
+          '</tr>';
+        }).join('')+'</tbody></table></div>'+
+        '<div style="margin-top:10px;font-size:11px;color:var(--muted);display:flex;justify-content:space-between">'+
+          '<span>'+dueInvs.length+' open invoice'+(dueInvs.length>1?'s':'')+'</span>'+
+          '<span style="font-weight:700;color:var(--red)">$'+dueInvs.reduce((a,i)=>a+(Number(i.amount)||0),0).toLocaleString()+' total due</span>'+
+        '</div>';
+    }
+  }
+  const refreshEl=document.getElementById('dash-last-refresh');
+  if(refreshEl)refreshEl.textContent='Last sync: '+new Date().toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
 }
 
 // ── DASHBOARD SUMMARY MODAL ──
@@ -17937,11 +18144,77 @@ async function lfLoadRoster(service, stripId){
 async function dashLoadLFRoster(){
   const wrap = document.getElementById('dash-lf-roster');
   const chip = document.getElementById('dash-lf-count');
-  if(!wrap) return;
   try {
     const d = await lfFetch('/api/light-fleet/drivers?limit=200');
     const drivers = (d.items||[]).sort((a,b)=>new Date(b.created_at)-new Date(a.created_at));
     if(chip) chip.textContent = drivers.length + ' total';
+    // Populate new dashboard LF elements
+    const lfTotalEl=document.getElementById('lf-total-d');
+    const lfActiveEl=document.getElementById('lf-active-d');
+    const lfKpiEl=document.getElementById('dash-lf-kpi-total');
+    const lfKpiSub=document.getElementById('dash-lf-kpi-sub');
+    if(lfTotalEl)lfTotalEl.textContent=drivers.length;
+    const lfActiveCt=drivers.filter(dr=>dr.status==='active').length;
+    if(lfActiveEl)lfActiveEl.textContent=lfActiveCt;
+    if(lfKpiEl)lfKpiEl.textContent=drivers.length;
+    if(lfKpiSub)lfKpiSub.textContent=lfActiveCt+' active across all segments';
+    // Segment counts
+    const segKeys=['nemt','medical','executive','courier','gig'];
+    const segMap={};
+    drivers.forEach(dr=>{(dr.approved_services||[dr.service_type||'']).filter(Boolean).forEach(s=>{const k=(s||'').toLowerCase();segMap[k]=(segMap[k]||0)+1;});});
+    // Also count by primary service if no approved_services
+    drivers.filter(dr=>!(dr.approved_services||[]).length&&dr.service_type).forEach(dr=>{const k=(dr.service_type||'').toLowerCase();segMap[k]=(segMap[k]||0)+1;});
+    segKeys.forEach(seg=>{const el=document.getElementById('lf-seg-'+seg);if(el)el.textContent=segMap[seg]||0;});
+    const bizdevEl=document.getElementById('lf-seg-bizdev');
+    if(bizdevEl)bizdevEl.textContent=segMap['bizdev']||segMap['business_dev']||segMap['biz_dev']||0;
+    // LF onboarding (pending/onboarding status)
+    const lfOnboard=drivers.filter(dr=>dr.status==='pending'||dr.status==='onboarding'||dr.status==='inactive');
+    const lfObCountEl=document.getElementById('lf-onboard-count');
+    if(lfObCountEl)lfObCountEl.textContent=lfOnboard.length;
+    const lfObEl=document.getElementById('dash-lf-onboarding');
+    if(lfObEl){
+      if(!lfOnboard.length){lfObEl.innerHTML='<div style="padding:12px;text-align:center;color:var(--muted);font-size:12px">No light fleet drivers pending onboarding</div>';}
+      else{
+        lfObEl.innerHTML='<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">'+
+          '<thead><tr style="border-bottom:1px solid var(--border)">'+
+          '<th style="padding:6px 8px;text-align:left;color:var(--muted);font-size:10px;font-weight:700;text-transform:uppercase">Driver</th>'+
+          '<th style="padding:6px 8px;text-align:left;color:var(--muted);font-size:10px;font-weight:700;text-transform:uppercase">Phone</th>'+
+          '<th style="padding:6px 8px;text-align:left;color:var(--muted);font-size:10px;font-weight:700;text-transform:uppercase">Services</th>'+
+          '<th style="padding:6px 8px;text-align:left;color:var(--muted);font-size:10px;font-weight:700;text-transform:uppercase">Stage</th>'+
+          '<th style="padding:6px 8px;text-align:left;color:var(--muted);font-size:10px;font-weight:700;text-transform:uppercase">MVR</th>'+
+          '</tr></thead><tbody>'+
+          lfOnboard.slice(0,8).map(dr=>{
+            const svcs=(dr.approved_services||[dr.service_type||'']).filter(Boolean).slice(0,2).join(', ')||'—';
+            const mvrColor=dr.mvr_status==='clear'?'var(--green)':dr.mvr_status==='flagged'?'var(--red)':'var(--orange)';
+            const stageColor=dr.status==='pending'?'var(--orange)':dr.status==='inactive'?'var(--muted)':'var(--blue)';
+            return '<tr style="border-bottom:1px solid var(--border)">'+
+              '<td style="padding:6px 8px;font-weight:600">'+esc(dr.name||'—')+'</td>'+
+              '<td style="padding:6px 8px;color:var(--muted)">'+esc(dr.phone||'—')+'</td>'+
+              '<td style="padding:6px 8px;font-size:11px;color:var(--muted)">'+esc(svcs)+'</td>'+
+              '<td style="padding:6px 8px"><span style="color:'+stageColor+';font-weight:600;font-size:11px">'+esc(dr.status||'—')+'</span></td>'+
+              '<td style="padding:6px 8px;font-size:11px;color:'+mvrColor+';font-weight:600">'+esc(dr.mvr_status||'pending')+'</td>'+
+            '</tr>';
+          }).join('')+'</tbody></table></div>';
+      }
+    }
+    // Recently added LF drivers (last 3)
+    const lfRecentEl=document.getElementById('lf-recent-drivers');
+    if(lfRecentEl){
+      if(!drivers.length){lfRecentEl.innerHTML='<div class="t-sm t-muted">No drivers yet</div>';}
+      else{lfRecentEl.innerHTML=drivers.slice(0,3).map(dr=>{
+        const veh=[dr.vehicle_year,dr.vehicle_make,dr.vehicle_model].filter(Boolean).join(' ')||'—';
+        const sc=dr.status==='active'?'var(--green)':dr.status==='pending'?'var(--orange)':'var(--muted)';
+        return '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">'+
+          '<div style="width:30px;height:30px;border-radius:8px;background:linear-gradient(135deg,#6366f1,#8b5cf6);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#fff;flex-shrink:0">'+esc((dr.name||'?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase())+'</div>'+
+          '<div style="flex:1;min-width:0">'+
+            '<div style="font-weight:600;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(dr.name||'—')+'</div>'+
+            '<div style="font-size:11px;color:var(--muted)">'+esc(veh)+'</div>'+
+          '</div>'+
+          '<span style="color:'+sc+';font-weight:600;font-size:11px">'+esc(dr.status||'inactive')+'</span>'+
+        '</div>';
+      }).join('');}
+    }
+    if(!wrap) return;
     if(!drivers.length){
       wrap.innerHTML = '<div style="padding:16px;text-align:center;color:var(--muted);font-size:12px">No light fleet drivers onboarded yet</div>';
       return;
