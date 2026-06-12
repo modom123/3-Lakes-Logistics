@@ -11465,7 +11465,10 @@ window.moEmailOpen = async function(id,from,mb){
 }';document.getElementById('mo-compose-subj').value='Re: ${(m.subject||'').replace(/'/g,'\\\'').slice(0,60)}';document.getElementById('mo-compose').style.display='flex'">↩ Reply</button>
       </div>
     </div>
-    <div style="font-size:13px;color:rgba(255,255,255,.75);line-height:1.7;white-space:pre-wrap;">${(m.body_text||m.body_html||'(Empty message)').slice(0,4000)}</div>`;
+    ${m.body_html
+      ? `<iframe sandbox="allow-same-origin" srcdoc="${m.body_html.replace(/&/g,'&amp;').replace(/"/g,'&quot;')}" style="width:100%;min-height:320px;flex:1;border:none;border-radius:6px;background:#fff;"></iframe>`
+      : `<div style="background:#fff;border-radius:6px;padding:16px 20px;font-size:13px;color:#1a1a1a;line-height:1.75;white-space:pre-wrap;font-family:inherit;word-break:break-word;">${(m.body_text||'(Empty message)').replace(/</g,'&lt;').replace(/>/g,'&gt;').slice(0,8000)}</div>`
+    }`;
   }catch(e){view.innerHTML='<div style="padding:20px;color:rgba(255,255,255,.4);">Could not load message</div>';}
 };
 
@@ -12776,7 +12779,10 @@ window.ccgEmailOpen = async function(id,from){
         <button class="ccg-hdr-btn" style="font-size:10px;padding:4px 10px;" onclick="document.getElementById('ccg-compose-to').value='${(m.from_address||'').replace(/'/g,'\\\'').replace(/"/g,'&quot;')}';document.getElementById('ccg-compose-subj').value='Re: ${(m.subject||'').replace(/'/g,'\\\'').slice(0,60)}';document.getElementById('ccg-compose').style.display='flex'">↩ Reply</button>
       </div>
     </div>
-    <div style="font-size:13px;color:rgba(255,255,255,.75);line-height:1.7;white-space:pre-wrap;">${(m.body_text||m.body_html||'(Empty message)').slice(0,4000)}</div>`;
+    ${m.body_html
+      ? `<iframe sandbox="allow-same-origin" srcdoc="${m.body_html.replace(/&/g,'&amp;').replace(/"/g,'&quot;')}" style="width:100%;min-height:320px;flex:1;border:none;border-radius:6px;background:#fff;"></iframe>`
+      : `<div style="background:#fff;border-radius:6px;padding:16px 20px;font-size:13px;color:#1a1a1a;line-height:1.75;white-space:pre-wrap;font-family:inherit;word-break:break-word;">${(m.body_text||'(Empty message)').replace(/</g,'&lt;').replace(/>/g,'&gt;').slice(0,8000)}</div>`
+    }`;
   }catch(e){view.innerHTML='<div style="padding:20px;color:rgba(255,255,255,.4);">Could not load message</div>';}
 };
 
