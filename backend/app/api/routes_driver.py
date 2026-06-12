@@ -797,11 +797,27 @@ async def lf_payout_status(session: DriverSession):
     except Exception:
         pass
 
+    # Instant pay eligibility: 6 months on the platform
+    instant_pay_eligible = False
+    try:
+        joined_row = sb.table("light_vehicle_drivers").select("created_at").eq(
+            "id", driver_id
+        ).maybe_single().execute().data or {}
+        joined_at_str = joined_row.get("created_at") or ""
+        if joined_at_str:
+            joined_at = datetime.fromisoformat(joined_at_str.replace("Z", "+00:00"))
+            instant_pay_eligible = (datetime.now(timezone.utc) - joined_at).days >= 180
+    except Exception:
+        pass
+
     return {
-        "stripe_status":       driver_row.get("stripe_account_status", "not_started"),
-        "payouts_enabled":     driver_row.get("stripe_payouts_enabled", False),
-        "stripe_account_id":   driver_row.get("stripe_account_id"),
-        "pending_balance_usd": round(pending_balance, 2),
+        "stripe_status":          driver_row.get("stripe_account_status", "not_started"),
+        "payouts_enabled":        driver_row.get("stripe_payouts_enabled", False),
+        "stripe_account_id":      driver_row.get("stripe_account_id"),
+        "pending_balance_usd":    round(pending_balance, 2),
+        "instant_pay_eligible":   instant_pay_eligible,
+        "instant_pay_unlock_note": "Instant pay unlocks after 6 months on the platform"
+                                   if not instant_pay_eligible else None,
     }
 
 
@@ -828,6 +844,24 @@ async def lf_instant_pay(body: dict, session: DriverSession):
 
     if driver_row.get("stripe_account_status") != "connected":
         raise HTTPException(status_code=400, detail="payout not set up — complete Stripe onboarding first")
+
+    # Instant pay requires 6 months of tenure
+    try:
+        joined_row = sb.table("light_vehicle_drivers").select("created_at").eq(
+            "id", driver_id
+        ).maybe_single().execute().data or {}
+        joined_at_str = joined_row.get("created_at") or ""
+        if joined_at_str:
+            joined_at = datetime.fromisoformat(joined_at_str.replace("Z", "+00:00"))
+            if (datetime.now(timezone.utc) - joined_at).days < 180:
+                raise HTTPException(
+                    status_code=403,
+                    detail="Instant pay is a privilege earned after 6 months on the platform",
+                )
+    except HTTPException:
+        raise
+    except Exception:
+        pass  # if we can't determine tenure, allow through
 
     stripe_account_id = driver_row["stripe_account_id"]
     fee  = round(amount * _INSTANT_PAY_FEE, 2)

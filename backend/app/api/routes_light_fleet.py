@@ -742,6 +742,110 @@ def get_driver_compliance(driver_id: str) -> dict:
     return compliance_autopilot.get_compliance_status(driver_id)
 
 
+@router.post("/payouts/weekly-batch")
+def run_weekly_payout_batch(payload: dict | None = None) -> dict:
+    """Process all queued driver earnings and send one Stripe Transfer per driver.
+
+    Intended to run every Friday.  Aggregates all 'queued' rows in
+    lf_driver_payouts, groups by driver, and fires a single Transfer per driver
+    for the week's total.  Marks rows 'paid' on success.
+    """
+    from ..settings import get_settings
+    import stripe as _stripe
+    s = get_settings()
+    if not s.stripe_secret_key:
+        raise HTTPException(status_code=503, detail="stripe not configured")
+    _stripe.api_key = s.stripe_secret_key
+
+    from datetime import datetime, timezone
+    sb = get_supabase()
+
+    # Load all queued rows
+    queued = sb.table("lf_driver_payouts").select(
+        "id, driver_id, net_cents"
+    ).eq("status", "queued").execute().data or []
+
+    if not queued:
+        return {"ok": True, "drivers_paid": 0, "total_transferred_usd": 0.0, "note": "no queued payouts"}
+
+    # Group by driver
+    from collections import defaultdict
+    by_driver: dict[str, list] = defaultdict(list)
+    for row in queued:
+        by_driver[row["driver_id"]].append(row)
+
+    # Fetch Stripe account IDs for all drivers in one query
+    driver_ids = list(by_driver.keys())
+    drv_rows = sb.table("light_vehicle_drivers").select(
+        "id, stripe_account_id, stripe_account_status"
+    ).in_("id", driver_ids).execute().data or []
+    stripe_map = {
+        d["id"]: d for d in drv_rows
+        if d.get("stripe_account_status") == "connected" and d.get("stripe_account_id")
+    }
+
+    now_iso = datetime.now(timezone.utc).isoformat()
+    results = []
+    total_cents = 0
+
+    for driver_id, rows in by_driver.items():
+        drv = stripe_map.get(driver_id)
+        if not drv:
+            results.append({"driver_id": driver_id, "status": "skipped", "reason": "stripe_not_connected"})
+            continue
+
+        batch_cents = sum(r["net_cents"] for r in rows)
+        if batch_cents <= 0:
+            continue
+
+        record_ids = [r["id"] for r in rows]
+        stripe_account_id = drv["stripe_account_id"]
+
+        try:
+            transfer = _stripe.Transfer.create(
+                amount=batch_cents,
+                currency="usd",
+                destination=stripe_account_id,
+                metadata={
+                    "driver_id":   driver_id,
+                    "source":      "lf_weekly_batch",
+                    "record_ids":  ",".join(str(x) for x in record_ids[:20]),
+                    "week_ending": now_iso[:10],
+                },
+            )
+            # Mark all contributing rows as paid
+            sb.table("lf_driver_payouts").update({
+                "status":             "paid",
+                "stripe_transfer_id": transfer.id,
+                "processed_at":       now_iso,
+                "paid_at":            now_iso,
+            }).in_("id", record_ids).execute()
+            total_cents += batch_cents
+            results.append({
+                "driver_id":   driver_id,
+                "status":      "paid",
+                "net_usd":     round(batch_cents / 100, 2),
+                "transfer_id": transfer.id,
+                "trips":       len(rows),
+            })
+        except _stripe.error.StripeError as e:
+            results.append({
+                "driver_id": driver_id,
+                "status":    "failed",
+                "reason":    str(e.user_message or e)[:200],
+            })
+
+    paid_count = sum(1 for r in results if r["status"] == "paid")
+    return {
+        "ok":                    True,
+        "drivers_paid":          paid_count,
+        "drivers_skipped":       len(results) - paid_count,
+        "total_transferred_usd": round(total_cents / 100, 2),
+        "processed_at":          now_iso,
+        "detail":                results,
+    }
+
+
 @router.post("/drivers/{driver_id}/instant-pay")
 def request_instant_pay(driver_id: str, payload: dict) -> dict:
     """Admin-triggered instant payout for an LF driver.  0.75% processing fee."""
