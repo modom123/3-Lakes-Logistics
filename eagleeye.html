@@ -5136,11 +5136,12 @@ function createInvoiceForLoad(loadId,driverName,fee){
 
 // ── DASHBOARD ──
 function updateDashboard(){
-  const activeC=allCarriers.filter(c=>c.status==='active'||c.status==='onboarding');
-  const pendingC=allCarriers.filter(c=>c.status==='onboarding_incomplete');
+  const realCarriers=allCarriers.filter(c=>!c.is_test);
+  const activeC=realCarriers.filter(c=>c.status==='active'||c.status==='onboarding');
+  const pendingC=realCarriers.filter(c=>c.status==='onboarding_incomplete');
   const testCt=allCarriers.filter(c=>c.is_test).length;
   setText('dash-total-carriers',activeC.length);
-  setText('dash-carrier-sub',allCarriers.length+' total'+(testCt?' · '+testCt+' test':''));
+  setText('dash-carrier-sub',realCarriers.length+' total'+(testCt?' · '+testCt+' test':''));
   setText('dash-pending-carriers',pendingC.length);
   setText('dash-pending-sub',pendingC.length+' need profile completion');
   const now=new Date();
@@ -5176,23 +5177,23 @@ function updateDashboard(){
   ];
   // Per-plan carrier + truck counts
   const planCounts={};const planTrucks={};
-  allCarriers.forEach(c=>{
+  realCarriers.forEach(c=>{
     const k=normPlanKey(c.plan);
     planCounts[k]=(planCounts[k]||0)+1;
     planTrucks[k]=(planTrucks[k]||0)+(c.fleet_size||1);
   });
-  const totalCarriers=allCarriers.length||1;
+  const totalCarriers=realCarriers.length||1;
   const totalTrucks=Object.values(planTrucks).reduce((a,b)=>a+b,0)||1;
   // Monthly subscription revenue per flat-fee plan
   const planMRR={};
-  allCarriers.forEach(c=>{
+  realCarriers.forEach(c=>{
     const k=normPlanKey(c.plan);
     const monthly=planMonthly(c.plan);
     if(monthly)planMRR[k]=(planMRR[k]||0)+monthly*(c.fleet_size||1);
   });
   // MTD dispatch fees for 8% plan
   const carrierPlanMap={};
-  allCarriers.forEach(c=>{if(c.company_name)carrierPlanMap[c.company_name.toLowerCase()]=normPlanKey(c.plan);});
+  realCarriers.forEach(c=>{if(c.company_name)carrierPlanMap[c.company_name.toLowerCase()]=normPlanKey(c.plan);});
   const planFees={};
   mtdLoads.forEach(l=>{
     const k=carrierPlanMap[(l.driver_name||'').toLowerCase()]||'pay_as_you_go';
@@ -5254,7 +5255,7 @@ function updateDashboard(){
   setText('rev-gross','$'+gross.toLocaleString());setText('rev-dispatch-fees','$'+fees.toLocaleString());setText('rev-ar','$'+ar.toLocaleString());
   const rbEl=document.getElementById('rev-breakdown');
   if(rbEl){
-    const activeCount=allCarriers.filter(c=>c.status==='active').length;
+    const activeCount=realCarriers.filter(c=>c.status==='active').length;
     const feeGoal=Math.max(4800,activeCount*400);
     const grossGoal=Math.max(22000,activeCount*4000);
     const mrrGoal=Math.max(5000,totalTrucks*400);
@@ -5267,7 +5268,7 @@ function updateDashboard(){
 
   const dyn=document.getElementById('dynamic-actions');
   if(dyn){
-    const newC=allCarriers.filter(c=>c.status==='onboarding_incomplete');
+    const newC=realCarriers.filter(c=>c.status==='onboarding_incomplete');
     dyn.innerHTML=newC.slice(0,2).map(c=>
       '<div class="tl-item"><div class="tl-dot" style="background:rgba(37,99,235,.1);color:var(--blue)">📋</div>'+
       '<div class="tl-body"><div class="tl-t">New Carrier — '+esc(c.company_name)+'</div>'+
@@ -5285,7 +5286,7 @@ function updateDashboard(){
   setText('dash-rev-fees','$'+fees.toLocaleString());
   setText('dash-rev-mrr',totalMRR?'$'+totalMRR.toLocaleString():'$0');
   setText('dash-rev-ar','$'+unpaidAmt.toLocaleString());
-  const hfActive=allCarriers.filter(c=>c.status==='active'||c.status==='onboarding');
+  const hfActive=realCarriers.filter(c=>c.status==='active'||c.status==='onboarding');
   const hfTrucks=hfActive.reduce((a,c)=>a+(Number(c.fleet_size)||1),0);
   const activeLoadDrivers=new Set(allLoads.filter(l=>l.status&&!['Delivered','Completed','Cancelled'].includes(l.status)).map(l=>(l.driver_name||'').toLowerCase().trim()));
   const hfOnLoadCt=hfActive.filter(c=>activeLoadDrivers.has((c.company_name||'').toLowerCase().trim())).length;
@@ -5301,7 +5302,7 @@ function updateDashboard(){
     if(!eKeys.length){equipEl.innerHTML='<div class="t-sm t-muted">No carriers yet</div>';}
     else{const tot=hfActive.length||1;equipEl.innerHTML=eKeys.map(k=>{const pct=Math.round(eMap[k]/tot*100);return '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><div style="width:72px;font-size:11px;color:var(--muted);text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(k)+'</div><div style="flex:1;background:var(--surface2);border-radius:4px;height:7px"><div style="width:'+pct+'%;background:var(--navy);border-radius:4px;height:7px;min-width:4px"></div></div><div style="font-size:11px;font-family:var(--ff-m);min-width:22px">'+eMap[k]+'</div></div>';}).join('');}
   }
-  const hfOnboard=allCarriers.filter(c=>c.status==='onboarding'||c.status==='onboarding_incomplete');
+  const hfOnboard=realCarriers.filter(c=>c.status==='onboarding'||c.status==='onboarding_incomplete');
   const hfObCountEl=document.getElementById('hf-onboard-count');
   if(hfObCountEl)hfObCountEl.textContent=hfOnboard.length;
   const hfObEl=document.getElementById('dash-hf-onboarding');
@@ -5323,8 +5324,8 @@ function updateDashboard(){
           const stageHtml=c.status==='onboarding_incomplete'?'<span class="badge badge-orange">Incomplete</span>':'<span class="badge badge-blue">In Progress</span>';
           const missing=Array.isArray(c.onboarding_missing_fields)&&c.onboarding_missing_fields.length?c.onboarding_missing_fields.slice(0,3).join(', ')+(c.onboarding_missing_fields.length>3?' +more':''):(c.status==='onboarding_incomplete'?'Profile incomplete':'—');
           const daysColor=days>7?'var(--red)':days>3?'var(--orange)':'var(--muted)';
-          return '<tr style="border-bottom:1px solid var(--border)">'+
-            '<td style="padding:6px 8px;font-weight:600">'+esc(c.company_name||'—')+'</td>'+
+          return '<tr style="border-bottom:1px solid var(--border);cursor:pointer;transition:background .12s" onmouseover="this.style.background=\'var(--surface2)\'" onmouseout="this.style.background=\'\'" onclick="showOnboardingDetail(\''+c.id+'\')">'+
+            '<td style="padding:6px 8px;font-weight:600">'+esc(c.company_name||'—')+' <span style="font-size:9px;color:var(--muted);font-family:var(--ff-m)">↗</span></td>'+
             '<td style="padding:6px 8px">'+stageHtml+'</td>'+
             '<td style="padding:6px 8px"><span class="badge '+planBadgeClass(c.plan)+'">'+planShort(c.plan)+'</span></td>'+
             '<td style="padding:6px 8px;text-align:center">'+(c.fleet_size||1)+'</td>'+
@@ -5342,7 +5343,7 @@ function updateDashboard(){
     const overdueInv=allInvoices.filter(i=>i.status==='Overdue');
     if(overdueInv.length)issues.push({level:'red',icon:'💸',title:overdueInv.length+' Overdue Invoice'+(overdueInv.length>1?'s':''),desc:'$'+overdueInv.reduce((a,i)=>a+(Number(i.amount)||0),0).toLocaleString()+' total overdue — collect now',action:"nav('invoices')"});
     if(unpaidAmt>5000)issues.push({level:'orange',icon:'⚠️',title:'High Outstanding AR',desc:'$'+unpaidAmt.toLocaleString()+' in '+unpaidCt+' open bills',action:"nav('invoices')"});
-    const staleOnboard=allCarriers.filter(c=>c.status==='onboarding_incomplete'&&c.created_at&&Math.floor((Date.now()-new Date(c.created_at))/86400000)>7);
+    const staleOnboard=realCarriers.filter(c=>c.status==='onboarding_incomplete'&&c.created_at&&Math.floor((Date.now()-new Date(c.created_at))/86400000)>7);
     if(staleOnboard.length)issues.push({level:'orange',icon:'👥',title:staleOnboard.length+' Carrier'+(staleOnboard.length>1?'s':'')+' Stuck in Onboarding',desc:staleOnboard.map(c=>c.company_name).join(', ')+' — over 7 days incomplete',action:"nav('carriers')"});
     const checkDue=allLoads.filter(l=>l.status==='Check Due');
     if(checkDue.length)issues.push({level:'orange',icon:'📞',title:checkDue.length+' Check-Call'+(checkDue.length>1?'s':'')+' Due',desc:checkDue.map(l=>esc(l.driver_name||l.load_number||'Load')).join(', '),action:"nav('dispatch')"});
@@ -5704,6 +5705,131 @@ function showDashSummary(type){
       </tr>`).join('')+'</tbody></table>';
   }
   body.innerHTML=html;
+  modal.style.display='flex';
+}
+
+// ── ONBOARDING DETAIL POPUP ──
+const HF_ONBOARD_STEPS=[
+  {key:'company_info',label:'Company Info',icon:'🏢',fields:['email','phone'],
+   check:c=>!!(c.company_name&&(c.email||c.phone)),
+   detail:c=>[c.email?'Email: '+c.email:'⚠ No email',c.phone?'Phone: '+c.phone:'⚠ No phone'].join(' · ')},
+  {key:'address',label:'Home Base / Address',icon:'📍',fields:['address'],
+   check:c=>!!(c.address),detail:c=>c.address||'Not provided'},
+  {key:'authority',label:'MC / DOT Number',icon:'📋',fields:['mc_number','dot_number'],
+   check:c=>!!(c.mc_number||c.dot_number),
+   detail:c=>[c.mc_number?'MC: '+c.mc_number:'',c.dot_number?'DOT: '+c.dot_number:''].filter(Boolean).join(' · ')||'Not on file'},
+  {key:'equipment',label:'Equipment Profile',icon:'🚛',fields:['trailer_type'],
+   check:c=>!!(c.trailer_type||(c.equipment_types&&c.equipment_types.length)),
+   detail:c=>(c.trailer_type||(c.equipment_types||[]).join(', ')||'Not set')+(c.fleet_size?' · '+c.fleet_size+' truck(s)':'')},
+  {key:'insurance',label:'Insurance COI',icon:'🛡️',fields:['insurance_carrier'],
+   check:c=>!!(c.insurance_carrier),detail:c=>c.insurance_carrier||'Not received'},
+  {key:'agreement',label:'Dispatch Agreement',icon:'✍️',fields:['agreement_signed'],
+   check:c=>!!(c.agreement_signed||c.docusign_completed),detail:c=>c.agreement_signed?'Signed ✓':'Awaiting signature'},
+  {key:'eld',label:'ELD / Telematics',icon:'📡',fields:['eld_provider'],
+   check:c=>!!(c.eld_provider),detail:c=>c.eld_provider||'Not set up'},
+  {key:'payment',label:'Payment Method',icon:'💳',fields:['payment_method','factoring_company'],
+   check:c=>!!(c.payment_method||c.factoring_company||c.bank_account),
+   detail:c=>c.payment_method||c.factoring_company||'Not arranged'},
+  {key:'first_load',label:'First Load Dispatched',icon:'🚀',fields:[],
+   check:c=>allLoads.some(l=>(l.driver_name||'').toLowerCase().trim()===(c.company_name||'').toLowerCase().trim()),
+   detail:c=>{const n=allLoads.filter(l=>(l.driver_name||'').toLowerCase().trim()===(c.company_name||'').toLowerCase().trim()).length;return n?n+' load(s) on record':'No loads yet';}},
+];
+
+function showOnboardingDetail(carrierId){
+  const c=allCarriers.find(x=>x.id===carrierId);
+  if(!c)return;
+  const modal=document.getElementById('onboarding-detail-modal');
+  const body=document.getElementById('onboarding-detail-body');
+  if(!modal||!body)return;
+
+  const days=c.created_at?Math.floor((Date.now()-new Date(c.created_at))/86400000):'?';
+  const missing=Array.isArray(c.onboarding_missing_fields)?c.onboarding_missing_fields:[];
+
+  const steps=HF_ONBOARD_STEPS.map(s=>{
+    const fieldMissing=s.fields.length&&s.fields.some(f=>missing.includes(f));
+    const done=!fieldMissing&&s.check(c);
+    return{...s,done};
+  });
+
+  const doneCount=steps.filter(s=>s.done).length;
+  const pct=Math.round(doneCount/steps.length*100);
+  const pctColor=pct>=80?'var(--green)':pct>=50?'var(--orange)':'var(--red)';
+
+  const stageHtml=c.status==='onboarding_incomplete'?'<span class="badge badge-orange">Incomplete</span>':
+    c.status==='onboarding'?'<span class="badge badge-blue">In Progress</span>':
+    '<span class="badge badge-green">Active</span>';
+
+  const infoRows=[
+    ['📋','MC Number',c.mc_number||'—'],
+    ['🔢','DOT Number',c.dot_number||'—'],
+    ['📧','Email',c.email||'—'],
+    ['📞','Phone',c.phone||'—'],
+    ['🚛','Equipment',c.trailer_type||(c.equipment_types||[]).join(', ')||'—'],
+    ['🔢','Fleet Size',c.fleet_size?(c.fleet_size+' truck(s)'):'—'],
+    ['🛡️','Insurance Co.',c.insurance_carrier||'—'],
+    ['📡','ELD Provider',c.eld_provider||'—'],
+    ['💳','Payment',c.payment_method||c.factoring_company||'—'],
+    ['📅','Enrolled',(c.created_at||'').split('T')[0]||'—'],
+  ];
+
+  body.innerHTML=
+    `<div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:14px">
+       <div>
+         <div style="font-size:18px;font-weight:800;font-family:var(--ff-h);color:var(--navy);margin-bottom:6px">
+           ${esc(c.company_name||'—')}
+           ${c.is_test?'<span style="background:#fef3c7;color:#92400e;font-size:10px;padding:2px 7px;border-radius:4px;margin-left:6px">TEST</span>':''}
+         </div>
+         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+           ${stageHtml}
+           <span style="font-size:12px;color:var(--muted)">${days}d in system</span>
+           <span class="badge ${planBadgeClass(c.plan)}">${planShort(c.plan)}</span>
+           ${c.address?'<span style="font-size:12px;color:var(--muted)">📍 '+esc(c.address)+'</span>':''}
+         </div>
+       </div>
+       <div style="text-align:right;flex-shrink:0;padding-left:16px">
+         <div style="font-size:32px;font-weight:900;font-family:var(--ff-h);color:${pctColor};line-height:1">${pct}%</div>
+         <div style="font-size:11px;color:var(--muted);margin-top:2px">${doneCount}/${steps.length} steps done</div>
+       </div>
+     </div>
+     <div style="background:var(--surface2);border-radius:6px;height:8px;margin-bottom:18px;overflow:hidden">
+       <div style="width:${pct}%;height:8px;background:${pctColor};border-radius:6px;transition:width .4s"></div>
+     </div>
+     <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:18px">
+       <div>
+         <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);margin-bottom:10px;padding-bottom:6px;border-bottom:2px solid var(--border)">Carrier Info</div>
+         ${infoRows.map(([icon,lbl,val])=>`
+           <div style="display:flex;align-items:flex-start;gap:8px;padding:5px 0;border-bottom:1px solid var(--border)">
+             <span style="font-size:13px;flex-shrink:0;margin-top:1px">${icon}</span>
+             <div style="flex:1;min-width:0">
+               <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px">${lbl}</div>
+               <div style="font-size:12px;color:${val==='—'?'var(--muted)':'var(--text)'};">${esc(val)}</div>
+             </div>
+           </div>`).join('')}
+       </div>
+       <div>
+         <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);margin-bottom:10px;padding-bottom:6px;border-bottom:2px solid var(--border)">Onboarding Checklist</div>
+         ${steps.map(s=>`
+           <div style="display:flex;align-items:flex-start;gap:10px;padding:7px 0;border-bottom:1px solid var(--border)">
+             <div style="width:19px;height:19px;border-radius:50%;background:${s.done?'rgba(34,197,94,.15)':'rgba(239,68,68,.08)'};border:1.5px solid ${s.done?'#22c55e':'#ef4444'};display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px">
+               <span style="font-size:10px;font-weight:900;color:${s.done?'#16a34a':'#dc2626'}">${s.done?'✓':'✗'}</span>
+             </div>
+             <div style="flex:1;min-width:0">
+               <div style="font-size:12px;font-weight:600;color:${s.done?'var(--text)':'#c2410c'}">${s.icon} ${s.label}</div>
+               <div style="font-size:11px;color:var(--muted);margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(s.detail(c))}</div>
+             </div>
+           </div>`).join('')}
+       </div>
+     </div>
+     ${missing.length?`<div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;padding:10px 14px;margin-bottom:16px">
+       <div style="font-size:10px;font-weight:700;color:#9a3412;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Missing Fields Detected</div>
+       <div style="display:flex;flex-wrap:wrap;gap:4px">${missing.map(f=>'<code style="background:#fed7aa;padding:2px 7px;border-radius:4px;font-size:11px;color:#92400e">'+esc(f)+'</code>').join('')}</div>
+     </div>`:''}
+     <div style="display:flex;gap:8px;flex-wrap:wrap;padding-top:4px">
+       <button class="btn-navy" onclick="resendOnboardingEmail('${c.id}');document.getElementById('onboarding-detail-modal').style.display='none'" style="font-size:12px;padding:7px 14px">📧 Resend Onboarding Email</button>
+       <button class="btn-out" onclick="document.getElementById('onboarding-detail-modal').style.display='none';nav('carriers')" style="font-size:12px;padding:7px 14px">👥 View in Carriers</button>
+       <button class="btn-out" onclick="document.getElementById('onboarding-detail-modal').style.display='none';nav('agreements')" style="font-size:12px;padding:7px 14px">✍️ Send Agreement</button>
+     </div>`;
+
   modal.style.display='flex';
 }
 
@@ -10364,6 +10490,23 @@ if (typeof nav === 'function') {
       <button onclick="document.getElementById('dash-summary-modal').style.display='none'" style="background:none;border:none;font-size:22px;color:#6b7280;cursor:pointer">×</button>
     </div>
     <div id="dash-summary-body" style="overflow-y:auto;padding:16px 24px 24px;flex:1"></div>
+  </div>
+</div>
+
+<!-- Onboarding Detail Modal -->
+<div id="onboarding-detail-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:2001;align-items:center;justify-content:center;padding:16px" onclick="if(event.target===this)this.style.display='none'">
+  <div style="background:#fff;border-radius:14px;width:100%;max-width:820px;max-height:90vh;overflow:hidden;box-shadow:0 24px 70px rgba(0,0,0,.35);display:flex;flex-direction:column">
+    <div style="padding:14px 20px;border-bottom:1px solid #e5e7eb;display:flex;justify-content:space-between;align-items:center;background:var(--navy)">
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="font-size:18px">🚛</span>
+        <div>
+          <div style="font-size:14px;font-weight:700;color:#fff;letter-spacing:.2px">Onboarding Pipeline Detail</div>
+          <div style="font-size:11px;color:rgba(255,255,255,.5);margin-top:1px">Click any step to see what's needed</div>
+        </div>
+      </div>
+      <button onclick="document.getElementById('onboarding-detail-modal').style.display='none'" style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);font-size:20px;color:rgba(255,255,255,.8);cursor:pointer;border-radius:6px;width:32px;height:32px;display:flex;align-items:center;justify-content:center;line-height:1">×</button>
+    </div>
+    <div id="onboarding-detail-body" style="overflow-y:auto;padding:20px 24px 24px;flex:1;scrollbar-width:thin"></div>
   </div>
 </div>
 
