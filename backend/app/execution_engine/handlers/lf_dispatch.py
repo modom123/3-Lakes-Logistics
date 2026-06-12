@@ -198,34 +198,78 @@ def h226_check_nemt_auth(carrier_id, contract_id, payload) -> dict:
 
 def h227_match_driver(carrier_id, contract_id, payload) -> dict:
     try:
-        trip_type = payload.get("trip_type", "gig")
+        trip_type    = payload.get("trip_type", "gig")
+        pickup_addr  = payload.get("pickup_address") or payload.get("origin_address") or ""
         sb = _db()
         candidates: list[dict] = []
+        disqualified: list[dict] = []
+
         if sb:
             try:
+                from datetime import date
+                from ..handlers.lf_onboarding import _SERVICE_RULES, _vehicle_age  # noqa: PLC0415
+                current_year = date.today().year
+                rules = _SERVICE_RULES.get(trip_type, _SERVICE_RULES["gig"])
+                max_age      = rules["max_age"]
+                allowed_types = rules["types"]  # None = any type
+
                 rows = (
                     sb.table("light_vehicle_drivers")
-                    .select("id,name,vehicle_type,total_trips,approved_services")
+                    .select(
+                        "id,name,vehicle_type,vehicle_year,total_trips,approved_services,"
+                        "mvr_status,background_check_status,last_lat,last_lng"
+                    )
                     .eq("status", "active")
                     .execute()
                     .data or []
                 )
                 for row in rows:
-                    services = row.get("approved_services") or []
-                    if trip_type in services:
-                        candidates.append({
-                            "id": row.get("id"),
-                            "name": row.get("name"),
-                            "vehicle_type": row.get("vehicle_type"),
-                            "total_trips": row.get("total_trips", 0),
-                        })
+                    services      = row.get("approved_services") or []
+                    vehicle_type  = (row.get("vehicle_type") or "sedan").lower()
+                    vehicle_year  = row.get("vehicle_year")
+                    age           = _vehicle_age(vehicle_year)
+                    mvr_ok        = row.get("mvr_status") not in ("flagged", "suspended", "failed")
+                    bg_ok         = row.get("background_check_status") not in ("flagged", "failed")
+
+                    # ── Hard gates ────────────────────────────────────────────
+                    if trip_type not in services:
+                        disqualified.append({"id": row["id"], "reason": f"not in approved_services for {trip_type}"})
+                        continue
+                    if not mvr_ok:
+                        disqualified.append({"id": row["id"], "reason": f"mvr_status={row.get('mvr_status')}"})
+                        continue
+                    if not bg_ok:
+                        disqualified.append({"id": row["id"], "reason": f"bg_status={row.get('background_check_status')}"})
+                        continue
+                    if allowed_types and vehicle_type not in allowed_types:
+                        disqualified.append({"id": row["id"], "reason": f"vehicle_type '{vehicle_type}' not allowed for {trip_type}"})
+                        continue
+                    if age is not None and age > max_age:
+                        disqualified.append({"id": row["id"], "reason": f"vehicle age {age}yr exceeds {max_age}yr limit for {trip_type}"})
+                        continue
+
+                    candidates.append({
+                        "id":           row["id"],
+                        "name":         row.get("name"),
+                        "vehicle_type": vehicle_type,
+                        "vehicle_year": vehicle_year,
+                        "total_trips":  row.get("total_trips", 0),
+                        "last_lat":     row.get("last_lat"),
+                        "last_lng":     row.get("last_lng"),
+                    })
             except Exception:  # noqa: BLE001
                 pass
+
+        # Prefer most experienced driver (most trips completed)
+        candidates.sort(key=lambda d: d.get("total_trips", 0), reverse=True)
         best_match_id = candidates[0]["id"] if candidates else None
+
         return {
-            "candidates": candidates,
+            "candidates":       candidates,
             "candidates_found": len(candidates),
-            "best_match_id": best_match_id,
+            "best_match_id":    best_match_id,
+            "disqualified":     disqualified,
+            "trip_type":        trip_type,
         }
     except Exception as e:  # noqa: BLE001
         return {"candidates": [], "candidates_found": 0, "best_match_id": None, "error": str(e)}

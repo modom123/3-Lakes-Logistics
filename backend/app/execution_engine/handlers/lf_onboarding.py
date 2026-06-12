@@ -318,6 +318,36 @@ def h205_verify_vehicle_insurance(carrier_id, contract_id, payload) -> dict:
         return {"valid": False, "error": str(e)}
 
 
+# ── Vehicle eligibility rules ─────────────────────────────────────────────────
+# Max vehicle age (years) and required vehicle types per service
+_SERVICE_RULES: dict[str, dict] = {
+    "nemt":      {"max_age": 10, "types": {"suv", "minivan", "wheelchair_van"}},
+    "executive": {"max_age": 7,  "types": {"sedan", "suv", "luxury"}},
+    "courier":   {"max_age": 15, "types": None},   # None = any type allowed
+    "gig":       {"max_age": 15, "types": None},
+}
+
+
+def _vehicle_age(vehicle_year: int | None) -> int | None:
+    """Return vehicle age in full years, or None if year unknown."""
+    if not vehicle_year:
+        return None
+    from datetime import date
+    return date.today().year - int(vehicle_year)
+
+
+def check_vehicle_eligibility(vehicle_type: str, vehicle_year: int | None) -> dict[str, bool]:
+    """Return which services this vehicle qualifies for based on type + age rules."""
+    vt  = (vehicle_type or "sedan").lower()
+    age = _vehicle_age(vehicle_year)
+    result = {}
+    for service, rules in _SERVICE_RULES.items():
+        type_ok = (rules["types"] is None) or (vt in rules["types"])
+        age_ok  = (age is None) or (age <= rules["max_age"])
+        result[service] = type_ok and age_ok
+    return result
+
+
 # ── Step 206: classify.vehicle ────────────────────────────────────────────────
 
 def h206_classify_vehicle(carrier_id, contract_id, payload) -> dict:
@@ -325,11 +355,12 @@ def h206_classify_vehicle(carrier_id, contract_id, payload) -> dict:
         driver_id = payload.get("driver_id") or carrier_id
         d = _driver(driver_id)
         vehicle_type = d.get("vehicle_type") or payload.get("vehicle_type", "sedan")
+        vehicle_year = d.get("vehicle_year") or payload.get("vehicle_year")
         vt = vehicle_type.lower() if vehicle_type else "sedan"
-        supports_nemt = vt in ("suv", "minivan", "wheelchair_van")
-        supports_executive = vt in ("suv", "sedan", "luxury")
-        supports_courier = vt in ("suv", "cargo_van", "minivan")
-        supports_gig = True
+
+        # Determine which services this vehicle is eligible for
+        eligibility = check_vehicle_eligibility(vt, vehicle_year)
+        age = _vehicle_age(vehicle_year)
 
         # Derive cargo_type and default capacity from vehicle classification
         cargo_type_map = {
@@ -345,7 +376,6 @@ def h206_classify_vehicle(carrier_id, contract_id, payload) -> dict:
         sb = _db()
         if sb and driver_id:
             update = {"vehicle_cargo_type": cargo_type}
-            # Only set defaults if not already provided
             if not d.get("vehicle_capacity_lbs"):
                 update["vehicle_capacity_lbs"] = default_cap
             if default_len and not d.get("vehicle_max_length_ft"):
@@ -356,15 +386,22 @@ def h206_classify_vehicle(carrier_id, contract_id, payload) -> dict:
                 pass
 
         return {
-            "vehicle_type": vehicle_type,
-            "vehicle_cargo_type": cargo_type,
-            "vehicle_year": d.get("vehicle_year"),
-            "vehicle_make": d.get("vehicle_make"),
-            "vehicle_model": d.get("vehicle_model"),
-            "supports_nemt": supports_nemt,
-            "supports_executive": supports_executive,
-            "supports_courier": supports_courier,
-            "supports_gig": supports_gig,
+            "vehicle_type":      vehicle_type,
+            "vehicle_year":      vehicle_year,
+            "vehicle_age":       age,
+            "vehicle_cargo_type":cargo_type,
+            "vehicle_make":      d.get("vehicle_make"),
+            "vehicle_model":     d.get("vehicle_model"),
+            "supports_nemt":     eligibility["nemt"],
+            "supports_executive":eligibility["executive"],
+            "supports_courier":  eligibility["courier"],
+            "supports_gig":      eligibility["gig"],
+            "eligibility":       eligibility,
+            "age_warnings": [
+                f"Vehicle too old for {svc} (max {_SERVICE_RULES[svc]['max_age']} yrs, yours is {age})"
+                for svc, ok in eligibility.items()
+                if not ok and age is not None and age > _SERVICE_RULES[svc]["max_age"]
+            ],
         }
     except Exception as e:  # noqa: BLE001
         return {"vehicle_type": None, "error": str(e)}
@@ -376,17 +413,32 @@ def h207_assign_services(carrier_id, contract_id, payload) -> dict:
     try:
         driver_id = payload.get("driver_id") or carrier_id
         d = _driver(driver_id)
-        approved_services = d.get("approved_services") or payload.get("approved_services") or []
-        if not approved_services:
-            vehicle_type = (d.get("vehicle_type") or payload.get("vehicle_type", "sedan")).lower()
-            if vehicle_type == "suv":
-                approved_services = ["nemt", "executive", "courier", "gig"]
+
+        vehicle_type = (d.get("vehicle_type") or payload.get("vehicle_type", "sedan")).lower()
+        vehicle_year = d.get("vehicle_year") or payload.get("vehicle_year")
+        eligibility  = check_vehicle_eligibility(vehicle_type, vehicle_year)
+
+        # Start from requested/existing services but filter by hard eligibility rules
+        requested = d.get("approved_services") or payload.get("approved_services") or []
+        if not requested:
+            # Default candidate list by vehicle type
+            if vehicle_type in ("suv", "minivan", "wheelchair_van"):
+                requested = ["nemt", "executive", "courier", "gig"]
             elif vehicle_type in ("sedan", "luxury"):
-                approved_services = ["executive", "gig"]
+                requested = ["executive", "gig"]
             elif vehicle_type == "cargo_van":
-                approved_services = ["courier", "gig"]
+                requested = ["courier", "gig"]
             else:
-                approved_services = ["gig"]
+                requested = ["gig"]
+
+        # Only keep services the vehicle actually qualifies for
+        approved_services = [s for s in requested if eligibility.get(s, False)]
+        # Gig is always available as a floor if the vehicle passes age check
+        if eligibility.get("gig") and "gig" not in approved_services:
+            approved_services.append("gig")
+
+        rejected = [s for s in requested if not eligibility.get(s, False)]
+
         sb = _db()
         if sb and driver_id:
             try:
@@ -395,8 +447,18 @@ def h207_assign_services(carrier_id, contract_id, payload) -> dict:
                 }).eq("id", str(driver_id)).execute()
             except Exception:  # noqa: BLE001
                 pass
+
         return {
             "services_assigned": approved_services,
+            "services_rejected": rejected,
+            "rejection_reasons": {
+                s: (
+                    f"Vehicle type '{vehicle_type}' not permitted for {s}"
+                    if _SERVICE_RULES.get(s, {}).get("types") and vehicle_type not in (_SERVICE_RULES[s]["types"] or set())
+                    else f"Vehicle too old for {s} (max {_SERVICE_RULES.get(s,{}).get('max_age',0)} yrs)"
+                )
+                for s in rejected
+            },
             "count": len(approved_services),
         }
     except Exception as e:  # noqa: BLE001
