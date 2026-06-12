@@ -4250,8 +4250,7 @@ async function loadOnboardingProgress(){
   if(!wrap)return;
   wrap.innerHTML='<div class="loading"><div class="spin"></div>Loading onboarding data…</div>';
   try{
-    const token=localStorage.getItem('3ll_token')||'eagle-eye-staff';
-    const res=await fetch('/api/onboarding/all-progress',{headers:{'Authorization':'Bearer '+token}});
+    const res=await apiFetch('/api/onboarding/all-progress');
     if(!res.ok){wrap.innerHTML='<div style="padding:16px;color:var(--danger);font-size:13px">Failed to load onboarding progress ('+res.status+')</div>';return;}
     const json=await res.json();
     const carriers=json.carriers||[];
@@ -4297,8 +4296,7 @@ async function loadOnboardingProgress(){
 
 async function resendOnboardingEmail(carrierId){
   try{
-    const token=localStorage.getItem('3ll_token')||'eagle-eye-staff';
-    const res=await fetch('/api/onboarding/resend-email/'+carrierId,{method:'POST',headers:{'Authorization':'Bearer '+token}});
+    const res=await apiFetch('/api/onboarding/resend-email/'+carrierId,'POST',{});
     const json=await res.json().catch(()=>({}));
     if(res.ok){alert('Email resent for phase '+json.phase+' ('+json.phase_name+')');}
     else{alert('Failed to resend email: '+(json.detail||res.status));}
