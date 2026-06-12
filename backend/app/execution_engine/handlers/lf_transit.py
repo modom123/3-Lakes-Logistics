@@ -371,24 +371,70 @@ def h252_dropoff_confirmed(carrier_id, contract_id, payload) -> dict:
 # ── Step 253: lf_transit.pod_capture ─────────────────────────────────────────
 
 def h253_pod_capture(carrier_id, contract_id, payload) -> dict:
+    """Verify POD record exists in lf_pod_records (uploaded via driver PWA).
+
+    The driver uploads photo + optional e-signature via
+    POST /driver/lf/trips/{trip_id}/pod before this step runs.
+    This step confirms the record, generates fresh signed URLs, and
+    writes the pod_url back to light_vehicle_trips.
+    """
     trip_id = payload.get("trip_id")
-    pod_url = payload.get("pod_url")
-    if not pod_url:
-        trip = _trip(trip_id)
-        pod_url = trip.get("pod_url")
+    sb = _db()
+
+    # ── Check lf_pod_records first (preferred — has signature too) ────────────
+    pod_record = None
+    if sb and trip_id:
+        try:
+            r = sb.table("lf_pod_records").select("*").eq("trip_id", str(trip_id)).maybe_single().execute()
+            pod_record = r.data
+        except Exception:  # noqa: BLE001
+            pass
+
+    if pod_record and pod_record.get("photo_path"):
+        photo_url     = pod_record.get("photo_url") or ""
+        signature_url = pod_record.get("signature_url") or ""
+
+        # Refresh signed URLs if stale/missing
+        if sb and not photo_url and pod_record.get("photo_path"):
+            try:
+                signed = sb.storage.from_("lf-pod").create_signed_url(
+                    pod_record["photo_path"], expires_in=604800
+                )
+                photo_url = signed.get("signedURL") or ""
+            except Exception:  # noqa: BLE001
+                pass
+
+        return {
+            "pod_captured":    True,
+            "pod_url":         photo_url,
+            "signature_url":   signature_url,
+            "has_signature":   bool(pod_record.get("signature_path")),
+            "recipient_name":  pod_record.get("recipient_name"),
+            "trip_id":         trip_id,
+            "captured_at":     pod_record.get("created_at") or _NOW(),
+            "source":          "lf_pod_records",
+        }
+
+    # ── Fallback: check pod_url on the trip row (legacy / manual entry) ───────
+    trip = _trip(trip_id)
+    pod_url = payload.get("pod_url") or trip.get("pod_url")
     if pod_url:
         return {
-            "pod_captured": True,
-            "pod_url": pod_url,
-            "trip_id": trip_id,
-            "captured_at": _NOW(),
+            "pod_captured":  True,
+            "pod_url":       pod_url,
+            "has_signature": False,
+            "trip_id":       trip_id,
+            "captured_at":   _NOW(),
+            "source":        "trip_row",
         }
+
     return {
         "pod_captured": False,
-        "pod_url": None,
-        "trip_id": trip_id,
+        "pod_url":      None,
+        "trip_id":      trip_id,
         "pod_required": True,
-        "captured_at": _NOW(),
+        "note":         "Driver must submit POD via the app before settlement can proceed",
+        "captured_at":  _NOW(),
     }
 
 

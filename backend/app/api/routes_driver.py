@@ -957,6 +957,140 @@ async def lf_instant_pay(body: dict, session: DriverSession):
         raise HTTPException(status_code=500, detail="instant pay failed")
 
 
+@router.post("/lf/trips/{trip_id}/pod")
+async def lf_submit_pod(
+    trip_id: str,
+    session: DriverSession,
+    photo: UploadFile = File(None),
+    signature: UploadFile = File(None),
+    recipient_name: str | None = None,
+    notes: str | None = None,
+    lat: float | None = None,
+    lng: float | None = None,
+):
+    """Driver submits Proof of Delivery — photo + optional e-signature.
+
+    Accepts multipart/form-data with:
+      photo         — delivery photo (jpeg/png/webp, required)
+      signature     — customer e-signature PNG (optional)
+      recipient_name — name of person who signed/received
+      notes         — any delivery notes
+      lat, lng      — GPS coordinates at capture time
+    """
+    driver_id = session["driver_id"]
+    sb = get_supabase()
+
+    # Verify this trip belongs to this driver
+    trip_res = sb.table("light_vehicle_trips").select(
+        "id, driver_id, trip_type, status"
+    ).eq("id", trip_id).maybe_single().execute()
+    trip = trip_res.data or {}
+    if not trip:
+        raise HTTPException(status_code=404, detail="trip not found")
+    if str(trip.get("driver_id")) != driver_id:
+        raise HTTPException(status_code=403, detail="not your trip")
+    if trip.get("status") not in ("in_progress", "arrived", "completed"):
+        raise HTTPException(status_code=409, detail=f"cannot submit POD in status '{trip.get('status')}'")
+
+    if not photo:
+        raise HTTPException(status_code=422, detail="photo is required for POD")
+
+    now = datetime.now(timezone.utc)
+    photo_path     = None
+    signature_path = None
+    photo_url      = None
+    signature_url  = None
+
+    # ── Upload photo ─────────────────────────────────────────────────────────
+    try:
+        photo_bytes = await photo.read()
+        ext = (photo.filename or "photo.jpg").rsplit(".", 1)[-1].lower() or "jpg"
+        photo_path = f"{trip_id}/photo.{ext}"
+        sb.storage.from_("lf-pod").upload(
+            path=photo_path,
+            file=photo_bytes,
+            file_options={"content-type": photo.content_type or "image/jpeg"},
+        )
+        # Generate 7-day signed URL
+        signed = sb.storage.from_("lf-pod").create_signed_url(photo_path, expires_in=604800)
+        photo_url = signed.get("signedURL") or signed.get("signed_url", "")
+    except Exception as e:
+        log.error("POD photo upload failed trip=%s: %s", trip_id, e)
+        raise HTTPException(status_code=500, detail="photo upload failed")
+
+    # ── Upload signature (optional) ───────────────────────────────────────────
+    if signature:
+        try:
+            sig_bytes = await signature.read()
+            signature_path = f"{trip_id}/signature.png"
+            sb.storage.from_("lf-pod").upload(
+                path=signature_path,
+                file=sig_bytes,
+                file_options={"content-type": "image/png"},
+            )
+            signed = sb.storage.from_("lf-pod").create_signed_url(signature_path, expires_in=604800)
+            signature_url = signed.get("signedURL") or signed.get("signed_url", "")
+        except Exception as e:
+            log.warning("POD signature upload failed trip=%s: %s", trip_id, e)
+
+    # ── Write POD record ──────────────────────────────────────────────────────
+    try:
+        sb.table("lf_pod_records").upsert({
+            "trip_id":        trip_id,
+            "driver_id":      driver_id,
+            "photo_path":     photo_path,
+            "signature_path": signature_path,
+            "photo_url":      photo_url,
+            "signature_url":  signature_url,
+            "captured_lat":   lat,
+            "captured_lng":   lng,
+            "recipient_name": recipient_name,
+            "notes":          notes,
+            "created_at":     now.isoformat(),
+        }, on_conflict="trip_id").execute()
+    except Exception as e:
+        log.error("POD record write failed trip=%s: %s", trip_id, e)
+
+    # ── Update trip pod_url + mark completed if still in progress ────────────
+    try:
+        trip_update: dict = {"pod_url": photo_url}
+        if trip.get("status") in ("in_progress", "arrived"):
+            trip_update.update({"status": "completed", "completed_at": now.isoformat()})
+        sb.table("light_vehicle_trips").update(trip_update).eq("id", trip_id).execute()
+    except Exception as e:
+        log.warning("Trip POD update failed trip=%s: %s", trip_id, e)
+
+    return {
+        "ok":             True,
+        "trip_id":        trip_id,
+        "photo_url":      photo_url,
+        "signature_url":  signature_url,
+        "pod_complete":   True,
+        "captured_at":    now.isoformat(),
+    }
+
+
+@router.get("/lf/trips/{trip_id}/pod")
+async def lf_get_pod(trip_id: str, session: DriverSession):
+    """Return the POD record for a completed trip."""
+    driver_id = session["driver_id"]
+    sb = get_supabase()
+    rec = sb.table("lf_pod_records").select("*").eq("trip_id", trip_id).maybe_single().execute().data
+    if not rec:
+        raise HTTPException(status_code=404, detail="no POD found for this trip")
+    if str(rec.get("driver_id")) != driver_id:
+        raise HTTPException(status_code=403, detail="not your trip")
+    # Refresh signed URLs if they've been stored as permanent paths
+    for field, path_field in [("photo_url", "photo_path"), ("signature_url", "signature_path")]:
+        if rec.get(path_field) and not rec.get(field):
+            try:
+                signed = sb.storage.from_("lf-pod").create_signed_url(rec[path_field], expires_in=604800)
+                rec[field] = signed.get("signedURL") or signed.get("signed_url", "")
+            except Exception:
+                pass
+    return rec
+
+
 @router.get("/lf/trips")
 async def lf_driver_trips(session: DriverSession, status: str | None = None, limit: int = 30):
     """Return Light Fleet trips assigned to the authenticated driver."""
