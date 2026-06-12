@@ -217,7 +217,8 @@ def h227_match_driver(carrier_id, contract_id, payload) -> dict:
                     sb.table("light_vehicle_drivers")
                     .select(
                         "id,name,vehicle_type,vehicle_year,total_trips,approved_services,"
-                        "mvr_status,background_check_status,last_lat,last_lng"
+                        "mvr_status,background_check_status,last_lat,last_lng,"
+                        "cpr_expires_at,hipaa_expires_at"
                     )
                     .eq("status", "active")
                     .execute()
@@ -247,6 +248,18 @@ def h227_match_driver(carrier_id, contract_id, payload) -> dict:
                     if age is not None and age > max_age:
                         disqualified.append({"id": row["id"], "reason": f"vehicle age {age}yr exceeds {max_age}yr limit for {trip_type}"})
                         continue
+
+                    # NEMT-specific: require valid CPR + HIPAA certs
+                    if trip_type == "nemt":
+                        today_str = date.today().isoformat()
+                        cpr_exp   = row.get("cpr_expires_at")
+                        hipaa_exp = row.get("hipaa_expires_at")
+                        if not cpr_exp or str(cpr_exp) < today_str:
+                            disqualified.append({"id": row["id"], "reason": "CPR certification expired or missing"})
+                            continue
+                        if not hipaa_exp or str(hipaa_exp) < today_str:
+                            disqualified.append({"id": row["id"], "reason": "HIPAA training expired or missing"})
+                            continue
 
                     candidates.append({
                         "id":           row["id"],

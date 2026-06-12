@@ -26,10 +26,16 @@ from ..supabase_client import get_supabase
 _NAME = "compliance_autopilot"
 
 # Alert thresholds (days)
-_LICENSE_CRITICAL = 30
-_LICENSE_WARNING  = 60
+_LICENSE_CRITICAL   = 30
+_LICENSE_WARNING    = 60
 _INSURANCE_CRITICAL = 14
 _INSURANCE_WARNING  = 30
+_CPR_CRITICAL       = 30   # CPR cert must be renewed annually
+_CPR_WARNING        = 60
+_HIPAA_CRITICAL     = 30   # HIPAA training required every 2 years
+_HIPAA_WARNING      = 60
+_SPECIMEN_CRITICAL  = 30   # Specimen handling cert renewed annually
+_SPECIMEN_WARNING   = 60
 
 # Platform color codes (shared with earnings_aggregator)
 _PLATFORM_COLORS: dict[str, str] = {
@@ -146,9 +152,10 @@ def check_driver(driver_id: str) -> dict[str, Any]:
         r = (
             sb.table("light_vehicle_drivers")
             .select(
-                "id,name,phone,status,platforms_opted_in,"
+                "id,name,phone,status,platforms_opted_in,approved_services,"
                 "license_expires,vehicle_insurance_expires,"
-                "mvr_status,background_check_status"
+                "mvr_status,background_check_status,"
+                "cpr_expires_at,hipaa_expires_at,specimen_expires_at"
             )
             .eq("id", driver_id)
             .maybe_single()
@@ -160,6 +167,9 @@ def check_driver(driver_id: str) -> dict[str, Any]:
 
     if not driver:
         return {"error": "driver_not_found", "driver_id": driver_id}
+
+    services = driver.get("approved_services") or []
+    is_nemt  = "nemt" in services
 
     # License
     lic_expires = driver.get("license_expires")
@@ -179,17 +189,40 @@ def check_driver(driver_id: str) -> dict[str, Any]:
     bg_status = driver.get("background_check_status") or "unknown"
     bg_level  = "critical" if bg_status in ("flagged", "failed") else "ok"
 
-    # Overall — worst across all four
+    # CPR certification (NEMT required; warning for all drivers)
+    cpr_expires = driver.get("cpr_expires_at")
+    cpr_days    = _days_remaining(cpr_expires)
+    if cpr_expires is None and is_nemt:
+        cpr_level = "critical"   # NEMT without any CPR cert on file
+    else:
+        cpr_level = _alert_level_for_days(cpr_days, _CPR_CRITICAL, _CPR_WARNING)
+
+    # HIPAA training (NEMT required every 2 years)
+    hipaa_expires = driver.get("hipaa_expires_at")
+    hipaa_days    = _days_remaining(hipaa_expires)
+    if hipaa_expires is None and is_nemt:
+        hipaa_level = "critical"
+    else:
+        hipaa_level = _alert_level_for_days(hipaa_days, _HIPAA_CRITICAL, _HIPAA_WARNING)
+
+    # Specimen handling cert (optional — only required if 'nemt' specimen trips)
+    spec_expires = driver.get("specimen_expires_at")
+    spec_days    = _days_remaining(spec_expires)
+    spec_level   = _alert_level_for_days(spec_days, _SPECIMEN_CRITICAL, _SPECIMEN_WARNING) \
+                   if spec_expires else "ok"
+
+    # Overall — worst across all items
     _level_rank = {"ok": 0, "warning": 1, "critical": 2, "expired": 3}
-    all_levels = [lic_level, ins_level, mvr_level, bg_level]
+    all_levels = [lic_level, ins_level, mvr_level, bg_level, cpr_level, hipaa_level, spec_level]
     overall = max(all_levels, key=lambda l: _level_rank.get(l, 0))
 
     compliant = overall == "ok"
 
     return {
-        "driver_id": driver_id,
-        "driver_name": driver.get("name"),
-        "phone": driver.get("phone"),
+        "driver_id":    driver_id,
+        "driver_name":  driver.get("name"),
+        "phone":        driver.get("phone"),
+        "is_nemt":      is_nemt,
         "items": {
             "license": {
                 "expires": lic_expires,
@@ -208,6 +241,24 @@ def check_driver(driver_id: str) -> dict[str, Any]:
             "background_check": {
                 "status": bg_status,
                 "alert_level": bg_level,
+            },
+            "cpr_certification": {
+                "expires": cpr_expires,
+                "days_remaining": cpr_days,
+                "alert_level": cpr_level,
+                "required_for_nemt": True,
+            },
+            "hipaa_training": {
+                "expires": hipaa_expires,
+                "days_remaining": hipaa_days,
+                "alert_level": hipaa_level,
+                "required_for_nemt": True,
+            },
+            "specimen_handling": {
+                "expires": spec_expires,
+                "days_remaining": spec_days,
+                "alert_level": spec_level,
+                "required_for_nemt": False,
             },
         },
         "overall_alert_level": overall,
@@ -289,8 +340,9 @@ def check_all_active_drivers() -> dict[str, Any]:
         rows = (
             sb.table("light_vehicle_drivers")
             .select(
-                "id,name,phone,status,checkr_candidate_id,checkr_package,"
-                "license_expires,vehicle_insurance_expires,mvr_checked_at"
+                "id,name,phone,status,approved_services,checkr_candidate_id,checkr_package,"
+                "license_expires,vehicle_insurance_expires,mvr_checked_at,"
+                "cpr_expires_at,hipaa_expires_at"
             )
             .in_("status", ["active", "suspended"])
             .execute()
@@ -386,6 +438,33 @@ def check_all_active_drivers() -> dict[str, Any]:
                 _write_alert(sb, driver_id, driver_name,
                              "insurance_expired" if ins.get("alert_level") == "expired" else "insurance_warning",
                              ins["alert_level"], msg, days, sent)
+
+        # ── CPR / HIPAA cert alerts (NEMT drivers) ───────────────────────
+        services = row.get("approved_services") or []
+        is_nemt  = "nemt" in services
+        if is_nemt and phone:
+            for cert_field, label, crit, warn in [
+                ("cpr_expires_at",   "CPR certification",  _CPR_CRITICAL,   _CPR_WARNING),
+                ("hipaa_expires_at", "HIPAA training",     _HIPAA_CRITICAL, _HIPAA_WARNING),
+            ]:
+                cert_exp_str = row.get(cert_field)
+                cert_days    = _days_remaining(cert_exp_str) if cert_exp_str else None
+                cert_level   = "critical" if cert_exp_str is None else \
+                               _alert_level_for_days(cert_days, crit, warn)
+                if cert_level in ("warning", "critical", "expired"):
+                    detail_msg = (
+                        f"⚠️ 3 Lakes: Your {label} has expired. Please renew to continue NEMT service."
+                        if cert_exp_str is None or cert_level == "expired"
+                        else f"⚠️ 3 Lakes: Your {label} expires in {cert_days} days. Please renew soon."
+                    )
+                    sent = _send_sms(phone, detail_msg)
+                    if sent:
+                        sms_sent += 1
+                    alert_type = f"{cert_field.replace('_expires_at','')}_expired" \
+                                 if cert_level in ("expired","critical") else \
+                                 f"{cert_field.replace('_expires_at','')}_warning"
+                    _write_alert(sb, driver_id, driver_name, alert_type, cert_level,
+                                 detail_msg, cert_days, sent)
 
         # ── Annual MVR re-check ────────────────────────────────────────────
         mvr_checked_at_str = row.get("mvr_checked_at")

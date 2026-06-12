@@ -713,6 +713,101 @@ async def lf_driver_compliance(session: DriverSession):
         raise HTTPException(status_code=500, detail="compliance fetch failed")
 
 
+@router.post("/lf/certifications/{cert_type}")
+async def lf_upload_certification(
+    cert_type: str,
+    session: DriverSession,
+    file: UploadFile = File(...),
+    issued_date: str | None = None,
+    expiry_date: str | None = None,
+):
+    """Upload a certification document (CPR, HIPAA, or specimen handling).
+
+    cert_type: cpr | hipaa | specimen
+    issued_date, expiry_date: YYYY-MM-DD strings
+    """
+    valid_types = {"cpr", "hipaa", "specimen"}
+    if cert_type not in valid_types:
+        raise HTTPException(status_code=422, detail=f"cert_type must be one of {valid_types}")
+
+    driver_id = session["driver_id"]
+    sb = get_supabase()
+
+    if not file.filename:
+        raise HTTPException(status_code=422, detail="file required")
+
+    file_bytes = await file.read()
+    ext = (file.filename or "cert.pdf").rsplit(".", 1)[-1].lower() or "pdf"
+    storage_path = f"certs/{driver_id}/{cert_type}.{ext}"
+
+    # Upload to driver-documents bucket
+    try:
+        try:
+            sb.storage.from_("driver-documents").remove([storage_path])
+        except Exception:
+            pass
+        sb.storage.from_("driver-documents").upload(
+            path=storage_path,
+            file=file_bytes,
+            file_options={"content-type": file.content_type or "application/octet-stream"},
+        )
+        signed = sb.storage.from_("driver-documents").create_signed_url(storage_path, expires_in=604800)
+        cert_url = signed.get("signedURL") or signed.get("signed_url", "")
+    except Exception as e:
+        log.error("Cert upload failed driver=%s cert=%s: %s", driver_id, cert_type, e)
+        raise HTTPException(status_code=500, detail="cert upload failed")
+
+    # Map to DB columns
+    col_map = {
+        "cpr":      ("cpr_certified_at",      "cpr_expires_at",      "cpr_cert_url"),
+        "hipaa":    ("hipaa_trained_at",       "hipaa_expires_at",    "hipaa_cert_url"),
+        "specimen": ("specimen_certified_at",  "specimen_expires_at", "specimen_cert_url"),
+    }
+    issued_col, expiry_col, url_col = col_map[cert_type]
+    update: dict = {url_col: cert_url}
+    if issued_date:
+        update[issued_col] = issued_date
+    if expiry_date:
+        update[expiry_col] = expiry_date
+    elif cert_type in ("cpr", "specimen") and issued_date:
+        # Default: 1-year expiry
+        from datetime import date, timedelta
+        try:
+            exp = date.fromisoformat(issued_date) + timedelta(days=365)
+            update[expiry_col] = exp.isoformat()
+        except Exception:
+            pass
+    elif cert_type == "hipaa" and issued_date:
+        # HIPAA training valid for 2 years
+        from datetime import date, timedelta
+        try:
+            exp = date.fromisoformat(issued_date) + timedelta(days=730)
+            update[expiry_col] = exp.isoformat()
+        except Exception:
+            pass
+
+    sb.table("light_vehicle_drivers").update(update).eq("id", driver_id).execute()
+
+    return {
+        "ok":       True,
+        "cert_type":cert_type,
+        "cert_url": cert_url,
+        **{k: v for k, v in update.items() if k != url_col},
+    }
+
+
+@router.get("/lf/certifications")
+async def lf_get_certifications(session: DriverSession):
+    """Return current certification status for the LF driver."""
+    driver_id = session["driver_id"]
+    row = get_supabase().table("light_vehicle_drivers").select(
+        "cpr_certified_at,cpr_expires_at,cpr_cert_url,"
+        "hipaa_trained_at,hipaa_expires_at,hipaa_cert_url,"
+        "specimen_certified_at,specimen_expires_at,specimen_cert_url"
+    ).eq("id", driver_id).maybe_single().execute().data or {}
+    return {"driver_id": driver_id, "certifications": row}
+
+
 @router.post("/lf/payout/setup")
 async def lf_payout_setup(session: DriverSession):
     """Initialize Stripe Connect Express onboarding for an LF driver."""
