@@ -713,31 +713,213 @@ async def lf_driver_compliance(session: DriverSession):
         raise HTTPException(status_code=500, detail="compliance fetch failed")
 
 
+@router.post("/lf/payout/setup")
+async def lf_payout_setup(session: DriverSession):
+    """Initialize Stripe Connect Express onboarding for an LF driver."""
+    driver_id = session["driver_id"]
+    sb = get_supabase()
+
+    driver_row = sb.table("light_vehicle_drivers").select(
+        "id, name, email, phone_e164, stripe_account_id, stripe_account_status"
+    ).eq("id", driver_id).maybe_single().execute().data or {}
+
+    if driver_row.get("stripe_account_status") == "connected":
+        raise HTTPException(status_code=400, detail="payout already set up")
+
+    from ..settings import get_settings
+    import stripe as _stripe
+    s = get_settings()
+    if not s.stripe_secret_key:
+        raise HTTPException(status_code=503, detail="stripe not configured")
+    _stripe.api_key = s.stripe_secret_key
+
+    try:
+        account_id = driver_row.get("stripe_account_id")
+        if not account_id:
+            name_parts = (driver_row.get("name") or "").split(" ", 1)
+            acct = _stripe.Account.create(
+                type="express",
+                country="US",
+                email=driver_row.get("email") or "",
+                settings={"payouts": {"schedule": {"interval": "manual"}}},
+                metadata={"driver_id": driver_id, "driver_type": "light_fleet"},
+            )
+            account_id = acct.id
+            sb.table("light_vehicle_drivers").update({
+                "stripe_account_id": account_id,
+                "stripe_account_status": "onboarding",
+            }).eq("id", driver_id).execute()
+
+        link = _stripe.AccountLink.create(
+            account=account_id,
+            refresh_url="https://www.3lakeslogistics.com/driver-pwa/lf.html?payout=refresh",
+            return_url="https://www.3lakeslogistics.com/driver-pwa/lf.html?payout=success",
+            type="account_onboarding",
+        )
+        sb.table("light_vehicle_drivers").update({
+            "stripe_onboarding_url": link.url,
+        }).eq("id", driver_id).execute()
+        return {"onboarding_url": link.url, "account_id": account_id}
+    except _stripe.error.StripeError as e:
+        log.error("Stripe Connect setup failed for LF driver %s: %s", driver_id, e)
+        raise HTTPException(status_code=502, detail=f"stripe error: {e.user_message or str(e)}")
+
+
+@router.get("/lf/payout/status")
+async def lf_payout_status(session: DriverSession):
+    """Return current Stripe Connect status and pending earnings for LF driver."""
+    driver_id = session["driver_id"]
+    sb = get_supabase()
+
+    driver_row = sb.table("light_vehicle_drivers").select(
+        "stripe_account_id, stripe_account_status, stripe_payouts_enabled"
+    ).eq("id", driver_id).maybe_single().execute().data or {}
+
+    # Sum unsettled earnings from ledger
+    try:
+        rows = sb.table("atomic_ledger").select("financial_payload").eq(
+            "event_type", "lf_trip_settled"
+        ).contains("logistics_payload", {"carrier_id": driver_id}).execute().data or []
+        pending_balance = sum(
+            float((r.get("financial_payload") or {}).get("driver_net", 0))
+            for r in rows
+        )
+    except Exception:
+        pending_balance = 0.0
+
+    # Subtract already-processed payouts
+    try:
+        paid_rows = sb.table("lf_driver_payouts").select("net_cents").eq(
+            "driver_id", driver_id
+        ).in_("status", ["processing", "paid"]).execute().data or []
+        paid_total = sum(r["net_cents"] / 100 for r in paid_rows)
+        pending_balance = max(0.0, pending_balance - paid_total)
+    except Exception:
+        pass
+
+    return {
+        "stripe_status":       driver_row.get("stripe_account_status", "not_started"),
+        "payouts_enabled":     driver_row.get("stripe_payouts_enabled", False),
+        "stripe_account_id":   driver_row.get("stripe_account_id"),
+        "pending_balance_usd": round(pending_balance, 2),
+    }
+
+
+# Instant-pay processing fee: 0.75%
+_INSTANT_PAY_FEE = 0.0075
+
+
 @router.post("/lf/instant-pay")
 async def lf_instant_pay(body: dict, session: DriverSession):
-    """Request instant same-day payout for LF driver — accessible via driver session token."""
+    """Request instant same-day payout for LF driver.
+
+    Deducts a 0.75% processing fee, creates a Stripe Transfer to the driver's
+    connected account, then triggers an instant Stripe Payout to their debit card.
+    """
     driver_id = session["driver_id"]
     amount = float(body.get("amount", 0))
-
     if amount <= 0:
         raise HTTPException(status_code=422, detail="amount must be positive")
 
-    fee = round(amount * 0.015, 2)
-    net = round(amount - fee, 2)
+    sb = get_supabase()
+    driver_row = sb.table("light_vehicle_drivers").select(
+        "stripe_account_id, stripe_account_status, stripe_payouts_enabled"
+    ).eq("id", driver_id).maybe_single().execute().data or {}
 
+    if driver_row.get("stripe_account_status") != "connected":
+        raise HTTPException(status_code=400, detail="payout not set up — complete Stripe onboarding first")
+
+    stripe_account_id = driver_row["stripe_account_id"]
+    fee  = round(amount * _INSTANT_PAY_FEE, 2)
+    net  = round(amount - fee, 2)
+    gross_cents   = int(amount * 100)
+    fee_cents     = int(fee * 100)
+    net_cents     = int(net * 100)
+
+    if net_cents <= 0:
+        raise HTTPException(status_code=422, detail="amount too small after processing fee")
+
+    from ..settings import get_settings
+    import stripe as _stripe
+    s = get_settings()
+    if not s.stripe_secret_key:
+        raise HTTPException(status_code=503, detail="stripe not configured")
+    _stripe.api_key = s.stripe_secret_key
+
+    now = datetime.now(timezone.utc)
+    payout_record_id = None
     try:
-        get_supabase().table("atomic_ledger").insert({
-            "event_type":         "instant_pay_requested",
-            "event_source":       "light_fleet.instant_pay",
-            "logistics_payload":  {"driver_id": driver_id},
-            "financial_payload":  {"gross": amount, "fee": fee, "net": net},
-            "compliance_payload": {},
-            "created_at":         datetime.now(timezone.utc).isoformat(),
+        # 1. Create payout record (pending)
+        rec = sb.table("lf_driver_payouts").insert({
+            "driver_id":          driver_id,
+            "payout_type":        "instant",
+            "gross_cents":        gross_cents,
+            "platform_fee_cents": 0,           # already deducted at settlement
+            "instant_fee_cents":  fee_cents,
+            "net_cents":          net_cents,
+            "status":             "processing",
+            "requested_at":       now.isoformat(),
         }).execute()
+        payout_record_id = (rec.data or [{}])[0].get("id")
 
-        return {"ok": True, "driver_id": driver_id, "gross": amount, "fee": fee, "net": net, "status": "processing"}
+        # 2. Transfer from platform balance → driver connected account
+        transfer = _stripe.Transfer.create(
+            amount=net_cents,
+            currency="usd",
+            destination=stripe_account_id,
+            metadata={"driver_id": driver_id, "payout_type": "instant",
+                      "record_id": str(payout_record_id or "")},
+        )
+        transfer_id = transfer.id
+
+        # 3. Trigger instant payout on connected account (to debit card)
+        payout_id = None
+        try:
+            payout = _stripe.Payout.create(
+                amount=net_cents,
+                currency="usd",
+                method="instant",
+                stripe_account=stripe_account_id,
+                metadata={"driver_id": driver_id, "transfer_id": transfer_id},
+            )
+            payout_id = payout.id
+        except _stripe.error.StripeError as pe:
+            # Instant payout may not be available on this account — fall back to standard
+            log.warning("Instant payout unavailable for driver %s (%s); transfer sent, standard payout will follow", driver_id, pe)
+
+        # 4. Update payout record with Stripe IDs
+        update: dict = {
+            "stripe_transfer_id": transfer_id,
+            "status":             "paid" if payout_id else "processing",
+            "processed_at":       now.isoformat(),
+        }
+        if payout_id:
+            update["stripe_payout_id"] = payout_id
+            update["paid_at"] = now.isoformat()
+        if payout_record_id:
+            sb.table("lf_driver_payouts").update(update).eq("id", payout_record_id).execute()
+
+        return {
+            "ok":               True,
+            "driver_id":        driver_id,
+            "gross":            amount,
+            "instant_fee":      fee,
+            "net":              net,
+            "fee_pct":          "0.75%",
+            "transfer_id":      transfer_id,
+            "payout_id":        payout_id,
+            "status":           "paid" if payout_id else "processing",
+        }
+
+    except _stripe.error.StripeError as e:
+        log.error("Stripe instant pay failed for LF driver %s: %s", driver_id, e)
+        if payout_record_id:
+            sb.table("lf_driver_payouts").update({
+                "status": "failed", "failure_reason": str(e.user_message or e)[:300]
+            }).eq("id", payout_record_id).execute()
+        raise HTTPException(status_code=502, detail=f"payment failed: {e.user_message or str(e)}")
     except Exception as e:
-        log.error("LF instant pay failed: %s", e)
+        log.error("LF instant pay unexpected error for driver %s: %s", driver_id, e)
         raise HTTPException(status_code=500, detail="instant pay failed")
 
 

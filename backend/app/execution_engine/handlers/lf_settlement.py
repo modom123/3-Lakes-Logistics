@@ -151,18 +151,97 @@ def h261_corporate_invoice(carrier_id, contract_id, payload) -> dict:
 # ── Step 262: lf_settlement.ach_initiation ───────────────────────────────────
 
 def h262_ach_initiation(carrier_id, contract_id, payload) -> dict:
-    trip_id = payload.get("trip_id")
-    driver_id = payload.get("driver_id") or str(carrier_id) if carrier_id else None
-    driver_net = payload.get("driver_net", 0.0)
-    return {
-        "ach_initiated": True,
-        "driver_id": driver_id,
-        "amount": float(driver_net) if driver_net is not None else 0.0,
-        "payment_method": "ach",
-        "trip_id": trip_id,
-        "initiated_at": _NOW(),
-        "estimated_arrival": "1-2 business days",
-    }
+    """Create a Stripe Transfer from platform balance to the driver's connected account.
+
+    Standard settlement (non-instant).  No extra fee — the 15% platform commission
+    was already deducted in step 258.  Stripe's normal payout schedule (T+2) applies.
+    """
+    trip_id    = payload.get("trip_id")
+    driver_id  = payload.get("driver_id") or (str(carrier_id) if carrier_id else None)
+    driver_net = float(payload.get("driver_net") or 0.0)
+
+    if driver_net <= 0:
+        return {"ach_initiated": False, "reason": "zero_or_negative_net", "amount": driver_net}
+
+    net_cents = int(round(driver_net * 100))
+
+    sb = _db()
+    stripe_account_id = None
+    if sb and driver_id:
+        try:
+            row = (sb.table("light_vehicle_drivers")
+                   .select("stripe_account_id, stripe_account_status")
+                   .eq("id", str(driver_id)).maybe_single().execute().data or {})
+            if row.get("stripe_account_status") == "connected":
+                stripe_account_id = row.get("stripe_account_id")
+        except Exception:  # noqa: BLE001
+            pass
+
+    if not stripe_account_id:
+        return {
+            "ach_initiated": False,
+            "reason": "stripe_not_connected",
+            "driver_id": driver_id,
+            "amount": driver_net,
+            "note": "driver must complete Stripe onboarding before settlement can transfer",
+        }
+
+    try:
+        from ...settings import get_settings
+        import stripe as _stripe
+        s = get_settings()
+        if not s.stripe_secret_key:
+            return {"ach_initiated": False, "reason": "stripe_not_configured", "amount": driver_net}
+        _stripe.api_key = s.stripe_secret_key
+
+        transfer = _stripe.Transfer.create(
+            amount=net_cents,
+            currency="usd",
+            destination=stripe_account_id,
+            metadata={
+                "driver_id":   str(driver_id),
+                "trip_id":     str(trip_id or ""),
+                "contract_id": str(contract_id or ""),
+                "source":      "lf_settlement.h262",
+            },
+        )
+
+        initiated_at = _NOW()
+        if sb and driver_id:
+            try:
+                sb.table("lf_driver_payouts").insert({
+                    "driver_id":          str(driver_id),
+                    "trip_id":            str(trip_id) if trip_id else None,
+                    "payout_type":        "standard",
+                    "gross_cents":        net_cents,   # net after 15% already removed
+                    "platform_fee_cents": 0,
+                    "instant_fee_cents":  0,
+                    "net_cents":          net_cents,
+                    "stripe_transfer_id": transfer.id,
+                    "status":             "processing",
+                    "requested_at":       initiated_at,
+                    "processed_at":       initiated_at,
+                }).execute()
+            except Exception:  # noqa: BLE001
+                pass
+
+        return {
+            "ach_initiated":       True,
+            "driver_id":           driver_id,
+            "amount":              driver_net,
+            "payment_method":      "stripe_transfer",
+            "stripe_transfer_id":  transfer.id,
+            "trip_id":             trip_id,
+            "initiated_at":        initiated_at,
+            "estimated_arrival":   "1-2 business days",
+        }
+
+    except Exception as e:  # noqa: BLE001
+        import logging
+        logging.getLogger("3ll.execution.lf_settlement").error(
+            "h262 Stripe transfer failed driver=%s: %s", driver_id, e
+        )
+        return {"ach_initiated": False, "reason": "stripe_error", "error": str(e)[:200]}
 
 
 # ── Step 263: lf_settlement.ledger_write ─────────────────────────────────────

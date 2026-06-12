@@ -744,27 +744,87 @@ def get_driver_compliance(driver_id: str) -> dict:
 
 @router.post("/drivers/{driver_id}/instant-pay")
 def request_instant_pay(driver_id: str, payload: dict) -> dict:
-    """
-    Request instant/same-day payout for a driver's pending earnings.
-    Deducts a 1.5% instant pay fee.
-    Body: { "amount": float }
-    """
+    """Admin-triggered instant payout for an LF driver.  0.75% processing fee."""
     amount = float(payload.get("amount", 0))
     if amount <= 0:
         raise HTTPException(status_code=422, detail="amount must be positive")
-    fee = round(amount * 0.015, 2)
-    net = round(amount - fee, 2)
-    # Log to atomic_ledger
+
+    _INSTANT_FEE_PCT = 0.0075
+    fee       = round(amount * _INSTANT_FEE_PCT, 2)
+    net       = round(amount - fee, 2)
+    fee_cents = int(fee * 100)
+    net_cents = int(net * 100)
+
+    if net_cents <= 0:
+        raise HTTPException(status_code=422, detail="amount too small after fee")
+
     sb = get_supabase()
-    sb.table("atomic_ledger").insert({
-        "event_type": "instant_pay_requested",
-        "event_source": "light_fleet.instant_pay",
-        "logistics_payload": {"driver_id": driver_id},
-        "financial_payload": {"gross": amount, "fee": fee, "net": net},
-        "compliance_payload": {},
-        "created_at": _now_iso(),
-    }).execute()
-    return {"ok": True, "driver_id": driver_id, "gross": amount, "fee": fee, "net": net, "status": "processing"}
+    driver_row = sb.table("light_vehicle_drivers").select(
+        "stripe_account_id, stripe_account_status"
+    ).eq("id", driver_id).maybe_single().execute().data or {}
+
+    if driver_row.get("stripe_account_status") != "connected":
+        raise HTTPException(status_code=400, detail="driver Stripe account not connected")
+
+    stripe_account_id = driver_row["stripe_account_id"]
+
+    from ..settings import get_settings
+    import stripe as _stripe
+    s = get_settings()
+    if not s.stripe_secret_key:
+        raise HTTPException(status_code=503, detail="stripe not configured")
+    _stripe.api_key = s.stripe_secret_key
+
+    from datetime import datetime, timezone
+    now = datetime.now(timezone.utc)
+    payout_record_id = None
+    try:
+        rec = sb.table("lf_driver_payouts").insert({
+            "driver_id":          driver_id,
+            "payout_type":        "instant",
+            "gross_cents":        int(amount * 100),
+            "platform_fee_cents": 0,
+            "instant_fee_cents":  fee_cents,
+            "net_cents":          net_cents,
+            "status":             "processing",
+            "requested_at":       now.isoformat(),
+        }).execute()
+        payout_record_id = (rec.data or [{}])[0].get("id")
+
+        transfer = _stripe.Transfer.create(
+            amount=net_cents, currency="usd",
+            destination=stripe_account_id,
+            metadata={"driver_id": driver_id, "source": "admin_instant_pay"},
+        )
+        payout_id = None
+        try:
+            payout = _stripe.Payout.create(
+                amount=net_cents, currency="usd", method="instant",
+                stripe_account=stripe_account_id,
+                metadata={"driver_id": driver_id, "transfer_id": transfer.id},
+            )
+            payout_id = payout.id
+        except _stripe.error.StripeError:
+            pass  # fall back to standard payout timing
+
+        upd: dict = {"stripe_transfer_id": transfer.id, "processed_at": now.isoformat(),
+                     "status": "paid" if payout_id else "processing"}
+        if payout_id:
+            upd["stripe_payout_id"] = payout_id
+            upd["paid_at"] = now.isoformat()
+        if payout_record_id:
+            sb.table("lf_driver_payouts").update(upd).eq("id", payout_record_id).execute()
+
+        return {"ok": True, "driver_id": driver_id, "gross": amount, "instant_fee": fee,
+                "fee_pct": "0.75%", "net": net, "transfer_id": transfer.id,
+                "payout_id": payout_id, "status": "paid" if payout_id else "processing"}
+
+    except _stripe.error.StripeError as e:
+        if payout_record_id:
+            sb.table("lf_driver_payouts").update(
+                {"status": "failed", "failure_reason": str(e)[:300]}
+            ).eq("id", payout_record_id).execute()
+        raise HTTPException(status_code=502, detail=f"stripe error: {e.user_message or str(e)}")
 
 
 # ===========================================================================
