@@ -368,6 +368,21 @@ def fire_lf_nemt_billing_run() -> None:
     _bg(_run)
 
 
+def fire_lf_recurring_trips() -> None:
+    """Daily 5am job — generate upcoming NEMT trips from recurring schedules (7-day lookahead)."""
+    def _run():
+        try:
+            from .api.routes_light_fleet import generate_scheduled_trips  # noqa: PLC0415
+            result = generate_scheduled_trips()
+            log.info(
+                "lf_recurring_trips created=%s skipped=%s errors=%s",
+                result.get("created"), result.get("skipped"), result.get("errors"),
+            )
+        except Exception as exc:  # noqa: BLE001
+            log.error("fire_lf_recurring_trips failed: %s", exc)
+    _bg(_run)
+
+
 def fire_lf_weekly_payouts() -> None:
     """Friday batch — aggregate queued driver earnings and send one Stripe Transfer per driver."""
     def _run():

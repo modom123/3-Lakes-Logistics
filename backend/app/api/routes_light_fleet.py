@@ -592,18 +592,195 @@ def create_nemt_client(payload: dict) -> dict:
 
 @router.patch("/nemt/clients/{client_id}")
 def update_nemt_client(client_id: str, payload: dict) -> dict:
-    """
-    Update a NEMT client record.
-
-    Common updates: name, phone, address, insurance_provider, insurance_id,
-    mobility_needs, notes, status.
-    """
+    """Update a NEMT client record."""
     sb = get_supabase()
     res = sb.table("nemt_clients").select("id").eq("id", client_id).execute()
     if not res.data:
         raise HTTPException(status_code=404, detail="NEMT client not found")
     upd = sb.table("nemt_clients").update(payload).eq("id", client_id).execute()
     return {"ok": True, "item": upd.data[0] if upd.data else {}}
+
+
+# ===========================================================================
+# NEMT RECURRING SCHEDULES
+# ===========================================================================
+
+@router.get("/nemt/schedules")
+def list_nemt_schedules(status: str | None = None, client_id: str | None = None,
+                        limit: int = 100) -> dict:
+    """List recurring NEMT trip schedules."""
+    sb = get_supabase()
+    q = sb.table("nemt_recurring_schedules").select("*, nemt_clients(name,phone,insurance_id)").order(
+        "created_at", desc=True).limit(limit)
+    if status:
+        q = q.eq("status", status)
+    if client_id:
+        q = q.eq("nemt_client_id", client_id)
+    return {"items": q.execute().data or [], "total": 0}
+
+
+@router.post("/nemt/schedules")
+def create_nemt_schedule(payload: dict) -> dict:
+    """Create a recurring NEMT schedule for a patient.
+
+    Required: nemt_client_id, frequency, days_of_week (for weekly/biweekly),
+              time_of_day (HH:MM), pickup_address, dropoff_address.
+    frequency: daily | weekly | biweekly | monthly
+    """
+    required = ("nemt_client_id", "frequency", "time_of_day", "pickup_address", "dropoff_address")
+    missing = [f for f in required if not payload.get(f)]
+    if missing:
+        raise HTTPException(status_code=422, detail=f"missing required fields: {missing}")
+
+    payload.setdefault("status", "active")
+    payload.setdefault("effective_from", _today_iso()[:10])
+    payload.setdefault("created_at", _now_iso())
+    payload.setdefault("updated_at", _now_iso())
+
+    res = get_supabase().table("nemt_recurring_schedules").insert(payload).execute()
+    if not res.data:
+        raise HTTPException(status_code=500, detail="schedule creation failed")
+    return {"ok": True, "item": res.data[0]}
+
+
+@router.patch("/nemt/schedules/{schedule_id}")
+def update_nemt_schedule(schedule_id: str, payload: dict) -> dict:
+    """Update schedule (pause/resume, change time, update auth number)."""
+    sb = get_supabase()
+    if not sb.table("nemt_recurring_schedules").select("id").eq("id", schedule_id).execute().data:
+        raise HTTPException(status_code=404, detail="schedule not found")
+    payload["updated_at"] = _now_iso()
+    res = sb.table("nemt_recurring_schedules").update(payload).eq("id", schedule_id).execute()
+    return {"ok": True, "item": res.data[0] if res.data else {}}
+
+
+@router.post("/nemt/schedules/generate-trips")
+def generate_scheduled_trips(payload: dict | None = None) -> dict:
+    """Generate upcoming trips from all active recurring schedules.
+
+    Looks ahead 7 days (or 'days_ahead' in payload) and creates
+    light_vehicle_trips rows for any schedule that doesn't already have
+    a trip on that day.  Safe to call multiple times — idempotent on
+    (schedule_id, date).
+
+    Run daily via cron or manually.
+    """
+    from datetime import date, timedelta, time as dt_time
+    import pytz
+
+    sb       = get_supabase()
+    p        = payload or {}
+    days_ahead = int(p.get("days_ahead", 7))
+    today    = date.today()
+
+    # Load all active schedules
+    schedules = sb.table("nemt_recurring_schedules").select(
+        "*, nemt_clients(name,phone,insurance_provider,insurance_id,dob,mobility_needs)"
+    ).eq("status", "active").execute().data or []
+
+    created  = 0
+    skipped  = 0
+    errors   = 0
+    detail: list[dict] = []
+
+    DOW_NAMES = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"]
+
+    for sched in schedules:
+        sched_id    = sched["id"]
+        freq        = sched["frequency"]
+        dow_list    = sched.get("days_of_week") or []
+        time_str    = sched.get("time_of_day") or "09:00"
+        eff_from    = date.fromisoformat(sched["effective_from"])
+        eff_until   = date.fromisoformat(sched["effective_until"]) if sched.get("effective_until") else None
+        client      = sched.get("nemt_clients") or {}
+
+        # Build candidate dates in the look-ahead window
+        for offset in range(days_ahead + 1):
+            target_date = today + timedelta(days=offset)
+
+            if target_date < eff_from:
+                continue
+            if eff_until and target_date > eff_until:
+                continue
+
+            # Check recurrence pattern
+            dow = target_date.weekday()  # Mon=0 … Sun=6 in Python
+            py_to_js_dow = (dow + 1) % 7  # convert to Sun=0 JS convention
+            match = False
+            if freq == "daily":
+                match = True
+            elif freq in ("weekly", "biweekly"):
+                if py_to_js_dow in (dow_list or []):
+                    if freq == "weekly":
+                        match = True
+                    else:  # biweekly — every other week from effective_from
+                        weeks_since = (target_date - eff_from).days // 7
+                        match = (weeks_since % 2 == 0)
+            elif freq == "monthly":
+                # Same day-of-month as effective_from
+                match = (target_date.day == eff_from.day)
+
+            if not match:
+                continue
+
+            # Build scheduled_at timestamp
+            try:
+                tz_name = sched.get("timezone") or "America/Los_Angeles"
+                tz      = pytz.timezone(tz_name)
+                h, m    = [int(x) for x in str(time_str)[:5].split(":")]
+                local_dt = tz.localize(datetime(target_date.year, target_date.month,
+                                               target_date.day, h, m))
+                scheduled_at_iso = local_dt.isoformat()
+            except Exception:
+                scheduled_at_iso = f"{target_date.isoformat()}T{time_str[:5]}:00-07:00"
+
+            # Idempotency check — skip if trip already exists for this schedule+date
+            date_str = target_date.isoformat()
+            existing = sb.table("light_vehicle_trips").select("id").eq(
+                "notes", f"recurring:{sched_id}:{date_str}"
+            ).execute().data
+            if existing:
+                skipped += 1
+                continue
+
+            # Create the trip
+            trip_row = {
+                "trip_type":            "nemt",
+                "status":               "pending",
+                "passenger_name":       client.get("name") or "",
+                "passenger_phone":      client.get("phone") or "",
+                "nemt_client_id":       sched["nemt_client_id"],
+                "pickup_address":       sched["pickup_address"],
+                "dropoff_address":      sched["dropoff_address"],
+                "scheduled_at":         scheduled_at_iso,
+                "insurance_provider":   sched.get("insurance_provider") or client.get("insurance_provider") or "",
+                "insurance_auth_number":sched.get("insurance_auth_number") or "",
+                "mobility_needs":       sched.get("mobility_needs") or client.get("mobility_needs") or "",
+                "vehicle_class":        sched.get("vehicle_class") or "",
+                "notes":                f"recurring:{sched_id}:{date_str}",
+                "dispatcher_notes":     f"Auto-generated from recurring schedule {sched_id[:8]}",
+            }
+            try:
+                sb.table("light_vehicle_trips").insert(trip_row).execute()
+                # Update last_generated_date + total_generated
+                sb.table("nemt_recurring_schedules").update({
+                    "last_generated_date": date_str,
+                    "total_generated":     (sched.get("total_generated") or 0) + 1,
+                    "updated_at":          _now_iso(),
+                }).eq("id", sched_id).execute()
+                created += 1
+                detail.append({"schedule_id": sched_id, "date": date_str, "status": "created"})
+            except Exception as e:
+                errors += 1
+                detail.append({"schedule_id": sched_id, "date": date_str, "status": "error", "reason": str(e)[:100]})
+
+    return {
+        "ok":      True,
+        "created": created,
+        "skipped": skipped,
+        "errors":  errors,
+        "detail":  detail[:50],  # cap to keep response small
+    }
 
 
 # ===========================================================================
