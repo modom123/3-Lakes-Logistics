@@ -116,23 +116,163 @@ def h223_classify_type(carrier_id, contract_id, payload) -> dict:
 
 # ── Step 224: estimate.distance ──────────────────────────────────────────────
 
+def _google_maps_distance(origin: str, destination: str, api_key: str) -> tuple[float, int] | None:
+    """Call Google Maps Distance Matrix API.  Returns (miles, minutes) or None."""
+    try:
+        import httpx
+        resp = httpx.get(
+            "https://maps.googleapis.com/maps/api/distancematrix/json",
+            params={
+                "origins":      origin,
+                "destinations": destination,
+                "units":        "imperial",
+                "key":          api_key,
+            },
+            timeout=6,
+        )
+        data  = resp.json()
+        elem  = data["rows"][0]["elements"][0]
+        if elem.get("status") != "OK":
+            return None
+        meters  = elem["distance"]["value"]
+        seconds = elem["duration"]["value"]
+        miles   = round(meters / 1609.34, 2)
+        minutes = round(seconds / 60)
+        return miles, minutes
+    except Exception:  # noqa: BLE001
+        return None
+
+
 def h224_estimate_distance(carrier_id, contract_id, payload) -> dict:
+    """Estimate trip distance — uses Google Maps Distance Matrix when configured."""
     try:
         trip_id = payload.get("trip_id")
         t = _trip(trip_id)
-        estimated_miles = (
-            t.get("estimated_miles")
-            or payload.get("estimated_miles")
-            or 15.0
-        )
-        estimated_miles = float(estimated_miles)
-        estimated_minutes = round(estimated_miles * 2.5)
+
+        # Use already-stored value if present
+        if t.get("estimated_miles"):
+            miles = float(t["estimated_miles"])
+            return {
+                "estimated_miles":   miles,
+                "estimated_minutes": round(miles * 2.5),
+                "source":            "stored",
+            }
+
+        origin      = t.get("pickup_address")  or payload.get("pickup_address",  "")
+        destination = t.get("dropoff_address") or payload.get("dropoff_address", "")
+        waypoints   = t.get("waypoints")       or payload.get("waypoints")       or []  # multi-stop
+
+        # Try Google Maps
+        if origin and destination:
+            try:
+                from ...settings import get_settings
+                s = get_settings()
+                if s.google_maps_api_key:
+                    # Multi-stop: build a waypoints string and sum legs via Directions API
+                    if waypoints:
+                        result = _optimize_route_via_google(
+                            origin, destination, waypoints, s.google_maps_api_key
+                        )
+                        if result:
+                            total_miles   = result["total_miles"]
+                            total_minutes = result["total_minutes"]
+                            sb = _db()
+                            if sb and trip_id:
+                                try:
+                                    sb.table("light_vehicle_trips").update({
+                                        "estimated_miles": total_miles,
+                                    }).eq("id", str(trip_id)).execute()
+                                except Exception:  # noqa: BLE001
+                                    pass
+                            return {
+                                "estimated_miles":   total_miles,
+                                "estimated_minutes": total_minutes,
+                                "stop_count":        len(waypoints) + 2,
+                                "legs":              result.get("legs", []),
+                                "source":            "google_maps_multistop",
+                            }
+                    else:
+                        gm = _google_maps_distance(origin, destination, s.google_maps_api_key)
+                        if gm:
+                            miles, minutes = gm
+                            sb = _db()
+                            if sb and trip_id:
+                                try:
+                                    sb.table("light_vehicle_trips").update({
+                                        "estimated_miles": miles,
+                                    }).eq("id", str(trip_id)).execute()
+                                except Exception:  # noqa: BLE001
+                                    pass
+                            return {
+                                "estimated_miles":   miles,
+                                "estimated_minutes": minutes,
+                                "source":            "google_maps",
+                            }
+            except Exception:  # noqa: BLE001
+                pass
+
+        # Fallback: straight-line estimation
+        fallback_miles = float(payload.get("estimated_miles") or 15.0)
         return {
-            "estimated_miles": estimated_miles,
-            "estimated_minutes": estimated_minutes,
+            "estimated_miles":   fallback_miles,
+            "estimated_minutes": round(fallback_miles * 2.5),
+            "source":            "fallback",
         }
     except Exception as e:  # noqa: BLE001
         return {"estimated_miles": 15.0, "estimated_minutes": 38, "error": str(e)}
+
+
+def _optimize_route_via_google(
+    origin: str, destination: str, waypoints: list[str], api_key: str
+) -> dict | None:
+    """Call Google Maps Directions API with waypoints=optimize:true.
+
+    Returns {total_miles, total_minutes, optimized_order, legs} or None.
+    """
+    try:
+        import httpx
+        wp_str = "optimize:true|" + "|".join(waypoints) if waypoints else ""
+        params: dict = {
+            "origin":      origin,
+            "destination": destination,
+            "key":         api_key,
+            "units":       "imperial",
+        }
+        if wp_str:
+            params["waypoints"] = wp_str
+
+        resp = httpx.get(
+            "https://maps.googleapis.com/maps/api/directions/json",
+            params=params,
+            timeout=8,
+        )
+        data = resp.json()
+        if data.get("status") != "OK":
+            return None
+
+        route = data["routes"][0]
+        legs  = route["legs"]
+        total_meters  = sum(leg["distance"]["value"] for leg in legs)
+        total_seconds = sum(leg["duration"]["value"] for leg in legs)
+        optimized_order = route.get("waypoint_order", list(range(len(waypoints))))
+
+        leg_summary = [
+            {
+                "from":    leg["start_address"],
+                "to":      leg["end_address"],
+                "miles":   round(leg["distance"]["value"] / 1609.34, 2),
+                "minutes": round(leg["duration"]["value"] / 60),
+            }
+            for leg in legs
+        ]
+        return {
+            "total_miles":      round(total_meters / 1609.34, 2),
+            "total_minutes":    round(total_seconds / 60),
+            "optimized_order":  optimized_order,
+            "legs":             leg_summary,
+        }
+    except Exception:  # noqa: BLE001
+        return None
 
 
 # ── Step 225: calculate.rate ──────────────────────────────────────────────────

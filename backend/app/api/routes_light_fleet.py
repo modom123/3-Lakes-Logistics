@@ -1560,6 +1560,54 @@ def driver_ping(payload: dict) -> dict:
     return {"ok": True}
 
 
+@router.post("/route/optimize")
+def optimize_route(payload: dict) -> dict:
+    """Optimize stop order for a multi-stop Light Fleet trip.
+
+    Body:
+      origin       str  — driver start location or pickup address
+      destination  str  — final dropoff
+      waypoints    list[str] — intermediate stops in any order
+
+    Returns the optimized stop sequence, per-leg distances/ETAs,
+    total miles, and total estimated minutes.
+    """
+    origin      = payload.get("origin") or ""
+    destination = payload.get("destination") or ""
+    waypoints   = payload.get("waypoints") or []
+
+    if not origin or not destination:
+        raise HTTPException(status_code=422, detail="origin and destination required")
+    if not isinstance(waypoints, list):
+        raise HTTPException(status_code=422, detail="waypoints must be a list of address strings")
+
+    from ..settings import get_settings
+    s = get_settings()
+    if not s.google_maps_api_key:
+        raise HTTPException(status_code=503, detail="GOOGLE_MAPS_API_KEY not configured")
+
+    from ..execution_engine.handlers.lf_dispatch import _optimize_route_via_google
+    result = _optimize_route_via_google(origin, destination, waypoints, s.google_maps_api_key)
+    if not result:
+        raise HTTPException(status_code=502, detail="Google Maps route optimization failed")
+
+    # Build human-readable ordered stop list
+    ordered_stops = [origin]
+    for idx in result.get("optimized_order", range(len(waypoints))):
+        ordered_stops.append(waypoints[idx])
+    ordered_stops.append(destination)
+
+    return {
+        "ok":               True,
+        "total_miles":      result["total_miles"],
+        "total_minutes":    result["total_minutes"],
+        "stop_count":       len(ordered_stops),
+        "ordered_stops":    ordered_stops,
+        "optimized_order":  result["optimized_order"],
+        "legs":             result["legs"],
+    }
+
+
 @router.get("/live-locations")
 def live_locations() -> dict:
     """
