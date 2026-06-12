@@ -835,12 +835,17 @@ select.form-input option{background:var(--surface);}
   </div>
 
   <div class="sb-section">
+    <div class="sb-label">Sales &amp; Marketing</div>
+    <div class="sb-item" onclick="nav('salesforce')" style="background:rgba(15,76,129,.07);border-left:3px solid var(--navy)"><span class="sb-icon">🏆</span> <strong>Command Center</strong> <span class="sb-badge" id="sm-notif" style="display:none;background:#ef4444;color:#fff">!</span></div>
+    <div class="sb-item" onclick="nav('crm')"><span class="sb-icon">📇</span> Lead CRM</div>
+    <div class="sb-item" onclick="nav('leads')"><span class="sb-icon">🎯</span> Lead Pipeline</div>
+  </div>
+
+  <div class="sb-section">
     <div class="sb-label">Automation</div>
     <div class="sb-item" onclick="nav('agents')"><span class="sb-icon">🤖</span> AI Agents <span class="sb-badge" id="agents-notif" style="display:none">●</span></div>
     <div class="sb-item" onclick="nav('execution')"><span class="sb-icon">⚙️</span> Execution Engine</div>
     <div class="sb-item" onclick="nav('founders')"><span class="sb-icon">🏁</span> Founders Program</div>
-    <div class="sb-item" onclick="nav('crm')"><span class="sb-icon">📇</span> Lead CRM</div>
-    <div class="sb-item" onclick="nav('leads')"><span class="sb-icon">🎯</span> Lead Pipeline</div>
   </div>
 
   <div class="sb-section">
@@ -2101,6 +2106,177 @@ select.form-input option{background:var(--surface);}
           </div>
           <div class="fg" style="margin-bottom:18px"><label class="fl">Description</label><textarea class="fta" id="report-body" placeholder="Describe the issue, suggestion, or update…" style="min-height:100px"></textarea></div>
           <button class="btn-navy" onclick="saveTeamReport()" style="width:100%">Submit Report</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── SALES & MARKETING COMMAND CENTER ── -->
+    <div class="page" id="page-salesforce">
+      <div class="page-hdr">
+        <div class="page-hdr-l">
+          <div class="chip">Sales &amp; Marketing</div>
+          <h2>Command Center</h2>
+        </div>
+        <div class="page-hdr-r" style="display:flex;gap:8px;align-items:center">
+          <button onclick="openAddLeadModal()" style="padding:6px 14px;background:var(--navy);color:#fff;border:none;border-radius:4px;font-size:13px;cursor:pointer;font-weight:600">+ Add Lead</button>
+          <button onclick="loadSalesforce(true)" style="padding:6px 10px;border:1px solid var(--border);border-radius:4px;font-size:13px;cursor:pointer;background:#fff" title="Refresh all data">↻ Refresh</button>
+        </div>
+      </div>
+
+      <!-- KPI Strip -->
+      <div id="sm-kpi-strip" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;padding:0 16px 12px">
+        <div class="card" style="padding:12px 14px;text-align:center">
+          <div style="font-size:22px;font-weight:800;color:var(--navy)" id="sm-kpi-leads">—</div>
+          <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px">Total Leads</div>
+        </div>
+        <div class="card" style="padding:12px 14px;text-align:center">
+          <div style="font-size:22px;font-weight:800;color:#f97316" id="sm-kpi-followup">—</div>
+          <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px">Follow-ups Due</div>
+        </div>
+        <div class="card" style="padding:12px 14px;text-align:center">
+          <div style="font-size:22px;font-weight:800;color:#3b82f6" id="sm-kpi-interested">—</div>
+          <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px">Interested</div>
+        </div>
+        <div class="card" style="padding:12px 14px;text-align:center">
+          <div style="font-size:22px;font-weight:800;color:var(--navy)" id="sm-kpi-hf-onboard">—</div>
+          <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px">HF Onboarding</div>
+        </div>
+        <div class="card" style="padding:12px 14px;text-align:center">
+          <div style="font-size:22px;font-weight:800;color:#8b5cf6" id="sm-kpi-lf-onboard">—</div>
+          <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px">LF Onboarding</div>
+        </div>
+        <div class="card" style="padding:12px 14px;text-align:center">
+          <div style="font-size:22px;font-weight:800;color:#16a34a" id="sm-kpi-won">—</div>
+          <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px">Won / Converted</div>
+        </div>
+        <div class="card" style="padding:12px 14px;text-align:center">
+          <div style="font-size:22px;font-weight:800;color:#0ea5e9" id="sm-kpi-calls">—</div>
+          <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px">Calls This Week</div>
+        </div>
+      </div>
+
+      <!-- Sub-tabs -->
+      <div style="padding:0 16px;border-bottom:2px solid var(--border);display:flex;gap:0;margin-bottom:0">
+        <button id="sm-tab-btn-pipeline" onclick="smSetTab('pipeline')" style="padding:8px 18px;font-size:13px;font-weight:700;border:none;background:none;cursor:pointer;border-bottom:3px solid var(--navy);margin-bottom:-2px;color:var(--navy)">🎯 Pipeline</button>
+        <button id="sm-tab-btn-onboard" onclick="smSetTab('onboard')" style="padding:8px 18px;font-size:13px;font-weight:600;border:none;background:none;cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-2px;color:var(--muted)">🚚 Onboarding</button>
+        <button id="sm-tab-btn-outreach" onclick="smSetTab('outreach')" style="padding:8px 18px;font-size:13px;font-weight:600;border:none;background:none;cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-2px;color:var(--muted)">📡 Outreach</button>
+        <button id="sm-tab-btn-team" onclick="smSetTab('team')" style="padding:8px 18px;font-size:13px;font-weight:600;border:none;background:none;cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-2px;color:var(--muted)">👥 Team</button>
+      </div>
+
+      <!-- ── Pipeline Tab ── -->
+      <div id="sm-tab-pipeline" style="display:grid;grid-template-columns:340px 1fr;gap:0;height:calc(100vh - 240px);overflow:hidden">
+        <!-- Left: Lead list -->
+        <div style="border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden">
+          <div style="padding:10px 12px;border-bottom:1px solid var(--border);display:flex;gap:6px;align-items:center">
+            <input type="text" id="sm-lead-search" placeholder="Name, MC, DOT, phone…" oninput="smRenderLeadList()" style="flex:1;padding:6px 8px;border:1px solid var(--border);border-radius:4px;font-size:12px">
+            <select id="sm-lead-stage" onchange="smRenderLeadList()" style="padding:6px 8px;border:1px solid var(--border);border-radius:4px;font-size:12px">
+              <option value="">All</option>
+              <option value="New">New</option>
+              <option value="Contacted">Contacted</option>
+              <option value="Interested">Interested</option>
+              <option value="Won">Won</option>
+              <option value="Not_Interested">Not interested</option>
+            </select>
+          </div>
+          <div id="sm-lead-list" style="flex:1;overflow-y:auto"></div>
+          <div style="padding:6px 12px;border-top:1px solid var(--border);font-size:11px;color:var(--muted)"><span id="sm-lead-count">0</span> leads · <a href="#" onclick="nav('crm');return false" style="color:var(--navy)">Open full CRM →</a></div>
+        </div>
+        <!-- Right: Pipeline overview -->
+        <div style="overflow-y:auto;padding:16px">
+          <!-- Stage funnel -->
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px" id="sm-stage-funnel"></div>
+          <!-- Two cols: Follow-ups + Never Contacted -->
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+            <div class="card" style="padding:14px">
+              <div style="font-size:12px;font-weight:700;margin-bottom:10px;color:#92400e">📅 Follow-ups Due</div>
+              <div id="sm-followup-list" style="font-size:12px"></div>
+            </div>
+            <div class="card" style="padding:14px">
+              <div style="font-size:12px;font-weight:700;margin-bottom:10px;color:#b45309">👋 Needs First Touch</div>
+              <div id="sm-first-touch-list" style="font-size:12px"></div>
+            </div>
+          </div>
+          <!-- Hot leads -->
+          <div class="card" style="padding:14px;margin-top:14px">
+            <div style="font-size:12px;font-weight:700;margin-bottom:10px;color:#dc2626">🔴 Hot Leads</div>
+            <div id="sm-hot-leads" style="font-size:12px"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Onboarding Tab ── -->
+      <div id="sm-tab-onboard" style="display:none;padding:16px;overflow-y:auto;height:calc(100vh - 240px)">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+          <!-- HF Onboarding -->
+          <div class="card" style="padding:16px">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+              <div style="font-weight:700;font-size:14px">🚚 Heavy Fleet Onboarding</div>
+              <a href="#" onclick="nav('carriers');return false" style="font-size:11px;color:var(--navy)">View all →</a>
+            </div>
+            <div id="sm-hf-onboard-table"></div>
+          </div>
+          <!-- LF Onboarding -->
+          <div class="card" style="padding:16px">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+              <div style="font-weight:700;font-size:14px">🚗 Light Fleet Onboarding</div>
+              <a href="#" onclick="nav('lf-drivers');return false" style="font-size:11px;color:var(--navy)">View all →</a>
+            </div>
+            <div id="sm-lf-onboard-table"></div>
+          </div>
+        </div>
+        <!-- Stage-by-stage completion -->
+        <div class="card" style="padding:16px;margin-top:16px">
+          <div style="font-weight:700;font-size:14px;margin-bottom:12px">📊 Onboarding Step Completion (Heavy Fleet)</div>
+          <div id="sm-onboard-steps-chart"></div>
+        </div>
+      </div>
+
+      <!-- ── Outreach Tab ── -->
+      <div id="sm-tab-outreach" style="display:none;padding:16px;overflow-y:auto;height:calc(100vh - 240px)">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+          <!-- Vance Call Log -->
+          <div class="card" style="padding:16px">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+              <div style="font-weight:700;font-size:14px">📞 Vance Call Log</div>
+              <button onclick="smLoadVanceCalls()" style="padding:4px 10px;border:1px solid var(--border);border-radius:4px;font-size:11px;cursor:pointer">↻</button>
+            </div>
+            <div id="sm-vance-log" style="font-size:12px"><div style="color:var(--muted)">Loading…</div></div>
+            <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">
+              <a href="#" onclick="nav('agents');return false" style="font-size:11px;color:var(--navy)">Open full Vance dialer →</a>
+            </div>
+          </div>
+          <!-- Email / Campaign Activity -->
+          <div class="card" style="padding:16px">
+            <div style="font-weight:700;font-size:14px;margin-bottom:10px">📧 Email &amp; Campaign Activity</div>
+            <div id="sm-email-activity" style="font-size:12px"></div>
+            <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">
+              <a href="#" onclick="nav('email');return false" style="font-size:11px;color:var(--navy)">Open Email Center →</a>
+              &nbsp;·&nbsp;
+              <a href="#" onclick="nav('crm');setTimeout(()=>crmSetView('outreach'),200);return false" style="font-size:11px;color:var(--navy)">CRM Campaigns →</a>
+            </div>
+          </div>
+        </div>
+        <!-- Outreach stats by lead -->
+        <div class="card" style="padding:16px">
+          <div style="font-weight:700;font-size:14px;margin-bottom:12px">📊 Outreach Coverage</div>
+          <div id="sm-outreach-stats" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px"></div>
+        </div>
+        <!-- Agent activity log -->
+        <div class="card" style="padding:16px;margin-top:16px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+            <div style="font-weight:700;font-size:14px">🤖 Recent Agent Activity</div>
+            <button onclick="smLoadAgentLog()" style="padding:4px 10px;border:1px solid var(--border);border-radius:4px;font-size:11px;cursor:pointer">↻</button>
+          </div>
+          <div id="sm-agent-log" style="font-size:12px"></div>
+        </div>
+      </div>
+
+      <!-- ── Team Tab ── -->
+      <div id="sm-tab-team" style="display:none;padding:16px;overflow-y:auto;height:calc(100vh - 240px)">
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px;margin-bottom:16px" id="sm-team-grid"></div>
+        <div class="card" style="padding:16px">
+          <div style="font-weight:700;font-size:14px;margin-bottom:12px">📋 Team Activity Log</div>
+          <div id="sm-team-log" style="font-size:12px"></div>
         </div>
       </div>
     </div>
@@ -10602,7 +10778,7 @@ function crmOeRunAutomation(){
   crmOeRefresh();
 }
 
-// Hook nav to load CRM when page is selected
+// Hook nav to load CRM or Salesforce when page is selected
 if (typeof nav === 'function') {
   const origNav = nav.bind(window);
   window.nav = function(id) {
@@ -10618,8 +10794,408 @@ if (typeof nav === 'function') {
         }
       }, 100);
     }
+    if (id === 'salesforce') {
+      loadSalesforce();
+    }
     return origNav(id);
   };
+}
+
+// ── SALES & MARKETING COMMAND CENTER ────────────────────────────────────────
+
+let _smCurrentTab = 'pipeline';
+let _smVanceCalls = [];
+
+function smSetTab(tab) {
+  _smCurrentTab = tab;
+  ['pipeline','onboard','outreach','team'].forEach(t => {
+    const btn = document.getElementById('sm-tab-btn-'+t);
+    const pane = document.getElementById('sm-tab-'+t);
+    const active = t === tab;
+    if(btn){ btn.style.borderBottomColor = active ? 'var(--navy)' : 'transparent'; btn.style.color = active ? 'var(--navy)' : 'var(--muted)'; btn.style.fontWeight = active ? '700' : '600'; }
+    if(pane) pane.style.display = active ? (t==='pipeline'?'grid':'block') : 'none';
+  });
+  if(tab === 'outreach' && !_smVanceCalls.length) { smLoadVanceCalls(); smLoadAgentLog(); smRenderEmailActivity(); }
+  if(tab === 'team') smRenderTeam();
+  if(tab === 'onboard') smRenderOnboarding();
+}
+
+async function loadSalesforce(force=false) {
+  // Ensure leads are loaded
+  if(!crmAllLeads.length || force) {
+    await loadCrmLeads();
+  }
+  smRenderKPIs();
+  smRenderLeadList();
+  smRenderPipelineOverview();
+  if(_smCurrentTab === 'onboard') smRenderOnboarding();
+  if(_smCurrentTab === 'outreach') { smLoadVanceCalls(); smRenderEmailActivity(); }
+  if(_smCurrentTab === 'team') smRenderTeam();
+}
+
+function smRenderKPIs() {
+  const leads = crmAllLeads || [];
+  const now = new Date();
+  const realC = (allCarriers||[]).filter(c=>!c.is_test);
+  const hfOnboard = realC.filter(c=>c.status==='onboarding'||c.status==='prospect').length;
+  const followupDue = leads.filter(l=>l.next_touch_at && new Date(l.next_touch_at)<=now).length;
+  const interested = leads.filter(l=>(_crmStatus(l)||'').toLowerCase()==='interested').length;
+  const won = leads.filter(l=>(_crmStatus(l)||'').toLowerCase()==='won').length;
+
+  const setText2 = (id,v) => { const e=document.getElementById(id); if(e) e.textContent=v; };
+  setText2('sm-kpi-leads', leads.length);
+  setText2('sm-kpi-followup', followupDue);
+  setText2('sm-kpi-interested', interested);
+  setText2('sm-kpi-hf-onboard', hfOnboard);
+  setText2('sm-kpi-won', won);
+  // LF onboard: try from existing lf data or show cached
+  const lfOnboardEl = document.getElementById('sm-kpi-lf-onboard');
+  if(lfOnboardEl && lfOnboardEl.textContent==='—') {
+    apiFetch('/api/light-fleet/drivers?limit=200').then(r=>r.ok?r.json():null).then(d=>{
+      if(!d) return;
+      const drv = d.drivers||d.items||[];
+      const pending = drv.filter(dr=>!dr.is_active||(dr.status||'').match(/pending|onboard/i)).length;
+      if(lfOnboardEl) lfOnboardEl.textContent = pending;
+    }).catch(()=>{});
+  }
+  // Calls this week from cached vance calls
+  const wkAgo = new Date(); wkAgo.setDate(wkAgo.getDate()-7);
+  const wkCalls = _smVanceCalls.filter(c=>c.ts && new Date(c.ts)>=wkAgo).length;
+  setText2('sm-kpi-calls', wkCalls||'—');
+}
+
+function smRenderLeadList() {
+  const listEl = document.getElementById('sm-lead-list');
+  const countEl = document.getElementById('sm-lead-count');
+  if(!listEl) return;
+  const search = (document.getElementById('sm-lead-search')?.value||'').toLowerCase().trim();
+  const stage = document.getElementById('sm-lead-stage')?.value||'';
+  let leads = crmAllLeads || [];
+  if(stage) leads = leads.filter(l=>(_crmStatus(l)||'').toLowerCase()===stage.toLowerCase());
+  if(search) leads = leads.filter(l=>
+    (_crmName(l)||'').toLowerCase().includes(search)||
+    (l.contact_name||'').toLowerCase().includes(search)||
+    (l.phone||'').includes(search)||
+    (l.email||'').toLowerCase().includes(search)||
+    (l.mc_number||'').toLowerCase().includes(search)||
+    (l.dot_number||'').toLowerCase().includes(search)||
+    (l.city||'').toLowerCase().includes(search)||
+    (l.notes||'').toLowerCase().includes(search)
+  );
+  if(countEl) countEl.textContent = leads.length;
+
+  const now = new Date();
+  const stColor = s => { const v=(s||'').toLowerCase(); if(v==='interested'||v==='won') return '#16a34a'; if(v==='not_interested'||v==='lost') return '#dc2626'; if(v==='contacted') return '#2563eb'; return '#f97316'; };
+
+  if(!leads.length) { listEl.innerHTML='<div style="padding:16px;text-align:center;color:var(--muted);font-size:12px">No leads found</div>'; return; }
+
+  listEl.innerHTML = leads.map(l => {
+    const st = _crmStatus(l);
+    const followup = l.next_touch_at && new Date(l.next_touch_at)<=now;
+    const heat = crmGetHeat(l.id);
+    const heatDot = heat ? `<span style="width:7px;height:7px;border-radius:50%;background:${heat==='hot'?'#ef4444':heat==='warm'?'#f97316':'#6b7280'};display:inline-block;flex-shrink:0"></span>` : '';
+    return `<div onclick="smOpenLead('${l.id}')" style="padding:9px 12px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .15s" onmouseover="this.style.background='rgba(0,0,0,.04)'" onmouseout="this.style.background=''">
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">
+        ${heatDot}
+        <div style="font-weight:500;font-size:13px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(_crmName(l))}</div>
+        <span style="font-size:10px;font-weight:600;color:${stColor(st)};white-space:nowrap">${st}</span>
+      </div>
+      <div style="font-size:11px;color:var(--muted);display:flex;gap:8px;align-items:center">
+        <span>${l.phone||l.email||'No contact'}</span>
+        ${l.equipment_type?`<span style="color:var(--muted)">·${l.equipment_type}</span>`:''}
+        ${followup?`<span style="color:#b45309;margin-left:auto">📅 due</span>`:''}
+        <span style="margin-left:auto;color:var(--muted)">⭐${l.score||0}</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function smOpenLead(leadId) {
+  // Open the full CRM with this lead selected
+  nav('crm');
+  setTimeout(()=>selectCrmLead(leadId), 400);
+}
+
+function smRenderPipelineOverview() {
+  const leads = crmAllLeads || [];
+  const now = new Date();
+  const stages = ['New','Contacted','Interested','Won','Not_Interested'];
+  const stColor = s => { const v=(s||'').toLowerCase(); if(v==='interested'||v==='won') return '#16a34a'; if(v==='not_interested') return '#dc2626'; if(v==='contacted') return '#2563eb'; return '#f97316'; };
+
+  const funnelEl = document.getElementById('sm-stage-funnel');
+  if(funnelEl) {
+    const displayed = ['New','Contacted','Interested','Won'];
+    funnelEl.innerHTML = displayed.map(s => {
+      const cnt = leads.filter(l=>(_crmStatus(l)||'').toLowerCase()===s.toLowerCase()).length;
+      const pct = leads.length ? Math.round(cnt/leads.length*100) : 0;
+      return `<div class="card" style="padding:12px;text-align:center;cursor:pointer" onclick="nav('crm');setTimeout(()=>crmFilterStage('${s}'),400)">
+        <div style="font-size:22px;font-weight:800;color:${stColor(s)}">${cnt}</div>
+        <div style="font-size:10px;color:var(--muted);text-transform:uppercase;margin-top:2px">${s}</div>
+        <div style="margin-top:4px;height:3px;background:var(--border);border-radius:2px">
+          <div style="height:3px;width:${pct}%;background:${stColor(s)};border-radius:2px"></div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  const followupEl = document.getElementById('sm-followup-list');
+  if(followupEl) {
+    const due = leads.filter(l=>l.next_touch_at && new Date(l.next_touch_at)<=now).slice(0,8);
+    followupEl.innerHTML = due.length ? due.map(l=>`
+      <div onclick="smOpenLead('${l.id}')" style="padding:5px 0;border-bottom:1px solid var(--border);cursor:pointer;display:flex;justify-content:space-between;align-items:center" onmouseover="this.style.background='rgba(0,0,0,.03)'" onmouseout="this.style.background=''">
+        <span style="font-weight:500">${esc(_crmName(l))}</span>
+        <span style="color:#b45309">${new Date(l.next_touch_at).toLocaleDateString('en-US',{month:'short',day:'numeric'})}</span>
+      </div>`).join('') : '<div style="color:var(--muted)">All clear!</div>';
+  }
+
+  const touchEl = document.getElementById('sm-first-touch-list');
+  if(touchEl) {
+    const never = leads.filter(l=>!l.last_touch_at&&!l.last_contact_at&&(_crmStatus(l)||'').toLowerCase()==='new').slice(0,8);
+    touchEl.innerHTML = never.length ? never.map(l=>`
+      <div onclick="smOpenLead('${l.id}')" style="padding:5px 0;border-bottom:1px solid var(--border);cursor:pointer;display:flex;justify-content:space-between;align-items:center" onmouseover="this.style.background='rgba(0,0,0,.03)'" onmouseout="this.style.background=''">
+        <span style="font-weight:500">${esc(_crmName(l))}</span>
+        <span style="color:var(--muted)">${l.phone||l.email||'No contact'}</span>
+      </div>`).join('') : '<div style="color:var(--muted)">All leads contacted</div>';
+  }
+
+  const hotEl = document.getElementById('sm-hot-leads');
+  if(hotEl) {
+    const hot = leads.filter(l=>crmGetHeat(l.id)==='hot').slice(0,10);
+    hotEl.innerHTML = hot.length ? `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px">` +
+      hot.map(l=>`<div onclick="smOpenLead('${l.id}')" style="padding:8px 10px;background:rgba(239,68,68,.07);border:1px solid rgba(239,68,68,.2);border-radius:6px;cursor:pointer" onmouseover="this.style.background='rgba(239,68,68,.12)'" onmouseout="this.style.background='rgba(239,68,68,.07)'">
+        <div style="font-weight:600;font-size:12px">${esc(_crmName(l))}</div>
+        <div style="font-size:11px;color:var(--muted)">${l.phone||l.email||'—'} · ⭐${l.score||0}</div>
+      </div>`).join('') + '</div>'
+      : '<div style="color:var(--muted);font-size:12px">No hot leads marked. Set heat from the CRM lead view.</div>';
+  }
+}
+
+function smRenderOnboarding() {
+  const realC = (allCarriers||[]).filter(c=>!c.is_test);
+  const onboarding = realC.filter(c=>c.status==='onboarding'||c.status==='prospect');
+
+  const hfEl = document.getElementById('sm-hf-onboard-table');
+  if(hfEl) {
+    if(!onboarding.length){ hfEl.innerHTML='<div style="color:var(--muted);font-size:12px;padding:8px 0">No carriers currently onboarding</div>'; }
+    else {
+      hfEl.innerHTML = `<table style="width:100%;font-size:12px;border-collapse:collapse">
+        <thead><tr style="border-bottom:1px solid var(--border)">
+          <th style="text-align:left;padding:4px 0;font-weight:600;color:var(--muted)">Carrier</th>
+          <th style="text-align:left;padding:4px;font-weight:600;color:var(--muted)">Status</th>
+          <th style="text-align:left;padding:4px;font-weight:600;color:var(--muted)">Progress</th>
+          <th style="text-align:left;padding:4px;font-weight:600;color:var(--muted)">Days</th>
+        </tr></thead>
+        <tbody>`+onboarding.map(c=>{
+          const missing = c.onboarding_missing_fields||[];
+          const total = 9;
+          const done = Math.max(0, total - missing.length);
+          const pct = Math.round(done/total*100);
+          const days = c.created_at ? Math.round((Date.now()-new Date(c.created_at).getTime())/(864e5)) : '—';
+          return `<tr style="border-bottom:1px solid var(--border);cursor:pointer" onclick="showOnboardingDetail('${c.id}')" onmouseover="this.style.background='rgba(0,0,0,.04)'" onmouseout="this.style.background=''">
+            <td style="padding:6px 0;font-weight:500">${esc(c.company_name||c.business_name||'Unknown')}</td>
+            <td style="padding:6px 4px"><span class="badge badge-navy">${c.status}</span></td>
+            <td style="padding:6px 4px;min-width:80px">
+              <div style="display:flex;align-items:center;gap:5px">
+                <div style="flex:1;height:5px;background:var(--border);border-radius:3px"><div style="height:5px;width:${pct}%;background:${pct>=80?'#16a34a':pct>=50?'#f97316':'#ef4444'};border-radius:3px"></div></div>
+                <span style="font-size:10px;color:var(--muted)">${pct}%</span>
+              </div>
+            </td>
+            <td style="padding:6px 4px;color:var(--muted)">${days}d</td>
+          </tr>`;
+        }).join('')+`</tbody></table>`;
+    }
+  }
+
+  // LF onboarding
+  const lfEl = document.getElementById('sm-lf-onboard-table');
+  if(lfEl) {
+    lfEl.innerHTML = '<div style="color:var(--muted);font-size:12px">Loading LF data…</div>';
+    apiFetch('/api/light-fleet/drivers?limit=200').then(r=>r.ok?r.json():null).then(d=>{
+      if(!d){ lfEl.innerHTML='<div style="color:var(--muted);font-size:12px">Could not load LF data</div>'; return; }
+      const drv = (d.drivers||d.items||[]).filter(dr=>!dr.is_active||(dr.status||'').match(/pending|onboard|inactive/i)).slice(0,20);
+      if(!drv.length){ lfEl.innerHTML='<div style="color:var(--muted);font-size:12px">No pending LF drivers</div>'; return; }
+      lfEl.innerHTML = `<table style="width:100%;font-size:12px;border-collapse:collapse">
+        <thead><tr style="border-bottom:1px solid var(--border)">
+          <th style="text-align:left;padding:4px 0;font-weight:600;color:var(--muted)">Driver</th>
+          <th style="text-align:left;padding:4px;font-weight:600;color:var(--muted)">Service</th>
+          <th style="text-align:left;padding:4px;font-weight:600;color:var(--muted)">Status</th>
+        </tr></thead>
+        <tbody>`+drv.map(dr=>`
+          <tr style="border-bottom:1px solid var(--border)">
+            <td style="padding:6px 0;font-weight:500">${esc(dr.full_name||dr.name||'Unknown')}</td>
+            <td style="padding:6px 4px;color:var(--muted);font-size:11px">${esc(dr.service_type||dr.approved_services||'—')}</td>
+            <td style="padding:6px 4px"><span class="badge badge-ghost" style="font-size:10px">${esc(dr.status||'pending')}</span></td>
+          </tr>`).join('')+`</tbody></table>`;
+    }).catch(()=>{ if(lfEl) lfEl.innerHTML='<div style="color:var(--muted);font-size:12px">Could not load LF data</div>'; });
+  }
+
+  // Step completion chart
+  const stepsEl = document.getElementById('sm-onboard-steps-chart');
+  if(stepsEl && typeof HF_ONBOARD_STEPS !== 'undefined') {
+    const realC2 = (allCarriers||[]).filter(c=>!c.is_test && (c.status==='onboarding'||c.status==='prospect'));
+    if(!realC2.length){ stepsEl.innerHTML='<div style="color:var(--muted);font-size:12px">No carriers onboarding</div>'; return; }
+    stepsEl.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px">` +
+      HF_ONBOARD_STEPS.map(step=>{
+        const done = realC2.filter(c=>step.check(c)).length;
+        const pct = Math.round(done/realC2.length*100);
+        return `<div style="padding:8px 10px;border:1px solid var(--border);border-radius:6px">
+          <div style="font-size:11px;font-weight:600;margin-bottom:4px">${step.icon} ${step.label}</div>
+          <div style="display:flex;align-items:center;gap:6px">
+            <div style="flex:1;height:4px;background:var(--border);border-radius:2px"><div style="height:4px;width:${pct}%;background:${pct>=80?'#16a34a':pct>=50?'#f97316':'#ef4444'};border-radius:2px"></div></div>
+            <span style="font-size:10px;color:var(--muted)">${done}/${realC2.length}</span>
+          </div>
+        </div>`;
+      }).join('') + '</div>';
+  }
+}
+
+async function smLoadVanceCalls() {
+  const el = document.getElementById('sm-vance-log');
+  try {
+    const r = await apiFetch('/api/prospecting/calls?limit=25');
+    if(!r.ok) { if(el) el.innerHTML='<div style="color:var(--muted)">Could not load calls</div>'; return; }
+    const d = await r.json();
+    _smVanceCalls = d.calls||[];
+    smRenderKPIs(); // update calls-this-week KPI
+    if(!el) return;
+    if(!_smVanceCalls.length){ el.innerHTML='<div style="color:var(--muted)">No calls yet</div>'; return; }
+    el.innerHTML = `<div style="max-height:300px;overflow-y:auto">
+      <table style="width:100%;border-collapse:collapse">
+        <thead><tr style="border-bottom:1px solid var(--border)">
+          <th style="text-align:left;padding:4px 0;font-size:11px;color:var(--muted)">Who</th>
+          <th style="text-align:left;padding:4px;font-size:11px;color:var(--muted)">Phone</th>
+          <th style="text-align:left;padding:4px;font-size:11px;color:var(--muted)">Result</th>
+          <th style="text-align:left;padding:4px;font-size:11px;color:var(--muted)">When</th>
+        </tr></thead>
+        <tbody>`+_smVanceCalls.map(c=>{
+          const p=c.payload||{}; const ok=c.result==='started';
+          return `<tr style="border-bottom:1px solid var(--border)">
+            <td style="padding:5px 0;font-weight:500">${esc(p.name||'—')}</td>
+            <td style="padding:5px 4px;color:var(--muted)">${esc(p.phone||'—')}</td>
+            <td style="padding:5px 4px"><span style="font-size:10px;padding:2px 6px;border-radius:10px;background:${ok?'rgba(22,163,74,.12)':'rgba(249,115,22,.12)'};color:${ok?'#15803d':'#c2410c'}">${c.result||c.action}</span></td>
+            <td style="padding:5px 4px;color:var(--muted);white-space:nowrap">${c.ts?new Date(c.ts).toLocaleDateString('en-US',{month:'short',day:'numeric'}):'—'}</td>
+          </tr>`;
+        }).join('')+`</tbody></table></div>`;
+  } catch(e) { if(el) el.innerHTML='<div style="color:var(--muted)">Could not load calls</div>'; }
+}
+
+function smRenderEmailActivity() {
+  const el = document.getElementById('sm-email-activity');
+  if(!el) return;
+  const leads = crmAllLeads || [];
+  const emailed = leads.filter(l=>(l.outreach_channel||'').toLowerCase().includes('email'));
+  const called = leads.filter(l=>(l.outreach_channel||'').toLowerCase().match(/call|sms|phone/));
+  const campaigns = CRM_OE?.campaigns||[];
+  el.innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
+      <div style="padding:8px;background:rgba(99,102,241,.07);border-radius:6px;text-align:center">
+        <div style="font-size:18px;font-weight:700;color:#4f46e5">${emailed.length}</div>
+        <div style="font-size:10px;color:var(--muted)">EMAILED</div>
+      </div>
+      <div style="padding:8px;background:rgba(14,165,233,.07);border-radius:6px;text-align:center">
+        <div style="font-size:18px;font-weight:700;color:#0284c7">${called.length}</div>
+        <div style="font-size:10px;color:var(--muted)">CALLED/SMS</div>
+      </div>
+    </div>
+    ${campaigns.length ? `<div style="font-size:11px;font-weight:600;margin-bottom:6px;color:var(--muted)">Active Campaigns (${campaigns.length})</div>`+
+      campaigns.slice(0,4).map(c=>`<div style="padding:5px 0;border-bottom:1px solid var(--border);font-size:11px">${esc(c.name||'Campaign')} <span style="color:var(--muted)">· ${(c.leads||[]).length} leads</span></div>`).join('')
+      : '<div style="color:var(--muted);font-size:11px">No active campaigns. Create one in CRM → Campaigns.</div>'}`;
+
+  const statsEl = document.getElementById('sm-outreach-stats');
+  if(statsEl) {
+    const total = leads.length;
+    const contacted = leads.filter(l=>l.last_touch_at||l.last_contact_at).length;
+    const never = total - contacted;
+    const pct = total ? Math.round(contacted/total*100) : 0;
+    statsEl.innerHTML = [
+      {label:'Total Leads', val:total, color:'var(--navy)'},
+      {label:'Contacted', val:contacted, color:'#16a34a'},
+      {label:'Never Reached', val:never, color:'#f97316'},
+      {label:'Outreach Rate', val:pct+'%', color:pct>=50?'#16a34a':'#f97316'},
+      {label:'With Email', val:leads.filter(l=>l.email).length, color:'#6366f1'},
+      {label:'With Phone', val:leads.filter(l=>l.phone||l.phone_number).length, color:'#0ea5e9'},
+    ].map(s=>`<div style="padding:10px;border:1px solid var(--border);border-radius:6px;text-align:center">
+      <div style="font-size:18px;font-weight:700;color:${s.color}">${s.val}</div>
+      <div style="font-size:10px;color:var(--muted);text-transform:uppercase;margin-top:2px">${s.label}</div>
+    </div>`).join('');
+  }
+}
+
+async function smLoadAgentLog() {
+  const el = document.getElementById('sm-agent-log');
+  const teamEl = document.getElementById('sm-team-log');
+  try {
+    const d = await API.agentLog();
+    const items = (d.items||[]).filter(i=>['vance','victoria','alexander','isabella','naomi','cc_gulley','diana_cole','drew'].some(a=>i.agent===a||i.action?.toLowerCase().includes(a)));
+    const all = d.items||[];
+    const renderLog = (arr, target) => {
+      if(!target) return;
+      if(!arr.length){ target.innerHTML='<div style="color:var(--muted)">No recent activity</div>'; return; }
+      target.innerHTML = arr.slice(0,15).map(i=>{
+        const m = AGENT_META[i.agent]||{icon:'🤖',label:i.agent||'—'};
+        const ok = !i.error;
+        return `<div style="padding:6px 0;border-bottom:1px solid var(--border);display:flex;align-items:start;gap:8px">
+          <span style="font-size:14px">${m.icon}</span>
+          <div style="flex:1">
+            <div style="font-size:12px;font-weight:600">${m.label} <span style="font-size:10px;color:var(--muted)">${esc(i.action||i.result||'')}</span></div>
+            <div style="font-size:10px;color:var(--muted)">${i.ts?new Date(i.ts).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}):''}</div>
+          </div>
+          <span style="font-size:10px;padding:2px 6px;border-radius:10px;background:${ok?'rgba(22,163,74,.1)':'rgba(239,68,68,.1)'};color:${ok?'#15803d':'#dc2626'}">${ok?'OK':'ERR'}</span>
+        </div>`;
+      }).join('');
+    };
+    if(items.length && el) renderLog(items, el);
+    else if(el) renderLog(all, el);
+    renderLog(all, teamEl);
+  } catch(e) {
+    if(el) el.innerHTML='<div style="color:var(--muted);font-size:12px">Could not load activity log</div>';
+  }
+}
+
+const SM_SALES_AGENTS = [
+  {key:'victoria',  icon:'📈', name:'Victoria',  title:'CGO — Growth Engine',         desc:'Manages carrier pipeline, growth targets & recruiting strategy',     fire:'victoria'},
+  {key:'vance',     icon:'🎤', name:'Vance',      title:'Outbound Prospecting',        desc:'AI phone agent — calls owner-operators from the lead queue',         fire:'vance'},
+  {key:'alexander', icon:'📊', name:'Alexander',  title:'VP Market Intelligence',      desc:'Pulls DOT data, scores new markets, identifies ideal carrier targets', fire:'alexander'},
+  {key:'isabella',  icon:'📣', name:'Isabella',   title:'Campaign Builder',            desc:'Creates and sends outreach campaigns via email and SMS',              fire:'isabella'},
+  {key:'naomi',     icon:'🎯', name:'Naomi',      title:'Lead Scoring & Targeting',    desc:'Predictive scoring on all leads, surfaces highest-priority targets',  fire:'naomi'},
+  {key:'cc_gulley', icon:'🧭', name:'CC Gulley',  title:'CSO — Chief Strategy Officer',desc:'30/60/90 day strategic roadmap, pipeline goals & market positioning', fire:'cc_gulley'},
+  {key:'diana_cole',icon:'🚗', name:'Diana Cole', title:'LF Division Head',            desc:'Light Fleet business development, driver acquisition & onboarding',   fire:null},
+  {key:'drew',      icon:'🏭', name:'Drew',       title:'Shipper Development',         desc:'Outbound shipper prospecting and account acquisition via Bland AI',   fire:null},
+  {key:'winston',   icon:'🤝', name:'Winston',    title:'Carrier Retention',           desc:'Monitors at-risk carriers, triggers retention outreach',              fire:'winston'},
+];
+
+function smRenderTeam() {
+  const gridEl = document.getElementById('sm-team-grid');
+  if(!gridEl) return;
+  gridEl.innerHTML = SM_SALES_AGENTS.map(a=>`
+    <div class="card" style="padding:14px">
+      <div style="display:flex;align-items:start;gap:10px;margin-bottom:10px">
+        <div style="font-size:26px;flex-shrink:0">${a.icon}</div>
+        <div>
+          <div style="font-weight:700;font-size:14px">${a.name}</div>
+          <div style="font-size:11px;color:var(--navy);font-weight:600">${a.title}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:3px">${a.desc}</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:6px">
+        ${a.fire ? `<button onclick="smFireAgent('${a.fire}','${a.name}')" style="flex:1;padding:6px;background:var(--navy);color:#fff;border:none;border-radius:4px;font-size:12px;cursor:pointer;font-weight:600">▶ Run</button>` : `<button disabled style="flex:1;padding:6px;background:var(--surface2);color:var(--muted);border:none;border-radius:4px;font-size:12px">Manual</button>`}
+        ${a.key==='vance' ? `<button onclick="nav('agents')" style="flex:1;padding:6px;background:#e5e7eb;color:#374151;border:none;border-radius:4px;font-size:12px;cursor:pointer">📞 Dial</button>` : ''}
+        ${a.key==='victoria'||a.key==='cc_gulley' ? `<button onclick="nav('agents')" style="flex:1;padding:6px;background:#e5e7eb;color:#374151;border:none;border-radius:4px;font-size:12px;cursor:pointer">Chat →</button>` : ''}
+      </div>
+    </div>
+  `).join('');
+  smLoadAgentLog();
+}
+
+async function smFireAgent(name, label) {
+  try {
+    toast(`Running ${label}…`, 'info');
+    await API.runAgent(name, {});
+    toast(`${label} completed`, 'success');
+    smLoadAgentLog();
+  } catch(e) {
+    toast(`${label} failed: ${e.message}`, 'error');
+  }
 }
 </script>
 <!-- END EXECUTIVE COMMAND PANEL -->
