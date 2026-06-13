@@ -12119,6 +12119,7 @@ select.oc-inp option{background:#1a1a2e;color:#fff;}
     <button class="mo-tab active" id="motab-home"       onclick="moTab('home')">🏛️ Office Home</button>
     <button class="mo-tab"        id="motab-team"       onclick="moTab('team')">👥 My Team</button>
     <button class="mo-tab"        id="motab-todo"       onclick="moTab('todo')">✅ Todo → CC Gulley <span id="mo-todo-badge" style="display:none;background:#f5c842;color:#000;font-size:9px;font-weight:800;border-radius:10px;padding:1px 6px;margin-left:2px;">0</span></button>
+    <button class="mo-tab"        id="motab-fromcc"     onclick="moTab('fromcc')">📥 From CC Gulley <span id="mo-fromcc-badge" style="display:none;background:#ef4444;color:#fff;font-size:9px;font-weight:800;border-radius:10px;padding:1px 6px;margin-left:2px;">0</span></button>
     <button class="mo-tab"        id="motab-directives" onclick="moTab('directives')">📣 Directives</button>
     <button class="mo-tab"        id="motab-docs"       onclick="moTab('docs')">📁 Documents</button>
     <button class="mo-tab"        id="motab-crm"        onclick="moTab('crm')">📇 My CRM</button>
@@ -12344,6 +12345,30 @@ select.oc-inp option{background:#1a1a2e;color:#fff;}
         </div>
       </div>
     </div><!-- /todo -->
+
+    <!-- ════ FROM CC GULLEY ════ -->
+    <div class="mo-pane" id="mopane-fromcc">
+      <div class="mo-room">
+        <div style="flex-shrink:0;">
+          <div class="mo-fl">CC GULLEY OFFICE → MARK ODOM</div>
+          <div class="mo-label" style="font-size:16px;">Tasks Assigned by CC Gulley</div>
+          <div style="font-size:11px;color:rgba(255,255,255,.5);margin-bottom:4px;">Tasks CC has assigned to you. Check them off to mark complete — CC's office updates automatically.</div>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;flex-shrink:0;">
+          <select id="mo-fromcc-filter" class="mo-select" style="width:160px;padding:6px 10px;font-size:11px;" onchange="moFromCCRender()">
+            <option value="open">Open Tasks</option>
+            <option value="urgent">Urgent / Overdue</option>
+            <option value="done">Completed</option>
+            <option value="all">All Tasks</option>
+          </select>
+          <button onclick="moFromCCSync(true).then(moFromCCRender).then(()=>toast('Tasks refreshed ✓'))" style="background:rgba(245,200,66,.15);border:1px solid rgba(245,200,66,.3);color:#f5c842;padding:4px 10px;border-radius:6px;font-size:11px;cursor:pointer;">↻ Refresh</button>
+          <span id="mo-fromcc-count" style="font-size:11px;color:rgba(255,255,255,.4);"></span>
+        </div>
+        <div id="mo-fromcc-list" style="flex:1;display:flex;flex-direction:column;gap:8px;">
+          <div style="color:rgba(255,255,255,.3);font-size:12px;text-align:center;padding:32px;">Loading tasks from CC…</div>
+        </div>
+      </div>
+    </div><!-- /fromcc -->
 
     <!-- ════ DIRECTIVES ════ -->
     <div class="mo-pane" id="mopane-directives">
@@ -12855,6 +12880,7 @@ window.moTab = function(id){
   if(tb)tb.classList.add('active');
   if(pn)pn.classList.add('active');
   if(id==='todo')moTodoRender();
+  if(id==='fromcc'){moFromCCSync(true).then(moFromCCRender);}
   if(id==='crm')ocInit('mark');
   if(id==='directives')moLoadDirectives();
   if(id==='lf')moLFRefresh();
@@ -12891,6 +12917,61 @@ async function moTodosServerSync(force){
   if(typeof moTodoRender==='function')moTodoRender();
   if(typeof ccgFromMarkRender==='function')ccgFromMarkRender();
 }
+
+/* ── CC Gulley → Mark: tasks CC assigns to Mark ── */
+let _moFromCCSynced=false;
+async function moFromCCSync(force){
+  if(_moFromCCSynced&&!force) return;
+  _moFromCCSynced=true;
+  const server=await _officeStateGet('cc_todos');
+  if(server===null) return;
+  localStorage.setItem('cc_todos',JSON.stringify(server));
+}
+
+window.moFromCCRender = function(){
+  const todos=JSON.parse(localStorage.getItem('cc_todos')||'[]');
+  const filter=document.getElementById('mo-fromcc-filter')?.value||'open';
+  const list=document.getElementById('mo-fromcc-list');
+  const countEl=document.getElementById('mo-fromcc-count');
+  if(!list)return;
+  const open=todos.filter(t=>!t.done);
+  const urgent=open.filter(t=>{if(!t.due)return false;return(new Date(t.due).setHours(0,0,0,0)-new Date().setHours(0,0,0,0))/86400000<=0;});
+  const done=todos.filter(t=>t.done);
+  let rows=filter==='open'?open:filter==='urgent'?urgent:filter==='done'?done:todos;
+  rows=rows.slice().sort((a,b)=>{if(a.done!==b.done)return a.done?1:-1;if(!a.due&&!b.due)return 0;if(!a.due)return 1;if(!b.due)return -1;return new Date(a.due)-new Date(b.due);});
+  if(countEl)countEl.textContent=`${rows.length} task${rows.length!==1?'s':''}`;
+  const badge=document.getElementById('mo-fromcc-badge');
+  if(badge){badge.textContent=open.length;badge.style.display=open.length?'inline':'none';}
+  if(!rows.length){
+    list.innerHTML='<div style="color:rgba(255,255,255,.3);font-size:12px;text-align:center;padding:40px;">No tasks found for this filter.<br><span style="font-size:10px;margin-top:6px;display:block;">CC Gulley assigns tasks to you via her office.</span></div>';
+    return;
+  }
+  const priCls={high:'color:#ef4444;border-color:rgba(239,68,68,.3);background:rgba(239,68,68,.1)',med:'color:#f59e0b;border-color:rgba(245,158,11,.3);background:rgba(245,158,11,.1)',low:'color:#10b981;border-color:rgba(16,185,129,.3);background:rgba(16,185,129,.1)'};
+  const catIcon={strategy:'📊',operations:'🚛',finance:'💰',compliance:'🛡️',trading:'📈',hr:'👥',other:'📌'};
+  list.innerHTML=rows.map(t=>`<div style="display:flex;align-items:flex-start;gap:12px;padding:14px 16px;border-radius:10px;border:1px solid rgba(255,255,255,.09);background:rgba(255,255,255,.03);${t.done?'opacity:.45;':''}">
+    <input type="checkbox" style="width:18px;height:18px;border-radius:4px;border:2px solid rgba(245,200,66,.5);background:transparent;cursor:pointer;flex-shrink:0;appearance:none;-webkit-appearance:none;margin-top:2px;${t.done?'background:#f5c842;border-color:#f5c842;':''}" ${t.done?'checked':''} onchange="moMarkCCDone('${t.id}',this.checked)">
+    <div style="flex:1;min-width:0;">
+      <div style="font-weight:700;font-size:13px;color:${t.done?'rgba(255,255,255,.35)':'#fff'};${t.done?'text-decoration:line-through;':''};margin-bottom:3px;">${t.title}</div>
+      ${t.desc?`<div style="font-size:11px;color:rgba(255,255,255,.5);line-height:1.5;margin-bottom:6px;">${t.desc}</div>`:''}
+      <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+        ${t.due?`<span style="font-size:9px;font-family:monospace;padding:2px 8px;border-radius:10px;background:rgba(245,158,11,.12);color:#f59e0b;border:1px solid rgba(245,158,11,.25);">${moDueLbl(t.due)}</span>`:''}
+        <span style="font-size:9px;font-family:monospace;padding:2px 8px;border-radius:10px;border:1px solid;${priCls[t.pri]||priCls.med}">${(t.pri||'med').toUpperCase()}</span>
+        <span style="font-size:9px;font-family:monospace;padding:2px 8px;border-radius:10px;background:rgba(56,189,248,.1);color:#38bdf8;border:1px solid rgba(56,189,248,.2);">${catIcon[t.cat]||'📌'} ${t.cat||'other'}</span>
+        <span style="font-size:9px;color:rgba(255,255,255,.3);font-family:monospace;">From: CC Gulley</span>
+      </div>
+    </div>
+  </div>`).join('');
+};
+
+window.moMarkCCDone = function(id, done){
+  if(!done){moFromCCRender();return;}
+  const todos=JSON.parse(localStorage.getItem('cc_todos')||'[]').filter(x=>x.id!==id);
+  localStorage.setItem('cc_todos',JSON.stringify(todos));
+  try{apiFetch('/api/office/state/cc_todos','PUT',{value:todos}).catch(()=>{});}catch(e){}
+  moFromCCRender();
+  if(typeof ccgTodoRender==='function')ccgTodoRender();
+  toast('Task completed & cleared ✓');
+};
 
 function moDueCls(due){
   if(!due)return'ok';
@@ -13102,7 +13183,7 @@ window.moTVCustom = function(){
 
 /* ── Initial load + seed sample todos ── */
 window.moLoadOfficeData = function(){
-  moTodoRender();moTodosServerSync();moLoadDirectives();moRefreshAll();moLFRefresh();moTDRefresh();moLoadEmailCount();
+  moTodoRender();moTodosServerSync();moFromCCSync().then(moFromCCRender);moLoadDirectives();moRefreshAll();moLFRefresh();moTDRefresh();moLoadEmailCount();
 };
 
 async function moLoadEmailCount(){
@@ -13450,6 +13531,7 @@ window.moEmailSend = async function(){
   <div class="ccg-tabs">
     <button class="ccg-tab active" id="ccgtab-home"       onclick="ccgTab('home')">🏠 Office Home</button>
     <button class="ccg-tab"        id="ccgtab-frommark"   onclick="ccgTab('frommark')">✅ Tasks from Mark <span id="ccg-frommark-badge" style="display:none;background:#ef4444;color:#fff;font-size:9px;font-weight:800;border-radius:10px;padding:1px 6px;margin-left:2px;">0</span></button>
+    <button class="ccg-tab"        id="ccgtab-tomark"     onclick="ccgTab('tomark')">📋 Assign to Mark <span id="ccg-tomark-badge" style="display:none;background:#f5c842;color:#000;font-size:9px;font-weight:800;border-radius:10px;padding:1px 6px;margin-left:2px;">0</span></button>
     <button class="ccg-tab"        id="ccgtab-team"       onclick="ccgTab('team')">👥 My Team</button>
     <button class="ccg-tab"        id="ccgtab-strategy"   onclick="ccgTab('strategy')">📊 Strategy</button>
     <button class="ccg-tab"        id="ccgtab-directives" onclick="ccgTab('directives')">📣 Directives <span id="ccg-dir-badge" style="display:none;background:#38bdf8;color:#000;font-size:9px;font-weight:800;border-radius:10px;padding:1px 6px;">NEW</span></button>
@@ -13996,6 +14078,77 @@ window.moEmailSend = async function(){
       </div>
     </div><!-- /frommark -->
 
+    <!-- ════ ASSIGN TO MARK ════ -->
+    <div class="ccg-pane" id="ccgpane-tomark">
+      <div style="display:flex;flex:1;min-height:0;overflow:hidden;">
+
+        <!-- Left: task list -->
+        <div style="flex:1;display:flex;flex-direction:column;border-right:1px solid rgba(255,255,255,.07);min-height:0;">
+          <div style="padding:12px 16px;border-bottom:1px solid rgba(255,255,255,.07);display:flex;align-items:center;gap:10px;flex-shrink:0;">
+            <div class="ccg-fl" style="margin:0;">TASKS ASSIGNED TO MARK ODOM</div>
+            <select class="ccg-input" id="ccg-tomark-filter" style="max-width:150px;font-size:11px;margin-left:auto;" onchange="ccgTodoRender()">
+              <option value="open">Open Tasks</option>
+              <option value="urgent">Urgent / Overdue</option>
+              <option value="done">Completed</option>
+              <option value="all">All Tasks</option>
+            </select>
+            <button onclick="ccgTodosServerSync(true).then(ccgTodoRender).then(()=>toast('Synced ✓'))" style="background:rgba(56,189,248,.15);border:1px solid rgba(56,189,248,.3);color:#38bdf8;padding:4px 10px;border-radius:6px;font-size:11px;cursor:pointer;white-space:nowrap;">↻ Sync</button>
+          </div>
+          <div style="flex:1;overflow-y:auto;padding:14px 16px;scrollbar-width:thin;scrollbar-color:rgba(56,189,248,.4) transparent;" id="ccg-tomark-list">
+            <div style="color:rgba(255,255,255,.3);font-size:11px;text-align:center;padding:40px;">Loading tasks…</div>
+          </div>
+        </div>
+
+        <!-- Right: create / edit form -->
+        <div style="width:320px;flex-shrink:0;display:flex;flex-direction:column;padding:20px 20px;gap:14px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:rgba(56,189,248,.4) transparent;">
+          <div>
+            <div class="ccg-fl">CC GULLEY → MARK ODOM</div>
+            <div id="ccg-tomark-form-title" class="ccg-label" style="font-size:15px;">New Task for Mark</div>
+          </div>
+          <input type="hidden" id="ccg-tomark-edit-id">
+          <div>
+            <div class="ccg-fl">TASK TITLE *</div>
+            <input class="ccg-input" id="ccg-tomark-inp-title" placeholder="e.g. Review Q2 carrier contracts…">
+          </div>
+          <div>
+            <div class="ccg-fl">NOTES / DESCRIPTION</div>
+            <textarea class="ccg-input" id="ccg-tomark-inp-desc" rows="3" placeholder="Optional details…" style="resize:vertical;"></textarea>
+          </div>
+          <div style="display:flex;gap:10px;">
+            <div style="flex:1;">
+              <div class="ccg-fl">DUE DATE</div>
+              <input type="date" class="ccg-input" id="ccg-tomark-inp-due">
+            </div>
+            <div style="flex:1;">
+              <div class="ccg-fl">PRIORITY</div>
+              <select class="ccg-input" id="ccg-tomark-inp-pri">
+                <option value="high">🔴 High</option>
+                <option value="med" selected>🟡 Medium</option>
+                <option value="low">🟢 Low</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <div class="ccg-fl">CATEGORY</div>
+            <select class="ccg-input" id="ccg-tomark-inp-cat">
+              <option value="strategy">📊 Strategy</option>
+              <option value="operations">🚛 Operations</option>
+              <option value="finance">💰 Finance</option>
+              <option value="compliance">🛡️ Compliance</option>
+              <option value="trading">📈 Trading</option>
+              <option value="hr">👥 HR</option>
+              <option value="other">📌 Other</option>
+            </select>
+          </div>
+          <div style="display:flex;gap:8px;">
+            <button class="ccg-btn" style="flex:1;" onclick="ccgTodoSave()">💾 Save Task</button>
+            <button class="ccg-hdr-btn" onclick="ccgTodoClear()">Clear</button>
+          </div>
+          <span id="ccg-tomark-save-status" style="font-size:11px;color:#38bdf8;min-height:14px;"></span>
+        </div>
+      </div>
+    </div><!-- /tomark -->
+
     <!-- ════ EMAIL ════ -->
     <div class="ccg-pane" id="ccgpane-email">
       <div style="display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden;position:relative;">
@@ -14060,6 +14213,7 @@ window.ccgTab = function(id){
   if(id==='directives')ccgDirLoadActive();
   if(id==='strategy')ccgLoadPlan();
   if(id==='frommark')ccgFromMarkRender();
+  if(id==='tomark'){ccgTodosServerSync(true).then(ccgTodoRender);}
   if(id==='email')ccgEmailLoad();
   if(id==='docs')ccgLoadDocs();
 };
@@ -14087,6 +14241,9 @@ async function ccgLoadOfficeData(){
     await Promise.all([ccgLoadAgentIntel('alexander'),ccgLoadAgentIntel('naomi'),ccgLoadAgentIntel('winston')]);
     // Email unread count
     ccgLoadEmailCount();
+    // Sync CC→Mark tasks and update badge
+    await ccgTodosServerSync(false);
+    ccgTodoUpdateBadge();
   }catch(e){console.error('ccgLoadOfficeData',e);}
 }
 
@@ -14613,6 +14770,153 @@ window.ccgEmailSend = async function(){
     if(st)st.textContent='✓ Sent';
     setTimeout(()=>{document.getElementById('ccg-compose').style.display='none';if(st)st.textContent='';['ccg-compose-to','ccg-compose-subj','ccg-compose-body'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});},1500);
   }catch(e){if(st)st.textContent='Send failed: '+e.message;}
+};
+
+/* ── CC Gulley → Mark: assign tasks ── */
+function ccgTodos(){return JSON.parse(localStorage.getItem('cc_todos')||'[]');}
+function ccgTodosSave(t){localStorage.setItem('cc_todos',JSON.stringify(t));_officeStatePut('cc_todos',t);}
+
+let _ccTodosSynced=false;
+window.ccgTodosServerSync = async function(force){
+  if(_ccTodosSynced&&!force) return;
+  _ccTodosSynced=true;
+  const server=await _officeStateGet('cc_todos');
+  if(server===null) return;
+  const local=ccgTodos();
+  if(server.length===0&&local.length>0){_officeStatePut('cc_todos',local);return;}
+  localStorage.setItem('cc_todos',JSON.stringify(server));
+  ccgTodoUpdateBadge();
+  if(typeof moFromCCRender==='function')moFromCCRender();
+};
+
+function ccgTodoUpdateBadge(){
+  const open=ccgTodos().filter(t=>!t.done).length;
+  const b=document.getElementById('ccg-tomark-badge');
+  if(b){b.textContent=open;b.style.display=open?'inline':'none';}
+}
+
+window.ccgTodoRender = function(){
+  const todos=ccgTodos();
+  const filter=document.getElementById('ccg-tomark-filter')?.value||'open';
+  const list=document.getElementById('ccg-tomark-list');
+  if(!list)return;
+  ccgTodoUpdateBadge();
+  const open=todos.filter(t=>!t.done);
+  const urgent=open.filter(t=>{if(!t.due)return false;return(new Date(t.due).setHours(0,0,0,0)-new Date().setHours(0,0,0,0))/86400000<=0;});
+  const done=todos.filter(t=>t.done);
+  let rows=filter==='open'?open:filter==='urgent'?urgent:filter==='done'?done:todos;
+  rows=rows.slice().sort((a,b)=>{if(a.done!==b.done)return a.done?1:-1;if(!a.due&&!b.due)return 0;if(!a.due)return 1;if(!b.due)return -1;return new Date(a.due)-new Date(b.due);});
+  if(!rows.length){
+    list.innerHTML='<div style="color:rgba(255,255,255,.3);font-size:11px;text-align:center;padding:40px;">No tasks found. Create one using the form →</div>';
+    return;
+  }
+  const priCls={high:'color:#ef4444;border-color:rgba(239,68,68,.35);background:rgba(239,68,68,.1)',med:'color:#f59e0b;border-color:rgba(245,158,11,.35);background:rgba(245,158,11,.1)',low:'color:#10b981;border-color:rgba(16,185,129,.35);background:rgba(16,185,129,.1)'};
+  const catIcon={strategy:'📊',operations:'🚛',finance:'💰',compliance:'🛡️',trading:'📈',hr:'👥',other:'📌'};
+  list.innerHTML=rows.map(t=>`<div class="mo-todo-item${t.done?' done':''}" id="ccg-row-${t.id}">
+    <input type="checkbox" class="mo-todo-cb" style="border-color:rgba(56,189,248,.5);" ${t.done?'checked':''} onchange="ccgTodoToggle('${t.id}')">
+    <div style="flex:1;min-width:0;">
+      <div class="mo-todo-title">${t.title}</div>
+      ${t.desc?`<div class="mo-todo-desc">${t.desc}</div>`:''}
+      <div class="mo-todo-meta">
+        ${t.due?`<span class="mo-todo-due ${ccgTodoDueCls(t.due)}">${ccgDueLbl(t.due)} · ${t.due}</span>`:''}
+        <span style="font-size:9px;font-family:var(--ff-m);padding:2px 8px;border-radius:10px;font-weight:700;border:1px solid;${priCls[t.pri]||priCls.med}">${(t.pri||'MED').toUpperCase()}</span>
+        <span class="mo-todo-tag">${catIcon[t.cat]||'📌'} ${t.cat||'other'}</span>
+        <span style="font-size:9px;color:rgba(255,255,255,.35);font-family:var(--ff-m);">→ Mark Odom</span>
+      </div>
+    </div>
+    <div style="display:flex;gap:4px;flex-shrink:0;">
+      <button class="mo-hdr-btn" style="font-size:10px;padding:3px 8px;" onclick="ccgTodoEdit('${t.id}')">✏️</button>
+      <button class="mo-todo-del" onclick="ccgTodoDel('${t.id}')" title="Delete">✕</button>
+    </div>
+  </div>`).join('');
+};
+
+function ccgTodoDueCls(due){
+  if(!due)return'ok';
+  const diff=(new Date(due).setHours(0,0,0,0)-new Date().setHours(0,0,0,0))/86400000;
+  return diff<=0?'urgent':diff<=3?'soon':'ok';
+}
+
+window.ccgTodoNew = function(){
+  document.getElementById('ccg-tomark-edit-id').value='';
+  document.getElementById('ccg-tomark-form-title').textContent='New Task for Mark';
+  document.getElementById('ccg-tomark-inp-title').value='';
+  document.getElementById('ccg-tomark-inp-desc').value='';
+  document.getElementById('ccg-tomark-inp-due').value='';
+  document.getElementById('ccg-tomark-inp-pri').value='med';
+  document.getElementById('ccg-tomark-inp-cat').value='strategy';
+  document.getElementById('ccg-tomark-save-status').textContent='';
+};
+
+window.ccgTodoSave = function(){
+  const title=(document.getElementById('ccg-tomark-inp-title')?.value||'').trim();
+  if(!title){const st=document.getElementById('ccg-tomark-save-status');if(st)st.textContent='Task title is required.';return;}
+  const editId=document.getElementById('ccg-tomark-edit-id')?.value||'';
+  const todos=ccgTodos();
+  const task={
+    id:editId||('cctodo_'+Date.now()),
+    title,
+    desc:(document.getElementById('ccg-tomark-inp-desc')?.value||'').trim(),
+    due:document.getElementById('ccg-tomark-inp-due')?.value||'',
+    pri:document.getElementById('ccg-tomark-inp-pri')?.value||'med',
+    cat:document.getElementById('ccg-tomark-inp-cat')?.value||'strategy',
+    done:editId?(todos.find(t=>t.id===editId)?.done||false):false,
+    created:editId?(todos.find(t=>t.id===editId)?.created||new Date().toISOString()):new Date().toISOString(),
+  };
+  const idx=editId?todos.findIndex(t=>t.id===editId):-1;
+  if(idx>=0)todos[idx]=task; else todos.push(task);
+  ccgTodosSave(todos);
+  ccgTodoRender();
+  if(typeof moFromCCRender==='function')moFromCCRender();
+  const st=document.getElementById('ccg-tomark-save-status');
+  if(st){st.textContent=editId?'Task updated ✓':'Task assigned to Mark ✓';setTimeout(()=>{st.textContent='';},3000);}
+  document.getElementById('ccg-tomark-edit-id').value='';
+  document.getElementById('ccg-tomark-form-title').textContent='New Task for Mark';
+  document.getElementById('ccg-tomark-inp-title').value='';
+  document.getElementById('ccg-tomark-inp-desc').value='';
+  document.getElementById('ccg-tomark-inp-due').value='';
+  toast(editId?'Task updated':'Task assigned to Mark ✓');
+};
+
+window.ccgTodoClear = function(){
+  document.getElementById('ccg-tomark-edit-id').value='';
+  document.getElementById('ccg-tomark-form-title').textContent='New Task for Mark';
+  document.getElementById('ccg-tomark-inp-title').value='';
+  document.getElementById('ccg-tomark-inp-desc').value='';
+  document.getElementById('ccg-tomark-inp-due').value='';
+  document.getElementById('ccg-tomark-inp-pri').value='med';
+  document.getElementById('ccg-tomark-inp-cat').value='strategy';
+  document.getElementById('ccg-tomark-save-status').textContent='';
+};
+
+window.ccgTodoEdit = function(id){
+  const t=ccgTodos().find(x=>x.id===id);
+  if(!t)return;
+  document.getElementById('ccg-tomark-edit-id').value=t.id;
+  document.getElementById('ccg-tomark-form-title').textContent='Edit Task';
+  document.getElementById('ccg-tomark-inp-title').value=t.title;
+  document.getElementById('ccg-tomark-inp-desc').value=t.desc||'';
+  document.getElementById('ccg-tomark-inp-due').value=t.due||'';
+  document.getElementById('ccg-tomark-inp-pri').value=t.pri||'med';
+  document.getElementById('ccg-tomark-inp-cat').value=t.cat||'strategy';
+};
+
+window.ccgTodoDel = function(id){
+  if(!confirm('Delete this task?'))return;
+  const todos=ccgTodos().filter(t=>t.id!==id);
+  ccgTodosSave(todos);
+  ccgTodoRender();
+  if(typeof moFromCCRender==='function')moFromCCRender();
+};
+
+window.ccgTodoToggle = function(id){
+  const todos=ccgTodos();
+  const t=todos.find(x=>x.id===id);
+  if(!t)return;
+  t.done=!t.done;
+  ccgTodosSave(todos);
+  ccgTodoRender();
+  if(typeof moFromCCRender==='function')moFromCCRender();
 };
 
 /* auto-load is wired directly in nav() */

@@ -25,7 +25,7 @@ log = get_logger("3ll.api.office")
 
 
 def _ok_key(key: str) -> bool:
-    return key == "mo_todos" or key.startswith("oc_")
+    return key in ("mo_todos", "cc_todos") or key.startswith("oc_")
 
 
 @router.get("/state/{key}")
