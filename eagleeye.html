@@ -8910,7 +8910,14 @@ async function loadTriggerStatus() {
   <div id="mail-compose-warn" style="display:none;margin:0 16px 6px;padding:8px 11px;border-radius:6px;font-size:11.5px;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.4);color:#b45309"></div>
   <div style="padding:10px 16px;border-top:1px solid var(--border);display:flex;gap:8px;align-items:center;flex-wrap:wrap">
     <button onclick="mailSend()" id="mail-send-btn" class="btn-navy" style="font-size:13px;padding:7px 18px">Send</button>
-    <button onclick="document.getElementById('mail-attach-input').click()" title="Attach files" style="padding:6px 12px;background:none;border:1px solid var(--border);border-radius:5px;cursor:pointer;font-size:12px;color:var(--text)">📎 Attach</button>
+    <div style="position:relative;display:inline-block" id="mail-attach-wrap">
+      <button onclick="mailToggleAttachMenu(event)" title="Attach files" style="padding:6px 12px;background:none;border:1px solid var(--border);border-radius:5px;cursor:pointer;font-size:12px;color:var(--text);display:flex;align-items:center;gap:4px">📎 Attach <span style="font-size:9px;opacity:.7">▾</span></button>
+      <div id="mail-attach-menu" style="display:none;position:absolute;bottom:calc(100% + 4px);left:0;background:var(--surface);border:1px solid var(--border);border-radius:6px;box-shadow:0 4px 16px rgba(0,0,0,.18);z-index:9400;min-width:190px;overflow:hidden">
+        <div onclick="document.getElementById('mail-attach-input').click();mailCloseAttachMenu()" style="padding:9px 14px;font-size:12px;cursor:pointer;display:flex;align-items:center;gap:8px" onmouseover="this.style.background='var(--border)'" onmouseout="this.style.background=''">📁 <span>From Computer</span></div>
+        <div onclick="mailOpenVaultPicker();mailCloseAttachMenu()" style="padding:9px 14px;font-size:12px;cursor:pointer;display:flex;align-items:center;gap:8px;border-top:1px solid var(--border)" onmouseover="this.style.background='var(--border)'" onmouseout="this.style.background=''">🗄 <span>From Document Vault</span></div>
+        <div onclick="mailOpenAgreementPicker();mailCloseAttachMenu()" style="padding:9px 14px;font-size:12px;cursor:pointer;display:flex;align-items:center;gap:8px;border-top:1px solid var(--border)" onmouseover="this.style.background='var(--border)'" onmouseout="this.style.background=''">📋 <span>From Agreements</span></div>
+      </div>
+    </div>
     <input type="file" id="mail-attach-input" multiple style="display:none" onchange="mailAttachSelected(this)">
     <button onclick="mailMailtoFallback()" id="mail-mailto-btn" style="display:none;padding:6px 14px;background:none;border:1px solid rgba(245,158,11,.6);border-radius:5px;cursor:pointer;font-size:12px;color:#b45309">✉ Open in mail app</button>
     <span id="mail-send-status" style="font-size:12px;color:var(--muted)"></span>
@@ -8920,13 +8927,77 @@ async function loadTriggerStatus() {
   <input type="hidden" id="mail-compose-reply-msg-id">
 </div>
 
+<!-- ── Mail Vault Picker ──────────────────────────────────────────────────── -->
+<div id="mail-vault-picker" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9500;align-items:center;justify-content:center">
+  <div style="background:var(--surface);border-radius:10px;box-shadow:0 12px 40px rgba(0,0,0,.3);width:600px;max-width:95vw;max-height:85vh;display:flex;flex-direction:column">
+    <div style="padding:14px 18px;background:var(--navy);color:#fff;border-radius:10px 10px 0 0;display:flex;justify-content:space-between;align-items:center">
+      <span style="font-size:13px;font-weight:600">🗄 Attach from Document Vault</span>
+      <button onclick="mailCloseVaultPicker()" style="background:none;border:none;color:rgba(255,255,255,.7);font-size:20px;cursor:pointer;padding:0;line-height:1">×</button>
+    </div>
+    <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;gap:8px">
+      <input id="mail-vault-search" type="text" placeholder="Search documents…" oninput="mailRenderVaultPicker()" style="flex:1;padding:7px 10px;border:1px solid var(--border);border-radius:5px;font-size:12px;background:var(--bg)">
+      <select id="mail-vault-type-filter" onchange="mailRenderVaultPicker()" style="padding:7px 10px;border:1px solid var(--border);border-radius:5px;font-size:12px;background:var(--bg)">
+        <option value="">All Types</option>
+        <option value="pod">POD</option>
+        <option value="bol">BOL</option>
+        <option value="rate_con">Rate Con</option>
+        <option value="invoice">Invoice</option>
+        <option value="agreement">Agreement</option>
+        <option value="compliance">Compliance</option>
+        <option value="other">Other</option>
+      </select>
+    </div>
+    <div id="mail-vault-list" style="flex:1;overflow-y:auto;min-height:200px;max-height:400px"></div>
+    <div style="padding:12px 16px;border-top:1px solid var(--border);display:flex;gap:8px;align-items:center;justify-content:space-between">
+      <span id="mail-vault-sel-count" style="font-size:12px;color:var(--muted)">0 selected</span>
+      <div style="display:flex;gap:8px">
+        <button onclick="mailCloseVaultPicker()" style="padding:7px 16px;background:none;border:1px solid var(--border);border-radius:5px;cursor:pointer;font-size:12px;color:var(--muted)">Cancel</button>
+        <button onclick="mailConfirmVaultPicker()" class="btn-navy" style="font-size:12px;padding:7px 18px">Attach Selected</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Mail Agreement Picker ──────────────────────────────────────────────── -->
+<div id="mail-agreement-picker" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9500;align-items:center;justify-content:center">
+  <div style="background:var(--surface);border-radius:10px;box-shadow:0 12px 40px rgba(0,0,0,.3);width:520px;max-width:95vw;max-height:85vh;display:flex;flex-direction:column">
+    <div style="padding:14px 18px;background:var(--navy);color:#fff;border-radius:10px 10px 0 0;display:flex;justify-content:space-between;align-items:center">
+      <span style="font-size:13px;font-weight:600">📋 Attach Agreement Template</span>
+      <button onclick="mailCloseAgreementPicker()" style="background:none;border:none;color:rgba(255,255,255,.7);font-size:20px;cursor:pointer;padding:0;line-height:1">×</button>
+    </div>
+    <p style="margin:12px 16px 8px;font-size:12px;color:var(--muted)">Select one or more agreement templates to attach as HTML files.</p>
+    <div id="mail-agreement-list" style="flex:1;overflow-y:auto;padding:0 16px 8px;max-height:420px"></div>
+    <div style="padding:12px 16px;border-top:1px solid var(--border);display:flex;gap:8px;align-items:center;justify-content:space-between">
+      <span id="mail-agr-sel-count" style="font-size:12px;color:var(--muted)">0 selected</span>
+      <div style="display:flex;gap:8px">
+        <button onclick="mailCloseAgreementPicker()" style="padding:7px 16px;background:none;border:1px solid var(--border);border-radius:5px;cursor:pointer;font-size:12px;color:var(--muted)">Cancel</button>
+        <button onclick="mailConfirmAgreementPicker()" class="btn-navy" style="font-size:12px;padding:7px 18px">Attach Selected</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
 // ── Mail Client ────────────────────────────────────────────────────────────
 let _mailCurrent='all';
 let _mailEmails=[];
 let _mailSelectedId=null;
 let _mailboxStatuses=[];
-let _mailAttachments=[];
+let _mailAttachments=[];      // File objects (from computer)
+let _mailVaultAttachments=[]; // [{id, filename, doc_type}] from vault
+let _mailAgreementAttachments=[]; // [{key, label}] template agreements
+
+// ── Attach dropdown ────────────────────────────────────────────────────────
+function mailToggleAttachMenu(e){
+  e&&e.stopPropagation();
+  const m=document.getElementById('mail-attach-menu');
+  m.style.display=m.style.display==='block'?'none':'block';
+}
+function mailCloseAttachMenu(){document.getElementById('mail-attach-menu').style.display='none';}
+document.addEventListener('click',function(e){
+  const wrap=document.getElementById('mail-attach-wrap');
+  if(wrap&&!wrap.contains(e.target))mailCloseAttachMenu();
+});
 
 function mailAttachSelected(input){
   for(const f of input.files)_mailAttachments.push(f);
@@ -8937,17 +9008,156 @@ function mailRemoveAttachment(idx){
   _mailAttachments.splice(idx,1);
   mailRenderAttachments();
 }
+function mailRemoveVaultAttachment(idx){
+  _mailVaultAttachments.splice(idx,1);
+  mailRenderAttachments();
+}
+function mailRemoveAgreementAttachment(idx){
+  _mailAgreementAttachments.splice(idx,1);
+  mailRenderAttachments();
+}
 function mailRenderAttachments(){
   const el=document.getElementById('mail-attach-list');
   if(!el)return;
-  if(!_mailAttachments.length){el.style.display='none';el.innerHTML='';return;}
+  const total=_mailAttachments.length+_mailVaultAttachments.length+_mailAgreementAttachments.length;
+  if(!total){el.style.display='none';el.innerHTML='';return;}
   el.style.display='flex';
-  el.innerHTML=_mailAttachments.map((f,i)=>
+  const chips=[];
+  _mailAttachments.forEach((f,i)=>chips.push(
     `<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 8px;background:var(--surface);border:1px solid var(--border);border-radius:4px;font-size:11px;max-width:200px">
       <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(f.name)}">📎 ${esc(f.name)}</span>
       <button onclick="mailRemoveAttachment(${i})" style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:14px;padding:0;line-height:1;flex-shrink:0" title="Remove">×</button>
     </span>`
-  ).join('');
+  ));
+  _mailVaultAttachments.forEach((v,i)=>chips.push(
+    `<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 8px;background:rgba(37,99,235,.08);border:1px solid rgba(37,99,235,.3);border-radius:4px;font-size:11px;max-width:200px">
+      <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#1d4ed8" title="${esc(v.filename)}">🗄 ${esc(v.filename)}</span>
+      <button onclick="mailRemoveVaultAttachment(${i})" style="background:none;border:none;cursor:pointer;color:#1d4ed8;font-size:14px;padding:0;line-height:1;flex-shrink:0" title="Remove">×</button>
+    </span>`
+  ));
+  _mailAgreementAttachments.forEach((a,i)=>chips.push(
+    `<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 8px;background:rgba(109,40,217,.08);border:1px solid rgba(109,40,217,.3);border-radius:4px;font-size:11px;max-width:220px">
+      <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#5b21b6" title="${esc(a.label)}">📋 ${esc(a.label)}</span>
+      <button onclick="mailRemoveAgreementAttachment(${i})" style="background:none;border:none;cursor:pointer;color:#5b21b6;font-size:14px;padding:0;line-height:1;flex-shrink:0" title="Remove">×</button>
+    </span>`
+  ));
+  el.innerHTML=chips.join('');
+}
+
+// ── Vault Picker ───────────────────────────────────────────────────────────
+let _mailVaultPickerSelected=new Set();
+let _mailVaultPickerDocs=[];
+
+async function mailOpenVaultPicker(){
+  _mailVaultPickerSelected=new Set(_mailVaultAttachments.map(v=>v.id));
+  document.getElementById('mail-vault-search').value='';
+  document.getElementById('mail-vault-type-filter').value='';
+  document.getElementById('mail-vault-picker').style.display='flex';
+  document.getElementById('mail-vault-list').innerHTML='<div style="padding:24px;text-align:center;color:var(--muted);font-size:12px">Loading…</div>';
+  try{
+    const r=await apiFetch('/api/clm/vault/docs');
+    _mailVaultPickerDocs=r.ok?await r.json():[];
+  }catch(_){_mailVaultPickerDocs=[];}
+  mailRenderVaultPicker();
+}
+function mailCloseVaultPicker(){document.getElementById('mail-vault-picker').style.display='none';}
+function mailToggleVaultDoc(id){
+  if(_mailVaultPickerSelected.has(id))_mailVaultPickerSelected.delete(id);
+  else _mailVaultPickerSelected.add(id);
+  mailRenderVaultPicker();
+}
+function mailRenderVaultPicker(){
+  const search=(document.getElementById('mail-vault-search').value||'').toLowerCase();
+  const typeF=document.getElementById('mail-vault-type-filter').value;
+  let docs=_mailVaultPickerDocs.filter(d=>{
+    if(typeF&&d.doc_type!==typeF)return false;
+    if(search){
+      const hay=((d.filename||'')+(d.doc_type||'')+(d.load_number||'')+(d.notes||'')).toLowerCase();
+      if(!hay.includes(search))return false;
+    }
+    return true;
+  });
+  const el=document.getElementById('mail-vault-list');
+  if(!docs.length){el.innerHTML='<div style="padding:24px;text-align:center;color:var(--muted);font-size:12px">No documents found.</div>';
+    document.getElementById('mail-vault-sel-count').textContent=`${_mailVaultPickerSelected.size} selected`;return;}
+  const TYPE_ICONS={pod:'📦',bol:'📄',rate_con:'💰',invoice:'🧾',agreement:'✍️',compliance:'🛡',other:'📎'};
+  el.innerHTML=docs.map(d=>{
+    const sel=_mailVaultPickerSelected.has(d.id);
+    const icon=TYPE_ICONS[d.doc_type]||'📎';
+    const sz=d.file_size_kb?`${d.file_size_kb} KB`:'';
+    const ln=d.load_number?`<span style="font-size:10px;color:var(--muted);margin-left:4px">${esc(d.load_number)}</span>`:'';
+    return `<div onclick="mailToggleVaultDoc('${d.id}')" style="padding:10px 16px;cursor:pointer;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border);${sel?'background:rgba(37,99,235,.06)':''}"
+      onmouseover="this.style.background='var(--border)'" onmouseout="this.style.background='${sel?'rgba(37,99,235,.06)':''}'">
+      <div style="width:18px;height:18px;border:2px solid ${sel?'#2563eb':'var(--border)'};border-radius:3px;background:${sel?'#2563eb':'transparent'};display:flex;align-items:center;justify-content:center;flex-shrink:0">
+        ${sel?'<span style="color:#fff;font-size:11px;line-height:1">✓</span>':''}
+      </div>
+      <span style="font-size:16px">${icon}</span>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(d.filename||'Unnamed')}${ln}</div>
+        <div style="font-size:11px;color:var(--muted)">${esc((d.doc_type||'').replace('_',' '))}${sz?' · '+sz:''}</div>
+      </div>
+    </div>`;
+  }).join('');
+  document.getElementById('mail-vault-sel-count').textContent=`${_mailVaultPickerSelected.size} selected`;
+}
+function mailConfirmVaultPicker(){
+  const newSel=Array.from(_mailVaultPickerSelected).map(id=>{
+    const d=_mailVaultPickerDocs.find(x=>x.id===id);
+    return d?{id:d.id,filename:d.filename||'document.pdf',doc_type:d.doc_type}:null;
+  }).filter(Boolean);
+  _mailVaultAttachments=newSel;
+  mailRenderAttachments();
+  mailCloseVaultPicker();
+}
+
+// ── Agreement Picker ───────────────────────────────────────────────────────
+const _AGREEMENT_LABELS={
+  carrier_agreement:'Carrier Dispatch Agreement',
+  broker_agreement:'Broker–Carrier Agreement',
+  terms_of_service:'Terms of Service',
+  independent_contractor:'Independent Contractor Agreement',
+  nda:'Non-Disclosure Agreement',
+  non_solicitation:'Non-Solicitation Agreement',
+  driver_lease_on:'Driver Lease-On Agreement',
+  fuel_advance:'Fuel Advance Agreement',
+  cargo_claims:'Cargo Claims Procedure',
+  rate_confirmation:'Rate Confirmation',
+  insurance_requirements:'Insurance Minimum Requirements',
+  dispatcher_service:'Dispatcher Service Agreement',
+  factoring_acknowledgment:'Factoring Acknowledgment & Notice of Assignment',
+};
+let _mailAgreementPickerSelected=new Set();
+
+function mailOpenAgreementPicker(){
+  _mailAgreementPickerSelected=new Set(_mailAgreementAttachments.map(a=>a.key));
+  document.getElementById('mail-agreement-picker').style.display='flex';
+  mailRenderAgreementPicker();
+}
+function mailCloseAgreementPicker(){document.getElementById('mail-agreement-picker').style.display='none';}
+function mailToggleAgreement(key){
+  if(_mailAgreementPickerSelected.has(key))_mailAgreementPickerSelected.delete(key);
+  else _mailAgreementPickerSelected.add(key);
+  mailRenderAgreementPicker();
+}
+function mailRenderAgreementPicker(){
+  const el=document.getElementById('mail-agreement-list');
+  el.innerHTML=Object.entries(_AGREEMENT_LABELS).map(([key,label])=>{
+    const sel=_mailAgreementPickerSelected.has(key);
+    return `<div onclick="mailToggleAgreement('${key}')" style="padding:10px 12px;cursor:pointer;display:flex;align-items:center;gap:10px;border-radius:6px;margin-bottom:2px;${sel?'background:rgba(109,40,217,.06)':''}"
+      onmouseover="this.style.background='var(--border)'" onmouseout="this.style.background='${sel?'rgba(109,40,217,.06)':''}'">
+      <div style="width:18px;height:18px;border:2px solid ${sel?'#7c3aed':'var(--border)'};border-radius:3px;background:${sel?'#7c3aed':'transparent'};display:flex;align-items:center;justify-content:center;flex-shrink:0">
+        ${sel?'<span style="color:#fff;font-size:11px;line-height:1">✓</span>':''}
+      </div>
+      <span style="font-size:13px">📋</span>
+      <span style="font-size:12px;font-weight:${sel?'600':'400'}">${esc(label)}</span>
+    </div>`;
+  }).join('');
+  document.getElementById('mail-agr-sel-count').textContent=`${_mailAgreementPickerSelected.size} selected`;
+}
+function mailConfirmAgreementPicker(){
+  _mailAgreementAttachments=Array.from(_mailAgreementPickerSelected).map(key=>({key,label:_AGREEMENT_LABELS[key]||key}));
+  mailRenderAttachments();
+  mailCloseAgreementPicker();
 }
 let _mailConfig=null;
 const _MB_COLORS={loads:'#2563eb',sales:'#059669',info:'#7c3aed',mark:'#dc2626',cece:'#d97706'};
@@ -9164,7 +9374,7 @@ function mailCompose(){
   document.getElementById('mail-compose-title').textContent='New Message';
   document.getElementById('mail-send-status').textContent='';
   document.getElementById('mail-send-btn').textContent='Send';
-  _mailAttachments=[];mailRenderAttachments();
+  _mailAttachments=[];_mailVaultAttachments=[];_mailAgreementAttachments=[];mailRenderAttachments();
   const sel=document.getElementById('mail-compose-from');
   if(_mailCurrent!=='all')sel.value=_mailCurrent;
   mailUpdateComposeWarn();
@@ -9185,7 +9395,7 @@ function mailForward(id,subject){
   document.getElementById('mail-compose-subject').value=subject.startsWith('Fwd:')?subject:'Fwd: '+subject;
   document.getElementById('mail-compose-title').textContent='Forward';
 }
-function mailCloseCompose(){_mailAttachments=[];mailRenderAttachments();document.getElementById('mail-compose-modal').style.display='none';}
+function mailCloseCompose(){_mailAttachments=[];_mailVaultAttachments=[];_mailAgreementAttachments=[];mailRenderAttachments();document.getElementById('mail-compose-modal').style.display='none';}
 
 async function mailSend(){
   const btn=document.getElementById('mail-send-btn');
@@ -9209,6 +9419,8 @@ async function mailSend(){
     if(cc)fd.append('cc',cc);
     if(replyId)fd.append('in_reply_to_db_id',replyId);
     for(const f of _mailAttachments)fd.append('attachments',f,f.name);
+    if(_mailVaultAttachments.length)fd.append('vault_doc_ids',_mailVaultAttachments.map(v=>v.id).join(','));
+    if(_mailAgreementAttachments.length)fd.append('agreement_types',_mailAgreementAttachments.map(a=>a.key).join(','));
     const r=await apiFetch('/api/mailboxes/compose','POST',fd);
     let d={};try{d=await r.json();}catch(_){}
     if(r.ok&&d.sent){

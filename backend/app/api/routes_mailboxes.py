@@ -167,13 +167,18 @@ async def compose_email(
     cc: str = Form(default=""),
     in_reply_to_db_id: str = Form(default=""),
     attachments: list[UploadFile] = File(default=[]),
+    vault_doc_ids: str = Form(default=""),
+    agreement_types: str = Form(default=""),
     _: str = Depends(require_bearer),
 ) -> dict:
     """Send a new email from one of the Hostinger mailboxes (multipart/form-data).
 
     Fields: from_mailbox, to, subject, body_text?, body_html?, cc?, in_reply_to_db_id?
+            vault_doc_ids? (comma-separated document_vault UUIDs)
+            agreement_types? (comma-separated agreement type keys, attaches HTML template)
     Files:  attachments[] (optional, any file type)
     """
+    import os
     from ..email.smtp_sender import send_from_mailbox
 
     mailbox = from_mailbox.strip()
@@ -192,6 +197,45 @@ async def compose_email(
         if upload.filename:
             content = await upload.read()
             attach_data.append((upload.filename, content, upload.content_type or "application/octet-stream"))
+
+    # Vault document attachments — download from Supabase Storage
+    if vault_doc_ids.strip():
+        sb = get_supabase()
+        for doc_id in [x.strip() for x in vault_doc_ids.split(",") if x.strip()]:
+            try:
+                res = sb.table("document_vault").select("filename,storage_path,bucket,mime_type").eq("id", doc_id).limit(1).execute()
+                if not res.data:
+                    log.warning("vault_doc_ids: doc %s not found, skipping", doc_id)
+                    continue
+                doc = res.data[0]
+                bucket = doc.get("bucket") or "documents"
+                storage_path = doc.get("storage_path") or ""
+                filename = doc.get("filename") or storage_path.split("/")[-1] or "attachment.pdf"
+                mime = doc.get("mime_type") or "application/pdf"
+                raw = sb.storage.from_(bucket).download(storage_path)
+                if raw:
+                    attach_data.append((filename, raw, mime))
+            except Exception as exc:
+                log.warning("vault_doc_ids: failed to fetch doc %s: %s", doc_id, exc)
+
+    # Agreement template attachments — read HTML files from disk
+    if agreement_types.strip():
+        from ..api.routes_agreements import AGREEMENT_LABELS, AGREEMENT_PATHS
+        base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+        for atype in [x.strip() for x in agreement_types.split(",") if x.strip()]:
+            if atype not in AGREEMENT_PATHS:
+                log.warning("agreement_types: unknown type %s, skipping", atype)
+                continue
+            rel_path = AGREEMENT_PATHS[atype].lstrip("/")
+            html_path = os.path.join(base_dir, rel_path)
+            try:
+                with open(html_path, "rb") as fh:
+                    content = fh.read()
+                label = AGREEMENT_LABELS.get(atype, atype)
+                safe_name = rel_path.replace("/", "_")
+                attach_data.append((safe_name, content, "text/html"))
+            except Exception as exc:
+                log.warning("agreement_types: failed to read %s: %s", html_path, exc)
 
     try:
         result = send_from_mailbox(
