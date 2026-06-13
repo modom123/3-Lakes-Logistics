@@ -2099,22 +2099,267 @@ select.form-input option{background:var(--surface);}
 
     <!-- TEAM REPORTS -->
     <div class="page" id="page-reports">
-      <div class="page-hdr"><div class="page-hdr-l"><div class="chip">Feedback & Issues</div><h2>Team Reports</h2></div><button class="btn-out" onclick="loadTeamReports()">↺ Refresh</button></div>
-      <div class="g2">
-        <div id="reports-container"><div class="loading"><div class="spin"></div>Loading reports…</div></div>
-        <div class="card">
-          <div class="card-hd"><div class="card-title">Submit a Report</div><div class="card-chip">All staff</div></div>
-          <div class="fg" style="margin-bottom:13px"><label class="fl">Your Name</label><input class="fi" id="report-name" placeholder="e.g. John Smith…"></div>
-          <div class="fg" style="margin-bottom:13px"><label class="fl">Department</label>
-            <select class="fsel" id="report-dept"><option>Dispatch</option><option>Driver Support</option><option>Accounting</option><option>Operations</option><option>Maintenance</option><option>Other</option></select>
-          </div>
-          <div class="fg" style="margin-bottom:13px"><label class="fl">Report Type</label>
-            <select class="fsel" id="report-type"><option>Issue / Bug</option><option>Suggestion</option><option>Performance Update</option><option>Equipment Report</option><option>Safety Concern</option><option>Other</option></select>
-          </div>
-          <div class="fg" style="margin-bottom:18px"><label class="fl">Description</label><textarea class="fta" id="report-body" placeholder="Describe the issue, suggestion, or update…" style="min-height:100px"></textarea></div>
-          <button class="btn-navy" onclick="saveTeamReport()" style="width:100%">Submit Report</button>
+      <div class="page-hdr" style="padding-bottom:0;border-bottom:none">
+        <div class="page-hdr-l"><div class="chip">Operations</div><h2>Team Reports</h2></div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button class="btn-out" onclick="trRefreshCurrent()" id="tr-refresh-btn">↺ Refresh</button>
         </div>
       </div>
+      <!-- Tab bar -->
+      <div style="display:flex;gap:0;border-bottom:2px solid var(--border);padding:0 16px;margin-bottom:0" id="tr-tabbar">
+        <button id="tr-tab-btn-staff" onclick="trSetTab('staff')" style="padding:10px 18px;font-size:13px;font-weight:700;border:none;background:none;cursor:pointer;border-bottom:3px solid var(--navy);margin-bottom:-2px;color:var(--navy)">📝 Staff Reports</button>
+        <button id="tr-tab-btn-lf" onclick="trSetTab('lf')" style="padding:10px 18px;font-size:13px;font-weight:600;border:none;background:none;cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-2px;color:var(--muted)">🚐 LF Intelligence</button>
+        <button id="tr-tab-btn-cards" onclick="trSetTab('cards')" style="padding:10px 18px;font-size:13px;font-weight:600;border:none;background:none;cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-2px;color:var(--muted)">📋 Driver Report Cards</button>
+      </div>
+
+      <!-- ── Staff Reports Tab ── -->
+      <div id="tr-tab-staff" style="padding:0">
+        <div class="g2" style="padding:16px">
+          <div id="reports-container"><div class="loading"><div class="spin"></div>Loading reports…</div></div>
+          <div class="card">
+            <div class="card-hd"><div class="card-title">Submit a Report</div><div class="card-chip">All staff</div></div>
+            <div class="fg" style="margin-bottom:13px"><label class="fl">Your Name</label><input class="fi" id="report-name" placeholder="e.g. John Smith…"></div>
+            <div class="fg" style="margin-bottom:13px"><label class="fl">Department</label>
+              <select class="fsel" id="report-dept"><option>Dispatch</option><option>Driver Support</option><option>Accounting</option><option>Operations</option><option>Maintenance</option><option>Light Fleet</option><option>Other</option></select>
+            </div>
+            <div class="fg" style="margin-bottom:13px"><label class="fl">Report Type</label>
+              <select class="fsel" id="report-type"><option>Issue / Bug</option><option>Suggestion</option><option>Performance Update</option><option>Equipment Report</option><option>Safety Concern</option><option>Driver Complaint</option><option>Other</option></select>
+            </div>
+            <div class="fg" style="margin-bottom:18px"><label class="fl">Description</label><textarea class="fta" id="report-body" placeholder="Describe the issue, suggestion, or update…" style="min-height:100px"></textarea></div>
+            <button class="btn-navy" onclick="saveTeamReport()" style="width:100%">Submit Report</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── LF Intelligence Tab ── -->
+      <div id="tr-tab-lf" style="display:none;padding:16px;overflow-y:auto">
+        <!-- Run All banner -->
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;padding:14px 18px;background:linear-gradient(135deg,#0a1628,#0d2040);border-radius:10px;border:1px solid rgba(255,255,255,.1)">
+          <div>
+            <div style="font-size:15px;font-weight:800;color:#fff;margin-bottom:3px">Light Fleet — Segment Intelligence</div>
+            <div style="font-size:11px;color:rgba(255,255,255,.45)">AI ops reports across all 5 segments · Run individually or all at once</div>
+          </div>
+          <button onclick="trRunAllReports()" id="tr-run-all-btn" style="padding:9px 18px;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer">▶▶ Run All Reports</button>
+        </div>
+        <!-- 5 segment panels -->
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(440px,1fr));gap:14px">
+
+          <!-- NEMT -->
+          <div style="background:var(--surface);border:1px solid var(--border);border-top:3px solid #16a34a;border-radius:10px;overflow:hidden">
+            <div style="padding:13px 16px;background:rgba(5,46,22,.35);display:flex;align-items:center;justify-content:space-between">
+              <div style="display:flex;align-items:center;gap:10px">
+                <div style="width:32px;height:32px;border-radius:8px;background:rgba(22,163,74,.2);display:flex;align-items:center;justify-content:center;font-size:14px">🏥</div>
+                <div>
+                  <div style="font-size:13px;font-weight:700;color:#4ade80">NEMT — Medical Transport</div>
+                  <div style="font-size:10px;color:var(--muted)">Dr. James · Node 201</div>
+                </div>
+              </div>
+              <div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px">
+                <button onclick="trRunReport('dr_james_nemt','nemt')" id="tr-btn-nemt" style="padding:6px 13px;background:#16a34a;color:#fff;border:none;border-radius:5px;font-size:11px;font-weight:700;cursor:pointer">▶ Run Report</button>
+                <span id="tr-ts-nemt" style="font-size:10px;color:var(--muted)">Last run: —</span>
+              </div>
+            </div>
+            <div style="display:grid;grid-template-columns:80px 1fr 1fr;border-top:1px solid var(--border)">
+              <div style="padding:14px 12px;text-align:center;border-right:1px solid var(--border)">
+                <div id="tr-health-nemt" style="font-size:26px;font-weight:900;color:#4ade80;line-height:1">—</div>
+                <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;margin-top:3px">Health</div>
+              </div>
+              <div style="padding:13px 14px;border-right:1px solid var(--border)">
+                <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Ops Summary</div>
+                <div id="tr-summary-nemt" style="font-size:12px;color:var(--text);line-height:1.5">Run a report to see Dr. James's latest compliance &amp; ops analysis.</div>
+                <div id="tr-actions-nemt" style="margin-top:6px"></div>
+              </div>
+              <div style="padding:13px 14px">
+                <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Compliance Flags</div>
+                <div id="tr-flags-nemt"><div style="font-size:11px;color:var(--muted)">No report run yet</div></div>
+              </div>
+            </div>
+            <div style="padding:8px 14px;border-top:1px solid var(--border);display:flex;justify-content:flex-end">
+              <button onclick="nav('lf-nemt')" style="font-size:11px;color:var(--navy);background:none;border:none;cursor:pointer;font-weight:600">Open NEMT →</button>
+            </div>
+          </div>
+
+          <!-- Medical Courier -->
+          <div style="background:var(--surface);border:1px solid var(--border);border-top:3px solid #dc2626;border-radius:10px;overflow:hidden">
+            <div style="padding:13px 16px;background:rgba(28,10,10,.35);display:flex;align-items:center;justify-content:space-between">
+              <div style="display:flex;align-items:center;gap:10px">
+                <div style="width:32px;height:32px;border-radius:8px;background:rgba(220,38,38,.2);display:flex;align-items:center;justify-content:center;font-size:14px">🧪</div>
+                <div>
+                  <div style="font-size:13px;font-weight:700;color:#f87171">Medical Courier</div>
+                  <div style="font-size:10px;color:var(--muted)">Elena Ross · Node 202</div>
+                </div>
+              </div>
+              <div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px">
+                <button onclick="trRunReport('elena_ross','medical')" id="tr-btn-medical" style="padding:6px 13px;background:#dc2626;color:#fff;border:none;border-radius:5px;font-size:11px;font-weight:700;cursor:pointer">▶ Run Report</button>
+                <span id="tr-ts-medical" style="font-size:10px;color:var(--muted)">Last run: —</span>
+              </div>
+            </div>
+            <div style="display:grid;grid-template-columns:80px 1fr 1fr;border-top:1px solid var(--border)">
+              <div style="padding:14px 12px;text-align:center;border-right:1px solid var(--border)">
+                <div id="tr-health-medical" style="font-size:26px;font-weight:900;color:#f87171;line-height:1">—</div>
+                <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;margin-top:3px">Health</div>
+              </div>
+              <div style="padding:13px 14px;border-right:1px solid var(--border)">
+                <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Ops Summary</div>
+                <div id="tr-summary-medical" style="font-size:12px;color:var(--text);line-height:1.5">Run a report to see Elena Ross's latest SLA &amp; chain-of-custody analysis.</div>
+                <div id="tr-actions-medical" style="margin-top:6px"></div>
+              </div>
+              <div style="padding:13px 14px">
+                <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">SLA Alerts</div>
+                <div id="tr-flags-medical"><div style="font-size:11px;color:var(--muted)">No report run yet</div></div>
+              </div>
+            </div>
+            <div style="padding:8px 14px;border-top:1px solid var(--border);display:flex;justify-content:flex-end">
+              <button onclick="nav('lf-medical')" style="font-size:11px;color:var(--navy);background:none;border:none;cursor:pointer;font-weight:600">Open Medical Courier →</button>
+            </div>
+          </div>
+
+          <!-- Executive Transport -->
+          <div style="background:var(--surface);border:1px solid var(--border);border-top:3px solid #d97706;border-radius:10px;overflow:hidden">
+            <div style="padding:13px 16px;background:rgba(28,22,7,.35);display:flex;align-items:center;justify-content:space-between">
+              <div style="display:flex;align-items:center;gap:10px">
+                <div style="width:32px;height:32px;border-radius:8px;background:rgba(217,119,6,.2);display:flex;align-items:center;justify-content:center;font-size:14px">🚗</div>
+                <div>
+                  <div style="font-size:13px;font-weight:700;color:#fbbf24">Executive Transport</div>
+                  <div style="font-size:10px;color:var(--muted)">Victor Nash · Node 203</div>
+                </div>
+              </div>
+              <div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px">
+                <button onclick="trRunReport('victor_nash','executive')" id="tr-btn-executive" style="padding:6px 13px;background:#d97706;color:#fff;border:none;border-radius:5px;font-size:11px;font-weight:700;cursor:pointer">▶ Run Report</button>
+                <span id="tr-ts-executive" style="font-size:10px;color:var(--muted)">Last run: —</span>
+              </div>
+            </div>
+            <div style="display:grid;grid-template-columns:80px 1fr 1fr;border-top:1px solid var(--border)">
+              <div style="padding:14px 12px;text-align:center;border-right:1px solid var(--border)">
+                <div id="tr-health-executive" style="font-size:26px;font-weight:900;color:#fbbf24;line-height:1">—</div>
+                <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;margin-top:3px">Health</div>
+              </div>
+              <div style="padding:13px 14px;border-right:1px solid var(--border)">
+                <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Ops Summary</div>
+                <div id="tr-summary-executive" style="font-size:12px;color:var(--text);line-height:1.5">Run a report to see Victor Nash's on-time performance &amp; corporate account analysis.</div>
+                <div id="tr-actions-executive" style="margin-top:6px"></div>
+              </div>
+              <div style="padding:13px 14px">
+                <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Performance Flags</div>
+                <div id="tr-flags-executive"><div style="font-size:11px;color:var(--muted)">No report run yet</div></div>
+              </div>
+            </div>
+            <div style="padding:8px 14px;border-top:1px solid var(--border);display:flex;justify-content:flex-end">
+              <button onclick="nav('lf-executive')" style="font-size:11px;color:var(--navy);background:none;border:none;cursor:pointer;font-weight:600">Open Executive Transport →</button>
+            </div>
+          </div>
+
+          <!-- Courier & Last-Mile -->
+          <div style="background:var(--surface);border:1px solid var(--border);border-top:3px solid #b45309;border-radius:10px;overflow:hidden">
+            <div style="padding:13px 16px;background:rgba(28,18,5,.35);display:flex;align-items:center;justify-content:space-between">
+              <div style="display:flex;align-items:center;gap:10px">
+                <div style="width:32px;height:32px;border-radius:8px;background:rgba(180,83,9,.2);display:flex;align-items:center;justify-content:center;font-size:14px">📦</div>
+                <div>
+                  <div style="font-size:13px;font-weight:700;color:#fbbf24">Courier &amp; Last-Mile</div>
+                  <div style="font-size:10px;color:var(--muted)">Felix Grant · Node 204</div>
+                </div>
+              </div>
+              <div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px">
+                <button onclick="trRunReport('felix_grant','courier')" id="tr-btn-courier" style="padding:6px 13px;background:#b45309;color:#fff;border:none;border-radius:5px;font-size:11px;font-weight:700;cursor:pointer">▶ Run Report</button>
+                <span id="tr-ts-courier" style="font-size:10px;color:var(--muted)">Last run: —</span>
+              </div>
+            </div>
+            <div style="display:grid;grid-template-columns:80px 1fr 1fr;border-top:1px solid var(--border)">
+              <div style="padding:14px 12px;text-align:center;border-right:1px solid var(--border)">
+                <div id="tr-health-courier" style="font-size:26px;font-weight:900;color:#fbbf24;line-height:1">—</div>
+                <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;margin-top:3px">Health</div>
+              </div>
+              <div style="padding:13px 14px;border-right:1px solid var(--border)">
+                <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Ops Summary</div>
+                <div id="tr-summary-courier" style="font-size:12px;color:var(--text);line-height:1.5">Run a report to see Felix Grant's delivery pipeline &amp; platform status.</div>
+                <div id="tr-actions-courier" style="margin-top:6px"></div>
+              </div>
+              <div style="padding:13px 14px">
+                <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Delivery Alerts</div>
+                <div id="tr-flags-courier"><div style="font-size:11px;color:var(--muted)">No report run yet</div></div>
+              </div>
+            </div>
+            <div style="padding:8px 14px;border-top:1px solid var(--border);display:flex;justify-content:flex-end">
+              <button onclick="nav('lf-courier')" style="font-size:11px;color:var(--navy);background:none;border:none;cursor:pointer;font-weight:600">Open Courier →</button>
+            </div>
+          </div>
+
+          <!-- Gig Fleet -->
+          <div style="background:var(--surface);border:1px solid var(--border);border-top:3px solid #7c3aed;border-radius:10px;overflow:hidden">
+            <div style="padding:13px 16px;background:rgba(15,10,28,.35);display:flex;align-items:center;justify-content:space-between">
+              <div style="display:flex;align-items:center;gap:10px">
+                <div style="width:32px;height:32px;border-radius:8px;background:rgba(124,58,237,.2);display:flex;align-items:center;justify-content:center;font-size:14px">🎯</div>
+                <div>
+                  <div style="font-size:13px;font-weight:700;color:#a78bfa">Gig Fleet Management</div>
+                  <div style="font-size:10px;color:var(--muted)">Morgan Hayes · Node 205</div>
+                </div>
+              </div>
+              <div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px">
+                <button onclick="trRunReport('morgan_hayes','gig')" id="tr-btn-gig" style="padding:6px 13px;background:#7c3aed;color:#fff;border:none;border-radius:5px;font-size:11px;font-weight:700;cursor:pointer">▶ Run Report</button>
+                <span id="tr-ts-gig" style="font-size:10px;color:var(--muted)">Last run: —</span>
+              </div>
+            </div>
+            <div style="display:grid;grid-template-columns:80px 1fr 1fr;border-top:1px solid var(--border)">
+              <div style="padding:14px 12px;text-align:center;border-right:1px solid var(--border)">
+                <div id="tr-health-gig" style="font-size:26px;font-weight:900;color:#a78bfa;line-height:1">—</div>
+                <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;margin-top:3px">Health</div>
+              </div>
+              <div style="padding:13px 14px;border-right:1px solid var(--border)">
+                <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Ops Summary</div>
+                <div id="tr-summary-gig" style="font-size:12px;color:var(--text);line-height:1.5">Run a report to see Morgan Hayes's gig platform &amp; driver utilization analysis.</div>
+                <div id="tr-actions-gig" style="margin-top:6px"></div>
+              </div>
+              <div style="padding:13px 14px">
+                <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Driver Alerts</div>
+                <div id="tr-flags-gig"><div style="font-size:11px;color:var(--muted)">No report run yet</div></div>
+              </div>
+            </div>
+            <div style="padding:8px 14px;border-top:1px solid var(--border);display:flex;justify-content:flex-end">
+              <button onclick="nav('lf-gig')" style="font-size:11px;color:var(--navy);background:none;border:none;cursor:pointer;font-weight:600">Open Gig Fleet →</button>
+            </div>
+          </div>
+
+        </div><!-- /segment grid -->
+      </div>
+
+      <!-- ── Driver Report Cards Tab ── -->
+      <div id="tr-tab-cards" style="display:none;padding:16px">
+        <!-- Grade summary strip -->
+        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:16px">
+          <div class="card" style="padding:12px 14px;text-align:center">
+            <div style="font-size:22px;font-weight:800;color:#4ade80" id="tr-kpi-a">—</div>
+            <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-top:2px">Grade A</div>
+          </div>
+          <div class="card" style="padding:12px 14px;text-align:center">
+            <div style="font-size:22px;font-weight:800;color:#60a5fa" id="tr-kpi-b">—</div>
+            <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-top:2px">Grade B</div>
+          </div>
+          <div class="card" style="padding:12px 14px;text-align:center">
+            <div style="font-size:22px;font-weight:800;color:#fbbf24" id="tr-kpi-c">—</div>
+            <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-top:2px">Grade C</div>
+          </div>
+          <div class="card" style="padding:12px 14px;text-align:center">
+            <div style="font-size:22px;font-weight:800;color:#f87171" id="tr-kpi-df">—</div>
+            <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-top:2px">D / F</div>
+          </div>
+          <div class="card" style="padding:12px 14px;text-align:center">
+            <div style="font-size:22px;font-weight:800;color:#f87171" id="tr-kpi-flags">—</div>
+            <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-top:2px">Flags</div>
+          </div>
+        </div>
+        <!-- Cards grid mirrors lf-reports but loads here -->
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+          <div style="font-size:13px;font-weight:700;color:var(--text)">Driver Performance Report Cards</div>
+          <div style="display:flex;gap:8px">
+            <button onclick="trLoadReportCards()" style="padding:6px 14px;border:1px solid var(--border);border-radius:5px;font-size:12px;cursor:pointer;background:var(--surface)">↻ Refresh</button>
+            <button onclick="nav('lf-reports')" style="padding:6px 14px;background:var(--navy);color:#fff;border:none;border-radius:5px;font-size:12px;cursor:pointer;font-weight:600">↗ Full Report Cards Page</button>
+          </div>
+        </div>
+        <div id="tr-cards-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:14px">
+          <div style="text-align:center;padding:60px;color:var(--muted);font-size:13px;grid-column:1/-1">Click Refresh to load driver report cards.</div>
+        </div>
+      </div>
+
     </div>
 
     <!-- ── SALES & MARKETING COMMAND CENTER ── -->
@@ -4439,7 +4684,7 @@ function nav(id){
 
   if(id==='invoices'){const n=document.getElementById('invoice-notif');if(n)n.style.display='none';renderInvoices();}
   if(id==='notes')loadNotes();
-  if(id==='reports')loadTeamReports();
+  if(id==='reports'){trSetTab('staff');loadTeamReports();}
   if(id==='exec-command'){const n=document.getElementById('exec-esc-notif');if(n)n.style.display='none';ecRefreshDashboard();}
   if(id==='mark-office'){if(typeof moLoadOfficeData==='function')moLoadOfficeData();}
   if(id==='ccg-office'){if(typeof ccgLoadOfficeData==='function')ccgLoadOfficeData();}
@@ -6100,6 +6345,146 @@ async function saveTeamReport(){
   if(error){toast('Error: '+error.message,'error');return;}
   document.getElementById('report-name').value='';document.getElementById('report-body').value='';
   await loadTeamReports();toast('Report submitted! Thank you.');
+}
+
+// ── TEAM REPORTS TABS ──────────────────────────────────────────────────────
+let _trActiveTab='staff';
+function trSetTab(tab){
+  _trActiveTab=tab;
+  ['staff','lf','cards'].forEach(t=>{
+    const pane=document.getElementById('tr-tab-'+t);
+    const btn=document.getElementById('tr-tab-btn-'+t);
+    if(!pane||!btn)return;
+    const active=t===tab;
+    pane.style.display=active?'':'none';
+    btn.style.borderBottomColor=active?'var(--navy)':'transparent';
+    btn.style.color=active?'var(--navy)':'var(--muted)';
+    btn.style.fontWeight=active?'700':'600';
+  });
+  if(tab==='staff')loadTeamReports();
+  else if(tab==='cards')trLoadReportCards();
+}
+function trRefreshCurrent(){
+  if(_trActiveTab==='staff')loadTeamReports();
+  else if(_trActiveTab==='lf'){/* individual run buttons handle refresh */}
+  else if(_trActiveTab==='cards')trLoadReportCards();
+}
+
+async function trRunReport(agent, segment){
+  const btn=document.getElementById('tr-btn-'+segment);
+  if(btn){btn.textContent='⟳ Running…';btn.disabled=true;}
+  try{
+    const d=await lfFetch('/api/agents/'+agent+'/run','POST',{action:'report',scope:'full'});
+    trRenderSegmentReport(segment,d);
+    const ts=document.getElementById('tr-ts-'+segment);
+    if(ts)ts.textContent='Last run: '+new Date().toLocaleTimeString();
+  }catch(e){
+    const el=document.getElementById('tr-summary-'+segment);
+    if(el)el.textContent='Agent unavailable — check API key configuration.';
+  }finally{
+    if(btn){btn.textContent='▶ Run Report';btn.disabled=false;}
+  }
+}
+
+function trRenderSegmentReport(segment,d){
+  const report=d.report||d;
+  const health=report.segment_health??report.division_health;
+  const healthEl=document.getElementById('tr-health-'+segment);
+  if(healthEl){
+    healthEl.textContent=health!=null?health:'—';
+    healthEl.style.color=health>=80?'#4ade80':health>=60?'#fbbf24':'#f87171';
+  }
+  const summEl=document.getElementById('tr-summary-'+segment);
+  if(summEl)summEl.textContent=report.ops_summary||report.summary||'Report received.';
+  const flagsEl=document.getElementById('tr-flags-'+segment);
+  const flags=report.compliance_flags||report.sla_alerts||report.client_alerts||report.performance_flags||report.driver_alerts||report.ops_flags||[];
+  if(flagsEl){
+    if(!flags.length){
+      flagsEl.innerHTML='<div style="font-size:11px;color:#4ade80">✓ No critical flags</div>';
+    }else{
+      flagsEl.innerHTML=flags.slice(0,3).map(f=>{
+        const urg=(f.urgency||'medium').toLowerCase();
+        const dot=urg==='critical'?'#ef4444':urg==='high'?'#f97316':urg==='medium'?'#fbbf24':'#6b7280';
+        return`<div style="display:flex;gap:6px;align-items:flex-start;font-size:11px;margin-bottom:5px">
+          <span style="width:7px;height:7px;border-radius:50%;background:${dot};flex-shrink:0;margin-top:3px"></span>
+          <span style="color:var(--text);line-height:1.4">${esc(f.issue||f.opportunity||JSON.stringify(f))}</span>
+        </div>`;
+      }).join('');
+    }
+  }
+  const actEl=document.getElementById('tr-actions-'+segment);
+  const actions=report.recommended_actions||[];
+  if(actEl)actEl.innerHTML=actions.slice(0,2).map(a=>`<div style="font-size:11px;color:var(--navy);padding:3px 0;border-top:1px solid var(--border);margin-top:4px">→ ${esc(a)}</div>`).join('');
+}
+
+async function trRunAllReports(){
+  const btn=document.getElementById('tr-run-all-btn');
+  if(btn){btn.textContent='⟳ Running All…';btn.disabled=true;}
+  const segments=[['dr_james_nemt','nemt'],['elena_ross','medical'],['victor_nash','executive'],['felix_grant','courier'],['morgan_hayes','gig']];
+  await Promise.allSettled(segments.map(([agent,seg])=>trRunReport(agent,seg)));
+  if(btn){btn.textContent='▶▶ Run All Reports';btn.disabled=false;}
+}
+
+async function trLoadReportCards(){
+  const grid=document.getElementById('tr-cards-grid');
+  if(!grid)return;
+  grid.innerHTML='<div style="text-align:center;padding:60px;color:var(--muted);font-size:13px;grid-column:1/-1"><div class="spin" style="margin:0 auto 12px"></div>Loading driver report cards…</div>';
+  try{
+    const res=await lfFetch('/api/light-fleet/drivers?limit=200');
+    const drivers=Array.isArray(res)?res:(res.drivers||res.items||[]);
+    if(!drivers.length){grid.innerHTML='<div style="text-align:center;padding:60px;color:var(--muted);font-size:13px;grid-column:1/-1">No drivers found in the system yet.</div>';return;}
+    const graded=drivers.map(d=>{
+      const trips=d.total_trips||d.trips_completed||0;
+      const rating=parseFloat(d.rating||d.avg_rating||0);
+      const comp=(d.compliance_status||'').toLowerCase();
+      let score=60;
+      if(trips>50)score+=15;else if(trips>20)score+=8;else if(trips>5)score+=3;
+      if(rating>=4.8)score+=20;else if(rating>=4.5)score+=12;else if(rating>=4.0)score+=6;
+      if(comp==='active'||comp==='compliant')score+=5;else if(comp==='issue'||comp==='expired')score-=10;
+      score=Math.min(100,Math.max(0,score));
+      let grade='F';if(score>=90)grade='A+';else if(score>=80)grade='A';else if(score>=70)grade='B';else if(score>=60)grade='C';else if(score>=50)grade='D';
+      return{...d,_score:score,_grade:grade};
+    }).sort((a,b)=>b._score-a._score);
+    const counts={A:0,B:0,C:0,DF:0,flags:0};
+    graded.forEach(d=>{
+      if(d._grade.startsWith('A'))counts.A++;
+      else if(d._grade==='B')counts.B++;
+      else if(d._grade==='C')counts.C++;
+      else counts.DF++;
+      if((d.compliance_status||'').toLowerCase()==='issue')counts.flags++;
+    });
+    const gradeColor={A:'#4ade80','A+':'#22c55e',B:'#60a5fa',C:'#fbbf24',D:'#f97316',F:'#ef4444'};
+    grid.innerHTML=graded.map(d=>{
+      const gc=gradeColor[d._grade]||'#9ca3af';
+      const seg=esc(d.segment||d.vehicle_type||'Driver');
+      const trips=d.total_trips||d.trips_completed||0;
+      const rating=parseFloat(d.rating||d.avg_rating||0);
+      const comp=d.compliance_status||'unknown';
+      const compColor=comp==='active'||comp==='compliant'?'#4ade80':comp==='issue'||comp==='expired'?'#ef4444':'#9ca3af';
+      return`<div class="card" style="padding:14px 16px;cursor:pointer" onclick="nav('lf-driver')">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px">
+          <div>
+            <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:2px">${esc(d.name||d.full_name||'Unnamed')}</div>
+            <div style="font-size:11px;color:var(--muted)">${seg} · ${esc(d.vehicle_type||'Vehicle N/A')}</div>
+          </div>
+          <div style="font-size:28px;font-weight:900;color:${gc};line-height:1">${esc(d._grade)}</div>
+        </div>
+        <div style="height:5px;background:var(--border);border-radius:100px;margin-bottom:10px">
+          <div style="height:100%;width:${d._score}%;background:${gc};border-radius:100px"></div>
+        </div>
+        <div style="display:flex;gap:12px;font-size:11px;color:var(--muted)">
+          <span>🚗 ${trips} trips</span>
+          ${rating?`<span>⭐ ${rating.toFixed(1)}</span>`:''}
+          <span style="color:${compColor}">● ${esc(comp)}</span>
+        </div>
+      </div>`;
+    }).join('');
+    // sync KPI boxes with computed values
+    const kpiMap={a:counts.A,b:counts.B,c:counts.C,df:counts.DF,flags:counts.flags};
+    Object.entries(kpiMap).forEach(([k,v])=>{const el=document.getElementById('tr-kpi-'+k);if(el)el.textContent=v;});
+  }catch(e){
+    grid.innerHTML=`<div style="text-align:center;padding:60px;color:var(--muted);font-size:13px;grid-column:1/-1">Could not load drivers — ${esc(e.message)}</div>`;
+  }
 }
 
 // ── IEBC EXECUTIVE COMMAND ──
