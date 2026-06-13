@@ -13986,6 +13986,7 @@ window.moEmailSend = async function(){
             <option value="done">Completed</option>
             <option value="all">All Tasks</option>
           </select>
+          <button onclick="moTodosServerSync(true).then(()=>{if(typeof ccgFromMarkRender==='function')ccgFromMarkRender();toast('Tasks refreshed ✓');})" style="background:rgba(56,189,248,.15);border:1px solid rgba(56,189,248,.3);color:#38bdf8;padding:4px 10px;border-radius:6px;font-size:11px;cursor:pointer;">↻ Refresh</button>
           <span id="ccg-frommark-count" style="font-size:11px;color:rgba(255,255,255,.4);"></span>
         </div>
 
@@ -14070,7 +14071,8 @@ window.ccgRefreshAll = function(){
 };
 
 async function ccgLoadOfficeData(){
-  if(typeof moTodosServerSync==='function')moTodosServerSync();
+  // Always force a fresh server sync so tasks Mark assigned appear immediately
+  if(typeof moTodosServerSync==='function') await moTodosServerSync(true);
   try{
     const mems=await API.agentBrain('cc_gulley').catch(()=>null);
     const list=(mems?.memories)||[];
@@ -14085,8 +14087,6 @@ async function ccgLoadOfficeData(){
     await Promise.all([ccgLoadAgentIntel('alexander'),ccgLoadAgentIntel('naomi'),ccgLoadAgentIntel('winston')]);
     // Email unread count
     ccgLoadEmailCount();
-    // Tasks from Mark badge
-    if(typeof ccgFromMarkRender==='function')ccgFromMarkRender();
   }catch(e){console.error('ccgLoadOfficeData',e);}
 }
 
