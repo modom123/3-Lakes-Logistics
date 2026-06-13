@@ -552,6 +552,46 @@ def fire_lf_bizdev() -> None:
     _bg(_run)
 
 
+def fire_trading_acquisition() -> None:
+    """Every 2 hours — Jordan scans hot freight states, Rex scores, auto-posts."""
+    def _run():
+        try:
+            from .agents.trading_desk_autopilot import run_acquisition_cycle  # noqa: PLC0415
+            log.info("trading_desk: acquisition cycle starting")
+            result = run_acquisition_cycle()
+            log.info("trading_desk: acquisition done posted=%s skipped=%s", result.get("posted"), result.get("skipped_low_score"))
+        except Exception as exc:  # noqa: BLE001
+            log.error("trading_desk: acquisition failed: %s", exc)
+    _bg(_run)
+
+
+def fire_trading_coverage() -> None:
+    """Every 30 minutes — Casey sweeps uncovered loads, auto-calls carriers."""
+    def _run():
+        try:
+            from .agents.trading_desk_autopilot import run_coverage_cycle  # noqa: PLC0415
+            log.info("trading_desk: coverage cycle starting")
+            result = run_coverage_cycle()
+            log.info("trading_desk: coverage done uncovered=%s calls=%s", result.get("uncovered_loads"), result.get("calls_made"))
+        except Exception as exc:  # noqa: BLE001
+            log.error("trading_desk: coverage failed: %s", exc)
+    _bg(_run)
+
+
+def fire_trading_daily_close() -> None:
+    """Daily at 21:00 UTC (5 PM ET) — P&L close + settlement check."""
+    def _run():
+        try:
+            from .agents.trading_desk_autopilot import run_daily_close, run_settlement_check  # noqa: PLC0415
+            log.info("trading_desk: daily close starting")
+            run_settlement_check()
+            result = run_daily_close()
+            log.info("trading_desk: daily close done loads=%s margin=$%s", result.get("total_loads"), result.get("gross_margin"))
+        except Exception as exc:  # noqa: BLE001
+            log.error("trading_desk: daily close failed: %s", exc)
+    _bg(_run)
+
+
 def fire_vault_scan(doc_id: str) -> None:
     """Trigger background AI extraction for a vault document.
 
