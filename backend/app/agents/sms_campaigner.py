@@ -80,9 +80,15 @@ def send_batch(daily_limit: int = 75) -> dict[str, Any]:
                 timeout=15,
             )
             r.raise_for_status()
-            db.table("leads").update(
-                {"last_touch_at": now, "last_contact_at": now, "outreach_channel": "sms"}
-            ).eq("id", row["id"]).execute()
+            sms_update: dict = {
+                "last_touch_at": now,
+                "last_contact_at": now,
+                "outreach_channel": "sms",
+            }
+            if (row.get("status") or "New") == "New":
+                sms_update["status"] = "Contacted"
+                sms_update["stage"] = "Contacted"
+            db.table("leads").update(sms_update).eq("id", row["id"]).execute()
             sent += 1
         except Exception as exc:  # noqa: BLE001
             log_agent("sms_campaigner", "send_failed", payload={"lead_id": row["id"]}, error=str(exc))

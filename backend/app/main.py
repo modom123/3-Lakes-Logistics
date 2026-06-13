@@ -123,9 +123,12 @@ def _start_scheduler(app: FastAPI) -> None:
         scheduler.add_job(fire_isabella, CronTrigger(hour=8, minute=0), id="isabella_daily", replace_existing=True)
         scheduler.add_job(fire_sofia, CronTrigger(hour=8, minute=15), id="sofia_daily", replace_existing=True)
         scheduler.add_job(fire_mark_odom, CronTrigger(hour=8, minute=30), id="mark_odom_daily", replace_existing=True)
+        scheduler.add_job(fire_naomi, CronTrigger(hour=18, minute=0), id="naomi_evening", replace_existing=True)
         scheduler.add_job(fire_vance_batch, CronTrigger(hour=13, minute=0), id="vance_batch_daily", replace_existing=True)
+        scheduler.add_job(fire_vance_batch, CronTrigger(hour=17, minute=0), id="vance_batch_evening", replace_existing=True)
         scheduler.add_job(fire_sms_campaign, CronTrigger(hour=14, minute=0), id="sms_outreach_daily", replace_existing=True)
         scheduler.add_job(fire_email_campaign, CronTrigger(hour=14, minute=30), id="email_outreach_daily", replace_existing=True)
+        scheduler.add_job(fire_email_campaign, CronTrigger(hour=11, minute=0), id="email_outreach_morning", replace_existing=True)
         scheduler.add_job(fire_social_post, CronTrigger(day_of_week="mon", hour=13, minute=0), id="social_post_weekly", replace_existing=True)
         scheduler.add_job(fire_lf_compliance_sweep, CronTrigger(hour=6, minute=15), id="lf_compliance_daily", replace_existing=True)
         scheduler.add_job(fire_lf_nemt_billing_run, CronTrigger(day_of_week="mon", hour=9, minute=0), id="lf_nemt_billing_weekly", replace_existing=True)
@@ -199,9 +202,31 @@ def _run_startup_migrations() -> None:
         log.warning("Startup migration error (non-fatal): %s", e)
 
 
+def _check_sales_credentials() -> None:
+    """Log a clear warning for each missing sales/outreach credential at startup."""
+    s = get_settings()
+    checks = [
+        ("BLAND_AI_API_KEY",        bool(s.bland_ai_api_key),        "Vance outbound calls will be disabled"),
+        ("POSTMARK_SERVER_TOKEN",    bool(s.postmark_server_token),   "Cold email outreach will be disabled"),
+        ("POSTMARK_FROM_EMAIL",      bool(s.postmark_from_email),     "Cold email outreach will be disabled"),
+        ("TWILIO_ACCOUNT_SID",       bool(s.twilio_account_sid),      "SMS outreach will be disabled"),
+        ("TWILIO_AUTH_TOKEN",        bool(s.twilio_auth_token),       "SMS outreach will be disabled"),
+        ("TWILIO_FROM_NUMBER",       bool(s.twilio_from_number),      "SMS outreach will be disabled"),
+        ("DOT_API_KEY",              bool(getattr(s, "dot_api_key", None)), "FMCSA census pulls may be rate-limited"),
+    ]
+    missing = [(name, reason) for name, ok, reason in checks if not ok]
+    if missing:
+        log.warning("⚠ SALES/MARKETING CREDENTIALS MISSING — %d unconfigured:", len(missing))
+        for name, reason in missing:
+            log.warning("  • %s not set → %s", name, reason)
+    else:
+        log.info("✓ All sales/marketing credentials configured")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     _run_startup_migrations()
+    _check_sales_credentials()
     _start_scheduler(app)
     yield
     scheduler = getattr(app.state, "scheduler", None)

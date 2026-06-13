@@ -64,9 +64,16 @@ def run_batch(limit: int = 30) -> dict[str, Any]:
         )
 
         if result.get("status") == "started":
-            db.table("leads").update(
-                {"last_contact_at": now, "last_touch_at": now, "outreach_channel": "voice"}
-            ).eq("id", row["id"]).execute()
+            update_fields: dict = {
+                "last_contact_at": now,
+                "last_touch_at": now,
+                "outreach_channel": "voice",
+            }
+            # Advance New leads to Contacted so the pipeline reflects reality
+            if (row.get("status") or "New") == "New":
+                update_fields["status"] = "Contacted"
+                update_fields["stage"] = "Contacted"
+            db.table("leads").update(update_fields).eq("id", row["id"]).execute()
             calls_queued += 1
         else:
             errors += 1
@@ -166,6 +173,23 @@ def handle_webhook(event: dict[str, Any]) -> dict[str, Any]:
         outcome="success",
         outcome_notes=f"Tier A connect rate now {outcomes['tier_a_connect_rate']:.0%} over {tier_a_calls} calls",
     )
+
+    # Update lead status in the database based on call outcome
+    if lead_id and not lead_id.startswith("manual-"):
+        try:
+            db = get_supabase()
+            ts_now = datetime.now(timezone.utc).isoformat()
+            lead_update: dict = {"last_touch_at": ts_now}
+            if connected:
+                lead_update["status"] = "Contacted"
+                lead_update["stage"] = "Contacted"
+                lead_update["outreach_channel"] = "voice"
+            if converted:
+                lead_update["status"] = "Interested"
+                lead_update["stage"] = "Interested"
+            db.table("leads").update(lead_update).eq("id", lead_id).execute()
+        except Exception:  # noqa: BLE001
+            pass
 
     # Write call outcome to Carrier Brain if we have a carrier/lead ID
     if lead_id:

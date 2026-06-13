@@ -77,29 +77,22 @@ def _seed_demo_leads(limit: int) -> list[dict[str, Any]]:
 
 
 def _run_fmcsa_ingest(since_days: int = 1) -> list[dict[str, Any]]:
-    """Pull real new-entrant leads from FMCSA if key is configured."""
-    from ..prospecting.fmcsa_scraper import fetch_new_entrants
-    raw = fetch_new_entrants(since_days)
-    leads = []
-    for e in raw:
-        dot = str(e.get("dotNumber") or "")
-        mc = str(e.get("docketNumber") or "")
-        lead: dict[str, Any] = {
-            "source": "fmcsa",
-            "source_ref": dot,
-            "company_name": e.get("legalName"),
-            "dot_number": dot,
-            "mc_number": mc or None,
-            "phone": e.get("phone"),
-            "email": e.get("emailAddress"),
-            "address": e.get("physicalAddress"),
-            "fleet_size": e.get("totalPowerUnits"),
-            "equipment_types": [],
-            "stage": "new",
-        }
-        lead["score"] = scoring.score_lead(lead)
-        leads.append(lead)
-    return leads
+    """Pull real carrier leads from the DOT/FMCSA census dataset via Naomi's pipeline.
+
+    The old SAFER new-entrant endpoint was never implemented (stub returned []).
+    Naomi's DOT open-data approach is the real, working FMCSA integration.
+    """
+    from ..agents.naomi import _pull_fmcsa_prospects, _get_hot_states
+    hot_states = _get_hot_states(top_n=5)
+    if not hot_states:
+        # Fallback to always-useful high-volume states
+        hot_states = {"TX": 1.3, "FL": 1.2, "CA": 1.2, "OH": 1.1, "GA": 1.1}
+    prospects = _pull_fmcsa_prospects(hot_states, per_state=40)
+    # Convert to route_prospecting format (already scored by naomi)
+    for p in prospects:
+        if "score" not in p or not p["score"]:
+            p["score"] = scoring.score_lead(p)
+    return prospects
 
 
 # ── routes ────────────────────────────────────────────────────────────────────

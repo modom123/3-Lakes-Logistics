@@ -149,7 +149,7 @@ def _pull_fmcsa_prospects(hot_states: dict[str, float], per_state: int = 30) -> 
     known_dots = {str(r["dot_number"]) for r in (existing.data or [])}
 
     prospects: list[dict[str, Any]] = []
-    for state in list(hot_states.keys())[:3]:  # cap at 3 states to stay within rate limits
+    for state in list(hot_states.keys())[:5]:  # top 5 hot states
         where = (
             f"phy_state='{state}' AND operating_status='AUTHORIZED' "
             f"AND oos_date IS NULL AND entity_type='CARRIER' "
@@ -273,8 +273,13 @@ def rank_leads(limit: int = 200, min_score: float = 0, include_fmcsa: bool = Tru
     # Stage 2 — fresh FMCSA prospects from hot states, persisted to leads table
     fmcsa_prospects: list[dict[str, Any]] = []
     fmcsa_inserted = 0
-    if include_fmcsa and hot_states:
-        fmcsa_prospects = _pull_fmcsa_prospects(hot_states, per_state=50)
+    if include_fmcsa:
+        if hot_states:
+            fmcsa_prospects = _pull_fmcsa_prospects(hot_states, per_state=50)
+        else:
+            # Fallback: broad sweep of high-volume carrier states when Alexander unavailable
+            fallback_states = {"TX": 1.3, "FL": 1.2, "CA": 1.2, "OH": 1.1, "GA": 1.1}
+            fmcsa_prospects = _pull_fmcsa_prospects(fallback_states, per_state=40)
         fmcsa_inserted = _persist_fmcsa_prospects(fmcsa_prospects)
 
     # Stage 3 — score everything together
