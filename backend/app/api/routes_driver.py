@@ -677,6 +677,54 @@ async def get_detention_history(session: DriverSession):
         raise HTTPException(status_code=500, detail="detention history failed")
 
 
+
+# ────────────────────────────────────────────────────────────────────────────
+# FUEL ADVANCE REQUESTS
+# ────────────────────────────────────────────────────────────────────────────
+
+class FuelAdvanceRequest(BaseModel):
+    driver_name: str | None = None
+    amount: float
+    location: str
+    notes: str | None = None
+    load_id: str | None = None
+
+
+@router.post("/fuel-advance")
+async def submit_fuel_advance(req: FuelAdvanceRequest, session: DriverSession):
+    """Driver submits a fuel advance request."""
+    driver_id = session["driver_id"]
+    try:
+        result = get_supabase().table("driver_fuel_requests").insert({
+            "driver_id":   driver_id,
+            "driver_name": req.driver_name,
+            "amount":      req.amount,
+            "location":    req.location,
+            "notes":       req.notes,
+            "load_id":     req.load_id,
+            "status":      "pending",
+            "created_at":  datetime.now(timezone.utc).isoformat(),
+        }).execute()
+        return {"ok": True, "id": (result.data or [{}])[0].get("id")}
+    except Exception as e:
+        log.error("Fuel advance submission failed: %s", e)
+        raise HTTPException(status_code=500, detail="fuel advance submission failed")
+
+
+@router.get("/fuel-advance")
+async def get_fuel_advance_history(session: DriverSession):
+    """Get driver's fuel advance request history."""
+    driver_id = session["driver_id"]
+    try:
+        result = get_supabase().table("driver_fuel_requests").select(
+            "id, amount, location, notes, status, load_id, created_at, approved_at"
+        ).eq("driver_id", driver_id).order("created_at", desc=True).limit(20).execute()
+        return {"requests": result.data or []}
+    except Exception as e:
+        log.error("Fuel advance history failed: %s", e)
+        raise HTTPException(status_code=500, detail="fuel advance history failed")
+
+
 # ────────────────────────────────────────────────────────────────────────────
 # LIGHT FLEET — driver-auth-protected earnings & compliance (for LF PWA)
 # ────────────────────────────────────────────────────────────────────────────

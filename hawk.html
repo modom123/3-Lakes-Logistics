@@ -1327,7 +1327,9 @@ async function setDutyStatus(status){
     const isActive = b.textContent === labels[status];
     b.className = 'duty-btn' + (isActive ? ' '+cssMap[status] : '');
   });
-  try { await hawkFetch('/api/driver/duty-status','POST',{status}); } catch(e){}
+  // Map HAWK status codes to backend duty_status values
+  const dutyMap = {OFF:'off_duty', D:'driving', ON:'on_duty', SB:'sleeper'};
+  try { await hawkFetch('/api/driver/hos/duty-status','POST',{duty_status: dutyMap[status] || 'off_duty'}); } catch(e){}
   hwToast('Duty status updated: '+labels[status]);
 }
 
@@ -1455,12 +1457,10 @@ async function hwCheckin(){
 
 async function _sendGpsPing(){
   try {
-    await hawkFetch('/api/driver/checkin','POST',{
+    await hawkFetch('/api/driver/location','POST',{
       lat: _hw.lastPos.lat,
       lng: _hw.lastPos.lng,
       accuracy: _hw.lastPos.accuracy,
-      load_id: _hw.activeLoad?.id || null,
-      status: _hw.dutyStatus
     });
   } catch(e){}
 }
@@ -1813,7 +1813,6 @@ async function hwSubmitFuel(){
   if(!amount || !location){ hwToast('Amount and location required','error'); return; }
   try {
     await hawkFetch('/api/driver/fuel-advance','POST',{
-      driver_id:   _hw.driverId,
       driver_name: _hw.driverName,
       amount:      parseFloat(amount),
       location,
