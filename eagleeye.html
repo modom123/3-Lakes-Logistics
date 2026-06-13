@@ -22138,6 +22138,29 @@ table.td-table tr:hover td{background:rgba(34,197,94,.03);}
     </div>
   </div>
 
+  <!-- Load Board Connections -->
+  <div class="td-panel" style="margin-bottom:16px">
+    <div class="td-panel-hd">
+      <span>🔌 Load Board Connections</span>
+      <span id="td-lb-summary" style="font-size:10px;color:rgba(255,255,255,.3)">Loading…</span>
+    </div>
+    <div class="td-panel-body" style="padding:14px 16px">
+      <div id="td-lb-warning" style="display:none;background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.25);border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:12px;color:#fbbf24;line-height:1.5"></div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:8px" id="td-lb-grid">
+        <div style="color:rgba(255,255,255,.2);font-size:12px;padding:20px 0">Loading sources…</div>
+      </div>
+      <div style="margin-top:16px;padding-top:14px;border-top:1px solid rgba(255,255,255,.06)">
+        <div style="font-size:10px;font-weight:700;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">How to connect a source</div>
+        <div style="font-size:11px;color:rgba(255,255,255,.4);line-height:1.7">
+          1. Sign up / apply for API access at the source's developer portal.<br>
+          2. Copy the credential values shown on each card above.<br>
+          3. Add them as environment variables in your <strong style="color:rgba(255,255,255,.65)">Render dashboard → Environment</strong> for the <code style="background:rgba(255,255,255,.06);padding:1px 5px;border-radius:4px">three-lakes-logistics-api</code> service.<br>
+          4. Trigger a manual deploy — Jordan will start pulling real loads on the next acquisition cycle.
+        </div>
+      </div>
+    </div>
+  </div>
+
 </div>
 </div><!-- /page-trading-desk -->
 \n<script>
@@ -22168,16 +22191,18 @@ function tdFmtDate(d) { if (!d) return '—'; return new Date(d).toLocaleDateStr
 async function tdLoadDashboard() {
   tdRenderHotLanes();
   try {
-    const [book, pnl, activity] = await Promise.all([
+    const [book, pnl, activity, lbStatus] = await Promise.all([
       tdApi('/api/trading/live-book/'),
       tdApi('/api/trading/pnl-summary/'),
       tdApi('/api/trading/activity/'),
+      tdApi('/api/trading/loadboard-status/').catch(() => null),
     ]);
     _tdBook = book.loads || [];
     tdRenderKPIs(book, pnl);
     tdRenderBook();
     tdRenderPnL(pnl);
     tdRenderActivity(activity.activity || []);
+    if (lbStatus) tdRenderLoadboardStatus(lbStatus);
   } catch(e) { tdStatus('Load error: ' + e.message, '#f87171'); }
   // Auto-refresh every 90 seconds
   if (_tdRefreshTimer) clearTimeout(_tdRefreshTimer);
@@ -22280,6 +22305,60 @@ function tdRenderActivity(rows) {
         (r.result ? '<div class="td-act-result">' + r.result + '</div>' : '') +
       '</div>' +
       '<div class="td-act-ts">' + ts + '</div>' +
+    '</div>';
+  }).join('');
+}
+
+function tdRenderLoadboardStatus(data) {
+  const summaryEl = document.getElementById('td-lb-summary');
+  const warningEl = document.getElementById('td-lb-warning');
+  const gridEl    = document.getElementById('td-lb-grid');
+  if (!gridEl) return;
+
+  const connected = data.connected_count || 0;
+  const total     = data.total || 15;
+  const est       = data.est_daily_loads || 0;
+
+  if (summaryEl) {
+    summaryEl.textContent = connected + '/' + total + ' connected · ~' + est.toLocaleString() + ' loads/day available';
+    summaryEl.style.color = connected === 0 ? '#f87171' : connected < 3 ? '#fbbf24' : '#4ade80';
+  }
+
+  if (warningEl) {
+    if (connected === 0) {
+      warningEl.style.display = 'block';
+      warningEl.innerHTML = '⚠️ <strong>No load boards connected.</strong> Jordan has no real loads to source — all acquisition cycles will return 0. Connect at least DAT or C.H. Robinson (free) to start trading. Follow the instructions below to add credentials to Render.';
+    } else if (connected < 3) {
+      warningEl.style.display = 'block';
+      warningEl.innerHTML = '⚠️ Only ' + connected + ' source' + (connected > 1 ? 's' : '') + ' connected. Adding more sources multiplies load volume and lane coverage. C.H. Robinson Navisphere is free — connect it now.';
+    } else {
+      warningEl.style.display = 'none';
+    }
+  }
+
+  const tierColors = { premium: '#f59e0b', tech: '#60a5fa', mid: '#a78bfa', enterprise: '#34d399' };
+  const tierLabels = { premium: 'PREMIUM', tech: 'TECH', mid: 'AFFORDABLE', enterprise: 'ENTERPRISE' };
+
+  gridEl.innerHTML = (data.sources || []).map(src => {
+    const dot = src.connected
+      ? '<span style="width:8px;height:8px;border-radius:50%;background:#4ade80;display:inline-block;flex-shrink:0;box-shadow:0 0 6px #4ade80"></span>'
+      : '<span style="width:8px;height:8px;border-radius:50%;background:#374151;display:inline-block;flex-shrink:0;border:1px solid rgba(255,255,255,.15)"></span>';
+    const tierClr = tierColors[src.tier] || '#a1a1aa';
+    const tierLbl = tierLabels[src.tier] || src.tier.toUpperCase();
+    const keysList = src.connected
+      ? '<span style="color:#4ade80;font-size:10px">✓ Credentials configured</span>'
+      : src.keys_needed.map(k =>
+          '<span style="display:inline-flex;align-items:center;gap:4px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:4px;padding:1px 6px;font-family:monospace;font-size:10px;color:rgba(255,255,255,.5);cursor:pointer" onclick="navigator.clipboard.writeText(\'' + k + '\')" title="Click to copy">' + k + ' 📋</span>'
+        ).join(' ');
+    return '<div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,' + (src.connected ? '.12' : '.05') + ');border-radius:8px;padding:10px 12px">' +
+      '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">' +
+        dot +
+        '<span style="font-size:12px;font-weight:700;color:#fff">' + src.name + '</span>' +
+        '<span style="margin-left:auto;font-size:9px;font-weight:800;color:' + tierClr + ';background:rgba(255,255,255,.04);border:1px solid ' + tierClr + '33;border-radius:4px;padding:1px 5px">' + tierLbl + '</span>' +
+      '</div>' +
+      '<div style="font-size:11px;color:rgba(255,255,255,.35);margin-bottom:6px">~' + src.est_loads_day.toLocaleString() + ' loads/day · ' + src.monthly_cost + '</div>' +
+      '<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:' + (src.connected ? '0' : '6px') + '">' + keysList + '</div>' +
+      (!src.connected ? '<a href="' + src.signup_url + '" target="_blank" style="font-size:10px;color:#60a5fa;text-decoration:none">Apply for API access →</a>' : '') +
     '</div>';
   }).join('');
 }

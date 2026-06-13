@@ -173,3 +173,19 @@ def api_activity(limit: int = 40) -> dict:
         .execute()
     ).data or []
     return {"ok": True, "activity": rows}
+
+
+@router.get("/loadboard-status/")
+def api_loadboard_status() -> dict:
+    """Connection status for all 15 load board sources — which have credentials configured."""
+    from ..prospecting.loadboard_clients import get_connection_status
+    sources = get_connection_status()
+    connected = [s for s in sources if s["connected"]]
+    est_daily = sum(s["est_loads_day"] for s in connected)
+    return {
+        "ok": True,
+        "connected_count": len(connected),
+        "total": len(sources),
+        "est_daily_loads": est_daily,
+        "sources": sources,
+    }

@@ -945,3 +945,132 @@ def search_all(params: SearchParams) -> list[LoadResult]:
 
     unique.sort(key=lambda r: r.rate_per_mile or 0, reverse=True)
     return unique
+
+
+# ── Connection Status ─────────────────────────────────────────────────────────
+
+def get_connection_status() -> list[dict]:
+    """Return credential status for all 15 load board sources."""
+    s = get_settings()
+    return [
+        {
+            "id": "dat", "name": "DAT Power", "tier": "premium",
+            "est_loads_day": 500, "monthly_cost": "$699+",
+            "connected": bool(s.dat_client_id and s.dat_client_secret),
+            "keys_needed": ["DAT_CLIENT_ID", "DAT_CLIENT_SECRET"],
+            "signup_url": "https://developer.dat.com",
+            "notes": "Largest load board in North America. Includes Convoy loads (acquired 2025).",
+        },
+        {
+            "id": "truckstop", "name": "Truckstop", "tier": "premium",
+            "est_loads_day": 350, "monthly_cost": "$499+",
+            "connected": bool(s.truckstop_username and s.truckstop_password),
+            "keys_needed": ["TRUCKSTOP_USERNAME", "TRUCKSTOP_PASSWORD", "TRUCKSTOP_PARTNER_ID"],
+            "signup_url": "https://www.truckstop.com/carriers/",
+            "notes": "Strong dry van and reefer coverage. Partner ID required for API access.",
+        },
+        {
+            "id": "123loadboard", "name": "123Loadboard", "tier": "mid",
+            "est_loads_day": 150, "monthly_cost": "$45/mo",
+            "connected": bool(s.loadboard_123_api_key),
+            "keys_needed": ["LOADBOARD_123_API_KEY"],
+            "signup_url": "https://www.123loadboard.com/",
+            "notes": "Affordable. Good cargo van / sprinter coverage. API key in account settings.",
+        },
+        {
+            "id": "truckerpath", "name": "Trucker Path", "tier": "mid",
+            "est_loads_day": 120, "monthly_cost": "Contact sales",
+            "connected": bool(s.truckerpath_api_key),
+            "keys_needed": ["TRUCKERPATH_API_KEY"],
+            "signup_url": "https://truckerpath.com/freight/",
+            "notes": "Mobile-first platform with strong small carrier network.",
+        },
+        {
+            "id": "direct_freight", "name": "Direct Freight", "tier": "mid",
+            "est_loads_day": 100, "monthly_cost": "$25/mo",
+            "connected": bool(s.direct_freight_username and s.direct_freight_password),
+            "keys_needed": ["DIRECT_FREIGHT_USERNAME", "DIRECT_FREIGHT_PASSWORD"],
+            "signup_url": "https://www.directfreight.com/",
+            "notes": "Very affordable. Good for backup coverage and spot loads.",
+        },
+        {
+            "id": "uber_freight", "name": "Uber Freight", "tier": "tech",
+            "est_loads_day": 200, "monthly_cost": "Free (carrier)",
+            "connected": bool(s.uber_freight_client_id and s.uber_freight_client_secret),
+            "keys_needed": ["UBER_FREIGHT_CLIENT_ID", "UBER_FREIGHT_CLIENT_SECRET"],
+            "signup_url": "https://www.uberfreight.com/carriers/",
+            "notes": "Instant book loads. Strong CA and TX markets. OAuth2 via developer portal.",
+        },
+        {
+            "id": "loadsmart", "name": "Loadsmart", "tier": "tech",
+            "est_loads_day": 180, "monthly_cost": "Free (broker API)",
+            "connected": bool(s.loadsmart_api_key),
+            "keys_needed": ["LOADSMART_API_KEY"],
+            "signup_url": "https://developer.loadsmart.com/",
+            "notes": "Digital freight matching. Good for dry van lanes. Free broker API.",
+        },
+        {
+            "id": "newtrul", "name": "NewTrul", "tier": "tech",
+            "est_loads_day": 80, "monthly_cost": "Contact sales",
+            "connected": bool(s.newtrul_api_key),
+            "keys_needed": ["NEWTRUL_API_KEY"],
+            "signup_url": "https://www.newtrul.com/",
+            "notes": "Growing platform focused on broker-carrier automation.",
+        },
+        {
+            "id": "flock_freight", "name": "Flock Freight", "tier": "tech",
+            "est_loads_day": 90, "monthly_cost": "Contact sales",
+            "connected": bool(s.flock_freight_api_key),
+            "keys_needed": ["FLOCK_FREIGHT_API_KEY"],
+            "signup_url": "https://www.flockfreight.com/",
+            "notes": "Shared truckload specialist. Good for partial loads and lane consolidation.",
+        },
+        {
+            "id": "jbhunt", "name": "J.B. Hunt 360", "tier": "enterprise",
+            "est_loads_day": 300, "monthly_cost": "Contact sales",
+            "connected": bool(s.jbhunt_client_id and s.jbhunt_client_secret),
+            "keys_needed": ["JBHUNT_CLIENT_ID", "JBHUNT_CLIENT_SECRET"],
+            "signup_url": "https://developer.jbhunt.com/",
+            "notes": "High volume. Intermodal + truckload. Enterprise relationship required.",
+        },
+        {
+            "id": "coyote", "name": "Coyote GO (RXO)", "tier": "enterprise",
+            "est_loads_day": 250, "monthly_cost": "Contact sales",
+            "connected": bool(s.coyote_client_id and s.coyote_client_secret),
+            "keys_needed": ["COYOTE_CLIENT_ID", "COYOTE_CLIENT_SECRET"],
+            "signup_url": "https://www.rxo.com/technology/",
+            "notes": "Rebranded as RXO. Strong spot market. Large broker network access.",
+        },
+        {
+            "id": "arrive", "name": "Arrive Logistics", "tier": "enterprise",
+            "est_loads_day": 200, "monthly_cost": "Contact sales",
+            "connected": bool(s.arrive_client_id and s.arrive_client_secret),
+            "keys_needed": ["ARRIVE_CLIENT_ID", "ARRIVE_CLIENT_SECRET"],
+            "signup_url": "https://developer.arrive.com/",
+            "notes": "Fast-growing broker with strong technology platform.",
+        },
+        {
+            "id": "echo_global", "name": "Echo Global", "tier": "enterprise",
+            "est_loads_day": 180, "monthly_cost": "Contact sales",
+            "connected": bool(s.echo_global_api_key),
+            "keys_needed": ["ECHO_GLOBAL_API_KEY"],
+            "signup_url": "https://www.echo.com/carriers/",
+            "notes": "Publicly traded broker. Strong carrier partnerships.",
+        },
+        {
+            "id": "cargo_chief", "name": "Cargo Chief", "tier": "tech",
+            "est_loads_day": 70, "monthly_cost": "Contact sales",
+            "connected": bool(s.cargo_chief_api_key),
+            "keys_needed": ["CARGO_CHIEF_API_KEY"],
+            "signup_url": "https://www.cargochief.com/",
+            "notes": "AI-driven rate intelligence + load matching.",
+        },
+        {
+            "id": "chrobinson", "name": "C.H. Robinson (Navisphere)", "tier": "enterprise",
+            "est_loads_day": 600, "monthly_cost": "Free (carrier)",
+            "connected": bool(s.chrobinson_client_id and s.chrobinson_client_secret),
+            "keys_needed": ["CHROBINSON_CLIENT_ID", "CHROBINSON_CLIENT_SECRET"],
+            "signup_url": "https://developer.chrobinson.com/",
+            "notes": "Largest US broker. Free Navisphere Carrier API. Highest load volume. Apply at developer portal.",
+        },
+    ]
