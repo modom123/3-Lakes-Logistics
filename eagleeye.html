@@ -277,6 +277,17 @@ body{font-family:var(--ff-b);color:var(--text);background:var(--off);display:fle
 .btn-navy:hover{background:var(--navy2);box-shadow:0 6px 22px rgba(11,37,69,.32);transform:translateY(-1px);}
 .btn-navy:disabled{opacity:.55;cursor:not-allowed;transform:none;}
 
+.btn-gold{
+  display:inline-flex;align-items:center;gap:7px;
+  padding:10px 22px;border-radius:8px;
+  background:var(--gold);color:var(--navy);
+  font-size:13px;font-weight:600;font-family:var(--ff-b);
+  border:none;cursor:pointer;transition:all .2s;
+  box-shadow:0 3px 14px rgba(200,144,42,.3);letter-spacing:.2px;
+}
+.btn-gold:hover{background:var(--gold2);box-shadow:0 6px 22px rgba(200,144,42,.4);transform:translateY(-1px);}
+.btn-gold:disabled{opacity:.55;cursor:not-allowed;transform:none;}
+
 .btn-out{
   display:inline-flex;align-items:center;gap:7px;
   padding:9px 20px;border-radius:8px;
@@ -18051,7 +18062,56 @@ async function deactivateDriver(driverId) {
   --shadow:0 2px 20px rgba(0,0,0,.4);
   --shadow-lg:0 8px 48px rgba(0,0,0,.55);
   color-scheme:dark;
+  color:#fff;                 /* base text color for all children */
 }
+
+/* ── Dark-mode button overrides for broker/trading pages ── */
+#page-broker-division .btn-navy,
+#page-broker-shippers .btn-navy,
+#page-broker-docs .btn-navy,
+#page-trading-desk .btn-navy{
+  background:rgba(255,255,255,.08);color:#e2e8f0;
+  border:1px solid rgba(255,255,255,.14);box-shadow:none;
+}
+#page-broker-division .btn-navy:hover,
+#page-broker-shippers .btn-navy:hover,
+#page-broker-docs .btn-navy:hover,
+#page-trading-desk .btn-navy:hover{
+  background:rgba(255,255,255,.16);transform:translateY(-1px);
+}
+#page-broker-division .btn-gold,
+#page-broker-shippers .btn-gold,
+#page-broker-docs .btn-gold,
+#page-trading-desk .btn-gold{
+  background:#f59e0b;color:#000;border:none;
+  box-shadow:0 2px 10px rgba(245,158,11,.3);
+}
+#page-broker-division .btn-gold:hover,
+#page-broker-shippers .btn-gold:hover,
+#page-broker-docs .btn-gold:hover,
+#page-trading-desk .btn-gold:hover{
+  background:#d97706;transform:translateY(-1px);
+}
+/* ── Dark-mode form fields for broker pages ── */
+#page-broker-division .td-form,
+#page-broker-shippers .td-form,
+#page-broker-docs .td-form{
+  display:grid;grid-template-columns:1fr 1fr;gap:10px;
+}
+@media(max-width:700px){
+  #page-broker-division .td-form,
+  #page-broker-shippers .td-form,
+  #page-broker-docs .td-form{grid-template-columns:1fr;}
+}
+.td-inp{
+  background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);
+  border-radius:6px;padding:7px 11px;font-size:12px;color:#fff;width:100%;
+  box-sizing:border-box;
+}
+.td-inp::placeholder{color:rgba(255,255,255,.28);}
+.td-inp:focus{outline:none;border-color:rgba(255,255,255,.3);background:rgba(255,255,255,.08);}
+.td-inp-label{display:block;font-size:10px;font-weight:600;color:rgba(255,255,255,.45);
+  text-transform:uppercase;letter-spacing:.6px;margin-bottom:4px;}
 
 .content.lf-fullpage{padding:0;background:#0A0A0F;}
 .content.lf-fullpage .page.active{
@@ -21483,13 +21543,13 @@ async function bdLoadStats(){
 ════════════════════════════════════════════════════════════════════════ -->
 <div class="page" id="page-broker-division">
 <style>
-.bd-hero{background:linear-gradient(135deg,#0f172a 0%,#1e1b4b 50%,#312e81 100%);border-radius:16px;padding:28px 32px;margin-bottom:24px;position:relative;overflow:hidden;}
+.bd-hero{background:linear-gradient(135deg,#071524 0%,#0d2540 50%,#0f3460 100%);border-radius:16px;padding:28px 32px;margin-bottom:24px;position:relative;overflow:hidden;border:1px solid rgba(99,160,255,.12);}
 .bd-hero::before{content:'';position:absolute;top:-80px;right:-80px;width:280px;height:280px;border-radius:50%;background:rgba(99,102,241,.08);pointer-events:none;}
 .bd-hero-title{font-size:22px;font-weight:800;color:#fff;margin-bottom:4px;}
 .bd-hero-sub{font-size:13px;color:rgba(255,255,255,.6);}
 .bd-kpi-row{display:flex;gap:14px;margin-top:20px;flex-wrap:wrap;}
 .bd-kpi{background:rgba(0,0,0,.25);border-radius:10px;padding:12px 18px;min-width:130px;}
-.bd-kpi-n{font-size:22px;font-weight:800;color:#a5b4fc;}
+.bd-kpi-n{font-size:22px;font-weight:800;color:#60a5fa;}
 .bd-kpi-l{font-size:10px;color:rgba(255,255,255,.45);text-transform:uppercase;letter-spacing:.8px;margin-top:2px;}
 .bd-team-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:24px;}
 @media(max-width:1100px){.bd-team-grid{grid-template-columns:repeat(3,1fr);}}
@@ -21497,9 +21557,9 @@ async function bdLoadStats(){
 .bd-member{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center;cursor:pointer;transition:border-color .15s;}
 .bd-member:hover{border-color:#6366f1;}
 .bd-member-icon{font-size:26px;margin-bottom:6px;}
-.bd-member-name{font-size:13px;font-weight:700;margin-bottom:2px;}
-.bd-member-role{font-size:10px;color:var(--muted);}
-.bd-section-hd{font-size:13px;font-weight:700;color:var(--text);margin:20px 0 12px;display:flex;align-items:center;gap:8px;}
+.bd-member-name{font-size:13px;font-weight:700;margin-bottom:2px;color:#fff;}
+.bd-member-role{font-size:10px;color:rgba(255,255,255,.5);}
+.bd-section-hd{font-size:13px;font-weight:700;color:#fff;margin:20px 0 12px;display:flex;align-items:center;gap:8px;letter-spacing:.2px;}
 .bd-out{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:16px;}
 .bd-out pre{font-size:11px;color:var(--text);white-space:pre-wrap;word-break:break-word;max-height:300px;overflow-y:auto;margin:0;}
 </style>
@@ -21567,7 +21627,7 @@ async function bdLoadStats(){
 
   <!-- Quick Actions -->
   <div class="bd-section-hd">⚡ Quick Actions</div>
-  <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px;">
+  <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px;padding:12px 16px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:10px;">
     <button class="btn-gold" onclick="bdRunQuinn('division_summary')">📊 Division Summary</button>
     <button class="btn-navy" onclick="bdRunRex('book_status')">📈 Book Status</button>
     <button class="btn-navy" onclick="bdRunDrew('pipeline')">🏭 Shipper Pipeline</button>
@@ -21606,7 +21666,7 @@ async function bdLoadStats(){
   </div>
 
   <!-- Actions -->
-  <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px;">
+  <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px;padding:12px 16px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:10px;">
     <button class="btn-gold" onclick="bdShowAddShipper()">➕ Add Shipper</button>
     <button class="btn-navy" onclick="bdRunDrew('prospect')">📞 Prospect Batch (Bland AI)</button>
     <button class="btn-navy" onclick="bdLoadShippers()">🔄 Refresh</button>
@@ -21665,7 +21725,7 @@ async function bdLoadStats(){
 ════════════════════════════════════════════════════════════════════════ -->
 <div class="page" id="page-broker-docs">
 <style>
-.quinn-hero{background:linear-gradient(135deg,#1c1a2e 0%,#2d1b69 100%);border-radius:16px;padding:24px 28px;margin-bottom:20px;}
+.quinn-hero{background:linear-gradient(135deg,#0d1e30 0%,#122a4a 60%,#0f3060 100%);border-radius:16px;padding:24px 28px;margin-bottom:20px;border:1px solid rgba(99,160,255,.1);}
 .quinn-hero-title{font-size:18px;font-weight:800;color:#fff;margin-bottom:4px;}
 .doc-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;gap:12px;}
 .doc-num{font-size:12px;font-weight:700;font-family:monospace;}
@@ -21684,7 +21744,7 @@ async function bdLoadStats(){
   </div>
 
   <!-- Quick Actions -->
-  <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px;">
+  <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px;padding:12px 16px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:10px;">
     <button class="btn-gold" onclick="bdShowRCForm()">📋 Generate RC</button>
     <button class="btn-gold" onclick="bdShowInvForm()">🧾 Generate Invoice</button>
     <button class="btn-navy" onclick="bdShowFactorForm()">💸 Submit to Factoring</button>
