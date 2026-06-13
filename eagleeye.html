@@ -776,14 +776,15 @@ select.form-input option{background:var(--surface);}
 
   <div class="sb-section">
     <div class="sb-label">Command</div>
-    <div class="sb-item" onclick="nav('exec-command')"><span class="sb-icon">🎖️</span> Exec Command <span class="sb-badge" id="exec-esc-notif" style="display:none">●</span></div>
     <div class="sb-item" onclick="nav('mark-office')"><span class="sb-icon">👑</span> Mark Odom Office <span class="sb-badge" id="mo-email-notif" style="display:none">●</span></div>
     <div class="sb-item" onclick="nav('ccg-office')"><span class="sb-icon">🧭</span> CC Gulley Office <span class="sb-badge" id="ccg-email-notif" style="display:none">●</span></div>
+    <div class="sb-item active" onclick="nav('dashboard')"><span class="sb-icon">📊</span> Dashboard</div>
+    <div class="sb-item" onclick="nav('salesforce')" style="background:rgba(15,76,129,.07);border-left:3px solid var(--navy)"><span class="sb-icon">🏆</span> <strong>Sales &amp; Marketing</strong> <span class="sb-badge" id="sm-notif-cmd" style="display:none;background:#ef4444;color:#fff">!</span></div>
+    <div class="sb-item" onclick="nav('exec-command')"><span class="sb-icon">🎖️</span> Exec Command <span class="sb-badge" id="exec-esc-notif" style="display:none">●</span></div>
   </div>
 
   <div class="sb-section">
     <div class="sb-label">Heavy Fleet</div>
-    <div class="sb-item active" onclick="nav('dashboard')"><span class="sb-icon">📊</span> Dashboard</div>
     <div class="sb-item" onclick="nav('dispatch')"><span class="sb-icon">🚛</span> Dispatch Board</div>
     <div class="sb-item" onclick="nav('fleet-map')"><span class="sb-icon">🗺️</span> Fleet Map <span class="sb-badge" id="fmap-live-count" style="display:none;background:#16a34a;color:#fff">0</span></div>
     <div class="sb-item" onclick="nav('carriers')"><span class="sb-icon">👥</span> Carriers <span class="sb-badge" id="carrier-notif" style="display:none">●</span></div>
@@ -835,15 +836,10 @@ select.form-input option{background:var(--surface);}
   </div>
 
   <div class="sb-section">
-    <div class="sb-label">Sales &amp; Marketing</div>
-    <div class="sb-item" onclick="nav('salesforce')" style="background:rgba(15,76,129,.07);border-left:3px solid var(--navy)"><span class="sb-icon">🏆</span> <strong>Command Center</strong> <span class="sb-badge" id="sm-notif" style="display:none;background:#ef4444;color:#fff">!</span></div>
-    <div class="sb-item" onclick="nav('crm')"><span class="sb-icon">📇</span> Lead CRM</div>
-    <div class="sb-item" onclick="nav('leads')"><span class="sb-icon">🎯</span> Lead Pipeline</div>
-  </div>
-
-  <div class="sb-section">
     <div class="sb-label">Automation</div>
     <div class="sb-item" onclick="nav('agents')"><span class="sb-icon">🤖</span> AI Agents <span class="sb-badge" id="agents-notif" style="display:none">●</span></div>
+    <div class="sb-item" onclick="nav('crm')"><span class="sb-icon">📇</span> Lead CRM</div>
+    <div class="sb-item" onclick="nav('leads')"><span class="sb-icon">🎯</span> Lead Pipeline</div>
     <div class="sb-item" onclick="nav('execution')"><span class="sb-icon">⚙️</span> Execution Engine</div>
     <div class="sb-item" onclick="nav('founders')"><span class="sb-icon">🏁</span> Founders Program</div>
   </div>
@@ -9511,7 +9507,7 @@ async function loadCrmLeads(retries=2){
   if(listEl) listEl.innerHTML = '<div style="padding:16px;text-align:center"><div class="spin" style="margin:0 auto 8px"></div><div style="color:var(--muted);font-size:13px">Loading leads…</div></div>';
   for(let attempt=0; attempt<=retries; attempt++){
     try {
-      const r = await apiFetch('/api/leads?limit=500');
+      const r = await apiFetch('/api/leads/?limit=500');
       if(!r.ok){
         // apiFetch already consumed the body for logging — use status code
         if(attempt < retries){
@@ -14301,7 +14297,7 @@ window.ocLoadLeads = async function(owner){
   if(!listEl) return;
   listEl.innerHTML = '<div class="oc-empty">Loading CRM leads…</div>';
   try{
-    const r = await API.get('/api/leads?limit=200').catch(()=>null);
+    const r = await API.get('/api/leads/?limit=200').catch(()=>null);
     st(owner).leads = (r?.items)||[];
     st(owner).leadsLoaded = true;
     ocRenderLeads(owner);
