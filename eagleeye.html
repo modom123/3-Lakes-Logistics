@@ -20841,7 +20841,14 @@ function lfRenderExpertReport(segment, d) {
       <div class="lf-dc-kpi"><div class="lf-dc-kpi-val" id="lfdc-kpi-rev" style="color:var(--gold2);">—</div><div class="lf-dc-kpi-lbl">Revenue Today</div></div>
       <div class="lf-dc-kpi"><div class="lf-dc-kpi-val" id="lfdc-kpi-acc">—</div><div class="lf-dc-kpi-lbl">Avg Acceptance</div></div>
       <div class="lf-dc-kpi"><div class="lf-dc-kpi-val" id="lfdc-kpi-flags" style="color:#f87171;">—</div><div class="lf-dc-kpi-lbl">Flags</div></div>
+      <div class="lf-dc-kpi"><div class="lf-dc-kpi-val" id="lfdc-kpi-pending" style="color:#f59e0b;">—</div><div class="lf-dc-kpi-lbl">Pending Onboard</div></div>
     </div>
+    <!-- Pending Onboarding Banner -->
+    <div id="lfdc-onboard-banner" style="display:none;margin:0 20px 16px;padding:14px 18px;background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.2);border-radius:10px">
+      <div style="font-size:12px;font-weight:700;color:#f59e0b;margin-bottom:10px;">⚠ Drivers Pending Onboarding Completion</div>
+      <div id="lfdc-onboard-list" style="display:flex;flex-direction:column;gap:6px"></div>
+    </div>
+
     <div class="lf-dc-toolbar">
       <input class="lf-dc-search" id="lfdc-search" type="text" placeholder="Search driver, location, vehicle…" oninput="_dcRenderRoster()" />
       <button class="lf-dc-fbtn dc-factive" data-dc-f="all" onclick="_dcSetFilter(this,'all')">All</button>
@@ -22840,6 +22847,26 @@ function _dcExpiry(ds){
   if(days<30)return{label:days+'d left',cls:'dc-warn'};
   return{label:_dcFmtDate(ds),cls:'dc-ok'};
 }
+function _dcLicenseStatus(d){
+  if(!d.license_number) return{label:'Not on File',cls:'dc-bad'};
+  if(!d.license_expires) return{label:'Expiry Needed',cls:'dc-warn'};
+  return _dcExpiry(d.license_expires);
+}
+function _dcOnboardChecklist(d){
+  return[
+    {key:'id_verified',   label:'ID Verified',          done:!!d.stripe_verification_session_id},
+    {key:'license_num',   label:'License on File',       done:!!d.license_number},
+    {key:'license_state', label:'License State',         done:!!d.license_state},
+    {key:'license_exp',   label:'License Expiry Entered',done:!!d.license_expires},
+    {key:'insurance',     label:'Insurance Expiry on File',done:!!d.vehicle_insurance_expires},
+    {key:'bg_check',      label:'Background Check Clear',done:d.background_check_status==='clear'},
+    {key:'mvr',           label:'MVR Check Clear',       done:d.mvr_status==='clear'},
+    {key:'stripe_pay',    label:'Stripe Payout Account', done:!!d.stripe_payouts_enabled},
+  ];
+}
+function _dcIsFullyOnboarded(d){
+  return _dcOnboardChecklist(d).every(c=>c.done);
+}
 function _dcGrade(p){ if(p>=90)return'A'; if(p>=80)return'B'; if(p>=70)return'C'; if(p>=60)return'D'; return'F'; }
 function _dcGradeDesc(g){ return{A:'Excellent',B:'Good',C:'Average',D:'Below expectations',F:'Needs attention'}[g]||''; }
 function _dcBarColor(p){ if(p>=80)return'#10b981'; if(p>=60)return'#60a5fa'; if(p>=40)return'#f59e0b'; return'#ef4444'; }
@@ -22858,8 +22885,11 @@ function _dcFlags(d){
   const f=[];
   if(d.mvr_status==='flagged')f.push({label:'MVR Flagged',u:'bad'});
   if(d.background_check_status==='flagged')f.push({label:'Background Check Flagged',u:'bad'});
-  const le=_dcExpiry(d.license_expires); if(le.cls!=='dc-ok')f.push({label:'License Expiry',u:le.cls==='dc-bad'?'bad':'warn'});
+  const ls=_dcLicenseStatus(d);
+  if(ls.cls==='dc-bad')f.push({label:'License Not on File',u:'bad'});
+  else if(ls.cls==='dc-warn')f.push({label:d.license_number?'License Expiry Needed':'License Unknown',u:'warn'});
   const ie=_dcExpiry(d.vehicle_insurance_expires); if(ie.cls!=='dc-ok')f.push({label:'Vehicle Insurance',u:ie.cls==='dc-bad'?'bad':'warn'});
+  if(!_dcIsFullyOnboarded(d))f.push({label:'Onboarding Incomplete',u:'warn'});
   return f;
 }
 
@@ -22927,6 +22957,8 @@ async function initLFRoster(){
   set('lfdc-kpi-acc',k.avgAcc!==null?k.avgAcc+'%':'—',k.avgAcc>=80?'#4ade80':k.avgAcc>=60?'#f59e0b':'#f87171');
   set('lfdc-kpi-flags',k.flags,k.flags?'#f87171':'#4ade80');
   set('lfdc-div-score',k.score,k.score>=80?'#4ade80':k.score>=60?'#f59e0b':'#f87171');
+  const pendingCount=_lfdc_drivers.filter(d=>!_dcIsFullyOnboarded(d)&&d.status!=='inactive').length;
+  set('lfdc-kpi-pending',pendingCount,pendingCount?'#f59e0b':'#4ade80');
   const badge=document.getElementById('lf-drivers-flag-badge');
   if(badge){badge.textContent=k.flags;badge.style.display=k.flags?'':'none';}
   _dcRenderRoster();
@@ -22974,6 +23006,23 @@ function _dcRenderRoster(){
       <td>${flags.length?`<span style="font-size:11px;font-weight:700;padding:2px 7px;border-radius:20px;background:rgba(239,68,68,.15);color:#f87171">⚠ ${flags.length}</span>`:'<span style="color:#4ade80;font-size:12px">✓</span>'}</td>
     </tr>`;
   }).join('')}</tbody></table>`;
+
+  // Populate pending-onboarding banner
+  const pendingBanner=document.getElementById('lfdc-onboard-banner');
+  const pendingList=document.getElementById('lfdc-onboard-list');
+  if(pendingBanner&&pendingList){
+    const pending=_lfdc_drivers.filter(d=>!_dcIsFullyOnboarded(d)&&d.status!=='inactive');
+    pendingBanner.style.display=pending.length?'block':'none';
+    pendingList.innerHTML=pending.map(d=>{
+      const missing=_dcOnboardChecklist(d).filter(c=>!c.done).map(c=>c.label);
+      return`<div style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:6px 8px;border-radius:6px;background:rgba(255,255,255,.03)" onclick="_lfOpenDriver('${d.id}')">
+        <div style="width:26px;height:26px;border-radius:6px;background:${_dcAvatarColor(d.name)};display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:#fff;flex-shrink:0">${_dcInitials(d.name)}</div>
+        <div style="flex:1"><div style="font-size:12px;font-weight:600;color:rgba(255,255,255,.85)">${d.name||'Unknown'}</div>
+          <div style="font-size:10px;color:#f59e0b;margin-top:1px">Missing: ${missing.join(' · ')}</div></div>
+        <span style="font-size:11px;color:rgba(255,255,255,.3)">→</span>
+      </div>`;
+    }).join('');
+  }
 }
 
 function _lfOpenDriver(driverId){
@@ -23097,15 +23146,58 @@ async function initLFDriverProfile(){
       ?poi.map(([city,cnt],i)=>`<div class="dc-info-row"><span class="dc-info-lbl" style="display:flex;align-items:center;gap:7px"><span style="width:18px;height:18px;border-radius:4px;background:rgba(124,58,237,.2);color:#a78bfa;display:inline-flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;flex-shrink:0">${i+1}</span>${city}</span><span class="dc-info-val" style="display:flex;align-items:center;gap:10px"><span style="flex:1;height:4px;background:rgba(255,255,255,.07);border-radius:10px;overflow:hidden"><span style="display:block;height:100%;background:#7c3aed;border-radius:10px;width:${Math.round(cnt/maxPoi*100)}%"></span></span><span style="font-size:11px;color:rgba(255,255,255,.35)">${cnt} pickup${cnt>1?'s':''}</span></span></div>`).join('')
       :`<div style="text-align:center;padding:20px;color:rgba(255,255,255,.3);font-size:13px">No trip history to build location data.</div>`}
 
+    <!-- ── ONBOARDING CHECKLIST ──────────────────────────────────────────── -->
+    <div class="dc-sec" style="display:flex;align-items:center;justify-content:space-between">
+      <span>📋 Onboarding Checklist</span>
+      ${_dcIsFullyOnboarded(d)
+        ?`<span style="font-size:11px;padding:3px 10px;border-radius:20px;background:rgba(16,185,129,.15);color:#4ade80;font-weight:700">✓ CLEARED TO WORK</span>`
+        :`<span style="font-size:11px;padding:3px 10px;border-radius:20px;background:rgba(245,158,11,.12);color:#f59e0b;font-weight:700">⚠ PENDING ITEMS</span>`}
+    </div>
+    <div style="padding:0 28px 8px">
+      <div style="background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.06);border-radius:10px;padding:14px 16px;display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        ${_dcOnboardChecklist(d).map(c=>`<div style="display:flex;align-items:center;gap:8px;font-size:12px">
+          <span style="font-size:14px">${c.done?'✅':'⬜'}</span>
+          <span style="color:${c.done?'rgba(255,255,255,.65)':'#f59e0b'};font-weight:${c.done?'400':'600'}">${c.label}</span>
+        </div>`).join('')}
+      </div>
+      ${!d.onboarded_at&&_dcIsFullyOnboarded(d)?`<button onclick="_lfMarkOnboarded('${d.id}')" style="margin-top:10px;width:100%;padding:9px;background:rgba(16,185,129,.15);border:1px solid rgba(16,185,129,.3);border-radius:8px;color:#4ade80;font-size:12px;font-weight:700;cursor:pointer">🚀 Mark as Fully Onboarded</button>`:''}
+      ${d.onboarded_at?`<div style="margin-top:10px;text-align:center;font-size:11px;color:rgba(255,255,255,.3)">Onboarded: ${_dcFmtDate(d.onboarded_at)}</div>`:''}
+    </div>
+
     <div class="dc-sec">Compliance</div>
-    ${[{icon:'🪪',name:"Driver's License",sub:d.license_number+'  · '+( d.license_state||'?'),exp:_dcExpiry(d.license_expires)},
-       {icon:'🚗',name:'Vehicle Insurance',sub:'Required for all trips',exp:_dcExpiry(d.vehicle_insurance_expires)},
+    ${[{icon:'🪪',name:"Driver's License",sub:(d.license_number||'No number on file')+(d.license_state?' · '+d.license_state:''),exp:_dcLicenseStatus(d)},
+       {icon:'🚗',name:'Vehicle Insurance',sub:d.vehicle_insurance_expires?'Expires '+_dcFmtDate(d.vehicle_insurance_expires):'Not on file',exp:d.vehicle_insurance_expires?_dcExpiry(d.vehicle_insurance_expires):{label:'Not on File',cls:'dc-bad'}},
        {icon:'🔍',name:'MVR Check',sub:d.mvr_checked_at?'Checked '+_dcFmtDate(d.mvr_checked_at):'Not checked',exp:{label:(d.mvr_status||'pending').toUpperCase(),cls:d.mvr_status==='clear'?'dc-ok':d.mvr_status==='flagged'?'dc-bad':'dc-warn'}},
        {icon:'✅',name:'Background Check',sub:d.background_checked_at?'Checked '+_dcFmtDate(d.background_checked_at):'Pending',exp:{label:(d.background_check_status||'pending').toUpperCase(),cls:d.background_check_status==='clear'?'dc-ok':d.background_check_status==='flagged'?'dc-bad':'dc-warn'}}
     ].map(it=>`<div class="dc-info-row"><span class="dc-info-lbl">${it.icon} ${it.name}</span><span class="dc-info-val" style="display:flex;flex-direction:column;gap:2px"><span style="color:${clrMap[it.exp.cls]||'#f59e0b'};font-weight:600">${it.exp.label}</span>${it.sub?`<span style="font-size:11px;color:rgba(255,255,255,.3)">${it.sub}</span>`:''}</span></div>`).join('')}
     ${flags.length
       ?`<div class="dc-sec">Open Flags (${flags.length})</div>${flags.map(f=>`<div class="dc-info-row"><span class="dc-info-lbl">${f.u==='bad'?'🚨':'⚠️'} Flag</span><span class="dc-info-val" style="display:flex;align-items:center;gap:8px"><span style="color:${f.u==='bad'?'#f87171':'#f59e0b'};font-weight:600">${f.label}</span><span style="font-size:10px;padding:1px 7px;border-radius:10px;background:${f.u==='bad'?'rgba(220,38,38,.15)':'rgba(245,158,11,.1)'};color:${f.u==='bad'?'#f87171':'#f59e0b'}">${f.u==='bad'?'CRITICAL':'WARNING'}</span></span></div>`).join('')}`
       :`<div style="margin:16px 28px;padding:12px 16px;background:rgba(16,185,129,.06);border:1px solid rgba(16,185,129,.2);border-radius:8px;text-align:center;font-size:13px;color:#4ade80">✓ All compliance checks clear</div>`}
+
+    <!-- ── ADMIN COMPLIANCE EDIT ──────────────────────────────────────────── -->
+    <div class="dc-sec">🛠 Admin — Update Compliance Fields</div>
+    <div style="padding:0 28px 8px">
+      <div style="background:rgba(245,158,11,.03);border:1px solid rgba(245,158,11,.15);border-radius:10px;padding:16px 18px">
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:14px">
+          <div>
+            <div style="font-size:10px;color:rgba(255,255,255,.35);margin-bottom:4px">License State</div>
+            <input id="cmp-lic-state" class="ac-input" value="${d.license_state||''}" placeholder="WA" style="width:100%;text-transform:uppercase">
+          </div>
+          <div>
+            <div style="font-size:10px;color:rgba(255,255,255,.35);margin-bottom:4px">License Expires</div>
+            <input id="cmp-lic-exp" class="ac-input" type="date" value="${d.license_expires||''}" style="width:100%">
+          </div>
+          <div>
+            <div style="font-size:10px;color:rgba(255,255,255,.35);margin-bottom:4px">Insurance Expires</div>
+            <input id="cmp-ins-exp" class="ac-input" type="date" value="${d.vehicle_insurance_expires||''}" style="width:100%">
+          </div>
+        </div>
+        <div style="display:flex;gap:10px">
+          <button onclick="_lfSaveCompliance('${d.id}')" style="flex:1;padding:9px;background:rgba(245,158,11,.15);border:1px solid rgba(245,158,11,.3);border-radius:8px;color:#f59e0b;font-size:12px;font-weight:700;cursor:pointer">💾 Save Compliance Fields</button>
+        </div>
+        <div id="cmp-msg" style="margin-top:8px;font-size:12px;text-align:center;min-height:16px"></div>
+      </div>
+    </div>
 
     <!-- ── AGENT CARD ───────────────────────────────────────────────────── -->
     <div class="dc-sec" style="display:flex;align-items:center;justify-content:space-between">
@@ -23255,6 +23347,38 @@ async function _lfSaveAgentCard(driverId){
   } catch(e){
     if(msg){msg.style.color='#f87171';msg.textContent='Error: '+e.message;}
   }
+}
+
+async function _lfSaveCompliance(driverId){
+  const msg=document.getElementById('cmp-msg');
+  const licState=(document.getElementById('cmp-lic-state')?.value||'').trim().toUpperCase()||null;
+  const licExp=document.getElementById('cmp-lic-exp')?.value||null;
+  const insExp=document.getElementById('cmp-ins-exp')?.value||null;
+  const payload={};
+  if(licState)payload.license_state=licState;
+  if(licExp)payload.license_expires=licExp;
+  if(insExp)payload.vehicle_insurance_expires=insExp;
+  if(!Object.keys(payload).length){if(msg){msg.style.color='#f59e0b';msg.textContent='Nothing to save.';} return;}
+  if(msg){msg.style.color='rgba(255,255,255,.4)';msg.textContent='Saving…';}
+  try{
+    const r=await apiFetch(`/api/light-fleet/drivers/${driverId}`,'PATCH',payload);
+    if(r&&r.ok!==false){
+      if(msg){msg.style.color='#4ade80';msg.textContent='✓ Compliance fields saved — reload to see updated checklist';}
+      if(_lfSelectedDriver){Object.assign(_lfSelectedDriver.driver,payload);}
+      setTimeout(()=>initLFDriverProfile(),1500);
+    }else{if(msg){msg.style.color='#f87171';msg.textContent='Save failed';}}
+  }catch(e){if(msg){msg.style.color='#f87171';msg.textContent='Error: '+e.message;}}
+}
+
+async function _lfMarkOnboarded(driverId){
+  try{
+    const r=await apiFetch(`/api/light-fleet/drivers/${driverId}`,'PATCH',{onboarded_at:new Date().toISOString(),status:'active'});
+    if(r&&r.ok!==false){
+      showToast('🎉 '+(_lfSelectedDriver?.driver?.name||'Driver')+' marked as fully onboarded!','success');
+      if(_lfSelectedDriver){Object.assign(_lfSelectedDriver.driver,{onboarded_at:new Date().toISOString()});}
+      setTimeout(()=>initLFDriverProfile(),800);
+    }
+  }catch(e){showToast('Error: '+e.message,'error');}
 }
 
 async function _lfHuntNow(driverId){
