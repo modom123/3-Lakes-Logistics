@@ -19959,6 +19959,41 @@ function lfRenderExpertReport(segment, d) {
 .bd-form-actions{display:flex;gap:8px;justify-content:flex-end;}
 .bd-form-title{font-size:12px;font-weight:700;color:rgba(255,255,255,.55);text-transform:uppercase;letter-spacing:1px;padding:4px 0 12px;}
 .bd-empty{text-align:center;padding:32px 20px;color:rgba(255,255,255,.4);font-size:13px;}
+/* Automation command strip */
+.bd-auto-strip{background:linear-gradient(135deg,rgba(245,158,11,.12),rgba(217,119,6,.08));border:1px solid rgba(245,158,11,.3);border-radius:12px;padding:14px 20px;margin-bottom:20px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;}
+.bd-auto-kpi{display:flex;flex-direction:column;align-items:center;min-width:90px;}
+.bd-auto-kpi-val{font-size:22px;font-weight:800;color:#f59e0b;}
+.bd-auto-kpi-lbl{font-size:9px;font-weight:700;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.8px;margin-top:2px;}
+.bd-auto-divider{width:1px;height:40px;background:rgba(245,158,11,.2);}
+.bd-auto-actions{display:flex;gap:8px;flex-wrap:wrap;margin-left:auto;}
+.bd-auto-btn{padding:8px 16px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;border:1px solid rgba(245,158,11,.4);background:rgba(245,158,11,.12);color:#f59e0b;transition:all .15s;letter-spacing:.3px;}
+.bd-auto-btn:hover{background:rgba(245,158,11,.2);border-color:rgba(245,158,11,.6);}
+.bd-auto-btn:disabled{opacity:.5;cursor:not-allowed;}
+/* Sequence step badge */
+.bd-step-badge{display:inline-block;font-size:9px;font-weight:700;padding:2px 7px;border-radius:8px;background:rgba(245,158,11,.15);color:#f59e0b;letter-spacing:.3px;}
+/* Activity feed */
+.bd-activity-wrap{background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-top:20px;}
+.bd-activity-hd{padding:14px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;}
+.bd-activity-title{font-family:var(--ff-h);font-weight:800;font-size:15px;color:var(--navy);}
+.bd-activity-list{max-height:360px;overflow-y:auto;}
+.bd-activity-row{display:flex;align-items:flex-start;gap:12px;padding:10px 20px;border-bottom:1px solid rgba(255,255,255,.04);font-size:12px;}
+.bd-activity-row:last-child{border-bottom:none;}
+.bd-activity-icon{font-size:16px;flex-shrink:0;margin-top:1px;}
+.bd-activity-body{flex:1;min-width:0;}
+.bd-activity-company{font-weight:700;color:#fff;}
+.bd-activity-detail{color:rgba(255,255,255,.5);font-size:11px;margin-top:1px;}
+.bd-activity-ts{font-size:10px;color:rgba(255,255,255,.3);white-space:nowrap;margin-left:auto;}
+.bd-activity-status{display:inline-block;font-size:9px;font-weight:700;padding:2px 6px;border-radius:6px;text-transform:uppercase;letter-spacing:.4px;}
+.bd-activity-status-sent{background:rgba(34,197,94,.15);color:#4ade80;}
+.bd-activity-status-failed{background:rgba(239,68,68,.15);color:#f87171;}
+.bd-activity-status-connected{background:rgba(59,130,246,.15);color:#60a5fa;}
+.bd-activity-status-voicemail{background:rgba(245,158,11,.15);color:#fbbf24;}
+/* Sector stat boxes */
+.bd-sector-stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin-bottom:20px;}
+.bd-sector-stat{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px;}
+.bd-sector-stat-title{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px;}
+.bd-sector-stat-row{display:flex;justify-content:space-between;font-size:12px;color:rgba(255,255,255,.65);margin-bottom:4px;}
+.bd-sector-stat-row span:last-child{font-weight:700;color:#fff;}
 </style>
 <div class="lf-wrap bd-wrap">
 
@@ -19972,6 +20007,50 @@ function lfRenderExpertReport(segment, d) {
     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
       <button class="lf-btn-ghost" onclick="loadLfBizDevProspects()">↻ Refresh</button>
       <button class="lf-btn" onclick="openBdAddProspect()">+ Add Lead</button>
+    </div>
+  </div>
+
+  <!-- Automation Command Strip -->
+  <div class="bd-auto-strip" id="bd-auto-strip">
+    <div class="bd-auto-kpi">
+      <div class="bd-auto-kpi-val" id="bd-auto-emails-today">—</div>
+      <div class="bd-auto-kpi-lbl">📧 Emails Today</div>
+    </div>
+    <div class="bd-auto-divider"></div>
+    <div class="bd-auto-kpi">
+      <div class="bd-auto-kpi-val" id="bd-auto-calls-today">—</div>
+      <div class="bd-auto-kpi-lbl">📞 Calls Today</div>
+    </div>
+    <div class="bd-auto-divider"></div>
+    <div class="bd-auto-kpi">
+      <div class="bd-auto-kpi-val" id="bd-auto-appts">—</div>
+      <div class="bd-auto-kpi-lbl">📅 Appointments</div>
+    </div>
+    <div class="bd-auto-actions">
+      <button class="bd-auto-btn" id="bd-btn-campaign" onclick="bdRunCampaign()">🤖 Run Campaign Now</button>
+      <button class="bd-auto-btn" id="bd-btn-calls" onclick="bdRunCalls()">📞 Run Calls Now</button>
+    </div>
+  </div>
+
+  <!-- Sector Campaign Stat Boxes -->
+  <div class="bd-sector-stats" id="bd-sector-stats">
+    <div class="bd-sector-stat">
+      <div class="bd-sector-stat-title">🏥 Healthcare — This Week</div>
+      <div class="bd-sector-stat-row"><span>Prospects</span><span id="bd-stat-hc-prospects">—</span></div>
+      <div class="bd-sector-stat-row"><span>Emails Sent</span><span id="bd-stat-hc-emails">—</span></div>
+      <div class="bd-sector-stat-row"><span>Calls Made</span><span id="bd-stat-hc-calls">—</span></div>
+    </div>
+    <div class="bd-sector-stat">
+      <div class="bd-sector-stat-title">🏢 Enterprise — This Week</div>
+      <div class="bd-sector-stat-row"><span>Prospects</span><span id="bd-stat-ent-prospects">—</span></div>
+      <div class="bd-sector-stat-row"><span>Emails Sent</span><span id="bd-stat-ent-emails">—</span></div>
+      <div class="bd-sector-stat-row"><span>Calls Made</span><span id="bd-stat-ent-calls">—</span></div>
+    </div>
+    <div class="bd-sector-stat">
+      <div class="bd-sector-stat-title">🔗 Platform — This Week</div>
+      <div class="bd-sector-stat-row"><span>Prospects</span><span id="bd-stat-plt-prospects">—</span></div>
+      <div class="bd-sector-stat-row"><span>Emails Sent</span><span id="bd-stat-plt-emails">—</span></div>
+      <div class="bd-sector-stat-row"><span>Calls Made</span><span id="bd-stat-plt-calls">—</span></div>
     </div>
   </div>
 
@@ -20110,6 +20189,7 @@ function lfRenderExpertReport(segment, d) {
             <th>Sector</th>
             <th>Rep</th>
             <th>Status</th>
+            <th>Seq</th>
             <th>Est. Monthly Value</th>
             <th>Last Contact</th>
             <th>Next Action</th>
@@ -20117,7 +20197,7 @@ function lfRenderExpertReport(segment, d) {
           </tr>
         </thead>
         <tbody id="bd-prospect-tbody">
-          <tr><td colspan="8" class="bd-empty">No prospects yet — click <strong style="color:var(--gold)">+ Add Lead</strong> to start building your pipeline.</td></tr>
+          <tr><td colspan="9" class="bd-empty">No prospects yet — click <strong style="color:var(--gold)">+ Add Lead</strong> to start building your pipeline.</td></tr>
         </tbody>
       </table>
     </div>
@@ -20182,6 +20262,17 @@ function lfRenderExpertReport(segment, d) {
         <button class="lf-btn-ghost" onclick="closeBdAddForm()">Cancel</button>
         <button class="lf-btn" onclick="saveBdProspect()">Save Lead</button>
       </div>
+    </div>
+  </div>
+
+  <!-- Recent Activity Feed -->
+  <div class="bd-activity-wrap">
+    <div class="bd-activity-hd">
+      <div class="bd-activity-title">⚡ Recent Outreach Activity</div>
+      <button class="lf-btn-ghost" style="font-size:11px;padding:4px 10px;margin-left:auto;" onclick="bdLoadActivity()">↻ Refresh</button>
+    </div>
+    <div class="bd-activity-list" id="bd-activity-list">
+      <div class="bd-activity-row"><div class="bd-activity-body" style="color:rgba(255,255,255,.3);text-align:center;padding:16px 0;">No outreach activity yet — run a campaign to get started.</div></div>
     </div>
   </div>
 
@@ -21066,6 +21157,8 @@ let _bdLoading=false;
 
 function initLfBizDev(){
   loadLfBizDevProspects();
+  bdLoadActivity();
+  bdLoadStats();
 }
 
 async function loadLfBizDevProspects(){
@@ -21116,7 +21209,7 @@ function renderBdProspects(){
   set('bd-kpi-pipeline',pipeline?'$'+pipeline.toLocaleString():'—');
   set('bd-kpi-mrr',mrr?'$'+mrr.toLocaleString()+'/mo':'—');
 
-  if(!filtered.length){tbody.innerHTML='<tr><td colspan="8" class="bd-empty">No prospects in this segment — click <strong style="color:var(--gold)">+ Add Lead</strong> to start building your pipeline.</td></tr>';return;}
+  if(!filtered.length){tbody.innerHTML='<tr><td colspan="9" class="bd-empty">No prospects in this segment — click <strong style="color:var(--gold)">+ Add Lead</strong> to start building your pipeline.</td></tr>';return;}
 
   const statusClass=s=>'bd-status-badge bd-status-'+s;
   const statusLabel={prospecting:'Prospecting',contacted:'Contacted',proposal:'Proposal Sent',negotiating:'Negotiating',contract:'Contract',active:'Active Client',lost:'Lost'};
@@ -21128,6 +21221,8 @@ function renderBdProspects(){
     const sectorLabel=BD_SECTOR_LABELS[p.sector]||p.sector||'—';
     const lastTouch=_bdTouch(p)?new Date(_bdTouch(p)).toLocaleDateString('en-US',{month:'short',day:'numeric'}):'Never';
     const value=_bdVal(p)?'$'+_bdVal(p).toLocaleString()+'/mo':'—';
+    const seqStep=p.sequence_step!=null?p.sequence_step:null;
+    const stepBadge=seqStep!=null?`<span class="bd-step-badge">Step ${seqStep}/4</span>`:'<span style="font-size:10px;color:rgba(255,255,255,.25)">—</span>';
     return`<tr>
       <td>
         <div style="font-weight:700;font-size:13px;color:#fff">${esc(p.company||'—')}</div>
@@ -21137,6 +21232,7 @@ function renderBdProspects(){
       <td><span style="font-size:11px;font-weight:600;color:${sectorColor[p.sector]||'rgba(255,255,255,.5)'}">${esc(sectorLabel)}</span></td>
       <td style="font-size:12px;color:rgba(255,255,255,.55)">${esc(repName)}</td>
       <td><span class="${statusClass(p.status)}">${statusLabel[p.status]||p.status}</span></td>
+      <td>${stepBadge}</td>
       <td style="font-size:13px;font-weight:700;color:var(--gold)">${value}</td>
       <td style="font-size:12px;color:rgba(255,255,255,.45)">${lastTouch}</td>
       <td style="font-size:12px;color:rgba(255,255,255,.55);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(p.notes||'')}">${esc(p.notes||'—')}</td>
@@ -21271,6 +21367,113 @@ function bdEmailProspect(id){
       const pitches={healthcare:`Hi ${p.contact||'there'},\n\nI'm reaching out from 3 Lakes Logistics regarding our NEMT and medical transport services. We specialize in reliable, HIPAA-aware dispatch with ADA vehicle options and same-day scheduling for recurring medical trips.\n\nNo monthly fee — just 15% per completed trip. We'd love to discuss how we can support your transport needs.\n\nWould you have 15 minutes this week for a quick call?\n\nBest,\n${rep}\n3 Lakes Light Fleet\n661-466-9932`,enterprise:`Hi ${p.contact||'there'},\n\nI'm reaching out from 3 Lakes Logistics about our corporate courier and executive transport services. We offer reliable same-day delivery and executive car service with real-time tracking and dedicated dispatch — flat 15% fee, no monthly contracts.\n\nI'd love to show you how we're serving businesses in your area.\n\nBest,\n${rep}\n3 Lakes Light Fleet\n661-466-9932`,platform:`Hi ${p.contact||'there'},\n\nI'm ${rep} from 3 Lakes Logistics. We have a network of pre-vetted, insured Light Fleet drivers available for platform partnerships and driver supply agreements.\n\nWe offer bulk driver supply, volume pricing, and white-label dispatch integration. I'd love to explore how our fleet can extend your network capacity.\n\nBest,\n${rep}\n3 Lakes Light Fleet\n661-466-9932`};
       if(body)body.value=pitches[p.sector]||pitches.enterprise;
     },400);
+  }
+}
+
+// ── BizDev Automation Functions ───────────────────────────────────────────
+
+async function bdRunCampaign(){
+  const btn=document.getElementById('bd-btn-campaign');
+  if(btn){btn.textContent='Running…';btn.disabled=true;}
+  try{
+    const res=await apiFetch('/api/lf-bizdev/run-campaign/',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({})});
+    const data=await res.json();
+    const emails=data?.result?.emails?.sent??0;
+    const calls=data?.result?.calls?.calls_queued??0;
+    if(typeof notify==='function')notify(`Campaign complete: ${emails} emails sent, ${calls} calls queued`);
+    // Update today KPIs
+    const ev=document.getElementById('bd-auto-emails-today');if(ev)ev.textContent=emails;
+    const cv=document.getElementById('bd-auto-calls-today');if(cv)cv.textContent=calls;
+    bdLoadActivity();
+  }catch(e){
+    console.error('BD campaign failed:',e);
+    if(typeof notify==='function')notify('Campaign error: '+e.message,'error');
+  }finally{
+    if(btn){btn.textContent='🤖 Run Campaign Now';btn.disabled=false;}
+  }
+}
+
+async function bdRunCalls(){
+  const btn=document.getElementById('bd-btn-calls');
+  if(btn){btn.textContent='Calling…';btn.disabled=true;}
+  try{
+    const res=await apiFetch('/api/lf-bizdev/run-calls/',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({})});
+    const data=await res.json();
+    const calls=data?.result?.calls_queued??0;
+    if(typeof notify==='function')notify(`Calls queued: ${calls}`);
+    const cv=document.getElementById('bd-auto-calls-today');if(cv)cv.textContent=calls;
+    bdLoadActivity();
+  }catch(e){
+    console.error('BD calls failed:',e);
+    if(typeof notify==='function')notify('Call error: '+e.message,'error');
+  }finally{
+    if(btn){btn.textContent='📞 Run Calls Now';btn.disabled=false;}
+  }
+}
+
+async function bdLoadActivity(){
+  try{
+    const res=await apiFetch('/api/lf-bizdev/activity/?limit=20');
+    const data=await res.json();
+    bdRenderActivity(data.logs||[]);
+  }catch(e){
+    console.warn('BD activity load failed:',e.message);
+  }
+}
+
+function bdRenderActivity(logs){
+  const list=document.getElementById('bd-activity-list');
+  if(!list)return;
+  if(!logs.length){
+    list.innerHTML='<div class="bd-activity-row"><div class="bd-activity-body" style="color:rgba(255,255,255,.3);text-align:center;padding:16px 0;">No outreach activity yet — run a campaign to get started.</div></div>';
+    return;
+  }
+  const chanIcon={email:'📧',call:'📞',sms:'💬'};
+  const statusCls={sent:'sent',failed:'failed',connected:'connected',voicemail:'voicemail',no_answer:'failed'};
+  list.innerHTML=logs.map(l=>{
+    const icon=chanIcon[l.channel]||'📋';
+    const sc=statusCls[l.status]||'sent';
+    const ts=l.created_at?new Date(l.created_at).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}):'';
+    const detail=l.channel==='email'?`Step ${l.step} — ${esc(l.subject||'')}`:l.channel==='call'?`Step ${l.step} outbound call`:`Step ${l.step}`;
+    return`<div class="bd-activity-row">
+      <div class="bd-activity-icon">${icon}</div>
+      <div class="bd-activity-body">
+        <div class="bd-activity-company">${esc(l.company||'Unknown')}</div>
+        <div class="bd-activity-detail">${detail} <span class="bd-activity-status bd-activity-status-${sc}">${l.status||'sent'}</span></div>
+      </div>
+      <div class="bd-activity-ts">${ts}</div>
+    </div>`;
+  }).join('');
+
+  // Update today email/call KPIs from activity
+  const today=new Date().toDateString();
+  const todayLogs=logs.filter(l=>l.created_at&&new Date(l.created_at).toDateString()===today);
+  const todayEmails=todayLogs.filter(l=>l.channel==='email'&&l.status==='sent').length;
+  const todayCalls=todayLogs.filter(l=>l.channel==='call').length;
+  const ev=document.getElementById('bd-auto-emails-today');if(ev&&ev.textContent==='—')ev.textContent=todayEmails;
+  const cv=document.getElementById('bd-auto-calls-today');if(cv&&cv.textContent==='—')cv.textContent=todayCalls;
+}
+
+async function bdLoadStats(){
+  try{
+    const res=await apiFetch('/api/lf-bizdev/stats/');
+    const data=await res.json();
+    const ss=data.sector_stats||{};
+    const set=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
+    set('bd-stat-hc-prospects',ss.healthcare?.prospects??'—');
+    set('bd-stat-hc-emails',ss.healthcare?.emails??'—');
+    set('bd-stat-hc-calls',ss.healthcare?.calls??'—');
+    set('bd-stat-ent-prospects',ss.enterprise?.prospects??'—');
+    set('bd-stat-ent-emails',ss.enterprise?.emails??'—');
+    set('bd-stat-ent-calls',ss.enterprise?.calls??'—');
+    set('bd-stat-plt-prospects',ss.platform?.prospects??'—');
+    set('bd-stat-plt-emails',ss.platform?.emails??'—');
+    set('bd-stat-plt-calls',ss.platform?.calls??'—');
+    // Appointments = prospects with appointment_at set (from stats endpoint)
+    const appts=(data.prospects||[]).filter(p=>p.appointment_at).length;
+    set('bd-auto-appts',appts);
+  }catch(e){
+    console.warn('BD stats load failed:',e.message);
   }
 }
 </script>
@@ -21729,370 +21932,449 @@ async function bdSubmitFactoring() {
 ════════════════════════════════════════════════════════════════════════ -->
 <div class="page" id="page-trading-desk">
 <style>
-.td-hero{background:linear-gradient(135deg,#1e3a2f 0%,#14532d 50%,#166534 100%);border-radius:16px;padding:28px 32px;margin-bottom:24px;position:relative;overflow:hidden;}
-.td-hero::before{content:'';position:absolute;top:-60px;right:-60px;width:220px;height:220px;border-radius:50%;background:rgba(34,197,94,.08);pointer-events:none;}
-.td-hero-title{font-size:22px;font-weight:800;color:#fff;margin-bottom:4px;}
-.td-hero-sub{font-size:13px;color:rgba(255,255,255,.65);}
-.td-stat-row{display:flex;gap:16px;margin-top:20px;flex-wrap:wrap;}
-.td-stat{background:rgba(0,0,0,.2);border-radius:10px;padding:12px 16px;min-width:120px;}
-.td-stat-n{font-size:22px;font-weight:800;color:#4ade80;}
-.td-stat-l{font-size:10px;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.8px;margin-top:2px;}
-.td-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:24px;}
-@media(max-width:900px){.td-grid{grid-template-columns:1fr 1fr;}}
-@media(max-width:600px){.td-grid{grid-template-columns:1fr;}}
-.td-agent-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px;}
-.td-agent-name{font-size:15px;font-weight:700;margin-bottom:2px;}
-.td-agent-role{font-size:11px;color:var(--muted);margin-bottom:14px;}
-.td-agent-btn{width:100%;padding:9px 0;font-size:12px;font-weight:700;border:none;border-radius:8px;cursor:pointer;margin-top:6px;transition:opacity .15s;}
-.td-agent-btn:active{opacity:.8;}
-.td-panel{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px;margin-bottom:20px;}
-.td-panel-hd{font-size:13px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:8px;}
-.td-table{width:100%;border-collapse:collapse;font-size:12px;}
-.td-table th{text-align:left;color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.6px;padding:6px 10px;border-bottom:1px solid var(--border);}
-.td-table td{padding:8px 10px;border-bottom:1px solid rgba(255,255,255,.04);vertical-align:middle;}
-.td-table tr:last-child td{border-bottom:none;}
-.td-pill{display:inline-block;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;}
-.td-sourced{background:rgba(99,102,241,.15);color:#a5b4fc;}
-.td-covered{background:rgba(34,197,94,.12);color:#4ade80;}
-.td-dispatched{background:rgba(245,158,11,.12);color:#fbbf24;}
-.td-settled{background:rgba(148,163,184,.1);color:var(--muted);}
-.td-form{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
-@media(max-width:600px){.td-form{grid-template-columns:1fr;}}
-.td-inp{width:100%;padding:9px 12px;font-size:13px;background:var(--bg);border:1.5px solid var(--border);border-radius:8px;color:var(--text);}
-.td-inp:focus{outline:none;border-color:#22c55e;box-shadow:0 0 0 3px rgba(34,197,94,.12);}
-.td-inp-label{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;margin-bottom:5px;display:block;}
+/* ── Trading Desk Styles ─────────────────────────────────── */
+.td-wrap{padding:20px 24px 60px;max-width:1400px;margin:0 auto;}
+.td-hero{background:linear-gradient(135deg,#0b1e14 0%,#0f2d1c 50%,#14532d 100%);border-radius:16px;padding:24px 28px;margin-bottom:20px;position:relative;overflow:hidden;border:1px solid rgba(34,197,94,.15);}
+.td-hero::before{content:'';position:absolute;top:-40px;right:-40px;width:180px;height:180px;border-radius:50%;background:rgba(34,197,94,.06);pointer-events:none;}
+.td-hero-title{font-size:20px;font-weight:900;color:#fff;margin-bottom:2px;letter-spacing:-.3px;}
+.td-hero-sub{font-size:12px;color:rgba(255,255,255,.5);}
+.td-auto-strip{display:flex;align-items:center;gap:10px;margin-top:16px;flex-wrap:wrap;}
+.td-auto-btn{padding:8px 16px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;border:1px solid;transition:opacity .15s;}
+.td-auto-btn:hover{opacity:.8;}
+.td-auto-btn-acq{background:rgba(34,197,94,.15);border-color:rgba(34,197,94,.4);color:#4ade80;}
+.td-auto-btn-cov{background:rgba(59,130,246,.15);border-color:rgba(59,130,246,.4);color:#93c5fd;}
+.td-auto-btn-close{background:rgba(245,158,11,.12);border-color:rgba(245,158,11,.3);color:#fbbf24;}
+.td-auto-btn-all{background:rgba(167,139,250,.15);border-color:rgba(167,139,250,.4);color:#c4b5fd;}
+.td-auto-status{font-size:11px;color:rgba(255,255,255,.35);padding:6px 10px;background:rgba(255,255,255,.04);border-radius:6px;border:1px solid rgba(255,255,255,.06);}
+.td-kpis{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:18px;}
+.td-kpi{background:#0b1812;border:1px solid rgba(34,197,94,.12);border-radius:10px;padding:14px 18px;min-width:130px;flex:1;}
+.td-kpi-val{font-size:22px;font-weight:900;color:#4ade80;font-family:var(--ff-m);}
+.td-kpi-lbl{font-size:10px;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:.7px;margin-top:3px;}
+.td-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:18px;}
+@media(max-width:900px){.td-grid{grid-template-columns:1fr;}}
+.td-panel{background:#0b1812;border:1px solid rgba(34,197,94,.1);border-radius:12px;padding:0;overflow:hidden;}
+.td-panel-hd{padding:12px 16px;background:rgba(34,197,94,.05);border-bottom:1px solid rgba(34,197,94,.1);font-size:12px;font-weight:700;color:rgba(255,255,255,.7);display:flex;align-items:center;justify-content:space-between;}
+.td-panel-body{padding:14px 16px;}
+.td-book{background:#0b1812;border:1px solid rgba(34,197,94,.1);border-radius:12px;overflow:hidden;margin-bottom:16px;}
+.td-book-hd{padding:12px 18px;background:rgba(34,197,94,.05);border-bottom:1px solid rgba(34,197,94,.1);display:flex;align-items:center;justify-content:space-between;}
+.td-book-title{font-size:13px;font-weight:800;color:#fff;}
+table.td-table{width:100%;border-collapse:collapse;font-size:12px;}
+table.td-table th{padding:8px 10px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:rgba(255,255,255,.3);border-bottom:1px solid rgba(34,197,94,.08);}
+table.td-table td{padding:9px 10px;border-bottom:1px solid rgba(255,255,255,.04);color:rgba(255,255,255,.75);}
+table.td-table tr:last-child td{border-bottom:none;}
+table.td-table tr:hover td{background:rgba(34,197,94,.03);}
+.td-risk-ok{color:#4ade80;}
+.td-risk-watch{color:#fbbf24;}
+.td-risk-at_risk{color:#f87171;font-weight:700;}
+.td-pill{font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px;}
+.td-pill-sourced{background:rgba(245,158,11,.15);color:#fbbf24;}
+.td-pill-covered{background:rgba(34,197,94,.15);color:#4ade80;}
+.td-pill-dispatched{background:rgba(59,130,246,.15);color:#93c5fd;}
+.td-pill-settled{background:rgba(124,58,237,.15);color:#a78bfa;}
+.td-lanes-grid{display:flex;flex-wrap:wrap;gap:6px;}
+.td-lane-chip{padding:5px 10px;border-radius:6px;font-size:11px;font-weight:700;background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.2);color:#4ade80;cursor:default;}
+.td-lane-chip.scanning{background:rgba(34,197,94,.15);animation:td-pulse 2s infinite;}
+@keyframes td-pulse{0%,100%{opacity:1;}50%{opacity:.5;}}
+.td-activity-feed{max-height:260px;overflow-y:auto;}
+.td-act-row{display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.04);}
+.td-act-row:last-child{border-bottom:none;}
+.td-act-icon{font-size:14px;flex-shrink:0;margin-top:1px;}
+.td-act-body{flex:1;}
+.td-act-action{font-size:12px;font-weight:600;color:rgba(255,255,255,.8);}
+.td-act-result{font-size:11px;color:rgba(255,255,255,.4);margin-top:1px;}
+.td-act-ts{font-size:10px;color:rgba(255,255,255,.2);flex-shrink:0;margin-top:2px;}
+.td-pnl-bar{height:6px;background:rgba(255,255,255,.06);border-radius:10px;overflow:hidden;margin-top:6px;}
+.td-pnl-fill{height:100%;background:#4ade80;border-radius:10px;transition:width .8s;}
+.td-score-badge{font-size:10px;font-weight:800;padding:1px 6px;border-radius:20px;}
+.td-score-book{background:rgba(34,197,94,.15);color:#4ade80;}
+.td-score-negotiate{background:rgba(245,158,11,.15);color:#fbbf24;}
+.td-score-pass{background:rgba(239,68,68,.12);color:#f87171;}
+.td-inline-form{background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.06);border-radius:8px;padding:12px 14px;margin-top:10px;}
+.td-fi{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:6px 10px;font-size:12px;color:#fff;width:100%;}
+.td-fi::placeholder{color:rgba(255,255,255,.25);}
 </style>
+<div class="td-wrap">
 
-<div style="padding:0 0 40px;">
-  <!-- Hero -->
+  <!-- Hero Banner -->
   <div class="td-hero">
-    <div class="td-hero-title">📈 Trading Desk</div>
-    <div class="td-hero-sub">Rex · Jordan · Casey — Brokered load book, live margin tracking</div>
-    <div class="td-stat-row">
-      <div class="td-stat"><div class="td-stat-n" id="td-open-loads">—</div><div class="td-stat-l">Open Positions</div></div>
-      <div class="td-stat"><div class="td-stat-n" id="td-uncovered">—</div><div class="td-stat-l">Need Coverage</div></div>
-      <div class="td-stat"><div class="td-stat-n" id="td-today-margin">—</div><div class="td-stat-l">Today's Margin</div></div>
-      <div class="td-stat"><div class="td-stat-n" id="td-today-settled">—</div><div class="td-stat-l">Settled Today</div></div>
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap">
+      <div>
+        <div class="td-hero-title">📈 North American Trading Desk</div>
+        <div class="td-hero-sub">Auto-acquisition every 2h · Coverage sweep every 30min · Daily close at 5PM ET · Rex · Jordan · Casey</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <div id="td-auto-indicator" style="display:flex;align-items:center;gap:6px;font-size:11px;color:#4ade80;padding:6px 12px;background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.2);border-radius:20px">
+          <span style="width:7px;height:7px;border-radius:50%;background:#4ade80;animation:td-pulse 2s infinite;display:inline-block"></span>
+          AUTO-PILOT ON
+        </div>
+        <button onclick="tdLoadDashboard()" style="padding:6px 12px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:8px;color:rgba(255,255,255,.6);font-size:11px;cursor:pointer">↻ Refresh</button>
+      </div>
+    </div>
+    <div class="td-auto-strip">
+      <button class="td-auto-btn td-auto-btn-acq" onclick="tdRunAcquisition()">🎯 Run Acquisition Now</button>
+      <button class="td-auto-btn td-auto-btn-cov" onclick="tdRunCoverage()">📞 Coverage Sweep</button>
+      <button class="td-auto-btn td-auto-btn-close" onclick="tdRunDailyClose()">📊 Daily Close</button>
+      <button class="td-auto-btn td-auto-btn-all" onclick="tdRunFullCycle()">⚡ Full Cycle</button>
+      <div id="td-cmd-status" class="td-auto-status">Desk ready — auto-pilot active</div>
     </div>
   </div>
 
-  <!-- 3 Trader Cards -->
-  <div class="td-grid">
-
-    <!-- Rex -->
-    <div class="td-agent-card">
-      <div style="font-size:28px;margin-bottom:8px;">🎯</div>
-      <div class="td-agent-name">Rex Morgan</div>
-      <div class="td-agent-role">Senior Desk Trader · Book Manager</div>
-      <p style="font-size:12px;color:var(--muted);line-height:1.5;margin-bottom:14px;">Scores load opportunities, tracks P&L, manages open positions. Every load goes through Rex before Jordan posts it.</p>
-      <div>
-        <button class="td-agent-btn" style="background:#166534;color:#4ade80;" onclick="tdRunRex('book_status')">📊 Book Status</button>
-        <button class="td-agent-btn" style="background:var(--card);color:var(--text);" onclick="tdShowScoreForm()">🎯 Score a Load</button>
-        <button class="td-agent-btn" style="background:var(--card);color:var(--text);" onclick="tdRunRex('daily_pnl')">💰 Daily P&L</button>
-      </div>
-    </div>
-
-    <!-- Jordan -->
-    <div class="td-agent-card">
-      <div style="font-size:28px;margin-bottom:8px;">🔍</div>
-      <div class="td-agent-name">Jordan Cross</div>
-      <div class="td-agent-role">Load Acquisition Trader</div>
-      <p style="font-size:12px;color:var(--muted);line-height:1.5;margin-bottom:14px;">Sources loads from DAT, Truckstop, and direct shippers. Evaluates lanes for margin potential and posts confirmed positions.</p>
-      <div>
-        <button class="td-agent-btn" style="background:#1e3a5f;color:#93c5fd;" onclick="tdShowSourceForm()">🔍 Source Loads</button>
-        <button class="td-agent-btn" style="background:var(--card);color:var(--text);" onclick="tdShowPostForm()">➕ Post a Load</button>
-        <button class="td-agent-btn" style="background:var(--card);color:var(--text);" onclick="tdRunJordan('open_positions')">📋 Open Positions</button>
-      </div>
-    </div>
-
-    <!-- Casey -->
-    <div class="td-agent-card">
-      <div style="font-size:28px;margin-bottom:8px;">📞</div>
-      <div class="td-agent-name">Casey Lane</div>
-      <div class="td-agent-role">Carrier Coverage Trader</div>
-      <p style="font-size:12px;color:var(--muted);line-height:1.5;margin-bottom:14px;">Covers open positions with vetted carriers. Negotiates buy rates via Bland AI calls and load board postings.</p>
-      <div>
-        <button class="td-agent-btn" style="background:#3b1f6e;color:#c4b5fd;" onclick="tdShowCoverageForm()">🚛 Find Coverage</button>
-        <button class="td-agent-btn" style="background:var(--card);color:var(--text);" onclick="tdRunCasey('covered_today')">✅ Covered Today</button>
-      </div>
-    </div>
-
+  <!-- KPIs -->
+  <div class="td-kpis">
+    <div class="td-kpi"><div class="td-kpi-val" id="td-kpi-open">—</div><div class="td-kpi-lbl">Open Positions</div></div>
+    <div class="td-kpi"><div class="td-kpi-val" id="td-kpi-uncovered" style="color:#fbbf24">—</div><div class="td-kpi-lbl">Uncovered</div></div>
+    <div class="td-kpi"><div class="td-kpi-val" id="td-kpi-risk" style="color:#f87171">—</div><div class="td-kpi-lbl">At Risk (&gt;90min)</div></div>
+    <div class="td-kpi"><div class="td-kpi-val" id="td-kpi-today-margin">—</div><div class="td-kpi-lbl">Today's Margin</div></div>
+    <div class="td-kpi"><div class="td-kpi-val" id="td-kpi-mtd-margin">—</div><div class="td-kpi-lbl">MTD Margin</div></div>
+    <div class="td-kpi"><div class="td-kpi-val" id="td-kpi-avg-mp">—</div><div class="td-kpi-lbl">Avg Margin %</div></div>
   </div>
 
-  <!-- Score a Load Form (hidden by default) -->
-  <div class="td-panel" id="td-score-form" style="display:none">
-    <div class="td-panel-hd">🎯 Rex — Score a Load Opportunity</div>
-    <div class="td-form" style="margin-bottom:14px;">
-      <div><label class="td-inp-label">Origin City</label><input class="td-inp" id="td-s-ocity" placeholder="Chicago"></div>
-      <div><label class="td-inp-label">Origin State</label><input class="td-inp" id="td-s-ostate" placeholder="IL" maxlength="2"></div>
-      <div><label class="td-inp-label">Dest City</label><input class="td-inp" id="td-s-dcity" placeholder="Dallas"></div>
-      <div><label class="td-inp-label">Dest State</label><input class="td-inp" id="td-s-dstate" placeholder="TX" maxlength="2"></div>
-      <div><label class="td-inp-label">Miles</label><input class="td-inp" id="td-s-miles" type="number" placeholder="920"></div>
-      <div><label class="td-inp-label">Sell Rate ($)</label><input class="td-inp" id="td-s-sell" type="number" placeholder="2400"></div>
-      <div><label class="td-inp-label">Buy Rate ($)</label><input class="td-inp" id="td-s-buy" type="number" placeholder="1950"></div>
-      <div><label class="td-inp-label">Commodity</label><input class="td-inp" id="td-s-commodity" placeholder="General Freight"></div>
-    </div>
-    <button class="btn-gold" onclick="tdScoreLoad()">Score This Load →</button>
-  </div>
-
-  <!-- Post a Load Form -->
-  <div class="td-panel" id="td-post-form" style="display:none">
-    <div class="td-panel-hd">➕ Jordan — Post a Load to the Book</div>
-    <div class="td-form" style="margin-bottom:14px;">
-      <div><label class="td-inp-label">Origin City</label><input class="td-inp" id="td-p-ocity" placeholder="Chicago"></div>
-      <div><label class="td-inp-label">Origin State</label><input class="td-inp" id="td-p-ostate" placeholder="IL" maxlength="2"></div>
-      <div><label class="td-inp-label">Dest City</label><input class="td-inp" id="td-p-dcity" placeholder="Dallas"></div>
-      <div><label class="td-inp-label">Dest State</label><input class="td-inp" id="td-p-dstate" placeholder="TX" maxlength="2"></div>
-      <div><label class="td-inp-label">Miles</label><input class="td-inp" id="td-p-miles" type="number" placeholder="920"></div>
-      <div><label class="td-inp-label">Sell Rate ($)</label><input class="td-inp" id="td-p-sell" type="number" placeholder="2400"></div>
-      <div><label class="td-inp-label">Target Buy Rate ($)</label><input class="td-inp" id="td-p-buy" type="number" placeholder="1950"></div>
-      <div><label class="td-inp-label">Pickup Date</label><input class="td-inp" id="td-p-pickup" type="date"></div>
-      <div><label class="td-inp-label">Shipper / Broker</label><input class="td-inp" id="td-p-shipper" placeholder="Acme Shippers Inc."></div>
-      <div><label class="td-inp-label">Source Platform</label>
-        <select class="td-inp" id="td-p-source">
-          <option value="direct">Direct Shipper</option>
-          <option value="dat">DAT</option>
-          <option value="truckstop">Truckstop</option>
-          <option value="123loadboard">123LoadBoard</option>
-          <option value="other">Other</option>
+  <!-- Live Book -->
+  <div class="td-book">
+    <div class="td-book-hd">
+      <div class="td-book-title">📋 Live Position Book <span id="td-book-count" style="font-size:11px;font-weight:400;color:rgba(255,255,255,.35)"></span></div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <select id="td-book-filter" onchange="tdRenderBook()" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:4px 8px;font-size:11px;color:#fff">
+          <option value="all">All Status</option>
+          <option value="sourced">Uncovered</option>
+          <option value="covered">Covered</option>
+          <option value="dispatched">Dispatched</option>
         </select>
+        <button onclick="tdPostLoadQuick()" style="padding:5px 12px;background:rgba(34,197,94,.15);border:1px solid rgba(34,197,94,.3);border-radius:6px;font-size:11px;font-weight:700;color:#4ade80;cursor:pointer">+ Post Load</button>
       </div>
     </div>
-    <button class="btn-gold" onclick="tdPostLoad()">Post to Book →</button>
-  </div>
-
-  <!-- Source Loads Form -->
-  <div class="td-panel" id="td-source-form" style="display:none">
-    <div class="td-panel-hd">🔍 Jordan — Source Loads from Load Boards</div>
-    <div class="td-form" style="margin-bottom:14px;">
-      <div><label class="td-inp-label">Origin State</label><input class="td-inp" id="td-src-state" placeholder="IL" maxlength="2"></div>
-      <div><label class="td-inp-label">Min $/Mile</label><input class="td-inp" id="td-src-rpm" type="number" step="0.01" placeholder="2.20"></div>
-      <div><label class="td-inp-label">Min Margin %</label><input class="td-inp" id="td-src-margin" type="number" placeholder="12"></div>
-      <div><label class="td-inp-label">Trailer Type</label>
-        <select class="td-inp" id="td-src-trailer">
-          <option value="dry_van">Dry Van</option>
-          <option value="reefer">Reefer</option>
-          <option value="flatbed">Flatbed</option>
-        </select>
-      </div>
-    </div>
-    <button class="btn-gold" onclick="tdSourceLoads()">Search Load Boards →</button>
-  </div>
-
-  <!-- Coverage Form -->
-  <div class="td-panel" id="td-coverage-form" style="display:none">
-    <div class="td-panel-hd">🚛 Casey — Find Coverage for a Load</div>
-    <div class="td-form" style="margin-bottom:14px;">
-      <div><label class="td-inp-label">Load ID (from book)</label><input class="td-inp" id="td-c-loadid" placeholder="uuid"></div>
-      <div><label class="td-inp-label">Origin State</label><input class="td-inp" id="td-c-ostate" placeholder="IL" maxlength="2"></div>
-      <div><label class="td-inp-label">Dest State</label><input class="td-inp" id="td-c-dstate" placeholder="TX" maxlength="2"></div>
-      <div><label class="td-inp-label">Miles</label><input class="td-inp" id="td-c-miles" type="number" placeholder="920"></div>
-      <div><label class="td-inp-label">Sell Rate ($)</label><input class="td-inp" id="td-c-sell" type="number" placeholder="2400"></div>
-      <div><label class="td-inp-label">Target Buy Rate ($)</label><input class="td-inp" id="td-c-buy" type="number" placeholder="1950"></div>
-      <div><label class="td-inp-label">Pickup Date</label><input class="td-inp" id="td-c-pickup" type="date"></div>
-    </div>
-    <button class="btn-gold" onclick="tdFindCoverage()">Find Coverage →</button>
-  </div>
-
-  <!-- Agent Output Panel -->
-  <div class="td-panel" id="td-output-panel" style="display:none">
-    <div class="td-panel-hd" id="td-output-title">Result</div>
-    <pre id="td-output-body" style="font-size:12px;color:var(--text);white-space:pre-wrap;word-break:break-word;max-height:420px;overflow-y:auto;margin:0;"></pre>
-  </div>
-
-  <!-- Open Positions Table -->
-  <div class="td-panel">
-    <div class="td-panel-hd">📋 Open Positions <span style="font-size:11px;font-weight:400;color:var(--muted)" id="td-book-count"></span></div>
-    <div style="overflow-x:auto;">
+    <div style="overflow-x:auto">
       <table class="td-table">
-        <thead>
-          <tr>
-            <th>Lane</th><th>Miles</th><th>Sell</th><th>Buy</th><th>Margin</th><th>Pickup</th><th>Status</th><th>Carrier</th>
-          </tr>
-        </thead>
-        <tbody id="td-positions-body">
-          <tr><td colspan="8" style="color:var(--muted);text-align:center;padding:20px;">Loading…</td></tr>
+        <thead><tr>
+          <th>Lane</th><th>Miles</th><th>Sell</th><th>Buy</th><th>Margin</th>
+          <th>Pickup</th><th>Status</th><th>Carrier</th><th>Age</th><th>Risk</th>
+        </tr></thead>
+        <tbody id="td-book-body">
+          <tr><td colspan="10" style="text-align:center;padding:30px;color:rgba(255,255,255,.3)">Loading positions…</td></tr>
         </tbody>
       </table>
     </div>
   </div>
 
+  <!-- 2-col panels -->
+  <div class="td-grid">
+
+    <!-- Hot Lanes / Scanner -->
+    <div class="td-panel">
+      <div class="td-panel-hd">
+        <span>🗺️ Hot Lanes — Auto-Scan States</span>
+        <span id="td-scan-status" style="font-size:10px;color:rgba(255,255,255,.3)">Every 2h</span>
+      </div>
+      <div class="td-panel-body">
+        <div class="td-lanes-grid" id="td-lanes-grid">
+          <!-- populated by JS -->
+        </div>
+        <div style="margin-top:14px">
+          <div style="font-size:10px;color:rgba(255,255,255,.3);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">Manual Scan</div>
+          <div style="display:flex;gap:8px">
+            <input id="td-scan-states" class="td-fi" placeholder="TX,OH,GA (blank = all hot states)" style="flex:1">
+            <button onclick="tdRunAcquisition()" style="padding:6px 14px;background:rgba(34,197,94,.15);border:1px solid rgba(34,197,94,.3);border-radius:6px;font-size:12px;font-weight:700;color:#4ade80;cursor:pointer;white-space:nowrap">Scan</button>
+          </div>
+        </div>
+        <div style="margin-top:12px">
+          <div style="font-size:10px;color:rgba(255,255,255,.3);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px">Quick Post</div>
+          <div id="td-quick-post" style="display:none">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:6px">
+              <input id="tdqp-ocity" class="td-fi" placeholder="Origin City">
+              <input id="tdqp-ostate" class="td-fi" placeholder="State (TX)">
+              <input id="tdqp-dcity" class="td-fi" placeholder="Dest City">
+              <input id="tdqp-dstate" class="td-fi" placeholder="State (IL)">
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:8px">
+              <input id="tdqp-miles" class="td-fi" type="number" placeholder="Miles">
+              <input id="tdqp-sell" class="td-fi" type="number" placeholder="Sell Rate $">
+              <input id="tdqp-buy" class="td-fi" type="number" placeholder="Buy Rate $">
+            </div>
+            <div style="display:flex;gap:8px">
+              <input id="tdqp-pickup" class="td-fi" type="date" style="flex:1">
+              <button onclick="tdQuickPost()" style="padding:6px 14px;background:rgba(34,197,94,.2);border:1px solid rgba(34,197,94,.4);border-radius:6px;font-size:12px;font-weight:700;color:#4ade80;cursor:pointer">Score &amp; Post</button>
+            </div>
+            <div id="tdqp-result" style="margin-top:8px;font-size:11px;min-height:14px;color:rgba(255,255,255,.4)"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- P&L Breakdown -->
+    <div class="td-panel">
+      <div class="td-panel-hd">
+        <span>💰 P&amp;L Breakdown</span>
+        <span style="font-size:10px;color:rgba(255,255,255,.3)">MTD</span>
+      </div>
+      <div class="td-panel-body">
+        <div id="td-pnl-today" style="margin-bottom:16px">
+          <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Today</div>
+          <div style="display:flex;gap:20px;flex-wrap:wrap">
+            <div><div class="td-kpi-val" id="pnl-today-loads" style="font-size:18px">—</div><div class="td-kpi-lbl">Loads</div></div>
+            <div><div class="td-kpi-val" id="pnl-today-rev" style="font-size:18px">—</div><div class="td-kpi-lbl">Revenue</div></div>
+            <div><div class="td-kpi-val" id="pnl-today-margin" style="font-size:18px">—</div><div class="td-kpi-lbl">Margin</div></div>
+          </div>
+        </div>
+        <div>
+          <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">MTD by Trader</div>
+          <div id="td-by-trader" style="display:flex;flex-direction:column;gap:8px">
+            <div style="color:rgba(255,255,255,.2);font-size:12px">Loading…</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Activity Feed -->
+  <div class="td-panel" style="margin-bottom:16px">
+    <div class="td-panel-hd">
+      <span>📡 Agent Activity Feed</span>
+      <span style="font-size:10px;color:rgba(255,255,255,.3)">Rex · Jordan · Casey · Live</span>
+    </div>
+    <div class="td-panel-body" style="padding:8px 16px">
+      <div class="td-activity-feed" id="td-activity-feed">
+        <div style="text-align:center;padding:20px;color:rgba(255,255,255,.2);font-size:12px">Loading activity…</div>
+      </div>
+    </div>
+  </div>
+
 </div>
 </div><!-- /page-trading-desk -->
+\n<script>
+// ── TRADING DESK AUTOPILOT ────────────────────────────────────────────────────
 
-<script>
-// ── TRADING DESK ─────────────────────────────────────────────────────────────
+const TD_HOT_STATES = ['TX','OH','GA','IL','CA','FL','TN','PA','NC','MO'];
+let _tdBook = [];
+let _tdRefreshTimer = null;
 
-function tdLoadDashboard() {
-  tdRunRex('book_status', false);
-  tdLoadPositions();
-}
-
-async function tdAgentCall(agent, payload) {
-  const token = localStorage.getItem('3ll_token') || API_TOKEN;
-  const r = await fetch('/api/agents/' + agent + '/run', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-    body: JSON.stringify(payload),
-  });
-  if (!r.ok) throw new Error(r.status + ' ' + r.statusText);
+async function tdApi(path, method='GET', body=null) {
+  const token = localStorage.getItem('3ll_token') || API_TOKEN || '';
+  const opts = { method, headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token } };
+  if (body) opts.body = JSON.stringify(body);
+  const r = await fetch(API_BASE + path, opts);
+  if (!r.ok) { const t = await r.text(); throw new Error(r.status + ': ' + t); }
   return r.json();
 }
 
-function tdShowOutput(title, data) {
-  document.getElementById('td-output-title').textContent = title;
-  document.getElementById('td-output-body').textContent = JSON.stringify(data, null, 2);
-  document.getElementById('td-output-panel').style.display = 'block';
-  document.getElementById('td-output-panel').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+function tdStatus(msg, color='rgba(255,255,255,.35)') {
+  const el = document.getElementById('td-cmd-status');
+  if (el) { el.textContent = msg; el.style.color = color; }
 }
 
-async function tdRunRex(action, showOutput = true) {
+function tdFmt$(n) { return n != null ? '$' + Number(n).toLocaleString('en-US', {maximumFractionDigits:0}) : '—'; }
+function tdFmtMin(m) { if (m < 60) return Math.round(m) + 'm'; return Math.round(m/60*10)/10 + 'h'; }
+function tdFmtDate(d) { if (!d) return '—'; return new Date(d).toLocaleDateString('en-US',{month:'short',day:'numeric'}); }
+
+async function tdLoadDashboard() {
+  tdRenderHotLanes();
   try {
-    const data = await tdAgentCall('rex', { action });
-    if (action === 'book_status') {
-      const el = id => document.getElementById(id);
-      el('td-open-loads').textContent   = data.open_positions ?? '—';
-      el('td-uncovered').textContent    = data.uncovered_loads ?? '—';
-      el('td-today-margin').textContent = data.today_gross_margin != null ? '$' + Number(data.today_gross_margin).toLocaleString() : '—';
-      el('td-today-settled').textContent = data.today_settled ?? '—';
-      const badge = document.getElementById('td-open-badge');
-      if (data.uncovered_loads > 0) { badge.textContent = data.uncovered_loads; badge.style.display = 'inline'; }
-    }
-    if (showOutput) tdShowOutput('Rex — ' + action, data);
-  } catch(e) { if (showOutput) tdShowOutput('Rex error', { error: e.message }); }
+    const [book, pnl, activity] = await Promise.all([
+      tdApi('/api/trading/live-book/'),
+      tdApi('/api/trading/pnl-summary/'),
+      tdApi('/api/trading/activity/'),
+    ]);
+    _tdBook = book.loads || [];
+    tdRenderKPIs(book, pnl);
+    tdRenderBook();
+    tdRenderPnL(pnl);
+    tdRenderActivity(activity.activity || []);
+  } catch(e) { tdStatus('Load error: ' + e.message, '#f87171'); }
+  // Auto-refresh every 90 seconds
+  if (_tdRefreshTimer) clearTimeout(_tdRefreshTimer);
+  _tdRefreshTimer = setTimeout(tdLoadDashboard, 90000);
 }
 
-async function tdRunJordan(action, payload = {}) {
-  try {
-    const data = await tdAgentCall('jordan', { action, ...payload });
-    tdShowOutput('Jordan — ' + action, data);
-    if (action === 'open_positions') tdRenderPositions(data.positions || []);
-  } catch(e) { tdShowOutput('Jordan error', { error: e.message }); }
+function tdRenderKPIs(book, pnl) {
+  const set = (id, v, clr) => { const el=document.getElementById(id); if(el){el.textContent=v; if(clr)el.style.color=clr;} };
+  set('td-kpi-open', book.open_positions ?? '—');
+  set('td-kpi-uncovered', book.uncovered ?? '—', book.uncovered > 0 ? '#fbbf24' : '#4ade80');
+  set('td-kpi-risk', book.at_risk ?? '—', book.at_risk > 0 ? '#f87171' : '#4ade80');
+  const tm = pnl?.today?.gross_margin;
+  set('td-kpi-today-margin', tdFmt$(tm), tm > 0 ? '#4ade80' : 'rgba(255,255,255,.5)');
+  const mm = pnl?.mtd?.gross_margin;
+  set('td-kpi-mtd-margin', tdFmt$(mm), mm > 0 ? '#4ade80' : 'rgba(255,255,255,.5)');
+  set('td-kpi-avg-mp', pnl?.mtd?.avg_margin_pct != null ? pnl.mtd.avg_margin_pct.toFixed(1)+'%' : '—', '#a78bfa');
+  // Sidebar badge
+  const badge = document.getElementById('td-open-badge');
+  if (badge) { if (book.uncovered > 0) { badge.textContent = book.uncovered; badge.style.display = 'inline'; } else { badge.style.display = 'none'; } }
 }
 
-async function tdRunCasey(action, payload = {}) {
-  try {
-    const data = await tdAgentCall('casey', { action, ...payload });
-    tdShowOutput('Casey — ' + action, data);
-  } catch(e) { tdShowOutput('Casey error', { error: e.message }); }
-}
-
-function tdShowScoreForm()    { document.getElementById('td-score-form').style.display = document.getElementById('td-score-form').style.display === 'none' ? 'block' : 'none'; }
-function tdShowPostForm()     { document.getElementById('td-post-form').style.display  = document.getElementById('td-post-form').style.display  === 'none' ? 'block' : 'none'; }
-function tdShowSourceForm()   { document.getElementById('td-source-form').style.display = document.getElementById('td-source-form').style.display === 'none' ? 'block' : 'none'; }
-function tdShowCoverageForm() { document.getElementById('td-coverage-form').style.display = document.getElementById('td-coverage-form').style.display === 'none' ? 'block' : 'none'; }
-
-async function tdScoreLoad() {
-  const g = id => document.getElementById(id).value.trim();
-  const payload = {
-    action: 'score_load',
-    origin_city: g('td-s-ocity'), origin_state: g('td-s-ostate'),
-    dest_city: g('td-s-dcity'),   dest_state: g('td-s-dstate'),
-    miles: Number(g('td-s-miles')),
-    sell_rate: Number(g('td-s-sell')),
-    buy_rate: Number(g('td-s-buy')),
-    commodity: g('td-s-commodity'),
-  };
-  try {
-    const data = await tdAgentCall('rex', payload);
-    const rec = data.recommendation || '';
-    const scoreColor = rec === 'book' ? '#4ade80' : rec === 'negotiate' ? '#fbbf24' : '#f87171';
-    tdShowOutput(`Rex Score: ${data.score}/10 — ${rec.toUpperCase()} (${data.rationale})`, data);
-  } catch(e) { tdShowOutput('Rex error', { error: e.message }); }
-}
-
-async function tdPostLoad() {
-  const g = id => document.getElementById(id).value.trim();
-  const payload = {
-    action: 'post_load',
-    origin_city: g('td-p-ocity'), origin_state: g('td-p-ostate'),
-    dest_city: g('td-p-dcity'),   dest_state: g('td-p-dstate'),
-    miles: Number(g('td-p-miles')),
-    sell_rate: Number(g('td-p-sell')),
-    buy_rate: Number(g('td-p-buy')),
-    pickup_date: g('td-p-pickup'),
-    shipper_name: g('td-p-shipper'),
-    source_platform: g('td-p-source'),
-  };
-  try {
-    const data = await tdAgentCall('jordan', payload);
-    tdShowOutput('Jordan — Load Posted', data);
-    tdLoadPositions();
-  } catch(e) { tdShowOutput('Jordan error', { error: e.message }); }
-}
-
-async function tdSourceLoads() {
-  const g = id => document.getElementById(id).value.trim();
-  const payload = {
-    action: 'source_loads',
-    origin_state: g('td-src-state'),
-    min_rate_per_mile: Number(g('td-src-rpm')) || 2.20,
-    min_margin_pct: Number(g('td-src-margin')) || 12,
-    trailer_type: g('td-src-trailer'),
-  };
-  try {
-    const data = await tdAgentCall('jordan', payload);
-    tdShowOutput('Jordan — Source Loads', data);
-  } catch(e) { tdShowOutput('Jordan error', { error: e.message }); }
-}
-
-async function tdFindCoverage() {
-  const g = id => document.getElementById(id).value.trim();
-  const payload = {
-    action: 'find_coverage',
-    load_id: g('td-c-loadid'),
-    origin_state: g('td-c-ostate'), dest_state: g('td-c-dstate'),
-    miles: Number(g('td-c-miles')),
-    sell_rate: Number(g('td-c-sell')),
-    target_buy_rate: Number(g('td-c-buy')),
-    pickup_date: g('td-c-pickup'),
-  };
-  try {
-    const data = await tdAgentCall('casey', payload);
-    tdShowOutput('Casey — Coverage Strategy', data);
-  } catch(e) { tdShowOutput('Casey error', { error: e.message }); }
-}
-
-async function tdLoadPositions() {
-  try {
-    const token = localStorage.getItem('3ll_token') || API_TOKEN;
-    const r = await fetch('/api/agents/jordan/run', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-      body: JSON.stringify({ action: 'open_positions' }),
-    });
-    const data = await r.json();
-    tdRenderPositions(data.positions || []);
-  } catch(e) {}
-}
-
-function tdRenderPositions(rows) {
-  const tbody = document.getElementById('td-positions-body');
+function tdRenderBook() {
+  const filter = document.getElementById('td-book-filter')?.value || 'all';
+  const tbody = document.getElementById('td-book-body');
   const countEl = document.getElementById('td-book-count');
+  if (!tbody) return;
+  const rows = filter === 'all' ? _tdBook : _tdBook.filter(r => r.status === filter);
+  if (countEl) countEl.textContent = '(' + rows.length + ')';
   if (!rows.length) {
-    tbody.innerHTML = '<tr><td colspan="8" style="color:var(--muted);text-align:center;padding:20px;">No open positions</td></tr>';
-    countEl.textContent = '';
+    tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:30px;color:rgba(255,255,255,.3)">No positions' + (filter!=='all'?' matching filter':'') + '</td></tr>';
     return;
   }
-  countEl.textContent = '(' + rows.length + ' loads)';
-  const statusClass = { sourced:'td-sourced', covered:'td-covered', dispatched:'td-dispatched', settled:'td-settled' };
   tbody.innerHTML = rows.map(r => {
-    const margin = r.gross_margin != null ? '$' + Number(r.gross_margin).toFixed(0) : '—';
-    const marginPct = r.margin_pct != null ? '(' + Number(r.margin_pct).toFixed(1) + '%)' : '';
-    const cls = statusClass[r.status] || '';
-    return `<tr>
-      <td style="font-weight:600">${r.origin_state || '?'} → ${r.dest_state || '?'}</td>
-      <td>${r.miles ? Number(r.miles).toLocaleString() : '—'}</td>
-      <td style="color:var(--green)">$${Number(r.sell_rate||0).toFixed(0)}</td>
-      <td style="color:#f87171">$${Number(r.buy_rate||0).toFixed(0)}</td>
-      <td style="color:#fbbf24">${margin} <span style="font-size:10px;color:var(--muted)">${marginPct}</span></td>
-      <td>${r.pickup_date || '—'}</td>
-      <td><span class="td-pill ${cls}">${r.status}</span></td>
-      <td style="font-size:11px;color:var(--muted)">${r.covering_carrier_name || '—'}</td>
-    </tr>`;
+    const margin = r.gross_margin != null ? tdFmt$(r.gross_margin) : '—';
+    const mp = r.margin_pct != null ? '(' + r.margin_pct + '%)' : '';
+    const riskCls = 'td-risk-' + (r.risk || 'ok');
+    const riskLabel = { ok: '✓', watch: '⚠', at_risk: '🚨 ' + tdFmtMin(r.age_minutes) }[r.risk || 'ok'] || '✓';
+    const age = r.age_minutes != null ? tdFmtMin(r.age_minutes) : '—';
+    return '<tr>' +
+      '<td style="font-weight:700">' + (r.origin_state||'?') + ' → ' + (r.dest_state||'?') + '</td>' +
+      '<td>' + (r.miles ? Number(r.miles).toLocaleString() : '—') + '</td>' +
+      '<td style="color:#4ade80">' + tdFmt$(r.sell_rate) + '</td>' +
+      '<td style="color:#f87171">' + tdFmt$(r.buy_rate) + '</td>' +
+      '<td style="color:#fbbf24;font-weight:700">' + margin + ' <span style="font-size:10px;color:rgba(255,255,255,.3)">' + mp + '</span></td>' +
+      '<td>' + tdFmtDate(r.pickup_date) + '</td>' +
+      '<td><span class="td-pill td-pill-' + r.status + '">' + (r.status||'—') + '</span></td>' +
+      '<td style="color:rgba(255,255,255,.45);font-size:11px">' + (r.covering_carrier_name || '—') + '</td>' +
+      '<td style="color:rgba(255,255,255,.4);font-size:11px">' + age + '</td>' +
+      '<td class="' + riskCls + '" style="font-size:12px">' + riskLabel + '</td>' +
+    '</tr>';
   }).join('');
 }
-</script>
+
+function tdRenderHotLanes() {
+  const grid = document.getElementById('td-lanes-grid');
+  if (!grid) return;
+  grid.innerHTML = TD_HOT_STATES.map(s =>
+    '<div class="td-lane-chip">' + s + '</div>'
+  ).join('');
+}
+
+function tdRenderPnL(pnl) {
+  const set = (id, v) => { const el=document.getElementById(id); if(el)el.textContent=v; };
+  const t = pnl?.today || {};
+  set('pnl-today-loads', t.loads ?? '0');
+  set('pnl-today-rev', tdFmt$(t.revenue));
+  set('pnl-today-margin', tdFmt$(t.gross_margin));
+
+  const traders = pnl?.by_trader || {};
+  const traderEl = document.getElementById('td-by-trader');
+  if (!traderEl) return;
+  const names = { rex: 'Rex Morgan', jordan: 'Jordan Cross', casey: 'Casey Lane' };
+  const entries = Object.entries(traders).sort((a,b) => b[1].margin - a[1].margin);
+  if (!entries.length) { traderEl.innerHTML = '<div style="color:rgba(255,255,255,.2);font-size:12px">No MTD data yet</div>'; return; }
+  const maxM = Math.max(...entries.map(([,v])=>v.margin), 1);
+  traderEl.innerHTML = entries.map(([key, v]) => {
+    const pct = Math.round(v.margin / maxM * 100);
+    return '<div><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px"><span style="color:rgba(255,255,255,.65)">' + (names[key]||key) + '</span><span style="color:#4ade80">' + tdFmt$(v.margin) + ' <span style="color:rgba(255,255,255,.3);font-size:10px">(' + v.loads + ' loads)</span></span></div><div class="td-pnl-bar"><div class="td-pnl-fill" style="width:' + pct + '%"></div></div></div>';
+  }).join('');
+}
+
+function tdRenderActivity(rows) {
+  const feed = document.getElementById('td-activity-feed');
+  if (!feed) return;
+  const icons = { rex: '📊', jordan: '🎯', casey: '📞' };
+  const actionColors = {
+    auto_acquisition: '#4ade80', auto_coverage_sweep: '#93c5fd', auto_coverage_escalation: '#fbbf24',
+    score_load: '#a78bfa', post_load: '#4ade80', find_coverage: '#60a5fa',
+    call_carrier: '#fbbf24', confirm_coverage: '#4ade80', daily_close: '#fbbf24',
+    book_status: 'rgba(255,255,255,.5)',
+  };
+  if (!rows.length) { feed.innerHTML = '<div style="text-align:center;padding:20px;color:rgba(255,255,255,.2);font-size:12px">No activity yet</div>'; return; }
+  feed.innerHTML = rows.map(r => {
+    const ts = r.ts ? new Date(r.ts).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'}) : '';
+    const clr = actionColors[r.action] || 'rgba(255,255,255,.5)';
+    return '<div class="td-act-row">' +
+      '<div class="td-act-icon">' + (icons[r.agent]||'🤖') + '</div>' +
+      '<div class="td-act-body">' +
+        '<div class="td-act-action" style="color:' + clr + '">' + (r.agent||'').toUpperCase() + ' · ' + (r.action||'') + '</div>' +
+        (r.result ? '<div class="td-act-result">' + r.result + '</div>' : '') +
+      '</div>' +
+      '<div class="td-act-ts">' + ts + '</div>' +
+    '</div>';
+  }).join('');
+}
+
+async function tdRunAcquisition() {
+  const statesInput = document.getElementById('td-scan-states')?.value || '';
+  const states = statesInput.split(',').map(s=>s.trim().toUpperCase()).filter(Boolean).join(',');
+  tdStatus('⏳ Jordan scanning load boards…', '#fbbf24');
+  document.querySelectorAll('.td-lane-chip').forEach(c => c.classList.add('scanning'));
+  try {
+    const r = await tdApi('/api/trading/run-acquisition/?states=' + states, 'POST');
+    tdStatus('✓ Acquisition complete — ' + r.posted + ' loads posted, ' + r.skipped_low_score + ' skipped', '#4ade80');
+    setTimeout(tdLoadDashboard, 1000);
+  } catch(e) {
+    tdStatus('Acquisition error: ' + e.message, '#f87171');
+  } finally {
+    document.querySelectorAll('.td-lane-chip').forEach(c => c.classList.remove('scanning'));
+  }
+}
+
+async function tdRunCoverage() {
+  tdStatus('⏳ Casey running coverage sweep…', '#93c5fd');
+  try {
+    const r = await tdApi('/api/trading/run-coverage/', 'POST');
+    tdStatus('✓ Coverage sweep — ' + r.uncovered_loads + ' uncovered, ' + r.calls_made + ' calls made', '#93c5fd');
+    setTimeout(tdLoadDashboard, 1000);
+  } catch(e) {
+    tdStatus('Coverage error: ' + e.message, '#f87171');
+  }
+}
+
+async function tdRunDailyClose() {
+  tdStatus('⏳ Rex running daily P&L close…', '#fbbf24');
+  try {
+    const r = await tdApi('/api/trading/daily-close/', 'POST');
+    tdStatus('✓ Daily close — ' + r.total_loads + ' loads, $' + Number(r.gross_margin||0).toLocaleString() + ' margin', '#fbbf24');
+    setTimeout(tdLoadDashboard, 1200);
+  } catch(e) {
+    tdStatus('Close error: ' + e.message, '#f87171');
+  }
+}
+
+async function tdRunFullCycle() {
+  tdStatus('⚡ Running full cycle — acquisition + coverage + settlement…', '#c4b5fd');
+  try {
+    const r = await tdApi('/api/trading/run-full/', 'POST');
+    const posted = r.acquisition?.posted ?? 0;
+    const calls  = r.coverage?.calls_made ?? 0;
+    const settled = r.settlement?.auto_settled ?? 0;
+    tdStatus('✓ Full cycle — ' + posted + ' posted, ' + calls + ' calls, ' + settled + ' settled', '#4ade80');
+    setTimeout(tdLoadDashboard, 1200);
+  } catch(e) {
+    tdStatus('Full cycle error: ' + e.message, '#f87171');
+  }
+}
+
+function tdPostLoadQuick() {
+  const qp = document.getElementById('td-quick-post');
+  if (qp) qp.style.display = qp.style.display === 'none' ? 'block' : 'none';
+}
+
+async function tdQuickPost() {
+  const g = id => document.getElementById(id)?.value?.trim() || '';
+  const sell = parseFloat(g('tdqp-sell'));
+  const buy  = parseFloat(g('tdqp-buy')) || sell * 0.82;
+  const payload = {
+    origin_city: g('tdqp-ocity'), origin_state: g('tdqp-ostate').toUpperCase(),
+    dest_city: g('tdqp-dcity'), dest_state: g('tdqp-dstate').toUpperCase(),
+    miles: parseInt(g('tdqp-miles')) || 0, sell_rate: sell, buy_rate: buy,
+    pickup_date: g('tdqp-pickup') || null,
+  };
+  const res = document.getElementById('tdqp-result');
+  if (!payload.origin_state || !payload.dest_state || !sell) {
+    if (res) { res.style.color='#f87171'; res.textContent='Fill in origin state, dest state, and sell rate.'; } return;
+  }
+  if (res) { res.style.color='rgba(255,255,255,.4)'; res.textContent='Scoring with Rex…'; }
+  try {
+    // First score with Rex
+    const scored = await tdApi('/api/agents/rex/run', 'POST', { action:'score_load', ...payload });
+    const score = scored.score ?? 0;
+    const rec = scored.recommendation || 'pass';
+    const recColor = { book: '#4ade80', negotiate: '#fbbf24', pass: '#f87171' }[rec] || '#fff';
+    if (rec === 'pass') {
+      if (res) { res.style.color='#f87171'; res.textContent='Rex says PASS (score ' + score + ') — ' + (scored.rationale||''); }
+      return;
+    }
+    // Post the load
+    const posted = await tdApi('/api/agents/jordan/run', 'POST', { action:'post_load', ...payload });
+    if (res) { res.style.color='#4ade80'; res.textContent='✓ Posted! Rex score=' + score + ' (' + rec.toUpperCase() + ') — margin $' + (sell-buy).toFixed(0); }
+    setTimeout(tdLoadDashboard, 800);
+  } catch(e) {
+    if (res) { res.style.color='#f87171'; res.textContent='Error: ' + e.message; }
+  }
+}
+</script>\n
 
 <script>
 // ── COST TRACKING — IEBC ─────────────────────────────────────────────────────
