@@ -12439,21 +12439,70 @@ select.oc-inp option{background:#1a1a2e;color:#fff;}
 
     <!-- ════ DOCUMENTS ════ -->
     <div class="mo-pane" id="mopane-docs">
-      <div class="mo-room">
-        <div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.09);border-radius:12px;padding:18px 20px;display:flex;flex-direction:column;gap:14px;">
-          <div>
+      <div class="mo-room" style="flex-direction:row;gap:0;padding:0;overflow:hidden;">
+
+        <!-- Left: upload + doc list -->
+        <div style="flex:1;display:flex;flex-direction:column;overflow:hidden;">
+
+          <!-- Upload zone -->
+          <div style="padding:18px 22px;border-bottom:1px solid rgba(255,255,255,.09);flex-shrink:0;">
             <div class="mo-fl">CEO VAULT — MARK ODOM</div>
-            <div class="mo-label" style="font-size:15px;">Executive Document Store</div>
+            <div class="mo-label" style="font-size:15px;margin-bottom:10px;">Upload Documents</div>
+            <div id="mo-drop-zone" style="border:2px dashed rgba(250,189,0,.35);border-radius:12px;padding:28px 20px;text-align:center;cursor:pointer;transition:border-color .2s,background .2s;background:rgba(250,189,0,.04);"
+              onclick="document.getElementById('mo-file-input').click()"
+              ondragover="event.preventDefault();this.style.borderColor='#fabd00';this.style.background='rgba(250,189,0,.1)'"
+              ondragleave="this.style.borderColor='rgba(250,189,0,.35)';this.style.background='rgba(250,189,0,.04)'"
+              ondrop="moHandleDrop(event)">
+              <div style="font-size:32px;margin-bottom:8px;">📁</div>
+              <div style="font-weight:700;font-size:14px;color:#fff;margin-bottom:4px;">Drop files here or click to upload</div>
+              <div style="font-size:11px;">PDF, DOCX, XLSX, PNG, JPG, TXT — up to 25 MB each</div>
+              <input type="file" id="mo-file-input" multiple style="display:none" onchange="moHandleFileSelect(event)"/>
+            </div>
+            <div style="display:flex;gap:10px;margin-top:12px;align-items:center;">
+              <select id="mo-doc-category" class="mo-input" style="max-width:240px;">
+                <option value="executive">👔 Executive Records</option>
+                <option value="contracts">📑 Contracts &amp; Agreements</option>
+                <option value="financial">💰 Financial Documents</option>
+                <option value="compliance">✅ Compliance</option>
+                <option value="general">📄 General</option>
+              </select>
+              <span id="mo-upload-status" style="font-size:11px;color:#fabd00;"></span>
+            </div>
           </div>
-          <div style="display:flex;gap:10px;flex-wrap:wrap;">
-            <button class="mo-hdr-btn" style="font-size:12px;padding:10px 16px;" onclick="nav('vault')">📁 Full Document Vault</button>
-            <button class="mo-hdr-btn" style="font-size:12px;padding:10px 16px;" onclick="nav('clm')">🔍 CLM Scanner</button>
-            <button class="mo-hdr-btn" style="font-size:12px;padding:10px 16px;" onclick="nav('agreements')">📋 Agreements</button>
-            <button class="mo-hdr-btn" style="font-size:12px;padding:10px 16px;" onclick="nav('ledger')">📒 Atomic Ledger</button>
-            <button class="mo-hdr-btn" style="font-size:12px;padding:10px 16px;" onclick="nav('reports')">📊 Team Reports</button>
+
+          <!-- Upload queue -->
+          <div id="mo-upload-queue" style="display:none;padding:10px 22px;border-bottom:1px solid rgba(255,255,255,.09);flex-shrink:0;display:flex;flex-direction:column;gap:6px;max-height:160px;overflow-y:auto;"></div>
+
+          <!-- Document list -->
+          <div style="flex:1;overflow-y:auto;scrollbar-width:thin;scrollbar-color:#fabd00 transparent;">
+            <div style="padding:12px 22px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(255,255,255,.07);">
+              <div style="font-weight:700;font-size:12px;color:#fff;">Uploaded Documents</div>
+              <button class="mo-hdr-btn" style="font-size:10px;padding:3px 8px;" onclick="moLoadDocs()">↺ Refresh</button>
+            </div>
+            <div id="mo-docs-list" style="padding:10px 22px;display:flex;flex-direction:column;gap:6px;">
+              <div style="font-size:12px;padding:16px 0;text-align:center;">Loading documents…</div>
+            </div>
           </div>
-          <div style="font-size:11px;color:rgba(255,255,255,.35);padding:12px;">Use the links above to navigate to the full document system.</div>
         </div>
+
+        <!-- Right sidebar: categories + quick nav -->
+        <div style="width:260px;flex-shrink:0;border-left:1px solid rgba(255,255,255,.09);display:flex;flex-direction:column;overflow:hidden;">
+          <div style="padding:11px 14px;border-bottom:1px solid rgba(255,255,255,.08);font-weight:700;font-size:12px;color:#fff;flex-shrink:0;">📂 Categories</div>
+          <div style="padding:10px 14px;display:flex;flex-direction:column;gap:6px;flex-shrink:0;border-bottom:1px solid rgba(255,255,255,.08);">
+            <button class="mo-hdr-btn" style="text-align:left;font-size:11px;" onclick="moFilterDocs('')">📄 All Documents</button>
+            <button class="mo-hdr-btn" style="text-align:left;font-size:11px;" onclick="moFilterDocs('executive')">👔 Executive Records</button>
+            <button class="mo-hdr-btn" style="text-align:left;font-size:11px;" onclick="moFilterDocs('contracts')">📑 Contracts</button>
+            <button class="mo-hdr-btn" style="text-align:left;font-size:11px;" onclick="moFilterDocs('financial')">💰 Financial</button>
+            <button class="mo-hdr-btn" style="text-align:left;font-size:11px;" onclick="moFilterDocs('compliance')">✅ Compliance</button>
+          </div>
+          <div style="padding:11px 14px;border-bottom:1px solid rgba(255,255,255,.08);font-weight:700;font-size:12px;color:#fff;flex-shrink:0;">🔗 Quick Links</div>
+          <div style="padding:10px 14px;display:flex;flex-direction:column;gap:6px;flex-shrink:0;">
+            <button class="mo-hdr-btn" style="text-align:left;font-size:11px;" onclick="nav('vault')">📁 Full Document Vault</button>
+            <button class="mo-hdr-btn" style="text-align:left;font-size:11px;" onclick="nav('clm')">🔍 CLM Scanner</button>
+            <button class="mo-hdr-btn" style="text-align:left;font-size:11px;" onclick="nav('agreements')">📋 Agreements</button>
+          </div>
+        </div>
+
       </div>
     </div><!-- /docs -->
 
@@ -13196,9 +13245,112 @@ window.moTVCustom = function(){
   if(fr)fr.src=`https://www.youtube.com/embed/${vid||'jfKfPfyJRdk'}?autoplay=1&rel=0`;
 };
 
+/* ── CEO Document Vault ── */
+let _moAllDocs = [], _moDocFilter = '';
+window.moHandleFileSelect = function(e){
+  const files = Array.from(e.target.files||[]);
+  moQueueFiles(files);
+};
+window.moHandleDrop = function(e){
+  e.preventDefault();
+  document.getElementById('mo-drop-zone').style.borderColor='rgba(250,189,0,.35)';
+  document.getElementById('mo-drop-zone').style.background='rgba(250,189,0,.04)';
+  const files = Array.from(e.dataTransfer.files||[]);
+  moQueueFiles(files);
+};
+function moQueueFiles(files){
+  const q = document.getElementById('mo-upload-queue');
+  if(!q) return;
+  q.style.display='flex';
+  files.forEach(f=>{
+    const row = document.createElement('div');
+    row.style.cssText='display:flex;align-items:center;gap:10px;padding:7px 10px;background:rgba(255,255,255,.04);border-radius:6px;border:1px solid rgba(255,255,255,.08);';
+    const icon = f.name.endsWith('.pdf')?'📄':f.name.match(/\.(doc|docx)$/)?'📝':f.name.match(/\.(xls|xlsx|csv)$/)?'📊':f.name.match(/\.(png|jpg|jpeg)$/)?'🖼️':'📎';
+    row.innerHTML=`<span style="font-size:18px;">${icon}</span><div style="flex:1;min-width:0;"><div style="font-weight:700;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${f.name}</div><div style="font-size:10px;opacity:.6;">${(f.size/1024).toFixed(1)} KB</div></div><span class="mo-upload-row-status" style="font-size:10px;color:#fabd00;">Pending</span>`;
+    q.appendChild(row);
+    moUploadFile(f, row.querySelector('.mo-upload-row-status'));
+  });
+}
+async function moUploadFile(file, statusEl){
+  const category = document.getElementById('mo-doc-category')?.value || 'executive';
+  const st = document.getElementById('mo-upload-status');
+  if(statusEl) statusEl.textContent = 'Uploading…';
+  if(st) st.textContent = `Uploading ${file.name}…`;
+  try {
+    const fd = new FormData();
+    fd.append('file', file);
+    fd.append('doc_type', 'corporate');
+    fd.append('notes', `${category} · CEO Mark Odom Office`);
+    const r = await fetch(API_BASE+'/api/clm/vault/upload', {method:'POST', headers:{'Authorization':'Bearer '+API_TOKEN}, body:fd});
+    if(!r.ok) throw new Error((await r.text())||('HTTP '+r.status));
+    const data = await r.json();
+    if(!data.ok) throw new Error(data.detail||'upload failed');
+    if(statusEl){statusEl.textContent='✓ Uploaded';statusEl.style.color='#10b981';}
+    if(st) st.textContent = `✓ ${file.name} uploaded`;
+    setTimeout(()=>{if(st)st.textContent='';},4000);
+    moLoadDocs();
+  } catch(e){
+    if(statusEl){statusEl.textContent='Failed';statusEl.style.color='#ef4444';}
+    if(st) st.textContent = `Upload failed: ${e.message}`;
+    toast(`Upload failed: ${file.name}`,'error');
+  }
+}
+window.moLoadDocs = async function(){
+  const el = document.getElementById('mo-docs-list');
+  if(!el) return;
+  el.innerHTML='<div style="font-size:12px;padding:16px 0;text-align:center;">Loading…</div>';
+  try {
+    const r = await API.get('/api/clm/vault/docs?doc_type=corporate');
+    _moAllDocs = (Array.isArray(r) ? r : (r?.data||[])).filter(d=>(d.notes||'').includes('CEO Mark Odom'));
+    moRenderDocs();
+  } catch(e){
+    el.innerHTML='<div style="font-size:11px;padding:16px 0;text-align:center;opacity:.6;">No documents found — upload files above to get started.</div>';
+  }
+};
+window.moFilterDocs = function(cat){_moDocFilter=cat;moRenderDocs();};
+function moRenderDocs(){
+  const el = document.getElementById('mo-docs-list');
+  if(!el) return;
+  const docs = _moDocFilter ? _moAllDocs.filter(d=>(d.notes||'').toLowerCase().includes(_moDocFilter)) : _moAllDocs;
+  if(!docs.length){
+    el.innerHTML='<div style="font-size:11px;padding:24px 0;text-align:center;opacity:.6;">No documents yet — drop files in the upload zone above.</div>';
+    return;
+  }
+  el.innerHTML = docs.map(d=>{
+    const name = d.filename||d.name||'Document';
+    const ext = String(name).split('.').pop().toLowerCase();
+    const icon = ext==='pdf'?'📄':ext.match(/^docx?$/)?'📝':ext.match(/^(xlsx?|csv)$/)?'📊':ext.match(/^(png|jpe?g|gif|webp)$/)?'🖼️':'📎';
+    const size = d.file_size_kb ? `${d.file_size_kb} KB` : '';
+    const date = d.uploaded_at ? new Date(d.uploaded_at).toLocaleDateString() : '';
+    const cat = (d.notes||'').split('·')[0].trim();
+    const did = esc(d.id||'');
+    const hasFile = d.file_available!==false;
+    return `<div style="display:flex;align-items:center;gap:10px;padding:9px 12px;background:rgba(255,255,255,.03);border-radius:8px;border:1px solid rgba(255,255,255,.08);transition:border-color .15s;" onmouseover="this.style.borderColor='rgba(250,189,0,.3)'" onmouseout="this.style.borderColor='rgba(255,255,255,.08)'">
+      <span style="font-size:22px;flex-shrink:0;">${icon}</span>
+      <div style="flex:1;min-width:0;">
+        <div style="font-weight:700;font-size:12px;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${esc(name)}">${esc(name)}</div>
+        <div style="font-size:10px;opacity:.6;">${[cat,size,date].filter(Boolean).join(' · ')}</div>
+      </div>
+      <div style="display:flex;gap:6px;flex-shrink:0;">
+        ${hasFile?`<button class="mo-hdr-btn" style="font-size:10px;padding:3px 8px;" onclick="vaultView('${did}')">👁 View</button>
+        <button class="mo-hdr-btn" style="font-size:10px;padding:3px 8px;" onclick="vaultDownload('${did}')">⬇</button>`:'<span style="font-size:10px;opacity:.5;font-style:italic;">No file</span>'}
+        <button class="mo-hdr-btn" style="font-size:10px;padding:3px 8px;color:#ef4444;border-color:rgba(239,68,68,.3);" onclick="moDeleteDoc('${did}','${esc(name)}')">🗑</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+window.moDeleteDoc = async function(id, name){
+  if(!id||!confirm(`Delete "${name}"?`)) return;
+  try{
+    await API.delete(`/api/clm/vault/${id}`);
+    moLoadDocs();
+    toast(`Deleted ${name}`,'success');
+  }catch(e){ toast('Delete failed','error'); }
+};
+
 /* ── Initial load + seed sample todos ── */
 window.moLoadOfficeData = function(){
-  moTodoRender();moTodosServerSync();moFromCCSync().then(moFromCCRender);moLoadDirectives();moRefreshAll();moLFRefresh();moTDRefresh();moLoadEmailCount();
+  moTodoRender();moTodosServerSync();moFromCCSync().then(moFromCCRender);moLoadDirectives();moRefreshAll();moLFRefresh();moTDRefresh();moLoadEmailCount();moLoadDocs();
 };
 
 async function moLoadEmailCount(){
