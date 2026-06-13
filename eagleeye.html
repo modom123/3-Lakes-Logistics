@@ -18065,6 +18065,18 @@ async function deactivateDriver(driverId) {
   color:#fff;                 /* base text color for all children */
 }
 
+/* ── Dark topbar when a fullpage dark page is active ── */
+#main.lf-fullpage .topbar{
+  background:#0d1b2a !important;
+  border-bottom-color:rgba(255,255,255,.08) !important;
+  box-shadow:0 1px 12px rgba(0,0,0,.4) !important;
+}
+#main.lf-fullpage .tb-title{color:#e2e8f0 !important;}
+#main.lf-fullpage .tb-date{color:rgba(255,255,255,.4) !important;}
+#main.lf-fullpage #sb-hamburger{color:rgba(255,255,255,.7) !important;background:none;border:none;cursor:pointer;}
+#main.lf-fullpage .tb-live{color:#4ade80 !important;}
+#main.lf-fullpage .tb-live::before{background:#4ade80 !important;}
+
 /* ── Dark-mode button overrides for broker/trading pages ── */
 #page-broker-division .btn-navy,
 #page-broker-shippers .btn-navy,
@@ -21546,11 +21558,11 @@ async function bdLoadStats(){
 .bd-hero{background:linear-gradient(135deg,#071524 0%,#0d2540 50%,#0f3460 100%);border-radius:16px;padding:28px 32px;margin-bottom:24px;position:relative;overflow:hidden;border:1px solid rgba(99,160,255,.12);}
 .bd-hero::before{content:'';position:absolute;top:-80px;right:-80px;width:280px;height:280px;border-radius:50%;background:rgba(99,102,241,.08);pointer-events:none;}
 .bd-hero-title{font-size:22px;font-weight:800;color:#fff;margin-bottom:4px;}
-.bd-hero-sub{font-size:13px;color:rgba(255,255,255,.6);}
+.bd-hero-sub{font-size:13px;color:rgba(255,255,255,.7);}
 .bd-kpi-row{display:flex;gap:14px;margin-top:20px;flex-wrap:wrap;}
 .bd-kpi{background:rgba(0,0,0,.25);border-radius:10px;padding:12px 18px;min-width:130px;}
 .bd-kpi-n{font-size:22px;font-weight:800;color:#60a5fa;}
-.bd-kpi-l{font-size:10px;color:rgba(255,255,255,.45);text-transform:uppercase;letter-spacing:.8px;margin-top:2px;}
+.bd-kpi-l{font-size:10px;color:rgba(255,255,255,.6);text-transform:uppercase;letter-spacing:.8px;margin-top:2px;}
 .bd-team-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:24px;}
 @media(max-width:1100px){.bd-team-grid{grid-template-columns:repeat(3,1fr);}}
 @media(max-width:680px){.bd-team-grid{grid-template-columns:1fr 1fr;}}
@@ -21649,7 +21661,7 @@ async function bdLoadStats(){
 <style>
 .drew-hero{background:linear-gradient(135deg,#0d1e2e 0%,#102840 50%,#0f3254 100%);border-radius:16px;padding:24px 28px;margin-bottom:20px;border:1px solid rgba(34,197,94,.12);}
 .drew-hero-title{font-size:18px;font-weight:800;color:#fff;margin-bottom:4px;}
-.drew-hero-sub{font-size:12px;color:rgba(255,255,255,.55);}
+.drew-hero-sub{font-size:12px;color:rgba(255,255,255,.7);}
 .shipper-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px;display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:8px;}
 .shipper-name{font-size:13px;font-weight:700;}
 .shipper-meta{font-size:11px;color:var(--muted);margin-top:2px;}
@@ -21740,11 +21752,11 @@ async function bdLoadStats(){
 <div style="padding:0 0 40px;">
   <div class="quinn-hero">
     <div class="quinn-hero-title">📄 Quinn Mercer — Broker Ops & Documentation</div>
-    <div style="font-size:12px;color:rgba(255,255,255,.55);">Rate Confirmations · Freight Invoices · Factoring · Accounts Receivable</div>
+    <div style="font-size:12px;color:rgba(255,255,255,.7);">Rate Confirmations · Freight Invoices · Factoring · Accounts Receivable</div>
   </div>
 
   <!-- Quick Actions -->
-  <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px;padding:12px 16px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:10px;">
+  <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px;padding:12px 16px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:10px;">
     <button class="btn-gold" onclick="bdShowRCForm()">📋 Generate RC</button>
     <button class="btn-gold" onclick="bdShowInvForm()">🧾 Generate Invoice</button>
     <button class="btn-navy" onclick="bdShowFactorForm()">💸 Submit to Factoring</button>
@@ -21850,15 +21862,19 @@ async function bdRunRex(action, payload={}) {
 }
 
 async function bdRunDrew(action, payload={}) {
+  // Use Drew's own output panel when on the shippers page; fall back to Hub output panel otherwise
+  const outId   = document.getElementById('bd-drew-output') ? 'bd-drew-output' : 'bd-output';
+  const titleId = outId === 'bd-drew-output' ? 'bd-drew-title' : 'bd-output-title';
+  const bodyId  = outId === 'bd-drew-output' ? 'bd-drew-body'  : 'bd-output-body';
   try {
     const data = await bdAgentCall('drew', { action, ...payload });
     if (action === 'pipeline') {
       bdRenderShippers(data.all_shippers || []);
       const b = document.getElementById('bd-shipper-badge');
-      if (data.active_accounts > 0) { b.textContent = data.active_accounts; b.style.display = 'inline'; }
+      if (b && data.active_accounts > 0) { b.textContent = data.active_accounts; b.style.display = 'inline'; }
     }
-    bdShow('bd-drew-output', 'bd-drew-title', 'bd-drew-body', 'Drew — ' + action, data);
-  } catch(e) { bdShow('bd-drew-output', 'bd-drew-title', 'bd-drew-body', 'Drew error', { error: e.message }); }
+    bdShow(outId, titleId, bodyId, 'Drew — ' + action, data);
+  } catch(e) { bdShow(outId, titleId, bodyId, 'Drew error', { error: e.message }); }
 }
 
 async function bdLoadHub() {
@@ -21876,6 +21892,7 @@ async function bdLoadShippers() {
 
 function bdRenderShippers(rows) {
   const el = document.getElementById('bd-shipper-list');
+  if (!el) return; // not on shippers page
   if (!rows.length) { el.innerHTML = '<div style="color:var(--muted);font-size:12px;text-align:center;padding:16px;">No shippers yet — add one or run Drew to prospect.</div>'; return; }
   const cls = { prospect:'s-prospect', contacted:'s-contacted', active:'s-active', lost:'s-lost' };
   el.innerHTML = rows.map(s => `
@@ -21997,7 +22014,7 @@ async function bdSubmitFactoring() {
 .td-hero{background:linear-gradient(135deg,#0b1e14 0%,#0f2d1c 50%,#14532d 100%);border-radius:16px;padding:24px 28px;margin-bottom:20px;position:relative;overflow:hidden;border:1px solid rgba(34,197,94,.15);}
 .td-hero::before{content:'';position:absolute;top:-40px;right:-40px;width:180px;height:180px;border-radius:50%;background:rgba(34,197,94,.06);pointer-events:none;}
 .td-hero-title{font-size:20px;font-weight:900;color:#fff;margin-bottom:2px;letter-spacing:-.3px;}
-.td-hero-sub{font-size:12px;color:rgba(255,255,255,.5);}
+.td-hero-sub{font-size:12px;color:rgba(255,255,255,.65);}
 .td-auto-strip{display:flex;align-items:center;gap:10px;margin-top:16px;flex-wrap:wrap;}
 .td-auto-btn{padding:8px 16px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;border:1px solid;transition:opacity .15s;}
 .td-auto-btn:hover{opacity:.8;}
@@ -22005,21 +22022,21 @@ async function bdSubmitFactoring() {
 .td-auto-btn-cov{background:rgba(59,130,246,.15);border-color:rgba(59,130,246,.4);color:#93c5fd;}
 .td-auto-btn-close{background:rgba(245,158,11,.12);border-color:rgba(245,158,11,.3);color:#fbbf24;}
 .td-auto-btn-all{background:rgba(167,139,250,.15);border-color:rgba(167,139,250,.4);color:#c4b5fd;}
-.td-auto-status{font-size:11px;color:rgba(255,255,255,.35);padding:6px 10px;background:rgba(255,255,255,.04);border-radius:6px;border:1px solid rgba(255,255,255,.06);}
+.td-auto-status{font-size:11px;color:rgba(255,255,255,.55);padding:6px 10px;background:rgba(255,255,255,.05);border-radius:6px;border:1px solid rgba(255,255,255,.1);}
 .td-kpis{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:18px;}
 .td-kpi{background:#0b1812;border:1px solid rgba(34,197,94,.12);border-radius:10px;padding:14px 18px;min-width:130px;flex:1;}
 .td-kpi-val{font-size:22px;font-weight:900;color:#4ade80;font-family:var(--ff-m);}
-.td-kpi-lbl{font-size:10px;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:.7px;margin-top:3px;}
+.td-kpi-lbl{font-size:10px;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.7px;margin-top:3px;}
 .td-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:18px;}
 @media(max-width:900px){.td-grid{grid-template-columns:1fr;}}
 .td-panel{background:#0b1812;border:1px solid rgba(34,197,94,.1);border-radius:12px;padding:0;overflow:hidden;}
-.td-panel-hd{padding:12px 16px;background:rgba(34,197,94,.05);border-bottom:1px solid rgba(34,197,94,.1);font-size:12px;font-weight:700;color:rgba(255,255,255,.7);display:flex;align-items:center;justify-content:space-between;}
+.td-panel-hd{padding:12px 16px;background:rgba(34,197,94,.07);border-bottom:1px solid rgba(34,197,94,.15);font-size:12px;font-weight:700;color:rgba(255,255,255,.9);display:flex;align-items:center;justify-content:space-between;}
 .td-panel-body{padding:14px 16px;}
 .td-book{background:#0b1812;border:1px solid rgba(34,197,94,.1);border-radius:12px;overflow:hidden;margin-bottom:16px;}
-.td-book-hd{padding:12px 18px;background:rgba(34,197,94,.05);border-bottom:1px solid rgba(34,197,94,.1);display:flex;align-items:center;justify-content:space-between;}
+.td-book-hd{padding:12px 18px;background:rgba(34,197,94,.07);border-bottom:1px solid rgba(34,197,94,.15);display:flex;align-items:center;justify-content:space-between;}
 .td-book-title{font-size:13px;font-weight:800;color:#fff;}
 table.td-table{width:100%;border-collapse:collapse;font-size:12px;}
-table.td-table th{padding:8px 10px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:rgba(255,255,255,.3);border-bottom:1px solid rgba(34,197,94,.08);}
+table.td-table th{padding:8px 10px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:rgba(255,255,255,.5);border-bottom:1px solid rgba(34,197,94,.12);}
 table.td-table td{padding:9px 10px;border-bottom:1px solid rgba(255,255,255,.04);color:rgba(255,255,255,.75);}
 table.td-table tr:last-child td{border-bottom:none;}
 table.td-table tr:hover td{background:rgba(34,197,94,.03);}
@@ -22041,8 +22058,8 @@ table.td-table tr:hover td{background:rgba(34,197,94,.03);}
 .td-act-icon{font-size:14px;flex-shrink:0;margin-top:1px;}
 .td-act-body{flex:1;}
 .td-act-action{font-size:12px;font-weight:600;color:rgba(255,255,255,.8);}
-.td-act-result{font-size:11px;color:rgba(255,255,255,.4);margin-top:1px;}
-.td-act-ts{font-size:10px;color:rgba(255,255,255,.2);flex-shrink:0;margin-top:2px;}
+.td-act-result{font-size:11px;color:rgba(255,255,255,.5);margin-top:1px;}
+.td-act-ts{font-size:10px;color:rgba(255,255,255,.35);flex-shrink:0;margin-top:2px;}
 .td-pnl-bar{height:6px;background:rgba(255,255,255,.06);border-radius:10px;overflow:hidden;margin-top:6px;}
 .td-pnl-fill{height:100%;background:#4ade80;border-radius:10px;transition:width .8s;}
 .td-score-badge{font-size:10px;font-weight:800;padding:1px 6px;border-radius:20px;}
@@ -22067,7 +22084,7 @@ table.td-table tr:hover td{background:rgba(34,197,94,.03);}
           <span style="width:7px;height:7px;border-radius:50%;background:#4ade80;animation:td-pulse 2s infinite;display:inline-block"></span>
           AUTO-PILOT ON
         </div>
-        <button onclick="tdLoadDashboard()" style="padding:6px 12px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:8px;color:rgba(255,255,255,.6);font-size:11px;cursor:pointer">↻ Refresh</button>
+        <button onclick="tdLoadDashboard()" style="padding:6px 12px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.18);border-radius:8px;color:rgba(255,255,255,.8);font-size:11px;cursor:pointer">↻ Refresh</button>
       </div>
     </div>
     <div class="td-auto-strip">
@@ -22130,14 +22147,14 @@ table.td-table tr:hover td{background:rgba(34,197,94,.03);}
           <!-- populated by JS -->
         </div>
         <div style="margin-top:14px">
-          <div style="font-size:10px;color:rgba(255,255,255,.3);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">Manual Scan</div>
+          <div style="font-size:10px;color:rgba(255,255,255,.5);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">Manual Scan</div>
           <div style="display:flex;gap:8px">
             <input id="td-scan-states" class="td-fi" placeholder="TX,OH,GA (blank = all hot states)" style="flex:1">
             <button onclick="tdRunAcquisition()" style="padding:6px 14px;background:rgba(34,197,94,.15);border:1px solid rgba(34,197,94,.3);border-radius:6px;font-size:12px;font-weight:700;color:#4ade80;cursor:pointer;white-space:nowrap">Scan</button>
           </div>
         </div>
         <div style="margin-top:12px">
-          <div style="font-size:10px;color:rgba(255,255,255,.3);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px">Quick Post</div>
+          <div style="font-size:10px;color:rgba(255,255,255,.5);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px">Quick Post</div>
           <div id="td-quick-post" style="display:none">
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:6px">
               <input id="tdqp-ocity" class="td-fi" placeholder="Origin City">
@@ -22168,7 +22185,7 @@ table.td-table tr:hover td{background:rgba(34,197,94,.03);}
       </div>
       <div class="td-panel-body">
         <div id="td-pnl-today" style="margin-bottom:16px">
-          <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Today</div>
+          <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.55);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Today</div>
           <div style="display:flex;gap:20px;flex-wrap:wrap">
             <div><div class="td-kpi-val" id="pnl-today-loads" style="font-size:18px">—</div><div class="td-kpi-lbl">Loads</div></div>
             <div><div class="td-kpi-val" id="pnl-today-rev" style="font-size:18px">—</div><div class="td-kpi-lbl">Revenue</div></div>
@@ -22176,9 +22193,9 @@ table.td-table tr:hover td{background:rgba(34,197,94,.03);}
           </div>
         </div>
         <div>
-          <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">MTD by Trader</div>
+          <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.55);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">MTD by Trader</div>
           <div id="td-by-trader" style="display:flex;flex-direction:column;gap:8px">
-            <div style="color:rgba(255,255,255,.2);font-size:12px">Loading…</div>
+            <div style="color:rgba(255,255,255,.35);font-size:12px">Loading…</div>
           </div>
         </div>
       </div>
@@ -22193,7 +22210,7 @@ table.td-table tr:hover td{background:rgba(34,197,94,.03);}
     </div>
     <div class="td-panel-body" style="padding:8px 16px">
       <div class="td-activity-feed" id="td-activity-feed">
-        <div style="text-align:center;padding:20px;color:rgba(255,255,255,.2);font-size:12px">Loading activity…</div>
+        <div style="text-align:center;padding:20px;color:rgba(255,255,255,.35);font-size:12px">Loading activity…</div>
       </div>
     </div>
   </div>
@@ -22207,11 +22224,11 @@ table.td-table tr:hover td{background:rgba(34,197,94,.03);}
     <div class="td-panel-body" style="padding:14px 16px">
       <div id="td-lb-warning" style="display:none;background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.25);border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:12px;color:#fbbf24;line-height:1.5"></div>
       <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:8px" id="td-lb-grid">
-        <div style="color:rgba(255,255,255,.2);font-size:12px;padding:20px 0">Loading sources…</div>
+        <div style="color:rgba(255,255,255,.35);font-size:12px;padding:20px 0">Loading sources…</div>
       </div>
       <div style="margin-top:16px;padding-top:14px;border-top:1px solid rgba(255,255,255,.06)">
-        <div style="font-size:10px;font-weight:700;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">How to connect a source</div>
-        <div style="font-size:11px;color:rgba(255,255,255,.4);line-height:1.7">
+        <div style="font-size:10px;font-weight:700;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">How to connect a source</div>
+        <div style="font-size:11px;color:rgba(255,255,255,.55);line-height:1.7">
           1. Sign up / apply for API access at the source's developer portal.<br>
           2. Copy the credential values shown on each card above.<br>
           3. Add them as environment variables in your <strong style="color:rgba(255,255,255,.65)">Render dashboard → Environment</strong> for the <code style="background:rgba(255,255,255,.06);padding:1px 5px;border-radius:4px">three-lakes-logistics-api</code> service.<br>
