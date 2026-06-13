@@ -1,0 +1,1916 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>HAWK — 3 Lakes Logistics Driver Portal</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%230B1F3A'/><text y='24' x='4' font-size='22'>🦅</text></svg>"/>
+<script>
+// Config injected by server; fallback for local dev
+window.__3LL_CONFIG = window.__3LL_CONFIG || {
+  API_BASE_URL: '',
+  SUPABASE_URL: '',
+  SUPABASE_ANON_KEY: ''
+};
+</script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --navy:   #0B1F3A;
+  --navy2:  #0F2847;
+  --navy3:  #142E5B;
+  --surface:#111C2E;
+  --card:   #152035;
+  --border: rgba(255,255,255,.08);
+  --gold:   #C8902A;
+  --gold2:  #E4A830;
+  --gold3:  #F5C842;
+  --white:  #E8EDF5;
+  --muted:  #5E7899;
+  --text:   #CBD5E1;
+  --green:  #4ade80;
+  --amber:  #fbbf24;
+  --red:    #f87171;
+  --blue:   #60a5fa;
+  --r:      12px;
+  --sb-w:   240px;
+  --hdr-h:  60px;
+}
+html,body{height:100%;background:var(--navy);font-family:'Segoe UI',system-ui,sans-serif;color:var(--text);overflow:hidden;}
+
+/* ══ LOGIN SCREEN ══════════════════════════════════════════════════════════ */
+#login-screen{
+  position:fixed;inset:0;background:var(--navy);
+  display:flex;align-items:center;justify-content:center;z-index:1000;
+}
+#login-screen.hidden{display:none;}
+.login-box{width:100%;max-width:400px;padding:0 24px;}
+.hawk-login-logo{
+  text-align:center;margin-bottom:32px;
+}
+.hawk-login-logo .hawk-icon{
+  width:72px;height:72px;border-radius:18px;background:var(--gold2);
+  display:inline-flex;align-items:center;justify-content:center;
+  font-size:36px;margin-bottom:14px;
+}
+.hawk-login-logo h1{
+  font-size:32px;font-weight:900;letter-spacing:3px;color:var(--white);
+}
+.hawk-login-logo p{color:var(--muted);font-size:13px;margin-top:4px;letter-spacing:.5px;}
+.login-card{
+  background:rgba(255,255,255,.04);border:1px solid var(--border);
+  border-radius:16px;padding:28px 24px;
+}
+.login-label{
+  color:var(--muted);font-size:11px;font-weight:600;
+  letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;display:block;
+}
+.login-input{
+  width:100%;padding:13px 16px;background:rgba(255,255,255,.06);
+  border:1px solid rgba(255,255,255,.12);border-radius:10px;
+  color:var(--white);font-size:15px;outline:none;margin-bottom:18px;
+  transition:border-color .2s;
+}
+.login-input:focus{border-color:var(--gold2);}
+.login-input::placeholder{color:rgba(255,255,255,.25);}
+/* PIN dots */
+.pin-display{display:flex;gap:12px;justify-content:center;margin-bottom:18px;}
+.pin-dot{
+  width:18px;height:18px;border-radius:50%;
+  background:rgba(255,255,255,.12);border:2px solid rgba(255,255,255,.2);
+  transition:all .15s;
+}
+.pin-dot.filled{background:var(--gold2);border-color:var(--gold2);}
+/* PIN pad */
+.pin-pad{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:18px;}
+.pin-btn{
+  padding:17px 0;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);
+  border-radius:10px;color:var(--white);font-size:19px;font-weight:600;
+  cursor:pointer;transition:all .1s;user-select:none;
+}
+.pin-btn:hover{background:rgba(255,255,255,.1);}
+.pin-btn:active{background:var(--gold2);color:var(--navy);transform:scale(.96);}
+.login-btn{
+  width:100%;padding:15px;background:var(--gold2);border:none;border-radius:10px;
+  color:var(--navy);font-size:15px;font-weight:800;cursor:pointer;
+  transition:all .2s;letter-spacing:.5px;
+}
+.login-btn:hover{background:var(--gold3);}
+.login-btn:disabled{opacity:.4;cursor:default;}
+.login-err{color:var(--red);font-size:13px;text-align:center;margin-top:12px;min-height:18px;}
+.login-toggle{
+  text-align:center;margin-top:16px;color:var(--muted);font-size:12px;cursor:pointer;
+}
+.login-toggle span{color:var(--gold2);text-decoration:underline;}
+
+/* ══ APP SHELL ═════════════════════════════════════════════════════════════ */
+#app-shell{display:none;height:100vh;overflow:hidden;}
+#app-shell.visible{display:flex;}
+
+/* ── SIDEBAR ──────────────────────────────────────────────────────────────── */
+#sidebar{
+  width:var(--sb-w);flex-shrink:0;
+  background:var(--surface);border-right:1px solid var(--border);
+  display:flex;flex-direction:column;height:100vh;overflow-y:auto;
+}
+.sb-brand{
+  padding:20px 20px 16px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:12px;
+}
+.sb-brand-icon{
+  width:36px;height:36px;background:var(--gold2);border-radius:9px;
+  display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;
+}
+.sb-brand-name{font-size:20px;font-weight:900;letter-spacing:2px;color:var(--white);}
+.sb-brand-sub{font-size:9px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-top:1px;}
+/* Driver badge */
+.sb-driver-badge{
+  margin:14px 14px 10px;background:rgba(255,255,255,.04);
+  border:1px solid var(--border);border-radius:12px;padding:14px;
+  display:flex;align-items:center;gap:10px;
+}
+.sb-driver-avatar{
+  width:40px;height:40px;border-radius:50%;background:var(--navy3);
+  display:flex;align-items:center;justify-content:center;
+  font-size:18px;flex-shrink:0;border:2px solid var(--gold2);
+}
+.sb-driver-name{font-size:13px;font-weight:700;color:var(--white);}
+.sb-driver-detail{font-size:11px;color:var(--muted);margin-top:2px;}
+.sb-online-dot{
+  width:8px;height:8px;border-radius:50%;background:var(--green);
+  margin-left:auto;flex-shrink:0;box-shadow:0 0 6px var(--green);
+}
+/* Nav items */
+.sb-section-lbl{
+  padding:14px 20px 6px;font-size:10px;font-weight:700;
+  color:var(--muted);letter-spacing:1px;text-transform:uppercase;
+}
+.sb-item{
+  display:flex;align-items:center;gap:10px;
+  padding:10px 20px;cursor:pointer;border-radius:0;
+  color:var(--muted);font-size:13px;font-weight:500;
+  transition:all .15s;position:relative;
+}
+.sb-item:hover{background:rgba(255,255,255,.04);color:var(--white);}
+.sb-item.active{
+  background:rgba(228,168,48,.1);color:var(--gold2);
+  border-right:3px solid var(--gold2);
+}
+.sb-item-icon{font-size:16px;width:20px;text-align:center;flex-shrink:0;}
+.sb-badge{
+  margin-left:auto;background:var(--red);color:#fff;
+  font-size:10px;font-weight:700;padding:2px 6px;
+  border-radius:20px;line-height:1.4;
+}
+.sb-badge.amber{background:var(--amber);color:#000;}
+/* GPS pill */
+.sb-gps-pill{
+  margin:10px 14px;padding:8px 14px;
+  background:rgba(74,222,128,.07);border:1px solid rgba(74,222,128,.2);
+  border-radius:8px;display:flex;align-items:center;gap:8px;
+  font-size:11px;color:rgba(74,222,128,.9);
+}
+.gps-pulse{
+  width:8px;height:8px;border-radius:50%;background:var(--green);
+  animation:gpsPulse 1.5s infinite;flex-shrink:0;
+}
+@keyframes gpsPulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.5;transform:scale(.8);}}
+/* Bottom of sidebar */
+.sb-spacer{flex:1;}
+.sb-footer{
+  padding:14px;border-top:1px solid var(--border);
+  display:flex;align-items:center;gap:8px;
+}
+.sb-logout-btn{
+  flex:1;padding:9px;background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.2);
+  border-radius:8px;color:var(--red);font-size:12px;font-weight:600;
+  cursor:pointer;text-align:center;transition:all .2s;
+}
+.sb-logout-btn:hover{background:rgba(248,113,113,.2);}
+.sb-hawk-ver{font-size:10px;color:var(--muted);text-align:center;padding-bottom:4px;}
+
+/* ── MAIN CONTENT ─────────────────────────────────────────────────────────── */
+#main-content{
+  flex:1;overflow-y:auto;background:var(--navy);height:100vh;
+}
+/* Page header */
+.page-hdr{
+  position:sticky;top:0;z-index:100;
+  background:rgba(11,31,58,.95);backdrop-filter:blur(12px);
+  border-bottom:1px solid var(--border);
+  padding:0 28px;height:var(--hdr-h);
+  display:flex;align-items:center;justify-content:space-between;
+}
+.page-hdr-l{display:flex;align-items:center;gap:10px;}
+.page-chip{
+  padding:3px 10px;background:rgba(228,168,48,.15);
+  border:1px solid rgba(228,168,48,.3);border-radius:20px;
+  font-size:10px;font-weight:700;color:var(--gold2);letter-spacing:.5px;text-transform:uppercase;
+}
+.page-title{font-size:18px;font-weight:800;color:var(--white);}
+.page-hdr-r{display:flex;align-items:center;gap:10px;}
+/* Buttons */
+.btn-gold{
+  padding:8px 18px;background:var(--gold2);border:none;border-radius:8px;
+  color:var(--navy);font-size:13px;font-weight:700;cursor:pointer;transition:all .2s;
+}
+.btn-gold:hover{background:var(--gold3);}
+.btn-out{
+  padding:8px 16px;background:transparent;border:1px solid var(--border);
+  border-radius:8px;color:var(--text);font-size:13px;font-weight:600;cursor:pointer;
+  transition:all .2s;
+}
+.btn-out:hover{border-color:var(--gold2);color:var(--gold2);}
+/* Page body */
+.page{display:none;padding:24px 28px;animation:fadeIn .2s;}
+.page.active{display:block;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:none;}}
+/* Cards */
+.hw-card{
+  background:var(--card);border:1px solid var(--border);
+  border-radius:14px;padding:20px;margin-bottom:16px;
+}
+.hw-card-title{
+  font-size:13px;font-weight:700;color:var(--muted);
+  text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px;
+  display:flex;align-items:center;gap:8px;
+}
+.hw-card-title::before{content:'';width:3px;height:14px;background:var(--gold2);border-radius:2px;flex-shrink:0;}
+/* KPI row */
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px;}
+.kpi-tile{
+  background:var(--card);border:1px solid var(--border);border-radius:12px;
+  padding:16px 18px;display:flex;flex-direction:column;gap:4px;
+}
+.kpi-val{font-size:26px;font-weight:900;color:var(--gold2);font-variant-numeric:tabular-nums;}
+.kpi-val.green{color:var(--green);}
+.kpi-val.amber{color:var(--amber);}
+.kpi-val.blue{color:var(--blue);}
+.kpi-lbl{font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.4px;}
+/* Two-column grid */
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+.three-col{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;}
+/* Load card */
+.load-card{
+  border:1.5px solid rgba(245,200,66,.2);border-radius:12px;padding:16px;
+  margin-bottom:10px;background:linear-gradient(135deg,rgba(11,31,58,.9),rgba(18,44,82,.9));
+  transition:all .2s;
+}
+.load-card:hover{border-color:rgba(245,200,66,.4);}
+.load-card.active{border-color:var(--green);box-shadow:0 0 16px rgba(74,222,128,.1);}
+.load-card.pending{border-color:rgba(251,191,36,.4);}
+.load-status{
+  display:inline-block;padding:3px 10px;border-radius:20px;
+  font-size:10px;font-weight:700;letter-spacing:.3px;margin-bottom:8px;
+}
+.load-status.booked{background:rgba(96,165,250,.15);color:var(--blue);}
+.load-status.enroute{background:rgba(74,222,128,.15);color:var(--green);}
+.load-status.delivered{background:rgba(100,116,139,.15);color:#94a3b8;}
+.load-status.pending-assign{background:rgba(251,191,36,.15);color:var(--amber);}
+.load-route{
+  display:flex;align-items:center;gap:8px;margin-bottom:6px;
+  font-size:14px;font-weight:700;color:var(--white);
+}
+.load-route-arrow{color:var(--gold2);font-size:12px;}
+.load-meta{display:flex;gap:14px;flex-wrap:wrap;}
+.load-meta-item{font-size:12px;color:var(--muted);}
+.load-meta-item strong{color:var(--text);}
+.load-actions{display:flex;gap:8px;margin-top:12px;}
+.load-action-btn{
+  padding:6px 14px;border-radius:7px;font-size:12px;font-weight:600;
+  cursor:pointer;border:none;transition:all .15s;
+}
+.load-action-btn.accept{background:var(--green);color:#000;}
+.load-action-btn.decline{background:rgba(248,113,113,.15);color:var(--red);border:1px solid rgba(248,113,113,.3);}
+.load-action-btn.navigate{background:var(--blue);color:#000;}
+.load-action-btn.pickup{background:var(--amber);color:#000;}
+.load-action-btn.deliver{background:var(--gold2);color:var(--navy);}
+/* Table */
+.hw-table{width:100%;border-collapse:collapse;}
+.hw-table th{
+  padding:10px 12px;text-align:left;font-size:11px;font-weight:700;
+  color:var(--muted);text-transform:uppercase;letter-spacing:.4px;
+  border-bottom:1px solid var(--border);
+}
+.hw-table td{
+  padding:12px 12px;font-size:13px;color:var(--text);
+  border-bottom:1px solid rgba(255,255,255,.04);
+}
+.hw-table tr:hover td{background:rgba(255,255,255,.02);}
+/* Form fields */
+.hw-field{margin-bottom:14px;}
+.hw-field label{
+  display:block;font-size:11px;color:var(--muted);
+  text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;font-weight:600;
+}
+.hw-field input,.hw-field select,.hw-field textarea{
+  width:100%;padding:10px 14px;background:rgba(255,255,255,.05);
+  border:1px solid rgba(255,255,255,.1);border-radius:8px;
+  color:var(--white);font-size:13px;font-family:inherit;outline:none;
+  transition:border-color .2s;
+}
+.hw-field input:focus,.hw-field select,.hw-field textarea:focus{
+  border-color:rgba(228,168,48,.4);
+}
+.hw-field textarea{resize:vertical;}
+.hw-field select option{background:#1a2840;}
+/* Chat */
+.chat-window{
+  display:flex;flex-direction:column;
+  height:calc(100vh - var(--hdr-h) - 48px);
+}
+.chat-messages{
+  flex:1;overflow-y:auto;padding:16px 0;
+  display:flex;flex-direction:column;gap:12px;
+}
+.chat-msg{display:flex;flex-direction:column;max-width:60%;}
+.chat-msg.outbound{align-self:flex-end;align-items:flex-end;}
+.chat-msg.inbound{align-self:flex-start;align-items:flex-start;}
+.chat-bubble{
+  padding:10px 14px;border-radius:12px;font-size:13px;line-height:1.5;
+}
+.chat-msg.outbound .chat-bubble{background:var(--gold2);color:var(--navy);font-weight:500;}
+.chat-msg.inbound .chat-bubble{background:rgba(255,255,255,.07);color:var(--white);}
+.chat-meta{font-size:10px;color:var(--muted);margin-top:4px;}
+.chat-input-row{
+  display:flex;gap:10px;align-items:flex-end;
+  padding:14px;background:var(--card);border:1px solid var(--border);border-radius:12px;
+}
+.chat-input{
+  flex:1;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);
+  border-radius:8px;padding:10px 14px;color:var(--white);font-size:13px;
+  font-family:inherit;resize:none;outline:none;
+}
+.chat-send-btn{
+  padding:10px 18px;background:var(--gold2);border:none;border-radius:8px;
+  color:var(--navy);font-size:14px;font-weight:800;cursor:pointer;flex-shrink:0;
+}
+/* Inspection checklist */
+.insp-category{margin-bottom:16px;}
+.insp-category-lbl{
+  font-size:11px;font-weight:700;color:var(--gold2);
+  text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;
+}
+.insp-item{
+  display:flex;align-items:center;gap:10px;
+  padding:10px 14px;background:rgba(255,255,255,.03);
+  border:1px solid var(--border);border-radius:8px;margin-bottom:6px;
+  cursor:pointer;transition:all .15s;
+}
+.insp-item:hover{background:rgba(255,255,255,.05);}
+.insp-item.pass{background:rgba(74,222,128,.06);border-color:rgba(74,222,128,.25);}
+.insp-item.fail{background:rgba(248,113,113,.06);border-color:rgba(248,113,113,.25);}
+.insp-checkbox{
+  width:20px;height:20px;border-radius:50%;
+  border:2px solid var(--border);display:flex;align-items:center;
+  justify-content:center;flex-shrink:0;font-size:12px;transition:all .15s;
+}
+.insp-item.pass .insp-checkbox{background:var(--green);border-color:var(--green);color:#000;}
+.insp-item.fail .insp-checkbox{background:var(--red);border-color:var(--red);color:#fff;}
+.insp-lbl{font-size:13px;color:var(--text);flex:1;}
+.insp-toggle-row{display:flex;gap:8px;margin-left:auto;}
+.insp-btn{
+  padding:4px 10px;font-size:11px;font-weight:600;border-radius:6px;
+  border:none;cursor:pointer;transition:all .15s;
+}
+.insp-btn.pass{background:rgba(74,222,128,.15);color:var(--green);}
+.insp-btn.pass.active{background:var(--green);color:#000;}
+.insp-btn.fail{background:rgba(248,113,113,.15);color:var(--red);}
+.insp-btn.fail.active{background:var(--red);color:#fff;}
+/* Earnings chart bars */
+.earn-bar-row{display:flex;align-items:center;gap:12px;margin-bottom:8px;}
+.earn-bar-lbl{width:90px;font-size:12px;color:var(--muted);flex-shrink:0;}
+.earn-bar-wrap{flex:1;background:rgba(255,255,255,.06);border-radius:4px;height:10px;overflow:hidden;}
+.earn-bar-fill{height:100%;background:var(--gold2);border-radius:4px;transition:width .5s;}
+.earn-bar-val{width:70px;text-align:right;font-size:12px;color:var(--text);font-weight:600;}
+/* Upload zone */
+.upload-zone{
+  border:2px dashed rgba(228,168,48,.3);border-radius:12px;padding:32px;
+  text-align:center;cursor:pointer;transition:all .2s;margin-bottom:14px;
+}
+.upload-zone:hover{border-color:var(--gold2);background:rgba(228,168,48,.04);}
+.upload-zone-icon{font-size:40px;margin-bottom:10px;}
+.upload-queue{margin-bottom:10px;}
+.upload-item{
+  display:flex;align-items:center;gap:10px;
+  padding:8px 12px;background:rgba(255,255,255,.04);
+  border-radius:8px;margin-bottom:6px;font-size:12px;color:var(--text);
+}
+.upload-item-name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.upload-item-remove{cursor:pointer;color:var(--red);font-size:14px;flex-shrink:0;}
+/* HOS status */
+.hos-row{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
+.hos-tile{
+  background:rgba(255,255,255,.04);border-radius:10px;padding:14px;text-align:center;
+}
+.hos-val{font-size:20px;font-weight:900;color:var(--white);font-variant-numeric:tabular-nums;}
+.hos-lbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-top:3px;}
+.hos-bar{margin-top:8px;height:5px;background:rgba(255,255,255,.08);border-radius:3px;overflow:hidden;}
+.hos-bar-fill{height:100%;border-radius:3px;background:var(--green);transition:width .5s;}
+.hos-bar-fill.warn{background:var(--amber);}
+.hos-bar-fill.crit{background:var(--red);}
+/* Duty status selector */
+.duty-btns{display:flex;gap:8px;flex-wrap:wrap;}
+.duty-btn{
+  padding:7px 14px;border-radius:8px;font-size:12px;font-weight:700;
+  border:1.5px solid var(--border);cursor:pointer;transition:all .15s;
+  background:transparent;color:var(--muted);
+}
+.duty-btn.active-off{border-color:var(--green);background:rgba(74,222,128,.1);color:var(--green);}
+.duty-btn.active-drive{border-color:var(--blue);background:rgba(96,165,250,.1);color:var(--blue);}
+.duty-btn.active-on{border-color:var(--amber);background:rgba(251,191,36,.1);color:var(--amber);}
+.duty-btn.active-sb{border-color:#a78bfa;background:rgba(167,139,250,.1);color:#a78bfa;}
+/* Toast */
+#hw-toast{
+  position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(20px);
+  background:var(--card);border:1px solid var(--border);border-radius:10px;
+  padding:12px 24px;font-size:13px;color:var(--white);font-weight:600;
+  opacity:0;transition:all .3s;pointer-events:none;z-index:9999;white-space:nowrap;
+}
+#hw-toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+#hw-toast.success{border-color:rgba(74,222,128,.4);color:var(--green);}
+#hw-toast.error{border-color:rgba(248,113,113,.4);color:var(--red);}
+/* Empty state */
+.empty-state{
+  text-align:center;padding:48px 24px;color:var(--muted);
+}
+.empty-state-icon{font-size:48px;margin-bottom:12px;opacity:.5;}
+.empty-state-msg{font-size:14px;}
+/* Geofence alert banner */
+#geo-alert-bar{
+  display:none;padding:10px 28px;
+  background:rgba(74,222,128,.1);border-bottom:1px solid rgba(74,222,128,.3);
+  color:var(--green);font-size:13px;font-weight:600;
+  align-items:center;gap:10px;
+}
+#geo-alert-bar.show{display:flex;}
+/* Scrollbar */
+::-webkit-scrollbar{width:5px;height:5px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:3px;}
+</style>
+</head>
+<body>
+
+<!-- ══ LOGIN SCREEN ══════════════════════════════════════════════════════════ -->
+<div id="login-screen">
+  <div class="login-box">
+    <div class="hawk-login-logo">
+      <div class="hawk-icon">🦅</div>
+      <h1>HAWK</h1>
+      <p>3 Lakes Logistics — Driver Portal</p>
+    </div>
+
+    <!-- Normal login form -->
+    <div id="login-form">
+      <div class="login-card">
+        <label class="login-label" for="login-phone">Phone Number</label>
+        <input class="login-input" id="login-phone" type="tel" placeholder="(312) 555-0100" autocomplete="tel"/>
+        <label class="login-label">PIN</label>
+        <div class="pin-display">
+          <div class="pin-dot" id="pd0"></div>
+          <div class="pin-dot" id="pd1"></div>
+          <div class="pin-dot" id="pd2"></div>
+          <div class="pin-dot" id="pd3"></div>
+        </div>
+        <div class="pin-pad">
+          <button class="pin-btn" onclick="enterPin('1')">1</button>
+          <button class="pin-btn" onclick="enterPin('2')">2</button>
+          <button class="pin-btn" onclick="enterPin('3')">3</button>
+          <button class="pin-btn" onclick="enterPin('4')">4</button>
+          <button class="pin-btn" onclick="enterPin('5')">5</button>
+          <button class="pin-btn" onclick="enterPin('6')">6</button>
+          <button class="pin-btn" onclick="enterPin('7')">7</button>
+          <button class="pin-btn" onclick="enterPin('8')">8</button>
+          <button class="pin-btn" onclick="enterPin('9')">9</button>
+          <button class="pin-btn" onclick="enterPin('clr')" style="font-size:12px;color:var(--muted)">CLR</button>
+          <button class="pin-btn" onclick="enterPin('0')">0</button>
+          <button class="pin-btn pin-del" onclick="enterPin('del')">⌫</button>
+        </div>
+        <button class="login-btn" id="login-btn" onclick="doLogin()">Sign In</button>
+        <div class="login-err" id="login-err"></div>
+      </div>
+      <div class="login-toggle" onclick="toggleSetup()">First login? <span>Set your PIN here</span></div>
+    </div>
+
+    <!-- First login / PIN setup form -->
+    <div id="setup-form" style="display:none">
+      <div class="login-card">
+        <label class="login-label" for="setup-phone">Phone Number</label>
+        <input class="login-input" id="setup-phone" type="tel" placeholder="(312) 555-0100"/>
+        <label class="login-label">Choose a 4-Digit PIN</label>
+        <div class="pin-display" id="setup-pin-display">
+          <div class="pin-dot" id="spd0"></div>
+          <div class="pin-dot" id="spd1"></div>
+          <div class="pin-dot" id="spd2"></div>
+          <div class="pin-dot" id="spd3"></div>
+        </div>
+        <label class="login-label" style="margin-top:8px">Confirm PIN</label>
+        <div class="pin-display">
+          <div class="pin-dot" id="spd4"></div>
+          <div class="pin-dot" id="spd5"></div>
+          <div class="pin-dot" id="spd6"></div>
+          <div class="pin-dot" id="spd7"></div>
+        </div>
+        <div class="pin-pad">
+          <button class="pin-btn" onclick="enterSetupPin('1')">1</button>
+          <button class="pin-btn" onclick="enterSetupPin('2')">2</button>
+          <button class="pin-btn" onclick="enterSetupPin('3')">3</button>
+          <button class="pin-btn" onclick="enterSetupPin('4')">4</button>
+          <button class="pin-btn" onclick="enterSetupPin('5')">5</button>
+          <button class="pin-btn" onclick="enterSetupPin('6')">6</button>
+          <button class="pin-btn" onclick="enterSetupPin('7')">7</button>
+          <button class="pin-btn" onclick="enterSetupPin('8')">8</button>
+          <button class="pin-btn" onclick="enterSetupPin('9')">9</button>
+          <button class="pin-btn" onclick="enterSetupPin('clr')" style="font-size:12px;color:var(--muted)">CLR</button>
+          <button class="pin-btn" onclick="enterSetupPin('0')">0</button>
+          <button class="pin-btn" onclick="enterSetupPin('del')">⌫</button>
+        </div>
+        <button class="login-btn" id="setup-btn" onclick="doSetupPin()">Set PIN &amp; Sign In</button>
+        <div class="login-err" id="setup-err"></div>
+      </div>
+      <div class="login-toggle" onclick="toggleSetup()">Already have a PIN? <span>Sign in here</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ APP SHELL ═════════════════════════════════════════════════════════════ -->
+<div id="app-shell">
+
+  <!-- ── SIDEBAR ───────────────────────────────────────────────────────────── -->
+  <nav id="sidebar">
+    <div class="sb-brand">
+      <div class="sb-brand-icon">🦅</div>
+      <div>
+        <div class="sb-brand-name">HAWK</div>
+        <div class="sb-brand-sub">Driver Portal</div>
+      </div>
+    </div>
+
+    <div class="sb-driver-badge">
+      <div class="sb-driver-avatar">🚛</div>
+      <div>
+        <div class="sb-driver-name" id="sb-driver-name">—</div>
+        <div class="sb-driver-detail" id="sb-driver-truck">—</div>
+      </div>
+      <div class="sb-online-dot" id="sb-online-dot" style="display:none"></div>
+    </div>
+
+    <div id="sb-gps-pill" class="sb-gps-pill" style="display:none">
+      <div class="gps-pulse"></div>
+      <span>GPS Active</span>
+    </div>
+
+    <div class="sb-section-lbl">Navigation</div>
+    <div class="sb-item active" id="nav-dashboard" onclick="hwNav('dashboard')">
+      <span class="sb-item-icon">🏠</span> Dashboard
+    </div>
+    <div class="sb-item" id="nav-loads" onclick="hwNav('loads')">
+      <span class="sb-item-icon">📦</span> My Loads
+      <span class="sb-badge amber" id="sb-badge-loads" style="display:none">0</span>
+    </div>
+    <div class="sb-item" id="nav-inspection" onclick="hwNav('inspection')">
+      <span class="sb-item-icon">🔍</span> Pre-Trip Inspection
+    </div>
+    <div class="sb-item" id="nav-docs" onclick="hwNav('docs')">
+      <span class="sb-item-icon">📷</span> Documents
+    </div>
+    <div class="sb-item" id="nav-earnings" onclick="hwNav('earnings')">
+      <span class="sb-item-icon">💵</span> Earnings
+    </div>
+    <div class="sb-item" id="nav-chat" onclick="hwNav('chat')">
+      <span class="sb-item-icon">💬</span> Dispatcher Chat
+      <span class="sb-badge" id="sb-badge-msgs" style="display:none">0</span>
+    </div>
+    <div class="sb-item" id="nav-fuel" onclick="hwNav('fuel')">
+      <span class="sb-item-icon">⛽</span> Fuel Advance
+    </div>
+
+    <div class="sb-spacer"></div>
+    <div class="sb-hawk-ver">HAWK v1.0</div>
+    <div class="sb-footer">
+      <div class="sb-logout-btn" onclick="hwLogout()">Sign Out</div>
+    </div>
+  </nav>
+
+  <!-- ── MAIN CONTENT ────────────────────────────────────────────────────────── -->
+  <div id="main-content">
+
+    <!-- Geofence alert bar -->
+    <div id="geo-alert-bar">
+      <span>📍</span>
+      <span id="geo-alert-text"></span>
+    </div>
+
+    <!-- ┌──────────────────────────────────────────────────────────────────────┐
+         │  PAGE: DASHBOARD                                                     │
+         └──────────────────────────────────────────────────────────────────────┘ -->
+    <div class="page active" id="page-dashboard">
+      <div class="page-hdr">
+        <div class="page-hdr-l">
+          <div class="page-chip">Driver</div>
+          <div class="page-title">My Dashboard</div>
+        </div>
+        <div class="page-hdr-r">
+          <button class="btn-out" style="font-size:12px" onclick="hwCheckin()">📍 Check In</button>
+          <button class="btn-gold" style="font-size:12px" onclick="hwNav('loads')">View Loads →</button>
+        </div>
+      </div>
+      <div style="padding:24px 28px">
+        <!-- KPI row -->
+        <div class="kpi-row">
+          <div class="kpi-tile">
+            <div class="kpi-val" id="kpi-trips">—</div>
+            <div class="kpi-lbl">Trips MTD</div>
+          </div>
+          <div class="kpi-tile">
+            <div class="kpi-val blue" id="kpi-miles">—</div>
+            <div class="kpi-lbl">Miles MTD</div>
+          </div>
+          <div class="kpi-tile">
+            <div class="kpi-val green" id="kpi-earn">—</div>
+            <div class="kpi-lbl">Earnings MTD</div>
+          </div>
+          <div class="kpi-tile">
+            <div class="kpi-val amber" id="kpi-loads">—</div>
+            <div class="kpi-lbl">Active Loads</div>
+          </div>
+        </div>
+
+        <div class="two-col">
+          <!-- Left column: active load + pending -->
+          <div>
+            <div class="hw-card">
+              <div class="hw-card-title">🟢 Current Load</div>
+              <div id="dash-active-load"><div style="color:var(--muted);font-size:13px">No active load</div></div>
+            </div>
+            <div class="hw-card">
+              <div class="hw-card-title">🔔 Pending Assignment</div>
+              <div id="dash-pending-loads"><div style="color:var(--muted);font-size:13px">Checking…</div></div>
+            </div>
+          </div>
+          <!-- Right column: HOS + messages + duty status -->
+          <div>
+            <div class="hw-card">
+              <div class="hw-card-title">⏱ Hours of Service</div>
+              <div class="hos-row" id="dash-hos">
+                <div class="hos-tile">
+                  <div class="hos-val" id="hos-drive">—</div>
+                  <div class="hos-lbl">Drive Left</div>
+                  <div class="hos-bar"><div class="hos-bar-fill" id="hos-drive-bar" style="width:100%"></div></div>
+                </div>
+                <div class="hos-tile">
+                  <div class="hos-val" id="hos-shift">—</div>
+                  <div class="hos-lbl">Shift Left</div>
+                  <div class="hos-bar"><div class="hos-bar-fill" id="hos-shift-bar" style="width:100%"></div></div>
+                </div>
+                <div class="hos-tile">
+                  <div class="hos-val" id="hos-cycle">—</div>
+                  <div class="hos-lbl">Cycle Left</div>
+                  <div class="hos-bar"><div class="hos-bar-fill" id="hos-cycle-bar" style="width:100%"></div></div>
+                </div>
+              </div>
+              <div style="margin-top:14px">
+                <div class="hw-card-title" style="font-size:11px;margin-bottom:8px">Duty Status</div>
+                <div class="duty-btns" id="duty-btns">
+                  <button class="duty-btn" onclick="setDutyStatus('OFF')">OFF Duty</button>
+                  <button class="duty-btn" onclick="setDutyStatus('SB')">Sleeper Berth</button>
+                  <button class="duty-btn" onclick="setDutyStatus('D')">Driving</button>
+                  <button class="duty-btn" onclick="setDutyStatus('ON')">On Duty</button>
+                </div>
+              </div>
+            </div>
+            <div class="hw-card">
+              <div class="hw-card-title">💬 Recent Messages</div>
+              <div id="dash-msgs" style="font-size:13px;color:var(--muted)">Loading…</div>
+              <button onclick="hwNav('chat')" class="btn-out" style="width:100%;margin-top:10px;font-size:12px">Open Chat →</button>
+            </div>
+            <div class="hw-card">
+              <div class="hw-card-title">⚡ Quick Actions</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+                <button class="btn-out" style="padding:10px;font-size:12px" onclick="hwNav('inspection')">🔍 Pre-Trip Check</button>
+                <button class="btn-out" style="padding:10px;font-size:12px" onclick="hwNav('docs')">📷 Upload POD/BOL</button>
+                <button class="btn-out" style="padding:10px;font-size:12px" onclick="hwNav('fuel')">⛽ Fuel Advance</button>
+                <button class="btn-out" style="padding:10px;font-size:12px" onclick="hwNav('earnings')">💵 View Earnings</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ┌──────────────────────────────────────────────────────────────────────┐
+         │  PAGE: MY LOADS                                                      │
+         └──────────────────────────────────────────────────────────────────────┘ -->
+    <div class="page" id="page-loads">
+      <div class="page-hdr">
+        <div class="page-hdr-l">
+          <div class="page-chip">Dispatch</div>
+          <div class="page-title">My Loads</div>
+        </div>
+        <div class="page-hdr-r">
+          <button class="btn-out" style="font-size:12px" onclick="hwLoadLoads()">↻ Refresh</button>
+        </div>
+      </div>
+      <div style="padding:24px 28px">
+        <div class="two-col">
+          <div>
+            <div class="hw-card">
+              <div class="hw-card-title">🔔 Pending Assignment</div>
+              <div id="loads-pending"><div class="empty-state"><div class="empty-state-icon">📭</div><div class="empty-state-msg">No pending loads</div></div></div>
+            </div>
+            <div class="hw-card">
+              <div class="hw-card-title">🚛 Active Loads</div>
+              <div id="loads-active"><div style="color:var(--muted);font-size:13px">Loading…</div></div>
+            </div>
+          </div>
+          <div>
+            <div class="hw-card">
+              <div class="hw-card-title">📋 Recent History</div>
+              <div id="loads-history" style="overflow-x:auto">
+                <table class="hw-table">
+                  <thead><tr>
+                    <th>Load #</th><th>Route</th><th>Status</th><th>Rate</th><th>Date</th>
+                  </tr></thead>
+                  <tbody id="loads-history-body"><tr><td colspan="5" style="color:var(--muted);text-align:center;padding:20px">Loading…</td></tr></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ┌──────────────────────────────────────────────────────────────────────┐
+         │  PAGE: PRE-TRIP INSPECTION                                           │
+         └──────────────────────────────────────────────────────────────────────┘ -->
+    <div class="page" id="page-inspection">
+      <div class="page-hdr">
+        <div class="page-hdr-l">
+          <div class="page-chip">Safety</div>
+          <div class="page-title">Pre-Trip Inspection</div>
+        </div>
+        <div class="page-hdr-r">
+          <span id="insp-pass-count" style="font-size:13px;color:var(--green);font-weight:700"></span>
+        </div>
+      </div>
+      <div style="padding:24px 28px">
+        <div class="two-col">
+          <!-- Checklist -->
+          <div>
+            <div class="hw-card">
+              <div class="hw-card-title">🔍 Vehicle Safety Checklist</div>
+              <div class="hw-field">
+                <label>Associated Load</label>
+                <select id="insp-load-sel"><option value="">— No active load —</option></select>
+              </div>
+              <div class="hw-field">
+                <label>Odometer Reading</label>
+                <input type="number" id="insp-odometer" placeholder="e.g. 142500"/>
+              </div>
+              <div id="insp-checklist"></div>
+              <div class="hw-field" style="margin-top:6px">
+                <label>Notes / Defects Found</label>
+                <textarea id="insp-notes" rows="3" placeholder="Describe any issues…"></textarea>
+              </div>
+              <button class="btn-gold" style="width:100%;padding:12px;margin-top:4px" onclick="hwSubmitInspection()">
+                ✅ Submit Inspection
+              </button>
+            </div>
+          </div>
+          <!-- History -->
+          <div>
+            <div class="hw-card">
+              <div class="hw-card-title">📋 Inspection History</div>
+              <div id="insp-history"><div style="color:var(--muted);font-size:13px">Loading…</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ┌──────────────────────────────────────────────────────────────────────┐
+         │  PAGE: DOCUMENTS                                                     │
+         └──────────────────────────────────────────────────────────────────────┘ -->
+    <div class="page" id="page-docs">
+      <div class="page-hdr">
+        <div class="page-hdr-l">
+          <div class="page-chip">Documents</div>
+          <div class="page-title">POD / BOL Upload</div>
+        </div>
+      </div>
+      <div style="padding:24px 28px">
+        <div class="two-col">
+          <div>
+            <div class="hw-card">
+              <div class="hw-card-title">📤 Upload Document</div>
+              <div class="hw-field">
+                <label>Associate with Load</label>
+                <select id="docs-load-sel"><option value="">— General document —</option></select>
+              </div>
+              <div class="hw-field">
+                <label>Document Type</label>
+                <select id="docs-type">
+                  <option value="pod">Proof of Delivery (POD)</option>
+                  <option value="bol">Bill of Lading (BOL)</option>
+                  <option value="rate_con">Rate Confirmation</option>
+                  <option value="inspection">Inspection Report</option>
+                  <option value="accident">Accident / Incident</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+              <div class="upload-zone" onclick="document.getElementById('docs-file-input').click()">
+                <input type="file" id="docs-file-input" accept="image/*,application/pdf" multiple
+                  onchange="hwHandleDocs(this)" style="display:none"/>
+                <div class="upload-zone-icon">📂</div>
+                <div style="font-size:14px;font-weight:700;color:var(--white);margin-bottom:4px">Click or drag to upload</div>
+                <div style="font-size:12px;color:var(--muted)">PDF · JPG · PNG · Max 20MB each</div>
+              </div>
+              <div class="upload-queue" id="docs-queue"></div>
+              <button id="docs-upload-btn" class="btn-gold" style="width:100%;padding:12px;display:none" onclick="hwUploadDocs()">
+                ⬆️ Upload Documents
+              </button>
+            </div>
+          </div>
+          <div>
+            <div class="hw-card">
+              <div class="hw-card-title">📁 Recent Uploads</div>
+              <div id="docs-recent"><div style="color:var(--muted);font-size:13px">Loading…</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ┌──────────────────────────────────────────────────────────────────────┐
+         │  PAGE: EARNINGS                                                      │
+         └──────────────────────────────────────────────────────────────────────┘ -->
+    <div class="page" id="page-earnings">
+      <div class="page-hdr">
+        <div class="page-hdr-l">
+          <div class="page-chip">Finance</div>
+          <div class="page-title">My Earnings</div>
+        </div>
+        <div class="page-hdr-r">
+          <button class="btn-out" style="font-size:12px" onclick="hwLoadEarnings()">↻ Refresh</button>
+        </div>
+      </div>
+      <div style="padding:24px 28px">
+        <div class="kpi-row" style="grid-template-columns:repeat(3,1fr)">
+          <div class="kpi-tile">
+            <div class="kpi-val" id="earn-mtd">—</div>
+            <div class="kpi-lbl">MTD Gross</div>
+          </div>
+          <div class="kpi-tile">
+            <div class="kpi-val green" id="earn-paid">—</div>
+            <div class="kpi-lbl">Paid Out</div>
+          </div>
+          <div class="kpi-tile">
+            <div class="kpi-val amber" id="earn-pending">—</div>
+            <div class="kpi-lbl">Pending</div>
+          </div>
+        </div>
+        <div class="two-col">
+          <div>
+            <div class="hw-card">
+              <div class="hw-card-title">💵 Load Breakdown</div>
+              <div id="earn-list"><div style="color:var(--muted);font-size:13px">Loading…</div></div>
+            </div>
+          </div>
+          <div>
+            <div class="hw-card">
+              <div class="hw-card-title">📅 Year-to-Date</div>
+              <div id="earn-ytd"><div style="color:var(--muted);font-size:13px">Loading…</div></div>
+            </div>
+            <div class="hw-card">
+              <div class="hw-card-title">📊 Monthly Trend</div>
+              <div id="earn-trend"><div style="color:var(--muted);font-size:13px">Loading…</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ┌──────────────────────────────────────────────────────────────────────┐
+         │  PAGE: DISPATCHER CHAT                                               │
+         └──────────────────────────────────────────────────────────────────────┘ -->
+    <div class="page" id="page-chat">
+      <div class="page-hdr">
+        <div class="page-hdr-l">
+          <div class="page-chip">Comms</div>
+          <div class="page-title">Dispatcher Chat</div>
+        </div>
+        <div class="page-hdr-r">
+          <span id="chat-status" style="font-size:11px;color:var(--muted)">Connecting…</span>
+        </div>
+      </div>
+      <div style="padding:0 28px 0;height:calc(100vh - var(--hdr-h))">
+        <div class="chat-window">
+          <div class="chat-messages" id="chat-messages">
+            <div class="empty-state">
+              <div class="empty-state-icon">💬</div>
+              <div class="empty-state-msg">Loading messages…</div>
+            </div>
+          </div>
+          <div class="chat-input-row" style="margin-bottom:16px">
+            <textarea class="chat-input" id="chat-input" rows="2" placeholder="Message your dispatcher…"
+              onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();hwSendMsg();}"></textarea>
+            <button class="chat-send-btn" onclick="hwSendMsg()">➤</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ┌──────────────────────────────────────────────────────────────────────┐
+         │  PAGE: FUEL ADVANCE                                                  │
+         └──────────────────────────────────────────────────────────────────────┘ -->
+    <div class="page" id="page-fuel">
+      <div class="page-hdr">
+        <div class="page-hdr-l">
+          <div class="page-chip">Finance</div>
+          <div class="page-title">Fuel Advance Request</div>
+        </div>
+      </div>
+      <div style="padding:24px 28px">
+        <div class="two-col">
+          <div>
+            <div class="hw-card">
+              <div class="hw-card-title">⛽ New Request</div>
+              <div class="hw-field">
+                <label>Associated Load</label>
+                <select id="fuel-load-sel"><option value="">— Select load —</option></select>
+              </div>
+              <div class="hw-field">
+                <label>Amount Requested ($)</label>
+                <input type="number" id="fuel-amount" placeholder="e.g. 250" min="1" max="2000"/>
+              </div>
+              <div class="hw-field">
+                <label>Fuel Stop Location</label>
+                <input type="text" id="fuel-location" placeholder="e.g. Pilot Travel Center, I-70 Exit 42, OH"/>
+              </div>
+              <div class="hw-field">
+                <label>Reason / Notes</label>
+                <textarea id="fuel-notes" rows="3" placeholder="Briefly explain reason for advance…"></textarea>
+              </div>
+              <button class="btn-gold" style="width:100%;padding:12px;margin-top:4px" onclick="hwSubmitFuel()">
+                ⛽ Submit Request
+              </button>
+            </div>
+          </div>
+          <div>
+            <div class="hw-card">
+              <div class="hw-card-title">📋 Request History</div>
+              <div id="fuel-history"><div style="color:var(--muted);font-size:13px">Loading…</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /main-content -->
+</div><!-- /app-shell -->
+
+<!-- Toast -->
+<div id="hw-toast"></div>
+
+<!-- Supabase JS -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+
+<script>
+// ════════════════════════════════════════════════════════════════════════════
+//  HAWK — 3 Lakes Logistics Driver Portal
+//  Auth: Phone + 4-digit PIN via /api/driver-auth
+//  Data: Supabase direct queries + backend API calls
+// ════════════════════════════════════════════════════════════════════════════
+
+const API = (window.__3LL_CONFIG?.API_BASE_URL || '').replace(/\/$/, '');
+const SB_URL = window.__3LL_CONFIG?.SUPABASE_URL || '';
+const SB_KEY = window.__3LL_CONFIG?.SUPABASE_ANON_KEY || '';
+
+let sb = null;
+try { if(SB_URL && SB_KEY) sb = supabase.createClient(SB_URL, SB_KEY); } catch(e){}
+
+// ── STATE ────────────────────────────────────────────────────────────────────
+let _hw = {
+  driverId:   null,
+  driverName: null,
+  truckNum:   null,
+  cdlNum:     null,
+  carrierId:  null,
+  loads:      [],
+  activeLoad: null,
+  msgs:       [],
+  earnings:   [],
+  uploadQueue: [],
+  inspState:  {},
+  geoWatchId: null,
+  lastPos:    null,
+  msgChannel: null,
+  dutyStatus: 'OFF',
+};
+
+// ── INSPECTION TEMPLATE ──────────────────────────────────────────────────────
+const INSP_ITEMS = [
+  {id:'headlights',    label:'Headlights & Taillights',       cat:'Lights'},
+  {id:'brake_lights',  label:'Brake Lights & Turn Signals',    cat:'Lights'},
+  {id:'markers',       label:'Marker / Clearance Lights',      cat:'Lights'},
+  {id:'tires_front',   label:'Front Tires — Tread & Pressure', cat:'Tires'},
+  {id:'tires_rear',    label:'Rear Tires — Tread & Pressure',  cat:'Tires'},
+  {id:'tires_spare',   label:'Spare Tire / Condition',         cat:'Tires'},
+  {id:'brakes',        label:'Brake System / Air Pressure',    cat:'Brakes'},
+  {id:'brake_adj',     label:'Brake Adjustment & Slack',       cat:'Brakes'},
+  {id:'mirrors',       label:'Side & Rear Mirrors',            cat:'Vision'},
+  {id:'windshield',    label:'Windshield & Wipers',            cat:'Vision'},
+  {id:'coupling',      label:'Fifth Wheel / Coupling',         cat:'Trailer'},
+  {id:'trailer_doors', label:'Trailer Doors & Seals',          cat:'Trailer'},
+  {id:'landing_gear',  label:'Landing Gear / Kingpin',         cat:'Trailer'},
+  {id:'oil_level',     label:'Engine Oil Level',               cat:'Engine'},
+  {id:'coolant',       label:'Coolant Level',                  cat:'Engine'},
+  {id:'air_filter',    label:'Air Filter',                     cat:'Engine'},
+  {id:'fire_ext',      label:'Fire Extinguisher',              cat:'Safety'},
+  {id:'triangles',     label:'Emergency Triangles',            cat:'Safety'},
+  {id:'first_aid',     label:'First Aid Kit',                  cat:'Safety'},
+  {id:'logbook',       label:'ELD / Logbook Current',         cat:'Compliance'},
+  {id:'registration',  label:'Registration & Permits',         cat:'Compliance'},
+];
+
+// ════════════════════════════════════════════════════════════════════════════
+//  AUTH
+// ════════════════════════════════════════════════════════════════════════════
+
+let _loginPin = '';
+let _setupPin1 = '';
+let _setupPin2 = '';
+let _setupField = 1; // 1 = entering pin1, 2 = entering pin2
+
+function enterPin(key){
+  const err = document.getElementById('login-err');
+  if(err) err.textContent = '';
+  if(key === 'clr'){ _loginPin = ''; }
+  else if(key === 'del'){ _loginPin = _loginPin.slice(0,-1); }
+  else if(_loginPin.length < 4){ _loginPin += key; }
+  _renderPinDots('pd', _loginPin.length);
+  if(_loginPin.length === 4) setTimeout(doLogin, 120);
+}
+
+function enterSetupPin(key){
+  if(_setupField === 1){
+    if(key === 'clr'){ _setupPin1 = ''; }
+    else if(key === 'del'){ _setupPin1 = _setupPin1.slice(0,-1); }
+    else if(_setupPin1.length < 4){ _setupPin1 += key; }
+    _renderPinDots('spd', _setupPin1.length, 0);
+    if(_setupPin1.length === 4) _setupField = 2;
+  } else {
+    if(key === 'clr'){ _setupPin2 = ''; }
+    else if(key === 'del'){ _setupPin2 = _setupPin2.slice(0,-1); }
+    else if(_setupPin2.length < 4){ _setupPin2 += key; }
+    _renderPinDots('spd', _setupPin2.length, 4);
+    if(_setupPin2.length === 4) setTimeout(doSetupPin, 120);
+  }
+}
+
+function _renderPinDots(prefix, count, offset=0){
+  for(let i=0;i<4;i++){
+    const el = document.getElementById(prefix + (i + offset));
+    if(el){ el.classList.toggle('filled', i < count); }
+  }
+}
+
+function toggleSetup(){
+  const lf = document.getElementById('login-form');
+  const sf = document.getElementById('setup-form');
+  const isLogin = lf.style.display !== 'none';
+  lf.style.display = isLogin ? 'none' : '';
+  sf.style.display = isLogin ? '' : 'none';
+  _loginPin = ''; _setupPin1 = ''; _setupPin2 = ''; _setupField = 1;
+  _renderPinDots('pd', 0);
+  _renderPinDots('spd', 0, 0);
+  _renderPinDots('spd', 0, 4);
+}
+
+async function doLogin(){
+  const phone = document.getElementById('login-phone').value.trim();
+  const err   = document.getElementById('login-err');
+  const btn   = document.getElementById('login-btn');
+  err.textContent = '';
+  if(!phone){ err.textContent = 'Enter your phone number.'; _loginPin=''; _renderPinDots('pd',0); return; }
+  if(_loginPin.length < 4){ err.textContent = 'Enter your 4-digit PIN.'; return; }
+  btn.disabled = true; btn.textContent = 'Signing in…';
+  try {
+    const res = await fetch(`${API}/api/driver-auth/login`, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({phone, pin: _loginPin})
+    });
+    const data = await res.json();
+    if(!res.ok){ throw new Error(data.detail || 'Invalid phone or PIN'); }
+    _storeSession(data);
+    await _loadDriverProfile();
+    _bootApp();
+  } catch(e){
+    err.textContent = e.message || 'Login failed. Check your phone and PIN.';
+    _loginPin = ''; _renderPinDots('pd', 0);
+  } finally { btn.disabled = false; btn.textContent = 'Sign In'; }
+}
+
+async function doSetupPin(){
+  const phone = document.getElementById('setup-phone').value.trim();
+  const err   = document.getElementById('setup-err');
+  const btn   = document.getElementById('setup-btn');
+  err.textContent = '';
+  if(!phone){ err.textContent = 'Enter your phone number.'; return; }
+  if(_setupPin1.length < 4 || _setupPin2.length < 4){ err.textContent = 'Complete both PIN fields.'; return; }
+  if(_setupPin1 !== _setupPin2){ err.textContent = 'PINs do not match. Try again.'; _setupPin1=''; _setupPin2=''; _setupField=1; _renderPinDots('spd',0,0); _renderPinDots('spd',0,4); return; }
+  btn.disabled = true; btn.textContent = 'Setting up…';
+  try {
+    const res = await fetch(`${API}/api/driver-auth/setup-pin`, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({phone, pin: _setupPin1})
+    });
+    const data = await res.json();
+    if(!res.ok){ throw new Error(data.detail || 'Setup failed'); }
+    _storeSession(data);
+    await _loadDriverProfile();
+    _bootApp();
+  } catch(e){
+    err.textContent = e.message || 'Setup failed. Please contact dispatch.';
+    _setupPin1=''; _setupPin2=''; _setupField=1;
+    _renderPinDots('spd',0,0); _renderPinDots('spd',0,4);
+  } finally { btn.disabled = false; btn.textContent = 'Set PIN & Sign In'; }
+}
+
+function _storeSession(data){
+  sessionStorage.setItem('hawk_token',      data.session_token);
+  sessionStorage.setItem('hawk_driver_id',  data.driver_id);
+  sessionStorage.setItem('hawk_driver_name',data.driver_name);
+  sessionStorage.setItem('hawk_carrier_id', data.carrier_id || '');
+  _hw.driverId   = data.driver_id;
+  _hw.driverName = data.driver_name;
+  _hw.carrierId  = data.carrier_id;
+}
+
+async function _loadDriverProfile(){
+  try {
+    const res = await fetch(`${API}/api/driver-auth/me`, {
+      headers:{'Authorization':'Bearer '+sessionStorage.getItem('hawk_token')}
+    });
+    if(res.ok){
+      const me = await res.json();
+      _hw.truckNum = me.truck_number;
+      _hw.cdlNum   = me.cdl_number;
+      sessionStorage.setItem('hawk_truck', me.truck_number || '');
+    }
+  } catch(e){ /* non-fatal */ }
+}
+
+function hwLogout(){
+  try { fetch(`${API}/api/driver-auth/logout`,{method:'POST',headers:{'Authorization':'Bearer '+sessionStorage.getItem('hawk_token')}}); } catch(e){}
+  sessionStorage.clear();
+  _hw = {driverId:null,driverName:null,truckNum:null,cdlNum:null,carrierId:null,loads:[],activeLoad:null,msgs:[],earnings:[],uploadQueue:[],inspState:{},geoWatchId:null,lastPos:null,msgChannel:null,dutyStatus:'OFF'};
+  if(_hw.geoWatchId) navigator.geolocation.clearWatch(_hw.geoWatchId);
+  document.getElementById('app-shell').classList.remove('visible');
+  document.getElementById('app-shell').style.display = 'none';
+  document.getElementById('login-screen').classList.remove('hidden');
+  _loginPin=''; _renderPinDots('pd',0);
+}
+
+// ── SESSION RESTORE ──────────────────────────────────────────────────────────
+function _tryRestoreSession(){
+  const tok = sessionStorage.getItem('hawk_token');
+  if(!tok) return false;
+  _hw.driverId   = sessionStorage.getItem('hawk_driver_id');
+  _hw.driverName = sessionStorage.getItem('hawk_driver_name');
+  _hw.carrierId  = sessionStorage.getItem('hawk_carrier_id');
+  _hw.truckNum   = sessionStorage.getItem('hawk_truck');
+  return true;
+}
+
+async function hawkFetch(path, method='GET', body=null){
+  const tok = sessionStorage.getItem('hawk_token');
+  const opts = { method, headers: {'Authorization':'Bearer '+tok, 'Content-Type':'application/json'} };
+  if(body) opts.body = JSON.stringify(body);
+  const res = await fetch(API + path, opts);
+  if(res.status === 401){ hwLogout(); return null; }
+  if(!res.ok){ const d = await res.json().catch(()=>{}); throw new Error(d?.detail || 'API error'); }
+  return res.json();
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+//  APP BOOT
+// ════════════════════════════════════════════════════════════════════════════
+
+function _bootApp(){
+  document.getElementById('login-screen').classList.add('hidden');
+  const shell = document.getElementById('app-shell');
+  shell.style.display = 'flex';
+  shell.classList.add('visible');
+
+  // Populate sidebar
+  document.getElementById('sb-driver-name').textContent = _hw.driverName || '—';
+  document.getElementById('sb-driver-truck').textContent = _hw.truckNum ? `Truck ${_hw.truckNum}` : (_hw.cdlNum ? `CDL: ${_hw.cdlNum}` : 'Driver');
+
+  hwNav('dashboard');
+  _startGPS();
+  _buildInspChecklist();
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+//  NAVIGATION
+// ════════════════════════════════════════════════════════════════════════════
+
+function hwNav(page){
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.sb-item').forEach(i => i.classList.remove('active'));
+  const pg = document.getElementById('page-'+page);
+  const nav = document.getElementById('nav-'+page);
+  if(pg) pg.classList.add('active');
+  if(nav) nav.classList.add('active');
+  // Load data for page
+  if(page === 'dashboard')  _loadDashboard();
+  if(page === 'loads')      hwLoadLoads();
+  if(page === 'inspection') _populateInspLoadSel();
+  if(page === 'docs')       { _populateDocsLoadSel(); hwLoadRecentDocs(); }
+  if(page === 'earnings')   hwLoadEarnings();
+  if(page === 'chat')       { hwLoadMessages(); _subscribeMsgs(); }
+  if(page === 'fuel')       { _populateFuelLoadSel(); hwLoadFuelHistory(); }
+  // Clear msg badge when opening chat
+  if(page === 'chat'){ document.getElementById('sb-badge-msgs').style.display='none'; }
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+//  DASHBOARD
+// ════════════════════════════════════════════════════════════════════════════
+
+async function _loadDashboard(){
+  await hwLoadLoads(true);
+  _renderDashLoads();
+  hwLoadMessages(true);
+  _loadHOS();
+}
+
+function _renderDashLoads(){
+  const active  = _hw.loads.filter(l => ['En Route','In Transit','Booked'].includes(l.status));
+  const pending = _hw.loads.filter(l => l.status === 'Pending' || (!l.driver_name && l.status === 'Booked'));
+  const activeEl  = document.getElementById('dash-active-load');
+  const pendingEl = document.getElementById('dash-pending-loads');
+  const kpiActive = document.getElementById('kpi-loads');
+  if(kpiActive) kpiActive.textContent = active.length;
+  if(activeEl){
+    const cur = _hw.loads.find(l => ['En Route','In Transit'].includes(l.status));
+    activeEl.innerHTML = cur ? _loadCardHTML(cur) : '<div style="color:var(--muted);font-size:13px">No active load</div>';
+  }
+  if(pendingEl){
+    pendingEl.innerHTML = pending.length
+      ? pending.slice(0,3).map(_loadCardHTML).join('')
+      : '<div style="color:var(--muted);font-size:13px">No pending loads</div>';
+  }
+  // KPIs
+  const month  = new Date(); month.setDate(1); month.setHours(0,0,0,0);
+  const mtd    = _hw.loads.filter(l => new Date(l.created_at) >= month);
+  const trips  = mtd.filter(l => ['Delivered','Completed'].includes(l.status)).length;
+  const miles  = mtd.reduce((s,l) => s + Number(l.miles||0), 0);
+  const earn   = mtd.reduce((s,l) => s + Number(l.driver_pay||l.rate||0), 0);
+  document.getElementById('kpi-trips').textContent = trips || '0';
+  document.getElementById('kpi-miles').textContent = miles > 0 ? miles.toLocaleString() : '0';
+  document.getElementById('kpi-earn').textContent = earn > 0 ? '$'+earn.toLocaleString(undefined,{maximumFractionDigits:0}) : '$0';
+  // Pending badge in sidebar
+  if(pending.length){
+    const badge = document.getElementById('sb-badge-loads');
+    badge.textContent = pending.length;
+    badge.style.display = '';
+  }
+}
+
+async function _loadHOS(){
+  try {
+    const data = await hawkFetch(`/api/driver/hos`).catch(()=>null);
+    if(!data) return;
+    const {drive_remaining_min, shift_remaining_min, cycle_remaining_min} = data;
+    const fmt = m => { if(m==null) return '—'; const h=Math.floor(m/60),mn=m%60; return `${h}h ${mn}m`; };
+    const pct = (m, total) => m==null ? 100 : Math.max(0, Math.min(100, (m/total)*100));
+    document.getElementById('hos-drive').textContent = fmt(drive_remaining_min);
+    document.getElementById('hos-shift').textContent = fmt(shift_remaining_min);
+    document.getElementById('hos-cycle').textContent = fmt(cycle_remaining_min);
+    const driveBar = document.getElementById('hos-drive-bar');
+    const shiftBar = document.getElementById('hos-shift-bar');
+    const cycleBar = document.getElementById('hos-cycle-bar');
+    if(driveBar){ driveBar.style.width = pct(drive_remaining_min, 660)+'%'; _hosBarColor(driveBar, drive_remaining_min, 660); }
+    if(shiftBar){ shiftBar.style.width = pct(shift_remaining_min, 840)+'%'; _hosBarColor(shiftBar, shift_remaining_min, 840); }
+    if(cycleBar){ cycleBar.style.width = pct(cycle_remaining_min, 4200)+'%'; _hosBarColor(cycleBar, cycle_remaining_min, 4200); }
+  } catch(e){}
+}
+function _hosBarColor(el, val, total){
+  const p = val / total;
+  el.classList.remove('warn','crit');
+  if(p < .15) el.classList.add('crit');
+  else if(p < .3) el.classList.add('warn');
+}
+
+async function setDutyStatus(status){
+  _hw.dutyStatus = status;
+  document.querySelectorAll('.duty-btn').forEach(b => {
+    b.className = 'duty-btn';
+    const map = {OFF:'active-off',D:'active-drive',ON:'active-on',SB:'active-sb'};
+    if(b.textContent.includes({OFF:'OFF',D:'Driving',ON:'On Duty',SB:'Sleeper'}[status]||'_')){
+      b.classList.add(map[status]||'');
+    }
+  });
+  // Apply correct active class
+  const labels = {OFF:'OFF Duty',D:'Driving',ON:'On Duty',SB:'Sleeper Berth'};
+  document.querySelectorAll('.duty-btn').forEach(b => {
+    b.className = 'duty-btn';
+    if(b.textContent === labels[status]) b.classList.add('active-'+status.toLowerCase().replace(' ',''));
+  });
+  const cssMap = {OFF:'active-off',D:'active-drive',ON:'active-on',SB:'active-sb'};
+  document.querySelectorAll('.duty-btn').forEach(b => {
+    const isActive = b.textContent === labels[status];
+    b.className = 'duty-btn' + (isActive ? ' '+cssMap[status] : '');
+  });
+  try { await hawkFetch('/api/driver/duty-status','POST',{status}); } catch(e){}
+  hwToast('Duty status updated: '+labels[status]);
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+//  LOADS
+// ════════════════════════════════════════════════════════════════════════════
+
+async function hwLoadLoads(silent=false){
+  try {
+    if(!sb){ if(!silent) hwToast('Supabase not configured','error'); return; }
+    const { data } = await sb.from('loads')
+      .select('id,load_number,origin,destination,status,rate,miles,driver_pay,driver_name,created_at,pickup_date,delivery_date')
+      .ilike('driver_name', `%${_hw.driverName||'__never__'}%`)
+      .order('created_at',{ascending:false})
+      .limit(50);
+    _hw.loads = data || [];
+    _hw.activeLoad = _hw.loads.find(l => ['En Route','In Transit'].includes(l.status)) || null;
+    if(!silent){
+      _renderLoadsPage();
+      _populateAllLoadSelects();
+    }
+  } catch(e){ if(!silent) hwToast('Failed to load loads','error'); }
+}
+
+function _renderLoadsPage(){
+  const pending  = _hw.loads.filter(l => l.status==='Pending' || (!l.driver_name && l.status==='Booked'));
+  const active   = _hw.loads.filter(l => ['En Route','In Transit','Booked'].includes(l.status));
+  const history  = _hw.loads.filter(l => ['Delivered','Completed','Cancelled'].includes(l.status));
+
+  const pendEl = document.getElementById('loads-pending');
+  const actEl  = document.getElementById('loads-active');
+  const tbody  = document.getElementById('loads-history-body');
+
+  if(pendEl) pendEl.innerHTML = pending.length
+    ? pending.map(_loadCardHTML).join('')
+    : '<div class="empty-state"><div class="empty-state-icon">📭</div><div class="empty-state-msg">No pending loads</div></div>';
+
+  if(actEl) actEl.innerHTML = active.length
+    ? active.map(_loadCardHTML).join('')
+    : '<div style="color:var(--muted);font-size:13px">No active loads</div>';
+
+  if(tbody) tbody.innerHTML = history.length
+    ? history.slice(0,20).map(l => `
+        <tr>
+          <td style="font-weight:700">#${_esc(l.load_number||l.id?.slice(0,6))}</td>
+          <td>${_esc((l.origin||'').split(',')[0])} → ${_esc((l.destination||'').split(',')[0])}</td>
+          <td><span class="load-status ${l.status==='Delivered'?'delivered':'booked'}">${_esc(l.status)}</span></td>
+          <td style="color:var(--green);font-weight:600">$${Number(l.driver_pay||l.rate||0).toLocaleString()}</td>
+          <td style="color:var(--muted)">${l.created_at?new Date(l.created_at).toLocaleDateString():''}</td>
+        </tr>`).join('')
+    : '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:24px">No history yet</td></tr>';
+}
+
+function _loadCardHTML(l){
+  if(!l) return '';
+  const origin = (l.origin||'').split(',')[0];
+  const dest   = (l.destination||'').split(',')[0];
+  const statusMap = {'En Route':'enroute','In Transit':'enroute','Booked':'booked','Pending':'pending-assign','Delivered':'delivered'};
+  const cls = statusMap[l.status] || 'booked';
+  const isActive = ['En Route','In Transit'].includes(l.status);
+  const isPending = l.status === 'Pending';
+  const actions = isPending
+    ? `<button class="load-action-btn accept" onclick="hwLoadAction('${l.id}','accept')">✓ Accept</button>
+       <button class="load-action-btn decline" onclick="hwLoadAction('${l.id}','decline')">✕ Decline</button>`
+    : isActive
+    ? `<button class="load-action-btn navigate" onclick="hwNavigate('${_esc(l.destination||'')}')">🗺 Navigate</button>
+       <button class="load-action-btn deliver" onclick="hwLoadAction('${l.id}','deliver')">📦 Mark Delivered</button>`
+    : `<button class="load-action-btn navigate" onclick="hwNavigate('${_esc(l.origin||'')}')">🗺 Navigate</button>
+       <button class="load-action-btn pickup" onclick="hwLoadAction('${l.id}','pickup')">🚛 Mark Picked Up</button>`;
+  return `
+    <div class="load-card ${isActive?'active':isPending?'pending':''}">
+      <span class="load-status ${cls}">${_esc(l.status||'Unknown')}</span>
+      <div class="load-route">
+        <span>${_esc(origin)}</span>
+        <span class="load-route-arrow">→</span>
+        <span>${_esc(dest)}</span>
+      </div>
+      <div class="load-meta">
+        <div class="load-meta-item">Load <strong>#${_esc(l.load_number||l.id?.slice(0,6))}</strong></div>
+        ${l.miles?`<div class="load-meta-item"><strong>${l.miles}</strong> mi</div>`:''}
+        ${(l.driver_pay||l.rate)?`<div class="load-meta-item">Pay <strong style="color:var(--green)">$${Number(l.driver_pay||l.rate||0).toLocaleString()}</strong></div>`:''}
+        ${l.pickup_date?`<div class="load-meta-item">PU <strong>${new Date(l.pickup_date).toLocaleDateString()}</strong></div>`:''}
+      </div>
+      <div class="load-actions">${actions}</div>
+    </div>`;
+}
+
+async function hwLoadAction(loadId, action){
+  const statusMap = {accept:'Booked', decline:'Cancelled', pickup:'En Route', deliver:'Delivered'};
+  try {
+    await hawkFetch(`/api/dashboard/loads/${loadId}`, 'PATCH', {status: statusMap[action]});
+    hwToast(action === 'accept' ? 'Load accepted' : action === 'deliver' ? 'Load marked delivered' : 'Updated');
+    await hwLoadLoads();
+    _renderDashLoads();
+  } catch(e){ hwToast('Update failed','error'); }
+}
+
+function hwNavigate(dest){
+  if(!dest) return;
+  const url = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(dest)}`;
+  window.open(url, '_blank');
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+//  GPS / CHECKIN
+// ════════════════════════════════════════════════════════════════════════════
+
+function _startGPS(){
+  if(!navigator.geolocation) return;
+  _hw.geoWatchId = navigator.geolocation.watchPosition(pos => {
+    _hw.lastPos = {lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy: pos.coords.accuracy};
+    document.getElementById('sb-gps-pill').style.display = '';
+    document.getElementById('sb-online-dot').style.display = '';
+    _checkGeofence(_hw.lastPos);
+    // Ping every ~30s when driving
+    if(_hw.dutyStatus === 'D') _sendGpsPing();
+  }, ()=>{}, {enableHighAccuracy:true, maximumAge:30000, timeout:15000});
+}
+
+async function hwCheckin(){
+  if(!_hw.lastPos){ hwToast('Waiting for GPS…','error'); return; }
+  await _sendGpsPing();
+  hwToast('Location checked in ✓');
+}
+
+async function _sendGpsPing(){
+  try {
+    await hawkFetch('/api/driver/checkin','POST',{
+      lat: _hw.lastPos.lat,
+      lng: _hw.lastPos.lng,
+      accuracy: _hw.lastPos.accuracy,
+      load_id: _hw.activeLoad?.id || null,
+      status: _hw.dutyStatus
+    });
+  } catch(e){}
+}
+
+function _checkGeofence(pos){
+  if(!_hw.activeLoad) return;
+  const destinations = [
+    {label:'Pickup', addr:_hw.activeLoad.origin},
+    {label:'Delivery', addr:_hw.activeLoad.destination},
+  ];
+  // Geofence logic is approximate without geocoding — just show the alert bar on proximity
+  const bar = document.getElementById('geo-alert-bar');
+  const txt = document.getElementById('geo-alert-text');
+  // Show reminder when near last recorded destination
+  if(txt && bar){ txt.textContent = `GPS Active · Load #${_hw.activeLoad.load_number||''}`; bar.classList.add('show'); }
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+//  PRE-TRIP INSPECTION
+// ════════════════════════════════════════════════════════════════════════════
+
+function _buildInspChecklist(){
+  const container = document.getElementById('insp-checklist');
+  if(!container) return;
+  const cats = [...new Set(INSP_ITEMS.map(i => i.cat))];
+  container.innerHTML = cats.map(cat => {
+    const items = INSP_ITEMS.filter(i => i.cat === cat);
+    return `<div class="insp-category">
+      <div class="insp-category-lbl">${cat}</div>
+      ${items.map(item => `
+        <div class="insp-item" id="insp-item-${item.id}">
+          <div class="insp-checkbox" id="insp-cb-${item.id}"></div>
+          <div class="insp-lbl">${_esc(item.label)}</div>
+          <div class="insp-toggle-row">
+            <button class="insp-btn pass" onclick="setInspItem('${item.id}','pass')">PASS</button>
+            <button class="insp-btn fail" onclick="setInspItem('${item.id}','fail')">FAIL</button>
+          </div>
+        </div>`).join('')}
+    </div>`;
+  }).join('');
+}
+
+function setInspItem(id, result){
+  _hw.inspState[id] = result;
+  const row  = document.getElementById('insp-item-'+id);
+  const cb   = document.getElementById('insp-cb-'+id);
+  if(row){ row.className = 'insp-item '+result; }
+  if(cb){ cb.textContent = result === 'pass' ? '✓' : '✕'; }
+  // Update buttons
+  if(row){
+    row.querySelectorAll('.insp-btn').forEach(b => {
+      b.classList.toggle('active', b.classList.contains(result));
+    });
+  }
+  const total  = INSP_ITEMS.length;
+  const done   = Object.keys(_hw.inspState).length;
+  const passed = Object.values(_hw.inspState).filter(v=>v==='pass').length;
+  const el = document.getElementById('insp-pass-count');
+  if(el) el.textContent = `${done}/${total} · ${passed} Pass`;
+}
+
+async function hwSubmitInspection(){
+  const odometer = document.getElementById('insp-odometer')?.value;
+  const notes    = document.getElementById('insp-notes')?.value;
+  const loadId   = document.getElementById('insp-load-sel')?.value;
+  const total    = INSP_ITEMS.length;
+  const done     = Object.keys(_hw.inspState).length;
+  const fails    = Object.entries(_hw.inspState).filter(([,v])=>v==='fail').map(([k])=>k);
+  if(done < total * 0.8){ hwToast('Complete at least 80% of the checklist','error'); return; }
+  try {
+    await hawkFetch('/api/driver/inspection','POST',{
+      driver_id:    _hw.driverId,
+      driver_name:  _hw.driverName,
+      odometer:     odometer ? parseInt(odometer) : null,
+      results:      _hw.inspState,
+      fail_count:   fails.length,
+      fail_items:   fails,
+      notes:        notes,
+      load_id:      loadId || null,
+    });
+    hwToast('Inspection submitted ✓');
+    _hw.inspState = {};
+    _buildInspChecklist();
+    document.getElementById('insp-odometer').value = '';
+    document.getElementById('insp-notes').value = '';
+    document.getElementById('insp-pass-count').textContent = '';
+    hwLoadInspHistory();
+  } catch(e){ hwToast('Submission failed: '+e.message,'error'); }
+}
+
+async function hwLoadInspHistory(){
+  const el = document.getElementById('insp-history');
+  if(!el || !sb) return;
+  try {
+    const { data } = await sb.from('driver_inspections')
+      .select('id,created_at,fail_count,notes,odometer')
+      .eq('driver_id', _hw.driverId)
+      .order('created_at',{ascending:false}).limit(5);
+    if(!data?.length){ el.innerHTML='<div style="color:var(--muted);font-size:13px">No inspections yet</div>'; return; }
+    el.innerHTML = data.map(r => `
+      <div style="padding:10px 0;border-bottom:1px solid rgba(255,255,255,.05)">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div style="font-size:13px;font-weight:700;color:var(--white)">${new Date(r.created_at).toLocaleString()}</div>
+          <span style="font-size:11px;padding:2px 8px;border-radius:12px;background:${r.fail_count?'rgba(248,113,113,.15)':'rgba(74,222,128,.15)'};color:${r.fail_count?'var(--red)':'var(--green)'}">
+            ${r.fail_count ? r.fail_count+' FAIL' : '✓ PASS'}
+          </span>
+        </div>
+        ${r.odometer?`<div style="font-size:12px;color:var(--muted);margin-top:3px">Odometer: ${Number(r.odometer).toLocaleString()}</div>`:''}
+        ${r.notes?`<div style="font-size:12px;color:var(--muted);margin-top:2px">${_esc(r.notes.slice(0,80))}</div>`:''}
+      </div>`).join('');
+  } catch(e){ el.innerHTML='<div style="color:var(--muted);font-size:13px">Unable to load</div>'; }
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+//  DOCUMENTS
+// ════════════════════════════════════════════════════════════════════════════
+
+function hwHandleDocs(input){
+  _hw.uploadQueue = [..._hw.uploadQueue, ...Array.from(input.files)];
+  _renderDocQueue();
+  input.value = '';
+}
+
+function _renderDocQueue(){
+  const el  = document.getElementById('docs-queue');
+  const btn = document.getElementById('docs-upload-btn');
+  if(!el) return;
+  el.innerHTML = _hw.uploadQueue.map((f,i) => `
+    <div class="upload-item">
+      <span style="font-size:16px">${f.type.includes('pdf')?'📄':'🖼'}</span>
+      <span class="upload-item-name">${_esc(f.name)}</span>
+      <span style="font-size:11px;color:var(--muted)">${(f.size/1024/1024).toFixed(1)} MB</span>
+      <span class="upload-item-remove" onclick="_removeDoc(${i})">✕</span>
+    </div>`).join('');
+  if(btn) btn.style.display = _hw.uploadQueue.length ? '' : 'none';
+}
+
+function _removeDoc(i){ _hw.uploadQueue.splice(i,1); _renderDocQueue(); }
+
+async function hwUploadDocs(){
+  if(!sb || !_hw.uploadQueue.length) return;
+  const docType = document.getElementById('docs-type')?.value || 'other';
+  const loadId  = document.getElementById('docs-load-sel')?.value;
+  const btn     = document.getElementById('docs-upload-btn');
+  if(btn){ btn.disabled=true; btn.textContent='Uploading…'; }
+  let success = 0;
+  for(const file of _hw.uploadQueue){
+    try {
+      const ext  = file.name.split('.').pop().toLowerCase();
+      const path = `drivers/${_hw.driverId}/${Date.now()}_${docType}.${ext}`;
+      const { error } = await sb.storage.from('driver-docs').upload(path, file, {contentType:file.type,upsert:false});
+      if(error) throw error;
+      const { data: { publicUrl } } = sb.storage.from('driver-docs').getPublicUrl(path);
+      await sb.from('driver_documents').insert({
+        driver_id: _hw.driverId,
+        driver_name: _hw.driverName,
+        doc_type: docType,
+        load_id: loadId || null,
+        file_path: path,
+        file_url: publicUrl,
+        file_name: file.name,
+      });
+      success++;
+    } catch(e){ console.warn('Upload failed:', e); }
+  }
+  hwToast(success + ' document(s) uploaded ✓');
+  _hw.uploadQueue = [];
+  _renderDocQueue();
+  if(btn){ btn.disabled=false; btn.textContent='⬆️ Upload Documents'; }
+  hwLoadRecentDocs();
+}
+
+async function hwLoadRecentDocs(){
+  const el = document.getElementById('docs-recent');
+  if(!el || !sb) return;
+  try {
+    const { data } = await sb.from('driver_documents')
+      .select('id,doc_type,file_name,file_url,created_at')
+      .eq('driver_id', _hw.driverId)
+      .order('created_at',{ascending:false}).limit(10);
+    if(!data?.length){ el.innerHTML='<div style="color:var(--muted);font-size:13px">No uploads yet</div>'; return; }
+    el.innerHTML = data.map(d => `
+      <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.05)">
+        <span style="font-size:20px">${d.file_name?.endsWith('.pdf')?'📄':'🖼'}</span>
+        <div style="flex:1;overflow:hidden">
+          <div style="font-size:13px;font-weight:600;color:var(--white);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${_esc(d.file_name||'Document')}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px">${_esc(d.doc_type?.toUpperCase())} · ${new Date(d.created_at).toLocaleDateString()}</div>
+        </div>
+        ${d.file_url?`<a href="${d.file_url}" target="_blank" style="font-size:12px;color:var(--gold2);text-decoration:none">View →</a>`:''}
+      </div>`).join('');
+  } catch(e){ el.innerHTML='<div style="color:var(--muted);font-size:13px">Unable to load</div>'; }
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+//  EARNINGS
+// ════════════════════════════════════════════════════════════════════════════
+
+async function hwLoadEarnings(){
+  if(!sb) return;
+  try {
+    const { data } = await sb.from('loads')
+      .select('id,load_number,origin,destination,status,rate,miles,driver_pay,created_at')
+      .or(`driver_name.ilike.%${_hw.driverName||'__never__'}%`)
+      .order('created_at',{ascending:false}).limit(100);
+    _hw.earnings = data || [];
+  } catch(e){}
+  _renderEarnings();
+}
+
+function _renderEarnings(){
+  const now   = new Date();
+  const month = new Date(now.getFullYear(), now.getMonth(), 1);
+  const year  = new Date(now.getFullYear(), 0, 1);
+  const mtd   = _hw.earnings.filter(l => new Date(l.created_at) >= month && ['Delivered','Completed'].includes(l.status));
+  const ytd   = _hw.earnings.filter(l => new Date(l.created_at) >= year  && ['Delivered','Completed'].includes(l.status));
+  const sumPay = arr => arr.reduce((s,l) => s + Number(l.driver_pay||l.rate||0), 0);
+  const mtdTotal = sumPay(mtd);
+  const ytdTotal = sumPay(ytd);
+  document.getElementById('earn-mtd').textContent  = '$'+mtdTotal.toLocaleString(undefined,{maximumFractionDigits:0});
+  document.getElementById('earn-paid').textContent = '$'+ytdTotal.toLocaleString(undefined,{maximumFractionDigits:0});
+  document.getElementById('earn-pending').textContent = '$'+sumPay(_hw.earnings.filter(l=>!['Delivered','Completed'].includes(l.status))).toLocaleString(undefined,{maximumFractionDigits:0});
+  // Load breakdown
+  const listEl = document.getElementById('earn-list');
+  if(listEl) listEl.innerHTML = mtd.length
+    ? mtd.map(l => `
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.05)">
+          <div>
+            <div style="font-size:13px;font-weight:600;color:var(--white)">#${_esc(l.load_number||l.id?.slice(0,6))} · ${_esc((l.origin||'').split(',')[0])} → ${_esc((l.destination||'').split(',')[0])}</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:2px">${l.miles||0} mi · ${new Date(l.created_at).toLocaleDateString()}</div>
+          </div>
+          <div style="font-size:15px;font-weight:800;color:var(--green)">$${Number(l.driver_pay||l.rate||0).toLocaleString()}</div>
+        </div>`).join('')
+    : '<div style="color:var(--muted);font-size:13px">No completed loads this month</div>';
+  // YTD summary
+  const ytdEl = document.getElementById('earn-ytd');
+  if(ytdEl) ytdEl.innerHTML = `
+    <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.05)"><span style="color:var(--muted);font-size:13px">Total Loads</span><strong>${ytd.length}</strong></div>
+    <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.05)"><span style="color:var(--muted);font-size:13px">Total Miles</span><strong>${ytd.reduce((s,l)=>s+Number(l.miles||0),0).toLocaleString()}</strong></div>
+    <div style="display:flex;justify-content:space-between;padding:8px 0"><span style="color:var(--muted);font-size:13px">YTD Earnings</span><strong style="color:var(--green);font-size:16px">$${ytdTotal.toLocaleString(undefined,{maximumFractionDigits:0})}</strong></div>`;
+  // Monthly trend (last 6 months)
+  const trendEl = document.getElementById('earn-trend');
+  if(trendEl){
+    const months = [];
+    for(let i=5;i>=0;i--){
+      const d = new Date(now.getFullYear(), now.getMonth()-i, 1);
+      const label = d.toLocaleDateString(undefined,{month:'short'});
+      const total = sumPay(_hw.earnings.filter(l=>{
+        const ld = new Date(l.created_at);
+        return ld.getMonth()===d.getMonth() && ld.getFullYear()===d.getFullYear() && ['Delivered','Completed'].includes(l.status);
+      }));
+      months.push({label, total});
+    }
+    const maxTotal = Math.max(...months.map(m=>m.total), 1);
+    trendEl.innerHTML = months.map(m => `
+      <div class="earn-bar-row">
+        <div class="earn-bar-lbl">${m.label}</div>
+        <div class="earn-bar-wrap"><div class="earn-bar-fill" style="width:${(m.total/maxTotal*100).toFixed(1)}%"></div></div>
+        <div class="earn-bar-val">${m.total>0?'$'+m.total.toLocaleString(undefined,{maximumFractionDigits:0}):'—'}</div>
+      </div>`).join('');
+  }
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+//  DISPATCHER CHAT
+// ════════════════════════════════════════════════════════════════════════════
+
+async function hwLoadMessages(silent=false){
+  if(!sb) return;
+  try {
+    const { data } = await sb.from('driver_messages')
+      .select('id,body,direction,driver_id,created_at,read_at')
+      .eq('driver_id', _hw.driverId)
+      .order('created_at',{ascending:true}).limit(60);
+    _hw.msgs = data || [];
+    _renderMessages();
+    // Unread badge
+    const unread = _hw.msgs.filter(m => m.direction==='inbound' && !m.read_at).length;
+    if(unread && !silent){
+      const badge = document.getElementById('sb-badge-msgs');
+      if(badge){ badge.textContent = unread; badge.style.display = ''; }
+    }
+    // Dash preview
+    if(silent){
+      const dashEl = document.getElementById('dash-msgs');
+      if(dashEl){
+        const recent = [..._hw.msgs].reverse().slice(0,3);
+        dashEl.innerHTML = recent.length
+          ? recent.map(m=>`<div style="padding:6px 0;border-bottom:1px solid rgba(255,255,255,.05);font-size:12px"><span style="color:${m.direction==='outbound'?'var(--gold2)':'var(--green)'}">●</span> ${_esc((m.body||'').slice(0,60))}</div>`).join('')
+          : '<div style="color:var(--muted)">No messages yet</div>';
+      }
+    }
+    document.getElementById('chat-status').textContent = '● Connected';
+    document.getElementById('chat-status').style.color = 'var(--green)';
+  } catch(e){
+    document.getElementById('chat-status').textContent = '● Offline';
+  }
+}
+
+function _renderMessages(){
+  const el = document.getElementById('chat-messages');
+  if(!el) return;
+  if(!_hw.msgs.length){
+    el.innerHTML = '<div class="empty-state"><div class="empty-state-icon">💬</div><div class="empty-state-msg">No messages yet. Say hi to your dispatcher!</div></div>';
+    return;
+  }
+  el.innerHTML = _hw.msgs.map(m => {
+    const isOut = m.direction === 'outbound';
+    return `<div class="chat-msg ${isOut?'outbound':'inbound'}">
+      <div class="chat-bubble">${_esc(m.body||'')}</div>
+      <div class="chat-meta">${new Date(m.created_at).toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'})}</div>
+    </div>`;
+  }).join('');
+  el.scrollTop = el.scrollHeight;
+}
+
+async function hwSendMsg(){
+  const input = document.getElementById('chat-input');
+  const body  = input?.value?.trim();
+  if(!body || !sb) return;
+  input.value = '';
+  try {
+    await sb.from('driver_messages').insert({
+      driver_id: _hw.driverId,
+      driver_name: _hw.driverName,
+      direction: 'outbound',
+      body,
+      read_at: new Date().toISOString(),
+    });
+    await hwLoadMessages(false);
+  } catch(e){ hwToast('Message failed','error'); }
+}
+
+function _subscribeMsgs(){
+  if(!sb || _hw.msgChannel) return;
+  _hw.msgChannel = sb.channel('hawk_msgs_'+_hw.driverId)
+    .on('postgres_changes',{event:'INSERT',schema:'public',table:'driver_messages',filter:`driver_id=eq.${_hw.driverId}`},
+      () => hwLoadMessages(false))
+    .subscribe();
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+//  FUEL ADVANCE
+// ════════════════════════════════════════════════════════════════════════════
+
+async function hwSubmitFuel(){
+  const amount   = document.getElementById('fuel-amount')?.value;
+  const location = document.getElementById('fuel-location')?.value?.trim();
+  const notes    = document.getElementById('fuel-notes')?.value?.trim();
+  const loadId   = document.getElementById('fuel-load-sel')?.value;
+  if(!amount || !location){ hwToast('Amount and location required','error'); return; }
+  try {
+    await hawkFetch('/api/driver/fuel-advance','POST',{
+      driver_id:   _hw.driverId,
+      driver_name: _hw.driverName,
+      amount:      parseFloat(amount),
+      location,
+      notes:       notes || null,
+      load_id:     loadId || null,
+    });
+    hwToast('Fuel advance request submitted ✓');
+    document.getElementById('fuel-amount').value = '';
+    document.getElementById('fuel-location').value = '';
+    document.getElementById('fuel-notes').value = '';
+    hwLoadFuelHistory();
+  } catch(e){ hwToast('Request failed: '+e.message,'error'); }
+}
+
+async function hwLoadFuelHistory(){
+  const el = document.getElementById('fuel-history');
+  if(!el || !sb) return;
+  try {
+    const { data } = await sb.from('driver_fuel_requests')
+      .select('id,amount,location,status,created_at,notes')
+      .eq('driver_id', _hw.driverId)
+      .order('created_at',{ascending:false}).limit(8);
+    if(!data?.length){ el.innerHTML='<div style="color:var(--muted);font-size:13px">No requests yet</div>'; return; }
+    const statusColor = {pending:'var(--amber)',approved:'var(--green)',denied:'var(--red)'};
+    el.innerHTML = data.map(r => `
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.05)">
+        <div>
+          <div style="font-size:14px;font-weight:700;color:var(--white)">$${Number(r.amount).toLocaleString()}</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:2px">${_esc(r.location||'—')} · ${new Date(r.created_at).toLocaleDateString()}</div>
+          ${r.notes?`<div style="font-size:11px;color:var(--muted);margin-top:2px">${_esc(r.notes.slice(0,60))}</div>`:''}
+        </div>
+        <span style="font-size:11px;font-weight:700;padding:4px 10px;border-radius:20px;background:${statusColor[r.status]||'rgba(255,255,255,.08)'}22;color:${statusColor[r.status]||'var(--muted)'}">${(r.status||'pending').toUpperCase()}</span>
+      </div>`).join('');
+  } catch(e){ el.innerHTML='<div style="color:var(--muted);font-size:13px">Unable to load</div>'; }
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+//  LOAD SELECT HELPERS
+// ════════════════════════════════════════════════════════════════════════════
+
+function _populateAllLoadSelects(){
+  _populateInspLoadSel();
+  _populateDocsLoadSel();
+  _populateFuelLoadSel();
+}
+
+function _buildLoadOptions(){
+  const active = _hw.loads.filter(l => ['Booked','En Route','In Transit','POD Needed','Delivered'].includes(l.status)).slice(0,10);
+  return active.map(l => {
+    const o = (l.origin||'').split(',')[0];
+    const d = (l.destination||'').split(',')[0];
+    return `<option value="${l.id}">#${_esc(l.load_number||l.id?.slice(0,6))} ${o}→${d}</option>`;
+  }).join('');
+}
+
+function _populateInspLoadSel(){
+  const el = document.getElementById('insp-load-sel');
+  if(el) el.innerHTML = '<option value="">— No active load —</option>' + _buildLoadOptions();
+}
+function _populateDocsLoadSel(){
+  const el = document.getElementById('docs-load-sel');
+  if(el) el.innerHTML = '<option value="">— General document —</option>' + _buildLoadOptions();
+}
+function _populateFuelLoadSel(){
+  const el = document.getElementById('fuel-load-sel');
+  if(el) el.innerHTML = '<option value="">— Select load —</option>' + _buildLoadOptions();
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+//  TOAST
+// ════════════════════════════════════════════════════════════════════════════
+
+let _toastTimer = null;
+function hwToast(msg, type='success'){
+  const el = document.getElementById('hw-toast');
+  if(!el) return;
+  clearTimeout(_toastTimer);
+  el.textContent = msg;
+  el.className = 'show ' + type;
+  _toastTimer = setTimeout(() => { el.className = ''; }, 3200);
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+//  UTILITY
+// ════════════════════════════════════════════════════════════════════════════
+
+function _esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+// ════════════════════════════════════════════════════════════════════════════
+//  INIT
+// ════════════════════════════════════════════════════════════════════════════
+
+document.addEventListener('DOMContentLoaded', () => {
+  if(_tryRestoreSession()){
+    _loadDriverProfile().then(_bootApp).catch(_bootApp);
+  }
+});
+</script>
+</body>
+</html>
