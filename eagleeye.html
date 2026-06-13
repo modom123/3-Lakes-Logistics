@@ -2323,40 +2323,40 @@ select.form-input option{background:var(--surface);}
       </div>
 
       <!-- ── Driver Report Cards Tab ── -->
-      <div id="tr-tab-cards" style="display:none;padding:16px">
-        <!-- Grade summary strip -->
-        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:16px">
-          <div class="card" style="padding:12px 14px;text-align:center">
+      <div id="tr-tab-cards" style="display:none;padding:0;background:#0A0A0F;flex-direction:column;overflow-y:auto;min-height:0;flex:1">
+        <!-- KPI strip (dark) -->
+        <div style="display:flex;border-bottom:1px solid rgba(255,255,255,.06);background:rgba(0,0,0,.2)">
+          <div style="flex:1;padding:14px 0;text-align:center;border-right:1px solid rgba(255,255,255,.05)">
             <div style="font-size:22px;font-weight:800;color:#4ade80" id="tr-kpi-a">—</div>
-            <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-top:2px">Grade A</div>
+            <div style="font-size:9px;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:1.5px;margin-top:2px;font-family:var(--ff-m)">Grade A</div>
           </div>
-          <div class="card" style="padding:12px 14px;text-align:center">
+          <div style="flex:1;padding:14px 0;text-align:center;border-right:1px solid rgba(255,255,255,.05)">
             <div style="font-size:22px;font-weight:800;color:#60a5fa" id="tr-kpi-b">—</div>
-            <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-top:2px">Grade B</div>
+            <div style="font-size:9px;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:1.5px;margin-top:2px;font-family:var(--ff-m)">Grade B</div>
           </div>
-          <div class="card" style="padding:12px 14px;text-align:center">
+          <div style="flex:1;padding:14px 0;text-align:center;border-right:1px solid rgba(255,255,255,.05)">
             <div style="font-size:22px;font-weight:800;color:#fbbf24" id="tr-kpi-c">—</div>
-            <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-top:2px">Grade C</div>
+            <div style="font-size:9px;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:1.5px;margin-top:2px;font-family:var(--ff-m)">Grade C</div>
           </div>
-          <div class="card" style="padding:12px 14px;text-align:center">
+          <div style="flex:1;padding:14px 0;text-align:center;border-right:1px solid rgba(255,255,255,.05)">
             <div style="font-size:22px;font-weight:800;color:#f87171" id="tr-kpi-df">—</div>
-            <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-top:2px">D / F</div>
+            <div style="font-size:9px;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:1.5px;margin-top:2px;font-family:var(--ff-m)">D / F</div>
           </div>
-          <div class="card" style="padding:12px 14px;text-align:center">
+          <div style="flex:1;padding:14px 0;text-align:center">
             <div style="font-size:22px;font-weight:800;color:#f87171" id="tr-kpi-flags">—</div>
-            <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-top:2px">Flags</div>
+            <div style="font-size:9px;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:1.5px;margin-top:2px;font-family:var(--ff-m)">Flags</div>
           </div>
         </div>
-        <!-- Cards grid mirrors lf-reports but loads here -->
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-          <div style="font-size:13px;font-weight:700;color:var(--text)">Driver Performance Report Cards</div>
+        <!-- Toolbar -->
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 20px;background:rgba(0,0,0,.25);border-bottom:1px solid rgba(255,255,255,.06)">
+          <div style="font-size:13px;font-weight:700;color:rgba(255,255,255,.7)">Driver Performance Report Cards</div>
           <div style="display:flex;gap:8px">
-            <button onclick="trLoadReportCards()" style="padding:6px 14px;border:1px solid var(--border);border-radius:5px;font-size:12px;cursor:pointer;background:var(--surface)">↻ Refresh</button>
-            <button onclick="nav('lf-reports')" style="padding:6px 14px;background:var(--navy);color:#fff;border:none;border-radius:5px;font-size:12px;cursor:pointer;font-weight:600">↗ Full Report Cards Page</button>
+            <button onclick="trLoadReportCards()" style="padding:6px 14px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);border-radius:5px;font-size:12px;cursor:pointer;color:rgba(255,255,255,.7)">↻ Refresh</button>
           </div>
         </div>
-        <div id="tr-cards-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:14px">
-          <div style="text-align:center;padding:60px;color:var(--muted);font-size:13px;grid-column:1/-1">Click Refresh to load driver report cards.</div>
+        <!-- Cards grid -->
+        <div id="tr-cards-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:16px;padding:24px;align-content:start">
+          <div style="text-align:center;padding:80px;color:rgba(255,255,255,.3);font-size:14px;grid-column:1/-1">Loading driver report cards…</div>
         </div>
       </div>
 
@@ -6356,7 +6356,7 @@ function trSetTab(tab){
     const btn=document.getElementById('tr-tab-btn-'+t);
     if(!pane||!btn)return;
     const active=t===tab;
-    pane.style.display=active?'':'none';
+    pane.style.display=active?(t==='cards'?'flex':'block'):'none';
     btn.style.borderBottomColor=active?'var(--navy)':'transparent';
     btn.style.color=active?'var(--navy)':'var(--muted)';
     btn.style.fontWeight=active?'700':'600';
@@ -6428,62 +6428,82 @@ async function trRunAllReports(){
 async function trLoadReportCards(){
   const grid=document.getElementById('tr-cards-grid');
   if(!grid)return;
-  grid.innerHTML='<div style="text-align:center;padding:60px;color:var(--muted);font-size:13px;grid-column:1/-1"><div class="spin" style="margin:0 auto 12px"></div>Loading driver report cards…</div>';
+  grid.innerHTML='<div style="text-align:center;padding:80px;color:rgba(255,255,255,.3);font-size:14px;grid-column:1/-1">⏳ Loading drivers…</div>';
   try{
-    const res=await lfFetch('/api/light-fleet/drivers?limit=200');
-    const drivers=Array.isArray(res)?res:(res.drivers||res.items||[]);
-    if(!drivers.length){grid.innerHTML='<div style="text-align:center;padding:60px;color:var(--muted);font-size:13px;grid-column:1/-1">No drivers found in the system yet.</div>';return;}
-    const graded=drivers.map(d=>{
-      const trips=d.total_trips||d.trips_completed||0;
-      const rating=parseFloat(d.rating||d.avg_rating||0);
-      const comp=(d.compliance_status||'').toLowerCase();
-      let score=60;
-      if(trips>50)score+=15;else if(trips>20)score+=8;else if(trips>5)score+=3;
-      if(rating>=4.8)score+=20;else if(rating>=4.5)score+=12;else if(rating>=4.0)score+=6;
-      if(comp==='active'||comp==='compliant')score+=5;else if(comp==='issue'||comp==='expired')score-=10;
-      score=Math.min(100,Math.max(0,score));
-      let grade='F';if(score>=90)grade='A+';else if(score>=80)grade='A';else if(score>=70)grade='B';else if(score>=60)grade='C';else if(score>=50)grade='D';
-      return{...d,_score:score,_grade:grade};
-    }).sort((a,b)=>b._score-a._score);
-    const counts={A:0,B:0,C:0,DF:0,flags:0};
-    graded.forEach(d=>{
-      if(d._grade.startsWith('A'))counts.A++;
-      else if(d._grade==='B')counts.B++;
-      else if(d._grade==='C')counts.C++;
-      else counts.DF++;
-      if((d.compliance_status||'').toLowerCase()==='issue')counts.flags++;
-    });
-    const gradeColor={A:'#4ade80','A+':'#22c55e',B:'#60a5fa',C:'#fbbf24',D:'#f97316',F:'#ef4444'};
-    grid.innerHTML=graded.map(d=>{
-      const gc=gradeColor[d._grade]||'#9ca3af';
-      const seg=esc(d.segment||d.vehicle_type||'Driver');
-      const trips=d.total_trips||d.trips_completed||0;
-      const rating=parseFloat(d.rating||d.avg_rating||0);
-      const comp=d.compliance_status||'unknown';
-      const compColor=comp==='active'||comp==='compliant'?'#4ade80':comp==='issue'||comp==='expired'?'#ef4444':'#9ca3af';
-      return`<div class="card" style="padding:14px 16px;cursor:pointer" onclick="nav('lf-driver')">
-        <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px">
-          <div>
-            <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:2px">${esc(d.name||d.full_name||'Unnamed')}</div>
-            <div style="font-size:11px;color:var(--muted)">${seg} · ${esc(d.vehicle_type||'Vehicle N/A')}</div>
+    // Use the shared LF data cache (same as the real Report Cards page)
+    await _lfFetchAll(null);
+    if(!_lfdc_drivers.length){
+      grid.innerHTML='<div style="text-align:center;padding:80px;color:rgba(255,255,255,.3);font-size:14px;grid-column:1/-1">No drivers in the system yet.</div>';
+      return;
+    }
+    const k=_dcKpiSummary();
+    const grades={A:0,B:0,C:0,D:0,F:0};
+    const overallScore=d=>{
+      const trips=_lfdc_trips[d.id]||[];
+      const acc=_dcAccRate(trips);
+      const comp=trips.filter(t=>t.status==='completed');
+      const compRate=trips.length?Math.round(comp.length/trips.length*100):null;
+      const ratingPct=d.rating?Math.round(Number(d.rating)*20):null;
+      const scores=[acc,compRate,ratingPct].filter(x=>x!==null);
+      return scores.length?Math.round(scores.reduce((a,b)=>a+b,0)/scores.length):null;
+    };
+    const sorted=[..._lfdc_drivers].sort((a,b)=>(overallScore(b)??-1)-(overallScore(a)??-1));
+    for(const d of sorted){const s=overallScore(d);const g=s!==null?_dcGrade(s):'F';grades[g]=(grades[g]||0)+1;}
+    // Update KPI strip
+    const set=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
+    set('tr-kpi-a',grades.A);set('tr-kpi-b',grades.B);set('tr-kpi-c',grades.C);
+    set('tr-kpi-df',(grades.D||0)+(grades.F||0));set('tr-kpi-flags',k.flags);
+    // Metric row helper (same style as real report cards page)
+    const metRow=(lbl,val)=>{
+      const c=val!==null?_dcBarColor(val):'rgba(255,255,255,.3)';
+      return`<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px">
+        <span style="font-size:9px;color:rgba(255,255,255,.28);font-family:var(--ff-m);text-transform:uppercase;letter-spacing:.8px;width:84px;flex-shrink:0">${lbl}</span>
+        <span style="flex:1;height:3px;background:rgba(255,255,255,.07);border-radius:10px;overflow:hidden">
+          <span style="display:block;height:100%;background:${c};border-radius:10px;width:${val??0}%"></span>
+        </span>
+        <span style="font-size:11px;font-weight:700;color:${c};width:34px;text-align:right">${val!==null?val+'%':'—'}</span>
+      </div>`;
+    };
+    grid.innerHTML=sorted.map(d=>{
+      const trips=_lfdc_trips[d.id]||[];
+      const acc=_dcAccRate(trips);
+      const comp=trips.filter(t=>t.status==='completed');
+      const compRate=trips.length?Math.round(comp.length/trips.length*100):null;
+      const ratingPct=d.rating?Math.round(Number(d.rating)*20):null;
+      const overall=overallScore(d);
+      const g=overall!==null?_dcGrade(overall):'—';
+      const gColor=_dcBarColor(overall??0);
+      const flags=_dcFlags(d);
+      const segs=(d.approved_services||[]).map(s=>`<span class="dc-pill dc-pill-${s}">${s.toUpperCase()}</span>`).join(' ')||'';
+      const statusCls={active:'dc-status-active',inactive:'dc-status-inactive',suspended:'dc-status-suspended'}[d.status]||'dc-status-inactive';
+      const veh=[d.vehicle_make,d.vehicle_model].filter(Boolean).join(' ')||'—';
+      return`<div style="background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.055);border-radius:12px;padding:18px 20px;cursor:pointer;transition:background .15s"
+        onmouseenter="this.style.background='rgba(255,255,255,.048)'" onmouseleave="this.style.background='rgba(255,255,255,.025)'"
+        onclick="_lfOpenDriver('${d.id}')">
+        <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:14px">
+          <div style="width:50px;height:50px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:900;flex-shrink:0;border:2.5px solid ${gColor};color:${gColor}">${g}</div>
+          <div style="min-width:0;flex:1">
+            <div style="font-size:13px;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(d.name||'—')}</div>
+            <div style="font-size:10px;color:rgba(255,255,255,.3);margin-top:2px">${_dcGradeDesc(g)}</div>
+            <div style="margin-top:5px;display:flex;gap:4px;flex-wrap:wrap">${segs}</div>
           </div>
-          <div style="font-size:28px;font-weight:900;color:${gc};line-height:1">${esc(d._grade)}</div>
+          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0">
+            <span class="dc-status ${statusCls}" style="font-size:9px">${(d.status||'—').toUpperCase()}</span>
+            ${flags.length?`<span style="font-size:9px;font-weight:700;padding:2px 6px;border-radius:20px;background:rgba(239,68,68,.15);color:#f87171">⚠ ${flags.length}</span>`:`<span style="font-size:9px;color:#4ade80">✓ Clear</span>`}
+          </div>
         </div>
-        <div style="height:5px;background:var(--border);border-radius:100px;margin-bottom:10px">
-          <div style="height:100%;width:${d._score}%;background:${gc};border-radius:100px"></div>
-        </div>
-        <div style="display:flex;gap:12px;font-size:11px;color:var(--muted)">
-          <span>🚗 ${trips} trips</span>
-          ${rating?`<span>⭐ ${rating.toFixed(1)}</span>`:''}
-          <span style="color:${compColor}">● ${esc(comp)}</span>
+        ${metRow('Acceptance',acc)}
+        ${metRow('Completion',compRate)}
+        ${metRow('Rating',ratingPct)}
+        <div style="display:flex;justify-content:space-between;margin-top:12px;padding-top:10px;border-top:1px solid rgba(255,255,255,.05)">
+          <span style="font-size:10px;color:rgba(255,255,255,.28)">📍 ${esc(d.location||'—')}</span>
+          <span style="font-size:10px;color:rgba(255,255,255,.28)">${comp.length} trips · ${esc(veh)}</span>
         </div>
       </div>`;
     }).join('');
-    // sync KPI boxes with computed values
-    const kpiMap={a:counts.A,b:counts.B,c:counts.C,df:counts.DF,flags:counts.flags};
-    Object.entries(kpiMap).forEach(([k,v])=>{const el=document.getElementById('tr-kpi-'+k);if(el)el.textContent=v;});
   }catch(e){
-    grid.innerHTML=`<div style="text-align:center;padding:60px;color:var(--muted);font-size:13px;grid-column:1/-1">Could not load drivers — ${esc(e.message)}</div>`;
+    const grid=document.getElementById('tr-cards-grid');
+    if(grid)grid.innerHTML=`<div style="text-align:center;padding:80px;color:#f87171;font-size:13px;grid-column:1/-1">Error loading drivers: ${esc(e.message)}</div>`;
   }
 }
 
