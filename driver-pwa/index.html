@@ -495,6 +495,14 @@
         <button class="btn btn-warning" onclick="showView('docs')">
           📎 Upload BOL / POD
         </button>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+          <button class="btn" style="background:#f59e0b;color:#000;padding:12px;font-size:13px" onclick="openFuelModal()">
+            ⛽ Fuel Advance
+          </button>
+          <button class="btn" style="background:var(--surface);color:var(--text);border:1px solid var(--border);padding:12px;font-size:13px" onclick="showView('inspect')">
+            🔍 Pre-Trip Check
+          </button>
+        </div>
         <button class="btn btn-ghost" onclick="reportIssue()">
           ⚠️ Report Issue / Breakdown
         </button>
@@ -945,6 +953,30 @@
       <button class="btn btn-ghost" onclick="logout()" style="margin-top:8px">Sign Out</button>
     </div></div><!-- /view-scroll /view-profile -->
 
+    <!-- ── INSPECTION VIEW ── -->
+    <div class="view" id="view-inspect"><div class="view-scroll">
+      <div id="geo-alert-hf" style="display:none;padding:12px 14px;border-radius:10px;margin-bottom:10px;font-size:13px;font-weight:600;text-align:center"></div>
+      <div class="section-header" style="display:flex;justify-content:space-between;align-items:center">
+        Pre-Trip Inspection
+        <button onclick="loadInspHistory()" style="font-size:11px;background:none;border:none;color:var(--accent);cursor:pointer">History ↓</button>
+      </div>
+      <div class="card" style="margin-bottom:10px">
+        <div class="card-title">Today's Odometer</div>
+        <input id="hf-insp-odo" type="number" placeholder="e.g. 142550" inputmode="numeric"
+          style="width:100%;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px 14px;color:var(--text);font-size:16px;margin-bottom:8px">
+        <div class="card-title" style="margin-top:8px">Notes</div>
+        <textarea id="hf-insp-notes" rows="2" placeholder="Any observations…"
+          style="width:100%;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px 14px;color:var(--text);font-size:14px;resize:none;font-family:inherit"></textarea>
+      </div>
+      <div class="section-header">Checklist</div>
+      <div class="card" id="hf-insp-checklist"></div>
+      <button onclick="submitHFInspection()" style="width:100%;padding:15px;background:var(--green);color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;margin-top:8px">
+        ✅ Submit Inspection
+      </button>
+      <div class="section-header" style="margin-top:16px">Recent Inspections</div>
+      <div id="hf-insp-history" style="color:var(--muted);font-size:13px;padding:8px 0">No history yet.</div>
+    </div></div><!-- /view-scroll /view-inspect -->
+
 </div><!-- /main -->
 
 <!-- BOTTOM NAV -->
@@ -974,10 +1006,37 @@
     <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="1" y="3" width="11" height="18" rx="2"/><path d="M12 7h8l3 4v4h-11"/><circle cx="5" cy="19" r="2"/><circle cx="17" cy="19" r="2"/></svg>
     <span class="nav-label">Trips</span>
   </button>
+  <button class="nav-btn" id="nav-inspect" onclick="showView('inspect')">
+    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+    <span class="nav-label">Inspect</span>
+  </button>
   <button class="nav-btn" id="nav-profile" onclick="showView('profile')">
     <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
     <span class="nav-label">Profile</span>
   </button>
+</div>
+
+<!-- FUEL ADVANCE MODAL -->
+<div id="fuel-modal" style="display:none;position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.75);align-items:flex-end;justify-content:center">
+  <div style="background:#111827;border-radius:20px 20px 0 0;width:100%;max-width:480px;padding:24px 20px calc(40px + env(safe-area-inset-bottom,0px));border-top:1px solid #2d3748;max-height:90vh;overflow-y:auto">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+      <div style="font-size:16px;font-weight:700;color:#f1f5f9">⛽ Fuel Advance Request</div>
+      <button onclick="closeFuelModal()" style="background:none;border:none;color:#94a3b8;font-size:22px;cursor:pointer;padding:0 4px">✕</button>
+    </div>
+    <div style="font-size:12px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px">Amount ($)</div>
+    <input id="fuel-amount" type="number" placeholder="e.g. 250" inputmode="decimal"
+      style="width:100%;padding:12px;background:#0a0f1e;border:1.5px solid #2d3748;border-radius:10px;color:#f1f5f9;font-size:16px;margin-bottom:14px">
+    <div style="font-size:12px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px">Current Location / Truck Stop</div>
+    <input id="fuel-location" type="text" placeholder="e.g. Pilot #4221, Gary, IN"
+      style="width:100%;padding:12px;background:#0a0f1e;border:1.5px solid #2d3748;border-radius:10px;color:#f1f5f9;font-size:14px;margin-bottom:14px">
+    <div style="font-size:12px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px">Notes (optional)</div>
+    <textarea id="fuel-notes" placeholder="Reason or additional info…" rows="2"
+      style="width:100%;padding:12px;background:#0a0f1e;border:1.5px solid #2d3748;border-radius:10px;color:#f1f5f9;font-size:14px;resize:none;font-family:inherit;margin-bottom:16px"></textarea>
+    <button onclick="submitFuelRequest()" style="width:100%;padding:14px;background:#f59e0b;color:#000;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer">Request Fuel Advance</button>
+    <div style="font-size:11px;color:#94a3b8;margin-top:10px;text-align:center">Dispatch will approve and send funds within 30 minutes</div>
+    <div class="section-header" style="margin-top:16px;font-size:10px">Recent Requests</div>
+    <div id="fuel-history" style="font-size:12px;color:#94a3b8;padding:4px 0">Loading…</div>
+  </div>
 </div>
 
 <!-- ISSUE REPORT MODAL -->
@@ -2993,7 +3052,216 @@ showView = function(name) {
   if (name === 'pay') { loadEarningsView(); loadComplianceStatus(); }
   if (name === 'profile') { loadComplianceStatus(); }
   if (name === 'home' && DRIVER_MODE !== 'truck') { loadLFHomeStats(); }
+  if (name === 'inspect') { buildHFInspChecklist(); loadInspHistory(); }
 }
+
+/* ── PRE-TRIP INSPECTION (Heavy Fleet) ──────────────────────────────────── */
+const HF_INSP_ITEMS = [
+  { cat:'Lights',    items:['Headlights & high beams','Tail lights & brake lights','Turn signals & 4-ways','Clearance / marker lights'] },
+  { cat:'Tires',     items:['Tread depth & condition','Inflation (visual)','Lug nuts tight','No visible damage / bulges'] },
+  { cat:'Brakes',    items:['Air pressure (90+ psi)','No audible leaks','Brake lines / hoses intact'] },
+  { cat:'Trailer',   items:['Glad hands connected','Brake lights / markers on trailer','Doors latch & seal','Load secured & strapped'] },
+  { cat:'Engine',    items:['Oil level OK','Coolant level OK','No visible leaks under truck'] },
+  { cat:'Safety',    items:['Fire extinguisher present','Triangles / flares in cab','First aid kit present'] },
+  { cat:'Compliance',items:['IFTA sticker current','Registration on file','Medical card on person','CDL valid & on person'] },
+];
+
+let _hfInspResults = {};
+
+function buildHFInspChecklist() {
+  const el = document.getElementById('hf-insp-checklist');
+  if (!el || el.dataset.built) return;
+  el.dataset.built = '1';
+  let idx = 0;
+  let html = '';
+  HF_INSP_ITEMS.forEach(group => {
+    html += `<div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;padding:10px 0 6px;border-top:1px solid var(--border)">${group.cat}</div>`;
+    group.items.forEach(label => {
+      const i = idx++;
+      html += `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.04)">
+        <div style="font-size:13px;color:var(--text);flex:1">${label}</div>
+        <div style="display:flex;gap:5px;flex-shrink:0">
+          <button onclick="setHFInsp(${i},'pass')" id="hfi-${i}-pass"
+            style="padding:5px 10px;border-radius:8px;border:1px solid var(--border);background:var(--card);color:var(--muted);font-size:11px;font-weight:700;cursor:pointer">✓ Pass</button>
+          <button onclick="setHFInsp(${i},'fail')" id="hfi-${i}-fail"
+            style="padding:5px 10px;border-radius:8px;border:1px solid var(--border);background:var(--card);color:var(--muted);font-size:11px;font-weight:700;cursor:pointer">✗ Fail</button>
+          <button onclick="setHFInsp(${i},'na')" id="hfi-${i}-na"
+            style="padding:5px 10px;border-radius:8px;border:1px solid var(--border);background:var(--card);color:var(--muted);font-size:11px;font-weight:700;cursor:pointer">N/A</button>
+        </div>
+      </div>`;
+    });
+  });
+  el.innerHTML = html;
+}
+
+function setHFInsp(idx, result) {
+  _hfInspResults[idx] = result;
+  ['pass','fail','na'].forEach(r => {
+    const btn = document.getElementById(`hfi-${idx}-${r}`);
+    if (!btn) return;
+    const sel = r === result;
+    btn.style.background = sel ? (r==='pass'?'var(--green)':r==='fail'?'var(--red)':'var(--muted)') : 'var(--card)';
+    btn.style.color      = sel ? '#fff' : 'var(--muted)';
+    btn.style.borderColor = sel ? 'transparent' : '';
+  });
+}
+
+async function submitHFInspection() {
+  const totalItems = HF_INSP_ITEMS.reduce((s,g) => s + g.items.length, 0);
+  const answered   = Object.keys(_hfInspResults).length;
+  if (answered < Math.ceil(totalItems * 0.8)) {
+    showToast(`⚠ Answer at least ${Math.ceil(totalItems * 0.8)} items (${answered}/${totalItems} done)`);
+    return;
+  }
+  const odo   = document.getElementById('hf-insp-odo').value;
+  const notes = document.getElementById('hf-insp-notes').value;
+  const fails = Object.entries(_hfInspResults).filter(([,v])=>v==='fail').length;
+
+  // Build labeled results
+  const allItems = HF_INSP_ITEMS.flatMap(g => g.items);
+  const resultsObj = {};
+  allItems.forEach((label, i) => { if (_hfInspResults[i]) resultsObj[label] = _hfInspResults[i]; });
+
+  if (DEMO_MODE) { showToast('✅ Inspection submitted (demo)'); _hfInspResults={}; document.getElementById('hf-insp-checklist').dataset.built=''; buildHFInspChecklist(); return; }
+
+  try {
+    await supabaseClient.from('driver_inspections').insert({
+      driver_phone: MY_PHONE,
+      driver_id:    localStorage.getItem('3ll_driver_id') || DRIVER_ID,
+      odometer:     odo ? parseInt(odo) : null,
+      results:      resultsObj,
+      fail_count:   fails,
+      notes:        notes || null,
+      load_id:      _currentLoadId || null,
+    });
+    showToast(`✅ Inspection submitted — ${fails} fail(s)`);
+    _hfInspResults = {};
+    document.getElementById('hf-insp-checklist').dataset.built = '';
+    document.getElementById('hf-insp-odo').value = '';
+    document.getElementById('hf-insp-notes').value = '';
+    buildHFInspChecklist();
+    loadInspHistory();
+  } catch(e) { showToast('Submission failed: ' + e.message, 4000); }
+}
+
+async function loadInspHistory() {
+  const el = document.getElementById('hf-insp-history');
+  if (!el) return;
+  if (DEMO_MODE) { el.innerHTML = `<div style="padding:8px 0;border-bottom:1px solid var(--border)"><div style="font-weight:600;font-size:12px">Today (demo) — 0 fails, 21 pass</div><div style="font-size:11px;color:var(--muted)">Odo: 142,550</div></div>`; return; }
+  try {
+    const { data } = await supabaseClient.from('driver_inspections')
+      .select('created_at,fail_count,odometer,notes')
+      .eq('driver_id', localStorage.getItem('3ll_driver_id') || DRIVER_ID)
+      .order('created_at', { ascending:false }).limit(5);
+    if (!data?.length) { el.innerHTML = '<div style="color:var(--muted)">No inspections yet</div>'; return; }
+    el.innerHTML = data.map(r => `
+      <div style="padding:8px 0;border-bottom:1px solid var(--border)">
+        <div style="display:flex;justify-content:space-between">
+          <div style="font-size:12px;font-weight:600;color:var(--text)">${new Date(r.created_at).toLocaleDateString()}</div>
+          <span style="font-size:11px;font-weight:700;color:${r.fail_count>0?'var(--red)':'var(--green)'}">${r.fail_count} fail(s)</span>
+        </div>
+        <div style="font-size:11px;color:var(--muted)">Odo: ${r.odometer?.toLocaleString()||'—'}${r.notes?' · '+r.notes.slice(0,40):''}</div>
+      </div>`).join('');
+  } catch(e) { el.innerHTML = '<div style="color:var(--muted)">Unable to load</div>'; }
+}
+
+/* ── FUEL ADVANCE ────────────────────────────────────────────────────────── */
+function openFuelModal() {
+  document.getElementById('fuel-modal').style.display = 'flex';
+  loadFuelHistory();
+}
+function closeFuelModal() { document.getElementById('fuel-modal').style.display = 'none'; }
+
+async function submitFuelRequest() {
+  const amount   = parseFloat(document.getElementById('fuel-amount').value);
+  const location = document.getElementById('fuel-location').value.trim();
+  const notes    = document.getElementById('fuel-notes').value.trim();
+  if (!amount || amount < 10) { showToast('⚠ Enter a valid amount (min $10)'); return; }
+  if (!location) { showToast('⚠ Enter your current location'); return; }
+  if (DEMO_MODE) { showToast('✅ Fuel advance requested (demo)'); closeFuelModal(); return; }
+  try {
+    await supabaseClient.from('driver_fuel_requests').insert({
+      driver_phone: MY_PHONE,
+      driver_id:    localStorage.getItem('3ll_driver_id') || DRIVER_ID,
+      driver_name:  localStorage.getItem('3ll_driver_name') || '',
+      amount, location, notes: notes||null,
+      load_id:  _currentLoadId || null,
+      status:   'pending',
+    });
+    showToast('✅ Fuel advance requested — dispatch will confirm within 30 min');
+    document.getElementById('fuel-amount').value = '';
+    document.getElementById('fuel-location').value = '';
+    document.getElementById('fuel-notes').value = '';
+    loadFuelHistory();
+  } catch(e) { showToast('Request failed: ' + e.message, 4000); }
+}
+
+async function loadFuelHistory() {
+  const el = document.getElementById('fuel-history');
+  if (!el) return;
+  if (DEMO_MODE) { el.innerHTML = 'No requests yet (demo)'; return; }
+  try {
+    const { data } = await supabaseClient.from('driver_fuel_requests')
+      .select('amount,location,status,created_at')
+      .eq('driver_id', localStorage.getItem('3ll_driver_id') || DRIVER_ID)
+      .order('created_at',{ascending:false}).limit(5);
+    if (!data?.length) { el.innerHTML = 'No requests yet'; return; }
+    const sc = {pending:'#fbbf24',approved:'#22c55e',denied:'#ef4444'};
+    el.innerHTML = data.map(r => `
+      <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.06)">
+        <div><div style="font-size:12px;color:#f1f5f9;font-weight:600">$${Number(r.amount).toLocaleString()}</div>
+          <div style="font-size:10px;color:#94a3b8">${r.location||''}</div></div>
+        <span style="font-size:10px;font-weight:700;color:${sc[r.status]||'#94a3b8'}">${(r.status||'pending').toUpperCase()}</span>
+      </div>`).join('');
+  } catch(e) { el.innerHTML = 'Unable to load'; }
+}
+
+/* ── GEOFENCE PROXIMITY ALERTS ───────────────────────────────────────────── */
+let _hfLastPos = null;
+
+function _haversineHF(lat1, lon1, lat2, lon2) {
+  const R = 3958.8, dLat = (lat2-lat1)*Math.PI/180, dLon = (lon2-lon1)*Math.PI/180;
+  const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+function checkHFGeofence(coords) {
+  const el = document.getElementById('geo-alert-hf');
+  if (!el) return;
+  // Pull pickup/delivery coords from current load if available
+  const pickupLat  = parseFloat(document.getElementById('pickup-address')?.dataset?.lat || '0');
+  const pickupLng  = parseFloat(document.getElementById('pickup-address')?.dataset?.lng || '0');
+  const deliveryLat = parseFloat(document.getElementById('delivery-address')?.dataset?.lat || '0');
+  const deliveryLng = parseFloat(document.getElementById('delivery-address')?.dataset?.lng || '0');
+
+  // Geofence via address text matching (show proximity alert banner based on load status)
+  const loadStatus = document.getElementById('load-status-pill')?.textContent?.toLowerCase() || '';
+  if (!loadStatus || loadStatus === 'available' || loadStatus === 'loading') { el.style.display='none'; return; }
+
+  // If pickup not yet confirmed and load is dispatched/booked:
+  if ((loadStatus.includes('booked') || loadStatus.includes('dispatched')) && pickupLat) {
+    const dist = _haversineHF(coords.latitude, coords.longitude, pickupLat, pickupLng);
+    if (dist < 0.25) { el.style.display=''; el.style.background='rgba(34,197,94,.15)'; el.style.border='1px solid rgba(34,197,94,.3)'; el.style.color='#22c55e'; el.textContent='📍 You are within 0.25 mi of pickup — ready to confirm!'; return; }
+  }
+  // If en route to delivery:
+  if (loadStatus.includes('transit') && deliveryLat) {
+    const dist = _haversineHF(coords.latitude, coords.longitude, deliveryLat, deliveryLng);
+    if (dist < 0.25) { el.style.display=''; el.style.background='rgba(59,130,246,.15)'; el.style.border='1px solid rgba(59,130,246,.3)'; el.style.color='var(--accent)'; el.textContent='🎯 You are within 0.25 mi of delivery — ready to confirm!'; return; }
+  }
+  el.style.display = 'none';
+}
+
+// Hook into existing GPS tracking
+const _origStartGps = startGpsTracking;
+startGpsTracking = function() {
+  _origStartGps();
+  if (navigator.geolocation) {
+    navigator.geolocation.watchPosition(pos => {
+      _hfLastPos = pos.coords;
+      checkHFGeofence(pos.coords);
+    }, () => {}, { enableHighAccuracy: true, maximumAge: 15000 });
+  }
+};
 </script>
 </body>
 </html>
