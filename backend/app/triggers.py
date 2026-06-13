@@ -535,6 +535,23 @@ def fire_jamie_park() -> None:
     _bg(_run)
 
 
+def fire_lf_bizdev() -> None:
+    """Daily 14:45 UTC — run LF BizDev email sequences + Bland AI calls."""
+    def _run():
+        try:
+            from .agents.lf_bizdev import run as lf_bizdev_run  # noqa: PLC0415
+            log.info("daily_agent: lf_bizdev starting")
+            result = lf_bizdev_run({})
+            log.info(
+                "daily_agent: lf_bizdev done emails_sent=%s calls_queued=%s",
+                result.get("emails", {}).get("sent"),
+                result.get("calls", {}).get("calls_queued"),
+            )
+        except Exception as exc:  # noqa: BLE001
+            log.error("daily_agent: lf_bizdev failed: %s", exc)
+    _bg(_run)
+
+
 def fire_vault_scan(doc_id: str) -> None:
     """Trigger background AI extraction for a vault document.
 

@@ -19959,6 +19959,41 @@ function lfRenderExpertReport(segment, d) {
 .bd-form-actions{display:flex;gap:8px;justify-content:flex-end;}
 .bd-form-title{font-size:12px;font-weight:700;color:rgba(255,255,255,.55);text-transform:uppercase;letter-spacing:1px;padding:4px 0 12px;}
 .bd-empty{text-align:center;padding:32px 20px;color:rgba(255,255,255,.4);font-size:13px;}
+/* Automation command strip */
+.bd-auto-strip{background:linear-gradient(135deg,rgba(245,158,11,.12),rgba(217,119,6,.08));border:1px solid rgba(245,158,11,.3);border-radius:12px;padding:14px 20px;margin-bottom:20px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;}
+.bd-auto-kpi{display:flex;flex-direction:column;align-items:center;min-width:90px;}
+.bd-auto-kpi-val{font-size:22px;font-weight:800;color:#f59e0b;}
+.bd-auto-kpi-lbl{font-size:9px;font-weight:700;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.8px;margin-top:2px;}
+.bd-auto-divider{width:1px;height:40px;background:rgba(245,158,11,.2);}
+.bd-auto-actions{display:flex;gap:8px;flex-wrap:wrap;margin-left:auto;}
+.bd-auto-btn{padding:8px 16px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;border:1px solid rgba(245,158,11,.4);background:rgba(245,158,11,.12);color:#f59e0b;transition:all .15s;letter-spacing:.3px;}
+.bd-auto-btn:hover{background:rgba(245,158,11,.2);border-color:rgba(245,158,11,.6);}
+.bd-auto-btn:disabled{opacity:.5;cursor:not-allowed;}
+/* Sequence step badge */
+.bd-step-badge{display:inline-block;font-size:9px;font-weight:700;padding:2px 7px;border-radius:8px;background:rgba(245,158,11,.15);color:#f59e0b;letter-spacing:.3px;}
+/* Activity feed */
+.bd-activity-wrap{background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-top:20px;}
+.bd-activity-hd{padding:14px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;}
+.bd-activity-title{font-family:var(--ff-h);font-weight:800;font-size:15px;color:var(--navy);}
+.bd-activity-list{max-height:360px;overflow-y:auto;}
+.bd-activity-row{display:flex;align-items:flex-start;gap:12px;padding:10px 20px;border-bottom:1px solid rgba(255,255,255,.04);font-size:12px;}
+.bd-activity-row:last-child{border-bottom:none;}
+.bd-activity-icon{font-size:16px;flex-shrink:0;margin-top:1px;}
+.bd-activity-body{flex:1;min-width:0;}
+.bd-activity-company{font-weight:700;color:#fff;}
+.bd-activity-detail{color:rgba(255,255,255,.5);font-size:11px;margin-top:1px;}
+.bd-activity-ts{font-size:10px;color:rgba(255,255,255,.3);white-space:nowrap;margin-left:auto;}
+.bd-activity-status{display:inline-block;font-size:9px;font-weight:700;padding:2px 6px;border-radius:6px;text-transform:uppercase;letter-spacing:.4px;}
+.bd-activity-status-sent{background:rgba(34,197,94,.15);color:#4ade80;}
+.bd-activity-status-failed{background:rgba(239,68,68,.15);color:#f87171;}
+.bd-activity-status-connected{background:rgba(59,130,246,.15);color:#60a5fa;}
+.bd-activity-status-voicemail{background:rgba(245,158,11,.15);color:#fbbf24;}
+/* Sector stat boxes */
+.bd-sector-stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin-bottom:20px;}
+.bd-sector-stat{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px;}
+.bd-sector-stat-title{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px;}
+.bd-sector-stat-row{display:flex;justify-content:space-between;font-size:12px;color:rgba(255,255,255,.65);margin-bottom:4px;}
+.bd-sector-stat-row span:last-child{font-weight:700;color:#fff;}
 </style>
 <div class="lf-wrap bd-wrap">
 
@@ -19972,6 +20007,50 @@ function lfRenderExpertReport(segment, d) {
     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
       <button class="lf-btn-ghost" onclick="loadLfBizDevProspects()">↻ Refresh</button>
       <button class="lf-btn" onclick="openBdAddProspect()">+ Add Lead</button>
+    </div>
+  </div>
+
+  <!-- Automation Command Strip -->
+  <div class="bd-auto-strip" id="bd-auto-strip">
+    <div class="bd-auto-kpi">
+      <div class="bd-auto-kpi-val" id="bd-auto-emails-today">—</div>
+      <div class="bd-auto-kpi-lbl">📧 Emails Today</div>
+    </div>
+    <div class="bd-auto-divider"></div>
+    <div class="bd-auto-kpi">
+      <div class="bd-auto-kpi-val" id="bd-auto-calls-today">—</div>
+      <div class="bd-auto-kpi-lbl">📞 Calls Today</div>
+    </div>
+    <div class="bd-auto-divider"></div>
+    <div class="bd-auto-kpi">
+      <div class="bd-auto-kpi-val" id="bd-auto-appts">—</div>
+      <div class="bd-auto-kpi-lbl">📅 Appointments</div>
+    </div>
+    <div class="bd-auto-actions">
+      <button class="bd-auto-btn" id="bd-btn-campaign" onclick="bdRunCampaign()">🤖 Run Campaign Now</button>
+      <button class="bd-auto-btn" id="bd-btn-calls" onclick="bdRunCalls()">📞 Run Calls Now</button>
+    </div>
+  </div>
+
+  <!-- Sector Campaign Stat Boxes -->
+  <div class="bd-sector-stats" id="bd-sector-stats">
+    <div class="bd-sector-stat">
+      <div class="bd-sector-stat-title">🏥 Healthcare — This Week</div>
+      <div class="bd-sector-stat-row"><span>Prospects</span><span id="bd-stat-hc-prospects">—</span></div>
+      <div class="bd-sector-stat-row"><span>Emails Sent</span><span id="bd-stat-hc-emails">—</span></div>
+      <div class="bd-sector-stat-row"><span>Calls Made</span><span id="bd-stat-hc-calls">—</span></div>
+    </div>
+    <div class="bd-sector-stat">
+      <div class="bd-sector-stat-title">🏢 Enterprise — This Week</div>
+      <div class="bd-sector-stat-row"><span>Prospects</span><span id="bd-stat-ent-prospects">—</span></div>
+      <div class="bd-sector-stat-row"><span>Emails Sent</span><span id="bd-stat-ent-emails">—</span></div>
+      <div class="bd-sector-stat-row"><span>Calls Made</span><span id="bd-stat-ent-calls">—</span></div>
+    </div>
+    <div class="bd-sector-stat">
+      <div class="bd-sector-stat-title">🔗 Platform — This Week</div>
+      <div class="bd-sector-stat-row"><span>Prospects</span><span id="bd-stat-plt-prospects">—</span></div>
+      <div class="bd-sector-stat-row"><span>Emails Sent</span><span id="bd-stat-plt-emails">—</span></div>
+      <div class="bd-sector-stat-row"><span>Calls Made</span><span id="bd-stat-plt-calls">—</span></div>
     </div>
   </div>
 
@@ -20110,6 +20189,7 @@ function lfRenderExpertReport(segment, d) {
             <th>Sector</th>
             <th>Rep</th>
             <th>Status</th>
+            <th>Seq</th>
             <th>Est. Monthly Value</th>
             <th>Last Contact</th>
             <th>Next Action</th>
@@ -20117,7 +20197,7 @@ function lfRenderExpertReport(segment, d) {
           </tr>
         </thead>
         <tbody id="bd-prospect-tbody">
-          <tr><td colspan="8" class="bd-empty">No prospects yet — click <strong style="color:var(--gold)">+ Add Lead</strong> to start building your pipeline.</td></tr>
+          <tr><td colspan="9" class="bd-empty">No prospects yet — click <strong style="color:var(--gold)">+ Add Lead</strong> to start building your pipeline.</td></tr>
         </tbody>
       </table>
     </div>
@@ -20182,6 +20262,17 @@ function lfRenderExpertReport(segment, d) {
         <button class="lf-btn-ghost" onclick="closeBdAddForm()">Cancel</button>
         <button class="lf-btn" onclick="saveBdProspect()">Save Lead</button>
       </div>
+    </div>
+  </div>
+
+  <!-- Recent Activity Feed -->
+  <div class="bd-activity-wrap">
+    <div class="bd-activity-hd">
+      <div class="bd-activity-title">⚡ Recent Outreach Activity</div>
+      <button class="lf-btn-ghost" style="font-size:11px;padding:4px 10px;margin-left:auto;" onclick="bdLoadActivity()">↻ Refresh</button>
+    </div>
+    <div class="bd-activity-list" id="bd-activity-list">
+      <div class="bd-activity-row"><div class="bd-activity-body" style="color:rgba(255,255,255,.3);text-align:center;padding:16px 0;">No outreach activity yet — run a campaign to get started.</div></div>
     </div>
   </div>
 
@@ -21066,6 +21157,8 @@ let _bdLoading=false;
 
 function initLfBizDev(){
   loadLfBizDevProspects();
+  bdLoadActivity();
+  bdLoadStats();
 }
 
 async function loadLfBizDevProspects(){
@@ -21116,7 +21209,7 @@ function renderBdProspects(){
   set('bd-kpi-pipeline',pipeline?'$'+pipeline.toLocaleString():'—');
   set('bd-kpi-mrr',mrr?'$'+mrr.toLocaleString()+'/mo':'—');
 
-  if(!filtered.length){tbody.innerHTML='<tr><td colspan="8" class="bd-empty">No prospects in this segment — click <strong style="color:var(--gold)">+ Add Lead</strong> to start building your pipeline.</td></tr>';return;}
+  if(!filtered.length){tbody.innerHTML='<tr><td colspan="9" class="bd-empty">No prospects in this segment — click <strong style="color:var(--gold)">+ Add Lead</strong> to start building your pipeline.</td></tr>';return;}
 
   const statusClass=s=>'bd-status-badge bd-status-'+s;
   const statusLabel={prospecting:'Prospecting',contacted:'Contacted',proposal:'Proposal Sent',negotiating:'Negotiating',contract:'Contract',active:'Active Client',lost:'Lost'};
@@ -21128,6 +21221,8 @@ function renderBdProspects(){
     const sectorLabel=BD_SECTOR_LABELS[p.sector]||p.sector||'—';
     const lastTouch=_bdTouch(p)?new Date(_bdTouch(p)).toLocaleDateString('en-US',{month:'short',day:'numeric'}):'Never';
     const value=_bdVal(p)?'$'+_bdVal(p).toLocaleString()+'/mo':'—';
+    const seqStep=p.sequence_step!=null?p.sequence_step:null;
+    const stepBadge=seqStep!=null?`<span class="bd-step-badge">Step ${seqStep}/4</span>`:'<span style="font-size:10px;color:rgba(255,255,255,.25)">—</span>';
     return`<tr>
       <td>
         <div style="font-weight:700;font-size:13px;color:#fff">${esc(p.company||'—')}</div>
@@ -21137,6 +21232,7 @@ function renderBdProspects(){
       <td><span style="font-size:11px;font-weight:600;color:${sectorColor[p.sector]||'rgba(255,255,255,.5)'}">${esc(sectorLabel)}</span></td>
       <td style="font-size:12px;color:rgba(255,255,255,.55)">${esc(repName)}</td>
       <td><span class="${statusClass(p.status)}">${statusLabel[p.status]||p.status}</span></td>
+      <td>${stepBadge}</td>
       <td style="font-size:13px;font-weight:700;color:var(--gold)">${value}</td>
       <td style="font-size:12px;color:rgba(255,255,255,.45)">${lastTouch}</td>
       <td style="font-size:12px;color:rgba(255,255,255,.55);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(p.notes||'')}">${esc(p.notes||'—')}</td>
@@ -21271,6 +21367,113 @@ function bdEmailProspect(id){
       const pitches={healthcare:`Hi ${p.contact||'there'},\n\nI'm reaching out from 3 Lakes Logistics regarding our NEMT and medical transport services. We specialize in reliable, HIPAA-aware dispatch with ADA vehicle options and same-day scheduling for recurring medical trips.\n\nNo monthly fee — just 15% per completed trip. We'd love to discuss how we can support your transport needs.\n\nWould you have 15 minutes this week for a quick call?\n\nBest,\n${rep}\n3 Lakes Light Fleet\n661-466-9932`,enterprise:`Hi ${p.contact||'there'},\n\nI'm reaching out from 3 Lakes Logistics about our corporate courier and executive transport services. We offer reliable same-day delivery and executive car service with real-time tracking and dedicated dispatch — flat 15% fee, no monthly contracts.\n\nI'd love to show you how we're serving businesses in your area.\n\nBest,\n${rep}\n3 Lakes Light Fleet\n661-466-9932`,platform:`Hi ${p.contact||'there'},\n\nI'm ${rep} from 3 Lakes Logistics. We have a network of pre-vetted, insured Light Fleet drivers available for platform partnerships and driver supply agreements.\n\nWe offer bulk driver supply, volume pricing, and white-label dispatch integration. I'd love to explore how our fleet can extend your network capacity.\n\nBest,\n${rep}\n3 Lakes Light Fleet\n661-466-9932`};
       if(body)body.value=pitches[p.sector]||pitches.enterprise;
     },400);
+  }
+}
+
+// ── BizDev Automation Functions ───────────────────────────────────────────
+
+async function bdRunCampaign(){
+  const btn=document.getElementById('bd-btn-campaign');
+  if(btn){btn.textContent='Running…';btn.disabled=true;}
+  try{
+    const res=await apiFetch('/api/lf-bizdev/run-campaign/',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({})});
+    const data=await res.json();
+    const emails=data?.result?.emails?.sent??0;
+    const calls=data?.result?.calls?.calls_queued??0;
+    if(typeof notify==='function')notify(`Campaign complete: ${emails} emails sent, ${calls} calls queued`);
+    // Update today KPIs
+    const ev=document.getElementById('bd-auto-emails-today');if(ev)ev.textContent=emails;
+    const cv=document.getElementById('bd-auto-calls-today');if(cv)cv.textContent=calls;
+    bdLoadActivity();
+  }catch(e){
+    console.error('BD campaign failed:',e);
+    if(typeof notify==='function')notify('Campaign error: '+e.message,'error');
+  }finally{
+    if(btn){btn.textContent='🤖 Run Campaign Now';btn.disabled=false;}
+  }
+}
+
+async function bdRunCalls(){
+  const btn=document.getElementById('bd-btn-calls');
+  if(btn){btn.textContent='Calling…';btn.disabled=true;}
+  try{
+    const res=await apiFetch('/api/lf-bizdev/run-calls/',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({})});
+    const data=await res.json();
+    const calls=data?.result?.calls_queued??0;
+    if(typeof notify==='function')notify(`Calls queued: ${calls}`);
+    const cv=document.getElementById('bd-auto-calls-today');if(cv)cv.textContent=calls;
+    bdLoadActivity();
+  }catch(e){
+    console.error('BD calls failed:',e);
+    if(typeof notify==='function')notify('Call error: '+e.message,'error');
+  }finally{
+    if(btn){btn.textContent='📞 Run Calls Now';btn.disabled=false;}
+  }
+}
+
+async function bdLoadActivity(){
+  try{
+    const res=await apiFetch('/api/lf-bizdev/activity/?limit=20');
+    const data=await res.json();
+    bdRenderActivity(data.logs||[]);
+  }catch(e){
+    console.warn('BD activity load failed:',e.message);
+  }
+}
+
+function bdRenderActivity(logs){
+  const list=document.getElementById('bd-activity-list');
+  if(!list)return;
+  if(!logs.length){
+    list.innerHTML='<div class="bd-activity-row"><div class="bd-activity-body" style="color:rgba(255,255,255,.3);text-align:center;padding:16px 0;">No outreach activity yet — run a campaign to get started.</div></div>';
+    return;
+  }
+  const chanIcon={email:'📧',call:'📞',sms:'💬'};
+  const statusCls={sent:'sent',failed:'failed',connected:'connected',voicemail:'voicemail',no_answer:'failed'};
+  list.innerHTML=logs.map(l=>{
+    const icon=chanIcon[l.channel]||'📋';
+    const sc=statusCls[l.status]||'sent';
+    const ts=l.created_at?new Date(l.created_at).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}):'';
+    const detail=l.channel==='email'?`Step ${l.step} — ${esc(l.subject||'')}`:l.channel==='call'?`Step ${l.step} outbound call`:`Step ${l.step}`;
+    return`<div class="bd-activity-row">
+      <div class="bd-activity-icon">${icon}</div>
+      <div class="bd-activity-body">
+        <div class="bd-activity-company">${esc(l.company||'Unknown')}</div>
+        <div class="bd-activity-detail">${detail} <span class="bd-activity-status bd-activity-status-${sc}">${l.status||'sent'}</span></div>
+      </div>
+      <div class="bd-activity-ts">${ts}</div>
+    </div>`;
+  }).join('');
+
+  // Update today email/call KPIs from activity
+  const today=new Date().toDateString();
+  const todayLogs=logs.filter(l=>l.created_at&&new Date(l.created_at).toDateString()===today);
+  const todayEmails=todayLogs.filter(l=>l.channel==='email'&&l.status==='sent').length;
+  const todayCalls=todayLogs.filter(l=>l.channel==='call').length;
+  const ev=document.getElementById('bd-auto-emails-today');if(ev&&ev.textContent==='—')ev.textContent=todayEmails;
+  const cv=document.getElementById('bd-auto-calls-today');if(cv&&cv.textContent==='—')cv.textContent=todayCalls;
+}
+
+async function bdLoadStats(){
+  try{
+    const res=await apiFetch('/api/lf-bizdev/stats/');
+    const data=await res.json();
+    const ss=data.sector_stats||{};
+    const set=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
+    set('bd-stat-hc-prospects',ss.healthcare?.prospects??'—');
+    set('bd-stat-hc-emails',ss.healthcare?.emails??'—');
+    set('bd-stat-hc-calls',ss.healthcare?.calls??'—');
+    set('bd-stat-ent-prospects',ss.enterprise?.prospects??'—');
+    set('bd-stat-ent-emails',ss.enterprise?.emails??'—');
+    set('bd-stat-ent-calls',ss.enterprise?.calls??'—');
+    set('bd-stat-plt-prospects',ss.platform?.prospects??'—');
+    set('bd-stat-plt-emails',ss.platform?.emails??'—');
+    set('bd-stat-plt-calls',ss.platform?.calls??'—');
+    // Appointments = prospects with appointment_at set (from stats endpoint)
+    const appts=(data.prospects||[]).filter(p=>p.appointment_at).length;
+    set('bd-auto-appts',appts);
+  }catch(e){
+    console.warn('BD stats load failed:',e.message);
   }
 }
 </script>

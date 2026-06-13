@@ -63,6 +63,7 @@ from .api import (
     onboarding_status_router,
     cost_tracking_router,
     office_router,
+    lf_bizdev_router,
 )
 from .logging_service import get_logger
 from .settings import get_settings
@@ -104,6 +105,7 @@ def _start_scheduler(app: FastAPI) -> None:
             fire_iebc_weekly_report,
             fire_marcus_reid,
             fire_jamie_park,
+            fire_lf_bizdev,
         )
         from .agents.memory import prune_interactions
         from .email.imap_poller import poll_all as poll_all_mailboxes
@@ -140,6 +142,7 @@ def _start_scheduler(app: FastAPI) -> None:
         scheduler.add_job(fire_marcus_reid, CronTrigger(day_of_week="fri", hour=6, minute=0), id="marcus_reid_weekly", replace_existing=True)
         scheduler.add_job(fire_lf_weekly_payouts, CronTrigger(day_of_week="fri", hour=17, minute=0), id="lf_weekly_payouts", replace_existing=True)
         scheduler.add_job(fire_lf_recurring_trips, CronTrigger(hour=5, minute=0), id="lf_recurring_trips_daily", replace_existing=True)
+        scheduler.add_job(fire_lf_bizdev, CronTrigger(hour=14, minute=45), id="lf_bizdev_daily", replace_existing=True)
 
         def _fire_load_hunt():
             try:
@@ -275,6 +278,7 @@ def create_app() -> FastAPI:
     app.include_router(onboarding_status_router, prefix="/api",           tags=["onboarding-status"])
     app.include_router(cost_tracking_router,    prefix="/api/costs",      tags=["cost-tracking"])
     app.include_router(office_router,           prefix="/api/office",     tags=["office"])
+    app.include_router(lf_bizdev_router,                                   tags=["lf-bizdev"])
     app.include_router(health_router,                                      tags=["health"])
 
     _marketing_dir = os.path.normpath(
