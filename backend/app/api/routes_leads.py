@@ -78,3 +78,35 @@ def update_lead(lead_id: str, patch: dict) -> dict:
     except Exception as exc:
         raise HTTPException(500, f"Database error updating lead: {exc}") from exc
     return {"ok": True}
+
+
+@router.get("/{lead_id}/score")
+def explain_score(lead_id: str) -> dict:
+    """Return a detailed score breakdown for a single lead."""
+    from ..prospecting.scoring import score_summary
+    res = get_supabase().table("leads").select("*").eq("id", lead_id).limit(1).execute()
+    lead = (res.data or [None])[0]
+    if not lead:
+        raise HTTPException(404, "Lead not found")
+    return score_summary(lead)
+
+
+@router.post("/rescore")
+def rescore_all_leads(min_score: int = 0) -> dict:
+    """Re-score every lead in the database with the current scoring model.
+
+    Use after a scoring model update to refresh all scores.
+    Returns counts of leads updated and how many changed.
+    """
+    from ..prospecting.scoring import score_lead
+    sb = get_supabase()
+    leads = sb.table("leads").select("id, score, safety_rating, operating_status, oos_date, phone, email, fleet_size, total_power_units, mc_number, dot_age_days, add_date, mcs150_date, equipment_types, company_name, business_name, legal_name, contact_name").limit(2000).execute().data or []
+    updated, changed = 0, 0
+    for lead in leads:
+        new_score = score_lead(lead)
+        if new_score != (lead.get("score") or 0):
+            sb.table("leads").update({"score": new_score}).eq("id", lead["id"]).execute()
+            changed += 1
+        updated += 1
+    return {"ok": True, "total": updated, "rescored": changed, "unchanged": updated - changed}
+

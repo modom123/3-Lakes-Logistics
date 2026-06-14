@@ -2883,6 +2883,7 @@ select.form-input option{background:var(--surface);}
               <button class="btn-out" style="font-size:10px;padding:4px 10px" onclick="mcFireAgent('vance')">🔔 Fire Vance Now</button>
               <button class="btn-out" style="font-size:10px;padding:4px 10px" onclick="mcFireAgent('naomi')">🔔 Fire Naomi Now</button>
               <button class="btn-out" style="font-size:10px;padding:4px 10px" onclick="mcOnboardWon()">🚛 Onboard Won Leads</button>
+              <button class="btn-out" style="font-size:10px;padding:4px 10px;color:#f59e0b;border-color:rgba(245,158,11,.3)" onclick="mcRescoreLeads()" title="Re-score all leads with updated model (safety, phone, email weighted)">🧠 Rescore All Leads</button>
             </div>
           </div>
 
@@ -8215,24 +8216,47 @@ function lpRenderQueue(){
     tbl.innerHTML='<div class="empty-state" style="padding:40px 0;text-align:center;color:var(--muted)">No leads found'+(stageFilter==='new'?' — run Lead Machine or FMCSA Search to source new leads':'')+'. <button class="btn-out" onclick="lpSetTab(\'machine\')" style="margin-left:8px">→ Lead Machine</button></div>';
     return;
   }
-  const scoreColor=s=>s>=8?'var(--green)':s>=5?'var(--gold)':'var(--muted)';
+  const scoreColor=s=>s>=8?'var(--green)':s>=6?'var(--gold)':s>=4?'#f97316':'var(--red)';
   const stgColor=s=>({new:'var(--blue)',contacted:'var(--orange)',interested:'var(--gold)',won:'var(--green)',converted:'var(--green)',not_interested:'var(--muted)'})[s]||'var(--muted)';
-  tbl.innerHTML='<div class="tbl-wrap"><table><thead><tr><th>Score</th><th>Company</th><th>Location</th><th>DOT/MC</th><th>Phone</th><th>Trucks</th><th>Stage</th><th style="min-width:160px">Quick Actions</th></tr></thead><tbody>'+
+  const safetyBadge=l=>{
+    const r=(l.safety_rating||'').toLowerCase();
+    if(r==='satisfactory')  return `<span style="font-size:9px;padding:1px 5px;border-radius:3px;background:rgba(34,197,94,.15);color:#4ade80;font-weight:700">SAT</span>`;
+    if(r==='conditional')   return `<span style="font-size:9px;padding:1px 5px;border-radius:3px;background:rgba(245,158,11,.15);color:#fbbf24;font-weight:700">COND</span>`;
+    if(r==='unsatisfactory')return `<span style="font-size:9px;padding:1px 5px;border-radius:3px;background:rgba(239,68,68,.15);color:#ef4444;font-weight:700">UNSAT</span>`;
+    if(l.oos_date)          return `<span style="font-size:9px;padding:1px 5px;border-radius:3px;background:rgba(239,68,68,.2);color:#ef4444;font-weight:700">OOS</span>`;
+    return `<span style="font-size:9px;padding:1px 5px;border-radius:3px;background:rgba(255,255,255,.07);color:var(--muted)">NEW</span>`;
+  };
+  const contactIcons=l=>{
+    const ph=(l.phone||l.telephone||'').trim();
+    const em=(l.email||'').trim();
+    return `${ph?'<span title="Has phone" style="color:#4ade80;font-size:11px">📞</span>':'<span title="No phone" style="color:#ef4444;font-size:11px;opacity:.5">📞</span>'}${em?'<span title="Has email" style="color:#38bdf8;font-size:11px">📧</span>':'<span title="No email" style="color:var(--muted);font-size:11px;opacity:.4">📧</span>'}`;
+  };
+  tbl.innerHTML='<div class="tbl-wrap"><table><thead><tr><th>Score</th><th>Company</th><th>Safety</th><th>Contact</th><th>Location</th><th>Trucks</th><th>Stage</th><th style="min-width:160px">Actions</th></tr></thead><tbody>'+
     leads.map(l=>{
       const phone=ph(l); const s=stg(l);
+      const mc=l.mc_number?`<span style="font-size:9px;color:var(--muted)">MC-${esc(l.mc_number)}</span>`:'';
       return `<tr>
-        <td><strong style="color:${scoreColor(l.score||0)}">${l.score||'—'}</strong></td>
-        <td style="max-width:200px;font-weight:500">${esc(name(l))}${l.source?`<br><span style="font-size:9px;color:var(--muted);text-transform:uppercase">${esc(l.source)}</span>`:''}</td>
+        <td>
+          <strong style="font-size:16px;color:${scoreColor(l.score||0)}">${l.score||'—'}</strong>
+          <div style="font-size:9px;color:var(--muted)">/ 10</div>
+        </td>
+        <td style="max-width:200px">
+          <div style="font-weight:600;font-size:12px">${esc(name(l))}</div>
+          <div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:2px">${mc}${l.dot_number?`<span style="font-size:9px;color:var(--muted)">DOT ${esc(l.dot_number)}</span>`:''}</div>
+        </td>
+        <td>${safetyBadge(l)}<div style="font-size:9px;color:var(--muted);margin-top:2px">${esc((l.operating_status||'').toLowerCase().replace('authorized','auth').replace('not ','!'))||'—'}</div></td>
+        <td>
+          <div style="display:flex;gap:2px">${contactIcons(l)}</div>
+          <div style="font-size:9px;color:var(--muted);margin-top:2px;max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(phone!=='—'?phone:'no phone')}</div>
+        </td>
         <td style="font-size:11px;color:var(--muted)">${esc(loc(l))}</td>
-        <td class="t-mono" style="font-size:10px">${esc(l.dot_number||l.mc_number||'—')}</td>
-        <td class="t-mono" style="font-size:11px">${esc(phone)}</td>
         <td style="font-size:11px">${l.fleet_size||l.total_power_units||'—'}</td>
         <td><span style="font-size:11px;font-weight:600;color:${stgColor(s)}">${s.charAt(0).toUpperCase()+s.slice(1)}</span></td>
         <td>
           <div style="display:flex;gap:4px;flex-wrap:wrap">
-            <button class="btn-navy-sm" onclick="vanceDialLead('${esc(l.id)}','${esc(name(l)).replace(/'/g,"\\'")}','${esc(phone)}')" ${phone==='—'?'disabled':''}>📞</button>
-            <button class="btn-out" style="font-size:10px;padding:2px 7px" onclick="lpQuickSMS('${esc(l.id)}')">💬 SMS</button>
-            <button class="btn-out" style="font-size:10px;padding:2px 7px" onclick="smOpenLead('${esc(l.id)}');nav('salesforce')">✏️ Edit</button>
+            <button class="btn-navy-sm" onclick="vanceDialLead('${esc(l.id)}','${esc(name(l)).replace(/'/g,"\\'")}','${esc(phone)}')" ${phone==='—'?'disabled title="No phone"':''} title="Vance auto-call">📞</button>
+            <button class="btn-out" style="font-size:10px;padding:2px 7px" onclick="lpQuickSMS('${esc(l.id)}')" ${phone==='—'?'disabled':''}title="Quick SMS">💬</button>
+            <button class="btn-out" style="font-size:10px;padding:2px 7px" onclick="smOpenLead('${esc(l.id)}');nav('salesforce')" title="Edit in Sales &amp; Marketing">✏️</button>
           </div>
         </td>
       </tr>`;
@@ -8518,6 +8542,17 @@ window.mcFireAgent = async function(agent){
   }catch(e){ toast(`Failed to fire ${agent}: `+e.message,'error'); }
 };
 
+window.mcRescoreLeads = async function(){
+  if(!confirm('Re-score all leads with the new model (safety rating, phone, email now weighted differently)?')) return;
+  toast('Re-scoring leads…','info');
+  try{
+    const r = await apiFetch('/api/leads/rescore',{method:'POST'});
+    if(!r.ok) throw new Error(r.status);
+    const d = await r.json();
+    toast(`Rescored ${d.total} leads — ${d.rescored} scores changed`,'success');
+    await loadLeadsPipeline(true);
+  }catch(e){ toast('Rescore error: '+e.message,'error'); }
+};
 window.mcOnboardWon = async function(){
   if(!confirm('Auto-onboard all Won leads that haven\'t been converted to carriers yet?')) return;
   try{
