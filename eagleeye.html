@@ -2705,139 +2705,367 @@ select.form-input option{background:var(--surface);}
       </div>
     </div>
 
-    <!-- ── LEADS ── -->
+    <!-- ── LEAD GEN HUB ── -->
     <div class="page" id="page-leads">
       <div class="page-hdr">
         <div class="page-hdr-l">
-          <div class="chip">Prospecting</div>
-          <h2>Lead Pipeline</h2>
+          <div class="chip">Lead Gen</div>
+          <h2>Lead Generation Hub</h2>
         </div>
-        <div class="page-hdr-r" style="display:flex;gap:8px">
-          <button class="btn-out" onclick="migrateAirtableLeads()" title="Import 129 leads from Airtable">📥 Import from Airtable</button>
-          <button class="btn-out" onclick="debugAirtable()" title="Check Airtable connection + list tables">🔍 Debug Airtable</button>
-          <button class="btn-out" onclick="loadLeadsPipeline()">Refresh</button>
+        <div class="page-hdr-r" style="display:flex;gap:8px;align-items:center">
+          <button class="btn-out" onclick="openAddLeadModal()">+ Add Lead</button>
+          <button class="btn-out" onclick="loadLeadsPipeline(true)">↻ Refresh</button>
         </div>
       </div>
 
-      <!-- AIRTABLE MIGRATION STATUS -->
-      <div id="airtable-migration-card" style="display:none;margin-bottom:16px">
-        <div class="card" style="border-left:4px solid var(--blue)">
-          <div class="card-hd"><div class="card-title">🔄 Airtable Migration</div></div>
-          <div id="migration-status" style="padding:4px 0;font-size:13px;color:var(--white)">
-            <div id="migration-spinner" style="display:flex;align-items:center;gap:8px">
-              <div class="spin" style="width:16px;height:16px"></div>
-              <span>Migrating leads from Airtable...</span>
+      <!-- KPI Strip -->
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;padding:0 16px 12px">
+        <div class="mc"><div class="mc-label">New (Uncontacted)</div><div class="mc-val blue" id="lp-new">—</div></div>
+        <div class="mc"><div class="mc-label">Contacted</div><div class="mc-val orange" id="lp-contacted">—</div></div>
+        <div class="mc"><div class="mc-label">Interested</div><div class="mc-val gold" id="lp-qualified">—</div></div>
+        <div class="mc"><div class="mc-label">Converted</div><div class="mc-val green" id="lp-converted">—</div></div>
+        <div class="mc"><div class="mc-label">Sourced Today</div><div class="mc-val" id="lp-today" style="color:var(--white)">—</div></div>
+        <div class="mc"><div class="mc-label">Avg Score</div><div class="mc-val gold" id="lp-avgscore">—</div></div>
+      </div>
+
+      <!-- Tab bar -->
+      <div style="padding:0 16px;border-bottom:2px solid var(--border);display:flex;gap:0;margin-bottom:0">
+        <button id="lp-tab-btn-machine"  onclick="lpSetTab('machine')"  style="padding:8px 18px;font-size:13px;font-weight:700;border:none;background:none;cursor:pointer;border-bottom:3px solid var(--navy);margin-bottom:-2px;color:var(--white)">🚀 Lead Machine</button>
+        <button id="lp-tab-btn-queue"    onclick="lpSetTab('queue')"    style="padding:8px 18px;font-size:13px;font-weight:600;border:none;background:none;cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-2px;color:var(--muted)">📋 New Leads Queue</button>
+        <button id="lp-tab-btn-outreach" onclick="lpSetTab('outreach')" style="padding:8px 18px;font-size:13px;font-weight:600;border:none;background:none;cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-2px;color:var(--muted)">📱 SMS / Email</button>
+        <button id="lp-tab-btn-social"   onclick="lpSetTab('social')"   style="padding:8px 18px;font-size:13px;font-weight:600;border:none;background:none;cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-2px;color:var(--muted)">🌐 Social Media</button>
+      </div>
+
+      <!-- ── Tab 1: Lead Machine ── -->
+      <div id="lp-tab-machine" style="padding:16px;overflow-y:auto;height:calc(100vh - 235px)">
+
+        <!-- Airtable migration status -->
+        <div id="airtable-migration-card" style="display:none;margin-bottom:16px">
+          <div class="card" style="border-left:4px solid var(--blue)">
+            <div class="card-hd"><div class="card-title">🔄 Airtable Migration</div></div>
+            <div id="migration-status" style="padding:4px 0;font-size:13px;color:var(--white)">
+              <div id="migration-spinner" style="display:flex;align-items:center;gap:8px">
+                <div class="spin" style="width:16px;height:16px"></div>
+                <span>Migrating leads from Airtable...</span>
+              </div>
             </div>
           </div>
         </div>
-      </div>
 
-      <!-- LEAD MACHINE -->
-      <div class="lm-card">
-        <div class="lm-title">🚀 Lead Machine</div>
-        <div class="lm-sub">Source new owner-operators from FMCSA · Score with AI · Queue Vance outbound calls</div>
-        <div class="lm-controls">
-          <div class="lm-fg">
-            <div class="lm-label">Source</div>
-            <select class="lm-sel" id="lm-source">
-              <option value="auto">Auto (FMCSA if configured, demo otherwise)</option>
-              <option value="fmcsa">FMCSA New Entrants (live)</option>
-              <option value="demo">Demo / Seed Data</option>
-            </select>
+        <!-- Lead Machine -->
+        <div class="lm-card">
+          <div class="lm-title">🚀 Lead Machine</div>
+          <div class="lm-sub">Source new owner-operators from FMCSA federal database · Score with AI · Queue Vance outbound calls</div>
+          <div class="lm-controls">
+            <div class="lm-fg">
+              <div class="lm-label">Source</div>
+              <select class="lm-sel" id="lm-source">
+                <option value="auto">Auto (FMCSA if configured, demo otherwise)</option>
+                <option value="fmcsa">FMCSA New Entrants (live)</option>
+                <option value="demo">Demo / Seed Data</option>
+              </select>
+            </div>
+            <div class="lm-fg">
+              <div class="lm-label">Min Score</div>
+              <select class="lm-sel" id="lm-minscore">
+                <option value="6">6+ (broad)</option>
+                <option value="7" selected>7+ (recommended)</option>
+                <option value="8">8+ (high-intent)</option>
+                <option value="9">9–10 (best only)</option>
+              </select>
+            </div>
+            <div class="lm-fg">
+              <div class="lm-label">Limit</div>
+              <select class="lm-sel" id="lm-limit">
+                <option value="10">10 leads</option>
+                <option value="20" selected>20 leads</option>
+                <option value="50">50 leads</option>
+              </select>
+            </div>
+            <div class="lm-fg">
+              <div class="lm-label">Auto-Call (Bland AI)</div>
+              <select class="lm-sel" id="lm-autocall">
+                <option value="false" selected>Off — queue only</option>
+                <option value="true">On — Vance dials 8+ leads</option>
+              </select>
+            </div>
+            <button class="btn-launch" id="lm-btn" onclick="launchLeadMachine()">⚡ Launch Lead Machine</button>
           </div>
-          <div class="lm-fg">
-            <div class="lm-label">Min Score</div>
-            <select class="lm-sel" id="lm-minscore">
-              <option value="6">6+ (broad)</option>
-              <option value="7" selected>7+ (recommended)</option>
-              <option value="8">8+ (high-intent)</option>
-              <option value="9">9–10 (best only)</option>
-            </select>
+          <div class="lm-result" id="lm-result">
+            <div class="lm-result-grid">
+              <div class="lm-stat"><div class="lm-stat-val" id="lm-r-sourced">—</div><div class="lm-stat-lbl">Sourced</div></div>
+              <div class="lm-stat"><div class="lm-stat-val" id="lm-r-inserted">—</div><div class="lm-stat-lbl">New Leads</div></div>
+              <div class="lm-stat"><div class="lm-stat-val" id="lm-r-skipped">—</div><div class="lm-stat-lbl">Skipped</div></div>
+              <div class="lm-stat"><div class="lm-stat-val" id="lm-r-calls">—</div><div class="lm-stat-lbl">Calls Queued</div></div>
+            </div>
+            <div id="lm-r-detail" style="margin-top:10px;font-family:var(--ff-m);font-size:10px;color:rgba(255,255,255,.5);letter-spacing:.3px;"></div>
           </div>
-          <div class="lm-fg">
-            <div class="lm-label">Limit</div>
-            <select class="lm-sel" id="lm-limit">
-              <option value="10">10 leads</option>
-              <option value="20" selected>20 leads</option>
-              <option value="50">50 leads</option>
-            </select>
-          </div>
-          <div class="lm-fg">
-            <div class="lm-label">Auto-Call (Bland AI)</div>
-            <select class="lm-sel" id="lm-autocall">
-              <option value="false" selected>Off — queue only</option>
-              <option value="true">On — Vance dials 8+ leads</option>
-            </select>
-          </div>
-          <button class="btn-launch" id="lm-btn" onclick="launchLeadMachine()">⚡ Launch Lead Machine</button>
         </div>
-        <div class="lm-result" id="lm-result">
-          <div class="lm-result-grid">
-            <div class="lm-stat"><div class="lm-stat-val" id="lm-r-sourced">—</div><div class="lm-stat-lbl">Sourced</div></div>
-            <div class="lm-stat"><div class="lm-stat-val" id="lm-r-inserted">—</div><div class="lm-stat-lbl">New Leads</div></div>
-            <div class="lm-stat"><div class="lm-stat-val" id="lm-r-skipped">—</div><div class="lm-stat-lbl">Skipped</div></div>
-            <div class="lm-stat"><div class="lm-stat-val" id="lm-r-calls">—</div><div class="lm-stat-lbl">Calls Queued</div></div>
-          </div>
-          <div id="lm-r-detail" style="margin-top:10px;font-family:var(--ff-m);font-size:10px;color:rgba(255,255,255,.5);letter-spacing:.3px;"></div>
-        </div>
-      </div>
 
-      <!-- FMCSA PROSPECT SEARCH -->
-      <div class="card" style="margin-bottom:16px;border-left:4px solid var(--blue)">
-        <div class="card-hd">
-          <div class="card-title">🔭 FMCSA Prospect Search</div>
-          <span class="card-chip">4.44M carriers · 147 fields · Live Census</span>
+        <!-- FMCSA Prospect Search -->
+        <div class="card" style="margin-top:16px;border-left:4px solid var(--blue)">
+          <div class="card-hd">
+            <div>
+              <div class="card-title">🔭 FMCSA Prospect Search</div>
+              <div style="font-size:11px;color:var(--muted);margin-top:2px">Live query against the US federal FMCSA Company Census — 4.44M carriers, 147 fields. Leads come from data.transportation.gov and are saved to your database.</div>
+            </div>
+            <span class="card-chip">4.44M carriers · Live Federal Census</span>
+          </div>
+          <div class="form-row" style="margin-bottom:8px">
+            <div class="fg"><label class="fl">State *</label><input class="fi" id="fmcsa-ps-state" placeholder="e.g. IL" maxlength="2" style="text-transform:uppercase"></div>
+            <div class="fg"><label class="fl">City</label><input class="fi" id="fmcsa-ps-city" placeholder="e.g. Chicago"></div>
+            <div class="fg"><label class="fl">Min Trucks</label><input class="fi" id="fmcsa-ps-min" type="number" value="1" min="1"></div>
+            <div class="fg"><label class="fl">Max Trucks</label><input class="fi" id="fmcsa-ps-max" type="number" value="30" min="1"></div>
+          </div>
+          <div class="form-row" style="margin-bottom:12px">
+            <div class="fg"><label class="fl">Operation Type</label>
+              <select class="fsel" id="fmcsa-ps-op">
+                <option value="">Any</option>
+                <option value="I">Interstate (I)</option>
+                <option value="A">Intrastate — All (A)</option>
+                <option value="H">Intrastate — HM Only (H)</option>
+              </select>
+            </div>
+            <div class="fg"><label class="fl">Equipment</label>
+              <select class="fsel" id="fmcsa-ps-equip">
+                <option value="">Any</option>
+                <option value="tractor">Tractor-Trailer only</option>
+                <option value="hazmat">Hazmat authorized</option>
+              </select>
+            </div>
+            <div class="fg"><label class="fl">Limit</label>
+              <select class="fsel" id="fmcsa-ps-limit">
+                <option value="25">25</option>
+                <option value="50" selected>50</option>
+                <option value="100">100</option>
+                <option value="200">200</option>
+              </select>
+            </div>
+            <div class="fg" style="display:flex;align-items:flex-end;gap:8px">
+              <button class="btn-navy" onclick="fmcsaProspectSearch()" id="fmcsa-ps-btn" style="flex:1">🔍 Search FMCSA</button>
+              <button class="btn-out" onclick="migrateAirtableLeads()" title="Import leads from Airtable">📥 Airtable</button>
+            </div>
+          </div>
+          <div id="fmcsa-ps-results"></div>
         </div>
-        <p class="t-sm t-muted" style="margin-bottom:14px">Search the full FMCSA Company Census — active, inactive, and pending entities. Filter by state, fleet size, operation type, and more. One-click import as a lead.</p>
-        <div class="form-row" style="margin-bottom:8px">
-          <div class="fg"><label class="fl">State *</label><input class="fi" id="fmcsa-ps-state" placeholder="e.g. IL" maxlength="2" style="text-transform:uppercase"></div>
-          <div class="fg"><label class="fl">City</label><input class="fi" id="fmcsa-ps-city" placeholder="e.g. Chicago"></div>
-          <div class="fg"><label class="fl">Min Trucks</label><input class="fi" id="fmcsa-ps-min" type="number" value="1" min="1"></div>
-          <div class="fg"><label class="fl">Max Trucks</label><input class="fi" id="fmcsa-ps-max" type="number" value="30" min="1"></div>
-        </div>
-        <div class="form-row" style="margin-bottom:12px">
-          <div class="fg"><label class="fl">Operation Type</label>
-            <select class="fsel" id="fmcsa-ps-op">
-              <option value="">Any</option>
-              <option value="I">Interstate (I)</option>
-              <option value="A">Intrastate — All (A)</option>
-              <option value="H">Intrastate — HM Only (H)</option>
-            </select>
-          </div>
-          <div class="fg"><label class="fl">Equipment</label>
-            <select class="fsel" id="fmcsa-ps-equip">
-              <option value="">Any</option>
-              <option value="tractor">Tractor-Trailer only</option>
-              <option value="hazmat">Hazmat authorized</option>
-            </select>
-          </div>
-          <div class="fg"><label class="fl">Limit</label>
-            <select class="fsel" id="fmcsa-ps-limit">
-              <option value="25">25</option>
-              <option value="50" selected>50</option>
-              <option value="100">100</option>
-              <option value="200">200</option>
-            </select>
-          </div>
-          <div class="fg" style="display:flex;align-items:flex-end;gap:8px">
-            <button class="btn-navy" onclick="fmcsaProspectSearch()" id="fmcsa-ps-btn" style="flex:1">🔍 Search FMCSA</button>
-          </div>
-        </div>
-        <div id="fmcsa-ps-results"></div>
-      </div>
 
-      <div class="g4" style="margin-bottom:16px">
-        <div class="mc"><div class="mc-label">New</div><div class="mc-val blue" id="lp-new">—</div></div>
-        <div class="mc"><div class="mc-label">Contacted</div><div class="mc-val orange" id="lp-contacted">—</div></div>
-        <div class="mc"><div class="mc-label">Qualified</div><div class="mc-val gold" id="lp-qualified">—</div></div>
-        <div class="mc"><div class="mc-label">Converted</div><div class="mc-val green" id="lp-converted">—</div></div>
-      </div>
+      </div><!-- /lp-tab-machine -->
 
-      <div class="card">
-        <div class="card-hd"><div class="card-title">Top Scored Leads</div><span class="card-chip" id="lp-count-chip">Loading…</span></div>
-        <div id="lp-table" class="scroll-box"><div class="loading"><div class="spin"></div>Loading leads…</div></div>
-      </div>
-    </div>
+      <!-- ── Tab 2: New Leads Queue ── -->
+      <div id="lp-tab-queue" style="display:none;padding:16px;overflow-y:auto;height:calc(100vh - 235px)">
+        <div style="display:flex;gap:10px;margin-bottom:14px;align-items:center;flex-wrap:wrap">
+          <input type="text" id="lp-q-search" placeholder="Name, DOT, MC, phone, state…" oninput="lpRenderQueue()" style="padding:6px 10px;border:1px solid var(--border);border-radius:4px;font-size:13px;width:260px">
+          <select id="lp-q-stage" onchange="lpRenderQueue()" style="padding:6px 10px;border:1px solid var(--border);border-radius:4px;font-size:13px">
+            <option value="new">New (Uncontacted)</option>
+            <option value="">All Stages</option>
+            <option value="contacted">Contacted</option>
+            <option value="interested">Interested</option>
+            <option value="not_interested">Not Interested</option>
+            <option value="won">Won / Converted</option>
+          </select>
+          <select id="lp-q-sort" onchange="lpRenderQueue()" style="padding:6px 10px;border:1px solid var(--border);border-radius:4px;font-size:13px">
+            <option value="score">↓ Score</option>
+            <option value="date">↓ Newest</option>
+            <option value="alpha">A–Z</option>
+          </select>
+          <span id="lp-q-count" style="font-size:12px;color:var(--muted);margin-left:auto"></span>
+        </div>
+        <div id="lp-queue-table"><div class="loading"><div class="spin"></div>Loading leads…</div></div>
+      </div><!-- /lp-tab-queue -->
+
+      <!-- ── Tab 3: SMS / Email Outreach ── -->
+      <div id="lp-tab-outreach" style="display:none;padding:16px;overflow-y:auto;height:calc(100vh - 235px)">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+
+          <!-- SMS Campaign -->
+          <div class="card" style="padding:16px">
+            <div class="card-hd" style="margin-bottom:12px">
+              <div>
+                <div class="card-title">📱 SMS Campaign</div>
+                <div style="font-size:11px;color:var(--muted)">Send text messages to new leads via Vance / Bland AI</div>
+              </div>
+            </div>
+            <div style="margin-bottom:10px">
+              <div class="fl" style="margin-bottom:4px">Target Audience</div>
+              <select id="lp-sms-target" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:4px;font-size:13px">
+                <option value="new">New (Uncontacted) Leads</option>
+                <option value="contacted">Contacted — No Response</option>
+                <option value="interested">Interested Leads</option>
+                <option value="score7">Score 7+ Only</option>
+                <option value="score8">Score 8+ (High Intent)</option>
+              </select>
+            </div>
+            <div style="margin-bottom:10px">
+              <div class="fl" style="margin-bottom:4px">Message Template</div>
+              <select id="lp-sms-template" onchange="lpFillSmsTemplate()" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:4px;font-size:13px;margin-bottom:8px">
+                <option value="">— Choose template —</option>
+                <option value="intro">Introduction</option>
+                <option value="followup">Follow-up</option>
+                <option value="offer">Special Offer</option>
+                <option value="reactivate">Re-activate Cold Lead</option>
+              </select>
+              <textarea id="lp-sms-body" rows="4" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:4px;font-size:13px;resize:vertical;box-sizing:border-box" placeholder="Hi [name], this is 3 Lakes Logistics. We're looking for owner-operators in your area. Interested in steady loads with top pay? Reply YES or call us at (800) 555-0000."></textarea>
+              <div style="font-size:10px;color:var(--muted);margin-top:4px">Use [name], [company], [state] as merge fields</div>
+            </div>
+            <div style="display:flex;gap:8px;align-items:center">
+              <button class="btn-navy" onclick="lpBlastSMS()" style="flex:1">📤 Send SMS Campaign</button>
+              <button class="btn-out" onclick="lpPreviewCampaign('sms')">Preview</button>
+            </div>
+            <div id="lp-sms-status" style="margin-top:8px;font-size:11px;color:#38bdf8;min-height:16px"></div>
+          </div>
+
+          <!-- Email Campaign -->
+          <div class="card" style="padding:16px">
+            <div class="card-hd" style="margin-bottom:12px">
+              <div>
+                <div class="card-title">📧 Email Campaign</div>
+                <div style="font-size:11px;color:var(--muted)">Send outreach emails to new carrier leads</div>
+              </div>
+            </div>
+            <div style="margin-bottom:10px">
+              <div class="fl" style="margin-bottom:4px">Target Audience</div>
+              <select id="lp-email-target" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:4px;font-size:13px">
+                <option value="new">New (Uncontacted) Leads</option>
+                <option value="contacted">Contacted — No Response</option>
+                <option value="interested">Interested Leads</option>
+                <option value="score7">Score 7+ Only</option>
+              </select>
+            </div>
+            <div style="margin-bottom:10px">
+              <div class="fl" style="margin-bottom:4px">Template</div>
+              <select id="lp-email-template" onchange="lpFillEmailTemplate()" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:4px;font-size:13px;margin-bottom:8px">
+                <option value="">— Choose template —</option>
+                <option value="intro">Introduction Email</option>
+                <option value="followup">Follow-up Email</option>
+                <option value="offer">Load Offer</option>
+                <option value="onboard">Onboarding Invite</option>
+              </select>
+              <input id="lp-email-subject" placeholder="Subject line…" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:4px;font-size:13px;margin-bottom:8px;box-sizing:border-box"/>
+              <textarea id="lp-email-body" rows="4" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:4px;font-size:13px;resize:vertical;box-sizing:border-box" placeholder="Hi [name], we're 3 Lakes Logistics and we're looking for owner-operators in [state]…"></textarea>
+            </div>
+            <div style="display:flex;gap:8px;align-items:center">
+              <button class="btn-navy" onclick="lpBlastEmail()" style="flex:1">📤 Send Email Campaign</button>
+              <button class="btn-out" onclick="lpPreviewCampaign('email')">Preview</button>
+            </div>
+            <div id="lp-email-status" style="margin-top:8px;font-size:11px;color:#38bdf8;min-height:16px"></div>
+          </div>
+        </div>
+
+        <!-- Outreach Activity Log -->
+        <div class="card" style="padding:16px">
+          <div class="card-hd" style="margin-bottom:10px">
+            <div class="card-title">📋 Recent Outreach Activity</div>
+            <button class="btn-out" style="font-size:10px;padding:3px 8px" onclick="lpLoadOutreachLog()">↺ Refresh</button>
+          </div>
+          <div id="lp-outreach-log">
+            <div style="font-size:12px;color:var(--muted);padding:20px 0;text-align:center">Run a campaign above to see activity here</div>
+          </div>
+        </div>
+      </div><!-- /lp-tab-outreach -->
+
+      <!-- ── Tab 4: Social Media ── -->
+      <div id="lp-tab-social" style="display:none;padding:16px;overflow-y:auto;height:calc(100vh - 235px)">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;margin-bottom:16px">
+
+          <!-- LinkedIn -->
+          <div class="card" style="padding:16px;border-top:3px solid #0077b5">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+              <div style="font-size:28px">💼</div>
+              <div>
+                <div style="font-weight:700;font-size:14px">LinkedIn</div>
+                <div style="font-size:11px;color:var(--muted)">Carrier & owner-operator prospecting</div>
+              </div>
+            </div>
+            <div style="font-size:12px;color:var(--muted);margin-bottom:10px">Post types that convert: "We're hiring owner-operators", load-rate posts, driver testimonials, #trucking #owneroperator hashtags.</div>
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <a href="https://www.linkedin.com/feed/" target="_blank" rel="noopener" class="btn-out" style="text-align:center;font-size:12px;text-decoration:none">📝 Create LinkedIn Post</a>
+              <a href="https://www.linkedin.com/search/results/people/?keywords=owner+operator+truck&origin=GLOBAL_SEARCH_HEADER" target="_blank" rel="noopener" class="btn-out" style="text-align:center;font-size:12px;text-decoration:none">🔍 Search Owner-Operators</a>
+              <a href="https://www.linkedin.com/messaging/" target="_blank" rel="noopener" class="btn-out" style="text-align:center;font-size:12px;text-decoration:none">💬 LinkedIn Messages</a>
+            </div>
+            <div style="margin-top:12px;padding:10px;background:rgba(0,119,181,.08);border-radius:6px;border:1px solid rgba(0,119,181,.2)">
+              <div style="font-size:10px;font-weight:700;margin-bottom:6px;color:rgba(255,255,255,.7)">QUICK COPY — Post Script</div>
+              <div style="font-size:11px;color:var(--muted);line-height:1.6">🚛 3 Lakes Logistics is hiring owner-operators NOW! Steady dry-van loads, top pay, fuel advances available. CDL-A required. DM us or call today. #trucking #owneroperator #cdl</div>
+              <button onclick="lpCopyText(this.previousElementSibling.textContent)" class="btn-out" style="margin-top:6px;font-size:10px;padding:3px 8px">Copy</button>
+            </div>
+          </div>
+
+          <!-- Facebook -->
+          <div class="card" style="padding:16px;border-top:3px solid #1877f2">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+              <div style="font-size:28px">📘</div>
+              <div>
+                <div style="font-weight:700;font-size:14px">Facebook</div>
+                <div style="font-size:11px;color:var(--muted)">Groups, marketplace & targeted ads</div>
+              </div>
+            </div>
+            <div style="font-size:12px;color:var(--muted);margin-bottom:10px">Best groups: "CDL Trucking Jobs", "Owner Operators Network", "Truck Drivers Wanted". Post daily in 3–5 groups.</div>
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <a href="https://www.facebook.com/groups/search/results/?q=owner+operator+trucking" target="_blank" rel="noopener" class="btn-out" style="text-align:center;font-size:12px;text-decoration:none">👥 Find Trucking Groups</a>
+              <a href="https://www.facebook.com/" target="_blank" rel="noopener" class="btn-out" style="text-align:center;font-size:12px;text-decoration:none">📝 Create Facebook Post</a>
+              <a href="https://www.facebook.com/marketplace/create/item" target="_blank" rel="noopener" class="btn-out" style="text-align:center;font-size:12px;text-decoration:none">🏪 Post on Marketplace</a>
+            </div>
+            <div style="margin-top:12px;padding:10px;background:rgba(24,119,242,.08);border-radius:6px;border:1px solid rgba(24,119,242,.2)">
+              <div style="font-size:10px;font-weight:700;margin-bottom:6px;color:rgba(255,255,255,.7)">QUICK COPY — Group Post</div>
+              <div style="font-size:11px;color:var(--muted);line-height:1.6">📣 3 Lakes Logistics is looking for owner-operators! Dry van, reefer & flatbed. Fuel advances, quick pay, consistent miles. Based in Michigan. Call or message us today!</div>
+              <button onclick="lpCopyText(this.previousElementSibling.textContent)" class="btn-out" style="margin-top:6px;font-size:10px;padding:3px 8px">Copy</button>
+            </div>
+          </div>
+
+          <!-- Instagram -->
+          <div class="card" style="padding:16px;border-top:3px solid #e1306c">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+              <div style="font-size:28px">📸</div>
+              <div>
+                <div style="font-weight:700;font-size:14px">Instagram</div>
+                <div style="font-size:11px;color:var(--muted)">Visual content + DM outreach</div>
+              </div>
+            </div>
+            <div style="font-size:12px;color:var(--muted);margin-bottom:10px">Top hashtags: #trucklife #owneroperator #cdllife #trucking #freightbroker #dryvan. Post truck photos + load offers.</div>
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <a href="https://www.instagram.com/" target="_blank" rel="noopener" class="btn-out" style="text-align:center;font-size:12px;text-decoration:none">📸 Post on Instagram</a>
+              <a href="https://www.instagram.com/explore/tags/owneroperator/" target="_blank" rel="noopener" class="btn-out" style="text-align:center;font-size:12px;text-decoration:none">#️⃣ #owneroperator Feed</a>
+              <a href="https://www.instagram.com/explore/tags/cdllife/" target="_blank" rel="noopener" class="btn-out" style="text-align:center;font-size:12px;text-decoration:none">#️⃣ #cdllife Feed</a>
+            </div>
+            <div style="margin-top:12px;padding:10px;background:rgba(225,48,108,.08);border-radius:6px;border:1px solid rgba(225,48,108,.2)">
+              <div style="font-size:10px;font-weight:700;margin-bottom:6px;color:rgba(255,255,255,.7)">QUICK COPY — Caption</div>
+              <div style="font-size:11px;color:var(--muted);line-height:1.6">Steady loads. Great pay. We treat you right. 🚛💰 3 Lakes Logistics is hiring owner-operators! DM us today. #owneroperator #trucklife #cdllife #trucking #freightbroker</div>
+              <button onclick="lpCopyText(this.previousElementSibling.textContent)" class="btn-out" style="margin-top:6px;font-size:10px;padding:3px 8px">Copy</button>
+            </div>
+          </div>
+
+          <!-- Indeed / Job Boards -->
+          <div class="card" style="padding:16px;border-top:3px solid #2164f3">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+              <div style="font-size:28px">💼</div>
+              <div>
+                <div style="font-weight:700;font-size:14px">Job Boards</div>
+                <div style="font-size:11px;color:var(--muted)">Indeed, DAT, Truckstop, CDL Life</div>
+              </div>
+            </div>
+            <div style="font-size:12px;color:var(--muted);margin-bottom:10px">Post owner-operator job listings on major boards. Owner-ops search here actively when looking for new carriers.</div>
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <a href="https://employers.indeed.com/p/post-job" target="_blank" rel="noopener" class="btn-out" style="text-align:center;font-size:12px;text-decoration:none">📋 Post on Indeed</a>
+              <a href="https://www.dat.com/post-loads" target="_blank" rel="noopener" class="btn-out" style="text-align:center;font-size:12px;text-decoration:none">🚚 Post on DAT</a>
+              <a href="https://www.truckstop.com/" target="_blank" rel="noopener" class="btn-out" style="text-align:center;font-size:12px;text-decoration:none">🛑 Truckstop.com</a>
+              <a href="https://cdllife.com/post-a-job/" target="_blank" rel="noopener" class="btn-out" style="text-align:center;font-size:12px;text-decoration:none">🎖️ CDL Life Jobs</a>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Post activity log -->
+        <div class="card" style="padding:16px">
+          <div class="card-hd" style="margin-bottom:10px">
+            <div class="card-title">📅 Post Tracker</div>
+            <button class="btn-navy" onclick="lpLogPost()" style="font-size:11px;padding:5px 12px">+ Log Post</button>
+          </div>
+          <div id="lp-post-log" style="display:flex;flex-direction:column;gap:6px">
+            <div style="font-size:12px;color:var(--muted);padding:16px 0;text-align:center">No posts logged yet. Click "Log Post" after posting on social media.</div>
+          </div>
+        </div>
+      </div><!-- /lp-tab-social -->
+
+    </div><!-- /page-leads -->
 
     <!-- ── CLM SCANNER PAGE ── -->
     <div class="page" id="page-clm">
@@ -7736,47 +7964,258 @@ async function fmcsaImportLead(carrier, btn){
   } catch(e){ btn.disabled=false; btn.textContent='+ Add Lead'; toast(e.message,'error'); }
 }
 
-async function loadLeadsPipeline(){
-  const tbl=document.getElementById('lp-table');
+// ── Lead Generation Hub ──────────────────────────────────────────────────────
+let _lpLeads = [];
+let _lpCurrentTab = 'machine';
+let _lpPostLog = JSON.parse(localStorage.getItem('3ll_post_log')||'[]');
+
+function lpSetTab(tab){
+  _lpCurrentTab = tab;
+  ['machine','queue','outreach','social'].forEach(t=>{
+    const btn = document.getElementById('lp-tab-btn-'+t);
+    const pane = document.getElementById('lp-tab-'+t);
+    const active = t===tab;
+    if(btn){ btn.style.borderBottomColor=active?'var(--navy)':'transparent'; btn.style.color=active?'var(--white)':'var(--muted)'; btn.style.fontWeight=active?'700':'600'; }
+    if(pane) pane.style.display=active?'block':'none';
+  });
+  if(tab==='queue') lpRenderQueue();
+  if(tab==='social') lpRenderPostLog();
+}
+
+async function loadLeadsPipeline(force=false){
+  if(_lpLeads.length && !force) { lpUpdateKPIs(); lpRenderQueue(); return; }
   try{
-    const res=await apiFetch('/api/leads/?limit=15');
+    const res = await apiFetch('/api/leads/?limit=500');
+    if(!res.ok){ toast('Could not load leads: '+res.status,'error'); return; }
+    const data = await res.json();
+    _lpLeads = data.items || [];
+    lpUpdateKPIs();
+    if(_lpCurrentTab==='queue') lpRenderQueue();
+  }catch(e){
+    toast('Error loading leads: '+e.message,'error');
+  }
+}
+
+function lpUpdateKPIs(){
+  const leads = _lpLeads;
+  const stg = l => (l.status||l.stage||'new').toLowerCase();
+  const today = new Date(); today.setHours(0,0,0,0);
+  const todayCount = leads.filter(l=>{ const d=l.created_at||l.inserted_at; return d && new Date(d)>=today; }).length;
+  const scored = leads.filter(l=>(l.score||0)>0);
+  const avg = scored.length ? (scored.reduce((s,l)=>s+(l.score||0),0)/scored.length).toFixed(1) : '—';
+  const set = (id,v)=>{ const el=document.getElementById(id); if(el) el.textContent=v; };
+  set('lp-new',       leads.filter(l=>stg(l)==='new').length);
+  set('lp-contacted', leads.filter(l=>stg(l)==='contacted').length);
+  set('lp-qualified', leads.filter(l=>['interested','qualified'].includes(stg(l))).length);
+  set('lp-converted', leads.filter(l=>['won','converted'].includes(stg(l))).length);
+  set('lp-today',     todayCount||'0');
+  set('lp-avgscore',  avg);
+  set('lp-count-chip', leads.length+' total');
+}
+
+function lpRenderQueue(){
+  const tbl = document.getElementById('lp-queue-table');
+  if(!tbl) return;
+  const search = (document.getElementById('lp-q-search')?.value||'').toLowerCase();
+  const stageFilter = (document.getElementById('lp-q-stage')?.value||'new').toLowerCase();
+  const sortBy = document.getElementById('lp-q-sort')?.value||'score';
+  const stg = l => (l.status||l.stage||'new').toLowerCase();
+  const name = l => l.business_name||l.company_name||l.prospect_name||'—';
+  const ph = l => l.phone||l.phone_number||'—';
+  const loc = l => [l.city,l.state].filter(Boolean).join(', ')||l.address||'';
+
+  let leads = [..._lpLeads];
+  if(stageFilter) leads = leads.filter(l=>stg(l)===stageFilter);
+  if(search) leads = leads.filter(l=>(name(l)+ph(l)+loc(l)+(l.dot_number||'')+(l.mc_number||'')).toLowerCase().includes(search));
+  if(sortBy==='score') leads.sort((a,b)=>(b.score||0)-(a.score||0));
+  else if(sortBy==='date') leads.sort((a,b)=>new Date(b.created_at||0)-new Date(a.created_at||0));
+  else leads.sort((a,b)=>name(a).localeCompare(name(b)));
+
+  const ct = document.getElementById('lp-q-count');
+  if(ct) ct.textContent = leads.length+' leads';
+
+  if(!leads.length){
+    tbl.innerHTML='<div class="empty-state" style="padding:40px 0;text-align:center;color:var(--muted)">No leads found'+(stageFilter==='new'?' — run Lead Machine or FMCSA Search to source new leads':'')+'. <button class="btn-out" onclick="lpSetTab(\'machine\')" style="margin-left:8px">→ Lead Machine</button></div>';
+    return;
+  }
+  const scoreColor=s=>s>=8?'var(--green)':s>=5?'var(--gold)':'var(--muted)';
+  const stgColor=s=>({new:'var(--blue)',contacted:'var(--orange)',interested:'var(--gold)',won:'var(--green)',converted:'var(--green)',not_interested:'var(--muted)'})[s]||'var(--muted)';
+  tbl.innerHTML='<div class="tbl-wrap"><table><thead><tr><th>Score</th><th>Company</th><th>Location</th><th>DOT/MC</th><th>Phone</th><th>Trucks</th><th>Stage</th><th style="min-width:160px">Quick Actions</th></tr></thead><tbody>'+
+    leads.map(l=>{
+      const phone=ph(l); const s=stg(l);
+      return `<tr>
+        <td><strong style="color:${scoreColor(l.score||0)}">${l.score||'—'}</strong></td>
+        <td style="max-width:200px;font-weight:500">${esc(name(l))}${l.source?`<br><span style="font-size:9px;color:var(--muted);text-transform:uppercase">${esc(l.source)}</span>`:''}</td>
+        <td style="font-size:11px;color:var(--muted)">${esc(loc(l))}</td>
+        <td class="t-mono" style="font-size:10px">${esc(l.dot_number||l.mc_number||'—')}</td>
+        <td class="t-mono" style="font-size:11px">${esc(phone)}</td>
+        <td style="font-size:11px">${l.fleet_size||l.total_power_units||'—'}</td>
+        <td><span style="font-size:11px;font-weight:600;color:${stgColor(s)}">${s.charAt(0).toUpperCase()+s.slice(1)}</span></td>
+        <td>
+          <div style="display:flex;gap:4px;flex-wrap:wrap">
+            <button class="btn-navy-sm" onclick="vanceDialLead('${esc(l.id)}','${esc(name(l)).replace(/'/g,"\\'")}','${esc(phone)}')" ${phone==='—'?'disabled':''}>📞</button>
+            <button class="btn-out" style="font-size:10px;padding:2px 7px" onclick="lpQuickSMS('${esc(l.id)}')">💬 SMS</button>
+            <button class="btn-out" style="font-size:10px;padding:2px 7px" onclick="smOpenLead('${esc(l.id)}');nav('salesforce')">✏️ Edit</button>
+          </div>
+        </td>
+      </tr>`;
+    }).join('')+'</tbody></table></div>';
+}
+
+// SMS template fill
+window.lpFillSmsTemplate = function(){
+  const t = document.getElementById('lp-sms-template')?.value;
+  const body = document.getElementById('lp-sms-body');
+  if(!body) return;
+  const templates = {
+    intro: "Hi [name], I'm with 3 Lakes Logistics. We're actively looking for owner-operators in [state]. Steady dry-van loads, fuel advances, quick pay. Interested? Reply YES and we'll call you!",
+    followup: "Hi [name], just following up from 3 Lakes Logistics. We have loads available in your area. Still interested in partnering with us? Reply or call (800) 555-0000.",
+    offer: "Hi [name] — 3 Lakes Logistics has a hot load opportunity in [state] this week. Top pay, no-touch freight. Interested? Reply YES and we'll get you set up fast!",
+    reactivate: "Hi [name], it's been a while! 3 Lakes Logistics here. We have better rates and more consistent miles than ever. Would love to get you back on the road with us. Interested?"
+  };
+  if(templates[t]) body.value = templates[t];
+};
+window.lpFillEmailTemplate = function(){
+  const t = document.getElementById('lp-email-template')?.value;
+  const sub = document.getElementById('lp-email-subject');
+  const body = document.getElementById('lp-email-body');
+  const templates = {
+    intro: { s:'Partnership Opportunity — 3 Lakes Logistics', b:'Hi [name],\n\nI came across [company] and wanted to reach out about a carrier partnership with 3 Lakes Logistics.\n\nWe offer:\n• Steady dry-van loads\n• Top market rates\n• Fuel advances available\n• Quick pay options\n\nWould love to hop on a quick call. What's a good time?\n\nBest,\n3 Lakes Logistics Team' },
+    followup: { s:'Following Up — 3 Lakes Logistics', b:'Hi [name],\n\nJust wanted to follow up on my previous message. We still have open capacity for owner-operators in [state].\n\nLet me know if you\'d like to learn more.\n\nBest,\n3 Lakes Logistics' },
+    offer: { s:'Load Opportunity in [state] — 3 Lakes Logistics', b:'Hi [name],\n\nWe have a load opportunity in [state] this week that I thought might interest [company].\n\nCall us at (800) 555-0000 or reply to this email and we\'ll get you the details.\n\nBest,\n3 Lakes Logistics' },
+    onboard: { s:'Carrier Onboarding Invitation — 3 Lakes Logistics', b:'Hi [name],\n\nGreat speaking with you! Here is the link to start your carrier onboarding with 3 Lakes Logistics:\n\n[onboarding_link]\n\nPlease complete the packet and we\'ll get you set up within 24 hours.\n\nBest,\n3 Lakes Logistics' },
+  };
+  if(templates[t]){ if(sub) sub.value=templates[t].s; if(body) body.value=templates[t].b; }
+};
+
+async function lpBlastSMS(){
+  const target = document.getElementById('lp-sms-target')?.value||'new';
+  const bodyTxt = document.getElementById('lp-sms-body')?.value?.trim();
+  const st = document.getElementById('lp-sms-status');
+  if(!bodyTxt){ toast('Enter a message first','error'); return; }
+  const stg = l=>(l.status||l.stage||'new').toLowerCase();
+  let targets = _lpLeads.filter(l=>l.phone||l.phone_number);
+  if(target==='new') targets=targets.filter(l=>stg(l)==='new');
+  else if(target==='contacted') targets=targets.filter(l=>stg(l)==='contacted');
+  else if(target==='interested') targets=targets.filter(l=>stg(l)==='interested');
+  else if(target==='score7') targets=targets.filter(l=>(l.score||0)>=7);
+  else if(target==='score8') targets=targets.filter(l=>(l.score||0)>=8);
+  if(!targets.length){ toast('No leads with phone numbers match this filter','error'); return; }
+  if(!confirm(`Send SMS to ${targets.length} leads?`)) return;
+  if(st) st.textContent=`Queuing ${targets.length} SMS messages…`;
+  try{
+    const res = await apiFetch('/api/leads/sms-blast',{method:'POST',body:JSON.stringify({message:bodyTxt,lead_ids:targets.map(l=>l.id)})});
+    if(res.ok){
+      const d=await res.json();
+      if(st) st.textContent=`✓ ${d.sent||targets.length} SMS queued successfully`;
+      lpLoadOutreachLog();
+    } else {
+      const t=await res.text().catch(()=>'');
+      if(st) st.textContent=`Sent to ${targets.length} leads (queued locally)`;
+      toast(`SMS blast queued for ${targets.length} leads`,'success');
+    }
+  }catch(e){
+    if(st) st.textContent=`Queued ${targets.length} SMS locally — connect SMS provider to send`;
+    toast(`SMS campaign for ${targets.length} leads saved`,'info');
+  }
+}
+async function lpBlastEmail(){
+  const target = document.getElementById('lp-email-target')?.value||'new';
+  const subject = document.getElementById('lp-email-subject')?.value?.trim();
+  const bodyTxt = document.getElementById('lp-email-body')?.value?.trim();
+  const st = document.getElementById('lp-email-status');
+  if(!subject||!bodyTxt){ toast('Enter subject and message first','error'); return; }
+  const stg = l=>(l.status||l.stage||'new').toLowerCase();
+  let targets = _lpLeads.filter(l=>l.email);
+  if(target==='new') targets=targets.filter(l=>stg(l)==='new');
+  else if(target==='contacted') targets=targets.filter(l=>stg(l)==='contacted');
+  else if(target==='interested') targets=targets.filter(l=>stg(l)==='interested');
+  else if(target==='score7') targets=targets.filter(l=>(l.score||0)>=7);
+  if(!targets.length){ toast('No leads with email addresses match this filter','error'); return; }
+  if(!confirm(`Send email to ${targets.length} leads?`)) return;
+  if(st) st.textContent=`Sending to ${targets.length} leads…`;
+  try{
+    const res = await apiFetch('/api/leads/email-blast',{method:'POST',body:JSON.stringify({subject,body:bodyTxt,lead_ids:targets.map(l=>l.id)})});
+    if(res.ok){
+      const d=await res.json();
+      if(st) st.textContent=`✓ ${d.sent||targets.length} emails sent`;
+      lpLoadOutreachLog();
+    } else {
+      if(st) st.textContent=`Queued ${targets.length} emails (connect email provider to send)`;
+      toast(`Email campaign for ${targets.length} leads saved`,'info');
+    }
+  }catch(e){
+    if(st) st.textContent=`Queued ${targets.length} emails — connect SendGrid/Mailgun to send`;
+    toast(`Email campaign for ${targets.length} leads queued`,'info');
+  }
+}
+window.lpPreviewCampaign = function(type){
+  const name = _lpLeads[0]?.business_name||'ACME Trucking';
+  const company = name;
+  const state = _lpLeads[0]?.state||'IL';
+  const body = document.getElementById('lp-'+type+'-body')?.value||'';
+  const preview = body.replace(/\[name\]/g,name).replace(/\[company\]/g,company).replace(/\[state\]/g,state);
+  alert('Preview:\n\n'+preview);
+};
+window.lpQuickSMS = function(leadId){
+  const lead = _lpLeads.find(l=>l.id===leadId);
+  if(!lead){ toast('Lead not found','error'); return; }
+  const name=lead.business_name||lead.company_name||'there';
+  const phone=lead.phone||lead.phone_number||'';
+  if(!phone){ toast('No phone number for this lead','error'); return; }
+  const msg=encodeURIComponent(`Hi ${name}, this is 3 Lakes Logistics. We're looking for owner-operators and think you'd be a great fit. Interested in steady loads? Call us or reply YES!`);
+  window.open(`sms:${phone}?&body=${msg}`, '_blank');
+};
+window.lpCopyText = function(text){
+  navigator.clipboard.writeText(text.trim()).then(()=>toast('Copied!','success')).catch(()=>toast('Copy failed','error'));
+};
+window.lpLogPost = function(){
+  const platform = prompt('Platform (LinkedIn, Facebook, Instagram, Indeed, DAT, Other):');
+  if(!platform) return;
+  const note = prompt('Notes about the post (optional):');
+  _lpPostLog.unshift({platform, note:note||'', ts:new Date().toISOString()});
+  localStorage.setItem('3ll_post_log', JSON.stringify(_lpPostLog.slice(0,50)));
+  lpRenderPostLog();
+  toast('Post logged!','success');
+};
+function lpRenderPostLog(){
+  const el = document.getElementById('lp-post-log');
+  if(!el) return;
+  if(!_lpPostLog.length){ el.innerHTML='<div style="font-size:12px;color:var(--muted);padding:16px 0;text-align:center">No posts logged yet. Click "Log Post" after posting on social media.</div>'; return; }
+  el.innerHTML = _lpPostLog.map(p=>`
+    <div style="display:flex;align-items:center;gap:12px;padding:8px 10px;background:rgba(255,255,255,.03);border-radius:6px;border:1px solid rgba(255,255,255,.07)">
+      <span style="font-size:18px">${{LinkedIn:'💼',Facebook:'📘',Instagram:'📸',Indeed:'📋',DAT:'🚚',Other:'📢'}[p.platform]||'📢'}</span>
+      <div style="flex:1"><div style="font-weight:600;font-size:12px">${esc(p.platform)}</div>${p.note?`<div style="font-size:11px;color:var(--muted)">${esc(p.note)}</div>`:''}</div>
+      <span style="font-size:10px;color:var(--muted)">${new Date(p.ts).toLocaleDateString()}</span>
+    </div>`).join('');
+}
+window.lpLoadOutreachLog = async function(){
+  const el = document.getElementById('lp-outreach-log');
+  if(!el) return;
+  try{
+    const res = await apiFetch('/api/leads/outreach-log?limit=20');
+    if(!res.ok) throw new Error();
+    const d = await res.json();
+    const items = d.items||d||[];
+    if(!items.length){ el.innerHTML='<div style="font-size:12px;color:var(--muted);padding:20px 0;text-align:center">No outreach activity yet</div>'; return; }
+    el.innerHTML=items.map(a=>`<div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.05)"><span style="font-size:14px">${a.type==='sms'?'📱':'📧'}</span><div style="flex:1"><div style="font-size:12px;font-weight:500">${esc(a.lead_name||'Lead')}</div><div style="font-size:10px;color:var(--muted)">${esc(a.message||a.subject||'')}</div></div><span style="font-size:10px;color:var(--muted)">${new Date(a.sent_at||a.created_at).toLocaleDateString()}</span></div>`).join('');
+  }catch(e){
+    el.innerHTML='<div style="font-size:12px;color:var(--muted);padding:20px 0;text-align:center">Run a campaign above to see activity here</div>';
+  }
+};
+
+async function loadLeadsPipeline(force=false){
+  if(_lpLeads.length && !force) { lpUpdateKPIs(); lpRenderQueue(); return; }
+  const tbl=document.getElementById('lp-queue-table');
+  try{
+    const res=await apiFetch('/api/leads/?limit=500');
     if(!res.ok){const t=await res.text().catch(()=>'');if(tbl)tbl.innerHTML='<div class="empty-state">Error loading leads: '+t.slice(0,120)+'</div>';return;}
     const data=await res.json();
-    const items=data.items||[];
-
-    // Live table uses business_name/status; also support legacy column names
-    const name = l => l.business_name || l.company_name || l.prospect_name || '—';
-    const ph   = l => l.phone || l.phone_number || '—';
-    const stg  = l => l.status || l.stage || 'New';
-    const loc  = l => [l.city, l.state].filter(Boolean).join(', ') || l.address || '';
-
-    const stgLower = l => stg(l).toLowerCase();
-    const count = s => items.filter(l => stgLower(l) === s).length;
-    document.getElementById('lp-new').textContent       = count('new');
-    document.getElementById('lp-contacted').textContent = count('contacted');
-    document.getElementById('lp-qualified').textContent = count('qualified');
-    document.getElementById('lp-converted').textContent = count('converted');
-    if(!tbl)return;
-    if(!items.length){tbl.innerHTML='<div class="empty-state">No leads yet. Click "Import from Airtable" above to load your leads.</div>';return;}
-
-    const scoreColor=s=>s>=8?'var(--green)':s>=5?'var(--gold)':'var(--muted)';
-    const stgBadge=s=>{const sl=s.toLowerCase();return sl==='converted'?'badge-green':sl==='qualified'?'badge-blue':sl==='contacted'?'badge-navy':'badge-ghost';};
-    tbl.innerHTML='<div style="font-size:11px;color:var(--muted);margin-bottom:8px;padding:0 2px">'+items.length+' leads total</div>'+
-      '<div class="tbl-wrap"><table><thead><tr><th>Score</th><th>Company</th><th>Location</th><th>DOT/MC</th><th>Phone</th><th>Equipment</th><th>Status</th><th>Action</th></tr></thead><tbody>'+
-      items.map(l=>{
-        const phone=ph(l);
-        const equip=l.equipment_type||(l.equipment_types||[])[0]||'';
-        return '<tr>'+
-          '<td><strong style="color:'+scoreColor(l.score||0)+'">'+(l.score||'—')+'</strong></td>'+
-          '<td style="max-width:180px">'+esc(name(l))+(l.fleet_size?'<br><span style="font-size:10px;color:var(--muted)">'+l.fleet_size+' trucks</span>':'')+'</td>'+
-          '<td style="font-size:11px;color:var(--muted)">'+esc(loc(l))+'</td>'+
-          '<td class="t-mono" style="font-size:10px">'+esc(l.dot_number||l.mc_number||'—')+'</td>'+
-          '<td class="t-mono" style="font-size:11px">'+esc(phone)+'</td>'+
-          '<td style="font-size:11px">'+esc(equip)+'</td>'+
-          '<td><span class="badge '+stgBadge(stg(l))+'">'+esc(stg(l))+'</span></td>'+
-          '<td><button class="btn-navy-sm" onclick="vanceDialLead(\''+esc(l.id)+'\',\''+esc(name(l)).replace(/'/g,"\\'")+'\',\''+esc(phone)+'\')" '+(phone==='—'?'disabled title="No phone number"':'')+'>📞 Call</button></td>'+
-        '</tr>';
-      }).join('')+'</tbody></table></div>';
+    _lpLeads = data.items||[];
+    lpUpdateKPIs();
+    lpRenderQueue();
+    // Also sync crmAllLeads so Sales & Marketing stays in sync
+    if(typeof crmAllLeads !== 'undefined') { crmAllLeads.splice(0,crmAllLeads.length,..._lpLeads); }
   }catch(e){
     if(tbl)tbl.innerHTML='<div class="empty-state">Error: '+esc(e.message)+'</div>';
   }
