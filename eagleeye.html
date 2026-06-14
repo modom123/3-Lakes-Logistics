@@ -2730,14 +2730,181 @@ select.form-input option{background:var(--surface);}
 
       <!-- Tab bar -->
       <div style="padding:0 16px;border-bottom:2px solid var(--border);display:flex;gap:0;margin-bottom:0">
-        <button id="lp-tab-btn-machine"  onclick="lpSetTab('machine')"  style="padding:8px 18px;font-size:13px;font-weight:700;border:none;background:none;cursor:pointer;border-bottom:3px solid var(--navy);margin-bottom:-2px;color:var(--white)">🚀 Lead Machine</button>
+        <button id="lp-tab-btn-auto"     onclick="lpSetTab('auto')"     style="padding:8px 18px;font-size:13px;font-weight:700;border:none;background:none;cursor:pointer;border-bottom:3px solid #f59e0b;margin-bottom:-2px;color:#f59e0b;letter-spacing:.3px">⚡ AUTO MACHINE</button>
+        <button id="lp-tab-btn-machine"  onclick="lpSetTab('machine')"  style="padding:8px 18px;font-size:13px;font-weight:600;border:none;background:none;cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-2px;color:var(--muted)">🚀 Lead Machine</button>
         <button id="lp-tab-btn-queue"    onclick="lpSetTab('queue')"    style="padding:8px 18px;font-size:13px;font-weight:600;border:none;background:none;cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-2px;color:var(--muted)">📋 New Leads Queue</button>
         <button id="lp-tab-btn-outreach" onclick="lpSetTab('outreach')" style="padding:8px 18px;font-size:13px;font-weight:600;border:none;background:none;cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-2px;color:var(--muted)">📱 SMS / Email</button>
         <button id="lp-tab-btn-social"   onclick="lpSetTab('social')"   style="padding:8px 18px;font-size:13px;font-weight:600;border:none;background:none;cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-2px;color:var(--muted)">🌐 Social Media</button>
       </div>
 
+      <!-- ── Tab 0: AUTO MACHINE (Mission Control) ── -->
+      <div id="lp-tab-auto" style="padding:16px;overflow-y:auto;height:calc(100vh - 235px);background:rgba(245,158,11,.02)">
+
+        <!-- Launch Button -->
+        <div style="text-align:center;padding:24px 0 20px;border-bottom:1px solid rgba(245,158,11,.15);margin-bottom:20px">
+          <div style="font-size:11px;font-weight:700;letter-spacing:2px;color:rgba(245,158,11,.7);margin-bottom:8px">CARRIER ACQUISITION MACHINE</div>
+          <div style="font-size:13px;color:var(--muted);margin-bottom:18px">FMCSA → AI Score → Vance Calls → SMS/Email → Onboarding · Fully automated end-to-end</div>
+          <button id="machine-launch-btn" onclick="runFullMachine()" style="padding:16px 48px;font-size:16px;font-weight:800;background:linear-gradient(135deg,#d97706,#f59e0b);border:none;border-radius:8px;color:#000;cursor:pointer;letter-spacing:.5px;box-shadow:0 4px 20px rgba(245,158,11,.4);transition:all .2s">
+            ⚡ LAUNCH MACHINE
+          </button>
+          <div style="margin-top:12px;display:flex;gap:16px;justify-content:center;flex-wrap:wrap">
+            <label style="font-size:12px;display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="mc-auto-call" checked> Auto-call score 8+ (Vance)</label>
+            <label style="font-size:12px;display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="mc-auto-onboard" checked> Auto-onboard Won leads</label>
+            <div style="display:flex;align-items:center;gap:6px">
+              <span style="font-size:12px">Source:</span>
+              <select id="mc-source" style="padding:3px 8px;border:1px solid var(--border);border-radius:4px;font-size:12px">
+                <option value="auto">Auto (FMCSA / demo)</option>
+                <option value="fmcsa">FMCSA Live</option>
+                <option value="demo">Demo Data</option>
+              </select>
+            </div>
+            <div style="display:flex;align-items:center;gap:6px">
+              <span style="font-size:12px">Min Score:</span>
+              <select id="mc-min-score" style="padding:3px 8px;border:1px solid var(--border);border-radius:4px;font-size:12px">
+                <option value="6">6+</option>
+                <option value="7" selected>7+</option>
+                <option value="8">8+</option>
+              </select>
+            </div>
+            <div style="display:flex;align-items:center;gap:6px">
+              <span style="font-size:12px">Limit:</span>
+              <select id="mc-limit" style="padding:3px 8px;border:1px solid var(--border);border-radius:4px;font-size:12px">
+                <option value="10">10</option>
+                <option value="20" selected>20</option>
+                <option value="50">50</option>
+              </select>
+            </div>
+          </div>
+          <div id="machine-run-status" style="margin-top:12px;font-size:12px;color:#f59e0b;min-height:18px"></div>
+        </div>
+
+        <!-- Pipeline Flow Diagram -->
+        <div style="display:flex;align-items:center;gap:0;margin-bottom:20px;overflow-x:auto;padding-bottom:4px">
+          <!-- Stage 1 -->
+          <div class="mc-stage" style="flex:1;min-width:130px;text-align:center;padding:14px 8px;background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.25);border-radius:8px">
+            <div style="font-size:22px;margin-bottom:4px">🔭</div>
+            <div style="font-weight:700;font-size:11px;color:#60a5fa;letter-spacing:.5px">FMCSA SOURCE</div>
+            <div style="font-size:24px;font-weight:800;color:#60a5fa;margin:4px 0" id="mc-stage-sourced">—</div>
+            <div style="font-size:10px;color:var(--muted)">Candidates</div>
+            <div style="font-size:10px;color:var(--muted);margin-top:4px">Sonny · Alexander · Naomi</div>
+          </div>
+          <div style="color:rgba(245,158,11,.5);font-size:20px;padding:0 6px;flex-shrink:0">→</div>
+          <!-- Stage 2 -->
+          <div class="mc-stage" style="flex:1;min-width:130px;text-align:center;padding:14px 8px;background:rgba(139,92,246,.08);border:1px solid rgba(139,92,246,.25);border-radius:8px">
+            <div style="font-size:22px;margin-bottom:4px">🧠</div>
+            <div style="font-weight:700;font-size:11px;color:#a78bfa;letter-spacing:.5px">AI SCORE</div>
+            <div style="font-size:24px;font-weight:800;color:#a78bfa;margin:4px 0" id="mc-stage-scored">—</div>
+            <div style="font-size:10px;color:var(--muted)">New Leads Added</div>
+            <div style="font-size:10px;color:var(--muted);margin-top:4px">Scoring model · Dedupe</div>
+          </div>
+          <div style="color:rgba(245,158,11,.5);font-size:20px;padding:0 6px;flex-shrink:0">→</div>
+          <!-- Stage 3 -->
+          <div class="mc-stage" style="flex:1;min-width:130px;text-align:center;padding:14px 8px;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.25);border-radius:8px">
+            <div style="font-size:22px;margin-bottom:4px">📞</div>
+            <div style="font-weight:700;font-size:11px;color:#fbbf24;letter-spacing:.5px">VANCE CALLS</div>
+            <div style="font-size:24px;font-weight:800;color:#fbbf24;margin:4px 0" id="mc-stage-called">—</div>
+            <div style="font-size:10px;color:var(--muted)">Contacted</div>
+            <div style="font-size:10px;color:var(--muted);margin-top:4px">Vance · Bland AI</div>
+          </div>
+          <div style="color:rgba(245,158,11,.5);font-size:20px;padding:0 6px;flex-shrink:0">→</div>
+          <!-- Stage 4 -->
+          <div class="mc-stage" style="flex:1;min-width:130px;text-align:center;padding:14px 8px;background:rgba(14,165,233,.08);border:1px solid rgba(14,165,233,.25);border-radius:8px">
+            <div style="font-size:22px;margin-bottom:4px">📱</div>
+            <div style="font-weight:700;font-size:11px;color:#38bdf8;letter-spacing:.5px">FOLLOW-UP</div>
+            <div style="font-size:24px;font-weight:800;color:#38bdf8;margin:4px 0" id="mc-stage-followup">—</div>
+            <div style="font-size:10px;color:var(--muted)">Interested</div>
+            <div style="font-size:10px;color:var(--muted);margin-top:4px">Isabella · Echo · Email</div>
+          </div>
+          <div style="color:rgba(245,158,11,.5);font-size:20px;padding:0 6px;flex-shrink:0">→</div>
+          <!-- Stage 5 -->
+          <div class="mc-stage" style="flex:1;min-width:130px;text-align:center;padding:14px 8px;background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.25);border-radius:8px">
+            <div style="font-size:22px;margin-bottom:4px">🤝</div>
+            <div style="font-weight:700;font-size:11px;color:#4ade80;letter-spacing:.5px">WON</div>
+            <div style="font-size:24px;font-weight:800;color:#4ade80;margin:4px 0" id="mc-stage-won">—</div>
+            <div style="font-size:10px;color:var(--muted)">Converted</div>
+            <div style="font-size:10px;color:var(--muted);margin-top:4px">Auto-detected</div>
+          </div>
+          <div style="color:rgba(245,158,11,.5);font-size:20px;padding:0 6px;flex-shrink:0">→</div>
+          <!-- Stage 6 -->
+          <div class="mc-stage" style="flex:1;min-width:130px;text-align:center;padding:14px 8px;background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.35);border-radius:8px;box-shadow:0 0 12px rgba(16,185,129,.1)">
+            <div style="font-size:22px;margin-bottom:4px">🚛</div>
+            <div style="font-weight:700;font-size:11px;color:#10b981;letter-spacing:.5px">ONBOARDING</div>
+            <div style="font-size:24px;font-weight:800;color:#10b981;margin:4px 0" id="mc-stage-onboarded">—</div>
+            <div style="font-size:10px;color:var(--muted)">Active Carriers</div>
+            <div style="font-size:10px;color:var(--muted);margin-top:4px">Steps 1–40 auto-fired</div>
+          </div>
+        </div>
+
+        <!-- Last run results -->
+        <div id="mc-last-run" style="display:none;margin-bottom:16px;padding:14px 16px;background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.2);border-radius:8px">
+          <div style="font-weight:700;font-size:12px;color:#f59e0b;margin-bottom:8px">⚡ LAST MACHINE RUN</div>
+          <div id="mc-last-run-body" style="font-size:12px;display:flex;gap:24px;flex-wrap:wrap"></div>
+        </div>
+
+        <!-- Two-column: Agent Schedule + Live Activity Feed -->
+        <div style="display:grid;grid-template-columns:320px 1fr;gap:16px">
+
+          <!-- Agent Schedule -->
+          <div class="card" style="padding:14px">
+            <div style="font-weight:700;font-size:12px;margin-bottom:12px;display:flex;align-items:center;gap:8px">
+              🤖 Agent Schedule
+              <span style="font-size:10px;font-weight:400;color:var(--muted)">(runs automatically)</span>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:7px;font-size:11px">
+              <div style="display:flex;justify-content:space-between;padding:5px 8px;background:rgba(59,130,246,.06);border-radius:4px;border-left:2px solid #60a5fa">
+                <span><strong>Alexander</strong> — FMCSA hot states</span><span style="color:var(--muted)">06:45 UTC</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;padding:5px 8px;background:rgba(139,92,246,.06);border-radius:4px;border-left:2px solid #a78bfa">
+                <span><strong>Naomi</strong> — Score + prospect pull</span><span style="color:var(--muted)">07:15 UTC</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;padding:5px 8px;background:rgba(245,158,11,.06);border-radius:4px;border-left:2px solid #fbbf24">
+                <span><strong>Vance</strong> — Outbound calls batch</span><span style="color:var(--muted)">13:00 + 17:00</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;padding:5px 8px;background:rgba(245,158,11,.06);border-radius:4px;border-left:2px solid #fbbf24">
+                <span><strong>Isabella</strong> — SMS campaign build</span><span style="color:var(--muted)">08:00 UTC</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;padding:5px 8px;background:rgba(14,165,233,.06);border-radius:4px;border-left:2px solid #38bdf8">
+                <span><strong>Echo</strong> — SMS send</span><span style="color:var(--muted)">14:00 UTC</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;padding:5px 8px;background:rgba(14,165,233,.06);border-radius:4px;border-left:2px solid #38bdf8">
+                <span><strong>Email Campaign</strong> — Outreach emails</span><span style="color:var(--muted)">11:00 + 14:30</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;padding:5px 8px;background:rgba(34,197,94,.06);border-radius:4px;border-left:2px solid #4ade80">
+                <span><strong>Bond Audit</strong> — Onboarding gaps</span><span style="color:var(--muted)">07:45 UTC</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;padding:5px 8px;background:rgba(34,197,94,.06);border-radius:4px;border-left:2px solid #4ade80">
+                <span><strong>Compliance</strong> — Daily doc sweep</span><span style="color:var(--muted)">06:00 UTC</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;padding:5px 8px;background:rgba(16,185,129,.06);border-radius:4px;border-left:2px solid #10b981">
+                <span><strong>Follow-up Reminders</strong> — SMS nudges</span><span style="color:var(--muted)">Hourly</span>
+              </div>
+            </div>
+            <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
+              <button class="btn-out" style="font-size:10px;padding:4px 10px" onclick="mcFireAgent('vance')">🔔 Fire Vance Now</button>
+              <button class="btn-out" style="font-size:10px;padding:4px 10px" onclick="mcFireAgent('naomi')">🔔 Fire Naomi Now</button>
+              <button class="btn-out" style="font-size:10px;padding:4px 10px" onclick="mcOnboardWon()">🚛 Onboard Won Leads</button>
+            </div>
+          </div>
+
+          <!-- Live Activity Feed -->
+          <div class="card" style="padding:14px;display:flex;flex-direction:column;max-height:500px">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-shrink:0">
+              <div style="font-weight:700;font-size:12px;display:flex;align-items:center;gap:8px">
+                🔴 Live Activity Feed
+                <span id="mc-feed-badge" style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#ef4444;animation:pulse 1s infinite"></span>
+              </div>
+              <button class="btn-out" style="font-size:10px;padding:3px 8px" onclick="mcRefreshFeed()">↺ Refresh</button>
+            </div>
+            <div id="mc-activity-feed" style="flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:6px;scrollbar-width:thin">
+              <div style="font-size:11px;color:var(--muted);text-align:center;padding:20px">Loading activity…</div>
+            </div>
+          </div>
+
+        </div>
+      </div><!-- /lp-tab-auto -->
+
       <!-- ── Tab 1: Lead Machine ── -->
-      <div id="lp-tab-machine" style="padding:16px;overflow-y:auto;height:calc(100vh - 235px)">
+      <div id="lp-tab-machine" style="display:none;padding:16px;overflow-y:auto;height:calc(100vh - 235px)">
 
         <!-- Airtable migration status -->
         <div id="airtable-migration-card" style="display:none;margin-bottom:16px">
@@ -7971,15 +8138,25 @@ let _lpPostLog = JSON.parse(localStorage.getItem('3ll_post_log')||'[]');
 
 function lpSetTab(tab){
   _lpCurrentTab = tab;
-  ['machine','queue','outreach','social'].forEach(t=>{
+  ['auto','machine','queue','outreach','social'].forEach(t=>{
     const btn = document.getElementById('lp-tab-btn-'+t);
     const pane = document.getElementById('lp-tab-'+t);
     const active = t===tab;
-    if(btn){ btn.style.borderBottomColor=active?'var(--navy)':'transparent'; btn.style.color=active?'var(--white)':'var(--muted)'; btn.style.fontWeight=active?'700':'600'; }
+    if(btn){
+      if(t==='auto'){
+        btn.style.borderBottomColor=active?'#f59e0b':'transparent';
+        btn.style.color=active?'#f59e0b':'var(--muted)';
+      } else {
+        btn.style.borderBottomColor=active?'var(--navy)':'transparent';
+        btn.style.color=active?'var(--white)':'var(--muted)';
+      }
+      btn.style.fontWeight=active?'700':'600';
+    }
     if(pane) pane.style.display=active?'block':'none';
   });
   if(tab==='queue') lpRenderQueue();
   if(tab==='social') lpRenderPostLog();
+  if(tab==='auto'){ mcRefreshFeed(); mcRefreshFunnel(); }
 }
 
 async function loadLeadsPipeline(force=false){
@@ -8203,6 +8380,161 @@ window.lpLoadOutreachLog = async function(){
     el.innerHTML='<div style="font-size:12px;color:var(--muted);padding:20px 0;text-align:center">Run a campaign above to see activity here</div>';
   }
 };
+
+// ── Machine Control Tower ─────────────────────────────────────────────────────
+let _mcFeedInterval = null;
+
+async function runFullMachine(){
+  const btn = document.getElementById('machine-launch-btn');
+  const st  = document.getElementById('machine-run-status');
+  if(btn){ btn.disabled=true; btn.textContent='⚙️ Running…'; }
+  if(st) st.textContent='Machine starting… sourcing leads from FMCSA…';
+
+  const source   = document.getElementById('mc-source')?.value    || 'auto';
+  const minScore = document.getElementById('mc-min-score')?.value || '7';
+  const limit    = document.getElementById('mc-limit')?.value     || '20';
+  const autoCall    = document.getElementById('mc-auto-call')?.checked    !== false;
+  const autoOnboard = document.getElementById('mc-auto-onboard')?.checked !== false;
+
+  try {
+    const r = await apiFetch(
+      `/api/prospecting/run-machine?source=${source}&min_score=${minScore}&limit=${limit}&auto_call=${autoCall}&auto_onboard=${autoOnboard}`,
+      { method: 'POST' }
+    );
+    if(!r.ok){ const t=await r.text(); throw new Error(t||r.status); }
+    const d = await r.json();
+    const s = d.stages || {};
+
+    // Update stage counters
+    const set=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
+    set('mc-stage-sourced',  s.sourced||0);
+    set('mc-stage-scored',   s.inserted||0);
+    set('mc-stage-called',   s.calls_queued||0);
+    set('mc-stage-won',      (d.onboard_results||[]).length||'—');
+    set('mc-stage-onboarded',s.onboarded||0);
+
+    // Show last run box
+    const lrb = document.getElementById('mc-last-run-body');
+    const lr  = document.getElementById('mc-last-run');
+    if(lrb) lrb.innerHTML = [
+      ['Sourced',    s.sourced||0,   '#60a5fa'],
+      ['New Leads',  s.inserted||0,  '#a78bfa'],
+      ['Dupes Skip', s.skipped_dupe||0, 'var(--muted)'],
+      ['Score Skip', s.skipped_score||0,'var(--muted)'],
+      ['Calls',      s.calls_queued||0,'#fbbf24'],
+      ['Onboarded',  s.onboarded||0, '#10b981'],
+    ].map(([lbl,val,col])=>`<div style="text-align:center"><div style="font-size:20px;font-weight:800;color:${col}">${val}</div><div style="font-size:10px;color:var(--muted)">${lbl}</div></div>`).join('');
+    if(lr) lr.style.display='block';
+
+    if(st) st.textContent=`✓ Machine complete — ${s.inserted||0} new leads, ${s.calls_queued||0} calls queued, ${s.onboarded||0} onboarded`;
+    toast(`Machine complete: ${s.inserted||0} leads · ${s.calls_queued||0} calls · ${s.onboarded||0} onboarded`, 'success');
+
+    // Refresh feed and lead data
+    mcRefreshFeed();
+    await loadLeadsPipeline(true);
+    mcRefreshFunnel();
+  } catch(e){
+    if(st) st.textContent='Error: '+e.message;
+    toast('Machine error: '+e.message,'error');
+  } finally {
+    if(btn){ btn.disabled=false; btn.textContent='⚡ LAUNCH MACHINE'; }
+  }
+}
+
+async function mcRefreshFunnel(){
+  try{
+    const r = await apiFetch('/api/prospecting/machine-status');
+    if(!r.ok) return;
+    const d = await r.json();
+    const f = d.funnel || {};
+    const set=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
+    set('mc-stage-sourced',   f.total||'—');
+    set('mc-stage-scored',    (f.new||0)+(f.contacted||0)+(f.interested||0)+(f.won||0));
+    set('mc-stage-called',    f.contacted||'—');
+    set('mc-stage-followup',  f.interested||'—');
+    set('mc-stage-won',       f.won||'—');
+    // Also update KPIs
+    const set2=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
+    set2('lp-new', f.new||'—');
+    set2('lp-contacted', f.contacted||'—');
+    set2('lp-qualified', f.interested||'—');
+    set2('lp-converted', f.won||'—');
+    set2('lp-today', f.sourced_today||'0');
+    mcRenderFeed(d.activity||[]);
+  }catch(e){}
+}
+
+window.mcRefreshFeed = async function(){
+  try{
+    const r = await apiFetch('/api/prospecting/machine-status');
+    if(!r.ok) return;
+    const d = await r.json();
+    mcRenderFeed(d.activity||[]);
+    const f = d.funnel||{};
+    const set=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
+    set('mc-stage-called', f.contacted||'—');
+    set('mc-stage-followup', f.interested||'—');
+    set('mc-stage-won', f.won||'—');
+  }catch(e){}
+};
+
+function mcRenderFeed(items){
+  const feed = document.getElementById('mc-activity-feed');
+  if(!feed) return;
+  if(!items.length){ feed.innerHTML='<div style="font-size:11px;color:var(--muted);text-align:center;padding:20px">No recent activity — launch the machine above</div>'; return; }
+  const agentColor = {machine:'#f59e0b',sonny:'#60a5fa',vance:'#fbbf24',naomi:'#a78bfa',alexander:'#818cf8',atlas:'#34d399',isabella:'#f472b6',echo:'#38bdf8',machine:'#f59e0b'};
+  const agentIcon = {machine:'⚡',sonny:'🧑‍💼',vance:'📞',naomi:'🎯',alexander:'🗺️',atlas:'🛰️',isabella:'📱',echo:'💬'};
+  feed.innerHTML = items.map(a=>{
+    const col = agentColor[a.agent]||'var(--muted)';
+    const ico = agentIcon[a.agent]||'🤖';
+    const ts = a.ts ? new Date(a.ts).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',hour12:true}) : '';
+    return `<div style="display:flex;gap:8px;align-items:flex-start;padding:7px 8px;background:rgba(255,255,255,.02);border-radius:5px;border-left:2px solid ${col}">
+      <span style="font-size:13px;flex-shrink:0">${ico}</span>
+      <div style="flex:1;min-width:0">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+          <span style="font-size:11px;font-weight:700;color:${col}">${esc(a.agent?.toUpperCase()||'')}</span>
+          <span style="font-size:9px;color:var(--muted);flex-shrink:0">${ts}</span>
+        </div>
+        <div style="font-size:11px;color:var(--muted)">${esc(a.action||'')} · ${esc(a.result||'')}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+window.mcFireAgent = async function(agent){
+  const endpoints = {
+    vance: '/api/agents/vance/run',
+    naomi: '/api/agents/naomi/run',
+    alexander: '/api/agents/alexander/run',
+    isabella: '/api/agents/isabella/run',
+  };
+  const ep = endpoints[agent];
+  if(!ep){ toast('Unknown agent','error'); return; }
+  try{
+    const r = await apiFetch(ep, {method:'POST', body:'{}'});
+    const d = r.ok ? await r.json() : null;
+    toast(`${agent} fired successfully`,'success');
+    setTimeout(mcRefreshFeed, 2000);
+  }catch(e){ toast(`Failed to fire ${agent}: `+e.message,'error'); }
+};
+
+window.mcOnboardWon = async function(){
+  if(!confirm('Auto-onboard all Won leads that haven\'t been converted to carriers yet?')) return;
+  try{
+    const r = await apiFetch('/api/prospecting/run-machine?source=auto&min_score=7&limit=1&auto_call=false&auto_onboard=true',{method:'POST'});
+    if(!r.ok) throw new Error(r.status);
+    const d = await r.json();
+    toast(`Onboarded ${d.stages?.onboarded||0} carriers from Won leads`,'success');
+    mcRefreshFeed();
+  }catch(e){ toast('Error: '+e.message,'error'); }
+};
+
+// Auto-poll feed every 8 seconds when Machine tab is active
+(function startMachinePoller(){
+  setInterval(()=>{
+    if(document.getElementById('lp-tab-auto')?.style.display!=='none') mcRefreshFeed();
+  }, 8000);
+})();
 
 async function loadLeadsPipeline(force=false){
   if(_lpLeads.length && !force) { lpUpdateKPIs(); lpRenderQueue(); return; }
@@ -11807,6 +12139,7 @@ if (typeof nav === 'function') {
     }
     if (id === 'leads') {
       loadLeadsPipeline();
+      mcRefreshFunnel();
     }
     return origNav(id);
   };
