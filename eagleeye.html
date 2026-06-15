@@ -10526,7 +10526,9 @@ async function mailOpen(id){
   }catch(err){bc.innerHTML=`<div style="padding:20px;color:var(--red)">${esc(err.message)}</div>`;}
 }
 
+let _lastOpenedEmail = null;
 function _renderBody(e,container){
+  _lastOpenedEmail = e;
   const ts=e.received_at?new Date(e.received_at).toLocaleString('en-US',{weekday:'short',month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit'}):'—';
   const dir=e.direction==='outbound'?'<span style="font-size:11px;background:rgba(5,150,105,.1);color:#059669;padding:2px 6px;border-radius:3px;font-weight:600">Sent</span>':'';
   const atts=(e.attachments||[]);
@@ -10588,6 +10590,17 @@ function mailForward(id,subject){
   mailCompose();
   document.getElementById('mail-compose-subject').value=subject.startsWith('Fwd:')?subject:'Fwd: '+subject;
   document.getElementById('mail-compose-title').textContent='Forward';
+  if(_lastOpenedEmail){
+    const e=_lastOpenedEmail;
+    const ts=e.received_at?new Date(e.received_at).toLocaleString():'';
+    const quoted='\n\n-------- Forwarded Message --------\n'
+      +'From: '+(e.from_address||'')+(ts?'\nDate: '+ts:'')
+      +'\nSubject: '+(e.subject||'')
+      +'\nTo: '+((e.to_addresses||[]).join(', '))
+      +'\n\n'+(e.body_text||'').slice(0,3000);
+    document.getElementById('mail-compose-body').value=quoted;
+  }
+  setTimeout(()=>document.getElementById('mail-compose-to').focus(),60);
 }
 function mailCloseCompose(){_mailAttachments=[];_mailVaultAttachments=[];_mailAgreementAttachments=[];mailRenderAttachments();document.getElementById('mail-compose-modal').style.display='none';}
 
@@ -15704,7 +15717,8 @@ window.ccgEmailOpen = async function(id,from){
         <span style="font-size:10px;color:rgba(255,255,255,.6);font-family:monospace;">${m.received_at?new Date(m.received_at).toLocaleString():''}</span>
       </div>
       <div style="display:flex;gap:6px;margin-top:10px;">
-        <button class="ccg-hdr-btn" style="font-size:10px;padding:4px 10px;" onclick="document.getElementById('ccg-compose-to').value='${(m.from_address||'').replace(/'/g,'\\\'').replace(/"/g,'&quot;')}';document.getElementById('ccg-compose-subj').value='Re: ${(m.subject||'').replace(/'/g,'\\\'').slice(0,60)}';document.getElementById('ccg-compose').style.display='flex'">↩ Reply</button>
+        <button class="ccg-hdr-btn" style="font-size:10px;padding:4px 10px;" onclick="document.getElementById('ccg-compose-to').value='${(m.from_address||'').replace(/'/g,'\\\'').replace(/"/g,'&quot;')}';document.getElementById('ccg-compose-subj').value='Re: ${(m.subject||'').replace(/'/g,'\\\'').slice(0,60)}';document.getElementById('ccg-compose-body').value='';document.getElementById('ccg-compose').style.display='flex'">↩ Reply</button>
+        <button class="ccg-hdr-btn" style="font-size:10px;padding:4px 10px;" onclick="document.getElementById('ccg-compose-to').value='';document.getElementById('ccg-compose-subj').value='Fwd: ${(m.subject||'').replace(/'/g,'\\\'').slice(0,55)}';document.getElementById('ccg-compose-body').value='\\n\\n-------- Forwarded Message --------\\nFrom: ${(m.from_address||'').replace(/'/g,'\\\'').replace(/\\/g,'\\\\')}\\nDate: ${m.received_at?new Date(m.received_at).toLocaleString().replace(/'/g,'\\\''):''}\\nTo: ${((Array.isArray(m.to_addresses)?m.to_addresses.join(', '):(m.to_addresses||''))).replace(/'/g,'\\\'').replace(/\\/g,'\\\\')}\\nSubject: ${(m.subject||'').replace(/'/g,'\\\'').replace(/\\/g,'\\\\')}\\n\\n${(m.body_text||'').replace(/'/g,'\\\'').replace(/\\/g,'\\\\').slice(0,2000)}';document.getElementById('ccg-compose').style.display='flex'">→ Forward</button>
       </div>
     </div>
     ${m.body_html
