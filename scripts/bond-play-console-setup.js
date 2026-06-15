@@ -133,8 +133,8 @@ async function jsClick(page, selector) {
   await shot(page, '2-app-list');
 
   // Look for our app
-  const bodyText = await page.evaluate(() => document.body.innerText);
-  if (bodyText.includes(PACKAGE_NAME) || bodyText.includes(APP_NAME)) {
+  const appListText = await page.evaluate(() => document.body.innerText);
+  if (appListText.includes(PACKAGE_NAME) || appListText.includes(APP_NAME)) {
     console.log('  App already exists in Play Console');
   } else {
     console.log('  App not found — creating...');
