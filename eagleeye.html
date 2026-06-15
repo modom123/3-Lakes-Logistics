@@ -12885,7 +12885,7 @@ select.oc-inp option{background:#1a1a2e;color:#fff;}
   <div class="mo-tabs">
     <button class="mo-tab active" id="motab-home"       onclick="moTab('home')">🏛️ Office Home</button>
     <button class="mo-tab"        id="motab-team"       onclick="moTab('team')">👥 My Team</button>
-    <button class="mo-tab"        id="motab-todo"       onclick="moTab('todo')">✅ Todo → CC Gulley <span id="mo-todo-badge" style="display:none;background:#f5c842;color:#000;font-size:9px;font-weight:800;border-radius:10px;padding:1px 6px;margin-left:2px;">0</span></button>
+    <button class="mo-tab"        id="motab-todo"       onclick="moTab('todo')">✅ Todo <span id="mo-todo-badge" style="display:none;background:#f5c842;color:#000;font-size:9px;font-weight:800;border-radius:10px;padding:1px 6px;margin-left:2px;">0</span></button>
     <button class="mo-tab"        id="motab-fromcc"     onclick="moTab('fromcc')">📥 From CC Gulley <span id="mo-fromcc-badge" style="display:none;background:#ef4444;color:#fff;font-size:9px;font-weight:800;border-radius:10px;padding:1px 6px;margin-left:2px;">0</span></button>
     <button class="mo-tab"        id="motab-directives" onclick="moTab('directives')">📣 Directives</button>
     <button class="mo-tab"        id="motab-docs"       onclick="moTab('docs')">📁 Documents</button>
@@ -13050,8 +13050,8 @@ select.oc-inp option{background:#1a1a2e;color:#fff;}
         <!-- Left: todo list -->
         <div style="flex:1;display:flex;flex-direction:column;overflow:hidden;border-right:1px solid rgba(255,255,255,.09);">
           <div style="padding:14px 20px;border-bottom:1px solid rgba(255,255,255,.09);display:flex;align-items:center;gap:10px;flex-shrink:0;flex-wrap:wrap;background:rgba(245,200,66,.03);">
-            <div style="font-weight:900;font-size:14px;color:#f5c842;">✅ Mark Odom → CC Gulley</div>
-            <div style="font-size:11px;color:rgba(255,255,255,.4);margin-right:auto;">Direct task assignments &amp; follow-ups with due dates</div>
+            <div style="font-weight:900;font-size:14px;color:#f5c842;">✅ Mark Odom — Todo</div>
+            <div style="font-size:11px;color:rgba(255,255,255,.4);margin-right:auto;">Your tasks + assignments from CC Gulley</div>
             <button class="mo-btn" style="font-size:11px;padding:6px 16px;" onclick="moTodoNew()">+ New Task</button>
             <select class="mo-select" id="mo-todo-filter" style="width:140px;padding:6px 10px;font-size:11px;" onchange="moTodoRender()">
               <option value="all">All Tasks</option>
@@ -13695,7 +13695,7 @@ window.moTab = function(id){
   const pn=document.getElementById('mopane-'+id);
   if(tb)tb.classList.add('active');
   if(pn)pn.classList.add('active');
-  if(id==='todo')moTodoRender();
+  if(id==='todo'){moFromCCSync().then(()=>{moTodoRender();});}
   if(id==='fromcc'){moFromCCSync(true).then(moFromCCRender);}
   if(id==='crm')ocInit('mark');
   if(id==='directives')moLoadDirectives();
@@ -13807,7 +13807,10 @@ const _priCls={high:'high',med:'med',low:'low'};
 const _priLbl={high:'HIGH',med:'MED',low:'LOW'};
 
 window.moTodoRender = function(){
-  const todos=moTodos();
+  // Merge personal todos (mo_todos) + CC-assigned todos (cc_todos) into one list
+  const myTodos = moTodos().map(t=>({...t, _from_cc:false}));
+  const ccTodos = JSON.parse(localStorage.getItem('cc_todos')||'[]').map(t=>({...t, _from_cc:true}));
+  const todos = [...myTodos, ...ccTodos];
   const filter=document.getElementById('mo-todo-filter')?.value||'all';
   const list=document.getElementById('mo-todo-list');
   if(!list)return;
@@ -13827,8 +13830,9 @@ window.moTodoRender = function(){
   if(badge){badge.textContent=open.length;badge.style.display=open.length?'':'none';}
   const cc=$('mo-cc-pending');
   if(cc){
-    if(!open.length){cc.textContent='No open tasks for CC Gulley.';}
-    else{cc.innerHTML=open.slice(0,3).map(t=>`<div style="margin-bottom:4px;">• ${t.title}${t.due?` <span style="color:#f59e0b;font-size:10px;">(${moDueLbl(t.due)})</span>`:''}</div>`).join('')+(open.length>3?`<div style="color:rgba(255,255,255,.35);font-size:10px;margin-top:2px;">+${open.length-3} more open</div>`:'');}
+    const myOpen=myTodos.filter(t=>!t.done);
+    if(!myOpen.length){cc.textContent='No open tasks for CC Gulley.';}
+    else{cc.innerHTML=myOpen.slice(0,3).map(t=>`<div style="margin-bottom:4px;">• ${t.title}${t.due?` <span style="color:#f59e0b;font-size:10px;">(${moDueLbl(t.due)})</span>`:''}</div>`).join('')+(myOpen.length>3?`<div style="color:rgba(255,255,255,.35);font-size:10px;margin-top:2px;">+${myOpen.length-3} more open</div>`:'');}
   }
   let rows=filter==='open'?open:filter==='urgent'?urgent:filter==='done'?done:todos;
   rows=rows.slice().sort((a,b)=>{
@@ -13838,8 +13842,16 @@ window.moTodoRender = function(){
     return new Date(a.due)-new Date(b.due);
   });
   if(!rows.length){list.innerHTML='<div style="color:rgba(255,255,255,.3);font-size:11px;text-align:center;padding:40px;">No tasks found. Add one using the form →</div>';return;}
-  list.innerHTML=rows.map(t=>`<div class="mo-todo-item${t.done?' done':''}" id="mo-row-${t.id}">
-    <input type="checkbox" class="mo-todo-cb" ${t.done?'checked':''} onchange="moTodoToggle('${t.id}')">
+  list.innerHTML=rows.map(t=>{
+    const fromCC=t._from_cc;
+    const cbChange=fromCC?`moMarkCCDone('${t.id}',this.checked)`:`moTodoToggle('${t.id}')`;
+    const rowId=fromCC?`cc-row-${t.id}`:`mo-row-${t.id}`;
+    const actions=fromCC
+      ?`<span style="font-size:9px;font-family:var(--ff-m);padding:2px 8px;border-radius:10px;background:rgba(56,189,248,.12);color:#38bdf8;border:1px solid rgba(56,189,248,.25);white-space:nowrap;">📥 From CC</span>`
+      :`<button class="mo-hdr-btn" style="font-size:10px;padding:3px 8px;" onclick="moTodoEdit('${t.id}')">✏️</button>
+       <button class="mo-todo-del" onclick="moTodoDel('${t.id}')" title="Delete">✕</button>`;
+    return `<div class="mo-todo-item${t.done?' done':''}" id="${rowId}">
+    <input type="checkbox" class="mo-todo-cb" ${t.done?'checked':''} onchange="${cbChange}">
     <div style="flex:1;min-width:0;">
       <div class="mo-todo-title">${t.title}</div>
       ${t.desc?`<div class="mo-todo-desc">${t.desc}</div>`:''}
@@ -13849,11 +13861,9 @@ window.moTodoRender = function(){
         <span class="mo-todo-tag">${_catIcon[t.cat]||'📌'} ${t.cat||'other'}</span>
       </div>
     </div>
-    <div style="display:flex;gap:4px;flex-shrink:0;">
-      <button class="mo-hdr-btn" style="font-size:10px;padding:3px 8px;" onclick="moTodoEdit('${t.id}')">✏️</button>
-      <button class="mo-todo-del" onclick="moTodoDel('${t.id}')" title="Delete">✕</button>
-    </div>
-  </div>`).join('');
+    <div style="display:flex;gap:4px;flex-shrink:0;align-items:center;">${actions}</div>
+  </div>`;
+  }).join('');
 };
 
 window.moTodoNew = function(){
