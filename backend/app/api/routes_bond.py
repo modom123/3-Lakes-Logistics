@@ -16,10 +16,13 @@ value in the X-Bond-Key request header.
 """
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, Header, HTTPException
+from datetime import datetime, timezone
+
+from fastapi import APIRouter, BackgroundTasks, Depends, Header, HTTPException
 from pydantic import BaseModel
 
 from ..agents import bond_courier
+from ..logging_service import log_agent
 from ..settings import get_settings
 from ..supabase_client import get_supabase
 from .deps import require_bearer
@@ -61,8 +64,172 @@ def get_thread(limit: int = 50, direction: str = "all") -> dict:
 
 
 @_internal.post("/directive")
-def send_directive(body: DirectiveIn) -> dict:
-    return bond_courier.send_directive(body.content, body.priority, body.metadata)
+def send_directive(body: DirectiveIn, background_tasks: BackgroundTasks) -> dict:
+    result = bond_courier.send_directive(body.content, body.priority, body.metadata)
+    directive_id = (result.get("message") or {}).get("id", "")
+    background_tasks.add_task(_auto_remediate, body.content, directive_id)
+    return result
+
+
+def _auto_remediate(directive_content: str, directive_id: str) -> None:
+    """Read the directive, run Outside Bond on each issue, post resolution to channel
+    and write a completion todo to Mark Odom's office state."""
+    from ..agents import outside_bond, memory as mem
+
+    sb = get_supabase()
+
+    # ── 1. Pull Jamie Park's latest platform_health report ───────────────────
+    jamie_row = (
+        sb.table("agent_memory")
+        .select("value")
+        .eq("agent", "jamie_park")
+        .eq("key", "platform_health")
+        .order("updated_at", desc=True)
+        .limit(1)
+        .execute()
+        .data or []
+    )
+    report = (jamie_row[0].get("value") or {}) if jamie_row else {}
+
+    api_down      = report.get("api_down") or []
+    missing_vars  = (report.get("env_coverage") or {}).get("missing_vars") or []
+    overall       = report.get("overall_status", "unknown")
+    criticals     = report.get("critical_count", 0)
+
+    fixes_applied: list[str] = []
+    fixes_failed:  list[str] = []
+
+    # ── 2. Run Outside Bond on each detected issue ────────────────────────────
+    for svc in api_down:
+        svc_name = svc.get("service") if isinstance(svc, dict) else str(svc)
+        error_detail = f"Service {svc_name} is down/unreachable (Jamie Park platform health report)"
+        try:
+            res = outside_bond.run({
+                "task":         "auto",
+                "phase":        "bond_directive",
+                "error_details": error_detail,
+                "context":      {"service": svc_name},
+            })
+            if res.get("automated"):
+                fixes_applied.append(f"{svc_name}: {res.get('action','fixed')}")
+            else:
+                fixes_failed.append(f"{svc_name}: {res.get('reason','could not automate')}")
+        except Exception as exc:
+            fixes_failed.append(f"{svc_name}: exception — {str(exc)[:120]}")
+
+    for mv in missing_vars:
+        var_name = mv.get("var") if isinstance(mv, dict) else str(mv)
+        try:
+            res = outside_bond.run({
+                "task":         "render_env",
+                "phase":        "bond_directive",
+                "error_details": f"Missing environment variable: {var_name}",
+                "context":      {"key": var_name},
+            })
+            if res.get("automated"):
+                fixes_applied.append(f"env/{var_name}: {res.get('action','configured')}")
+            else:
+                fixes_failed.append(f"env/{var_name}: {res.get('reason','needs manual set')}")
+        except Exception as exc:
+            fixes_failed.append(f"env/{var_name}: exception — {str(exc)[:120]}")
+
+    # If no specific issues extracted, run a general api_probe + tech audit
+    if not api_down and not missing_vars:
+        try:
+            probe = outside_bond.run({"task": "api_probe", "phase": "bond_directive", "context": {}})
+            if probe.get("automated"):
+                fixes_applied.append(f"api_probe: {probe.get('action','health check complete')}")
+        except Exception:
+            pass
+
+    # ── 3. Post resolution report back to bond_channel ───────────────────────
+    total   = len(fixes_applied) + len(fixes_failed)
+    success = len(fixes_applied)
+    ts      = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+
+    if fixes_applied:
+        status_line = f"✅ {success}/{total} issue(s) remediated automatically."
+    elif total == 0:
+        status_line = "🔍 No specific API/env issues found in Jamie Park's report. Platform status: " + overall.upper()
+    else:
+        status_line = f"⚠ {success}/{total} fixes applied — {len(fixes_failed)} require manual action."
+
+    report_lines = [
+        f"BOND RESOLUTION REPORT — {ts}",
+        f"Directive ref: {directive_id or 'N/A'}",
+        "",
+        f"Platform status (Jamie Park): {overall.upper()} | Criticals: {criticals}",
+        "",
+        status_line,
+    ]
+    if fixes_applied:
+        report_lines += ["", "AUTOMATED FIXES APPLIED:"] + [f"  ✓ {f}" for f in fixes_applied]
+    if fixes_failed:
+        report_lines += ["", "REQUIRES MANUAL ACTION:"] + [f"  ✗ {f}" for f in fixes_failed]
+    report_lines += ["", "Bond signing off. Issues resolved or escalated per protocol."]
+
+    report_content = "\n".join(report_lines)
+
+    try:
+        sb.table("bond_channel").insert({
+            "direction":    "external_to_internal",
+            "from_label":   "James Bond — IEBC (Auto-Remediation)",
+            "message_type": "report",
+            "content":      report_content,
+            "priority":     "critical" if fixes_failed else "normal",
+            "status":       "pending",
+            "metadata":     {
+                "directive_id":    directive_id,
+                "fixes_applied":   fixes_applied,
+                "fixes_failed":    fixes_failed,
+                "auto_remediated": True,
+            },
+        }).execute()
+    except Exception as exc:
+        log_agent("bond_auto_remediate", "report_post_failed", result=str(exc)[:200])
+
+    # ── 4. Write resolution todo to Mark Odom's office state ─────────────────
+    try:
+        existing_row = (
+            sb.table("office_state")
+            .select("value")
+            .eq("key", "mo_todos")
+            .limit(1)
+            .execute()
+            .data or []
+        )
+        existing = existing_row[0].get("value", []) if existing_row else []
+        if not isinstance(existing, list):
+            existing = []
+
+        resolution_task = {
+            "id":      f"bond_resolution_{int(datetime.now(timezone.utc).timestamp())}",
+            "title":   f"🕵️ Bond Report: {status_line[:80]}",
+            "desc":    report_content[:400],
+            "due":     "",
+            "pri":     "high" if fixes_failed else "med",
+            "cat":     "operations",
+            "done":    False,
+            "created": datetime.now(timezone.utc).isoformat(),
+            "_from_bond": True,
+        }
+
+        # Replace any prior bond dispatched placeholder
+        updated = [t for t in existing if not str(t.get("id", "")).startswith("bond_escalation_")]
+        updated = [resolution_task] + updated
+
+        sb.table("office_state").upsert(
+            {"key": "mo_todos", "value": updated},
+            on_conflict="key"
+        ).execute()
+    except Exception as exc:
+        log_agent("bond_auto_remediate", "todo_write_failed", result=str(exc)[:200])
+
+    log_agent(
+        "bond_auto_remediate", "complete",
+        payload={"directive_id": directive_id, "issues_found": total},
+        result=f"applied={success} failed={len(fixes_failed)}",
+    )
 
 
 @_internal.get("/status")
