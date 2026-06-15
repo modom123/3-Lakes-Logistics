@@ -5009,7 +5009,15 @@ async function apiFetch(path, method='GET', body){
     if(banner)banner.style.display='block';
     throw new Error(`${r.status}: ${text.slice(0,120)}`);
   }
-  return r.json();
+  const json = await r.json();
+  // Shim: callers that treat the result as a Response (r.ok, r.json()) still work,
+  // while callers that treat it as parsed JSON (d.field) also work.
+  if(json !== null && typeof json === 'object'){
+    if(!('ok'     in json)) Object.defineProperty(json,'ok',    {value:true,       configurable:true,writable:true});
+    if(!('status' in json)) Object.defineProperty(json,'status',{value:r.status,   configurable:true,writable:true});
+    if(!('json'   in json)) Object.defineProperty(json,'json',  {value:()=>Promise.resolve(json), configurable:true});
+  }
+  return json;
 }
 
 function toggleSidebar(){
@@ -13728,7 +13736,7 @@ window.moTab = function(id){
    devices. Falls back silently to localStorage-only if the API/table isn't
    live yet (no regression). */
 async function _officeStateGet(key){
-  try{ const r=await apiFetch(`/api/office/state/${key}`); const d=await r.json();
+  try{ const d=await apiFetch(`/api/office/state/${key}`);
     return (d&&d.ok&&Array.isArray(d.value))?d.value:null; }catch(e){ return null; }
 }
 function _officeStatePut(key,value){
