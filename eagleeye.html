@@ -14312,8 +14312,9 @@ window.moEmailOpen = async function(id,from,mb){
         <span style="font-size:10px;color:#777;font-family:monospace;">${m.received_at?new Date(m.received_at).toLocaleString():''}</span>
       </div>
       <div style="display:flex;gap:6px;margin-top:10px;">
-        <button class="mo-hdr-btn" style="font-size:10px;padding:4px 10px;" onclick="document.getElementById('mo-compose-to').value='${(m.from_address||'').replace(/'/g,'\\\'')
-}';document.getElementById('mo-compose-subj').value='Re: ${(m.subject||'').replace(/'/g,'\\\'').slice(0,60)}';document.getElementById('mo-compose').style.display='flex'">↩ Reply</button>
+        <button style="font-size:11px;padding:5px 14px;border-radius:6px;border:1px solid #d1d5db;background:#f9fafb;color:#111;font-weight:600;cursor:pointer;" onclick="document.getElementById('mo-compose-to').value='${(m.from_address||'').replace(/'/g,'\\\'')
+}';document.getElementById('mo-compose-subj').value='Re: ${(m.subject||'').replace(/'/g,'\\\'').slice(0,60)}';document.getElementById('mo-compose-body').value='';document.getElementById('mo-compose').style.display='flex'">↩ Reply</button>
+        <button style="font-size:11px;padding:5px 14px;border-radius:6px;border:1px solid #d1d5db;background:#f9fafb;color:#111;font-weight:600;cursor:pointer;" onclick="document.getElementById('mo-compose-to').value='';document.getElementById('mo-compose-subj').value='Fwd: ${(m.subject||'').replace(/'/g,'\\\'').slice(0,55)}';document.getElementById('mo-compose-body').value='\\n\\n-------- Forwarded Message --------\\nFrom: ${(m.from_address||'').replace(/'/g,'\\\'').replace(/\\/g,'\\\\')}\\nTo: ${(toAddr||mbAddr).replace(/'/g,'\\\'').replace(/\\/g,'\\\\')}\\nSubject: ${(m.subject||'').replace(/'/g,'\\\'').replace(/\\/g,'\\\\')}\\n\\n${(m.body_text||'').replace(/'/g,'\\\'').replace(/\\/g,'\\\\').slice(0,2000)}';document.getElementById('mo-compose').style.display='flex'">→ Forward</button>
       </div>
     </div>
     ${m.body_html
