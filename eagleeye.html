@@ -10552,6 +10552,7 @@ function _renderBody(e,container){
       <div style="display:flex;gap:6px;flex-wrap:wrap">
         <button onclick="mailReply('${esc(e.id)}','${esc(e.from_address||'')}','${esc((e.subject||'').replace(/'/g,"\\'"))}')" class="btn-navy" style="font-size:11px;padding:5px 12px">↩ Reply</button>
         <button onclick="mailForward('${esc(e.id)}','${esc((e.subject||'').replace(/'/g,"\\'"))}')" style="padding:5px 12px;font-size:11px;border:1px solid var(--border);border-radius:4px;cursor:pointer;background:var(--surface)">→ Forward</button>
+        <button onclick="nav('mark-office');setTimeout(()=>moEmailAddToCRM('${esc(e.from_address||'')}','${esc((e.subject||'').replace(/'/g,"\\'"))}'),400)" style="padding:5px 12px;font-size:11px;border:1px solid #2563eb;border-radius:4px;cursor:pointer;background:#eff6ff;color:#2563eb;font-weight:600">➕ Add to CRM</button>
         ${e.mailbox==='loads'&&atts.length?`<button onclick="nav('vault')" style="padding:5px 12px;font-size:11px;border:1px solid #059669;border-radius:4px;cursor:pointer;background:rgba(5,150,105,.06);color:#059669;font-weight:600">📄 Vault</button>`:''}
         <button onclick="mailDelete('${esc(e.id)}')" style="padding:5px 12px;font-size:11px;border:1px solid rgba(239,68,68,.4);border-radius:4px;cursor:pointer;background:rgba(239,68,68,.05);color:var(--red);margin-left:auto">🗑 Delete</button>
       </div>
@@ -14324,10 +14325,11 @@ window.moEmailOpen = async function(id,from,mb){
         <span style="font-size:11px;color:#555;">To: <b style="color:#111;">${toAddr||mbAddr}</b></span>
         <span style="font-size:10px;color:#777;font-family:monospace;">${m.received_at?new Date(m.received_at).toLocaleString():''}</span>
       </div>
-      <div style="display:flex;gap:6px;margin-top:10px;">
+      <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;">
         <button style="font-size:11px;padding:5px 14px;border-radius:6px;border:1px solid #d1d5db;background:#f9fafb;color:#111;font-weight:600;cursor:pointer;" onclick="document.getElementById('mo-compose-to').value='${(m.from_address||'').replace(/'/g,'\\\'')
 }';document.getElementById('mo-compose-subj').value='Re: ${(m.subject||'').replace(/'/g,'\\\'').slice(0,60)}';document.getElementById('mo-compose-body').value='';document.getElementById('mo-compose').style.display='flex'">↩ Reply</button>
-        <button style="font-size:11px;padding:5px 14px;border-radius:6px;border:1px solid #d1d5db;background:#f9fafb;color:#111;font-weight:600;cursor:pointer;" onclick="document.getElementById('mo-compose-to').value='';document.getElementById('mo-compose-subj').value='Fwd: ${(m.subject||'').replace(/'/g,'\\\'').slice(0,55)}';document.getElementById('mo-compose-body').value='\\n\\n-------- Forwarded Message --------\\nFrom: ${(m.from_address||'').replace(/'/g,'\\\'').replace(/\\/g,'\\\\')}\\nTo: ${(toAddr||mbAddr).replace(/'/g,'\\\'').replace(/\\/g,'\\\\')}\\nSubject: ${(m.subject||'').replace(/'/g,'\\\'').replace(/\\/g,'\\\\')}\\n\\n${(m.body_text||'').replace(/'/g,'\\\'').replace(/\\/g,'\\\\').slice(0,2000)}';document.getElementById('mo-compose').style.display='flex'">→ Forward</button>
+        <button style="font-size:11px;padding:5px 14px;border-radius:6px;border:1px solid #d1d5db;background:#f9fafb;color:#111;font-weight:600;cursor:pointer;" onclick="document.getElementById('mo-compose-to').value='';document.getElementById('mo-compose-subj').value='Fwd: ${(m.subject||'').replace(/'/g,'\\\'').slice(0,55)}';document.getElementById('mo-compose-body').value='\\n\\n-------- Forwarded Message --------\\nFrom: ${(m.from_address||'').replace(/'/g,'\\\'').replace(/\\/g,'\\\\')}\\nDate: ${m.received_at?new Date(m.received_at).toLocaleString().replace(/'/g,'\\\''):''}\\nTo: ${((Array.isArray(m.to_addresses)?m.to_addresses.join(', '):(m.to_addresses||''))).replace(/'/g,'\\\'').replace(/\\/g,'\\\\')}\\nSubject: ${(m.subject||'').replace(/'/g,'\\\'').replace(/\\/g,'\\\\')}\\n\\n${(m.body_text||'').replace(/'/g,'\\\'').replace(/\\/g,'\\\\').slice(0,2000)}';document.getElementById('mo-compose').style.display='flex'">→ Forward</button>
+        <button style="font-size:11px;padding:5px 14px;border-radius:6px;border:1px solid #2563eb;background:#eff6ff;color:#2563eb;font-weight:700;cursor:pointer;" onclick="moEmailAddToCRM('${(m.from_address||'').replace(/'/g,'\\\'').replace(/\\/g,'\\\\')}','${(m.subject||'').replace(/'/g,'\\\'').replace(/\\/g,'\\\\')}')" >➕ Add to CRM</button>
       </div>
     </div>
     ${m.body_html
@@ -14349,6 +14351,34 @@ window.moEmailSend = async function(){
     if(st)st.textContent='✓ Sent';
     setTimeout(()=>{document.getElementById('mo-compose').style.display='none';if(st)st.textContent='';['mo-compose-to','mo-compose-subj','mo-compose-body'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});},1500);
   }catch(e){if(st)st.textContent='Send failed: '+e.message;}
+};
+
+window.moEmailAddToCRM = function(fromAddr, subject){
+  // Parse "Name <email@domain.com>" or just "email@domain.com"
+  let name='', email=fromAddr;
+  const nameMatch=fromAddr.match(/^(.+?)\s*<(.+?)>\s*$/);
+  if(nameMatch){name=nameMatch[1].replace(/['"]/g,'').trim();email=nameMatch[2].trim();}
+  else{email=fromAddr.trim();}
+  // Guess company from domain
+  let company='';
+  const domainMatch=email.match(/@([^.]+)\./);
+  if(domainMatch){const d=domainMatch[1];company=d.charAt(0).toUpperCase()+d.slice(1);}
+  // Switch to CRM tab then pre-fill new contact form
+  moTab('crm');
+  setTimeout(()=>{
+    ocNew('mark');
+    setTimeout(()=>{
+      const f=id=>document.getElementById(id);
+      if(f('oc-f-name'))f('oc-f-name').value=name||email.split('@')[0];
+      if(f('oc-f-company'))f('oc-f-company').value=company;
+      if(f('oc-f-email'))f('oc-f-email').value=email;
+      if(f('oc-f-pri'))f('oc-f-pri').value='warm';
+      if(f('oc-f-stage'))f('oc-f-stage').value='Contacted';
+      if(f('oc-f-lc'))f('oc-f-lc').value=new Date().toISOString().slice(0,10);
+      if(f('oc-f-notes'))f('oc-f-notes').value=subject?'Email subject: '+subject:'';
+      if(typeof toast!=='undefined')toast('Contact pre-filled — add follow-up date and save');
+    },200);
+  },150);
 };
 
 // (Removed dummy-todo auto-seed: it re-injected sample tasks on every load
@@ -16041,6 +16071,7 @@ window.ocOpen = function(owner, id){
       <div style="display:flex;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
         <button class="oc-btn-out" onclick="ocEdit('${owner}','${id}')">✏️ Edit</button>
         <button class="oc-btn-out" onclick="ocLogActivity('${owner}','${id}')" title="Log a call, email, or note">+ Log</button>
+        <button class="oc-btn" style="background:rgba(245,200,66,.2);border-color:rgba(245,200,66,.5);color:#f5c842;" onclick="ocScheduleFollowUp('${owner}','${id}')">📅 Follow-up</button>
         <button class="oc-btn-danger" onclick="ocDelete('${owner}','${id}')">🗑</button>
       </div>
     </div>
@@ -16063,6 +16094,18 @@ window.ocOpen = function(owner, id){
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
           <div style="font-size:9px;font-weight:800;letter-spacing:.08em;color:rgba(255,255,255,.4);">ACTIVITY TIMELINE</div>
           <button class="oc-btn-out" style="font-size:10px;padding:3px 10px;" onclick="ocLogActivity('${owner}','${id}')">+ Log Activity</button>
+        </div>
+        <div id="oc-followup-form-${id}" style="display:none;background:rgba(245,200,66,.06);border-radius:8px;border:1px solid rgba(245,200,66,.25);padding:12px;margin-bottom:10px;">
+          <div style="font-size:10px;font-weight:800;color:#f5c842;letter-spacing:.06em;margin-bottom:8px;">SCHEDULE FOLLOW-UP</div>
+          <div class="oc-2col" style="margin-bottom:8px;">
+            <div><div class="oc-fl">FOLLOW-UP DATE</div><input class="oc-inp" type="date" id="oc-fu-date-${id}" value="${new Date(Date.now()+86400000*3).toISOString().slice(0,10)}"></div>
+            <div><div class="oc-fl">TYPE</div><select class="oc-inp" id="oc-fu-type-${id}"><option>📞 Call</option><option>📧 Email</option><option>🤝 Meeting</option><option>📝 Note</option></select></div>
+          </div>
+          <div class="oc-row"><div class="oc-fl">REMINDER NOTE</div><textarea class="oc-inp oc-ta" id="oc-fu-note-${id}" style="min-height:50px;" placeholder="What's the follow-up about?"></textarea></div>
+          <div style="display:flex;gap:6px;margin-top:8px;">
+            <button class="oc-btn" onclick="ocSaveFollowUp('${owner}','${id}')">📅 Schedule</button>
+            <button class="oc-btn-out" onclick="document.getElementById('oc-followup-form-${id}').style.display='none'">Cancel</button>
+          </div>
         </div>
         <div id="oc-act-log-form-${id}" style="display:none;background:rgba(255,255,255,.04);border-radius:8px;border:1px solid rgba(255,255,255,.1);padding:12px;margin-bottom:10px;">
           <div class="oc-2col" style="margin-bottom:8px;">
@@ -16095,6 +16138,40 @@ window.ocTouchContact = function(owner, id){
   ocSaveAll(owner, arr);
   ocOpen(owner, id);
   if(typeof toast!=='undefined') toast('Marked as contacted today');
+};
+
+window.ocScheduleFollowUp = function(owner, id){
+  const form=document.getElementById('oc-followup-form-'+id);
+  const actForm=document.getElementById('oc-act-log-form-'+id);
+  if(!form)return;
+  if(actForm)actForm.style.display='none';
+  form.style.display=form.style.display==='none'?'block':'none';
+};
+
+window.ocSaveFollowUp = function(owner, id){
+  const date=document.getElementById('oc-fu-date-'+id)?.value;
+  const type=document.getElementById('oc-fu-type-'+id)?.value||'📞 Call';
+  const note=(document.getElementById('oc-fu-note-'+id)?.value||'').trim();
+  if(!date){if(typeof toast!=='undefined')toast('Pick a date first','error');return;}
+  const arr=ocContacts(owner);
+  const c=arr.find(x=>x.id===id);
+  if(!c)return;
+  // Save follow_up_date on contact
+  c.follow_up_date=date;
+  if(!c.activities)c.activities=[];
+  c.activities.push({id:'fu_'+Date.now(),type:'📋 Task',
+    note:(note||type+' scheduled')+' — Follow-up: '+date,ts:new Date().toISOString()});
+  ocSaveAll(owner,arr);
+  // Create a Todo for Mark
+  if(owner==='mark' && typeof moTodos==='function'){
+    const todos=moTodos();
+    const todoId='followup_'+id+'_'+Date.now();
+    todos.unshift({id:todoId,title:type+' with '+c.name+(c.company?' ('+c.company+')':''),
+      desc:note||'',due:date,pri:'med',cat:'strategy',done:false,created:new Date().toISOString()});
+    moTodosSave(todos);
+  }
+  ocOpen(owner,id);
+  if(typeof toast!=='undefined')toast('Follow-up scheduled for '+date+' · Todo created');
 };
 
 // ── Edit form ─────────────────────────────────────────
@@ -16146,7 +16223,10 @@ function ocRenderForm(owner, c, isNew){
         <div class="oc-row"><div class="oc-fl">DEAL VALUE ($)</div><input class="oc-inp" id="oc-f-deal" type="number" min="0" step="100" value="${c.deal_value||''}" placeholder="0"></div>
       </div>
       <div class="oc-row"><div class="oc-fl">LINKEDIN</div><input class="oc-inp" id="oc-f-linkedin" value="${esc(c.linkedin||'')}" placeholder="https://linkedin.com/in/…"></div>
-      <div class="oc-row"><div class="oc-fl">LAST CONTACTED</div><input class="oc-inp" id="oc-f-lc" type="date" value="${c.last_contacted?c.last_contacted.slice(0,10):''}"></div>
+      <div class="oc-2col">
+        <div class="oc-row"><div class="oc-fl">LAST CONTACTED</div><input class="oc-inp" id="oc-f-lc" type="date" value="${c.last_contacted?c.last_contacted.slice(0,10):''}"></div>
+        <div class="oc-row"><div class="oc-fl">FOLLOW-UP DATE</div><input class="oc-inp" id="oc-f-followup" type="date" value="${c.follow_up_date||''}" placeholder="Schedule follow-up…"></div>
+      </div>
       <div class="oc-row"><div class="oc-fl">NOTES</div><textarea class="oc-inp oc-ta" id="oc-f-notes" placeholder="Anything worth remembering…">${esc(c.notes||'')}</textarea></div>
     </div>`;
 }
@@ -16169,13 +16249,26 @@ window.ocSaveContact = function(owner){
   c.linkedin       = document.getElementById('oc-f-linkedin')?.value.trim()||'';
   c.last_contacted = document.getElementById('oc-f-lc')?.value||null;
   c.notes          = document.getElementById('oc-f-notes')?.value||'';
+  const followUpDate = document.getElementById('oc-f-followup')?.value||'';
+  if(followUpDate) c.follow_up_date = followUpDate;
   if(!c.activities) c.activities=[];
   if(isNew){ arr.push(c); s.isNew=false; }
   ocSaveAll(owner, arr);
+  // Auto-create a Todo when a follow-up date is set
+  if(followUpDate && owner==='mark' && typeof moTodos==='function'){
+    const todos=moTodos();
+    const todoId='followup_'+c.id;
+    if(!todos.find(t=>t.id===todoId)){
+      todos.unshift({id:todoId,title:'Follow up with '+c.name+(c.company?' ('+c.company+')':''),
+        desc:c.notes?c.notes.slice(0,120):'',due:followUpDate,pri:'med',cat:'strategy',
+        done:false,created:new Date().toISOString()});
+      moTodosSave(todos);
+    }
+  }
   s.editingId = c.id;
   ocRenderList(owner);
   ocOpen(owner, c.id);
-  if(typeof toast!=='undefined') toast('Contact saved');
+  if(typeof toast!=='undefined') toast('Contact saved'+(followUpDate?' · Follow-up todo created':''));
 };
 
 window.ocCancelForm = function(owner, id){
