@@ -4992,7 +4992,17 @@ const API = {
 };
 
 // apiFetch — bearer-authenticated fetch to the backend API.
+// Accepts both (path, method, body) and (path, {method, body}) call styles.
+// Returns parsed JSON with backward-compat .ok / .status / .json() shim so
+// callers that treat the return as a Response object continue to work.
 async function apiFetch(path, method='GET', body){
+  if(method && typeof method === 'object'){
+    const opts = method;
+    method = opts.method || 'GET';
+    if(body === undefined && opts.body !== undefined){
+      try{ body = JSON.parse(opts.body); }catch(_){ body = opts.body; }
+    }
+  }
   const isFormData = body instanceof FormData;
   const headers = {'Authorization':'Bearer '+API_TOKEN};
   if(!isFormData) headers['Content-Type']='application/json';
@@ -5009,7 +5019,13 @@ async function apiFetch(path, method='GET', body){
     if(banner)banner.style.display='block';
     throw new Error(`${r.status}: ${text.slice(0,120)}`);
   }
-  return r.json();
+  const json = await r.json();
+  if(json !== null && typeof json === 'object'){
+    if(!('ok'     in json)) Object.defineProperty(json,'ok',    {value:true,configurable:true,writable:true});
+    if(!('status' in json)) Object.defineProperty(json,'status',{value:r.status,configurable:true,writable:true});
+    if(!('json'   in json)) Object.defineProperty(json,'json',  {value:()=>Promise.resolve(json),configurable:true});
+  }
+  return json;
 }
 
 // Wrap raw email HTML in a full document so every email renders on a white
@@ -9681,15 +9697,10 @@ async function launchLeadMachine() {
   _pushNotif({ id:'lm_run_'+Date.now(), agent:'sonny', action:'pipeline_source', result:'running', ts: new Date().toISOString() });
 
   try {
-    const qs = `?source=${source}&min_score=${minScore}&limit=${limit}&auto_call=${autoCall}`;
-    const res = await API.post('/api/prospecting/run' + qs.replace('?','') , {});
-    // Actually use query params via GET-style post
-    const r = await fetch(
-      `${API_BASE}/api/prospecting/run?source=${source}&min_score=${minScore}&limit=${limit}&auto_call=${autoCall}`,
-      { method:'POST', headers:{'Authorization':'Bearer '+API_TOKEN, 'Content-Type':'application/json'} }
+    const data = await apiFetch(
+      `/api/prospecting/run?source=${source}&min_score=${minScore}&limit=${limit}&auto_call=${autoCall}`,
+      'POST'
     );
-    if (!r.ok) throw new Error(await r.text());
-    const data = await r.json();
 
     // Update result panel
     document.getElementById('lm-r-sourced').textContent  = data.sourced  ?? '—';
