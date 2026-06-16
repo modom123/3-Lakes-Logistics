@@ -10167,18 +10167,18 @@ async function loadTriggerStatus() {
     </div>
     <div style="display:flex;align-items:center;gap:8px;padding:7px 16px;border-bottom:1px solid var(--border)">
       <span style="font-size:11px;font-weight:600;color:var(--muted);width:46px">To</span>
-      <input id="mail-compose-to" type="text" placeholder="recipient@example.com (comma-separate multiple)" style="flex:1;border:none;outline:none;font-size:12px;background:transparent">
+      <input id="mail-compose-to" type="text" placeholder="recipient@example.com (comma-separate multiple)" style="flex:1;border:none;outline:none;font-size:12px;background:transparent;color:var(--text)">
     </div>
     <div style="display:flex;align-items:center;gap:8px;padding:7px 16px;border-bottom:1px solid var(--border)">
       <span style="font-size:11px;font-weight:600;color:var(--muted);width:46px">CC</span>
-      <input id="mail-compose-cc" type="text" placeholder="optional" style="flex:1;border:none;outline:none;font-size:12px;background:transparent">
+      <input id="mail-compose-cc" type="text" placeholder="optional" style="flex:1;border:none;outline:none;font-size:12px;background:transparent;color:var(--text)">
     </div>
     <div style="display:flex;align-items:center;gap:8px;padding:7px 16px">
       <span style="font-size:11px;font-weight:600;color:var(--muted);width:46px">Subject</span>
-      <input id="mail-compose-subject" type="text" placeholder="Subject" style="flex:1;border:none;outline:none;font-size:12px;font-weight:500;background:transparent">
+      <input id="mail-compose-subject" type="text" placeholder="Subject" style="flex:1;border:none;outline:none;font-size:12px;font-weight:500;background:transparent;color:var(--text)">
     </div>
   </div>
-  <textarea id="mail-compose-body" placeholder="Write your message…" style="flex:1;min-height:340px;border:none;outline:none;padding:12px 16px;font-size:13px;resize:none;font-family:inherit;background:transparent"></textarea>
+  <textarea id="mail-compose-body" placeholder="Write your message…" style="flex:1;min-height:340px;border:none;outline:none;padding:12px 16px;font-size:13px;resize:none;font-family:inherit;background:transparent;color:var(--text)"></textarea>
   <div id="mail-attach-list" style="display:none;padding:6px 16px 0;flex-wrap:wrap;gap:6px"></div>
   <div id="mail-compose-warn" style="display:none;margin:0 16px 6px;padding:8px 11px;border-radius:6px;font-size:11.5px;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.4);color:#b45309"></div>
   <div style="padding:10px 16px;border-top:2px solid var(--border);background:rgba(0,0,0,.06);display:flex;gap:8px;align-items:center;flex-wrap:wrap;flex-shrink:0">
@@ -10714,6 +10714,31 @@ function mailForward(id,subject){
   setTimeout(()=>document.getElementById('mail-compose-to').focus(),60);
 }
 function mailCloseCompose(){_mailAttachments=[];_mailVaultAttachments=[];_mailAgreementAttachments=[];mailRenderAttachments();document.getElementById('mail-compose-modal').style.display='none';}
+function mailComposeAs(mb){
+  mailCompose();
+  const sel=document.getElementById('mail-compose-from');
+  if(sel){sel.value=mb;mailUpdateComposeWarn();}
+}
+window.moComposeReply=function(id,from,subj){
+  mailReply(id,from,subj);
+  const sel=document.getElementById('mail-compose-from');
+  if(sel){sel.value=_moCurrentMailbox||'mark';mailUpdateComposeWarn();}
+};
+window.moComposeForward=function(id,subj){
+  mailForward(id,subj);
+  const sel=document.getElementById('mail-compose-from');
+  if(sel){sel.value=_moCurrentMailbox||'mark';mailUpdateComposeWarn();}
+};
+window.ccgComposeReply=function(id,from,subj){
+  mailReply(id,from,subj);
+  const sel=document.getElementById('mail-compose-from');
+  if(sel){sel.value='cece';mailUpdateComposeWarn();}
+};
+window.ccgComposeForward=function(id,subj){
+  mailForward(id,subj);
+  const sel=document.getElementById('mail-compose-from');
+  if(sel){sel.value='cece';mailUpdateComposeWarn();}
+};
 
 async function mailSend(){
   const btn=document.getElementById('mail-send-btn');
@@ -13909,7 +13934,7 @@ select.oc-inp option{background:#1a1a2e;color:#fff;}
             <button id="mo-mb-sales" onclick="moEmailLoad('sales')" style="font-size:10px;padding:3px 9px;border-radius:5px;border:1px solid rgba(255,255,255,.15);background:transparent;color:rgba(255,255,255,.5);cursor:pointer;">sales@</button>
           </div>
           <button class="mo-hdr-btn" style="font-size:10px;padding:4px 10px;" onclick="moEmailLoad()">↺ Refresh</button>
-          <button class="mo-btn" style="font-size:10px;padding:4px 12px;margin-left:auto;" onclick="document.getElementById('mo-compose').style.display='flex'">✉️ Compose</button>
+          <button class="mo-btn" style="font-size:10px;padding:4px 12px;margin-left:auto;" onclick="mailComposeAs(_moCurrentMailbox||'mark')">✉️ Compose</button>
         </div>
         <div style="display:flex;flex:1;min-height:0;overflow:hidden;">
           <!-- Inbox list -->
@@ -14738,6 +14763,7 @@ window.moEmailOpen = async function(id,from,mb){
     const res=await API.get('/api/mailboxes/email/'+id).catch(()=>null);
     const m=res?.email||res;
     if(!m||!m.id){view.innerHTML='<div style="padding:20px;color:#888;">Could not load message</div>';return;}
+    _lastOpenedEmail=m;
     const toAddr=(Array.isArray(m.to_addresses)?m.to_addresses.join(', '):(m.to_addresses||m.from_address||'—'));
     const mbAddr={mark:'mark@3lakeslogistics.com',info:'info@3lakeslogistics.com',sales:'sales@3lakeslogistics.com'}[mb||_moCurrentMailbox]||'mark@3lakeslogistics.com';
     view.innerHTML=`<div style="padding:0 0 12px;border-bottom:2px solid rgba(245,200,66,.3);margin-bottom:14px;flex-shrink:0;">
@@ -14748,9 +14774,8 @@ window.moEmailOpen = async function(id,from,mb){
         <span style="font-size:10px;color:#777;font-family:monospace;">${m.received_at?new Date(m.received_at).toLocaleString():''}</span>
       </div>
       <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;">
-        <button style="font-size:11px;padding:5px 14px;border-radius:6px;border:1px solid #d1d5db;background:#f9fafb;color:#111;font-weight:600;cursor:pointer;" onclick="document.getElementById('mo-compose-to').value='${(m.from_address||'').replace(/'/g,'\\\'')
-}';document.getElementById('mo-compose-subj').value='Re: ${(m.subject||'').replace(/'/g,'\\\'').slice(0,60)}';document.getElementById('mo-compose-body').value='';document.getElementById('mo-compose').style.display='flex'">↩ Reply</button>
-        <button style="font-size:11px;padding:5px 14px;border-radius:6px;border:1px solid #d1d5db;background:#f9fafb;color:#111;font-weight:600;cursor:pointer;" onclick="document.getElementById('mo-compose-to').value='';document.getElementById('mo-compose-subj').value='Fwd: ${(m.subject||'').replace(/'/g,'\\\'').slice(0,55)}';document.getElementById('mo-compose-body').value='\\n\\n-------- Forwarded Message --------\\nFrom: ${(m.from_address||'').replace(/'/g,'\\\'').replace(/\\/g,'\\\\')}\\nDate: ${m.received_at?new Date(m.received_at).toLocaleString().replace(/'/g,'\\\''):''}\\nTo: ${((Array.isArray(m.to_addresses)?m.to_addresses.join(', '):(m.to_addresses||''))).replace(/'/g,'\\\'').replace(/\\/g,'\\\\')}\\nSubject: ${(m.subject||'').replace(/'/g,'\\\'').replace(/\\/g,'\\\\')}\\n\\n${(m.body_text||'').replace(/'/g,'\\\'').replace(/\\/g,'\\\\').slice(0,2000)}';document.getElementById('mo-compose').style.display='flex'">→ Forward</button>
+        <button style="font-size:11px;padding:5px 14px;border-radius:6px;border:1px solid #d1d5db;background:#f9fafb;color:#111;font-weight:600;cursor:pointer;" onclick="moComposeReply('${m.id}','${(m.from_address||'').replace(/'/g,'\\\'').replace(/"/g,'&quot;')}','${(m.subject||'').replace(/'/g,'\\\'').slice(0,60)}')">↩ Reply</button>
+        <button style="font-size:11px;padding:5px 14px;border-radius:6px;border:1px solid #d1d5db;background:#f9fafb;color:#111;font-weight:600;cursor:pointer;" onclick="moComposeForward('${m.id}','${(m.subject||'').replace(/'/g,'\\\'').slice(0,55)}')">→ Forward</button>
         <button style="font-size:11px;padding:5px 14px;border-radius:6px;border:1px solid #2563eb;background:#eff6ff;color:#2563eb;font-weight:700;cursor:pointer;" onclick="moEmailAddToCRM('${(m.from_address||'').replace(/'/g,'\\\'').replace(/\\/g,'\\\\')}','${(m.subject||'').replace(/'/g,'\\\'').replace(/\\/g,'\\\\')}')" >➕ Add to CRM</button>
       </div>
     </div>
@@ -15677,7 +15702,7 @@ window.moGrowthPlan = async function(){
         <div style="padding:8px 16px;background:rgba(3,10,20,.95);border-bottom:1px solid rgba(56,189,248,.15);flex-shrink:0;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
           <div style="font-size:12px;font-weight:800;color:#38bdf8;">📧 cece@3lakeslogistics.com</div>
           <button class="ccg-hdr-btn" style="font-size:10px;padding:4px 10px;" onclick="ccgEmailLoad()">↺ Refresh</button>
-          <button class="ccg-btn" style="font-size:10px;padding:4px 12px;margin-left:auto;" onclick="document.getElementById('ccg-compose').style.display='flex'">✉️ Compose</button>
+          <button class="ccg-btn" style="font-size:10px;padding:4px 12px;margin-left:auto;" onclick="mailComposeAs('cece')">✉️ Compose</button>
         </div>
         <div style="display:flex;flex:1;min-height:0;overflow:hidden;">
           <!-- Inbox list -->
@@ -16262,6 +16287,7 @@ window.ccgEmailOpen = async function(id,from){
     const res=await API.get('/api/mailboxes/email/'+id).catch(()=>null);
     const m=res?.email||res;
     if(!m||!m.id){view.innerHTML='<div style="padding:20px;color:rgba(255,255,255,.4);">Could not load message</div>';return;}
+    _lastOpenedEmail=m;
     const toAddr=(Array.isArray(m.to_addresses)?m.to_addresses.join(', '):(m.to_addresses||'cece@3lakeslogistics.com'));
     view.innerHTML=`<div style="padding:0 0 12px;border-bottom:1px solid rgba(56,189,248,.1);margin-bottom:14px;flex-shrink:0;">
       <div style="font-size:15px;font-weight:800;color:#fff;margin-bottom:8px;">${m.subject||'(No subject)'}</div>
@@ -16271,8 +16297,8 @@ window.ccgEmailOpen = async function(id,from){
         <span style="font-size:10px;color:rgba(255,255,255,.6);font-family:monospace;">${m.received_at?new Date(m.received_at).toLocaleString():''}</span>
       </div>
       <div style="display:flex;gap:6px;margin-top:10px;">
-        <button class="ccg-hdr-btn" style="font-size:10px;padding:4px 10px;" onclick="document.getElementById('ccg-compose-to').value='${(m.from_address||'').replace(/'/g,'\\\'').replace(/"/g,'&quot;')}';document.getElementById('ccg-compose-subj').value='Re: ${(m.subject||'').replace(/'/g,'\\\'').slice(0,60)}';document.getElementById('ccg-compose-body').value='';document.getElementById('ccg-compose').style.display='flex'">↩ Reply</button>
-        <button class="ccg-hdr-btn" style="font-size:10px;padding:4px 10px;" onclick="document.getElementById('ccg-compose-to').value='';document.getElementById('ccg-compose-subj').value='Fwd: ${(m.subject||'').replace(/'/g,'\\\'').slice(0,55)}';document.getElementById('ccg-compose-body').value='\\n\\n-------- Forwarded Message --------\\nFrom: ${(m.from_address||'').replace(/'/g,'\\\'').replace(/\\/g,'\\\\')}\\nDate: ${m.received_at?new Date(m.received_at).toLocaleString().replace(/'/g,'\\\''):''}\\nTo: ${((Array.isArray(m.to_addresses)?m.to_addresses.join(', '):(m.to_addresses||''))).replace(/'/g,'\\\'').replace(/\\/g,'\\\\')}\\nSubject: ${(m.subject||'').replace(/'/g,'\\\'').replace(/\\/g,'\\\\')}\\n\\n${(m.body_text||'').replace(/'/g,'\\\'').replace(/\\/g,'\\\\').slice(0,2000)}';document.getElementById('ccg-compose').style.display='flex'">→ Forward</button>
+        <button class="ccg-hdr-btn" style="font-size:10px;padding:4px 10px;" onclick="ccgComposeReply('${m.id}','${(m.from_address||'').replace(/'/g,'\\\'').replace(/"/g,'&quot;')}','${(m.subject||'').replace(/'/g,'\\\'').slice(0,60)}')">↩ Reply</button>
+        <button class="ccg-hdr-btn" style="font-size:10px;padding:4px 10px;" onclick="ccgComposeForward('${m.id}','${(m.subject||'').replace(/'/g,'\\\'').slice(0,55)}')">→ Forward</button>
       </div>
     </div>
     ${m.body_html
