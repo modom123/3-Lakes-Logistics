@@ -12940,6 +12940,7 @@ select.oc-inp option{background:#1a1a2e;color:#fff;}
     <button class="mo-tab"        id="motab-crm"        onclick="moTab('crm')">📇 My CRM</button>
     <button class="mo-tab"        id="motab-email"      onclick="moTab('email')">📧 Email <span id="mo-email-ct" style="display:none;background:#f5c842;color:#000;font-size:9px;font-weight:800;border-radius:10px;padding:1px 6px;margin-left:2px;">0</span></button>
     <button class="mo-tab"        id="motab-lf"         onclick="moTab('lf')">🚐 Light Fleet</button>
+    <button class="mo-tab"        id="motab-hf"         onclick="moTab('hf')">🚛 Heavy Fleet</button>
     <button class="mo-tab"        id="motab-trading"    onclick="moTab('trading')">📈 Trading Reports</button>
     <button class="mo-tab"        id="motab-zoom"       onclick="moTab('zoom')">📹 Zoom</button>
     <button class="mo-tab"        id="motab-tv"         onclick="moTab('tv')">📺 Watch TV</button>
@@ -13510,6 +13511,133 @@ select.oc-inp option{background:#1a1a2e;color:#fff;}
       </div>
     </div><!-- /lf -->
 
+    <!-- ════ HEAVY FLEET ════ -->
+    <div class="mo-pane" id="mopane-hf">
+      <div class="mo-room">
+
+        <!-- Division header -->
+        <div style="background:linear-gradient(135deg,rgba(15,22,35,.9),rgba(10,30,55,.7));border:1px solid rgba(96,165,250,.25);border-radius:12px;padding:16px 22px;display:flex;align-items:center;gap:16px;flex-shrink:0;">
+          <div style="font-size:36px;">🚛</div>
+          <div style="flex:1;">
+            <div style="font-size:16px;font-weight:900;color:#fff;margin-bottom:2px;">Heavy Fleet Division</div>
+            <div style="font-size:11px;color:rgba(255,255,255,.5);line-height:1.6;">CDL Carriers · Dry Van · Reefer · Flatbed · Dispatch · DOT Compliance · Load Board</div>
+          </div>
+          <button class="mo-hdr-btn" onclick="moHFRefresh()">↺ Refresh</button>
+          <button class="mo-hdr-btn" style="color:#60a5fa;border-color:rgba(96,165,250,.35);" onclick="nav('dispatch')">🚛 Dispatch Board</button>
+          <button class="mo-hdr-btn" style="color:#22c55e;border-color:rgba(34,197,94,.35);" onclick="nav('fleet-map')">🗺️ Fleet Map</button>
+        </div>
+
+        <!-- HF KPI strip -->
+        <div class="mo-kpi-strip">
+          <div class="mo-kpi" style="border-top-color:#60a5fa;"><div class="mo-kpi-n" id="mo-hf-kpi-carriers">—</div><div class="mo-kpi-l">Active Carriers</div></div>
+          <div class="mo-kpi" style="border-top-color:#f59e0b;"><div class="mo-kpi-n" id="mo-hf-kpi-loads">—</div><div class="mo-kpi-l">Active Loads</div></div>
+          <div class="mo-kpi" style="border-top-color:#22c55e;"><div class="mo-kpi-n" id="mo-hf-kpi-booked">—</div><div class="mo-kpi-l">Booked Today</div></div>
+          <div class="mo-kpi" style="border-top-color:#f5c842;"><div class="mo-kpi-n" id="mo-hf-kpi-rev">—</div><div class="mo-kpi-l">Revenue MTD</div></div>
+          <div class="mo-kpi" style="border-top-color:#a855f7;"><div class="mo-kpi-n" id="mo-hf-kpi-margin">—%</div><div class="mo-kpi-l">Avg Margin</div></div>
+          <div class="mo-kpi" style="border-top-color:#22c55e;"><div class="mo-kpi-n" id="mo-hf-kpi-dot">—</div><div class="mo-kpi-l">DOT Compliance</div></div>
+        </div>
+
+        <!-- Agent panels grid -->
+        <div class="mo-grid">
+
+          <!-- Rex — Dispatch & Load Ops -->
+          <div class="mo-panel" style="border-top:3px solid #f59e0b;">
+            <div class="mo-panel-hdr" style="background:rgba(245,158,11,.07);">
+              <div class="mo-panel-title">
+                <div style="width:28px;height:28px;border-radius:50%;background:rgba(245,158,11,.2);color:#f59e0b;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:900;">RX</div>
+                Rex — Dispatch &amp; Load Operations
+              </div>
+              <button class="mo-hdr-btn" style="font-size:10px;padding:3px 9px;" onclick="nav('dispatch')">Board →</button>
+            </div>
+            <div class="mo-panel-body">
+              <div style="font-size:11px;color:rgba(255,255,255,.5);margin-bottom:10px;">Manages live dispatch board, carrier check-calls, POD collection, and load status from pickup through delivery.</div>
+              <div id="mo-hf-rex-feed" style="display:flex;flex-direction:column;gap:6px;">
+                <div style="font-size:11px;color:rgba(255,255,255,.3);text-align:center;padding:12px;">Click Refresh to load dispatch intel</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Casey — Carrier Coverage -->
+          <div class="mo-panel" style="border-top:3px solid #38bdf8;">
+            <div class="mo-panel-hdr" style="background:rgba(56,189,248,.07);">
+              <div class="mo-panel-title">
+                <div style="width:28px;height:28px;border-radius:50%;background:rgba(56,189,248,.2);color:#38bdf8;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:900;">CS</div>
+                Casey — Carrier Coverage &amp; Market
+              </div>
+              <button class="mo-hdr-btn" style="font-size:10px;padding:3px 9px;" onclick="nav('carriers')">Carriers →</button>
+            </div>
+            <div class="mo-panel-body">
+              <div style="font-size:11px;color:rgba(255,255,255,.5);margin-bottom:10px;">Monitors spot rates, fuel surcharges, carrier availability, and market conditions across DAT and Truckstop load boards.</div>
+              <div id="mo-hf-casey-feed" style="display:flex;flex-direction:column;gap:6px;">
+                <div style="font-size:11px;color:rgba(255,255,255,.3);text-align:center;padding:12px;">Click Refresh to load market intel</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Jordan — Lane Analysis -->
+          <div class="mo-panel" style="border-top:3px solid #22c55e;">
+            <div class="mo-panel-hdr" style="background:rgba(34,197,94,.07);">
+              <div class="mo-panel-title">
+                <div style="width:28px;height:28px;border-radius:50%;background:rgba(34,197,94,.2);color:#22c55e;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:900;">JR</div>
+                Jordan — Lane Analysis
+              </div>
+              <button class="mo-hdr-btn" style="font-size:10px;padding:3px 9px;" onclick="nav('trading-desk')">Desk →</button>
+            </div>
+            <div class="mo-panel-body">
+              <div style="font-size:11px;color:rgba(255,255,255,.5);margin-bottom:10px;">Identifies highest-margin lanes, rate trend analysis, and carrier density by corridor. Flags seasonal capacity shifts.</div>
+              <div id="mo-hf-jordan-feed" style="display:flex;flex-direction:column;gap:6px;">
+                <div style="font-size:11px;color:rgba(255,255,255,.3);text-align:center;padding:12px;">Click Refresh to load lane analysis</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Quinn — DOT Compliance & Invoices -->
+          <div class="mo-panel" style="border-top:3px solid #f5c842;">
+            <div class="mo-panel-hdr" style="background:rgba(245,200,66,.06);">
+              <div class="mo-panel-title">
+                <div style="width:28px;height:28px;border-radius:50%;background:rgba(245,200,66,.2);color:#f5c842;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:900;">QN</div>
+                Quinn — DOT Compliance &amp; Invoices
+              </div>
+              <button class="mo-hdr-btn" style="font-size:10px;padding:3px 9px;" onclick="nav('carriers')">Compliance →</button>
+            </div>
+            <div class="mo-panel-body">
+              <div style="font-size:11px;color:rgba(255,255,255,.5);margin-bottom:10px;">Tracks CDL expirations, medical cards, insurance COIs, HOS compliance, and BOL/POD document collection. Manages invoicing cycle and AR.</div>
+              <div id="mo-hf-quinn-feed" style="display:flex;flex-direction:column;gap:6px;">
+                <div style="font-size:11px;color:rgba(255,255,255,.3);text-align:center;padding:12px;">Click Refresh to load compliance status</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Carrier summary -->
+          <div class="mo-panel" style="border-top:3px solid #60a5fa;">
+            <div class="mo-panel-hdr" style="background:rgba(96,165,250,.07);">
+              <div class="mo-panel-title" style="color:#60a5fa;">👥 Carrier Roster</div>
+              <button class="mo-hdr-btn" style="font-size:10px;padding:3px 9px;" onclick="nav('carriers')">View All →</button>
+            </div>
+            <div class="mo-panel-body">
+              <div id="mo-hf-carrier-list" style="display:flex;flex-direction:column;gap:6px;">
+                <div style="font-size:11px;color:rgba(255,255,255,.3);text-align:center;padding:12px;">Click Refresh to load carrier roster</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Quick navigation -->
+          <div class="mo-panel" style="border-top:3px solid rgba(96,165,250,.4);min-height:0;">
+            <div class="mo-panel-hdr" style="background:rgba(96,165,250,.05);">
+              <div class="mo-panel-title" style="color:#60a5fa;">🚛 Heavy Fleet Pages</div>
+            </div>
+            <div class="mo-panel-body" style="display:flex;flex-direction:column;gap:8px;min-height:0;">
+              <button class="mo-hdr-btn" style="text-align:left;padding:8px 12px;font-size:11px;" onclick="nav('dispatch')">🚛 Dispatch Board — Live Loads</button>
+              <button class="mo-hdr-btn" style="text-align:left;padding:8px 12px;font-size:11px;" onclick="nav('fleet-map')">🗺️ Fleet Map — Carrier Positions</button>
+              <button class="mo-hdr-btn" style="text-align:left;padding:8px 12px;font-size:11px;" onclick="nav('carriers')">👥 Carrier Management &amp; Onboarding</button>
+              <button class="mo-hdr-btn" style="text-align:left;padding:8px 12px;font-size:11px;" onclick="nav('trading-desk')">📈 Trading Desk — Load Board</button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div><!-- /hf -->
+
     <!-- ════ TRADING DESK REPORTS ════ -->
     <div class="mo-pane" id="mopane-trading">
       <div class="mo-room">
@@ -13859,6 +13987,7 @@ window.moTab = function(id){
   if(id==='crm')ocInit('mark');
   if(id==='directives')moLoadDirectives();
   if(id==='lf')moLFRefresh();
+  if(id==='hf')moHFRefresh();
   if(id==='trading')moTDRefresh();
   if(id==='email')moEmailLoad();
   if(id==='growth')moGrowthRefresh();
@@ -14309,6 +14438,76 @@ window.moLFRefresh = function(){
   if($('mo-lf-kpi-rev'))$('mo-lf-kpi-rev').textContent='$18.4k';
   if($('mo-lf-kpi-health'))$('mo-lf-kpi-health').textContent='91%';
   if($('mo-lf-kpi-pending'))$('mo-lf-kpi-pending').textContent='24';
+};
+
+/* ── Heavy Fleet Reports ── */
+window.moHFRefresh = async function(){
+  const $=n=>document.getElementById(n);
+  const mkFeed=(items)=>items.map(it=>`<div style="padding:7px 10px;border-radius:6px;border-left:3px solid ${it.color||'rgba(255,255,255,.15)'};background:rgba(255,255,255,.03);margin-bottom:5px;"><div style="font-weight:700;font-size:10px;color:${it.color||'rgba(255,255,255,.6)'};margin-bottom:1px;">${it.label}</div><div style="font-size:11px;color:rgba(255,255,255,.55);line-height:1.5;">${it.text}</div></div>`).join('');
+
+  // Fetch live carrier count
+  let carrierCount='—', activeLoads='—', bookedToday='—', revMTD='—', margin='—', dotScore='—';
+  try{
+    const [carriers, book, pnl] = await Promise.all([
+      apiFetch('/api/carriers/'),
+      apiFetch('/api/trading/live-book/'),
+      apiFetch('/api/trading/pnl-summary/'),
+    ]);
+    if(Array.isArray(carriers)){
+      const active=carriers.filter(c=>c.status==='active'||c.status==='approved');
+      carrierCount=active.length||carriers.length;
+      // Build carrier roster
+      const cl=$('mo-hf-carrier-list');
+      if(cl){
+        const top=active.slice(0,8);
+        if(top.length){
+          cl.innerHTML=top.map(c=>`<div style="padding:7px 10px;border-radius:6px;border-left:3px solid #60a5fa;background:rgba(255,255,255,.03);margin-bottom:4px;display:flex;justify-content:space-between;align-items:center;"><div><div style="font-weight:700;font-size:11px;color:#fff;">${c.company_name||c.name||'Carrier'}</div><div style="font-size:10px;color:rgba(255,255,255,.4);margin-top:1px;">${c.mc_number?'MC-'+c.mc_number:''} ${c.trailer_type||''}</div></div><span style="font-size:9px;padding:2px 7px;border-radius:10px;background:rgba(34,197,94,.15);color:#4ade80;font-weight:700;">${(c.status||'active').toUpperCase()}</span></div>`).join('');
+        }else{
+          cl.innerHTML='<div style="font-size:11px;color:rgba(255,255,255,.3);text-align:center;padding:12px;">No active carriers yet — add carriers via onboarding</div>';
+        }
+      }
+    }
+    if(book&&book.loads){
+      activeLoads=book.loads.filter(l=>l.status==='in_transit'||l.status==='active').length;
+      bookedToday=book.loads.filter(l=>l.status==='booked').length;
+    }
+    if(pnl){
+      revMTD=pnl.mtd_revenue!=null?'$'+(pnl.mtd_revenue/1000).toFixed(1)+'k':'—';
+      margin=pnl.avg_margin!=null?Math.round(pnl.avg_margin):'—';
+    }
+  }catch(e){}
+
+  if($('mo-hf-kpi-carriers'))$('mo-hf-kpi-carriers').textContent=carrierCount;
+  if($('mo-hf-kpi-loads'))$('mo-hf-kpi-loads').textContent=activeLoads;
+  if($('mo-hf-kpi-booked'))$('mo-hf-kpi-booked').textContent=bookedToday;
+  if($('mo-hf-kpi-rev'))$('mo-hf-kpi-rev').textContent=revMTD;
+  if($('mo-hf-kpi-margin'))$('mo-hf-kpi-margin').textContent=margin+'%';
+  if($('mo-hf-kpi-dot'))$('mo-hf-kpi-dot').textContent=dotScore==='—'?'—':dotScore+'%';
+
+  const rex=$('mo-hf-rex-feed');
+  if(rex)rex.innerHTML=mkFeed([
+    {color:'#f59e0b',label:'Active Loads',text:'Live dispatch board tracking all in-transit loads. Check-call schedule active. Drivers reporting on time.'},
+    {color:'#22c55e',label:'Today\'s Pickups',text:'Monitoring all scheduled pickups. Carriers confirmed and en route. ETA tracking via ELD ping.'},
+    {color:'#38bdf8',label:'POD Collection',text:'Collecting proof of delivery on all completed loads. BOL scan required within 2 hours of drop.'},
+  ]);
+  const casey=$('mo-hf-casey-feed');
+  if(casey)casey.innerHTML=mkFeed([
+    {color:'#38bdf8',label:'Spot Market',text:'DAT and Truckstop load-to-truck ratio monitored. Carrier pool active across dry van, reefer, and flatbed.'},
+    {color:'#f59e0b',label:'Fuel Surcharge',text:'DOE fuel index tracked weekly. FSC applied to all carrier rate confirmations automatically.'},
+    {color:'#a855f7',label:'Capacity Watch',text:'Southeast capacity tightening. Pre-booking carriers 48hrs ahead for FL and GA lanes recommended.'},
+  ]);
+  const jordan=$('mo-hf-jordan-feed');
+  if(jordan)jordan.innerHTML=mkFeed([
+    {color:'#22c55e',label:'Top Lanes',text:'TX→IL, FL→GA, and CA→AZ running highest margin. Reefer premium averaging +$0.45/mi over dry van.'},
+    {color:'#f59e0b',label:'Rate Trends',text:'National avg dry van spot holding at $2.31/mi. Flatbed surging in TX/OK corridor. Midwest softening.'},
+    {color:'#60a5fa',label:'Expansion Targets',text:'OH→PA and TN→IL lanes showing rising demand. Recommend adding carrier capacity in these corridors.'},
+  ]);
+  const quinn=$('mo-hf-quinn-feed');
+  if(quinn)quinn.innerHTML=mkFeed([
+    {color:'#f5c842',label:'CDL & Compliance',text:'Monitoring CDL expirations, medical card renewals, and insurance COIs for all active carriers. Alerts auto-sent 30 days before expiry.'},
+    {color:'#22c55e',label:'Document Status',text:'BOL and rate con compliance tracking on all loads. POD upload required within 24hrs of delivery.'},
+    {color:'#ef4444',label:'HOS Alerts',text:'Hours of service monitoring via ELD integration. Violations flagged to Rex immediately for dispatch rerouting.'},
+  ]);
 };
 
 /* ── Trading Desk Reports ── */
