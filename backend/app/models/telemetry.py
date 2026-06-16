@@ -26,3 +26,17 @@ class HosStatus(BaseModel):
     shift_remaining_min: int | None = None
     cycle_remaining_min: int | None = None
     violation_flags: list[str] = []
+
+
+class NativePing(BaseModel):
+    """Telemetry payload sent directly from the driver-tracker PWA (browser GPS)."""
+    truck_id: str
+    carrier_id: str | None = None
+    lat: float
+    lng: float
+    speed_mph: float | None = None
+    heading_deg: float | None = None
+    driver_name: str | None = None
+    duty_status: str | None = None
+    accuracy_m: float | None = None
+    ts: datetime | None = None

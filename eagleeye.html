@@ -4938,7 +4938,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 let allCarriers=[], allLoads=[], allInvoices=[], currentInvFilter='all', loadCounter=3849;
 
-const pageNames={dashboard:'Dashboard',dispatch:'Dispatch Board','fleet-map':'Fleet Map',carriers:'Carriers',drivers:'Drivers',loads:'Load Manager',invoices:'Invoices & Billing',compliance:'DOT Compliance',ifta:'IFTA / Permits',insurance:'Insurance',revenue:'Revenue Tracker',providers:'Compliance Providers',checklist:'Daily Checklist',notes:'Dispatcher Notes',reports:'Team Reports','exec-command':'Exec Command',agents:'AI Agents',founders:'Founders Program',leads:'Pipeline',salesforce:'Sales & Marketing',execution:'Execution Engine',factoring:'Factoring',email:'Email Center',vault:'Document Vault',clm:'CLM Scanner',ledger:'Atomic Ledger',agreements:'Agreements','lf-map':'Light Fleet Live Map','lf-nemt':'NEMT — Medical Transport','lf-medical':'Medical Courier','lf-executive':'Executive Transport','lf-courier':'Courier & Last-Mile','lf-gig':'Gig Fleet Management','lf-bizdev':'Light Fleet — Business Development','lf-million':'Light Fleet — $1M Blueprint','load-hunter':'Load Hunter — Live Board Scanner','mark-office':'Mark Odom — CEO Office','ccg-office':'CC Gulley Office','trading-desk':'Trading Desk','broker-division':'N. American Trading — Hub','broker-shippers':'Shipper Pipeline','broker-docs':'Docs & Invoices','trading-desk':'Trading Desk',costs:'Cost Tracking — IEBC','tech-monitor':'Tech Monitor — Marcus Reid & Jamie Park'};
+const pageNames={dashboard:'Dashboard',dispatch:'Dispatch Board','fleet-map':'Fleet Map',carriers:'Carriers',drivers:'Drivers',loads:'Load Manager',invoices:'Invoices & Billing',compliance:'DOT Compliance',ifta:'IFTA / Permits',insurance:'Insurance',revenue:'Revenue Tracker',providers:'Compliance Providers',checklist:'Daily Checklist',notes:'Dispatcher Notes',reports:'Team Reports','exec-command':'Exec Command',agents:'AI Agents',founders:'Founders Program',leads:'Pipeline',salesforce:'Sales & Marketing',execution:'Execution Engine',factoring:'Factoring',email:'Email Center',vault:'Document Vault',clm:'CLM Scanner',ledger:'Atomic Ledger',agreements:'Agreements','lf-map':'Light Fleet Live Map','lf-nemt':'NEMT — Medical Transport','lf-medical':'Medical Courier','lf-executive':'Executive Transport','lf-courier':'Courier & Last-Mile','lf-gig':'Gig Fleet Management','lf-bizdev':'Light Fleet — Business Development','lf-million':'Light Fleet — $1M Blueprint','load-hunter':'Load Hunter — Live Board Scanner','mark-office':'Mark Odom — CEO Office','ccg-office':'CC Gulley Office','trading-desk':'Trading Desk','broker-division':'N. American Trading — Hub','broker-shippers':'Shipper Pipeline','broker-docs':'Docs & Invoices','trading-desk':'Trading Desk',costs:'Cost Tracking — IEBC','tech-monitor':'Tech Monitor — Marcus Reid & Jamie Park','driver-tracker':'Driver GPS Tracker'};
 
 // ── 3 Lakes Logistics Backend API (FastAPI) ──
 const API_BASE = (window.__3LL_API_BASE || 'https://three-lakes-logistics-api.onrender.com').replace(/\/$/,'');
@@ -20288,9 +20288,33 @@ ${(fleet.year||fleet.make||fleet.model||fleet.trailer_type||fleet.vin) ? `
 <div style="padding:12px 16px;display:flex;gap:8px">
   <button class="btn-navy" style="flex:1;font-size:12px;padding:8px" onclick="fmapFlyTo(${row.lat},${row.lng})">📍 Go to Truck</button>
   <button class="btn-out" style="flex:1;font-size:12px;padding:8px" onclick="nav('dispatch')">🚛 Dispatch</button>
+</div>
+<div style="padding:0 16px 14px">
+  <button class="btn-out" style="width:100%;font-size:12px;padding:8px;color:var(--gold);border-color:rgba(201,162,39,.4)" onclick="copyTrackerLink(${JSON.stringify(row.truck_id)},${JSON.stringify(row.carrier_id||'')})">📡 Copy Tracker Link</button>
 </div>`;
 }
 
+
+// ── DRIVER TRACKER LINK ──────────────────────────────────────────────────────
+function copyTrackerLink(truckId, carrierId) {
+  const base = location.origin + '/driver-tracker.html';
+  const params = new URLSearchParams({ truck: truckId });
+  if (carrierId) params.set('carrier', carrierId);
+  const url = base + '?' + params.toString();
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(url).then(() => showToast('Tracker link copied!')).catch(() => _fallbackCopyTrackerLink(url));
+  } else {
+    _fallbackCopyTrackerLink(url);
+  }
+}
+function _fallbackCopyTrackerLink(url) {
+  const ta = document.createElement('textarea');
+  ta.value = url; ta.style.position = 'fixed'; ta.style.opacity = '0';
+  document.body.appendChild(ta); ta.select();
+  try { document.execCommand('copy'); showToast('Tracker link copied!'); }
+  catch(e) { showToast('Copy failed — open: ' + url); }
+  document.body.removeChild(ta);
+}
 
 // ── DRIVER MANAGEMENT ────────────────────────────────────────────────────────
 let _allDrivers = [];
@@ -20337,6 +20361,7 @@ function renderDrivers() {
       <th style="text-align:left;padding:8px 10px;color:var(--muted);font-weight:600">Phone</th>
       <th style="text-align:left;padding:8px 10px;color:var(--muted);font-weight:600">Carrier</th>
       <th style="text-align:left;padding:8px 10px;color:var(--muted);font-weight:600">Status</th>
+      <th style="text-align:left;padding:8px 10px;color:var(--muted);font-weight:600">Tracker</th>
       <th style="text-align:left;padding:8px 10px;color:var(--muted);font-weight:600"></th>
     </tr></thead>
     <tbody>${list.map(d=>`
@@ -20346,6 +20371,7 @@ function renderDrivers() {
       <td style="padding:8px 10px">${esc(d.phone_e164||'—')}</td>
       <td style="padding:8px 10px;color:var(--muted)">${esc(carrier(d.carrier_id))}</td>
       <td style="padding:8px 10px"><span class="badge badge-${d.status==='active'?'green':'orange'}">${esc(d.status)}</span></td>
+      <td style="padding:8px 10px"><button class="btn-out" style="padding:4px 10px;font-size:11px;color:var(--gold);border-color:rgba(201,162,39,.4)" onclick="copyTrackerLink('${esc(d.driver_code||d.id)}','${esc(d.carrier_id||'')}')">📡 Link</button></td>
       <td style="padding:8px 10px"><button class="btn-out" style="padding:4px 10px;font-size:11px" onclick="deactivateDriver('${d.id}')">Deactivate</button></td>
     </tr>`).join('')}</tbody></table>`;
 }
