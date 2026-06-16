@@ -13749,17 +13749,17 @@ window.moTab = function(id){
    (/api/office/state/{key}) so TODOs and contacts are shared across users and
    devices. Falls back silently to localStorage-only if the API/table isn't
    live yet (no regression). */
-async function _officeStateGet(key){
+window._officeStateGet = async function(key){
   try{ const d=await apiFetch(`/api/office/state/${key}`);
     return (d&&d.ok&&Array.isArray(d.value))?d.value:null; }catch(e){ return null; }
-}
-function _officeStatePut(key,value){
+};
+window._officeStatePut = function(key,value){
   try{ apiFetch(`/api/office/state/${key}`,'PUT',{value}).catch(()=>{}); }catch(e){}
-}
+};
 
 /* ── Todo: localStorage cache, mirrored to the shared office store ── */
-function moTodos(){return JSON.parse(localStorage.getItem('mo_todos')||'[]');}
-function moTodosSave(t){localStorage.setItem('mo_todos',JSON.stringify(t));_officeStatePut('mo_todos',t);}
+window.moTodos = function(){return JSON.parse(localStorage.getItem('mo_todos')||'[]');};
+window.moTodosSave = function(t){localStorage.setItem('mo_todos',JSON.stringify(t));_officeStatePut('mo_todos',t);};
 
 let _moTodosSynced=false;
 async function moTodosServerSync(force){
