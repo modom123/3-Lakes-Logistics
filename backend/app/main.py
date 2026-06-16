@@ -65,6 +65,7 @@ from .api import (
     office_router,
     lf_bizdev_router,
     trading_autopilot_router,
+    growth_router,
 )
 from .logging_service import get_logger
 from .settings import get_settings
@@ -312,6 +313,7 @@ def create_app() -> FastAPI:
     app.include_router(office_router,           prefix="/api/office",     tags=["office"])
     app.include_router(lf_bizdev_router,                                   tags=["lf-bizdev"])
     app.include_router(trading_autopilot_router,                           tags=["trading"])
+    app.include_router(growth_router,                                      tags=["growth"])
     app.include_router(health_router,                                      tags=["health"])
 
     _marketing_dir = os.path.normpath(

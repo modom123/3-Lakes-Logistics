@@ -113,14 +113,14 @@ def run_pipeline(
     sb = get_supabase()
     started_at = datetime.now(timezone.utc).isoformat()
 
-    # 1. Source leads
-    use_demo = source == "demo" or (source == "auto" and not s.fmcsa_webkey)
-    raw_leads = _seed_demo_leads(limit) if use_demo else _run_fmcsa_ingest()
+    # 1. Source leads — real FMCSA only; no demo fallback
+    raw_leads = _run_fmcsa_ingest()
+    actual_source = "fmcsa"
     raw_leads = raw_leads[:limit]
 
     log_agent("sonny", "pipeline_source",
-              payload={"source": "demo" if use_demo else "fmcsa", "count": len(raw_leads)},
-              result=f"sourced {len(raw_leads)}")
+              payload={"source": actual_source, "count": len(raw_leads)},
+              result=f"sourced {len(raw_leads)} from {actual_source}")
 
     # 2. Dedupe + insert qualifying leads
     inserted, skipped, calls_queued = 0, 0, 0
@@ -157,7 +157,7 @@ def run_pipeline(
     return {
         "ok": True,
         "started_at": started_at,
-        "source": "demo" if use_demo else "fmcsa",
+        "source": actual_source,
         "sourced": len(raw_leads),
         "inserted": inserted,
         "skipped_low_score_or_dupe": skipped,
@@ -259,12 +259,12 @@ def run_full_machine(
         machine_log.append(entry)
         log_agent("machine", f"machine.{stage}", payload=data or {}, result=msg)
 
-    # ── Stage 1: Source leads ──────────────────────────────────────────────────
-    _log("source", f"Sourcing from {'FMCSA' if source != 'demo' else 'demo'}…")
-    use_demo = source == "demo" or (source == "auto" and not s.fmcsa_webkey)
-    raw_leads = _seed_demo_leads(limit) if use_demo else _run_fmcsa_ingest()
+    # ── Stage 1: Source leads — real FMCSA only; no demo fallback ───────────────
+    _log("source", "Sourcing leads from FMCSA…")
+    raw_leads = _run_fmcsa_ingest()
+    actual_source = "fmcsa"
     raw_leads = raw_leads[:limit]
-    _log("source", f"Sourced {len(raw_leads)} candidates", {"count": len(raw_leads), "source": "demo" if use_demo else "fmcsa"})
+    _log("source", f"Sourced {len(raw_leads)} candidates from {actual_source}", {"count": len(raw_leads), "source": actual_source})
 
     # ── Stage 2: Score + insert qualifying leads ───────────────────────────────
     _log("score", f"Scoring {len(raw_leads)} candidates (min score {min_score})…")
@@ -366,7 +366,7 @@ def run_full_machine(
         "ok": True,
         "started_at": started_at,
         "completed_at": completed_at,
-        "source": "demo" if use_demo else "fmcsa",
+        "source": actual_source,
         "stages": {
             "sourced": len(raw_leads),
             "inserted": inserted,
