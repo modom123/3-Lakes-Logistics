@@ -13973,15 +13973,35 @@ window.moTodoSendToCC = function(){
 };
 
 /* ── Directives ── */
-window.moLoadDirectives = function(){
+window.moLoadDirectives = async function(){
   const log=document.getElementById('mo-directives-log');if(!log)return;
-  const sample=[
-    {ts:'Today',sub:'Q3 Market Pivot — TX/FL Focus',to:'CC Gulley',body:'Shift all carrier acquisition to TX and FL corridors for Q3.'},
-    {ts:'Yesterday',sub:'Compliance Review Deadline',to:'All Divisions',body:'All DOT compliance reviews must be completed and filed by end of month.'},
-    {ts:'Jun 1',sub:'Trading Desk Performance Review',to:'North American Trading',body:'Weekly load board report required. Rex to prepare load mix analysis.'},
-  ];
-  const n=document.getElementById('mo-kpi-directives');if(n)n.textContent=sample.length;
-  log.innerHTML=sample.map(d=>`<div class="mo-dir-card"><div class="mo-dir-card-hd">${d.sub} <span style="color:rgba(255,255,255,.35);font-weight:400;margin-left:6px;">→ ${d.to}</span></div><div class="mo-dir-card-body">${d.body}</div><div class="mo-dir-card-ts">${d.ts}</div></div>`).join('');
+  try{
+    // Directives are stored in agent memory as keys starting with "directive:"
+    const brain = await apiFetch('/api/org/brain/cc_gulley');
+    const entries = brain.memories || brain.items || [];
+    const directives = entries
+      .filter(m=>(m.key||'').startsWith('directive:') || (m.key||'')==='commander_directive')
+      .map(m=>{
+        const val = (typeof m.value==='object') ? m.value : {};
+        return {
+          ts: val.issued_at ? new Date(val.issued_at).toLocaleDateString() : (m.updated_at||m.ts||''),
+          sub: val.subject || m.summary || m.key || 'Directive',
+          to: val.to || 'CC Gulley',
+          body: val.message || '',
+        };
+      })
+      .slice(0,10);
+    const n=document.getElementById('mo-kpi-directives');
+    if(n) n.textContent=directives.length||'0';
+    if(!directives.length){
+      log.innerHTML='<div style="text-align:center;color:rgba(255,255,255,.3);padding:24px;font-size:12px;">No directives issued yet — use the form above to send one.</div>';
+      return;
+    }
+    log.innerHTML=directives.map(d=>`<div class="mo-dir-card"><div class="mo-dir-card-hd">${esc(d.sub)} <span style="color:rgba(255,255,255,.35);font-weight:400;margin-left:6px;">→ ${esc(d.to)}</span></div>${d.body?`<div class="mo-dir-card-body">${esc(d.body)}</div>`:''}<div class="mo-dir-card-ts">${esc(d.ts)}</div></div>`).join('');
+  }catch(e){
+    const n=document.getElementById('mo-kpi-directives');if(n)n.textContent='—';
+    log.innerHTML='<div style="text-align:center;color:rgba(255,255,255,.3);padding:24px;font-size:12px;">Could not load directives</div>';
+  }
 };
 
 window.moBroadcast = function(){
@@ -14000,22 +14020,43 @@ window.moBroadcast = function(){
 };
 
 /* ── Refresh all ── */
-window.moRefreshAll = function(){
+window.moRefreshAll = async function(){
   const ts=document.getElementById('mo-intel-ts');if(ts)ts.textContent=new Date().toLocaleTimeString();
   const feed=document.getElementById('mo-home-feed');
   const open=moTodos().filter(t=>!t.done);
   const urgent=open.filter(t=>moDueCls(t.due)==='urgent');
+  // Pull live snapshots in parallel
+  let lfText='Loading…', tdText='Loading…';
+  try{
+    const [lf,book,pnl] = await Promise.all([
+      apiFetch('/api/light-fleet/kpis').catch(()=>null),
+      apiFetch('/api/trading/live-book/').catch(()=>null),
+      apiFetch('/api/trading/pnl-summary/').catch(()=>null),
+    ]);
+    if(lf){
+      const rev=lf.mtd_revenue?'$'+Number(lf.mtd_revenue).toLocaleString('en-US',{maximumFractionDigits:0})+' MTD':'no revenue data';
+      lfText=`${lf.active_drivers??'—'} active drivers · ${lf.todays_trips??'—'} trips today · ${rev}`;
+    } else { lfText='Unable to load Light Fleet data'; }
+    if(book&&pnl){
+      const mtd=pnl.mtd||{};
+      const rev=mtd.revenue?'$'+Number(mtd.revenue).toLocaleString('en-US',{maximumFractionDigits:0})+' MTD revenue':'no revenue data';
+      const total=book.open_positions||0,uncov=book.uncovered||0;
+      const cov=total>0?Math.round(((total-uncov)/total)*100)+'% coverage':'no loads';
+      tdText=`${total} open loads · ${rev} · ${cov}`;
+    } else { tdText='Unable to load Trading Desk data'; }
+  }catch(_){}
   if(feed){
     feed.innerHTML=[
-      {cls:'gold',from:'Todo Summary',text:`${open.length} open tasks for CC Gulley${urgent.length?`. ${urgent.length} overdue or due today.`:'.'}` },
-      {cls:'green',from:'CC Gulley — Strategy',text:'Strategy unit active. Alexander scanning markets, Naomi targeting Tier A carriers, Winston monitoring retention.'},
-      {cls:'amber',from:'North American Trading',text:'7 active loads · 4 booked today · $84k MTD revenue · 94% coverage · Jordan: TX→IL and FL→GA lanes hot.'},
-      {cls:'green',from:'Light Fleet',text:'88 total drivers active across 5 segments · 138 trips/deliveries today · Fleet health 91% · Revenue $18.4k MTD.'},
-      {cls:'purple',from:'Operations',text:'Dispatch board and fleet tracker online. DOT compliance monitor active.'},
-      {cls:'green',from:'James Bond — IEBC',text:'System integration health: normal. No critical alerts. Intel channel active.'},
+      {cls:'gold',  from:'Todo Summary',          text:`${open.length} open tasks${urgent.length?` · ${urgent.length} overdue or due today`:''}`},
+      {cls:'green', from:'CC Gulley — Strategy',  text:'Strategy unit online. Check CC Gulley office for current directives and agent status.'},
+      {cls:'amber', from:'North American Trading', text:tdText},
+      {cls:'green', from:'Light Fleet',            text:lfText},
+      {cls:'purple',from:'Operations',             text:'Dispatch board and fleet tracker online. DOT compliance monitor active.'},
+      {cls:'green', from:'James Bond — IEBC',      text:'System integration health: normal. No critical alerts. Intel channel active.'},
     ].map(f=>`<div class="mo-feed-item ${f.cls}"><div class="mo-feed-from">${f.from}</div><div class="mo-feed-text">${f.text}</div></div>`).join('');
   }
   moTodoRender();moLoadDirectives();
+  moLFRefresh();moTDRefresh();
 };
 
 window.moRunAgent = function(agent,name){
@@ -14165,71 +14206,90 @@ async function moLoadEmailCount(){
 }
 
 /* ── Light Fleet Reports ── */
-window.moLFRefresh = function(){
+window.moLFRefresh = async function(){
   const $=n=>document.getElementById(n);
-  // Aggregate KPIs (live data from API if available, else representative sample)
-  const segments=[
-    {key:'nemt', drivers:14, trips:38, score:'94%', status:'Dr. James: All 14 drivers active. 38 medical transport trips completed today. Modivcare tender acceptance at 97%. No compliance flags.', color:'#4ade80'},
-    {key:'med',  drivers:8,  trips:22, score:'91%', status:'Elena Ross: 8 couriers on-route. 22 lab/pharma runs completed. Chain of custody tracking nominal. HIPAA compliance confirmed.', color:'#f87171'},
-    {key:'exec', drivers:6,  trips:11, score:'98%', status:'Victor Nash: 6 black-car drivers on standby. 11 executive rides today. Client satisfaction 5.0/5.0. All vehicles detailed and inspected.', color:'#fb923c'},
-    {key:'cour', drivers:18, trips:67, score:'89%', status:'Felix Grant: 18 drivers active. 67 last-mile deliveries completed. Veho and AxleHire loads running ahead of schedule. Cargo van utilization 94%.', color:'#fbbf24'},
-    {key:'gig',  drivers:42, trips:0,  score:'85%', status:'Morgan Hayes: 42 active contractors logged in. Amazon Flex blocks claimed. Spark and DoorDash active. Lugg: 3 moves booked today.', color:'#60a5fa'},
-  ];
-  let totalDrivers=0,totalTrips=0;
-  segments.forEach(s=>{
-    totalDrivers+=s.drivers;totalTrips+=s.trips;
-    if($('mo-lf-'+s.key+'-drivers'))$('mo-lf-'+s.key+'-drivers').textContent=s.drivers;
-    if($('mo-lf-'+s.key+'-trips'))$('mo-lf-'+s.key+'-trips').textContent=s.key==='gig'?'42':s.trips;
-    if($('mo-lf-'+s.key+'-score'))$('mo-lf-'+s.key+'-score').textContent=s.score;
-    if($('mo-lf-'+s.key+'-status'))$('mo-lf-'+s.key+'-status').textContent=s.status;
-  });
-  if($('mo-lf-kpi-drivers'))$('mo-lf-kpi-drivers').textContent=totalDrivers;
-  if($('mo-lf-kpi-trips'))$('mo-lf-kpi-trips').textContent=totalTrips;
-  if($('mo-lf-kpi-rev'))$('mo-lf-kpi-rev').textContent='$18.4k';
-  if($('mo-lf-kpi-health'))$('mo-lf-kpi-health').textContent='91%';
-  if($('mo-lf-kpi-pending'))$('mo-lf-kpi-pending').textContent='24';
+  const dash=v=>v==null||v===''?'—':v;
+  const fmt$=v=>v?'$'+Number(v).toLocaleString('en-US',{maximumFractionDigits:0}):'—';
+  try{
+    const d = await apiFetch('/api/light-fleet/kpis');
+    const byType = d.trips_by_type || {};
+    const byStatus = d.trips_by_status || {};
+    // Per-segment trip counts
+    const segMap = {nemt:'nemt', med:'nemt', exec:'executive', cour:'courier', gig:'gig'};
+    ['nemt','med','exec','cour','gig'].forEach(key=>{
+      const apiKey = segMap[key];
+      if($('mo-lf-'+key+'-trips')) $('mo-lf-'+key+'-trips').textContent = dash(byType[apiKey]);
+      if($('mo-lf-'+key+'-drivers')) $('mo-lf-'+key+'-drivers').textContent = '—';
+      if($('mo-lf-'+key+'-score')) $('mo-lf-'+key+'-score').textContent = '—';
+      if($('mo-lf-'+key+'-status')) $('mo-lf-'+key+'-status').textContent = 'Live data — no cached narrative';
+    });
+    if($('mo-lf-kpi-drivers')) $('mo-lf-kpi-drivers').textContent = dash(d.active_drivers);
+    if($('mo-lf-kpi-trips'))   $('mo-lf-kpi-trips').textContent   = dash(d.todays_trips);
+    if($('mo-lf-kpi-rev'))     $('mo-lf-kpi-rev').textContent     = fmt$(d.mtd_revenue);
+    if($('mo-lf-kpi-health'))  $('mo-lf-kpi-health').textContent  = '—';
+    if($('mo-lf-kpi-pending')) $('mo-lf-kpi-pending').textContent = dash(byStatus.pending);
+  }catch(e){
+    ['mo-lf-kpi-drivers','mo-lf-kpi-trips','mo-lf-kpi-rev','mo-lf-kpi-health','mo-lf-kpi-pending']
+      .forEach(id=>{if($(id))$(id).textContent='—';});
+  }
 };
 
 /* ── Trading Desk Reports ── */
-window.moTDRefresh = function(){
+window.moTDRefresh = async function(){
   const $=n=>document.getElementById(n);
-  if($('mo-td-kpi-loads'))$('mo-td-kpi-loads').textContent='7';
-  if($('mo-td-kpi-booked'))$('mo-td-kpi-booked').textContent='4';
-  if($('mo-td-kpi-lanes'))$('mo-td-kpi-lanes').textContent='12';
-  if($('mo-td-kpi-rev'))$('mo-td-kpi-rev').textContent='$84k';
-  if($('mo-td-kpi-margin'))$('mo-td-kpi-margin').textContent='18';
-  if($('mo-td-kpi-coverage'))$('mo-td-kpi-coverage').textContent='94';
-  const mkFeed=(items)=>items.map(it=>`<div style="padding:7px 10px;border-radius:6px;border-left:3px solid ${it.color||'rgba(255,255,255,.15)'};background:rgba(255,255,255,.03);margin-bottom:5px;"><div style="font-weight:700;font-size:10px;color:${it.color||'rgba(255,255,255,.6)'};margin-bottom:1px;">${it.label}</div><div style="font-size:11px;color:rgba(255,255,255,.55);line-height:1.5;">${it.text}</div></div>`).join('');
-  const rex=$('mo-td-rex-feed');
-  if(rex)rex.innerHTML=mkFeed([
-    {color:'#f59e0b',label:'Active Loads',text:'7 loads in motion. TX→IL flatbed covering at $3.20/mi. FL→GA reefer secured at $2.85/mi. 2 loads tendered, awaiting carrier confirmation.'},
-    {color:'#22c55e',label:'Today\'s Bookings',text:'4 loads booked this morning. Best rate: $4.10/mi on OR→CA lane. DAT spot board showing tightening capacity in Southeast.'},
-    {color:'#38bdf8',label:'Coverage',text:'94% load coverage rate this week. 2 pending loads need carrier assignment before 3pm cutoff.'},
-  ]);
-  const jordan=$('mo-td-jordan-feed');
-  if(jordan)jordan.innerHTML=mkFeed([
-    {color:'#22c55e',label:'Hot Lanes',text:'TX→IL: demand up 12% WoW. FL→GA: reefer capacity tightening. CA→AZ: spot rates rising ahead of summer season.'},
-    {color:'#f59e0b',label:'Rate Watch',text:'National avg dry van spot: $2.31/mi (+$0.08 WoW). Reefer premium holding at +$0.45/mi. Flatbed surging in TX/OK corridor.'},
-    {color:'#ef4444',label:'Risk Flags',text:'Midwest ice storm potential this weekend — pre-book Friday loads by Thursday noon. OH→PA lane historically spikes +15% pre-weather.'},
-  ]);
-  const casey=$('mo-td-casey-feed');
-  if(casey)casey.innerHTML=mkFeed([
-    {color:'#38bdf8',label:'Market Conditions',text:'Freight market tightening moderately. Spot load-to-truck ratio: 3.2 (up from 2.8 last week). Carrier rejection rates rising in Southeast.'},
-    {color:'#a855f7',label:'Fuel Surcharge',text:'DOE fuel index: $3.84/gal. Current FSC: $0.42/mi. Monitor for Friday update — crude up 2% this week.'},
-    {color:'#f5c842',label:'Q3 Outlook',text:'Seasonal capacity tightening expected June–August. Recommend locking in contract lanes for TX/FL corridors before July rate resets.'},
-  ]);
-  const drew=$('mo-td-drew-feed');
-  if(drew)drew.innerHTML=mkFeed([
-    {color:'#a855f7',label:'Shipper Pipeline',text:'14 active shipper accounts. 3 new RFQs in review. Top shipper: Acme Freight — 22 loads/month steady. Contract renewal due Aug 1.'},
-    {color:'#22c55e',label:'Tender Acceptance',text:'Contract tender acceptance: 91% this week. 3 declined due to capacity. Reviewing with Rex for alternative coverage solutions.'},
-    {color:'#f59e0b',label:'New Business',text:'2 prospective shippers in final negotiation. Combined potential: 15 loads/week. Expected close date: end of June.'},
-  ]);
-  const quinn=$('mo-td-quinn-feed');
-  if(quinn)quinn.innerHTML=mkFeed([
-    {color:'#f5c842',label:'Invoice Status',text:'$84k invoiced MTD. $31k outstanding. 4 invoices past 30 days — Drew following up. DSO: 22 days (target: <25).'},
-    {color:'#22c55e',label:'Documents',text:'All active loads have signed rate cons. 6 PODs pending upload. BOL compliance: 98% this week.'},
-    {color:'#ef4444',label:'Disputes',text:'1 open dispute: shipper claims 2-hour detention not pre-authorized. Quinn escalating to Drew for resolution.'},
-  ]);
+  const dash=v=>v==null||v===''?'—':v;
+  const fmt$=v=>v?'$'+Number(v).toLocaleString('en-US',{maximumFractionDigits:0}):'—';
+  const mkFeed=(items)=>items.map(it=>`<div style="padding:7px 10px;border-radius:6px;border-left:3px solid ${it.color||'rgba(255,255,255,.15)'};background:rgba(255,255,255,.03);margin-bottom:5px;"><div style="font-weight:700;font-size:10px;color:${it.color||'rgba(255,255,255,.6)'};margin-bottom:1px;">${esc(it.label)}</div><div style="font-size:11px;color:rgba(255,255,255,.55);line-height:1.5;">${esc(it.text)}</div></div>`).join('');
+  const noData='<div style="font-size:11px;color:rgba(255,255,255,.3);padding:12px 0">No activity logged yet</div>';
+  try{
+    const [book, pnl, act] = await Promise.all([
+      apiFetch('/api/trading/live-book/'),
+      apiFetch('/api/trading/pnl-summary/'),
+      apiFetch('/api/trading/activity/'),
+    ]);
+    const mtd = pnl.mtd || {};
+    const today = pnl.today || {};
+    if($('mo-td-kpi-loads'))   $('mo-td-kpi-loads').textContent   = dash(book.open_positions);
+    if($('mo-td-kpi-booked'))  $('mo-td-kpi-booked').textContent  = dash(today.loads);
+    if($('mo-td-kpi-lanes'))   $('mo-td-kpi-lanes').textContent   = '—';
+    if($('mo-td-kpi-rev'))     $('mo-td-kpi-rev').textContent     = fmt$(mtd.revenue);
+    if($('mo-td-kpi-margin'))  $('mo-td-kpi-margin').textContent  = mtd.avg_margin_pct!=null ? Number(mtd.avg_margin_pct).toFixed(1) : '—';
+    if($('mo-td-kpi-coverage')){
+      const total=book.open_positions||0, uncov=book.uncovered||0;
+      const cov=total>0?Math.round(((total-uncov)/total)*100):null;
+      $('mo-td-kpi-coverage').textContent = cov!=null?cov:'—';
+    }
+    // Activity feed — group by agent
+    const activity = act.activity || [];
+    const byAgent = {};
+    activity.forEach(a=>{ const ag=a.agent||'unknown'; (byAgent[ag]=byAgent[ag]||[]).push(a); });
+    const renderFeed=(id,agentKey,color)=>{
+      const el=$(id); if(!el) return;
+      const items=(byAgent[agentKey]||[]).slice(0,5);
+      if(!items.length){ el.innerHTML=noData; return; }
+      el.innerHTML=mkFeed(items.map(a=>({color,label:a.action||'Activity',text:a.result||''})));
+    };
+    renderFeed('mo-td-rex-feed','rex','#f59e0b');
+    renderFeed('mo-td-jordan-feed','jordan','#22c55e');
+    renderFeed('mo-td-casey-feed','casey','#38bdf8');
+    renderFeed('mo-td-drew-feed','drew','#a855f7');
+    renderFeed('mo-td-quinn-feed','quinn','#f5c842');
+    // Open loads feed
+    const loads = (book.loads||[]).slice(0,5);
+    const rex=$('mo-td-rex-feed');
+    if(rex && loads.length){
+      rex.innerHTML = mkFeed(loads.map(l=>({
+        color: l.risk==='at_risk'?'#ef4444':l.risk==='watch'?'#f59e0b':'#22c55e',
+        label: `${l.origin_city||''}→${l.dest_city||''} · ${l.trailer_type||''}`,
+        text: `Sell $${l.sell_rate||'?'} · Buy $${l.buy_rate||'?'} · Margin ${l.margin_pct||'?'}% · Status: ${l.status||'?'}${l.covering_carrier_name?' · '+l.covering_carrier_name:''}`,
+      })));
+    }
+  }catch(e){
+    ['mo-td-kpi-loads','mo-td-kpi-booked','mo-td-kpi-lanes','mo-td-kpi-rev','mo-td-kpi-margin','mo-td-kpi-coverage']
+      .forEach(id=>{if($(id))$(id).textContent='—';});
+    ['mo-td-rex-feed','mo-td-jordan-feed','mo-td-casey-feed','mo-td-drew-feed','mo-td-quinn-feed']
+      .forEach(id=>{const el=$(id);if(el)el.innerHTML=noData;});
+  }
 };
 
 /* ── KPI Drill-down panel ── */
@@ -14239,30 +14299,22 @@ window.moKpiDrill = function(type){
   const urgent=open.filter(t=>moDueCls(t.due)==='urgent');
   const dueWeek=open.filter(t=>{if(!t.due)return false;return(new Date(t.due).setHours(0,0,0,0)-new Date().setHours(0,0,0,0))/86400000<=7;});
   const done=todos.filter(t=>t.done);
-  const drectives=[
-    {ts:'Today',sub:'Q3 Market Pivot — TX/FL Focus',to:'CC Gulley',body:'Shift all carrier acquisition to TX and FL corridors for Q3.'},
-    {ts:'Yesterday',sub:'Compliance Review Deadline',to:'All Divisions',body:'All DOT compliance reviews must be completed and filed by end of month.'},
-    {ts:'Jun 1',sub:'Trading Desk Performance Review',to:'North American Trading',body:'Weekly load board report required. Rex to prepare load mix analysis.'},
-  ];
   let items=[],title='',isDir=false;
   if(type==='todos'){title='📋 Open Tasks → CC Gulley';items=open.slice(0,10);}
   else if(type==='urgent'){title='🔴 Urgent / Overdue Tasks';items=urgent.slice(0,10);}
   else if(type==='dueWeek'){title='🟡 Due This Week';items=dueWeek.slice(0,10);}
   else if(type==='done'){title='✅ Completed Tasks (Last 10)';items=done.slice(-10).reverse();}
-  else if(type==='directives'){title='📣 Active Directives';items=drectives;isDir=true;}
+  else if(type==='directives'){title='📣 Active Directives';isDir=true;}
   const drill=document.getElementById('mo-kpi-drill');
   const list=document.getElementById('mo-kpi-drill-list');
   const t=document.getElementById('mo-kpi-drill-title');
   if(t)t.textContent=title;
   if(list){
-    if(!items.length){
+    if(isDir){
+      // Directives are loaded/rendered by moLoadDirectives into mo-directives-log
+      list.innerHTML='<div style="font-size:12px;color:rgba(255,255,255,.4);padding:20px 0">See the Directives section below for issued directives.</div>';
+    }else if(!items.length){
       list.innerHTML='<div style="text-align:center;color:rgba(255,255,255,.3);padding:40px;font-size:13px;">No items here yet</div>';
-    }else if(isDir){
-      list.innerHTML=drectives.map(d=>`<div style="padding:11px 14px;border-radius:8px;border:1px solid rgba(255,255,255,.09);background:rgba(255,255,255,.03);border-left:3px solid #f5c842;margin-bottom:10px;">
-        <div style="font-weight:700;font-size:12px;color:#fff;margin-bottom:3px;">${d.sub} <span style="color:rgba(255,255,255,.3);font-weight:400;font-size:10px;">→ ${d.to}</span></div>
-        <div style="font-size:11px;color:rgba(255,255,255,.55);line-height:1.5;">${d.body}</div>
-        <div style="font-size:9px;color:rgba(255,255,255,.28);margin-top:4px;font-family:monospace;">${d.ts}</div>
-      </div>`).join('');
     }else{
       list.innerHTML=items.map(it=>`<div style="display:flex;align-items:flex-start;gap:10px;padding:11px 14px;border-radius:8px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);margin-bottom:8px;">
         <span style="font-size:16px;flex-shrink:0;margin-top:2px;">${it.done?'✅':moDueCls(it.due)==='urgent'?'🔴':moDueCls(it.due)==='soon'?'🟡':'📋'}</span>

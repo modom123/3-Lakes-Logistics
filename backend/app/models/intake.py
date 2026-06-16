@@ -127,7 +127,7 @@ class CarrierIntake(BaseModel):
     # --- Step 6: Plan + e-sign ---
     plan: Plan = "founders"
     founders_truck_count: int = 1  # How many trucks for founders program (if plan == "founders")
-    esign_name: str
+    esign_name: str = ""
     esign_ip: str | None = None
     esign_user_agent: str | None = None
     agreement_pdf_hash: str | None = None

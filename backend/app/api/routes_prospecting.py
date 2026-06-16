@@ -113,17 +113,9 @@ def run_pipeline(
     sb = get_supabase()
     started_at = datetime.now(timezone.utc).isoformat()
 
-    # 1. Source leads — try real FMCSA data first; fall back to demo only if needed
-    actual_source = "demo"
-    if source == "demo":
-        raw_leads = _seed_demo_leads(limit)
-    else:
-        # Try real FMCSA (public DOT Socrata API — works without a key)
-        raw_leads = _run_fmcsa_ingest()
-        if raw_leads:
-            actual_source = "fmcsa"
-        else:
-            raw_leads = _seed_demo_leads(limit)
+    # 1. Source leads — real FMCSA only; no demo fallback
+    raw_leads = _run_fmcsa_ingest()
+    actual_source = "fmcsa"
     raw_leads = raw_leads[:limit]
 
     log_agent("sonny", "pipeline_source",
@@ -267,18 +259,10 @@ def run_full_machine(
         machine_log.append(entry)
         log_agent("machine", f"machine.{stage}", payload=data or {}, result=msg)
 
-    # ── Stage 1: Source leads — try real FMCSA first, fall back to demo ──────────
-    _log("source", f"Sourcing leads…")
-    if source == "demo":
-        raw_leads = _seed_demo_leads(limit)
-        actual_source = "demo"
-    else:
-        raw_leads = _run_fmcsa_ingest()
-        if raw_leads:
-            actual_source = "fmcsa"
-        else:
-            raw_leads = _seed_demo_leads(limit)
-            actual_source = "demo"
+    # ── Stage 1: Source leads — real FMCSA only; no demo fallback ───────────────
+    _log("source", "Sourcing leads from FMCSA…")
+    raw_leads = _run_fmcsa_ingest()
+    actual_source = "fmcsa"
     raw_leads = raw_leads[:limit]
     _log("source", f"Sourced {len(raw_leads)} candidates from {actual_source}", {"count": len(raw_leads), "source": actual_source})
 
