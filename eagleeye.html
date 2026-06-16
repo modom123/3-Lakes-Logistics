@@ -1179,7 +1179,33 @@ select.form-input option{background:var(--surface);}
         </div>
       </div>
       <div id="fmap-body">
-        <div id="fmap-map"></div>
+        <div id="fmap-map" style="position:relative;">
+          <div id="fmap-setup-panel" style="display:none;position:absolute;inset:0;z-index:500;background:rgba(0,0,0,.72);backdrop-filter:blur(4px);align-items:center;justify-content:center;flex-direction:column;padding:24px;">
+            <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:28px 24px;max-width:420px;width:100%;box-shadow:0 8px 40px rgba(0,0,0,.6);">
+              <div style="font-size:18px;font-weight:800;margin-bottom:6px;">No vehicles tracked yet</div>
+              <div style="font-size:13px;color:var(--muted);margin-bottom:22px;">Choose how to start tracking your fleet:</div>
+              <div style="display:flex;flex-direction:column;gap:14px;">
+                <div style="background:#111;border:1px solid var(--border);border-radius:10px;padding:14px 16px;">
+                  <div style="font-size:13px;font-weight:700;margin-bottom:8px;">&#x1F4F1; Send Driver Tracking Link</div>
+                  <div style="display:flex;gap:8px;">
+                    <input id="fmap-setup-truck" placeholder="Truck ID (e.g. TRK-001)" style="flex:1;background:#1a1a1a;border:1px solid var(--border);border-radius:6px;padding:8px 10px;font-size:13px;color:var(--text);outline:none;">
+                    <button class="fmap-btn" style="background:#c9a227;color:#000;border-color:#c9a227;font-weight:700;" onclick="fmapSendDriverLink()">Copy Link</button>
+                  </div>
+                </div>
+                <div style="background:#111;border:1px solid var(--border);border-radius:10px;padding:14px 16px;">
+                  <div style="font-size:13px;font-weight:700;margin-bottom:8px;">&#x1F6F0;&#xFE0F; Connect ELD (Motive / Samsara)</div>
+                  <div style="font-size:12px;color:var(--muted);margin-bottom:8px;">Configure ELD credentials on the Carriers page, then sync.</div>
+                  <button class="fmap-btn" onclick="nav('carriers')" style="font-size:12px;">Go to Carriers &#x2192;</button>
+                </div>
+                <div style="background:#111;border:1px solid var(--border);border-radius:10px;padding:14px 16px;">
+                  <div style="font-size:13px;font-weight:700;margin-bottom:8px;">&#x21BA; Sync from ELD</div>
+                  <div style="font-size:12px;color:var(--muted);margin-bottom:8px;">Pull current positions from all connected ELD providers.</div>
+                  <button class="fmap-btn" id="fmap-pull-btn" onclick="fmapPullEld()" style="font-size:12px;">Pull Now</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
         <div id="fmap-panel">
           <div id="fmap-placeholder">
             <div class="fmap-ph-icon">🚚</div>
@@ -4834,6 +4860,22 @@ select.form-input option{background:var(--surface);}
         <div class="fg"><label class="fl">Service Plan</label><select class="fsel" id="mc-plan"><option value="founders">🏁 Founders — $300/truck/mo</option><option value="pro">💫 Pro — $500/truck/mo</option><option value="pay_as_you_go" selected>⚡ 8% of Load</option></select></div>
         <div class="fg"><label class="fl">ELD Device</label><input class="fi" id="mc-eld" placeholder="Samsara / Motive / etc."></div>
       </div>
+      <div class="form-row-1">
+        <div class="fg" style="display:flex;flex-direction:column;gap:10px;">
+          <div style="font-size:12px;color:var(--muted);font-weight:600;padding-top:2px;">OR use 3 Lakes native GPS tracking (no ELD device needed)</div>
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;">
+            <input type="checkbox" id="mc-native-gps" onchange="toggleNativeGps()" style="accent-color:#c9a227;width:16px;height:16px;">
+            Enable browser-based GPS for this carrier
+          </label>
+          <div id="mc-native-gps-info" style="display:none;background:rgba(201,162,39,.08);border:1px solid rgba(201,162,39,.25);border-radius:8px;padding:10px 12px;font-size:12px;color:#aaa;line-height:1.6;">
+            📱 After onboarding, text the driver their tracking link from the Fleet Map page (&#x27a4; Send Driver Tracking Link).
+          </div>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+            <button type="button" class="btn-out" style="font-size:12px;padding:6px 12px;" onclick="testEldConnection()">&#x1F4F6; Test ELD Connection</button>
+            <span id="eld-test-result" style="font-size:12px;color:var(--muted);"></span>
+          </div>
+        </div>
+      </div>
       <div class="form-row">
         <div class="fg"><label class="fl">Phone</label><input class="fi" id="mc-phone" placeholder="(313) 555-0000"></div>
         <div class="fg"><label class="fl">Email</label><input class="fi" id="mc-email" placeholder="driver@email.com"></div>
@@ -5296,15 +5338,41 @@ async function saveCarrier(){
       phone:document.getElementById('mc-phone').value.trim()||null,
       email:document.getElementById('mc-email').value.trim()||null,
       insurance_carrier:document.getElementById('mc-ins').value.trim()||null,
-      eld_provider:document.getElementById('mc-eld').value.trim()||null,
+      eld_provider:document.getElementById('mc-native-gps')?.checked ? 'native_gps' : (document.getElementById('mc-eld').value.trim()||null),
       status:'onboarding'
     });
     if(!res.ok){const t=await res.text().catch(()=>'');toast('Error: '+(t||res.status),'error');return;}
     closeModal('add-carrier-modal');
     ['mc-name','mc-number','mc-dot','mc-base','mc-phone','mc-email','mc-ins','mc-eld'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+    const ngps=document.getElementById('mc-native-gps');if(ngps)ngps.checked=false;
+    const ngpsInfo=document.getElementById('mc-native-gps-info');if(ngpsInfo)ngpsInfo.style.display='none';
     await loadCarriers();updateDashboard();toast('Carrier saved!');
   }catch(e){toast('Error: '+e.message,'error');}
   finally{btn.disabled=false;btn.textContent='Add Carrier';}
+}
+
+function toggleNativeGps(){
+  const checked=document.getElementById('mc-native-gps')?.checked;
+  const info=document.getElementById('mc-native-gps-info');
+  if(info)info.style.display=checked?'block':'none';
+  const eldInput=document.getElementById('mc-eld');
+  if(eldInput){if(checked){eldInput.value='native_gps';eldInput.disabled=true;}else{eldInput.value='';eldInput.disabled=false;}}
+}
+
+async function testEldConnection(){
+  const provider=document.getElementById('mc-eld').value.trim();
+  const resultEl=document.getElementById('eld-test-result');
+  if(!provider||provider==='native_gps'){if(resultEl)resultEl.textContent='Enter an ELD provider first';return;}
+  if(resultEl){resultEl.textContent='Testing…';resultEl.style.color='var(--muted)';}
+  try{
+    const res=await apiFetch('/api/telemetry/verify-eld','POST',{provider,api_token:'',account_id:null});
+    if(!res.ok){if(resultEl){resultEl.textContent='Request failed';resultEl.style.color='#dc2626';}return;}
+    const d=await res.json();
+    if(resultEl){
+      resultEl.textContent=d.valid?('✓ '+d.message+(d.vehicle_count!=null?' ('+d.vehicle_count+' vehicles)':'')):'✗ '+d.message;
+      resultEl.style.color=d.valid?'#16a34a':'#dc2626';
+    }
+  }catch(e){if(resultEl){resultEl.textContent='Error: '+e.message;resultEl.style.color='#dc2626';}}
 }
 
 async function deleteCarrier(id){
@@ -20146,10 +20214,47 @@ async function fmapRefresh() {
     const badge = document.getElementById('fmap-live-count');
     if (badge) { badge.textContent = count; badge.style.display = count ? 'inline-block' : 'none'; }
     document.getElementById('fmap-last-update').textContent = 'Updated ' + new Date().toLocaleTimeString();
+
+    // Show/hide the no-vehicles setup panel
+    const setupPanel = document.getElementById('fmap-setup-panel');
+    if (setupPanel) {
+      if (count === 0) {
+        setupPanel.style.display = 'flex';
+      } else {
+        setupPanel.style.display = 'none';
+      }
+    }
   } catch (e) {
     if (statusEl) statusEl.textContent = 'Load error — retrying';
     console.error('[FleetMap]', e);
   }
+}
+
+async function fmapSendDriverLink() {
+  const truckId = (document.getElementById('fmap-setup-truck')?.value || '').trim();
+  if (!truckId) { toast('Enter a Truck ID first', 'error'); return; }
+  const carrierId = document.getElementById('fmap-carrier-filter')?.value || '';
+  const qs = `/api/telemetry/driver-link?truck_id=${encodeURIComponent(truckId)}${carrierId ? '&carrier_id=' + encodeURIComponent(carrierId) : ''}`;
+  try {
+    const res = await apiFetch(qs);
+    if (!res.ok) { toast('Failed to generate link', 'error'); return; }
+    const d = await res.json();
+    await navigator.clipboard.writeText(d.url);
+    toast('Driver link copied! ' + d.url.slice(0, 60) + '…');
+  } catch(e) { toast('Error: ' + e.message, 'error'); }
+}
+
+async function fmapPullEld() {
+  const btn = document.getElementById('fmap-pull-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Pulling…'; }
+  try {
+    const res = await apiFetch('/api/telemetry/pull', 'POST');
+    if (!res.ok) { toast('Pull failed', 'error'); return; }
+    const d = await res.json();
+    toast(`Pulled ${d.pulled} position${d.pulled !== 1 ? 's' : ''} from ${(d.providers || []).join(', ') || 'ELD'}`);
+    await fmapRefresh();
+  } catch(e) { toast('Error: ' + e.message, 'error'); }
+  finally { if (btn) { btn.disabled = false; btn.textContent = 'Pull Now'; } }
 }
 
 function _fmapPutMarkers(items) {
