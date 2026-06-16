@@ -10167,7 +10167,7 @@ async function loadTriggerStatus() {
     </div>
     <div style="display:flex;align-items:center;gap:8px;padding:7px 16px;border-bottom:1px solid var(--border)">
       <span style="font-size:11px;font-weight:600;color:var(--muted);width:46px">To</span>
-      <input id="mail-compose-to" type="email" placeholder="recipient@example.com" style="flex:1;border:none;outline:none;font-size:12px;background:transparent">
+      <input id="mail-compose-to" type="text" placeholder="recipient@example.com (comma-separate multiple)" style="flex:1;border:none;outline:none;font-size:12px;background:transparent">
     </div>
     <div style="display:flex;align-items:center;gap:8px;padding:7px 16px;border-bottom:1px solid var(--border)">
       <span style="font-size:11px;font-weight:600;color:var(--muted);width:46px">CC</span>
@@ -13934,6 +13934,7 @@ select.oc-inp option{background:#1a1a2e;color:#fff;}
           </div>
           <div style="padding:12px 14px;display:flex;flex-direction:column;gap:8px;">
             <div><div class="mo-fl">TO</div><input id="mo-compose-to" class="mo-input" placeholder="recipient@email.com"></div>
+            <div><div class="mo-fl">CC</div><input id="mo-compose-cc" class="mo-input" placeholder="cc@email.com (optional)"></div>
             <div><div class="mo-fl">SUBJECT</div><input id="mo-compose-subj" class="mo-input" placeholder="Subject line…"></div>
             <div><div class="mo-fl">MESSAGE</div><textarea id="mo-compose-body" class="mo-textarea" style="min-height:140px;" placeholder="Write your message…"></textarea></div>
             <div style="display:flex;gap:8px;justify-content:flex-end;align-items:center;">
@@ -14762,15 +14763,23 @@ window.moEmailOpen = async function(id,from,mb){
 
 window.moEmailSend = async function(){
   const to=(document.getElementById('mo-compose-to')?.value||'').trim();
+  const cc=(document.getElementById('mo-compose-cc')?.value||'').trim();
   const subj=(document.getElementById('mo-compose-subj')?.value||'').trim();
   const body=(document.getElementById('mo-compose-body')?.value||'').trim();
   const st=document.getElementById('mo-compose-status');
   if(!to||!body){if(st)st.textContent='To and message required.';return;}
   if(st)st.textContent='Sending…';
   try{
-    await API.post('/api/mailboxes/compose',{from_mailbox:_moCurrentMailbox,to:[to],subject:subj||'(No subject)',body_text:body});
+    const fd=new FormData();
+    fd.append('from_mailbox',_moCurrentMailbox);
+    fd.append('to',to);
+    fd.append('subject',subj||'(No subject)');
+    fd.append('body_text',body);
+    fd.append('body_html','');
+    if(cc)fd.append('cc',cc);
+    await apiFetch('/api/mailboxes/compose','POST',fd);
     if(st)st.textContent='✓ Sent';
-    setTimeout(()=>{document.getElementById('mo-compose').style.display='none';if(st)st.textContent='';['mo-compose-to','mo-compose-subj','mo-compose-body'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});},1500);
+    setTimeout(()=>{document.getElementById('mo-compose').style.display='none';if(st)st.textContent='';['mo-compose-to','mo-compose-cc','mo-compose-subj','mo-compose-body'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});},1500);
   }catch(e){if(st)st.textContent='Send failed: '+e.message;}
 };
 
@@ -15693,6 +15702,7 @@ window.moGrowthPlan = async function(){
           </div>
           <div style="padding:12px 14px;display:flex;flex-direction:column;gap:8px;">
             <div><div class="ccg-fl">TO</div><input id="ccg-compose-to" class="ccg-input" placeholder="recipient@email.com"></div>
+            <div><div class="ccg-fl">CC</div><input id="ccg-compose-cc" class="ccg-input" placeholder="cc@email.com (optional)"></div>
             <div><div class="ccg-fl">SUBJECT</div><input id="ccg-compose-subj" class="ccg-input" placeholder="Subject line…"></div>
             <div><div class="ccg-fl">MESSAGE</div><textarea id="ccg-compose-body" class="ccg-textarea" style="min-height:130px;" placeholder="Write your message…"></textarea></div>
             <div style="display:flex;gap:8px;justify-content:flex-end;align-items:center;">
@@ -16274,15 +16284,23 @@ window.ccgEmailOpen = async function(id,from){
 
 window.ccgEmailSend = async function(){
   const to=(document.getElementById('ccg-compose-to')?.value||'').trim();
+  const cc=(document.getElementById('ccg-compose-cc')?.value||'').trim();
   const subj=(document.getElementById('ccg-compose-subj')?.value||'').trim();
   const body=(document.getElementById('ccg-compose-body')?.value||'').trim();
   const st=document.getElementById('ccg-compose-status');
   if(!to||!body){if(st)st.textContent='To and message required.';return;}
   if(st)st.textContent='Sending…';
   try{
-    await API.post('/api/mailboxes/compose',{from_mailbox:'cece',to:[to],subject:subj||'(No subject)',body_text:body});
+    const fd=new FormData();
+    fd.append('from_mailbox','cece');
+    fd.append('to',to);
+    fd.append('subject',subj||'(No subject)');
+    fd.append('body_text',body);
+    fd.append('body_html','');
+    if(cc)fd.append('cc',cc);
+    await apiFetch('/api/mailboxes/compose','POST',fd);
     if(st)st.textContent='✓ Sent';
-    setTimeout(()=>{document.getElementById('ccg-compose').style.display='none';if(st)st.textContent='';['ccg-compose-to','ccg-compose-subj','ccg-compose-body'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});},1500);
+    setTimeout(()=>{document.getElementById('ccg-compose').style.display='none';if(st)st.textContent='';['ccg-compose-to','ccg-compose-cc','ccg-compose-subj','ccg-compose-body'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});},1500);
   }catch(e){if(st)st.textContent='Send failed: '+e.message;}
 };
 
