@@ -302,6 +302,102 @@ def update_shipper(payload: dict) -> dict:
     return {"agent": "drew", "action": "update_shipper", "status": "updated", "shipper_id": shipper_id, "fields": list(update.keys())}
 
 
+def seed_prospects(payload: dict) -> dict:
+    """Use Claude to generate 20 realistic shipper prospect companies and insert them into broker_shippers."""
+    industries = payload.get("industries") or ["food_beverage", "manufacturing", "retail", "building_materials", "consumer_goods"]
+    states = payload.get("states") or ["IL", "TX", "FL", "OH", "GA", "PA", "NC", "TN"]
+    limit = int(payload.get("limit") or 20)
+
+    s = get_settings()
+    if not s.anthropic_api_key:
+        return {"agent": "drew", "status": "error", "error": "ANTHROPIC_API_KEY not configured"}
+
+    system = (
+        f"You are a B2B data analyst specializing in freight shipper research. "
+        f"Generate {limit} realistic US freight shipper prospects for a freight broker targeting "
+        f"{industries} in {states}. Return ONLY a valid JSON array, no markdown. "
+        "Each prospect needs: company_name, contact_name, phone (US format with area code), email, "
+        "address_city, address_state, primary_commodity (one of: food_beverage, manufacturing, "
+        "auto_parts, building_materials, consumer_goods, retail, chemical, paper), "
+        "trailer_types (array, values: dry_van/reefer/flatbed/step_deck), "
+        "avg_loads_per_week (integer 2-30), avg_load_value (integer 1800-4500), "
+        "notes (one sentence about their shipping profile and why they need a broker)."
+    )
+
+    example = (
+        '[{"company_name":"Acme Foods Inc","contact_name":"Logistics Manager",'
+        '"phone":"(312) 555-0142","email":"logistics@acmefoods.com","address_city":"Chicago",'
+        '"address_state":"IL","primary_commodity":"food_beverage","trailer_types":["reefer"],'
+        '"avg_loads_per_week":8,"avg_load_value":2800,'
+        '"notes":"Regional food distributor, 3PL contract up for renewal Q3"}]'
+    )
+
+    prospects: list[dict] = []
+    try:
+        resp = httpx.post(
+            "https://api.anthropic.com/v1/messages",
+            headers={
+                "x-api-key": s.anthropic_api_key,
+                "anthropic-version": "2023-06-01",
+                "Content-Type": "application/json",
+            },
+            json={
+                "model": "claude-haiku-4-5-20251001",
+                "max_tokens": 4000,
+                "system": system,
+                "messages": [{"role": "user", "content": f"Generate the prospects. Example format:\n{example}"}],
+            },
+            timeout=30,
+        )
+        if resp.status_code == 200:
+            _d = resp.json()
+            try:
+                from ..cost_tracking import track_anthropic as _ta
+                _usage = _d.get("usage", {})
+                _ta("claude-haiku-4-5-20251001", _usage.get("input_tokens", 0), _usage.get("output_tokens", 0), agent="drew")
+            except Exception:
+                pass
+            text = _d["content"][0]["text"].strip()
+            if text.startswith("```"):
+                text = "\n".join(text.split("\n")[1:])
+                text = text.rsplit("```", 1)[0]
+            prospects = json.loads(text)
+    except Exception as exc:
+        log_agent("drew", "seed_prospects", result=f"claude_error={exc}")
+        return {"agent": "drew", "status": "error", "error": str(exc), "seeded": 0, "errors": 0, "source": "claude_ai"}
+
+    db = get_supabase()
+    seeded, errors = 0, 0
+
+    for p in prospects:
+        company_name = (p.get("company_name") or "").strip()
+        if not company_name:
+            errors += 1
+            continue
+        try:
+            db.table("broker_shippers").insert({
+                "company_name":       company_name,
+                "contact_name":       p.get("contact_name"),
+                "phone":              p.get("phone"),
+                "email":              p.get("email"),
+                "address_city":       p.get("address_city"),
+                "address_state":      (p.get("address_state") or "").upper()[:2] or None,
+                "primary_commodity":  p.get("primary_commodity"),
+                "trailer_types":      p.get("trailer_types") or ["dry_van"],
+                "avg_loads_per_week": p.get("avg_loads_per_week"),
+                "avg_load_value":     p.get("avg_load_value"),
+                "notes":              p.get("notes"),
+                "status":             "prospect",
+                "source":             "drew_ai_seed",
+            }).execute()
+            seeded += 1
+        except Exception:
+            errors += 1
+
+    log_agent("drew", "seed_prospects", result=f"seeded={seeded} errors={errors}")
+    return {"seeded": seeded, "errors": errors, "source": "claude_ai"}
+
+
 def run(payload: dict[str, Any]) -> dict[str, Any]:
     action = payload.get("action", "pipeline")
     if action == "prospect":
@@ -314,5 +410,7 @@ def run(payload: dict[str, Any]) -> dict[str, Any]:
         return pipeline(payload)
     if action == "update_shipper":
         return update_shipper(payload)
+    if action == "seed_prospects":
+        return seed_prospects(payload)
     return {"agent": "drew", "status": "error", "error": f"unknown action: {action}",
-            "valid_actions": ["prospect", "add_shipper", "call_shipper", "pipeline", "update_shipper"]}
+            "valid_actions": ["prospect", "add_shipper", "call_shipper", "pipeline", "update_shipper", "seed_prospects"]}

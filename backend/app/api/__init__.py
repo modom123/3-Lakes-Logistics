@@ -40,6 +40,7 @@ from .routes_cost_tracking     import router as cost_tracking_router
 from .routes_office            import router as office_router
 from .routes_lf_bizdev         import router as lf_bizdev_router
 from .routes_trading           import router as trading_autopilot_router
+from .routes_growth            import router as growth_router
 
 from ..clm             import clm_router
 from ..email_ingest    import router as email_ingest_router
@@ -100,4 +101,5 @@ __all__ = [
     "office_router",
     "lf_bizdev_router",
     "trading_autopilot_router",
+    "growth_router",
 ]
