@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from typing import Any
 import httpx
 from fastapi import APIRouter, Depends
-from ..api.deps import require_bearer
+from .deps import require_bearer
 from ..logging_service import log_agent
 from ..settings import get_settings
 from ..supabase_client import get_supabase
