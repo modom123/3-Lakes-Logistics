@@ -10,7 +10,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import PlainTextResponse
+from fastapi.responses import HTMLResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 
 from .api import (
@@ -321,6 +321,28 @@ def create_app() -> FastAPI:
     )
     if os.path.isdir(_marketing_dir):
         app.mount("/marketing", StaticFiles(directory=_marketing_dir), name="marketing")
+
+    _legal_dir = os.path.normpath(
+        os.path.join(os.path.dirname(__file__), "..", "..")
+    )
+
+    @app.get("/privacy-policy", include_in_schema=False)
+    async def privacy_policy():
+        pp_path = os.path.join(_legal_dir, "privacy-policy.html")
+        with open(pp_path) as f:
+            return HTMLResponse(f.read())
+
+    @app.get("/terms-of-service", include_in_schema=False)
+    async def terms_of_service():
+        tos_path = os.path.join(_legal_dir, "terms-of-service.html")
+        with open(tos_path) as f:
+            return HTMLResponse(f.read())
+
+    @app.get("/data-safety", include_in_schema=False)
+    async def data_safety():
+        ds_path = os.path.join(_legal_dir, "data-safety.html")
+        with open(ds_path) as f:
+            return HTMLResponse(f.read())
 
     @app.get("/google9f88d93f841d8a95.html", include_in_schema=False)
     async def google_site_verification():
