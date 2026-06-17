@@ -27,14 +27,16 @@ from typing import Any
 
 import httpx
 
-from ..logging_service import log_agent
+from ..logging_service import get_logger, log_agent
 from ..settings import get_settings
 from ..supabase_client import get_supabase
 from . import alexander as alexander_agent
 from . import memory as mem
 
+log = get_logger("3ll.naomi")
+
 _FMCSA_BASE = "https://data.transportation.gov/resource/az4n-8mr2.json"
-_TIMEOUT = 20
+_TIMEOUT = 30
 
 _HIGH_VALUE_EQUIPMENT = {"dry van", "reefer", "flatbed", "step deck", "power only"}
 
@@ -102,13 +104,15 @@ def _get_hot_states(top_n: int = 5) -> dict[str, float]:
             result={"states_retrieved": len(multipliers_live)},
             outcome="success", outcome_notes=f"Live Alexander call: top state {ranked[0][0] if ranked else 'N/A'}")
         return multipliers_live
-    except Exception:
+    except Exception as exc:
+        log.error("_get_hot_states failed: %s", exc)
         return {}
 
 
 # ── Stage 2: FMCSA census pull ────────────────────────────────────────────────
 
-def _fmcsa_fetch(where: str, limit: int = 50) -> list[dict]:
+def _fmcsa_fetch(where: str, limit: int = 50, _retries: int = 2) -> list[dict]:
+    import time
     settings = get_settings()
     params: dict[str, Any] = {
         "$where": where,
@@ -123,12 +127,31 @@ def _fmcsa_fetch(where: str, limit: int = 50) -> list[dict]:
     headers: dict[str, str] = {}
     if settings.dot_api_key:
         headers["X-App-Token"] = settings.dot_api_key
-    try:
-        r = httpx.get(_FMCSA_BASE, params=params, headers=headers, timeout=_TIMEOUT)
-        r.raise_for_status()
-        return r.json() or []
-    except Exception:
-        return []
+    else:
+        log.warning("DOT_API_KEY not set — FMCSA requests may be rate-limited")
+    for attempt in range(_retries + 1):
+        try:
+            r = httpx.get(_FMCSA_BASE, params=params, headers=headers, timeout=_TIMEOUT)
+            r.raise_for_status()
+            data = r.json() or []
+            log.info("FMCSA fetch: %d rows for query: %s", len(data), where[:80])
+            return data
+        except httpx.HTTPStatusError as exc:
+            log.error("FMCSA HTTP %s (attempt %d/%d) for: %s — %s",
+                       exc.response.status_code, attempt + 1, _retries + 1,
+                       where[:80], exc.response.text[:200])
+            if exc.response.status_code == 429 and attempt < _retries:
+                time.sleep(2 * (attempt + 1))
+                continue
+            return []
+        except Exception as exc:
+            log.error("FMCSA fetch failed (attempt %d/%d): %s — query: %s",
+                       attempt + 1, _retries + 1, exc, where[:80])
+            if attempt < _retries:
+                time.sleep(2 * (attempt + 1))
+                continue
+            return []
+    return []
 
 
 def _int(val: Any) -> int:
@@ -149,6 +172,7 @@ def _pull_fmcsa_prospects(hot_states: dict[str, float], per_state: int = 30) -> 
     known_dots = {str(r["dot_number"]) for r in (existing.data or [])}
 
     prospects: list[dict[str, Any]] = []
+    log.info("Pulling FMCSA prospects for %d states: %s", len(hot_states), list(hot_states.keys())[:5])
     for state in list(hot_states.keys())[:5]:  # top 5 hot states
         where = (
             f"phy_state='{state}' AND operating_status='AUTHORIZED' "
@@ -181,6 +205,7 @@ def _pull_fmcsa_prospects(hot_states: dict[str, float], per_state: int = 30) -> 
             })
             known_dots.add(dot)  # prevent dupes across states
 
+    log.info("FMCSA prospects: %d new carriers found across %d states", len(prospects), min(len(hot_states), 5))
     return prospects
 
 
