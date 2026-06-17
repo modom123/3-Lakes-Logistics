@@ -107,8 +107,8 @@ jobs:
         working-directory: android
         env:
           STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
-          KEY_ALIAS:      ${{ secrets.ANDROID_LF_KEY_ALIAS }}
-          KEY_PASSWORD:   ${{ secrets.ANDROID_LF_KEY_PASSWORD }}
+          KEY_ALIAS:      ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD:   ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
           ./gradlew bundleRelease \
             -Pandroid.injected.signing.store.file=$GITHUB_WORKSPACE/android/app/3lakes-release.keystore \
