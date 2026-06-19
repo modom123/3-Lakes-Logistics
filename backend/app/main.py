@@ -108,6 +108,7 @@ def _start_scheduler(app: FastAPI) -> None:
             fire_marcus_reid,
             fire_jamie_park,
             fire_lf_bizdev,
+            fire_lf_bizdev_seed,
             fire_trading_acquisition,
             fire_trading_coverage,
             fire_trading_daily_close,
@@ -151,6 +152,7 @@ def _start_scheduler(app: FastAPI) -> None:
         scheduler.add_job(fire_lf_weekly_payouts, CronTrigger(day_of_week="fri", hour=17, minute=0), id="lf_weekly_payouts", replace_existing=True)
         scheduler.add_job(fire_lf_recurring_trips, CronTrigger(hour=5, minute=0), id="lf_recurring_trips_daily", replace_existing=True)
         scheduler.add_job(fire_lf_bizdev, CronTrigger(hour=14, minute=45), id="lf_bizdev_daily", replace_existing=True)
+        scheduler.add_job(fire_lf_bizdev_seed, CronTrigger(day_of_week="mon", hour=7, minute=0), id="lf_bizdev_seed_weekly", replace_existing=True)
         scheduler.add_job(fire_trading_acquisition, IntervalTrigger(hours=2), id="trading_acquisition", replace_existing=True)
         scheduler.add_job(fire_trading_coverage, IntervalTrigger(minutes=30), id="trading_coverage", replace_existing=True)
         scheduler.add_job(fire_trading_daily_close, CronTrigger(hour=21, minute=0), id="trading_daily_close", replace_existing=True)

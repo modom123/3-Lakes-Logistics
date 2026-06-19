@@ -72,8 +72,8 @@ def _claude_generate_prospects(sector: str, context: str, limit: int = 15) -> li
         f"You are a B2B sales researcher. Generate {limit} realistic US company prospects "
         f"for a {sector} transportation service. Return ONLY a valid JSON array, no markdown. "
         "Each item: {\"company\": string, \"contact\": string, \"phone\": \"(XXX) XXX-XXXX\", "
-        "\"email\": string or null, \"city\": string, \"state\": two-letter, \"sector\": string, "
-        "\"rep\": \"marcus_webb\", \"status\": \"prospect\", \"source\": \"claude_ai\", "
+        "\"email\": string or null, \"city\": string, \"state\": two-letter, "
+        "\"status\": \"prospect\", \"source\": \"claude_ai\", "
         "\"notes\": one sentence about their transport needs}"
     )
     try:
@@ -140,6 +140,7 @@ def seed_lf_prospects(body: dict = {}) -> dict:  # noqa: B006
     )
     for p in enterprise_raw:
         p["sector"] = "enterprise"
+        p["rep"] = "jordan_vale"
     all_prospects.extend(enterprise_raw)
 
     # Platform / last-mile — AI-generated e-commerce / fulfillment prospects
@@ -152,13 +153,23 @@ def seed_lf_prospects(body: dict = {}) -> dict:  # noqa: B006
     )
     for p in platform_raw:
         p["sector"] = "platform"
+        p["rep"] = "priya_santos"
     all_prospects.extend(platform_raw)
 
-    # Insert into lf_bd_prospects
+    # Fetch existing company names to avoid duplicates
+    existing_rows = (db.table("lf_bd_prospects").select("company").limit(2000).execute()).data or []
+    existing_companies = {r["company"].strip().lower() for r in existing_rows if r.get("company")}
+
+    # Insert into lf_bd_prospects (skip duplicates by company name)
     for p in all_prospects:
         company = (p.get("company") or "").strip()
         if not company:
             continue
+        if company.lower() in existing_companies:
+            continue
+        sector = p.get("sector") or "healthcare"
+        rep_map = {"healthcare": "marcus_webb", "enterprise": "jordan_vale", "platform": "priya_santos"}
+        rep = p.get("rep") or rep_map.get(sector, "marcus_webb")
         try:
             db.table("lf_bd_prospects").insert({
                 "company": company,
@@ -167,8 +178,8 @@ def seed_lf_prospects(body: dict = {}) -> dict:  # noqa: B006
                 "email": p.get("email"),
                 "city": p.get("city"),
                 "state": p.get("state"),
-                "sector": p.get("sector") or "healthcare",
-                "rep": p.get("rep") or "marcus_webb",
+                "sector": sector,
+                "rep": rep,
                 "status": "prospect",
                 "source": p.get("source") or "growth_seed",
                 "notes": p.get("notes"),
@@ -178,6 +189,7 @@ def seed_lf_prospects(body: dict = {}) -> dict:  # noqa: B006
                 "do_not_contact": False,
                 "created_at": now,
             }).execute()
+            existing_companies.add(company.lower())
             seeded += 1
         except Exception:
             errors += 1

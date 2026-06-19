@@ -457,12 +457,14 @@ def run_email_sequence(daily_limit: int = 30) -> dict[str, Any]:
             log_agent("lf_bizdev", "log_insert_failed", payload={"prospect_id": prospect_id}, error=str(log_exc))
 
         if result.get("status") == "sent":
-            # Update prospect
+            current_status = prospect.get("status") or "prospect"
+            new_status = "prospecting" if current_status == "prospect" else current_status
             db.table("lf_bd_prospects").update({
                 "sequence_step": next_step,
                 "email_count": email_count + 1,
                 "last_email_at": now_iso,
                 "last_contact_at": now_iso,
+                "status": new_status,
                 "updated_at": now_iso,
             }).eq("id", prospect_id).execute()
             sent += 1

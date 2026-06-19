@@ -552,6 +552,24 @@ def fire_lf_bizdev() -> None:
     _bg(_run)
 
 
+def fire_lf_bizdev_seed() -> None:
+    """Monday 07:00 UTC — refill lf_bd_prospects from NPI + Claude AI, then kick campaigns."""
+    def _run():
+        try:
+            from .api.routes_growth import seed_lf_prospects  # noqa: PLC0415
+            log.info("weekly_seed: lf_bizdev_seed starting")
+            result = seed_lf_prospects()
+            log.info(
+                "weekly_seed: lf_bizdev_seed done seeded=%s emails=%s calls=%s",
+                result.get("prospects_seeded"),
+                result.get("email_outreach", {}).get("sent"),
+                result.get("call_outreach", {}).get("calls_queued"),
+            )
+        except Exception as exc:  # noqa: BLE001
+            log.error("weekly_seed: lf_bizdev_seed failed: %s", exc)
+    _bg(_run)
+
+
 def fire_trading_acquisition() -> None:
     """Every 2 hours — Jordan scans hot freight states, Rex scores, auto-posts."""
     def _run():
