@@ -363,11 +363,14 @@ def _send_postmark_email(to: str, subject: str, body: str) -> dict[str, Any]:
                 "Subject": subject,
                 "TextBody": body,
                 "MessageStream": "outbound",
+                "TrackOpens": True,
+                "TrackLinks": "None",
             },
             timeout=15,
         )
         r.raise_for_status()
-        return {"status": "sent"}
+        data = r.json()
+        return {"status": "sent", "message_id": data.get("MessageID")}
     except Exception as exc:  # noqa: BLE001
         return {"status": "error", "error": str(exc)}
 
@@ -452,6 +455,7 @@ def run_email_sequence(daily_limit: int = 30) -> dict[str, Any]:
                 "subject": subject,
                 "body": body[:2000],
                 "status": result.get("status", "sent"),
+                "message_id": result.get("message_id"),
             }).execute()
         except Exception as log_exc:  # noqa: BLE001
             log_agent("lf_bizdev", "log_insert_failed", payload={"prospect_id": prospect_id}, error=str(log_exc))

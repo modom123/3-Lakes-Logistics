@@ -140,28 +140,94 @@ def outreach_log(limit: int = 20) -> dict:
 
 @router.post("/sms-blast")
 def sms_blast(body: dict) -> dict:
-    """Queue an SMS to a list of leads. Logs the campaign; delivery requires Twilio."""
+    """Send SMS to a list of leads via Twilio."""
+    import httpx
     from ..logging_service import log_agent
+    from ..settings import get_settings
     lead_ids = body.get("lead_ids") or []
     message = body.get("message") or ""
     if not lead_ids or not message:
         raise HTTPException(400, "lead_ids and message are required")
+
+    s = get_settings()
+    if not s.twilio_account_sid or not s.twilio_auth_token:
+        raise HTTPException(503, "Twilio not configured")
+
+    db = get_supabase()
+    rows = (db.table("leads").select("id,phone").in_("id", [str(i) for i in lead_ids]).execute()).data or []
+    phone_map = {str(r["id"]): r.get("phone") for r in rows}
+
+    sent, failed = 0, 0
+    twilio_url = f"https://api.twilio.com/2010-04-01/Accounts/{s.twilio_account_sid}/Messages.json"
+    for lid in lead_ids:
+        phone = phone_map.get(str(lid))
+        if not phone:
+            failed += 1
+            continue
+        try:
+            r = httpx.post(
+                twilio_url,
+                auth=(s.twilio_account_sid, s.twilio_auth_token),
+                data={"From": s.twilio_from_number, "To": phone, "Body": message},
+                timeout=10,
+            )
+            if r.is_success:
+                sent += 1
+            else:
+                failed += 1
+        except Exception:
+            failed += 1
+
     log_agent("isabella", "sms_blast",
               payload={"count": len(lead_ids), "message_preview": message[:80]},
-              result=f"SMS queued for {len(lead_ids)} leads")
-    return {"ok": True, "sent": len(lead_ids), "queued": len(lead_ids)}
+              result=f"SMS sent={sent} failed={failed}")
+    return {"ok": True, "sent": sent, "failed": failed}
 
 
 @router.post("/email-blast")
 def email_blast(body: dict) -> dict:
-    """Queue an email to a list of leads. Logs the campaign; delivery requires SendGrid/Mailgun."""
+    """Send email to a list of leads via Postmark."""
+    import httpx
     from ..logging_service import log_agent
+    from ..settings import get_settings
     lead_ids = body.get("lead_ids") or []
     subject = body.get("subject") or ""
     email_body = body.get("body") or ""
     if not lead_ids or not subject:
         raise HTTPException(400, "lead_ids and subject are required")
+
+    s = get_settings()
+    if not s.postmark_server_token:
+        raise HTTPException(503, "Postmark not configured")
+
+    db = get_supabase()
+    rows = (db.table("leads").select("id,email,legal_name").in_("id", [str(i) for i in lead_ids]).execute()).data or []
+
+    sent, failed = 0, 0
+    for lead in rows:
+        email = (lead.get("email") or "").strip()
+        if not email:
+            failed += 1
+            continue
+        try:
+            r = httpx.post(
+                "https://api.postmarkapp.com/email",
+                headers={"X-Postmark-Server-Token": s.postmark_server_token,
+                         "Content-Type": "application/json"},
+                json={"From": s.postmark_from_email, "To": email,
+                      "Subject": subject, "TextBody": email_body,
+                      "MessageStream": "outbound",
+                      "TrackOpens": True, "TrackLinks": "None"},
+                timeout=12,
+            )
+            if r.is_success:
+                sent += 1
+            else:
+                failed += 1
+        except Exception:
+            failed += 1
+
     log_agent("echo", "email_blast",
               payload={"count": len(lead_ids), "subject": subject},
-              result=f"Email queued for {len(lead_ids)} leads — subject: {subject[:60]}")
-    return {"ok": True, "sent": len(lead_ids), "queued": len(lead_ids)}
+              result=f"Email sent={sent} failed={failed} — subject: {subject[:60]}")
+    return {"ok": True, "sent": sent, "failed": failed}
