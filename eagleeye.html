@@ -10145,111 +10145,6 @@ async function loadTriggerStatus() {
   </div>
 </div>
 
-<!-- Compose modal -->
-<div id="mail-compose-modal" style="display:none;position:fixed;bottom:24px;right:24px;width:740px;max-width:96vw;background:var(--surface);border:1px solid var(--border);border-radius:10px;box-shadow:0 12px 40px rgba(0,0,0,.25);z-index:9300;flex-direction:column;max-height:92vh;min-height:480px;resize:both;overflow:hidden">
-  <div id="mail-compose-dragbar" style="padding:11px 16px;background:var(--navy);color:#fff;border-radius:10px 10px 0 0;display:flex;justify-content:space-between;align-items:center;cursor:move;user-select:none">
-    <span id="mail-compose-title" style="font-size:13px;font-weight:600">New Message</span>
-    <div style="display:flex;align-items:center;gap:10px">
-      <span style="font-size:10px;color:rgba(255,255,255,.35);font-style:italic">drag to move · resize from corner</span>
-      <button onclick="mailCloseCompose()" style="background:none;border:none;color:rgba(255,255,255,.7);font-size:20px;cursor:pointer;line-height:1;padding:0">×</button>
-    </div>
-  </div>
-  <div style="border-bottom:1px solid var(--border)">
-    <div style="display:flex;align-items:center;gap:8px;padding:7px 16px;border-bottom:1px solid var(--border)">
-      <span style="font-size:11px;font-weight:600;color:var(--muted);width:46px">From</span>
-      <select id="mail-compose-from" onchange="mailUpdateComposeWarn()" style="flex:1;border:none;outline:none;font-size:12px;background:transparent">
-        <option value="loads">loads@3lakeslogistics.com</option>
-        <option value="sales">sales@3lakeslogistics.com</option>
-        <option value="info">info@3lakeslogistics.com</option>
-        <option value="mark">mark@3lakeslogistics.com</option>
-        <option value="cece">cece@3lakeslogistics.com</option>
-      </select>
-    </div>
-    <div style="display:flex;align-items:center;gap:8px;padding:7px 16px;border-bottom:1px solid var(--border)">
-      <span style="font-size:11px;font-weight:600;color:var(--muted);width:46px">To</span>
-      <input id="mail-compose-to" type="text" placeholder="recipient@example.com (comma-separate multiple)" style="flex:1;border:none;outline:none;font-size:12px;background:transparent;color:var(--text)">
-    </div>
-    <div style="display:flex;align-items:center;gap:8px;padding:7px 16px;border-bottom:1px solid var(--border)">
-      <span style="font-size:11px;font-weight:600;color:var(--muted);width:46px">CC</span>
-      <input id="mail-compose-cc" type="text" placeholder="optional" style="flex:1;border:none;outline:none;font-size:12px;background:transparent;color:var(--text)">
-    </div>
-    <div style="display:flex;align-items:center;gap:8px;padding:7px 16px">
-      <span style="font-size:11px;font-weight:600;color:var(--muted);width:46px">Subject</span>
-      <input id="mail-compose-subject" type="text" placeholder="Subject" style="flex:1;border:none;outline:none;font-size:12px;font-weight:500;background:transparent;color:var(--text)">
-    </div>
-  </div>
-  <textarea id="mail-compose-body" placeholder="Write your message…" style="flex:1;min-height:340px;border:none;outline:none;padding:12px 16px;font-size:13px;resize:none;font-family:inherit;background:transparent;color:var(--text)"></textarea>
-  <div id="mail-attach-list" style="display:none;padding:6px 16px 0;flex-wrap:wrap;gap:6px"></div>
-  <div id="mail-compose-warn" style="display:none;margin:0 16px 6px;padding:8px 11px;border-radius:6px;font-size:11.5px;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.4);color:#b45309"></div>
-  <div style="padding:10px 16px;border-top:2px solid var(--border);background:rgba(0,0,0,.06);display:flex;gap:8px;align-items:center;flex-wrap:wrap;flex-shrink:0">
-    <button onclick="mailSend()" id="mail-send-btn" class="btn-navy" style="font-size:13px;padding:7px 18px">Send</button>
-    <div style="position:relative;display:inline-block" id="mail-attach-wrap">
-      <button onclick="mailToggleAttachMenu(event)" title="Attach files" style="padding:6px 14px;background:rgba(37,99,235,.1);border:1px solid rgba(37,99,235,.4);border-radius:5px;cursor:pointer;font-size:12px;color:#3b82f6;display:flex;align-items:center;gap:5px;font-weight:600">📎 Attach <span style="font-size:9px;opacity:.7">▾</span></button>
-      <div id="mail-attach-menu" style="display:none;position:absolute;bottom:calc(100% + 4px);left:0;background:var(--surface);border:1px solid var(--border);border-radius:6px;box-shadow:0 4px 16px rgba(0,0,0,.18);z-index:9400;min-width:190px;overflow:hidden">
-        <div onclick="document.getElementById('mail-attach-input').click();mailCloseAttachMenu()" style="padding:9px 14px;font-size:12px;cursor:pointer;display:flex;align-items:center;gap:8px" onmouseover="this.style.background='var(--border)'" onmouseout="this.style.background=''">📁 <span>From Computer</span></div>
-        <div onclick="mailOpenVaultPicker();mailCloseAttachMenu()" style="padding:9px 14px;font-size:12px;cursor:pointer;display:flex;align-items:center;gap:8px;border-top:1px solid var(--border)" onmouseover="this.style.background='var(--border)'" onmouseout="this.style.background=''">🗄 <span>From Document Vault</span></div>
-        <div onclick="mailOpenAgreementPicker();mailCloseAttachMenu()" style="padding:9px 14px;font-size:12px;cursor:pointer;display:flex;align-items:center;gap:8px;border-top:1px solid var(--border)" onmouseover="this.style.background='var(--border)'" onmouseout="this.style.background=''">📋 <span>From Agreements</span></div>
-      </div>
-    </div>
-    <input type="file" id="mail-attach-input" multiple style="display:none" onchange="mailAttachSelected(this)">
-    <button onclick="mailMailtoFallback()" id="mail-mailto-btn" style="display:none;padding:6px 14px;background:none;border:1px solid rgba(245,158,11,.6);border-radius:5px;cursor:pointer;font-size:12px;color:#b45309">✉ Open in mail app</button>
-    <span id="mail-send-status" style="font-size:12px;color:var(--muted)"></span>
-    <button onclick="mailCloseCompose()" style="margin-left:auto;padding:6px 12px;background:none;border:1px solid var(--border);border-radius:5px;cursor:pointer;font-size:12px;color:var(--muted)">Discard</button>
-  </div>
-  <input type="hidden" id="mail-compose-reply-id">
-  <input type="hidden" id="mail-compose-reply-msg-id">
-</div>
-
-<!-- ── Mail Vault Picker ──────────────────────────────────────────────────── -->
-<div id="mail-vault-picker" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9500;align-items:center;justify-content:center">
-  <div style="background:var(--surface);border-radius:10px;box-shadow:0 12px 40px rgba(0,0,0,.3);width:600px;max-width:95vw;max-height:85vh;display:flex;flex-direction:column">
-    <div style="padding:14px 18px;background:var(--navy);color:#fff;border-radius:10px 10px 0 0;display:flex;justify-content:space-between;align-items:center">
-      <span style="font-size:13px;font-weight:600">🗄 Attach from Document Vault</span>
-      <button onclick="mailCloseVaultPicker()" style="background:none;border:none;color:rgba(255,255,255,.7);font-size:20px;cursor:pointer;padding:0;line-height:1">×</button>
-    </div>
-    <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;gap:8px">
-      <input id="mail-vault-search" type="text" placeholder="Search documents…" oninput="mailRenderVaultPicker()" style="flex:1;padding:7px 10px;border:1px solid var(--border);border-radius:5px;font-size:12px;background:var(--bg)">
-      <select id="mail-vault-type-filter" onchange="mailRenderVaultPicker()" style="padding:7px 10px;border:1px solid var(--border);border-radius:5px;font-size:12px;background:var(--bg)">
-        <option value="">All Types</option>
-        <option value="pod">POD</option>
-        <option value="bol">BOL</option>
-        <option value="rate_con">Rate Con</option>
-        <option value="invoice">Invoice</option>
-        <option value="agreement">Agreement</option>
-        <option value="compliance">Compliance</option>
-        <option value="other">Other</option>
-      </select>
-    </div>
-    <div id="mail-vault-list" style="flex:1;overflow-y:auto;min-height:200px;max-height:400px"></div>
-    <div style="padding:12px 16px;border-top:1px solid var(--border);display:flex;gap:8px;align-items:center;justify-content:space-between">
-      <span id="mail-vault-sel-count" style="font-size:12px;color:var(--muted)">0 selected</span>
-      <div style="display:flex;gap:8px">
-        <button onclick="mailCloseVaultPicker()" style="padding:7px 16px;background:none;border:1px solid var(--border);border-radius:5px;cursor:pointer;font-size:12px;color:var(--muted)">Cancel</button>
-        <button onclick="mailConfirmVaultPicker()" class="btn-navy" style="font-size:12px;padding:7px 18px">Attach Selected</button>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- ── Mail Agreement Picker ──────────────────────────────────────────────── -->
-<div id="mail-agreement-picker" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9500;align-items:center;justify-content:center">
-  <div style="background:var(--surface);border-radius:10px;box-shadow:0 12px 40px rgba(0,0,0,.3);width:520px;max-width:95vw;max-height:85vh;display:flex;flex-direction:column">
-    <div style="padding:14px 18px;background:var(--navy);color:#fff;border-radius:10px 10px 0 0;display:flex;justify-content:space-between;align-items:center">
-      <span style="font-size:13px;font-weight:600">📋 Attach Agreement Template</span>
-      <button onclick="mailCloseAgreementPicker()" style="background:none;border:none;color:rgba(255,255,255,.7);font-size:20px;cursor:pointer;padding:0;line-height:1">×</button>
-    </div>
-    <p style="margin:12px 16px 8px;font-size:12px;color:var(--muted)">Select one or more agreement templates to attach as HTML files.</p>
-    <div id="mail-agreement-list" style="flex:1;overflow-y:auto;padding:0 16px 8px;max-height:420px"></div>
-    <div style="padding:12px 16px;border-top:1px solid var(--border);display:flex;gap:8px;align-items:center;justify-content:space-between">
-      <span id="mail-agr-sel-count" style="font-size:12px;color:var(--muted)">0 selected</span>
-      <div style="display:flex;gap:8px">
-        <button onclick="mailCloseAgreementPicker()" style="padding:7px 16px;background:none;border:1px solid var(--border);border-radius:5px;cursor:pointer;font-size:12px;color:var(--muted)">Cancel</button>
-        <button onclick="mailConfirmAgreementPicker()" class="btn-navy" style="font-size:12px;padding:7px 18px">Attach Selected</button>
-      </div>
-    </div>
-  </div>
-</div>
-
 <script>
 // ── Mail Client ────────────────────────────────────────────────────────────
 let _mailCurrent='all';
@@ -10292,7 +10187,13 @@ let _mailAgreementAttachments=[]; // [{key, label}] template agreements
 function mailToggleAttachMenu(e){
   e&&e.stopPropagation();
   const m=document.getElementById('mail-attach-menu');
-  m.style.display=m.style.display==='block'?'none':'block';
+  if(m.style.display==='block'){m.style.display='none';return;}
+  const wrap=document.getElementById('mail-attach-wrap');
+  const rect=wrap.getBoundingClientRect();
+  m.style.left=rect.left+'px';
+  m.style.top=(rect.top-4)+'px';
+  m.style.transform='translateY(-100%)';
+  m.style.display='block';
 }
 function mailCloseAttachMenu(){document.getElementById('mail-attach-menu').style.display='none';}
 document.addEventListener('click',function(e){
@@ -10820,6 +10721,116 @@ setInterval(()=>{
   }
 },120000);
 </script>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     GLOBAL EMAIL MODALS — kept outside all page divs so they render
+     via position:fixed regardless of which page is active
+     ═══════════════════════════════════════════════════════════════ -->
+
+<!-- Compose modal -->
+<div id="mail-compose-modal" style="display:none;position:fixed;bottom:24px;right:24px;width:740px;max-width:96vw;background:var(--surface);border:1px solid var(--border);border-radius:10px;box-shadow:0 12px 40px rgba(0,0,0,.25);z-index:9300;flex-direction:column;max-height:92vh;min-height:480px;resize:both;overflow:hidden">
+  <div id="mail-compose-dragbar" style="padding:11px 16px;background:var(--navy);color:#fff;border-radius:10px 10px 0 0;display:flex;justify-content:space-between;align-items:center;cursor:move;user-select:none">
+    <span id="mail-compose-title" style="font-size:13px;font-weight:600">New Message</span>
+    <div style="display:flex;align-items:center;gap:10px">
+      <span style="font-size:10px;color:rgba(255,255,255,.35);font-style:italic">drag to move · resize from corner</span>
+      <button onclick="mailCloseCompose()" style="background:none;border:none;color:rgba(255,255,255,.7);font-size:20px;cursor:pointer;line-height:1;padding:0">×</button>
+    </div>
+  </div>
+  <div style="border-bottom:1px solid var(--border)">
+    <div style="display:flex;align-items:center;gap:8px;padding:7px 16px;border-bottom:1px solid var(--border)">
+      <span style="font-size:11px;font-weight:600;color:var(--muted);width:46px">From</span>
+      <select id="mail-compose-from" onchange="mailUpdateComposeWarn()" style="flex:1;border:none;outline:none;font-size:12px;background:transparent">
+        <option value="loads">loads@3lakeslogistics.com</option>
+        <option value="sales">sales@3lakeslogistics.com</option>
+        <option value="info">info@3lakeslogistics.com</option>
+        <option value="mark">mark@3lakeslogistics.com</option>
+        <option value="cece">cece@3lakeslogistics.com</option>
+      </select>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;padding:7px 16px;border-bottom:1px solid var(--border)">
+      <span style="font-size:11px;font-weight:600;color:var(--muted);width:46px">To</span>
+      <input id="mail-compose-to" type="text" placeholder="recipient@example.com (comma-separate multiple)" style="flex:1;border:none;outline:none;font-size:12px;background:transparent;color:var(--text)">
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;padding:7px 16px;border-bottom:1px solid var(--border)">
+      <span style="font-size:11px;font-weight:600;color:var(--muted);width:46px">CC</span>
+      <input id="mail-compose-cc" type="text" placeholder="optional" style="flex:1;border:none;outline:none;font-size:12px;background:transparent;color:var(--text)">
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;padding:7px 16px">
+      <span style="font-size:11px;font-weight:600;color:var(--muted);width:46px">Subject</span>
+      <input id="mail-compose-subject" type="text" placeholder="Subject" style="flex:1;border:none;outline:none;font-size:12px;font-weight:500;background:transparent;color:var(--text)">
+    </div>
+  </div>
+  <textarea id="mail-compose-body" placeholder="Write your message…" style="flex:1;min-height:340px;border:none;outline:none;padding:12px 16px;font-size:13px;resize:none;font-family:inherit;background:transparent;color:var(--text)"></textarea>
+  <div id="mail-attach-list" style="display:none;padding:6px 16px 0;flex-wrap:wrap;gap:6px"></div>
+  <div id="mail-compose-warn" style="display:none;margin:0 16px 6px;padding:8px 11px;border-radius:6px;font-size:11.5px;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.4);color:#b45309"></div>
+  <div style="padding:10px 16px;border-top:2px solid var(--border);background:rgba(0,0,0,.06);display:flex;gap:8px;align-items:center;flex-wrap:wrap;flex-shrink:0">
+    <button onclick="mailSend()" id="mail-send-btn" class="btn-navy" style="font-size:13px;padding:7px 18px">Send</button>
+    <div style="position:relative;display:inline-block" id="mail-attach-wrap">
+      <button onclick="mailToggleAttachMenu(event)" title="Attach files" style="padding:6px 14px;background:rgba(37,99,235,.1);border:1px solid rgba(37,99,235,.4);border-radius:5px;cursor:pointer;font-size:12px;color:#3b82f6;display:flex;align-items:center;gap:5px;font-weight:600">📎 Attach <span style="font-size:9px;opacity:.7">▾</span></button>
+      <div id="mail-attach-menu" style="display:none;position:fixed;background:var(--surface);border:1px solid var(--border);border-radius:6px;box-shadow:0 4px 16px rgba(0,0,0,.18);z-index:9999;min-width:190px;overflow:hidden">
+        <div onclick="document.getElementById('mail-attach-input').click();mailCloseAttachMenu()" style="padding:9px 14px;font-size:12px;cursor:pointer;display:flex;align-items:center;gap:8px" onmouseover="this.style.background='var(--border)'" onmouseout="this.style.background=''">📁 <span>From Computer</span></div>
+        <div onclick="mailOpenVaultPicker();mailCloseAttachMenu()" style="padding:9px 14px;font-size:12px;cursor:pointer;display:flex;align-items:center;gap:8px;border-top:1px solid var(--border)" onmouseover="this.style.background='var(--border)'" onmouseout="this.style.background=''">🗄 <span>From Document Vault</span></div>
+        <div onclick="mailOpenAgreementPicker();mailCloseAttachMenu()" style="padding:9px 14px;font-size:12px;cursor:pointer;display:flex;align-items:center;gap:8px;border-top:1px solid var(--border)" onmouseover="this.style.background='var(--border)'" onmouseout="this.style.background=''">📋 <span>From Agreements</span></div>
+      </div>
+    </div>
+    <input type="file" id="mail-attach-input" multiple style="display:none" onchange="mailAttachSelected(this)">
+    <button onclick="mailMailtoFallback()" id="mail-mailto-btn" style="display:none;padding:6px 14px;background:none;border:1px solid rgba(245,158,11,.6);border-radius:5px;cursor:pointer;font-size:12px;color:#b45309">✉ Open in mail app</button>
+    <span id="mail-send-status" style="font-size:12px;color:var(--muted)"></span>
+    <button onclick="mailCloseCompose()" style="margin-left:auto;padding:6px 12px;background:none;border:1px solid var(--border);border-radius:5px;cursor:pointer;font-size:12px;color:var(--muted)">Discard</button>
+  </div>
+  <input type="hidden" id="mail-compose-reply-id">
+  <input type="hidden" id="mail-compose-reply-msg-id">
+</div>
+
+<!-- ── Mail Vault Picker ──────────────────────────────────────────────────── -->
+<div id="mail-vault-picker" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9500;align-items:center;justify-content:center">
+  <div style="background:var(--surface);border-radius:10px;box-shadow:0 12px 40px rgba(0,0,0,.3);width:600px;max-width:95vw;max-height:85vh;display:flex;flex-direction:column">
+    <div style="padding:14px 18px;background:var(--navy);color:#fff;border-radius:10px 10px 0 0;display:flex;justify-content:space-between;align-items:center">
+      <span style="font-size:13px;font-weight:600">🗄 Attach from Document Vault</span>
+      <button onclick="mailCloseVaultPicker()" style="background:none;border:none;color:rgba(255,255,255,.7);font-size:20px;cursor:pointer;padding:0;line-height:1">×</button>
+    </div>
+    <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;gap:8px">
+      <input id="mail-vault-search" type="text" placeholder="Search documents…" oninput="mailRenderVaultPicker()" style="flex:1;padding:7px 10px;border:1px solid var(--border);border-radius:5px;font-size:12px;background:var(--bg)">
+      <select id="mail-vault-type-filter" onchange="mailRenderVaultPicker()" style="padding:7px 10px;border:1px solid var(--border);border-radius:5px;font-size:12px;background:var(--bg)">
+        <option value="">All Types</option>
+        <option value="pod">POD</option>
+        <option value="bol">BOL</option>
+        <option value="rate_con">Rate Con</option>
+        <option value="invoice">Invoice</option>
+        <option value="agreement">Agreement</option>
+        <option value="compliance">Compliance</option>
+        <option value="other">Other</option>
+      </select>
+    </div>
+    <div id="mail-vault-list" style="flex:1;overflow-y:auto;min-height:200px;max-height:400px"></div>
+    <div style="padding:12px 16px;border-top:1px solid var(--border);display:flex;gap:8px;align-items:center;justify-content:space-between">
+      <span id="mail-vault-sel-count" style="font-size:12px;color:var(--muted)">0 selected</span>
+      <div style="display:flex;gap:8px">
+        <button onclick="mailCloseVaultPicker()" style="padding:7px 16px;background:none;border:1px solid var(--border);border-radius:5px;cursor:pointer;font-size:12px;color:var(--muted)">Cancel</button>
+        <button onclick="mailConfirmVaultPicker()" class="btn-navy" style="font-size:12px;padding:7px 18px">Attach Selected</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Mail Agreement Picker ──────────────────────────────────────────────── -->
+<div id="mail-agreement-picker" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9500;align-items:center;justify-content:center">
+  <div style="background:var(--surface);border-radius:10px;box-shadow:0 12px 40px rgba(0,0,0,.3);width:520px;max-width:95vw;max-height:85vh;display:flex;flex-direction:column">
+    <div style="padding:14px 18px;background:var(--navy);color:#fff;border-radius:10px 10px 0 0;display:flex;justify-content:space-between;align-items:center">
+      <span style="font-size:13px;font-weight:600">📋 Attach Agreement Template</span>
+      <button onclick="mailCloseAgreementPicker()" style="background:none;border:none;color:rgba(255,255,255,.7);font-size:20px;cursor:pointer;padding:0;line-height:1">×</button>
+    </div>
+    <p style="margin:12px 16px 8px;font-size:12px;color:var(--muted)">Select one or more agreement templates to attach as HTML files.</p>
+    <div id="mail-agreement-list" style="flex:1;overflow-y:auto;padding:0 16px 8px;max-height:420px"></div>
+    <div style="padding:12px 16px;border-top:1px solid var(--border);display:flex;gap:8px;align-items:center;justify-content:space-between">
+      <span id="mail-agr-sel-count" style="font-size:12px;color:var(--muted)">0 selected</span>
+      <div style="display:flex;gap:8px">
+        <button onclick="mailCloseAgreementPicker()" style="padding:7px 16px;background:none;border:1px solid var(--border);border-radius:5px;cursor:pointer;font-size:12px;color:var(--muted)">Cancel</button>
+        <button onclick="mailConfirmAgreementPicker()" class="btn-navy" style="font-size:12px;padding:7px 18px">Attach Selected</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -13935,7 +13946,7 @@ select.oc-inp option{background:#1a1a2e;color:#fff;}
             <button id="mo-mb-sales" onclick="moEmailLoad('sales')" style="font-size:10px;padding:3px 9px;border-radius:5px;border:1px solid rgba(255,255,255,.15);background:transparent;color:rgba(255,255,255,.5);cursor:pointer;">sales@</button>
           </div>
           <button class="mo-hdr-btn" style="font-size:10px;padding:4px 10px;" onclick="moEmailLoad()">↺ Refresh</button>
-          <button class="mo-btn" style="font-size:10px;padding:4px 12px;margin-left:auto;" onclick="mailComposeAs(_moCurrentMailbox||'mark')">✉️ Compose</button>
+          <button class="mo-btn" style="font-size:10px;padding:4px 12px;margin-left:auto;" onclick="(function(){var p=document.getElementById('mo-compose');if(p){['mo-compose-to','mo-compose-cc','mo-compose-subj','mo-compose-body'].forEach(function(id){var el=document.getElementById(id);if(el)el.value='';});var st=document.getElementById('mo-compose-status');if(st)st.textContent='';p.style.display='flex';}})()">✉️ Compose</button>
         </div>
         <div style="display:flex;flex:1;min-height:0;overflow:hidden;">
           <!-- Inbox list -->
@@ -13963,7 +13974,8 @@ select.oc-inp option{background:#1a1a2e;color:#fff;}
             <div><div class="mo-fl">CC</div><input id="mo-compose-cc" class="mo-input" placeholder="cc@email.com (optional)"></div>
             <div><div class="mo-fl">SUBJECT</div><input id="mo-compose-subj" class="mo-input" placeholder="Subject line…"></div>
             <div><div class="mo-fl">MESSAGE</div><textarea id="mo-compose-body" class="mo-textarea" style="min-height:140px;" placeholder="Write your message…"></textarea></div>
-            <div style="display:flex;gap:8px;justify-content:flex-end;align-items:center;">
+            <div style="display:flex;gap:8px;justify-content:flex-end;align-items:center;flex-wrap:wrap;">
+              <button onclick="mailComposeAs(_moCurrentMailbox||'mark')" style="padding:4px 10px;font-size:10px;border:1px solid rgba(245,200,66,.4);border-radius:5px;background:transparent;color:#f5c842;cursor:pointer;">📎 Attach / Full Composer</button>
               <span id="mo-compose-status" style="font-size:11px;color:#f5c842;"></span>
               <button class="mo-btn" onclick="moEmailSend()">📤 Send</button>
             </div>
@@ -15704,7 +15716,7 @@ window.moGrowthPlan = async function(){
         <div style="padding:8px 16px;background:rgba(3,10,20,.95);border-bottom:1px solid rgba(56,189,248,.15);flex-shrink:0;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
           <div style="font-size:12px;font-weight:800;color:#38bdf8;">📧 cece@3lakeslogistics.com</div>
           <button class="ccg-hdr-btn" style="font-size:10px;padding:4px 10px;" onclick="ccgEmailLoad()">↺ Refresh</button>
-          <button class="ccg-btn" style="font-size:10px;padding:4px 12px;margin-left:auto;" onclick="mailComposeAs('cece')">✉️ Compose</button>
+          <button class="ccg-btn" style="font-size:10px;padding:4px 12px;margin-left:auto;" onclick="(function(){var p=document.getElementById('ccg-compose');if(p){['ccg-compose-to','ccg-compose-cc','ccg-compose-subj','ccg-compose-body'].forEach(function(id){var el=document.getElementById(id);if(el)el.value='';});var st=document.getElementById('ccg-compose-status');if(st)st.textContent='';p.style.display='flex';}})()">✉️ Compose</button>
         </div>
         <div style="display:flex;flex:1;min-height:0;overflow:hidden;">
           <!-- Inbox list -->
@@ -15732,7 +15744,8 @@ window.moGrowthPlan = async function(){
             <div><div class="ccg-fl">CC</div><input id="ccg-compose-cc" class="ccg-input" placeholder="cc@email.com (optional)"></div>
             <div><div class="ccg-fl">SUBJECT</div><input id="ccg-compose-subj" class="ccg-input" placeholder="Subject line…"></div>
             <div><div class="ccg-fl">MESSAGE</div><textarea id="ccg-compose-body" class="ccg-textarea" style="min-height:130px;" placeholder="Write your message…"></textarea></div>
-            <div style="display:flex;gap:8px;justify-content:flex-end;align-items:center;">
+            <div style="display:flex;gap:8px;justify-content:flex-end;align-items:center;flex-wrap:wrap;">
+              <button onclick="mailComposeAs('cece')" style="padding:4px 10px;font-size:10px;border:1px solid rgba(56,189,248,.4);border-radius:5px;background:transparent;color:#38bdf8;cursor:pointer;">📎 Attach / Full Composer</button>
               <span id="ccg-compose-status" style="font-size:11px;color:#38bdf8;"></span>
               <button class="ccg-btn" onclick="ccgEmailSend()">📤 Send</button>
             </div>
