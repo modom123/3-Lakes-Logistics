@@ -1,0 +1,974 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mark Odom — Executive Capabilities & Technical Portfolio</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600&display=swap');
+
+  :root {
+    --navy: #0a1628;
+    --navy2: #112240;
+    --blue: #1e40af;
+    --blue2: #2563eb;
+    --gold: #d4a017;
+    --gold2: #f59e0b;
+    --teal: #0d9488;
+    --text: #1e293b;
+    --muted: #64748b;
+    --light: #f8fafc;
+    --border: #e2e8f0;
+    --white: #ffffff;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Inter', -apple-system, sans-serif;
+    background: #f1f5f9;
+    color: var(--text);
+    font-size: 13px;
+    line-height: 1.6;
+  }
+
+  .page {
+    max-width: 900px;
+    margin: 0 auto;
+    background: var(--white);
+    box-shadow: 0 4px 40px rgba(0,0,0,.12);
+  }
+
+  /* ── HEADER ── */
+  .header {
+    background: linear-gradient(135deg, var(--navy) 0%, var(--navy2) 60%, #1e3a5f 100%);
+    padding: 44px 52px 36px;
+    position: relative;
+    overflow: hidden;
+  }
+  .header::before {
+    content: '';
+    position: absolute;
+    top: -60px; right: -60px;
+    width: 280px; height: 280px;
+    border-radius: 50%;
+    background: rgba(37,99,235,.18);
+  }
+  .header::after {
+    content: '';
+    position: absolute;
+    bottom: -40px; left: 200px;
+    width: 180px; height: 180px;
+    border-radius: 50%;
+    background: rgba(212,160,23,.10);
+  }
+  .header-inner { position: relative; z-index: 1; }
+  .header-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; }
+  .name-block h1 {
+    font-size: 38px;
+    font-weight: 900;
+    color: var(--white);
+    letter-spacing: -1px;
+    line-height: 1;
+  }
+  .name-block .title {
+    font-size: 13px;
+    font-weight: 500;
+    color: #93c5fd;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    margin-top: 6px;
+  }
+  .contact-block {
+    text-align: right;
+    padding-top: 4px;
+  }
+  .contact-block a, .contact-block span {
+    display: block;
+    color: rgba(255,255,255,.8);
+    font-size: 12.5px;
+    text-decoration: none;
+    line-height: 1.9;
+  }
+  .contact-block a:hover { color: var(--gold2); }
+  .tagline {
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid rgba(255,255,255,.12);
+    font-size: 14px;
+    color: rgba(255,255,255,.85);
+    line-height: 1.7;
+    font-weight: 400;
+    max-width: 720px;
+  }
+  .tagline strong { color: var(--gold2); font-weight: 700; }
+
+  /* ── BADGE ROW ── */
+  .badges {
+    background: var(--navy2);
+    padding: 14px 52px;
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    border-bottom: 2px solid var(--gold);
+  }
+  .badge {
+    background: rgba(255,255,255,.07);
+    border: 1px solid rgba(255,255,255,.12);
+    color: rgba(255,255,255,.85);
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: .04em;
+    padding: 4px 11px;
+    border-radius: 20px;
+    white-space: nowrap;
+  }
+  .badge.gold { background: rgba(212,160,23,.2); border-color: rgba(212,160,23,.4); color: #fcd34d; }
+  .badge.teal { background: rgba(13,148,136,.2); border-color: rgba(13,148,136,.4); color: #5eead4; }
+  .badge.blue { background: rgba(37,99,235,.2); border-color: rgba(37,99,235,.4); color: #93c5fd; }
+
+  /* ── BODY ── */
+  .body { padding: 0 52px 48px; }
+
+  /* ── SECTION ── */
+  .section { margin-top: 36px; }
+  .section-title {
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: var(--blue2);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 18px;
+  }
+  .section-title::after {
+    content: '';
+    flex: 1;
+    height: 1.5px;
+    background: linear-gradient(90deg, var(--blue2), transparent);
+    opacity: .25;
+  }
+  .section-title .icon { font-size: 14px; }
+
+  /* ── SKILL GRID ── */
+  .skill-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+  }
+  .skill-card {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 16px 14px;
+    position: relative;
+    overflow: hidden;
+  }
+  .skill-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 3px; height: 100%;
+    border-radius: 10px 0 0 10px;
+  }
+  .skill-card.navy::before { background: var(--navy); }
+  .skill-card.blue::before { background: var(--blue2); }
+  .skill-card.gold::before { background: var(--gold); }
+  .skill-card.teal::before { background: var(--teal); }
+  .skill-card.purple::before { background: #7c3aed; }
+  .skill-card.rose::before { background: #e11d48; }
+  .skill-card-title {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+  }
+  .skill-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+  .skill-tag {
+    background: var(--light);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 10px;
+    font-weight: 500;
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  /* ── TECH STACK BAR ── */
+  .tech-stack {
+    background: var(--navy);
+    border-radius: 10px;
+    padding: 20px 24px;
+    margin-top: 0;
+  }
+  .tech-stack-title {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .1em;
+    color: rgba(255,255,255,.4);
+    text-transform: uppercase;
+    margin-bottom: 14px;
+  }
+  .tech-row {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 8px;
+  }
+  .tech-row:last-child { margin-bottom: 0; }
+  .tech-label {
+    font-size: 9.5px;
+    color: rgba(255,255,255,.35);
+    font-weight: 700;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    width: 60px;
+    flex-shrink: 0;
+    padding-top: 3px;
+  }
+  .tech-pills { display: flex; flex-wrap: wrap; gap: 5px; flex: 1; }
+  .tech-pill {
+    background: rgba(255,255,255,.07);
+    border: 1px solid rgba(255,255,255,.10);
+    color: rgba(255,255,255,.8);
+    font-size: 10.5px;
+    font-weight: 500;
+    padding: 3px 9px;
+    border-radius: 5px;
+    font-family: 'JetBrains Mono', monospace;
+    letter-spacing: -.01em;
+  }
+  .tech-pill.highlight {
+    background: rgba(245,158,11,.15);
+    border-color: rgba(245,158,11,.3);
+    color: #fcd34d;
+  }
+
+  /* ── PROJECTS ── */
+  .projects-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .project-card {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  .project-header {
+    padding: 13px 16px 11px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .project-header.navy { background: var(--navy); }
+  .project-header.blue { background: var(--blue); }
+  .project-header.teal { background: #0f4c41; }
+  .project-header.gold { background: #7c4f00; }
+  .project-header.purple { background: #4c1d95; }
+  .project-header.slate { background: #1e293b; }
+  .project-name {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--white);
+    line-height: 1.2;
+  }
+  .project-type {
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,.5);
+    white-space: nowrap;
+  }
+  .project-body { padding: 13px 16px 14px; background: var(--light); }
+  .project-desc {
+    font-size: 11.5px;
+    color: var(--text);
+    line-height: 1.6;
+    margin-bottom: 10px;
+  }
+  .project-tech-row { display: flex; flex-wrap: wrap; gap: 4px; }
+  .ptag {
+    background: var(--white);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 9.5px;
+    font-weight: 500;
+    padding: 1.5px 6px;
+    border-radius: 3px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  /* ── EXPERIENCE ── */
+  .exp-item { margin-bottom: 22px; }
+  .exp-item:last-child { margin-bottom: 0; }
+  .exp-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 4px;
+  }
+  .exp-company {
+    font-size: 13px;
+    font-weight: 800;
+    color: var(--navy);
+    text-transform: uppercase;
+    letter-spacing: .04em;
+  }
+  .exp-dates {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--muted);
+    white-space: nowrap;
+    padding-top: 2px;
+  }
+  .exp-role {
+    font-size: 11.5px;
+    font-weight: 500;
+    color: var(--blue2);
+    font-style: italic;
+    margin-bottom: 7px;
+  }
+  .exp-bullets { list-style: none; padding: 0; }
+  .exp-bullets li {
+    font-size: 12px;
+    color: var(--text);
+    padding: 2px 0 2px 14px;
+    position: relative;
+    line-height: 1.6;
+  }
+  .exp-bullets li::before {
+    content: '▸';
+    position: absolute;
+    left: 0;
+    color: var(--blue2);
+    font-size: 9px;
+    top: 4px;
+  }
+
+  /* ── VALUE PROPS ── */
+  .value-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  .value-card {
+    background: var(--light);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px 14px;
+    text-align: center;
+  }
+  .value-number {
+    font-size: 28px;
+    font-weight: 900;
+    color: var(--navy);
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+  .value-number span { font-size: 18px; }
+  .value-label {
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    line-height: 1.4;
+  }
+
+  /* ── SERVICES ── */
+  .services-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .service-item {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    padding: 12px 14px;
+    background: var(--light);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+  }
+  .service-icon { font-size: 18px; flex-shrink: 0; }
+  .service-name { font-size: 12px; font-weight: 700; color: var(--text); margin-bottom: 2px; }
+  .service-desc { font-size: 11px; color: var(--muted); line-height: 1.5; }
+
+  /* ── FOOTER ── */
+  .footer {
+    background: var(--navy);
+    padding: 20px 52px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .footer-left { color: rgba(255,255,255,.5); font-size: 11px; }
+  .footer-left strong { color: var(--gold2); }
+  .footer-cta {
+    background: var(--gold);
+    color: var(--navy);
+    font-size: 12px;
+    font-weight: 800;
+    padding: 9px 22px;
+    border-radius: 6px;
+    text-decoration: none;
+    letter-spacing: .02em;
+  }
+
+  /* ── DIVIDER ── */
+  .divider {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--border), transparent);
+    margin: 8px 0;
+  }
+
+  /* ── PRINT STYLES ── */
+  @media print {
+    body { background: white; font-size: 11px; }
+    .page { box-shadow: none; max-width: 100%; }
+    .section { margin-top: 24px; }
+    .projects-grid { grid-template-columns: 1fr 1fr; }
+    .skill-grid { grid-template-columns: repeat(3, 1fr); }
+    .value-grid { grid-template-columns: repeat(4, 1fr); }
+    a { text-decoration: none; color: inherit; }
+    .header { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .project-header { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .tech-stack { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .footer { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .badges { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  }
+
+  @media (max-width: 700px) {
+    .header, .body, .badges, .footer { padding-left: 24px; padding-right: 24px; }
+    .header-top { flex-direction: column; }
+    .contact-block { text-align: left; }
+    .skill-grid { grid-template-columns: 1fr 1fr; }
+    .projects-grid { grid-template-columns: 1fr; }
+    .value-grid { grid-template-columns: 1fr 1fr; }
+    .services-grid { grid-template-columns: 1fr; }
+    .name-block h1 { font-size: 28px; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="header-inner">
+      <div class="header-top">
+        <div class="name-block">
+          <h1>Mark Odom</h1>
+          <div class="title">AI Systems Architect &amp; Executive Technology Leader</div>
+        </div>
+        <div class="contact-block">
+          <span>Detroit, MI 48219</span>
+          <a href="tel:6614669932">661.466.9932</a>
+          <a href="mailto:yourticketbroker@gmail.com">yourticketbroker@gmail.com</a>
+          <a href="#">linkedin.com/in/markodom</a>
+        </div>
+      </div>
+      <div class="tagline">
+        <strong>Builder. Architect. Closer.</strong> — Entrepreneurial executive with 30+ years across finance, sales, and business development who crossed over into hands-on AI systems development. Founder of <strong>Integrated Efficiency (IEBC)</strong>, where I personally architect and code enterprise AI platforms — multi-agent command centers, real-time dashboards, full-stack web applications, mobile apps, database systems, and automated business workflows. I don't just manage tech teams. I build the product.
+      </div>
+    </div>
+  </div>
+
+  <!-- BADGE ROW -->
+  <div class="badges">
+    <span class="badge gold">Full-Stack Developer</span>
+    <span class="badge gold">AI Systems Architect</span>
+    <span class="badge blue">Anthropic Claude API</span>
+    <span class="badge blue">Supabase / PostgreSQL</span>
+    <span class="badge teal">Mobile App Development</span>
+    <span class="badge teal">REST API Design</span>
+    <span class="badge">Python / ReportLab</span>
+    <span class="badge">Multi-Agent AI Systems</span>
+    <span class="badge">SPA Architecture</span>
+    <span class="badge">Workflow Automation</span>
+    <span class="badge">Series 6 · 7 · 65</span>
+    <span class="badge">$100M+ Asset Management</span>
+  </div>
+
+  <div class="body">
+
+    <!-- VALUE PROPS -->
+    <div class="section">
+      <div class="value-grid">
+        <div class="value-card">
+          <div class="value-number">30<span>+</span></div>
+          <div class="value-label">Years Executive Experience</div>
+        </div>
+        <div class="value-card">
+          <div class="value-number">$100<span>M+</span></div>
+          <div class="value-label">Assets Managed</div>
+        </div>
+        <div class="value-card">
+          <div class="value-number">50<span>+</span></div>
+          <div class="value-label">AI Agents Deployed</div>
+        </div>
+        <div class="value-card">
+          <div class="value-number">22<span>hrs</span></div>
+          <div class="value-label">Avg Weekly Savings per Client</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TECHNICAL SKILLS -->
+    <div class="section">
+      <div class="section-title"><span class="icon">⚙️</span> Technical Capabilities</div>
+      <div class="skill-grid">
+        <div class="skill-card blue">
+          <div class="skill-card-title">Frontend Development</div>
+          <div class="skill-tags">
+            <span class="skill-tag">HTML5</span>
+            <span class="skill-tag">CSS3</span>
+            <span class="skill-tag">JavaScript ES6+</span>
+            <span class="skill-tag">Responsive Design</span>
+            <span class="skill-tag">CSS Grid / Flexbox</span>
+            <span class="skill-tag">CSS Variables</span>
+            <span class="skill-tag">SPA Architecture</span>
+            <span class="skill-tag">DOM Manipulation</span>
+            <span class="skill-tag">Event-Driven UI</span>
+            <span class="skill-tag">PWA</span>
+          </div>
+        </div>
+        <div class="skill-card navy">
+          <div class="skill-card-title">Backend &amp; APIs</div>
+          <div class="skill-tags">
+            <span class="skill-tag">Python</span>
+            <span class="skill-tag">FastAPI</span>
+            <span class="skill-tag">REST API Design</span>
+            <span class="skill-tag">Supabase</span>
+            <span class="skill-tag">PostgreSQL</span>
+            <span class="skill-tag">pgvector</span>
+            <span class="skill-tag">JWT Auth</span>
+            <span class="skill-tag">FormData / Multipart</span>
+            <span class="skill-tag">Webhooks</span>
+            <span class="skill-tag">Render.com</span>
+          </div>
+        </div>
+        <div class="skill-card gold">
+          <div class="skill-card-title">AI &amp; Automation</div>
+          <div class="skill-tags">
+            <span class="skill-tag">Anthropic Claude API</span>
+            <span class="skill-tag">Multi-Agent Systems</span>
+            <span class="skill-tag">Persistent Memory</span>
+            <span class="skill-tag">pgvector Embeddings</span>
+            <span class="skill-tag">AI Persona Design</span>
+            <span class="skill-tag">Workflow Automation</span>
+            <span class="skill-tag">Document OCR</span>
+            <span class="skill-tag">Lead Gen Automation</span>
+            <span class="skill-tag">Agent Orchestration</span>
+          </div>
+        </div>
+        <div class="skill-card teal">
+          <div class="skill-card-title">Database Design</div>
+          <div class="skill-tags">
+            <span class="skill-tag">Schema Design</span>
+            <span class="skill-tag">SQL</span>
+            <span class="skill-tag">Supabase RLS</span>
+            <span class="skill-tag">Row-Level Security</span>
+            <span class="skill-tag">Vector Search</span>
+            <span class="skill-tag">Real-Time Subscriptions</span>
+            <span class="skill-tag">Migrations</span>
+            <span class="skill-tag">Airtable → Supabase</span>
+            <span class="skill-tag">Data Modeling</span>
+          </div>
+        </div>
+        <div class="skill-card purple">
+          <div class="skill-card-title">Mobile &amp; DevOps</div>
+          <div class="skill-tags">
+            <span class="skill-tag">Android App Dev</span>
+            <span class="skill-tag">Capacitor.js</span>
+            <span class="skill-tag">PWA / Service Workers</span>
+            <span class="skill-tag">Firebase</span>
+            <span class="skill-tag">Docker</span>
+            <span class="skill-tag">Vercel</span>
+            <span class="skill-tag">Render</span>
+            <span class="skill-tag">Git / GitHub</span>
+            <span class="skill-tag">Playwright Testing</span>
+            <span class="skill-tag">CI/CD</span>
+          </div>
+        </div>
+        <div class="skill-card rose">
+          <div class="skill-card-title">Document &amp; PDF Systems</div>
+          <div class="skill-tags">
+            <span class="skill-tag">Python ReportLab</span>
+            <span class="skill-tag">PDF Generation</span>
+            <span class="skill-tag">Dynamic Templates</span>
+            <span class="skill-tag">NDA / Legal Docs</span>
+            <span class="skill-tag">Contract Automation</span>
+            <span class="skill-tag">E-Signature Flows</span>
+            <span class="skill-tag">Agreement Builders</span>
+            <span class="skill-tag">OCR Processing</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TECH STACK -->
+    <div class="section" style="margin-top:20px;">
+      <div class="tech-stack">
+        <div class="tech-stack-title">Full Technology Stack</div>
+        <div class="tech-row">
+          <span class="tech-label">Languages</span>
+          <div class="tech-pills">
+            <span class="tech-pill highlight">JavaScript</span>
+            <span class="tech-pill highlight">Python</span>
+            <span class="tech-pill">HTML5</span>
+            <span class="tech-pill">CSS3</span>
+            <span class="tech-pill">SQL</span>
+            <span class="tech-pill">Bash</span>
+          </div>
+        </div>
+        <div class="tech-row">
+          <span class="tech-label">Frameworks</span>
+          <div class="tech-pills">
+            <span class="tech-pill">FastAPI</span>
+            <span class="tech-pill">Capacitor.js</span>
+            <span class="tech-pill">ReportLab</span>
+            <span class="tech-pill">Playwright</span>
+            <span class="tech-pill">pytest</span>
+          </div>
+        </div>
+        <div class="tech-row">
+          <span class="tech-label">AI / Data</span>
+          <div class="tech-pills">
+            <span class="tech-pill highlight">Anthropic Claude API</span>
+            <span class="tech-pill">Supabase</span>
+            <span class="tech-pill">pgvector</span>
+            <span class="tech-pill">PostgreSQL</span>
+            <span class="tech-pill">Firebase</span>
+            <span class="tech-pill">Airtable</span>
+          </div>
+        </div>
+        <div class="tech-row">
+          <span class="tech-label">DevOps</span>
+          <div class="tech-pills">
+            <span class="tech-pill">Docker</span>
+            <span class="tech-pill">Render.com</span>
+            <span class="tech-pill">Vercel</span>
+            <span class="tech-pill">Firebase Hosting</span>
+            <span class="tech-pill">GitHub</span>
+            <span class="tech-pill">Google Play Store</span>
+          </div>
+        </div>
+        <div class="tech-row">
+          <span class="tech-label">Integrations</span>
+          <div class="tech-pills">
+            <span class="tech-pill">REST APIs</span>
+            <span class="tech-pill">Webhooks</span>
+            <span class="tech-pill">SMTP / Email API</span>
+            <span class="tech-pill">Twilio SMS</span>
+            <span class="tech-pill">JWT / OAuth</span>
+            <span class="tech-pill">FormData / Multipart</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PORTFOLIO -->
+    <div class="section">
+      <div class="section-title"><span class="icon">🏗️</span> Built Projects — Portfolio</div>
+      <div class="projects-grid">
+
+        <div class="project-card">
+          <div class="project-header navy">
+            <div>
+              <div class="project-name">Eagle Eye Command Center</div>
+              <div class="project-type">Enterprise SPA · 26,000+ Lines</div>
+            </div>
+            <span style="font-size:22px;">🦅</span>
+          </div>
+          <div class="project-body">
+            <div class="project-desc">Full-stack enterprise operations hub with real-time email client, AI agent coordination (Bond Office), multi-persona inboxes, CRM pipeline, document vault, financial dashboards, carrier management, and fleet tracking. Built as a single-page application with zero frameworks.</div>
+            <div class="project-tech-row">
+              <span class="ptag">HTML5/CSS3/JS</span>
+              <span class="ptag">REST API</span>
+              <span class="ptag">Supabase</span>
+              <span class="ptag">Email System</span>
+              <span class="ptag">AI Agents</span>
+              <span class="ptag">Real-Time</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="project-card">
+          <div class="project-header blue">
+            <div>
+              <div class="project-name">IEBC Multi-Agent AI Hub</div>
+              <div class="project-type">AI System · 50+ Personas</div>
+            </div>
+            <span style="font-size:22px;">🤖</span>
+          </div>
+          <div class="project-body">
+            <div class="project-desc">Enterprise AI command center with 50+ specialized AI personas operating autonomously. Persistent memory via pgvector embeddings, long-term agent context, multi-persona coordination, and orchestrated workflows across sales, ops, compliance, and finance functions.</div>
+            <div class="project-tech-row">
+              <span class="ptag">Claude API</span>
+              <span class="ptag">pgvector</span>
+              <span class="ptag">Supabase</span>
+              <span class="ptag">Python</span>
+              <span class="ptag">Agent Orchestration</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="project-card">
+          <div class="project-header teal">
+            <div>
+              <div class="project-name">3 Lakes Logistics Platform</div>
+              <div class="project-type">Full-Stack Web · Mobile App</div>
+            </div>
+            <span style="font-size:22px;">🚚</span>
+          </div>
+          <div class="project-body">
+            <div class="project-desc">Full logistics operations platform: driver onboarding portal, fleet tracking, carrier agreement automation, load management, safety monitoring (Shield), settlement automation (Settler), and a published Android mobile app on Google Play Store.</div>
+            <div class="project-tech-row">
+              <span class="ptag">FastAPI</span>
+              <span class="ptag">Capacitor</span>
+              <span class="ptag">Android</span>
+              <span class="ptag">Supabase</span>
+              <span class="ptag">Docker</span>
+              <span class="ptag">PWA</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="project-card">
+          <div class="project-header gold">
+            <div>
+              <div class="project-name">Automated Document Engine</div>
+              <div class="project-type">PDF Generation · Legal Docs</div>
+            </div>
+            <span style="font-size:22px;">📄</span>
+          </div>
+          <div class="project-body">
+            <div class="project-desc">Python-based document generation system producing professional NDAs, carrier agreements, rate confirmations, lease agreements, driver contracts, and financial roadmaps dynamically. Includes e-signature workflow and OCR document processing pipeline.</div>
+            <div class="project-tech-row">
+              <span class="ptag">Python</span>
+              <span class="ptag">ReportLab</span>
+              <span class="ptag">OCR</span>
+              <span class="ptag">E-Signature</span>
+              <span class="ptag">HTML Templates</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="project-card">
+          <div class="project-header purple">
+            <div>
+              <div class="project-name">ERP Replacement Suite</div>
+              <div class="project-type">Enterprise Architecture · 14 Phases</div>
+            </div>
+            <span style="font-size:22px;">🏢</span>
+          </div>
+          <div class="project-body">
+            <div class="project-desc">14-phase enterprise resource planning architecture designed to replace legacy ERP systems. Covers finance, HR, fleet ops, compliance, and reporting with AI-augmented modules, real-time BI dashboards, and Supabase-backed data infrastructure.</div>
+            <div class="project-tech-row">
+              <span class="ptag">System Architecture</span>
+              <span class="ptag">Supabase</span>
+              <span class="ptag">BI Dashboards</span>
+              <span class="ptag">AI Modules</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="project-card">
+          <div class="project-header slate">
+            <div>
+              <div class="project-name">Lead Engine &amp; CRM Pipeline</div>
+              <div class="project-type">Automation · Sales Intelligence</div>
+            </div>
+            <span style="font-size:22px;">📊</span>
+          </div>
+          <div class="project-body">
+            <div class="project-desc">Automated lead generation, scoring, and outreach system. Airtable-to-Supabase migration, SMS/email drip sequences, carrier prospect pipeline, scarcity matrix for load pricing, and market intel reporting — all fully automated with AI decision logic.</div>
+            <div class="project-tech-row">
+              <span class="ptag">Automation</span>
+              <span class="ptag">Supabase</span>
+              <span class="ptag">Twilio</span>
+              <span class="ptag">Email API</span>
+              <span class="ptag">AI Scoring</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- WHAT I OFFER -->
+    <div class="section">
+      <div class="section-title"><span class="icon">🎯</span> Services Offered</div>
+      <div class="services-grid">
+        <div class="service-item">
+          <span class="service-icon">🖥️</span>
+          <div>
+            <div class="service-name">Full-Stack Web Development</div>
+            <div class="service-desc">Custom web apps, dashboards, and portals — built from scratch with no bloated frameworks. Responsive, fast, and production-ready.</div>
+          </div>
+        </div>
+        <div class="service-item">
+          <span class="service-icon">🤖</span>
+          <div>
+            <div class="service-name">AI Agent &amp; Automation Systems</div>
+            <div class="service-desc">Multi-agent AI systems using Anthropic Claude API. Persistent memory, autonomous workflows, persona-based operations.</div>
+          </div>
+        </div>
+        <div class="service-item">
+          <span class="service-icon">🗄️</span>
+          <div>
+            <div class="service-name">Database Architecture &amp; Development</div>
+            <div class="service-desc">Supabase/PostgreSQL schema design, vector search, row-level security, real-time subscriptions, and data migrations.</div>
+          </div>
+        </div>
+        <div class="service-item">
+          <span class="service-icon">📱</span>
+          <div>
+            <div class="service-name">Mobile App Development</div>
+            <div class="service-desc">Android apps via Capacitor.js, published to Google Play. PWA-first approach for cross-platform reach without redundant codebases.</div>
+          </div>
+        </div>
+        <div class="service-item">
+          <span class="service-icon">⚡</span>
+          <div>
+            <div class="service-name">Workflow &amp; Process Automation</div>
+            <div class="service-desc">End-to-end business automation: lead generation, document processing, email/SMS sequences, onboarding, settlement, and compliance.</div>
+          </div>
+        </div>
+        <div class="service-item">
+          <span class="service-icon">🏗️</span>
+          <div>
+            <div class="service-name">Business Infrastructure Build-Out</div>
+            <div class="service-desc">"Automate Your Hustle" — full business stack in 6 weeks: website, CRM, AI agents, document systems, email, and ops dashboard.</div>
+          </div>
+        </div>
+        <div class="service-item">
+          <span class="service-icon">📈</span>
+          <div>
+            <div class="service-name">Executive Advisory &amp; Strategy</div>
+            <div class="service-desc">30 years of C-suite perspective applied to AI strategy, revenue modeling, capital markets, and operational scaling decisions.</div>
+          </div>
+        </div>
+        <div class="service-item">
+          <span class="service-icon">📄</span>
+          <div>
+            <div class="service-name">Document Automation &amp; Legal Tech</div>
+            <div class="service-desc">Automated NDAs, contracts, rate confirmations, and compliance docs — generated dynamically, signed electronically, filed instantly.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- EXPERIENCE -->
+    <div class="section">
+      <div class="section-title"><span class="icon">💼</span> Executive Career History</div>
+
+      <div class="exp-item">
+        <div class="exp-header">
+          <div class="exp-company">Integrated Efficiency (IEBC Business Consultants)</div>
+          <div class="exp-dates">2025 – Present</div>
+        </div>
+        <div class="exp-role">Founder &amp; CEO — AI Systems Architect</div>
+        <ul class="exp-bullets">
+          <li>Personally architected and coded the "IEBC Enterprise Hub" — a 26,000+ line multi-persona AI command center featuring 50+ specialized AI personas for autonomous business operations.</li>
+          <li>Deployed full-stack web platform (Eagle Eye) with real-time email client, CRM pipeline, document vault, carrier management, fleet tracking, and AI agent orchestration.</li>
+          <li>Built and published Android mobile app to Google Play Store using Capacitor.js and FastAPI backend deployed on Render with Docker.</li>
+          <li>Engineered persistent AI memory systems using Supabase and pgvector — enabling agents to maintain long-term context across sessions.</li>
+          <li>Designed 14-phase ERP replacement architecture replacing legacy systems with AI-augmented Supabase infrastructure.</li>
+          <li>Developed automated document engine generating NDAs, carrier agreements, and rate confirmations dynamically via Python ReportLab.</li>
+          <li>Delivered "Automate Your Hustle" client framework — full business infrastructure in 6-week cycles; average 22 hours/week saved per client.</li>
+        </ul>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="exp-item">
+        <div class="exp-header">
+          <div class="exp-company">3 Lakes Logistics</div>
+          <div class="exp-dates">2024 – Present</div>
+        </div>
+        <div class="exp-role">Founder &amp; CEO — Technology Architect</div>
+        <ul class="exp-bullets">
+          <li>Founded and built a technology-first freight brokerage operation from scratch, including all software infrastructure.</li>
+          <li>Built full logistics platform: driver onboarding, load management, fleet safety monitoring, automated settlement, and carrier outreach — all custom-coded.</li>
+          <li>Architected Supabase database with 20+ tables, real-time subscriptions, row-level security, and cross-system data integrity.</li>
+          <li>Deployed multi-channel automated outreach (SMS + email) for carrier acquisition and load coverage with AI-assisted scoring.</li>
+        </ul>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="exp-item">
+        <div class="exp-header">
+          <div class="exp-company">Northwest Ticket &amp; Investment Company</div>
+          <div class="exp-dates">2001 – Present</div>
+        </div>
+        <div class="exp-role">CEO / Owner</div>
+        <ul class="exp-bullets">
+          <li>Founded and operate a multi-million dollar national sales operation with $20M+ in lifetime revenue.</li>
+          <li>Built and manage end-to-end client lifecycle, strategic marketing, and high-leverage automated sales systems.</li>
+        </ul>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="exp-item">
+        <div class="exp-header">
+          <div class="exp-company">Korn Ferry International</div>
+          <div class="exp-dates">2001 – 2002</div>
+        </div>
+        <div class="exp-role">Executive Recruiter</div>
+        <ul class="exp-bullets">
+          <li>Spearheaded C-suite (CEO, CFO, COO) placements for global organizations across medical device, telecom, and financial sectors.</li>
+        </ul>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="exp-item">
+        <div class="exp-header">
+          <div class="exp-company">Oppenheimer &amp; Company / Investment Firms</div>
+          <div class="exp-dates">1991 – 2001</div>
+        </div>
+        <div class="exp-role">Financial Advisor / Asset Manager</div>
+        <ul class="exp-bullets">
+          <li>Managed high-net-worth client assets exceeding $100M across capital markets and portfolio growth strategies.</li>
+          <li>Maintained Series 6, 7, 65, and Insurance licenses — full regulatory and fiduciary compliance across 10 years.</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- EDUCATION + CERTS -->
+    <div class="section">
+      <div class="section-title"><span class="icon">🎓</span> Education &amp; Certifications</div>
+      <div style="display:flex; gap:24px; flex-wrap:wrap;">
+        <div>
+          <div style="font-weight:700;font-size:12.5px;color:var(--navy)">University of Hawaii — Honolulu, HI</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:2px">Bachelor of Science in Marketing</div>
+        </div>
+        <div>
+          <div style="font-weight:700;font-size:12.5px;color:var(--navy)">FINRA Licenses (Active/Previous)</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:2px">Series 6 · Series 7 · Series 65 · Insurance</div>
+        </div>
+        <div>
+          <div style="font-weight:700;font-size:12.5px;color:var(--navy)">Self-Directed Technical Development</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:2px">Anthropic AI Systems · Full-Stack Dev · Database Architecture</div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /body -->
+
+  <!-- FOOTER -->
+  <div class="footer">
+    <div class="footer-left">
+      <strong>Mark Odom</strong> — Available for Contract, Advisory, and Full-Time Roles<br>
+      AI Systems · Full-Stack Development · Executive Technology Leadership
+    </div>
+    <a href="mailto:yourticketbroker@gmail.com" class="footer-cta">Get In Touch →</a>
+  </div>
+
+</div>
+</body>
+</html>
