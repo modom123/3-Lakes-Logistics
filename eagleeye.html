@@ -23041,17 +23041,54 @@ function lfRenderExpertReport(segment, d) {
       _lfKpis();
     };
 
-    window.tslfHand=function(id){
+    window.tslfHand=async function(id){
       _lfSt[id]='ng';tslfRender();
       const l=_lfLoads.find(x=>x.id===id);
-      if(l)console.log('[Bond Agent LF] Activated for',l.id,l.oc+'→'+l.dc,'$'+l.rate,l.cargo);
+      if(!l)return;
+      const today=new Date().toISOString().split('T')[0];
+      const deliv=new Date(Date.now()+86400000).toISOString().split('T')[0];
+      try{
+        const r=await fetch(API_BASE+'/api/execution/steps/31/run',{
+          method:'POST',
+          headers:{'Content-Type':'application/json','Authorization':'Bearer '+API_TOKEN},
+          body:JSON.stringify({carrier_id:null,contract_id:null,input_payload:{
+            broker_name:'TruckSmarter LF',load_number:l.id,
+            origin_city:l.oc,origin_state:l.os,
+            dest_city:l.dc,dest_state:l.ds,
+            miles:l.mi,rate_total:l.rate,rate_per_mile:l.rpm,
+            equipment_type:l.eq.toLowerCase().replace(/\s+/g,'_'),
+            pickup_at:today,delivery_at:deliv,
+          }})
+        });
+        const d=await r.json();
+        if(d.status==='complete'&&d.output?.load_id){
+          l._sysId=d.output.load_id;
+          console.log('[Execution Step 31 LF] Load booked. ID:',l._sysId);
+        }else{
+          console.warn('[Execution Step 31 LF]',d);
+        }
+      }catch(e){console.error('[Execution Step 31 LF] error:',e);}
       setTimeout(()=>{if(_lfSt[id]==='ng'){_lfSt[id]='wn';tslfRender();}},8000);
     };
 
-    window.tslfDisp=function(id){
+    window.tslfDisp=async function(id){
       _lfSt[id]='dp';tslfRender();
       const l=_lfLoads.find(x=>x.id===id);
-      if(l)console.log('[Hawk LF] Dispatched:',l.id,l.oc+'→'+l.dc,l.eq);
+      if(!l)return;
+      try{
+        const r=await fetch(API_BASE+'/api/execution/steps/37/run',{
+          method:'POST',
+          headers:{'Content-Type':'application/json','Authorization':'Bearer '+API_TOKEN},
+          body:JSON.stringify({carrier_id:null,contract_id:null,input_payload:{
+            accepted:true,
+            load_id:l._sysId||null,
+            driver_code:'aaaaaaaa-0001-4000-a000-000000000001',
+            truck_id:'test-truck-lf-001',
+          }})
+        });
+        const d=await r.json();
+        console.log('[Execution Step 37 LF] Hawk dispatch result:',d);
+      }catch(e){console.error('[Execution Step 37 LF] error:',e);}
     };
 
     window.tslfRefresh=function(){_lfLoads=_lfGen();Object.keys(_lfSt).forEach(k=>{if(_lfSt[k]==='av')delete _lfSt[k];});tslfRender();};
@@ -25223,17 +25260,55 @@ table.td-table tr:hover td{background:rgba(34,197,94,.03);}
       _updateTDKpis();
     };
 
-    window.tsHandTD=function(id){
+    window.tsHandTD=async function(id){
       _tdSt[id]='ng';tsRenderTD();
       const l=_tdLoads.find(x=>x.id===id);
-      if(l)console.log('[Bond Agent] Activated for',l.id,l.oc+'→'+l.dc,'$'+l.rate,'via',l.broker);
+      if(!l)return;
+      const today=new Date().toISOString().split('T')[0];
+      const deliv=new Date(Date.now()+2*86400000).toISOString().split('T')[0];
+      try{
+        const r=await fetch(API_BASE+'/api/execution/steps/31/run',{
+          method:'POST',
+          headers:{'Content-Type':'application/json','Authorization':'Bearer '+API_TOKEN},
+          body:JSON.stringify({carrier_id:null,contract_id:null,input_payload:{
+            broker_name:l.broker,load_number:l.id,
+            origin_city:l.oc,origin_state:l.os,
+            dest_city:l.dc,dest_state:l.ds,
+            miles:l.mi,rate_total:l.rate,rate_per_mile:l.rpm,
+            equipment_type:l.eq.toLowerCase().replace(/\s+/g,'_'),
+            pickup_at:today,delivery_at:deliv,
+          }})
+        });
+        const d=await r.json();
+        if(d.status==='complete'&&d.output?.load_id){
+          l._sysId=d.output.load_id;
+          console.log('[Execution Step 31] Load booked in system. ID:',l._sysId);
+        }else{
+          console.warn('[Execution Step 31]',d);
+        }
+      }catch(e){console.error('[Execution Step 31] error:',e);}
       setTimeout(()=>{if(_tdSt[id]==='ng'){_tdSt[id]='wn';tsRenderTD();}},9000);
     };
 
-    window.tsDispTD=function(id){
+    window.tsDispTD=async function(id){
       _tdSt[id]='dp';tsRenderTD();
       const l=_tdLoads.find(x=>x.id===id);
-      if(l)console.log('[Hawk] Load dispatched:',l.id,l.oc+'→'+l.dc);
+      if(!l)return;
+      // Step 37: assign to test driver James Test Driver (PIN: 1234)
+      try{
+        const r=await fetch(API_BASE+'/api/execution/steps/37/run',{
+          method:'POST',
+          headers:{'Content-Type':'application/json','Authorization':'Bearer '+API_TOKEN},
+          body:JSON.stringify({carrier_id:null,contract_id:null,input_payload:{
+            accepted:true,
+            load_id:l._sysId||null,
+            driver_code:'aaaaaaaa-0001-4000-a000-000000000001',
+            truck_id:'test-truck-001',
+          }})
+        });
+        const d=await r.json();
+        console.log('[Execution Step 37] Hawk dispatch result:',d);
+      }catch(e){console.error('[Execution Step 37] error:',e);}
     };
 
     window.tsRefreshTD=function(){_tdLoads=_gen();Object.keys(_tdSt).forEach(k=>{if(_tdSt[k]==='av')delete _tdSt[k];});tsRenderTD();};
