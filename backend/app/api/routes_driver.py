@@ -256,28 +256,56 @@ async def get_driver_full_profile(session: DriverSession):
 
 @router.get("/loads")
 async def get_available_loads(session: DriverSession):
-    """Return loads available for pickup (status = available or offered to this driver)."""
+    """Return loads for this driver: carrier pool (available/offered/pending) +
+    loads dispatched directly to this driver (dispatched/in_transit)."""
     driver_id = session["driver_id"]
 
+    _LOAD_FIELDS = (
+        "id, load_number, origin_city, origin_state, dest_city, dest_state, "
+        "pickup_address, delivery_address, pickup_at, delivery_at, "
+        "rate_total, rate_per_mile, miles, commodity, weight_lbs, "
+        "equipment_type, broker_name, broker_phone, special_instructions, "
+        "status, driver_code, driver_id, truck_id"
+    )
+    sb = get_supabase()
+    loads: list[dict] = []
+    seen_ids: set[str] = set()
+
     try:
-        driver_result = get_supabase().table("drivers").select(
-            "carrier_id"
-        ).eq("id", driver_id).single().execute()
+        driver_result = sb.table("drivers").select("carrier_id").eq(
+            "id", driver_id
+        ).single().execute()
         carrier_id = driver_result.data.get("carrier_id")
 
-        result = get_supabase().table("loads").select(
-            "id, load_number, origin_city, origin_state, dest_city, dest_state, "
-            "pickup_address, delivery_address, pickup_at, delivery_at, "
-            "rate_total, rate_per_mile, miles, commodity, weight_lbs, "
-            "equipment_type, broker_name, broker_phone, special_instructions, status"
-        ).eq("carrier_id", carrier_id).in_(
-            "status", ["available", "offered", "pending"]
-        ).order("pickup_at", desc=False).limit(50).execute()
+        # 1. Carrier pool — loads available to any driver on this carrier
+        if carrier_id:
+            pool = sb.table("loads").select(_LOAD_FIELDS).eq(
+                "carrier_id", carrier_id
+            ).in_(
+                "status", ["available", "offered", "pending"]
+            ).order("pickup_at", desc=False).limit(50).execute()
+            for row in (pool.data or []):
+                if row["id"] not in seen_ids:
+                    seen_ids.add(row["id"])
+                    loads.append(row)
 
-        return {"loads": result.data or [], "count": len(result.data or [])}
+        # 2. Loads dispatched directly to this driver (by driver_code or driver_id)
+        for field in ("driver_code", "driver_id"):
+            dispatched = sb.table("loads").select(_LOAD_FIELDS).eq(
+                field, driver_id
+            ).in_(
+                "status", ["dispatched", "confirmed", "in_transit"]
+            ).order("pickup_at", desc=False).limit(20).execute()
+            for row in (dispatched.data or []):
+                if row["id"] not in seen_ids:
+                    seen_ids.add(row["id"])
+                    loads.append(row)
+
     except Exception as e:
         log.error("Failed to get available loads: %s", e)
         raise HTTPException(status_code=500, detail="failed to fetch loads")
+
+    return {"loads": loads, "count": len(loads)}
 
 
 @router.post("/loads/{load_id}/accept")
