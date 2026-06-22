@@ -1,0 +1,904 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
+<meta name="theme-color" content="#0a0d14"/>
+<meta name="mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<title>FALCON · IEBC Carrier Portal</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+:root{
+  --bg:#0a0d14;
+  --surface:#111520;
+  --surface2:#161b28;
+  --border:rgba(255,255,255,.08);
+  --gold:#F5C842;
+  --gold2:#e4b830;
+  --text:#e8eaf0;
+  --muted:#6b7280;
+  --green:#10b981;
+  --amber:#f59e0b;
+  --red:#ef4444;
+  --blue:#3b82f6;
+  --ff:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  --ffm:'SF Mono','Fira Code',monospace;
+}
+body{background:var(--bg);color:var(--text);font-family:var(--ff);min-height:100dvh;display:flex;flex-direction:column;max-width:480px;margin:0 auto;}
+/* ── Header ── */
+.hdr{background:linear-gradient(135deg,#0a0d14 0%,#0f1420 100%);border-bottom:1px solid var(--border);padding:14px 18px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;position:sticky;top:0;z-index:50;}
+.hdr-logo{display:flex;align-items:center;gap:10px;}
+.hdr-icon{width:34px;height:34px;background:linear-gradient(135deg,#F5C842,#e4a800);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;}
+.hdr-title{font-weight:900;font-size:17px;letter-spacing:.5px;color:#fff;}
+.hdr-sub{font-size:10px;color:var(--muted);letter-spacing:.4px;text-transform:uppercase;margin-top:1px;}
+.hdr-load-chip{background:rgba(245,200,66,.1);border:1px solid rgba(245,200,66,.3);color:var(--gold);font-size:11px;font-weight:700;padding:4px 10px;border-radius:20px;letter-spacing:.3px;}
+/* ── Tabs ── */
+.tabs{display:flex;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;position:sticky;top:63px;z-index:40;}
+.tab{flex:1;padding:12px 4px;text-align:center;font-size:11px;font-weight:700;color:var(--muted);border:none;background:none;cursor:pointer;letter-spacing:.4px;text-transform:uppercase;transition:color .15s;border-bottom:2px solid transparent;display:flex;flex-direction:column;align-items:center;gap:3px;}
+.tab .tab-icon{font-size:16px;}
+.tab.active{color:var(--gold);border-bottom-color:var(--gold);}
+/* ── Pages ── */
+.page{display:none;flex:1;overflow-y:auto;padding:16px;}
+.page.active{display:block;}
+/* ── Auth screen ── */
+.auth-wrap{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60dvh;padding:24px;text-align:center;}
+.auth-eagle{font-size:72px;margin-bottom:16px;}
+.auth-title{font-size:22px;font-weight:900;color:#fff;margin-bottom:8px;}
+.auth-sub{font-size:13px;color:var(--muted);line-height:1.6;max-width:280px;}
+.auth-err{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);color:#ef4444;padding:12px 16px;border-radius:8px;font-size:13px;margin-top:16px;width:100%;}
+.auth-spin{width:40px;height:40px;border:3px solid rgba(245,200,66,.2);border-top-color:var(--gold);border-radius:50%;animation:spin .7s linear infinite;margin:24px auto;}
+@keyframes spin{to{transform:rotate(360deg);}}
+/* ── Cards ── */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;margin-bottom:14px;overflow:hidden;}
+.card-head{padding:14px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.card-title{font-weight:700;font-size:13px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);}
+.card-body{padding:14px 16px;}
+/* ── Load overview ── */
+.route-display{display:flex;align-items:center;gap:12px;margin-bottom:16px;}
+.route-city{flex:1;}
+.route-city-name{font-size:20px;font-weight:900;color:#fff;line-height:1;}
+.route-city-st{font-size:12px;color:var(--muted);margin-top:2px;}
+.route-arrow{color:var(--gold);font-size:20px;flex-shrink:0;}
+.load-meta-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;}
+.lmg-item{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;}
+.lmg-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px;}
+.lmg-val{font-size:15px;font-weight:800;color:#fff;}
+.lmg-val.green{color:var(--green);}
+.lmg-val.gold{color:var(--gold);}
+/* ── Status progress ── */
+.status-track{display:flex;flex-direction:column;gap:0;}
+.status-step{display:flex;align-items:flex-start;gap:12px;position:relative;}
+.status-step:not(:last-child)::after{content:'';position:absolute;left:15px;top:32px;width:2px;height:calc(100% - 4px);background:var(--border);}
+.status-step.done::after{background:var(--green);}
+.status-step.active::after{background:rgba(245,200,66,.3);}
+.ss-dot{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;border:2px solid var(--border);background:var(--surface2);margin-top:8px;z-index:1;}
+.ss-dot.done{background:rgba(16,185,129,.15);border-color:var(--green);color:var(--green);}
+.ss-dot.active{background:rgba(245,200,66,.15);border-color:var(--gold);color:var(--gold);animation:pulse-dot 1.5s ease-in-out infinite;}
+@keyframes pulse-dot{0%,100%{box-shadow:0 0 0 0 rgba(245,200,66,.4);}50%{box-shadow:0 0 0 6px rgba(245,200,66,0);}}
+.ss-info{flex:1;padding:10px 0 16px;}
+.ss-label{font-size:13px;font-weight:700;color:var(--text);}
+.ss-label.done{color:var(--green);}
+.ss-label.active{color:var(--gold);}
+.ss-label.pending{color:var(--muted);}
+.ss-ts{font-size:10px;color:var(--muted);margin-top:2px;}
+/* ── Action button ── */
+.action-btn{width:100%;padding:16px;border-radius:12px;border:none;font-size:16px;font-weight:900;cursor:pointer;letter-spacing:.4px;transition:all .15s;margin-top:6px;display:flex;align-items:center;justify-content:center;gap:10px;}
+.action-btn.primary{background:linear-gradient(135deg,var(--gold),var(--gold2));color:#000;}
+.action-btn.primary:hover{filter:brightness(1.1);}
+.action-btn.primary:disabled{opacity:.5;cursor:not-allowed;}
+.action-btn.secondary{background:var(--surface2);border:1px solid var(--border);color:var(--text);}
+.action-btn.done-state{background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.3);color:var(--green);cursor:default;}
+/* ── Status badge ── */
+.status-badge{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;}
+.sb-dispatched{background:rgba(59,130,246,.15);color:var(--blue);}
+.sb-confirmed{background:rgba(139,92,246,.15);color:#8b5cf6;}
+.sb-en_route{background:rgba(245,158,11,.15);color:var(--amber);}
+.sb-at_pickup{background:rgba(245,200,66,.15);color:var(--gold);}
+.sb-in_transit{background:rgba(245,200,66,.15);color:var(--gold);}
+.sb-at_delivery{background:rgba(16,185,129,.15);color:var(--green);}
+.sb-delivered{background:rgba(16,185,129,.2);color:var(--green);}
+/* ── Doc upload ── */
+.doc-slot{display:flex;align-items:center;gap:14px;padding:14px 0;border-bottom:1px solid var(--border);}
+.doc-slot:last-child{border-bottom:none;}
+.doc-icon{width:44px;height:44px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;}
+.doc-icon.pending{background:var(--surface2);}
+.doc-icon.done{background:rgba(16,185,129,.1);}
+.doc-info{flex:1;min-width:0;}
+.doc-name{font-weight:700;font-size:13px;}
+.doc-note{font-size:11px;color:var(--muted);margin-top:2px;}
+.doc-status{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;margin-top:4px;}
+.doc-status.uploaded{color:var(--green);}
+.doc-status.required{color:var(--amber);}
+.doc-upload-btn{padding:8px 14px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:12px;font-weight:700;cursor:pointer;flex-shrink:0;display:flex;align-items:center;gap:6px;}
+.doc-upload-btn:hover{border-color:var(--gold);color:var(--gold);}
+.doc-upload-btn.done{background:rgba(16,185,129,.1);border-color:rgba(16,185,129,.3);color:var(--green);cursor:default;}
+.doc-view-btn{padding:6px 12px;border-radius:6px;border:1px solid rgba(16,185,129,.3);background:transparent;color:var(--green);font-size:11px;font-weight:700;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:4px;}
+input[type=file]{display:none;}
+/* ── Pay ── */
+.pay-row{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--border);}
+.pay-row:last-child{border-bottom:none;}
+.pay-label{font-size:13px;color:var(--muted);}
+.pay-val{font-size:14px;font-weight:800;color:#fff;}
+.pay-val.green{color:var(--green);}
+.pay-val.red{color:var(--red);}
+.pay-timeline{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-top:14px;}
+.pay-timeline-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:10px;}
+.pt-step{display:flex;align-items:center;gap:10px;padding:6px 0;}
+.pt-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.pt-dot.done{background:var(--green);}
+.pt-dot.active{background:var(--gold);}
+.pt-dot.wait{background:var(--muted);}
+.pt-text{font-size:12px;color:var(--text);}
+.pt-eta{font-size:10px;color:var(--muted);margin-left:auto;}
+/* ── Help / messages ── */
+.help-contact{display:flex;align-items:center;gap:14px;padding:14px 16px;background:var(--surface);border:1px solid var(--border);border-radius:12px;margin-bottom:12px;}
+.help-avatar{width:46px;height:46px;border-radius:50%;background:rgba(245,200,66,.1);border:2px solid rgba(245,200,66,.3);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;}
+.help-info{flex:1;}
+.help-name{font-weight:700;font-size:14px;color:#fff;}
+.help-role{font-size:11px;color:var(--muted);margin-top:2px;}
+.help-actions{display:flex;gap:8px;}
+.help-btn{padding:8px 14px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:5px;text-decoration:none;}
+.help-btn:hover{border-color:var(--gold);color:var(--gold);}
+.msg-input-wrap{margin-top:14px;}
+.msg-input{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px 14px;color:var(--text);font-size:14px;font-family:var(--ff);resize:none;min-height:90px;outline:none;}
+.msg-input:focus{border-color:rgba(245,200,66,.4);}
+.msg-send-btn{width:100%;margin-top:10px;padding:14px;background:var(--gold);color:#000;border:none;border-radius:10px;font-weight:900;font-size:14px;cursor:pointer;letter-spacing:.4px;}
+.msg-send-btn:disabled{opacity:.5;cursor:not-allowed;}
+.msg-sent{color:var(--green);font-size:12px;text-align:center;margin-top:8px;}
+.faq-item{padding:14px 0;border-bottom:1px solid var(--border);}
+.faq-item:last-child{border-bottom:none;}
+.faq-q{font-size:13px;font-weight:700;color:#fff;margin-bottom:6px;}
+.faq-a{font-size:12px;color:var(--muted);line-height:1.6;}
+/* ── Toast ── */
+#toast{position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:#1a2035;border:1px solid var(--border);padding:10px 18px;border-radius:20px;font-size:13px;font-weight:600;color:#fff;z-index:999;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap;}
+#toast.show{opacity:1;}
+/* ── Upload progress ── */
+.upload-progress{background:rgba(245,200,66,.1);border:1px solid rgba(245,200,66,.3);border-radius:8px;padding:10px 14px;margin-top:8px;font-size:12px;color:var(--gold);display:none;}
+.upload-progress.show{display:block;}
+/* ── Nav bottom spacing ── */
+.page-bottom-spacer{height:24px;}
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="hdr">
+  <div class="hdr-logo">
+    <div class="hdr-icon">🦅</div>
+    <div>
+      <div class="hdr-title">FALCON</div>
+      <div class="hdr-sub">IEBC Carrier Portal</div>
+    </div>
+  </div>
+  <div id="hdr-load-num"></div>
+</div>
+
+<!-- Tabs (hidden until auth) -->
+<div class="tabs" id="tabs" style="display:none;">
+  <button class="tab active" onclick="showTab('load')" id="tab-load">
+    <span class="tab-icon">🚛</span>MY LOAD
+  </button>
+  <button class="tab" onclick="showTab('docs')" id="tab-docs">
+    <span class="tab-icon">📄</span>VAULT
+  </button>
+  <button class="tab" onclick="showTab('pay')" id="tab-pay">
+    <span class="tab-icon">💰</span>PAY
+  </button>
+  <button class="tab" onclick="showTab('help')" id="tab-help">
+    <span class="tab-icon">💬</span>HELP
+  </button>
+</div>
+
+<!-- Auth / loading screen -->
+<div class="page active" id="page-auth">
+  <div class="auth-wrap" id="auth-wrap">
+    <div class="auth-eagle">🦅</div>
+    <div class="auth-title">FALCON Portal</div>
+    <div class="auth-sub">Loading your dispatch from IEBC Business Consultants…</div>
+    <div class="auth-spin"></div>
+  </div>
+</div>
+
+<!-- Load tab -->
+<div class="page" id="page-load">
+  <!-- Status badge row -->
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+    <div>
+      <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">Load Status</div>
+      <div id="load-status-badge"></div>
+    </div>
+    <div style="font-size:11px;color:var(--muted);text-align:right;">
+      <div id="load-broker" style="font-weight:700;color:var(--text);font-size:13px;"></div>
+      <div id="load-equipment" style="margin-top:2px;"></div>
+    </div>
+  </div>
+
+  <!-- Route card -->
+  <div class="card">
+    <div class="card-body">
+      <div class="route-display">
+        <div class="route-city">
+          <div class="route-city-name" id="load-origin-city">—</div>
+          <div class="route-city-st" id="load-origin-st">—</div>
+        </div>
+        <div class="route-arrow">→</div>
+        <div class="route-city" style="text-align:right;">
+          <div class="route-city-name" id="load-dest-city">—</div>
+          <div class="route-city-st" id="load-dest-st">—</div>
+        </div>
+      </div>
+      <div class="load-meta-grid">
+        <div class="lmg-item">
+          <div class="lmg-label">Miles</div>
+          <div class="lmg-val" id="load-miles">—</div>
+        </div>
+        <div class="lmg-item">
+          <div class="lmg-label">Load Rate</div>
+          <div class="lmg-val gold" id="load-rate">—</div>
+        </div>
+        <div class="lmg-item">
+          <div class="lmg-label">Pickup</div>
+          <div class="lmg-val" id="load-pickup" style="font-size:12px;"></div>
+        </div>
+        <div class="lmg-item">
+          <div class="lmg-label">Delivery</div>
+          <div class="lmg-val" id="load-delivery" style="font-size:12px;"></div>
+        </div>
+      </div>
+      <div id="load-commodity" style="font-size:12px;color:var(--muted);"></div>
+      <div id="load-instructions" style="font-size:12px;color:var(--amber);margin-top:6px;"></div>
+    </div>
+  </div>
+
+  <!-- Action button -->
+  <div id="action-area"></div>
+
+  <!-- Status progress track -->
+  <div class="card" style="margin-top:14px;">
+    <div class="card-head">
+      <div class="card-title">Load Progress</div>
+    </div>
+    <div class="card-body">
+      <div class="status-track" id="status-track"></div>
+    </div>
+  </div>
+
+  <div class="page-bottom-spacer"></div>
+</div>
+
+<!-- Docs / Vault tab -->
+<div class="page" id="page-docs">
+  <!-- Required trip docs -->
+  <div class="card">
+    <div class="card-head">
+      <div class="card-title">Trip Documents</div>
+      <span style="font-size:10px;color:var(--muted);font-weight:600">REQUIRED</span>
+    </div>
+    <div class="card-body" style="padding:0 16px;">
+      <!-- BOL -->
+      <div class="doc-slot" id="doc-bol-slot">
+        <div class="doc-icon pending" id="doc-bol-icon">📋</div>
+        <div class="doc-info">
+          <div class="doc-name">Bill of Lading (BOL)</div>
+          <div class="doc-note">Upload at pickup · photo or PDF</div>
+          <div class="doc-status required" id="doc-bol-status">Required at pickup</div>
+        </div>
+        <div>
+          <button class="doc-upload-btn" id="doc-bol-btn" onclick="triggerUpload('bol')">📷 Upload</button>
+          <a id="doc-bol-view" class="doc-view-btn" style="display:none;margin-top:4px;" target="_blank">👁 View</a>
+        </div>
+      </div>
+      <!-- POD -->
+      <div class="doc-slot" id="doc-pod-slot">
+        <div class="doc-icon pending" id="doc-pod-icon">📦</div>
+        <div class="doc-info">
+          <div class="doc-name">Proof of Delivery (POD)</div>
+          <div class="doc-note">Upload at delivery · photo or signed sheet</div>
+          <div class="doc-status required" id="doc-pod-status">Required at delivery</div>
+        </div>
+        <div>
+          <button class="doc-upload-btn" id="doc-pod-btn" onclick="triggerUpload('pod')">📷 Upload</button>
+          <a id="doc-pod-view" class="doc-view-btn" style="display:none;margin-top:4px;" target="_blank">👁 View</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Vault: additional documents -->
+  <div class="card">
+    <div class="card-head">
+      <div class="card-title">🗄 Document Vault</div>
+      <span style="font-size:10px;color:var(--muted);font-weight:600">OPTIONAL</span>
+    </div>
+    <div class="card-body" style="padding:0 16px;">
+      <div id="vault-list">
+        <!-- rate_con -->
+        <div class="doc-slot" id="doc-rate_con-slot">
+          <div class="doc-icon pending" id="doc-rate_con-icon">📑</div>
+          <div class="doc-info">
+            <div class="doc-name">Rate Confirmation</div>
+            <div class="doc-note">Broker rate con · PDF or photo</div>
+            <div class="doc-status" id="doc-rate_con-status" style="color:var(--muted)">Not uploaded</div>
+          </div>
+          <div>
+            <button class="doc-upload-btn" id="doc-rate_con-btn" onclick="triggerUpload('rate_con')">📷 Upload</button>
+            <a id="doc-rate_con-view" class="doc-view-btn" style="display:none;margin-top:4px;" target="_blank">👁 View</a>
+          </div>
+        </div>
+        <!-- lumper -->
+        <div class="doc-slot" id="doc-lumper-slot">
+          <div class="doc-icon pending" id="doc-lumper-icon">🧾</div>
+          <div class="doc-info">
+            <div class="doc-name">Lumper Receipt</div>
+            <div class="doc-note">Unloading labor receipt</div>
+            <div class="doc-status" id="doc-lumper-status" style="color:var(--muted)">Not uploaded</div>
+          </div>
+          <div>
+            <button class="doc-upload-btn" id="doc-lumper-btn" onclick="triggerUpload('lumper')">📷 Upload</button>
+            <a id="doc-lumper-view" class="doc-view-btn" style="display:none;margin-top:4px;" target="_blank">👁 View</a>
+          </div>
+        </div>
+        <!-- scale_ticket -->
+        <div class="doc-slot" id="doc-scale_ticket-slot">
+          <div class="doc-icon pending" id="doc-scale_ticket-icon">⚖️</div>
+          <div class="doc-info">
+            <div class="doc-name">Scale Ticket</div>
+            <div class="doc-note">Weight slip from weigh station</div>
+            <div class="doc-status" id="doc-scale_ticket-status" style="color:var(--muted)">Not uploaded</div>
+          </div>
+          <div>
+            <button class="doc-upload-btn" id="doc-scale_ticket-btn" onclick="triggerUpload('scale_ticket')">📷 Upload</button>
+            <a id="doc-scale_ticket-view" class="doc-view-btn" style="display:none;margin-top:4px;" target="_blank">👁 View</a>
+          </div>
+        </div>
+        <!-- detention -->
+        <div class="doc-slot" id="doc-detention-slot">
+          <div class="doc-icon pending" id="doc-detention-icon">⏱</div>
+          <div class="doc-info">
+            <div class="doc-name">Detention Record</div>
+            <div class="doc-note">Timestamp + signature for detention pay</div>
+            <div class="doc-status" id="doc-detention-status" style="color:var(--muted)">Not uploaded</div>
+          </div>
+          <div>
+            <button class="doc-upload-btn" id="doc-detention-btn" onclick="triggerUpload('detention')">📷 Upload</button>
+            <a id="doc-detention-view" class="doc-view-btn" style="display:none;margin-top:4px;" target="_blank">👁 View</a>
+          </div>
+        </div>
+        <!-- fuel_receipt -->
+        <div class="doc-slot" id="doc-fuel_receipt-slot">
+          <div class="doc-icon pending" id="doc-fuel_receipt-icon">⛽</div>
+          <div class="doc-info">
+            <div class="doc-name">Fuel Receipt</div>
+            <div class="doc-note">For IFTA / fuel advance reimbursement</div>
+            <div class="doc-status" id="doc-fuel_receipt-status" style="color:var(--muted)">Not uploaded</div>
+          </div>
+          <div>
+            <button class="doc-upload-btn" id="doc-fuel_receipt-btn" onclick="triggerUpload('fuel_receipt')">📷 Upload</button>
+            <a id="doc-fuel_receipt-view" class="doc-view-btn" style="display:none;margin-top:4px;" target="_blank">👁 View</a>
+          </div>
+        </div>
+        <!-- other -->
+        <div class="doc-slot" id="doc-other-slot">
+          <div class="doc-icon pending" id="doc-other-icon">📎</div>
+          <div class="doc-info">
+            <div class="doc-name">Other Document</div>
+            <div class="doc-note">Any additional document for this load</div>
+            <div class="doc-status" id="doc-other-status" style="color:var(--muted)">Not uploaded</div>
+          </div>
+          <div>
+            <button class="doc-upload-btn" id="doc-other-btn" onclick="triggerUpload('other')">📷 Upload</button>
+            <a id="doc-other-view" class="doc-view-btn" style="display:none;margin-top:4px;" target="_blank">👁 View</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- hidden file inputs for all doc types -->
+  <div class="upload-progress" id="upload-progress">Uploading…</div>
+  <input type="file" id="file-input-bol"          accept="image/*,application/pdf" capture="environment" onchange="handleUpload('bol')"/>
+  <input type="file" id="file-input-pod"          accept="image/*,application/pdf" capture="environment" onchange="handleUpload('pod')"/>
+  <input type="file" id="file-input-rate_con"     accept="image/*,application/pdf" capture="environment" onchange="handleUpload('rate_con')"/>
+  <input type="file" id="file-input-lumper"       accept="image/*,application/pdf" capture="environment" onchange="handleUpload('lumper')"/>
+  <input type="file" id="file-input-scale_ticket" accept="image/*,application/pdf" capture="environment" onchange="handleUpload('scale_ticket')"/>
+  <input type="file" id="file-input-detention"    accept="image/*,application/pdf" capture="environment" onchange="handleUpload('detention')"/>
+  <input type="file" id="file-input-fuel_receipt" accept="image/*,application/pdf" capture="environment" onchange="handleUpload('fuel_receipt')"/>
+  <input type="file" id="file-input-other"        accept="image/*,application/pdf" capture="environment" onchange="handleUpload('other')"/>
+
+  <div class="card">
+    <div class="card-head"><div class="card-title">Upload Tips</div></div>
+    <div class="card-body" style="font-size:12px;color:var(--muted);line-height:1.8;">
+      📷 Use your camera — tap Upload and point at the document<br>
+      ✅ Make sure all fields are visible and readable<br>
+      📄 PDF also accepted — share from your email or files app<br>
+      ⏱ BOL starts the payment clock · POD closes the load<br>
+      🗄 All vault docs visible to IEBC dispatch in Eagle Eye
+    </div>
+  </div>
+  <div class="page-bottom-spacer"></div>
+</div>
+
+<!-- Pay tab -->
+<div class="page" id="page-pay">
+  <div class="card">
+    <div class="card-head">
+      <div class="card-title">Your Earnings</div>
+      <div id="pay-status-badge"></div>
+    </div>
+    <div class="card-body" style="padding:0 16px;">
+      <div class="pay-row">
+        <div class="pay-label">Load Rate</div>
+        <div class="pay-val" id="pay-gross">—</div>
+      </div>
+      <div class="pay-row">
+        <div class="pay-label">Platform Fee (15%)</div>
+        <div class="pay-val red" id="pay-fee">—</div>
+      </div>
+      <div class="pay-row" style="border-top:2px solid var(--border);margin-top:2px;padding-top:14px;">
+        <div class="pay-label" style="font-weight:700;font-size:15px;color:#fff;">Your Net Pay</div>
+        <div class="pay-val green" id="pay-net" style="font-size:18px;">—</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="pay-timeline" id="pay-timeline">
+    <div class="pay-timeline-title">Payment Timeline</div>
+    <div id="pay-timeline-steps"></div>
+  </div>
+
+  <div id="factoring-card" style="display:none;margin-top:14px;" class="card">
+    <div class="card-head">
+      <div class="card-title">⚡ Same-Day Pay Available</div>
+    </div>
+    <div class="card-body">
+      <div style="font-size:13px;color:var(--text);line-height:1.6;margin-bottom:14px;">Get paid today via factoring. IEBC submits your invoice directly — funds hit your account same business day.</div>
+      <button class="action-btn secondary" onclick="requestFactoring()">Request Same-Day Pay →</button>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:14px;">
+    <div class="card-head"><div class="card-title">How Pay Works</div></div>
+    <div class="card-body" style="font-size:12px;color:var(--muted);line-height:1.8;">
+      💰 IEBC deducts 15% platform fee for finding, booking & managing the load<br>
+      📄 Invoice auto-submits when you upload POD<br>
+      🏦 ACH payment in 3-5 business days or same-day via factoring<br>
+      ✉️ Settlement email sent to your address on file
+    </div>
+  </div>
+  <div class="page-bottom-spacer"></div>
+</div>
+
+<!-- Help tab -->
+<div class="page" id="page-help">
+  <div class="help-contact">
+    <div class="help-avatar">🎖️</div>
+    <div class="help-info">
+      <div class="help-name">IEBC Dispatch</div>
+      <div class="help-role">Available 24/7 · avg response &lt;5 min</div>
+    </div>
+  </div>
+  <div style="display:flex;gap:10px;margin-bottom:16px;">
+    <a href="tel:+13135559000" class="action-btn secondary" style="flex:1;text-decoration:none;font-size:14px;">📞 Call Dispatch</a>
+    <a href="sms:+13135559000" class="action-btn secondary" style="flex:1;text-decoration:none;font-size:14px;">💬 Text Us</a>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><div class="card-title">Send Message</div></div>
+    <div class="card-body">
+      <div class="msg-input-wrap">
+        <textarea class="msg-input" id="msg-text" placeholder="Breakdown? Detention? Question about pay? Tell dispatch anything…" rows="4"></textarea>
+        <button class="msg-send-btn" id="msg-send-btn" onclick="sendMessage()">Send to Dispatch →</button>
+        <div class="msg-sent" id="msg-sent" style="display:none;">✅ Message sent · dispatch notified</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:14px;">
+    <div class="card-head"><div class="card-title">FAQ</div></div>
+    <div class="card-body" style="padding:0 16px;">
+      <div class="faq-item">
+        <div class="faq-q">How do I upload my BOL / POD?</div>
+        <div class="faq-a">Tap the Docs tab → tap Upload → use your camera or select a file. Upload BOL at pickup, POD after delivery.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q">When will I get paid?</div>
+        <div class="faq-a">After you upload your POD, IEBC submits the invoice. Standard ACH: 3–5 business days. Same-day factoring available on the Pay tab.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q">What if I'm delayed or have a breakdown?</div>
+        <div class="faq-a">Call or text dispatch immediately (buttons above). We handle broker communication and will document detention pay if applicable.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q">What is the 15% platform fee?</div>
+        <div class="faq-a">IEBC found the load, negotiated the rate, handled all broker communication, and manages your settlement. The 15% covers all of that — you keep 85% with zero broker hassle.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q">Can I use this link again?</div>
+        <div class="faq-a">Yes — your FALCON link is tied to this load. Bookmark it or screenshot your dispatch SMS. A new link is sent with each load IEBC books for you.</div>
+      </div>
+    </div>
+  </div>
+  <div class="page-bottom-spacer"></div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ── Config ────────────────────────────────────────────────────────────────────
+const API_BASE = 'https://three-lakes-logistics-api.onrender.com';
+
+const STATUS_STEPS = [
+  { key:'dispatched',  label:'Dispatch Confirmed',    icon:'📋', note:'Load booked by IEBC' },
+  { key:'confirmed',   label:'You Confirmed',         icon:'✅', note:'Tap Confirm to proceed' },
+  { key:'en_route',    label:'En Route to Pickup',    icon:'🚛', note:'Heading to shipper' },
+  { key:'at_pickup',   label:'Arrived at Pickup',     icon:'📍', note:'At shipper location' },
+  { key:'in_transit',  label:'Picked Up · In Transit',icon:'🛣️', note:'Load aboard — BOL required' },
+  { key:'at_delivery', label:'Arrived at Delivery',   icon:'📍', note:'At consignee location' },
+  { key:'delivered',   label:'Delivered · POD Needed',icon:'🏁', note:'Upload POD to trigger payment' },
+];
+
+const ACTION_CONFIG = {
+  dispatched:  { label:'Confirm Dispatch',        next:'confirmed',   icon:'✅', note:'Let IEBC know you received this load' },
+  confirmed:   { label:'I\'m En Route to Pickup', next:'en_route',    icon:'🚛', note:'Tap when you leave for shipper' },
+  en_route:    { label:'I\'ve Arrived at Pickup', next:'at_pickup',   icon:'📍', note:'Tap when you arrive at shipper' },
+  at_pickup:   { label:'Load Picked Up',          next:'in_transit',  icon:'🛣️', note:'Tap after loading — upload BOL in Docs tab' },
+  in_transit:  { label:'Arrived at Delivery',     next:'at_delivery', icon:'📍', note:'Tap when you reach consignee' },
+  at_delivery: { label:'Delivery Confirmed',      next:'delivered',   icon:'🏁', note:'Tap after unloading — upload POD to trigger payment' },
+  delivered:   null,
+};
+
+// ── State ─────────────────────────────────────────────────────────────────────
+let _token = null;
+let _loadId = null;
+let _driverCode = null;
+let _load = null;
+let _payData = null;
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+(async function init() {
+  const params = new URLSearchParams(location.search);
+  _token = params.get('t');
+  if (!_token) {
+    showAuthError('No dispatch token found. Check your dispatch SMS for the FALCON link.');
+    return;
+  }
+  try {
+    const res = await fetch(`${API_BASE}/api/falcon/auth?t=${encodeURIComponent(_token)}`);
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      showAuthError(err.detail || `Auth failed (${res.status}). Your link may have expired.`);
+      return;
+    }
+    const data = await res.json();
+    _loadId = data.load_id;
+    _driverCode = data.driver_code;
+    _load = data.load;
+    onAuthenticated();
+  } catch(e) {
+    showAuthError(`Cannot reach IEBC server. Check your connection and try again.\n\n${e.message}`);
+  }
+})();
+
+function showAuthError(msg) {
+  document.getElementById('auth-wrap').innerHTML = `
+    <div class="auth-eagle">🦅</div>
+    <div class="auth-title">FALCON Portal</div>
+    <div class="auth-sub">Carrier dispatch portal by IEBC Business Consultants</div>
+    <div class="auth-err">${msg}</div>
+  `;
+}
+
+function onAuthenticated() {
+  document.getElementById('page-auth').classList.remove('active');
+  document.getElementById('tabs').style.display = 'flex';
+  document.getElementById('page-load').classList.add('active');
+  renderLoad();
+  loadPayData();
+  loadVaultDocs();
+}
+
+// ── Tab switching ──────────────────────────────────────────────────────────────
+function showTab(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  document.getElementById('tab-'+id).classList.add('active');
+}
+
+// ── Render Load ───────────────────────────────────────────────────────────────
+function renderLoad() {
+  const l = _load;
+  if (!l) return;
+
+  // Header load number
+  const chip = document.getElementById('hdr-load-num');
+  if (chip) chip.innerHTML = `<div class="hdr-load-chip">#${l.load_number||l.id?.slice(0,8)||'—'}</div>`;
+
+  // Status badge
+  const status = l.status || 'dispatched';
+  document.getElementById('load-status-badge').innerHTML = statusBadge(status);
+
+  // Broker / equipment
+  document.getElementById('load-broker').textContent = l.broker_name || '—';
+  document.getElementById('load-equipment').textContent = (l.equipment_type||'').replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase());
+
+  // Route
+  document.getElementById('load-origin-city').textContent = l.origin_city || '—';
+  document.getElementById('load-origin-st').textContent = l.origin_state || '';
+  document.getElementById('load-dest-city').textContent = l.dest_city || '—';
+  document.getElementById('load-dest-st').textContent = l.dest_state || '';
+
+  // Meta
+  document.getElementById('load-miles').textContent = l.miles ? `${l.miles.toLocaleString()} mi` : '—';
+  document.getElementById('load-rate').textContent = l.rate_total ? `$${parseFloat(l.rate_total).toLocaleString()}` : '—';
+  document.getElementById('load-pickup').textContent = l.pickup_at ? fmtDate(l.pickup_at) : '—';
+  document.getElementById('load-delivery').textContent = l.delivery_at ? fmtDate(l.delivery_at) : '—';
+
+  if (l.commodity) document.getElementById('load-commodity').textContent = `📦 ${l.commodity}`;
+  if (l.special_instructions) document.getElementById('load-instructions').textContent = `⚠️ ${l.special_instructions}`;
+
+  // Action button
+  renderActionBtn(status);
+
+  // Progress track
+  renderStatusTrack(status);
+}
+
+function renderActionBtn(status) {
+  const area = document.getElementById('action-area');
+  const cfg = ACTION_CONFIG[status];
+  if (!cfg) {
+    area.innerHTML = `<button class="action-btn done-state">🏁 Load Delivered · Thank You!</button>`;
+    return;
+  }
+  area.innerHTML = `
+    <button class="action-btn primary" id="action-main-btn" onclick="updateStatus('${cfg.next}')">
+      <span>${cfg.icon}</span> ${cfg.label}
+    </button>
+    <div style="text-align:center;font-size:11px;color:var(--muted);margin-top:8px;">${cfg.note}</div>
+  `;
+}
+
+function renderStatusTrack(currentStatus) {
+  const currentIdx = STATUS_STEPS.findIndex(s => s.key === currentStatus);
+  const track = document.getElementById('status-track');
+  track.innerHTML = STATUS_STEPS.map((step, i) => {
+    let cls = 'pending', dotCls = '';
+    if (i < currentIdx) { cls = 'done'; dotCls = 'done'; }
+    else if (i === currentIdx) { cls = 'active'; dotCls = 'active'; }
+    const icon = i < currentIdx ? '✓' : step.icon;
+    const ts = getStepTimestamp(step.key);
+    return `<div class="status-step ${dotCls}">
+      <div class="ss-dot ${dotCls}">${icon}</div>
+      <div class="ss-info">
+        <div class="ss-label ${cls}">${step.label}</div>
+        ${ts ? `<div class="ss-ts">${ts}</div>` : (i === currentIdx ? `<div class="ss-ts" style="color:var(--gold)">Current status</div>` : '')}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function getStepTimestamp(statusKey) {
+  if (!_load) return null;
+  if (statusKey === 'in_transit' && _load.pickup_confirmed_at) return fmtDateTime(_load.pickup_confirmed_at);
+  if (statusKey === 'delivered' && _load.delivered_at) return fmtDateTime(_load.delivered_at);
+  return null;
+}
+
+// ── Status update ──────────────────────────────────────────────────────────────
+async function updateStatus(newStatus) {
+  const btn = document.getElementById('action-main-btn');
+  if (btn) { btn.disabled = true; btn.innerHTML = '⏳ Updating…'; }
+  try {
+    const res = await fetch(`${API_BASE}/api/falcon/load/${_loadId}/status?t=${encodeURIComponent(_token)}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: newStatus }),
+    });
+    const data = await res.json();
+    if (!res.ok) { showToast(data.detail || 'Update failed'); if(btn){btn.disabled=false;} return; }
+    _load.status = newStatus;
+    renderLoad();
+    showToast('✅ Status updated');
+  } catch(e) {
+    showToast('Network error — try again');
+    if(btn){btn.disabled=false;}
+  }
+}
+
+// ── Docs ──────────────────────────────────────────────────────────────────────
+function triggerUpload(type) {
+  document.getElementById(`file-input-${type}`).click();
+}
+
+// Trip docs go to dedicated endpoints; vault docs go to generic /docs endpoint
+const _TRIP_DOCS = ['bol', 'pod'];
+
+async function handleUpload(type) {
+  const input = document.getElementById(`file-input-${type}`);
+  const file = input.files[0];
+  if (!file) return;
+  const progress = document.getElementById('upload-progress');
+  const label = type.replace(/_/g,' ').toUpperCase();
+  progress.textContent = `Uploading ${label}…`;
+  progress.classList.add('show');
+  const btn = document.getElementById(`doc-${type}-btn`);
+  if (btn) btn.disabled = true;
+
+  const fd = new FormData();
+  fd.append('file', file);
+  // BOL/POD use dedicated endpoints; all other docs go to /docs
+  const endpoint = _TRIP_DOCS.includes(type)
+    ? `${API_BASE}/api/falcon/load/${_loadId}/${type}?t=${encodeURIComponent(_token)}`
+    : `${API_BASE}/api/falcon/load/${_loadId}/docs?t=${encodeURIComponent(_token)}&doc_type=${encodeURIComponent(type)}`;
+
+  try {
+    const res = await fetch(endpoint, { method: 'POST', body: fd });
+    const data = await res.json();
+    if (!res.ok) { showToast(data.detail || 'Upload failed'); progress.classList.remove('show'); if(btn)btn.disabled=false; return; }
+    progress.textContent = `✅ ${label} uploaded!`;
+    setTimeout(() => progress.classList.remove('show'), 3000);
+    markDocUploaded(type, data.url);
+    if (type === 'pod') {
+      _load.status = 'delivered';
+      _load.pod_url = data.url;
+      renderLoad();
+      loadPayData();
+    } else if (type === 'bol') {
+      _load.bol_url = data.url;
+    }
+    showToast(`✅ ${label} uploaded!`);
+  } catch(e) {
+    showToast('Upload failed — check connection');
+    progress.classList.remove('show');
+    if (btn) btn.disabled = false;
+  }
+  input.value = '';
+}
+
+function markDocUploaded(type, url) {
+  const icon = document.getElementById(`doc-${type}-icon`);
+  const status = document.getElementById(`doc-${type}-status`);
+  const btn = document.getElementById(`doc-${type}-btn`);
+  const view = document.getElementById(`doc-${type}-view`);
+  if (icon) { icon.textContent = '✅'; icon.classList.replace('pending','done'); }
+  if (status) {
+    status.textContent = 'Uploaded ✓';
+    status.className = 'doc-status uploaded';
+    status.style.color = '';
+  }
+  if (btn) { btn.className = 'doc-upload-btn done'; btn.textContent = '✓ Uploaded'; }
+  if (url && view) { view.href = url; view.style.display = 'inline-flex'; }
+}
+
+// ── Vault: load existing docs ──────────────────────────────────────────────────
+async function loadVaultDocs() {
+  // Mark BOL/POD already on the load object
+  if (_load?.bol_url) markDocUploaded('bol', _load.bol_url);
+  if (_load?.pod_url) markDocUploaded('pod', _load.pod_url);
+  // Fetch additional vault docs
+  try {
+    const res = await fetch(`${API_BASE}/api/falcon/load/${_loadId}/docs?t=${encodeURIComponent(_token)}`);
+    if (!res.ok) return;
+    const data = await res.json();
+    (data.docs || []).forEach(d => {
+      if (d.doc_type && d.url) markDocUploaded(d.doc_type, d.url);
+    });
+  } catch(e) {}
+}
+
+// ── Pay ────────────────────────────────────────────────────────────────────────
+async function loadPayData() {
+  try {
+    const res = await fetch(`${API_BASE}/api/falcon/load/${_loadId}/pay?t=${encodeURIComponent(_token)}`);
+    if (!res.ok) return;
+    _payData = await res.json();
+    renderPay();
+  } catch(e) {}
+}
+
+function renderPay() {
+  const p = _payData;
+  if (!p) return;
+  document.getElementById('pay-gross').textContent = `$${p.gross_rate?.toLocaleString()||'—'}`;
+  document.getElementById('pay-fee').textContent = `-$${p.platform_fee?.toLocaleString()||'—'}`;
+  document.getElementById('pay-net').textContent = `$${p.your_net?.toLocaleString()||'—'}`;
+
+  const statuses = {
+    pending:           { label:'Pending Delivery', cls:'sb-dispatched' },
+    in_transit:        { label:'In Transit',       cls:'sb-in_transit' },
+    invoice_submitted: { label:'Invoice Submitted',cls:'sb-delivered' },
+  };
+  const st = statuses[p.pay_status] || statuses.pending;
+  document.getElementById('pay-status-badge').innerHTML = `<span class="status-badge ${st.cls}">${st.label}</span>`;
+
+  const steps = [
+    { label:'Load Delivered', done: p.pay_status === 'invoice_submitted', active: p.pay_status === 'in_transit' },
+    { label:'POD Uploaded → Invoice Auto-Submitted', done: p.pay_status === 'invoice_submitted', active: false },
+    { label:'ACH Payment Processing', done: false, active: p.pay_status === 'invoice_submitted', eta: '3–5 business days' },
+    { label:'Funds in Your Account', done: false, active: false, eta: 'or same-day with factoring' },
+  ];
+  document.getElementById('pay-timeline-steps').innerHTML = steps.map(s => `
+    <div class="pt-step">
+      <div class="pt-dot ${s.done?'done':s.active?'active':'wait'}"></div>
+      <div class="pt-text" style="color:${s.done?'var(--green)':s.active?'var(--gold)':'var(--muted)'}">${s.label}</div>
+      ${s.eta ? `<div class="pt-eta">${s.eta}</div>` : ''}
+    </div>
+  `).join('');
+
+  if (p.factoring_available) {
+    document.getElementById('factoring-card').style.display = 'block';
+  }
+}
+
+async function requestFactoring() {
+  showToast('Requesting same-day pay — dispatch will contact you shortly');
+  try {
+    await fetch(`${API_BASE}/api/falcon/load/${_loadId}/message?t=${encodeURIComponent(_token)}`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ message:'FACTORING REQUEST: Please submit my invoice for same-day pay.', priority:'high' })
+    });
+  } catch(e) {}
+}
+
+// ── Messages ──────────────────────────────────────────────────────────────────
+async function sendMessage() {
+  const txt = document.getElementById('msg-text').value.trim();
+  if (!txt) return;
+  const btn = document.getElementById('msg-send-btn');
+  btn.disabled = true; btn.textContent = 'Sending…';
+  try {
+    const res = await fetch(`${API_BASE}/api/falcon/load/${_loadId}/message?t=${encodeURIComponent(_token)}`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ message: txt })
+    });
+    if (res.ok) {
+      document.getElementById('msg-text').value = '';
+      document.getElementById('msg-sent').style.display = 'block';
+      showToast('✅ Message sent to dispatch');
+      setTimeout(() => { document.getElementById('msg-sent').style.display='none'; }, 4000);
+    } else {
+      showToast('Send failed — try again');
+    }
+  } catch(e) {
+    showToast('Network error — try again');
+  }
+  btn.disabled = false; btn.textContent = 'Send to Dispatch →';
+}
+
+// ── Utilities ─────────────────────────────────────────────────────────────────
+function statusBadge(status) {
+  const labels = {
+    dispatched:'Dispatched', confirmed:'Confirmed', en_route:'En Route',
+    at_pickup:'At Pickup', in_transit:'In Transit', at_delivery:'At Delivery', delivered:'Delivered'
+  };
+  const cls = `sb-${status}`;
+  return `<span class="status-badge ${cls}">${labels[status]||status}</span>`;
+}
+
+function fmtDate(iso) {
+  if (!iso) return '—';
+  try {
+    return new Date(iso).toLocaleDateString('en-US',{month:'short',day:'numeric',weekday:'short'});
+  } catch { return iso.slice(0,10); }
+}
+
+function fmtDateTime(iso) {
+  if (!iso) return null;
+  try {
+    return new Date(iso).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});
+  } catch { return iso.slice(0,16); }
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+</script>
+</body>
+</html>

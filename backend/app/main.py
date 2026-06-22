@@ -66,6 +66,7 @@ from .api import (
     lf_bizdev_router,
     trading_autopilot_router,
     growth_router,
+    falcon_router,
 )
 from .logging_service import get_logger
 from .settings import get_settings
@@ -316,6 +317,7 @@ def create_app() -> FastAPI:
     app.include_router(lf_bizdev_router,                                   tags=["lf-bizdev"])
     app.include_router(trading_autopilot_router,                           tags=["trading"])
     app.include_router(growth_router,                                      tags=["growth"])
+    app.include_router(falcon_router,                                      tags=["falcon"])
     app.include_router(health_router,                                      tags=["health"])
 
     _marketing_dir = os.path.normpath(
@@ -349,6 +351,18 @@ def create_app() -> FastAPI:
     @app.get("/google9f88d93f841d8a95.html", include_in_schema=False)
     async def google_site_verification():
         return PlainTextResponse("google-site-verification: google9f88d93f841d8a95.html")
+
+    _root_dir = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", ".."))
+
+    @app.get("/falcon", include_in_schema=False)
+    async def falcon_portal():
+        """Serve the FALCON carrier PWA."""
+        fp = os.path.join(_root_dir, "falcon.html")
+        if os.path.exists(fp):
+            with open(fp) as f:
+                return HTMLResponse(f.read())
+        from fastapi.responses import Response
+        return Response(status_code=404, content="FALCON portal not found")
 
     log.info("3 Lakes Logistics API ready (env=%s)", s.env)
     return app
