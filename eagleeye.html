@@ -19495,6 +19495,70 @@ const TS_DOMAINS = [
         }
       }
     ]
+  },
+  {
+    id: 'falcon', label: 'FALCON', icon: '🦅',
+    tests: [
+      {
+        name: 'Board endpoint reachable',
+        run: async () => {
+          const r = await fetch(`${API_BASE}/api/falcon/board?limit=5`);
+          if (!r.ok) throw new Error(`HTTP ${r.status}`);
+          const d = await r.json();
+          if (!Array.isArray(d.loads)) throw new Error('Expected loads array');
+          return `${d.count} FALCON load(s) in system ✓`;
+        }
+      },
+      {
+        name: 'Auth — invalid token returns 401',
+        run: async () => {
+          const r = await fetch(`${API_BASE}/api/falcon/auth?t=badtoken`);
+          if (r.status !== 401) throw new Error(`Expected 401, got ${r.status}`);
+          return `401 returned for bad token ✓`;
+        }
+      },
+      {
+        name: 'Token generation + auth roundtrip',
+        run: async () => {
+          // Generate a token via the board (first active load with a token)
+          const board = await fetch(`${API_BASE}/api/falcon/board?limit=10`).then(r=>r.json()).catch(()=>({loads:[]}));
+          const load = (board.loads||[]).find(l=>l.falcon_token);
+          if (!load) return 'No FALCON loads yet — token roundtrip skipped (ok)';
+          const r = await fetch(`${API_BASE}/api/falcon/auth?t=${encodeURIComponent(load.falcon_token)}`);
+          if (!r.ok) throw new Error(`Auth failed: HTTP ${r.status}`);
+          const d = await r.json();
+          if (!d.authenticated) throw new Error('authenticated=false');
+          return `token roundtrip OK · load_id=${d.load_id?.slice(0,8)} ✓`;
+        }
+      },
+      {
+        name: 'Vault doc list endpoint',
+        run: async () => {
+          // Use first load with a token to test /docs endpoint
+          const board = await fetch(`${API_BASE}/api/falcon/board?limit=10`).then(r=>r.json()).catch(()=>({loads:[]}));
+          const load = (board.loads||[]).find(l=>l.falcon_token);
+          if (!load) return 'No FALCON loads — vault test skipped (ok)';
+          const r = await fetch(`${API_BASE}/api/falcon/load/${load.id}/docs?t=${encodeURIComponent(load.falcon_token)}`);
+          if (!r.ok) throw new Error(`HTTP ${r.status}`);
+          const d = await r.json();
+          if (!Array.isArray(d.docs)) throw new Error('Expected docs array');
+          return `vault: ${d.docs.length} doc(s) on load ${load.load_number||load.id?.slice(0,8)} ✓`;
+        }
+      },
+      {
+        name: 'Pay endpoint',
+        run: async () => {
+          const board = await fetch(`${API_BASE}/api/falcon/board?limit=10`).then(r=>r.json()).catch(()=>({loads:[]}));
+          const load = (board.loads||[]).find(l=>l.falcon_token);
+          if (!load) return 'No FALCON loads — pay test skipped (ok)';
+          const r = await fetch(`${API_BASE}/api/falcon/load/${load.id}/pay?t=${encodeURIComponent(load.falcon_token)}`);
+          if (!r.ok) throw new Error(`HTTP ${r.status}`);
+          const d = await r.json();
+          if (typeof d.gross_rate === 'undefined') throw new Error('Missing gross_rate');
+          return `gross=$${d.gross_rate} fee=${d.platform_fee_pct}% net=$${d.your_net} ✓`;
+        }
+      }
+    ]
   }
 ];
 
