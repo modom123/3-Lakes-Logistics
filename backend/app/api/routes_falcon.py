@@ -307,6 +307,84 @@ def send_message(load_id: str, body: MessageBody, t: str = Query(...)):
     return {"ok": True, "note": "Message sent to IEBC dispatch"}
 
 
+# ── Document Vault ────────────────────────────────────────────────────────────
+
+_VAULT_DOC_TYPES = {"rate_con", "lumper", "scale_ticket", "detention", "fuel_receipt", "other"}
+
+
+@router.get("/load/{load_id}/docs")
+def list_vault_docs(load_id: str, t: str = Query(...)):
+    """Return all vault documents uploaded for this load (excludes BOL/POD)."""
+    tok_load_id, _ = _decode_token(t)
+    if tok_load_id != load_id:
+        raise HTTPException(status_code=403, detail="Token mismatch")
+    sb = get_supabase()
+    try:
+        result = sb.table("load_documents").select(
+            "id, doc_type, url, file_name, uploaded_at"
+        ).eq("load_id", load_id).execute()
+        return {"docs": result.data or []}
+    except Exception:
+        # Table may not exist yet — return empty list gracefully
+        return {"docs": []}
+
+
+@router.post("/load/{load_id}/docs")
+async def upload_vault_doc(
+    load_id: str,
+    t: str = Query(...),
+    doc_type: str = Query(..., description="rate_con | lumper | scale_ticket | detention | fuel_receipt | other"),
+    file: UploadFile = File(...),
+):
+    """Carrier uploads a vault document (non-BOL/POD) via FALCON."""
+    tok_load_id, driver_code = _decode_token(t)
+    if tok_load_id != load_id:
+        raise HTTPException(status_code=403, detail="Token mismatch")
+    if doc_type not in _VAULT_DOC_TYPES:
+        raise HTTPException(status_code=422, detail=f"Unknown doc_type. Valid: {sorted(_VAULT_DOC_TYPES)}")
+    sb = get_supabase()
+    file_bytes = await file.read()
+    ext = (file.filename or f"{doc_type}.pdf").rsplit(".", 1)[-1].lower() or "pdf"
+    path = f"falcon/{load_id}/{doc_type}.{ext}"
+    try:
+        try:
+            sb.storage.from_("driver-documents").remove([path])
+        except Exception:
+            pass
+        sb.storage.from_("driver-documents").upload(
+            path=path, file=file_bytes,
+            file_options={"content-type": file.content_type or "application/pdf"},
+        )
+        signed = sb.storage.from_("driver-documents").create_signed_url(path, expires_in=604800)
+        url = signed.get("signedURL") or signed.get("signed_url", "")
+        now = datetime.now(timezone.utc).isoformat()
+        # Upsert into load_documents table (graceful if table doesn't exist)
+        try:
+            sb.table("load_documents").upsert({
+                "load_id": load_id,
+                "doc_type": doc_type,
+                "url": url,
+                "file_name": file.filename or f"{doc_type}.{ext}",
+                "uploaded_by": driver_code,
+                "uploaded_at": now,
+            }, on_conflict="load_id,doc_type").execute()
+        except Exception:
+            pass
+        try:
+            sb.table("agent_log").insert({
+                "agent": "falcon", "action": "vault_doc_uploaded",
+                "payload": {"load_id": load_id, "driver_code": driver_code,
+                            "doc_type": doc_type, "url": url},
+                "result": "ok",
+            }).execute()
+        except Exception:
+            pass
+        return {"ok": True, "doc_type": doc_type, "url": url}
+    except Exception as exc:
+        log.error("FALCON vault upload failed: %s", exc)
+        raise HTTPException(status_code=500, detail="Vault upload failed")
+
+
 # ── FALCON Board (Eagle Eye internal) ─────────────────────────────────────────
 
 @router.get("/board")

@@ -181,7 +181,7 @@ input[type=file]{display:none;}
     <span class="tab-icon">🚛</span>MY LOAD
   </button>
   <button class="tab" onclick="showTab('docs')" id="tab-docs">
-    <span class="tab-icon">📄</span>DOCS
+    <span class="tab-icon">📄</span>VAULT
   </button>
   <button class="tab" onclick="showTab('pay')" id="tab-pay">
     <span class="tab-icon">💰</span>PAY
@@ -268,11 +268,13 @@ input[type=file]{display:none;}
   <div class="page-bottom-spacer"></div>
 </div>
 
-<!-- Docs tab -->
+<!-- Docs / Vault tab -->
 <div class="page" id="page-docs">
+  <!-- Required trip docs -->
   <div class="card">
     <div class="card-head">
-      <div class="card-title">Required Documents</div>
+      <div class="card-title">Trip Documents</div>
+      <span style="font-size:10px;color:var(--muted);font-weight:600">REQUIRED</span>
     </div>
     <div class="card-body" style="padding:0 16px;">
       <!-- BOL -->
@@ -303,9 +305,107 @@ input[type=file]{display:none;}
       </div>
     </div>
   </div>
+
+  <!-- Vault: additional documents -->
+  <div class="card">
+    <div class="card-head">
+      <div class="card-title">🗄 Document Vault</div>
+      <span style="font-size:10px;color:var(--muted);font-weight:600">OPTIONAL</span>
+    </div>
+    <div class="card-body" style="padding:0 16px;">
+      <div id="vault-list">
+        <!-- rate_con -->
+        <div class="doc-slot" id="doc-rate_con-slot">
+          <div class="doc-icon pending" id="doc-rate_con-icon">📑</div>
+          <div class="doc-info">
+            <div class="doc-name">Rate Confirmation</div>
+            <div class="doc-note">Broker rate con · PDF or photo</div>
+            <div class="doc-status" id="doc-rate_con-status" style="color:var(--muted)">Not uploaded</div>
+          </div>
+          <div>
+            <button class="doc-upload-btn" id="doc-rate_con-btn" onclick="triggerUpload('rate_con')">📷 Upload</button>
+            <a id="doc-rate_con-view" class="doc-view-btn" style="display:none;margin-top:4px;" target="_blank">👁 View</a>
+          </div>
+        </div>
+        <!-- lumper -->
+        <div class="doc-slot" id="doc-lumper-slot">
+          <div class="doc-icon pending" id="doc-lumper-icon">🧾</div>
+          <div class="doc-info">
+            <div class="doc-name">Lumper Receipt</div>
+            <div class="doc-note">Unloading labor receipt</div>
+            <div class="doc-status" id="doc-lumper-status" style="color:var(--muted)">Not uploaded</div>
+          </div>
+          <div>
+            <button class="doc-upload-btn" id="doc-lumper-btn" onclick="triggerUpload('lumper')">📷 Upload</button>
+            <a id="doc-lumper-view" class="doc-view-btn" style="display:none;margin-top:4px;" target="_blank">👁 View</a>
+          </div>
+        </div>
+        <!-- scale_ticket -->
+        <div class="doc-slot" id="doc-scale_ticket-slot">
+          <div class="doc-icon pending" id="doc-scale_ticket-icon">⚖️</div>
+          <div class="doc-info">
+            <div class="doc-name">Scale Ticket</div>
+            <div class="doc-note">Weight slip from weigh station</div>
+            <div class="doc-status" id="doc-scale_ticket-status" style="color:var(--muted)">Not uploaded</div>
+          </div>
+          <div>
+            <button class="doc-upload-btn" id="doc-scale_ticket-btn" onclick="triggerUpload('scale_ticket')">📷 Upload</button>
+            <a id="doc-scale_ticket-view" class="doc-view-btn" style="display:none;margin-top:4px;" target="_blank">👁 View</a>
+          </div>
+        </div>
+        <!-- detention -->
+        <div class="doc-slot" id="doc-detention-slot">
+          <div class="doc-icon pending" id="doc-detention-icon">⏱</div>
+          <div class="doc-info">
+            <div class="doc-name">Detention Record</div>
+            <div class="doc-note">Timestamp + signature for detention pay</div>
+            <div class="doc-status" id="doc-detention-status" style="color:var(--muted)">Not uploaded</div>
+          </div>
+          <div>
+            <button class="doc-upload-btn" id="doc-detention-btn" onclick="triggerUpload('detention')">📷 Upload</button>
+            <a id="doc-detention-view" class="doc-view-btn" style="display:none;margin-top:4px;" target="_blank">👁 View</a>
+          </div>
+        </div>
+        <!-- fuel_receipt -->
+        <div class="doc-slot" id="doc-fuel_receipt-slot">
+          <div class="doc-icon pending" id="doc-fuel_receipt-icon">⛽</div>
+          <div class="doc-info">
+            <div class="doc-name">Fuel Receipt</div>
+            <div class="doc-note">For IFTA / fuel advance reimbursement</div>
+            <div class="doc-status" id="doc-fuel_receipt-status" style="color:var(--muted)">Not uploaded</div>
+          </div>
+          <div>
+            <button class="doc-upload-btn" id="doc-fuel_receipt-btn" onclick="triggerUpload('fuel_receipt')">📷 Upload</button>
+            <a id="doc-fuel_receipt-view" class="doc-view-btn" style="display:none;margin-top:4px;" target="_blank">👁 View</a>
+          </div>
+        </div>
+        <!-- other -->
+        <div class="doc-slot" id="doc-other-slot">
+          <div class="doc-icon pending" id="doc-other-icon">📎</div>
+          <div class="doc-info">
+            <div class="doc-name">Other Document</div>
+            <div class="doc-note">Any additional document for this load</div>
+            <div class="doc-status" id="doc-other-status" style="color:var(--muted)">Not uploaded</div>
+          </div>
+          <div>
+            <button class="doc-upload-btn" id="doc-other-btn" onclick="triggerUpload('other')">📷 Upload</button>
+            <a id="doc-other-view" class="doc-view-btn" style="display:none;margin-top:4px;" target="_blank">👁 View</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- hidden file inputs for all doc types -->
   <div class="upload-progress" id="upload-progress">Uploading…</div>
-  <input type="file" id="file-input-bol" accept="image/*,application/pdf" capture="environment" onchange="handleUpload('bol')"/>
-  <input type="file" id="file-input-pod" accept="image/*,application/pdf" capture="environment" onchange="handleUpload('pod')"/>
+  <input type="file" id="file-input-bol"          accept="image/*,application/pdf" capture="environment" onchange="handleUpload('bol')"/>
+  <input type="file" id="file-input-pod"          accept="image/*,application/pdf" capture="environment" onchange="handleUpload('pod')"/>
+  <input type="file" id="file-input-rate_con"     accept="image/*,application/pdf" capture="environment" onchange="handleUpload('rate_con')"/>
+  <input type="file" id="file-input-lumper"       accept="image/*,application/pdf" capture="environment" onchange="handleUpload('lumper')"/>
+  <input type="file" id="file-input-scale_ticket" accept="image/*,application/pdf" capture="environment" onchange="handleUpload('scale_ticket')"/>
+  <input type="file" id="file-input-detention"    accept="image/*,application/pdf" capture="environment" onchange="handleUpload('detention')"/>
+  <input type="file" id="file-input-fuel_receipt" accept="image/*,application/pdf" capture="environment" onchange="handleUpload('fuel_receipt')"/>
+  <input type="file" id="file-input-other"        accept="image/*,application/pdf" capture="environment" onchange="handleUpload('other')"/>
 
   <div class="card">
     <div class="card-head"><div class="card-title">Upload Tips</div></div>
@@ -313,7 +413,8 @@ input[type=file]{display:none;}
       📷 Use your camera — tap Upload and point at the document<br>
       ✅ Make sure all fields are visible and readable<br>
       📄 PDF also accepted — share from your email or files app<br>
-      ⏱ BOL triggers payment clock · POD closes the load
+      ⏱ BOL starts the payment clock · POD closes the load<br>
+      🗄 All vault docs visible to IEBC dispatch in Eagle Eye
     </div>
   </div>
   <div class="page-bottom-spacer"></div>
@@ -495,6 +596,7 @@ function onAuthenticated() {
   document.getElementById('page-load').classList.add('active');
   renderLoad();
   loadPayData();
+  loadVaultDocs();
 }
 
 // ── Tab switching ──────────────────────────────────────────────────────────────
@@ -611,26 +713,32 @@ function triggerUpload(type) {
   document.getElementById(`file-input-${type}`).click();
 }
 
+// Trip docs go to dedicated endpoints; vault docs go to generic /docs endpoint
+const _TRIP_DOCS = ['bol', 'pod'];
+
 async function handleUpload(type) {
   const input = document.getElementById(`file-input-${type}`);
   const file = input.files[0];
   if (!file) return;
   const progress = document.getElementById('upload-progress');
-  progress.textContent = `Uploading ${type.toUpperCase()}…`;
+  const label = type.replace(/_/g,' ').toUpperCase();
+  progress.textContent = `Uploading ${label}…`;
   progress.classList.add('show');
   const btn = document.getElementById(`doc-${type}-btn`);
   if (btn) btn.disabled = true;
 
   const fd = new FormData();
   fd.append('file', file);
+  // BOL/POD use dedicated endpoints; all other docs go to /docs
+  const endpoint = _TRIP_DOCS.includes(type)
+    ? `${API_BASE}/api/falcon/load/${_loadId}/${type}?t=${encodeURIComponent(_token)}`
+    : `${API_BASE}/api/falcon/load/${_loadId}/docs?t=${encodeURIComponent(_token)}&doc_type=${encodeURIComponent(type)}`;
+
   try {
-    const res = await fetch(`${API_BASE}/api/falcon/load/${_loadId}/${type}?t=${encodeURIComponent(_token)}`, {
-      method: 'POST',
-      body: fd,
-    });
+    const res = await fetch(endpoint, { method: 'POST', body: fd });
     const data = await res.json();
     if (!res.ok) { showToast(data.detail || 'Upload failed'); progress.classList.remove('show'); if(btn)btn.disabled=false; return; }
-    progress.textContent = `✅ ${type.toUpperCase()} uploaded successfully!`;
+    progress.textContent = `✅ ${label} uploaded!`;
     setTimeout(() => progress.classList.remove('show'), 3000);
     markDocUploaded(type, data.url);
     if (type === 'pod') {
@@ -638,10 +746,10 @@ async function handleUpload(type) {
       _load.pod_url = data.url;
       renderLoad();
       loadPayData();
-    } else {
+    } else if (type === 'bol') {
       _load.bol_url = data.url;
     }
-    showToast(`✅ ${type.toUpperCase()} uploaded!`);
+    showToast(`✅ ${label} uploaded!`);
   } catch(e) {
     showToast('Upload failed — check connection');
     progress.classList.remove('show');
@@ -656,9 +764,29 @@ function markDocUploaded(type, url) {
   const btn = document.getElementById(`doc-${type}-btn`);
   const view = document.getElementById(`doc-${type}-view`);
   if (icon) { icon.textContent = '✅'; icon.classList.replace('pending','done'); }
-  if (status) { status.textContent = 'Uploaded ✓'; status.classList.replace('required','uploaded'); }
+  if (status) {
+    status.textContent = 'Uploaded ✓';
+    status.className = 'doc-status uploaded';
+    status.style.color = '';
+  }
   if (btn) { btn.className = 'doc-upload-btn done'; btn.textContent = '✓ Uploaded'; }
   if (url && view) { view.href = url; view.style.display = 'inline-flex'; }
+}
+
+// ── Vault: load existing docs ──────────────────────────────────────────────────
+async function loadVaultDocs() {
+  // Mark BOL/POD already on the load object
+  if (_load?.bol_url) markDocUploaded('bol', _load.bol_url);
+  if (_load?.pod_url) markDocUploaded('pod', _load.pod_url);
+  // Fetch additional vault docs
+  try {
+    const res = await fetch(`${API_BASE}/api/falcon/load/${_loadId}/docs?t=${encodeURIComponent(_token)}`);
+    if (!res.ok) return;
+    const data = await res.json();
+    (data.docs || []).forEach(d => {
+      if (d.doc_type && d.url) markDocUploaded(d.doc_type, d.url);
+    });
+  } catch(e) {}
 }
 
 // ── Pay ────────────────────────────────────────────────────────────────────────
@@ -771,11 +899,6 @@ function showToast(msg) {
   setTimeout(() => t.classList.remove('show'), 2800);
 }
 
-// Pre-mark uploaded docs on load
-setTimeout(() => {
-  if (_load?.bol_url) markDocUploaded('bol', _load.bol_url);
-  if (_load?.pod_url) markDocUploaded('pod', _load.pod_url);
-}, 100);
 </script>
 </body>
 </html>
