@@ -27661,8 +27661,9 @@ function fbCardHtml(l){
   const driver = l.driver_code || '—';
   const bolOk = !!l.bol_url;
   const podOk = !!l.pod_url;
+  const vault = Array.isArray(l.vault_docs) ? l.vault_docs : [];
+  const vaultLabels = {'rate_con':'Rate Con','lumper':'Lumper','scale_ticket':'Scale Ticket','detention':'Detention','fuel_receipt':'Fuel Receipt','other':'Other'};
   const token = l.falcon_token || '';
-  const portalUrl = `${window.location.origin}/falcon.html?t=${token}`;
   return `<div class="fb-card">
     <div class="fb-card-top">
       <div>
@@ -27680,8 +27681,9 @@ function fbCardHtml(l){
       ${l.broker_name?`<span class="fb-chip">🏢 ${l.broker_name}</span>`:''}
     </div>
     <div class="fb-docs">
-      <span class="fb-doc${bolOk?' ok':''}">📋 BOL ${bolOk?'✓ Uploaded':'Pending'}</span>
-      <span class="fb-doc${podOk?' ok':''}">📸 POD ${podOk?'✓ Uploaded':'Pending'}</span>
+      <span class="fb-doc${bolOk?' ok':''}">📋 BOL ${bolOk?'✓':'Pending'}</span>
+      <span class="fb-doc${podOk?' ok':''}">📸 POD ${podOk?'✓':'Pending'}</span>
+      ${vault.map(d=>`<span class="fb-doc ok">🗄 ${vaultLabels[d]||d}</span>`).join('')}
     </div>
     <div class="fb-actions">
       ${token?`<button class="fb-btn fb-btn-gold" onclick="fbCopyLink('${token}')">🔗 Copy Portal Link</button>`:''}

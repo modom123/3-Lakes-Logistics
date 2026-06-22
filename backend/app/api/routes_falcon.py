@@ -402,9 +402,24 @@ def falcon_board(status: str | None = None, limit: int = 100):
             q = q.eq("status", status)
         result = q.execute()
         loads = result.data or []
+
+        # Fetch vault doc counts for all loads in one query
+        load_ids = [r["id"] for r in loads if r.get("id")]
+        vault_map: dict[str, list] = {}
+        if load_ids:
+            try:
+                vdocs = sb.table("load_documents").select("load_id, doc_type").in_("load_id", load_ids).execute()
+                for vd in (vdocs.data or []):
+                    vault_map.setdefault(vd["load_id"], []).append(vd["doc_type"])
+            except Exception:
+                pass
+
         for row in loads:
-            if row.get("id") and row.get("driver_code"):
-                row["falcon_token"] = generate_falcon_token(str(row["id"]), str(row["driver_code"]))
+            rid = str(row.get("id", ""))
+            if rid and row.get("driver_code"):
+                row["falcon_token"] = generate_falcon_token(rid, str(row["driver_code"]))
+            row["vault_docs"] = vault_map.get(rid, [])
+
         return {"loads": loads, "count": len(loads)}
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc))
