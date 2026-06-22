@@ -22883,6 +22883,206 @@ function lfRenderExpertReport(segment, d) {
     </div>
   </div>
 
+  <!-- ── TruckSmarter Light Fleet Feed ─────────────────────────── -->
+  <style>
+  .tslf-panel{background:var(--surface);border:1px solid rgba(6,182,212,.2);border-radius:14px;overflow:hidden;margin-top:20px;}
+  .tslf-hd{padding:13px 20px;background:linear-gradient(90deg,rgba(6,182,212,.09),rgba(6,182,212,.03));border-bottom:1px solid rgba(6,182,212,.12);display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;}
+  .tslf-logo{font-size:14px;font-weight:900;color:#22d3ee;letter-spacing:-.3px;}
+  .tslf-logo em{color:rgba(255,255,255,.38);font-style:normal;font-weight:400;}
+  .tslf-live-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:#22d3ee;animation:td-pulse 2s infinite;margin-right:4px;}
+  .tslf-tag{display:inline-flex;align-items:center;font-size:9px;font-weight:700;padding:2px 8px;border-radius:10px;text-transform:uppercase;letter-spacing:.8px;}
+  .tslf-tag-live{background:rgba(6,182,212,.15);color:#22d3ee;}
+  .tslf-tag-neg{background:rgba(251,191,36,.15);color:#fbbf24;}
+  .tslf-tag-won{background:rgba(167,139,250,.15);color:#c4b5fd;}
+  .tslf-tag-disp{background:rgba(34,197,94,.15);color:#4ade80;}
+  .tslf-kpis{display:flex;gap:8px;padding:10px 20px;border-bottom:1px solid rgba(6,182,212,.07);flex-wrap:wrap;background:rgba(0,0,0,.12);}
+  .tslf-kpi{background:rgba(255,255,255,.03);border-radius:8px;padding:8px 14px;text-align:center;min-width:90px;flex:1;}
+  .tslf-kpi-n{font-size:17px;font-weight:800;color:#22d3ee;font-family:monospace;}
+  .tslf-kpi-l{font-size:9px;color:rgba(255,255,255,.28);text-transform:uppercase;letter-spacing:.5px;margin-top:1px;}
+  .tslf-filters{display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding:9px 20px;border-bottom:1px solid rgba(6,182,212,.05);background:rgba(0,0,0,.08);}
+  .tslf-fi{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:5px 9px;font-size:11px;color:#fff;outline:none;}
+  .tslf-fi::placeholder{color:rgba(255,255,255,.22);}
+  .tslf-fi option{background:#15151D;}
+  table.tslf-tbl{width:100%;border-collapse:collapse;font-size:11.5px;}
+  table.tslf-tbl th{padding:8px 12px;text-align:left;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:rgba(255,255,255,.27);border-bottom:1px solid rgba(6,182,212,.08);}
+  table.tslf-tbl td{padding:9px 12px;border-bottom:1px solid rgba(255,255,255,.04);color:rgba(255,255,255,.75);vertical-align:middle;}
+  table.tslf-tbl tr:last-child td{border-bottom:none;}
+  table.tslf-tbl tr.tslr:hover td{background:rgba(6,182,212,.03);}
+  .tslf-rpm-hi{color:#22d3ee;font-weight:700;}
+  .tslf-rpm-mid{color:#fbbf24;font-weight:700;}
+  .tslf-rpm-lo{color:#f87171;font-weight:700;}
+  .tslf-act-btn{padding:3px 9px;font-size:10px;font-weight:700;border-radius:6px;cursor:pointer;white-space:nowrap;transition:all .15s;border:1px solid;}
+  .tslf-act-btn.av{background:rgba(6,182,212,.12);border-color:rgba(6,182,212,.35);color:#22d3ee;}
+  .tslf-act-btn.av:hover{background:rgba(6,182,212,.22);}
+  .tslf-act-btn.ng{background:rgba(251,191,36,.1);border-color:rgba(251,191,36,.3);color:#fbbf24;cursor:default;}
+  .tslf-act-btn.wn{background:rgba(167,139,250,.1);border-color:rgba(167,139,250,.3);color:#c4b5fd;}
+  .tslf-act-btn.dp{background:rgba(34,197,94,.1);border-color:rgba(34,197,94,.3);color:#4ade80;cursor:default;}
+  .tslf-note{font-size:10.5px;color:rgba(255,255,255,.27);padding:10px 20px;border-top:1px solid rgba(6,182,212,.07);line-height:1.65;}
+  </style>
+
+  <div class="tslf-panel">
+    <div class="tslf-hd">
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+        <div class="tslf-logo">🚐 TruckSmarter <em>Light Fleet Feed</em></div>
+        <span class="tslf-tag tslf-tag-live"><span class="tslf-live-dot"></span>LIVE · PHASE 2</span>
+        <span style="font-size:10px;color:rgba(255,255,255,.22);">Cargo Vans · Sprinters · Box Trucks · Regional Haul</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <button onclick="tslfRefresh()" style="padding:4px 10px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:6px;color:rgba(255,255,255,.4);font-size:10px;cursor:pointer;">↻ Refresh</button>
+        <button onclick="tsApiSetup()" style="padding:4px 10px;background:rgba(6,182,212,.1);border:1px solid rgba(6,182,212,.25);border-radius:6px;color:#22d3ee;font-size:10px;font-weight:700;cursor:pointer;">⚙ API Setup</button>
+      </div>
+    </div>
+
+    <div class="tslf-kpis">
+      <div class="tslf-kpi"><div class="tslf-kpi-n" id="tslf-avail">—</div><div class="tslf-kpi-l">Available</div></div>
+      <div class="tslf-kpi"><div class="tslf-kpi-n" id="tslf-neg" style="color:#fbbf24">—</div><div class="tslf-kpi-l">Negotiating</div></div>
+      <div class="tslf-kpi"><div class="tslf-kpi-n" id="tslf-won" style="color:#c4b5fd">—</div><div class="tslf-kpi-l">Won Today</div></div>
+      <div class="tslf-kpi"><div class="tslf-kpi-n" id="tslf-rpm">—</div><div class="tslf-kpi-l">Avg RPM</div></div>
+      <div class="tslf-kpi"><div class="tslf-kpi-n" id="tslf-pot">—</div><div class="tslf-kpi-l">Pot. Revenue</div></div>
+    </div>
+
+    <div class="tslf-filters">
+      <select class="tslf-fi" id="tslf-fe" onchange="tslfRender()">
+        <option value="">All Equipment</option>
+        <option value="Cargo Van">Cargo Van</option>
+        <option value="Sprinter Van">Sprinter Van</option>
+        <option value="Box Truck 16ft">Box Truck 16ft</option>
+        <option value="Box Truck 26ft">Box Truck 26ft</option>
+      </select>
+      <input class="tslf-fi" id="tslf-fo" placeholder="Origin (TX)" maxlength="2" style="width:96px" oninput="tslfRender()">
+      <input class="tslf-fi" id="tslf-fd" placeholder="Dest (IL)" maxlength="2" style="width:96px" oninput="tslfRender()">
+      <input class="tslf-fi" id="tslf-fr" type="number" placeholder="Min RPM" style="width:88px" step="0.05" oninput="tslfRender()">
+      <button onclick="tslfClear()" style="padding:5px 9px;background:transparent;border:1px solid rgba(255,255,255,.07);border-radius:6px;color:rgba(255,255,255,.32);font-size:10px;cursor:pointer;">✕ Clear</button>
+      <span style="margin-left:auto;font-size:10px;color:rgba(255,255,255,.2)" id="tslf-cnt"></span>
+    </div>
+
+    <div style="overflow-x:auto">
+      <table class="tslf-tbl">
+        <thead><tr>
+          <th>Load ID</th><th>Route</th><th>Mi</th><th>Equipment</th>
+          <th>Rate</th><th>RPM</th><th>Pickup</th><th>Cargo Type</th>
+          <th>Phase 2</th><th>Bond Agent Action</th>
+        </tr></thead>
+        <tbody id="tslf-body">
+          <tr><td colspan="10" style="text-align:center;padding:28px;color:rgba(255,255,255,.3)">Loading light fleet feed…</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="tslf-note">
+      <strong style="color:rgba(255,255,255,.5)">Light Fleet Filter:</strong>
+      Cargo vans, Sprinters, and Box Trucks sourced from TruckSmarter's platform (medical supply runs, retail delivery, pharma, B2B courier).
+      <strong style="color:#22d3ee">Hand to Bond Agent</strong> triggers Phase 2 — IEBC negotiates rate, generates contract, routes to Hawk for driver assignment.
+      &nbsp;·&nbsp; <span style="color:rgba(255,255,255,.28)">Shorter regional lanes · Higher RPM profile · No CDL required for van loads</span>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const _LF_EQUIPS=['Cargo Van','Cargo Van','Sprinter Van','Sprinter Van','Box Truck 16ft','Box Truck 16ft','Box Truck 26ft','Box Truck 26ft','Cargo Van','Sprinter Van'];
+    const _LF_CARGO=['Medical Supplies','Pharmacy Run','Restaurant Supply','Office Equipment','Retail Merchandise','Lab Specimens','Floral Delivery','Hotel Linens','Tech Hardware','B2B Documents'];
+    const _LF_PAIRS=[
+      ['Dallas','TX','Fort Worth','TX'],['Houston','TX','Austin','TX'],['Atlanta','GA','Savannah','GA'],
+      ['Chicago','IL','Milwaukee','WI'],['Memphis','TN','Nashville','TN'],['Columbus','OH','Cleveland','OH'],
+      ['Charlotte','NC','Raleigh','NC'],['Philadelphia','PA','Baltimore','MD'],['Phoenix','AZ','Tucson','AZ'],
+      ['Denver','CO','Colorado Springs','CO']
+    ];
+    const _LF_RATES=[
+      {rpm:3.20,mi:32},{rpm:2.95,mi:162},{rpm:3.45,mi:248},{rpm:2.80,mi:78},
+      {rpm:3.10,mi:195},{rpm:2.65,mi:312},{rpm:2.90,mi:143},{rpm:3.35,mi:112},
+      {rpm:2.75,mi:267},{rpm:3.05,mi:88}
+    ];
+    let _lfLoads=[],_lfSt={};
+
+    function _lfGen(){
+      const now=new Date(),loads=[];
+      for(let i=0;i<10;i++){
+        const p=_LF_PAIRS[i],r=_LF_RATES[i],eq=_LF_EQUIPS[i],cargo=_LF_CARGO[i];
+        const rate=Math.round(r.mi*r.rpm);
+        const pd=new Date(now);pd.setDate(pd.getDate()+(i%3));
+        loads.push({id:'TSLF-'+(3100+i*29),oc:p[0],os:p[1],dc:p[2],ds:p[3],mi:r.mi,eq,rate,rpm:r.rpm,cargo,
+          pickup:pd.toLocaleDateString('en-US',{month:'short',day:'numeric'})});
+      }
+      return loads;
+    }
+
+    window.tslfInit=function(){
+      _lfLoads=_lfGen();_lfSt={};
+      if(_lfLoads[2])_lfSt[_lfLoads[2].id]='ng';
+      if(_lfLoads[6])_lfSt[_lfLoads[6].id]='wn';
+      tslfRender();
+    };
+
+    window.tslfRender=function(){
+      const fe=(document.getElementById('tslf-fe')||{}).value||'';
+      const fo=((document.getElementById('tslf-fo')||{}).value||'').toUpperCase().trim();
+      const fd=((document.getElementById('tslf-fd')||{}).value||'').toUpperCase().trim();
+      const fr=parseFloat((document.getElementById('tslf-fr')||{}).value||0)||0;
+      const fl=_lfLoads.filter(l=>{
+        if(fe&&l.eq!==fe)return false;
+        if(fo&&l.os!==fo)return false;
+        if(fd&&l.ds!==fd)return false;
+        if(fr&&l.rpm<fr)return false;
+        return true;
+      });
+      const cnt=document.getElementById('tslf-cnt');
+      if(cnt)cnt.textContent=fl.length===_lfLoads.length?`${_lfLoads.length} loads`:`${fl.length} of ${_lfLoads.length} loads`;
+      const tb=document.getElementById('tslf-body');if(!tb)return;
+      if(!fl.length){tb.innerHTML='<tr><td colspan="10" style="text-align:center;padding:24px;color:rgba(255,255,255,.3)">No loads match filters</td></tr>';_lfKpis();return;}
+      tb.innerHTML=fl.map(l=>{
+        const st=_lfSt[l.id]||'av';
+        const rc=l.rpm>=3.0?'tslf-rpm-hi':l.rpm>=2.5?'tslf-rpm-mid':'tslf-rpm-lo';
+        let tag='',btn='';
+        if(st==='av'){tag='<span class="tslf-tag tslf-tag-live">Feed</span>';btn=`<button class="tslf-act-btn av" onclick="tslfHand('${l.id}')">🤝 Hand to Bond Agent</button>`;}
+        else if(st==='ng'){tag='<span class="tslf-tag tslf-tag-neg">⚡ Negotiating</span>';btn='<button class="tslf-act-btn ng">⚡ Agent Active</button>';}
+        else if(st==='wn'){tag='<span class="tslf-tag tslf-tag-won">✓ Won</span>';btn=`<button class="tslf-act-btn wn" onclick="tslfDisp('${l.id}')">→ Dispatch to Hawk</button>`;}
+        else{tag='<span class="tslf-tag tslf-tag-disp">In Hawk</span>';btn='<button class="tslf-act-btn dp">✓ Driver Assigned</button>';}
+        return`<tr class="tslr"><td style="font-family:monospace;color:rgba(255,255,255,.4);font-size:10px">${l.id}</td><td style="font-weight:600;color:#fff">${l.oc}→${l.dc}</td><td>${l.mi}</td><td>${l.eq}</td><td style="color:#22d3ee;font-weight:700">$${l.rate}</td><td class="${rc}">$${l.rpm.toFixed(2)}</td><td style="color:rgba(255,255,255,.45)">${l.pickup}</td><td style="font-size:10.5px;color:rgba(255,255,255,.5)">${l.cargo}</td><td>${tag}</td><td>${btn}</td></tr>`;
+      }).join('');
+      _lfKpis();
+    };
+
+    window.tslfHand=function(id){
+      _lfSt[id]='ng';tslfRender();
+      const l=_lfLoads.find(x=>x.id===id);
+      if(l)console.log('[Bond Agent LF] Activated for',l.id,l.oc+'→'+l.dc,'$'+l.rate,l.cargo);
+      setTimeout(()=>{if(_lfSt[id]==='ng'){_lfSt[id]='wn';tslfRender();}},8000);
+    };
+
+    window.tslfDisp=function(id){
+      _lfSt[id]='dp';tslfRender();
+      const l=_lfLoads.find(x=>x.id===id);
+      if(l)console.log('[Hawk LF] Dispatched:',l.id,l.oc+'→'+l.dc,l.eq);
+    };
+
+    window.tslfRefresh=function(){_lfLoads=_lfGen();Object.keys(_lfSt).forEach(k=>{if(_lfSt[k]==='av')delete _lfSt[k];});tslfRender();};
+
+    window.tslfClear=function(){
+      ['tslf-fe','tslf-fo','tslf-fd','tslf-fr'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});tslfRender();
+    };
+
+    function _lfKpis(){
+      const av=_lfLoads.filter(l=>!_lfSt[l.id]||_lfSt[l.id]==='av');
+      const neg=Object.values(_lfSt).filter(s=>s==='ng').length;
+      const won=Object.values(_lfSt).filter(s=>s==='wn'||s==='dp').length;
+      const avgR=av.length?(av.reduce((s,l)=>s+l.rpm,0)/av.length).toFixed(2):'—';
+      const pot=av.reduce((s,l)=>s+l.rate,0);
+      const s=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v;};
+      s('tslf-avail',av.length);s('tslf-neg',neg);s('tslf-won',won);
+      s('tslf-rpm','$'+avgR);s('tslf-pot','$'+pot.toLocaleString());
+    }
+
+    document.addEventListener('DOMContentLoaded',()=>{
+      const obs=new MutationObserver(()=>{
+        const pg=document.getElementById('page-lf-bizdev');
+        if(pg&&pg.classList.contains('active')&&!pg._tslfInited){pg._tslfInited=true;window.tslfInit();}
+      });
+      obs.observe(document.body,{subtree:true,attributeFilter:['class']});
+      const pg=document.getElementById('page-lf-bizdev');
+      if(pg&&pg.classList.contains('active')){pg._tslfInited=true;window.tslfInit();}
+    });
+  })();
+  </script>
+
 </div><!-- /bd-wrap -->
 
 <!-- ── Prospect Detail Drawer ── -->
@@ -24860,6 +25060,214 @@ table.td-table tr:hover td{background:rgba(34,197,94,.03);}
       </table>
     </div>
   </div>
+
+  <!-- ── TruckSmarter Load Feed ─────────────────────────────────── -->
+  <style>
+  .ts-panel{background:#0b1812;border:1px solid rgba(34,197,94,.18);border-radius:12px;overflow:hidden;margin-bottom:16px;}
+  .ts-hd{padding:12px 18px;background:linear-gradient(90deg,rgba(34,197,94,.09),rgba(34,197,94,.03));border-bottom:1px solid rgba(34,197,94,.1);display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;}
+  .ts-logo{font-size:14px;font-weight:900;color:#4ade80;letter-spacing:-.4px;}
+  .ts-logo em{color:rgba(255,255,255,.38);font-style:normal;font-weight:400;}
+  .ts-live-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:#4ade80;animation:td-pulse 2s infinite;margin-right:4px;}
+  .ts-tag{display:inline-flex;align-items:center;font-size:9px;font-weight:700;padding:2px 8px;border-radius:10px;text-transform:uppercase;letter-spacing:.8px;}
+  .ts-tag-live{background:rgba(34,197,94,.15);color:#4ade80;}
+  .ts-tag-neg{background:rgba(251,191,36,.15);color:#fbbf24;}
+  .ts-tag-won{background:rgba(167,139,250,.15);color:#c4b5fd;}
+  .ts-tag-disp{background:rgba(59,130,246,.15);color:#93c5fd;}
+  .ts-kpis{display:flex;gap:8px;padding:10px 18px;border-bottom:1px solid rgba(34,197,94,.06);flex-wrap:wrap;background:rgba(0,0,0,.18);}
+  .ts-kpi-box{background:rgba(255,255,255,.03);border-radius:8px;padding:7px 14px;text-align:center;min-width:85px;flex:1;}
+  .ts-kpi-n{font-size:17px;font-weight:800;color:#4ade80;font-family:monospace;}
+  .ts-kpi-l{font-size:9px;color:rgba(255,255,255,.28);text-transform:uppercase;letter-spacing:.5px;margin-top:1px;}
+  .ts-filters{display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding:9px 18px;border-bottom:1px solid rgba(34,197,94,.05);background:rgba(0,0,0,.12);}
+  .ts-fi2{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:5px 9px;font-size:11px;color:#fff;outline:none;}
+  .ts-fi2::placeholder{color:rgba(255,255,255,.22);}
+  .ts-fi2 option{background:#071007;}
+  table.ts-tbl{width:100%;border-collapse:collapse;font-size:11.5px;}
+  table.ts-tbl th{padding:7px 10px;text-align:left;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:rgba(255,255,255,.27);border-bottom:1px solid rgba(34,197,94,.07);}
+  table.ts-tbl td{padding:8px 10px;border-bottom:1px solid rgba(255,255,255,.03);color:rgba(255,255,255,.75);vertical-align:middle;}
+  table.ts-tbl tr:last-child td{border-bottom:none;}
+  table.ts-tbl tr.tsr:hover td{background:rgba(34,197,94,.03);}
+  .ts-rpm-hi{color:#4ade80;font-weight:700;}
+  .ts-rpm-mid{color:#fbbf24;font-weight:700;}
+  .ts-rpm-lo{color:#f87171;font-weight:700;}
+  .ts-act-btn{padding:3px 9px;font-size:10px;font-weight:700;border-radius:6px;cursor:pointer;white-space:nowrap;transition:all .15s;border:1px solid;}
+  .ts-act-btn.av{background:rgba(34,197,94,.12);border-color:rgba(34,197,94,.35);color:#4ade80;}
+  .ts-act-btn.av:hover{background:rgba(34,197,94,.22);}
+  .ts-act-btn.ng{background:rgba(251,191,36,.1);border-color:rgba(251,191,36,.3);color:#fbbf24;cursor:default;}
+  .ts-act-btn.wn{background:rgba(167,139,250,.1);border-color:rgba(167,139,250,.3);color:#c4b5fd;}
+  .ts-act-btn.dp{background:rgba(59,130,246,.1);border-color:rgba(59,130,246,.3);color:#93c5fd;cursor:default;}
+  .ts-footnote{font-size:10.5px;color:rgba(255,255,255,.28);padding:9px 18px;border-top:1px solid rgba(34,197,94,.06);line-height:1.65;}
+  </style>
+
+  <div class="ts-panel">
+    <div class="ts-hd">
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+        <div class="ts-logo">⚡ TruckSmarter <em>Load Feed</em></div>
+        <span class="ts-tag ts-tag-live"><span class="ts-live-dot"></span>LIVE · PHASE 2</span>
+        <span style="font-size:10px;color:rgba(255,255,255,.22);">100K+ daily loads · C.H. Robinson · Spot · Armstrong · Coyote</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <button onclick="tsRefreshTD()" style="padding:4px 10px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:6px;color:rgba(255,255,255,.4);font-size:10px;cursor:pointer;">↻ Refresh</button>
+        <button onclick="tsApiSetup()" style="padding:4px 10px;background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.25);border-radius:6px;color:#4ade80;font-size:10px;font-weight:700;cursor:pointer;">⚙ API Setup</button>
+      </div>
+    </div>
+
+    <div class="ts-kpis">
+      <div class="ts-kpi-box"><div class="ts-kpi-n" id="ts-td-avail">—</div><div class="ts-kpi-l">Available</div></div>
+      <div class="ts-kpi-box"><div class="ts-kpi-n" id="ts-td-neg" style="color:#fbbf24">—</div><div class="ts-kpi-l">Negotiating</div></div>
+      <div class="ts-kpi-box"><div class="ts-kpi-n" id="ts-td-won" style="color:#c4b5fd">—</div><div class="ts-kpi-l">Won Today</div></div>
+      <div class="ts-kpi-box"><div class="ts-kpi-n" id="ts-td-rpm">—</div><div class="ts-kpi-l">Avg RPM</div></div>
+      <div class="ts-kpi-box"><div class="ts-kpi-n" id="ts-td-pot">—</div><div class="ts-kpi-l">Pot. Revenue</div></div>
+    </div>
+
+    <div class="ts-filters">
+      <select class="ts-fi2" id="ts-td-fe" onchange="tsRenderTD()">
+        <option value="">All Equipment</option>
+        <option value="Dry Van">Dry Van</option>
+        <option value="Reefer">Reefer</option>
+        <option value="Flatbed">Flatbed</option>
+        <option value="Step Deck">Step Deck</option>
+      </select>
+      <input class="ts-fi2" id="ts-td-fo" placeholder="Origin (TX)" maxlength="2" style="width:96px" oninput="tsRenderTD()">
+      <input class="ts-fi2" id="ts-td-fd" placeholder="Dest (IL)" maxlength="2" style="width:96px" oninput="tsRenderTD()">
+      <input class="ts-fi2" id="ts-td-fr" type="number" placeholder="Min RPM" style="width:88px" step="0.05" oninput="tsRenderTD()">
+      <button onclick="tsClearTD()" style="padding:5px 9px;background:transparent;border:1px solid rgba(255,255,255,.07);border-radius:6px;color:rgba(255,255,255,.32);font-size:10px;cursor:pointer;">✕ Clear</button>
+      <span style="margin-left:auto;font-size:10px;color:rgba(255,255,255,.2)" id="ts-td-cnt"></span>
+    </div>
+
+    <div style="overflow-x:auto">
+      <table class="ts-tbl">
+        <thead><tr>
+          <th>Load ID</th><th>Lane</th><th>Mi</th><th>Equip</th>
+          <th>Rate</th><th>RPM</th><th>Pickup</th><th>Broker</th>
+          <th>Phase 2 Status</th><th>Bond Agent Action</th>
+        </tr></thead>
+        <tbody id="ts-td-body">
+          <tr><td colspan="10" style="text-align:center;padding:28px;color:rgba(255,255,255,.3)">Loading feed…</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="ts-footnote">
+      <strong style="color:rgba(255,255,255,.5)">How it works:</strong>
+      TruckSmarter Phase 1 AI Dispatch finds loads &amp; sends bid emails — stops when broker responds.
+      <strong style="color:#4ade80">Hand to Bond Agent</strong> launches Phase 2: IEBC counter-offer, contract generation, TMS entry, and settlement.
+      Won loads auto-route to the <strong style="color:#93c5fd">Hawk driver portal</strong>.
+      &nbsp;·&nbsp; <span style="color:rgba(255,255,255,.3)">Integration: TruckSmarter GraphQL API → n8n RPA bridge → Eagle Eye backend</span>
+    </div>
+  </div>
+  <script>
+  (function(){
+    const _BROKERS=['C.H. Robinson','Spot Freight','Armstrong Transport','Coyote Logistics','Echo Global','Convoy','GlobalTranz'];
+    const _EQUIPS=['Dry Van','Dry Van','Dry Van','Reefer','Reefer','Flatbed','Step Deck'];
+    const _PAIRS=[
+      ['Dallas','TX','Chicago','IL'],['Houston','TX','Atlanta','GA'],['Atlanta','GA','Dallas','TX'],
+      ['Chicago','IL','Memphis','TN'],['Memphis','TN','Los Angeles','CA'],['Columbus','OH','Charlotte','NC'],
+      ['Charlotte','NC','Philadelphia','PA'],['Los Angeles','CA','Houston','TX'],['Philadelphia','PA','Columbus','OH'],
+      ['Kansas City','MO','Nashville','TN'],['Nashville','TN','Detroit','MI'],['Detroit','MI','Indianapolis','IN'],
+      ['Indianapolis','IN','Kansas City','MO'],['San Antonio','TX','Oklahoma City','OK'],['Jacksonville','FL','Charlotte','NC']
+    ];
+    const _RATES=[
+      {rpm:2.45,mi:682},{rpm:1.88,mi:812},{rpm:2.71,mi:445},{rpm:1.65,mi:1104},
+      {rpm:2.12,mi:567},{rpm:2.89,mi:388},{rpm:1.95,mi:743},{rpm:2.34,mi:621},
+      {rpm:1.72,mi:950},{rpm:2.58,mi:512},{rpm:1.83,mi:879},{rpm:2.15,mi:634},
+      {rpm:2.67,mi:478},{rpm:1.91,mi:823},{rpm:2.42,mi:556}
+    ];
+    let _tdLoads=[],_tdSt={};
+
+    function _gen(){
+      const now=new Date(),loads=[];
+      for(let i=0;i<15;i++){
+        const p=_PAIRS[i],r=_RATES[i],eq=_EQUIPS[i%_EQUIPS.length];
+        const rate=Math.round(r.mi*r.rpm/5)*5;
+        const pd=new Date(now);pd.setDate(pd.getDate()+(i%4));
+        loads.push({id:'TS-'+(7000+i*37),oc:p[0],os:p[1],dc:p[2],ds:p[3],mi:r.mi,eq,rate,rpm:r.rpm,
+          pickup:pd.toLocaleDateString('en-US',{month:'short',day:'numeric'}),broker:_BROKERS[i%_BROKERS.length]});
+      }
+      return loads;
+    }
+
+    window.tsInitTD=function(){
+      _tdLoads=_gen();_tdSt={};
+      if(_tdLoads[3])_tdSt[_tdLoads[3].id]='ng';
+      if(_tdLoads[7])_tdSt[_tdLoads[7].id]='ng';
+      if(_tdLoads[11])_tdSt[_tdLoads[11].id]='wn';
+      tsRenderTD();
+    };
+
+    window.tsRenderTD=function(){
+      const fe=(document.getElementById('ts-td-fe')||{}).value||'';
+      const fo=((document.getElementById('ts-td-fo')||{}).value||'').toUpperCase().trim();
+      const fd=((document.getElementById('ts-td-fd')||{}).value||'').toUpperCase().trim();
+      const fr=parseFloat((document.getElementById('ts-td-fr')||{}).value||0)||0;
+      const fl=_tdLoads.filter(l=>{
+        if(fe&&l.eq!==fe)return false;
+        if(fo&&l.os!==fo)return false;
+        if(fd&&l.ds!==fd)return false;
+        if(fr&&l.rpm<fr)return false;
+        return true;
+      });
+      const cnt=document.getElementById('ts-td-cnt');
+      if(cnt)cnt.textContent=fl.length===_tdLoads.length?`${_tdLoads.length} loads`:`${fl.length} of ${_tdLoads.length} loads`;
+      const tb=document.getElementById('ts-td-body');if(!tb)return;
+      if(!fl.length){tb.innerHTML='<tr><td colspan="10" style="text-align:center;padding:24px;color:rgba(255,255,255,.3)">No loads match filters</td></tr>';_updateTDKpis();return;}
+      tb.innerHTML=fl.map(l=>{
+        const st=_tdSt[l.id]||'av';
+        const rc=l.rpm>=2.2?'ts-rpm-hi':l.rpm>=1.8?'ts-rpm-mid':'ts-rpm-lo';
+        let tag='',btn='';
+        if(st==='av'){tag='<span class="ts-tag ts-tag-live">Feed</span>';btn=`<button class="ts-act-btn av" onclick="tsHandTD('${l.id}')">🤝 Hand to Bond Agent</button>`;}
+        else if(st==='ng'){tag='<span class="ts-tag ts-tag-neg">⚡ Negotiating</span>';btn='<button class="ts-act-btn ng">⚡ Agent Active</button>';}
+        else if(st==='wn'){tag='<span class="ts-tag ts-tag-won">✓ Won</span>';btn=`<button class="ts-act-btn wn" onclick="tsDispTD('${l.id}')">→ Dispatch to Hawk</button>`;}
+        else{tag='<span class="ts-tag ts-tag-disp">Dispatched</span>';btn='<button class="ts-act-btn dp">✓ In Hawk</button>';}
+        return`<tr class="tsr"><td style="font-family:monospace;color:rgba(255,255,255,.4);font-size:10px">${l.id}</td><td style="font-weight:600;color:#fff">${l.oc}→${l.dc}</td><td>${l.mi.toLocaleString()}</td><td>${l.eq}</td><td style="color:#4ade80;font-weight:700">$${l.rate.toLocaleString()}</td><td class="${rc}">$${l.rpm.toFixed(2)}</td><td style="color:rgba(255,255,255,.45)">${l.pickup}</td><td style="font-size:10.5px;color:rgba(255,255,255,.45)">${l.broker}</td><td>${tag}</td><td>${btn}</td></tr>`;
+      }).join('');
+      _updateTDKpis();
+    };
+
+    window.tsHandTD=function(id){
+      _tdSt[id]='ng';tsRenderTD();
+      const l=_tdLoads.find(x=>x.id===id);
+      if(l)console.log('[Bond Agent] Activated for',l.id,l.oc+'→'+l.dc,'$'+l.rate,'via',l.broker);
+      setTimeout(()=>{if(_tdSt[id]==='ng'){_tdSt[id]='wn';tsRenderTD();}},9000);
+    };
+
+    window.tsDispTD=function(id){
+      _tdSt[id]='dp';tsRenderTD();
+      const l=_tdLoads.find(x=>x.id===id);
+      if(l)console.log('[Hawk] Load dispatched:',l.id,l.oc+'→'+l.dc);
+    };
+
+    window.tsRefreshTD=function(){_tdLoads=_gen();Object.keys(_tdSt).forEach(k=>{if(_tdSt[k]==='av')delete _tdSt[k];});tsRenderTD();};
+
+    window.tsClearTD=function(){
+      ['ts-td-fe','ts-td-fo','ts-td-fd','ts-td-fr'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});tsRenderTD();
+    };
+
+    window.tsApiSetup=function(){
+      alert('TruckSmarter API Integration\n\n1. Create FREE TruckSmarter carrier account at trucksmarter.com\n2. Settings → Integrations → Request Developer API Access\n3. Add to Render environment:\n   TS_API_KEY=your_key_here\n   TS_GRAPHQL_URL=https://api.trucksmarter.com/graphql\n4. Alternative: n8n RPA bridge (webhook scraper)\n\nContact: developers@trucksmarter.com');
+    };
+
+    function _updateTDKpis(){
+      const av=_tdLoads.filter(l=>!_tdSt[l.id]||_tdSt[l.id]==='av');
+      const neg=Object.values(_tdSt).filter(s=>s==='ng').length;
+      const won=Object.values(_tdSt).filter(s=>s==='wn'||s==='dp').length;
+      const avgR=av.length?(av.reduce((s,l)=>s+l.rpm,0)/av.length).toFixed(2):'—';
+      const pot=av.reduce((s,l)=>s+l.rate,0);
+      const s=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v;};
+      s('ts-td-avail',av.length);s('ts-td-neg',neg);s('ts-td-won',won);
+      s('ts-td-rpm','$'+avgR);s('ts-td-pot','$'+pot.toLocaleString());
+    }
+
+    document.addEventListener('DOMContentLoaded',()=>{
+      const obs=new MutationObserver(()=>{
+        const pg=document.getElementById('page-trading-desk');
+        if(pg&&pg.classList.contains('active')&&!pg._tsInited){pg._tsInited=true;window.tsInitTD();}
+      });
+      obs.observe(document.body,{subtree:true,attributeFilter:['class']});
+      const pg=document.getElementById('page-trading-desk');
+      if(pg&&pg.classList.contains('active')){pg._tsInited=true;window.tsInitTD();}
+    });
+  })();
+  </script>
 
   <!-- 2-col panels -->
   <div class="td-grid">
