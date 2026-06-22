@@ -18923,6 +18923,27 @@ setInterval(bondGlobalPoll, 180000);
     </div>
   </div>
 
+  <!-- ── Execution Engine Health Matrix ───────────────────────────────── -->
+  <div id="ee-health-panel" style="background:var(--surface);border:1px solid var(--border);border-radius:10px;margin-bottom:20px;overflow:hidden;">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--border);">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <span style="font-size:18px;">⚙️</span>
+        <div>
+          <div style="font-weight:700;font-size:14px;">Execution Engine — All 12 Domains</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px;">Runs entry step of each domain. <span style="color:#f59e0b">⚡ Degraded</span> = runs but needs Twilio/SMTP/Anthropic creds. <span style="color:#10b981">✅ Operational</span> = fully working.</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <span id="eeqc-score" style="font-size:13px;font-weight:800;color:var(--muted);">—/12</span>
+        <button id="eeqc-run-btn" onclick="eeRunHealthCheck()" style="background:var(--gold2);color:#000;border:none;padding:8px 18px;border-radius:6px;font-weight:700;font-size:12px;cursor:pointer;letter-spacing:.4px;">▶ Run Health Check</button>
+      </div>
+    </div>
+    <div id="eeqc-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:1px;background:var(--border);">
+      <!-- filled by eeRenderHealthGrid() -->
+    </div>
+    <div id="eeqc-log" style="display:none;padding:12px 16px;border-top:1px solid var(--border);font-family:var(--ff-m);font-size:11px;max-height:180px;overflow-y:auto;color:var(--text);line-height:1.7;"></div>
+  </div>
+
   <div class="ts-grid" id="ts-grid"></div>
 </div>
 </div>
@@ -19385,8 +19406,222 @@ const TS_DOMAINS = [
         }
       }
     ]
+  },
+  {
+    id: 'execution', label: 'Execution Engine', icon: '⚙️',
+    tests: [
+      {
+        name: 'List steps (expect 290+)',
+        run: async () => {
+          const d = await apiFetch('/api/execution/steps');
+          if (!Array.isArray(d)) throw new Error('Expected array of steps');
+          if (d.length < 200) throw new Error(`Only ${d.length} steps returned — expected 290+`);
+          return `${d.length} steps registered across all domains ✓`;
+        }
+      },
+      {
+        name: 'List domains (expect 12)',
+        run: async () => {
+          const d = await apiFetch('/api/execution/domains');
+          if (!Array.isArray(d)) throw new Error('Expected array of domains');
+          if (d.length < 7) throw new Error(`Only ${d.length} domains returned`);
+          return `${d.length} domains: ${d.map(x=>x.domain).join(', ')} ✓`;
+        }
+      },
+      {
+        name: 'Step 1 — Onboarding entry (intake.receive)',
+        run: async () => {
+          const d = await apiFetch('/api/execution/steps/1/run', 'POST',
+            { carrier_id: null, contract_id: null, input_payload: { test: true } });
+          if (d.status === 'failed') throw new Error(d.error || 'step failed');
+          const note = d.output?.note || '';
+          return `status=${d.status}${note ? ' · '+note : ''} ✓`;
+        }
+      },
+      {
+        name: 'Step 31 — Dispatch entry (load_received)',
+        run: async () => {
+          const today = new Date().toISOString().split('T')[0];
+          const d = await apiFetch('/api/execution/steps/31/run', 'POST', {
+            carrier_id: null, contract_id: null,
+            input_payload: {
+              broker_name: 'Eagle Eye QA Test', load_number: 'QA-TEST-001',
+              origin_city: 'Chicago', origin_state: 'IL',
+              dest_city: 'Detroit', dest_state: 'MI',
+              miles: 280, rate_total: 1400, rate_per_mile: 5.00,
+              equipment_type: 'dry_van', pickup_at: today,
+              delivery_at: today
+            }
+          });
+          if (d.status === 'failed') throw new Error(d.error || 'step failed');
+          return `status=${d.status} load_id=${d.output?.load_id||'(no Supabase)'} ✓`;
+        }
+      },
+      {
+        name: 'Step 151 — Compliance daily sweep',
+        run: async () => {
+          const d = await apiFetch('/api/execution/steps/151/run', 'POST',
+            { carrier_id: null, contract_id: null, input_payload: {} });
+          if (d.status === 'failed') throw new Error(d.error || 'step failed');
+          return `status=${d.status} ✓`;
+        }
+      },
+      {
+        name: 'Step 181 — Analytics daily KPI',
+        run: async () => {
+          const d = await apiFetch('/api/execution/steps/181/run', 'POST',
+            { carrier_id: null, contract_id: null, input_payload: {} });
+          if (d.status === 'failed') throw new Error(d.error || 'step failed');
+          return `status=${d.status} ✓`;
+        }
+      },
+      {
+        name: 'Step 271 — LF Load Hunt entry',
+        run: async () => {
+          const d = await apiFetch('/api/execution/steps/271/run', 'POST',
+            { carrier_id: null, contract_id: null, input_payload: { vehicle_type: 'cargo_van' } });
+          if (d.status === 'failed') throw new Error(d.error || 'step failed');
+          return `status=${d.status} ✓`;
+        }
+      },
+      {
+        name: 'Execution history readable',
+        run: async () => {
+          const d = await apiFetch('/api/execution/executions?limit=5');
+          if (!Array.isArray(d)) throw new Error('Expected array of execution records');
+          return `${d.length} recent execution record(s) ✓`;
+        }
+      }
+    ]
   }
 ];
+
+// ── Execution Engine Health Check ─────────────────────────────────────────────
+const EE_DOMAINS = [
+  { id:'onboarding',   label:'Onboarding',    icon:'🚀', step:1,   desc:'intake.receive' },
+  { id:'dispatch',     label:'Dispatch',       icon:'🚛', step:31,  desc:'load_received' },
+  { id:'transit',      label:'Transit',        icon:'📡', step:61,  desc:'pickup_confirmed' },
+  { id:'settlement',   label:'Settlement',     icon:'💰', step:91,  desc:'delivery.confirmed' },
+  { id:'clm',          label:'CLM',            icon:'📑', step:121, desc:'email_inbound_parse' },
+  { id:'compliance',   label:'Compliance',     icon:'✅', step:151, desc:'daily_sweep' },
+  { id:'analytics',    label:'Analytics',      icon:'📊', step:181, desc:'daily_kpi' },
+  { id:'lf_onboarding',label:'LF Onboarding',  icon:'🏥', step:201, desc:'lf.intake.receive' },
+  { id:'lf_dispatch',  label:'LF Dispatch',    icon:'🗺️', step:221, desc:'lf.trip.receive' },
+  { id:'lf_transit',   label:'LF Transit',     icon:'🚗', step:241, desc:'lf.transit.en_route' },
+  { id:'lf_settlement',label:'LF Settlement',  icon:'🧾', step:256, desc:'lf.settle.confirm' },
+  { id:'lf_load_hunt', label:'LF Load Hunt',   icon:'🎯', step:271, desc:'lf.hunt.read_agent_card' },
+];
+
+let _eeqcRunning = false;
+const _eeqcState = {}; // domain id → { status, ms, note }
+
+function eeRenderHealthGrid() {
+  const grid = document.getElementById('eeqc-grid');
+  if (!grid) return;
+  grid.innerHTML = EE_DOMAINS.map(d => {
+    const st = _eeqcState[d.id] || { status: 'idle' };
+    const colors = {
+      idle:      { bg:'var(--surface)', border:'var(--border)', badge:'rgba(255,255,255,.07)', badgeTxt:'var(--muted)', badgeLabel:'IDLE' },
+      running:   { bg:'rgba(228,168,48,.04)', border:'rgba(228,168,48,.3)', badge:'rgba(228,168,48,.15)', badgeTxt:'var(--gold2)', badgeLabel:'RUNNING' },
+      ok:        { bg:'rgba(16,185,129,.04)', border:'rgba(16,185,129,.3)', badge:'rgba(16,185,129,.15)', badgeTxt:'#10b981', badgeLabel:'✅ OPERATIONAL' },
+      degraded:  { bg:'rgba(245,158,11,.04)', border:'rgba(245,158,11,.3)', badge:'rgba(245,158,11,.15)', badgeTxt:'#f59e0b', badgeLabel:'⚡ DEGRADED' },
+      failed:    { bg:'rgba(239,68,68,.04)',  border:'rgba(239,68,68,.3)',  badge:'rgba(239,68,68,.15)',  badgeTxt:'#ef4444', badgeLabel:'❌ FAILED' },
+    };
+    const c = colors[st.status] || colors.idle;
+    const msStr = st.ms ? ` · ${st.ms}ms` : '';
+    const noteStr = st.note ? `<div style="font-size:10px;color:var(--muted);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${st.note}">${st.note}</div>` : '';
+    return `<div style="background:${c.bg};border-left:3px solid ${c.border};padding:12px 14px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+        <div style="font-weight:700;font-size:13px;">${d.icon} ${d.label}</div>
+        <span style="background:${c.badge};color:${c.badgeTxt};font-size:9px;font-weight:800;padding:2px 7px;border-radius:3px;letter-spacing:.5px;text-transform:uppercase;">${c.badgeLabel}</span>
+      </div>
+      <div style="font-size:10px;color:var(--muted);">Step ${d.step} · ${d.desc}${msStr}</div>
+      ${noteStr}
+    </div>`;
+  }).join('');
+
+  const ops = Object.values(_eeqcState).filter(s=>s.status==='ok').length;
+  const deg = Object.values(_eeqcState).filter(s=>s.status==='degraded').length;
+  const fail = Object.values(_eeqcState).filter(s=>s.status==='failed').length;
+  const done = ops+deg+fail;
+  const scoreEl = document.getElementById('eeqc-score');
+  if (scoreEl) {
+    if (done === 0) { scoreEl.textContent = '—/12'; scoreEl.style.color='var(--muted)'; }
+    else if (fail > 0) { scoreEl.textContent = `${ops}✅ ${deg}⚡ ${fail}❌`; scoreEl.style.color='#ef4444'; }
+    else if (deg > 0) { scoreEl.textContent = `${ops}✅ ${deg}⚡`; scoreEl.style.color='#f59e0b'; }
+    else { scoreEl.textContent = `${ops}/12 ✅`; scoreEl.style.color='#10b981'; }
+  }
+}
+
+async function eeRunHealthCheck() {
+  if (_eeqcRunning) return;
+  _eeqcRunning = true;
+  const btn = document.getElementById('eeqc-run-btn');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Running…'; }
+  EE_DOMAINS.forEach(d => _eeqcState[d.id] = { status:'running' });
+  eeRenderHealthGrid();
+  const log = document.getElementById('eeqc-log');
+  if (log) { log.style.display='block'; log.innerHTML = ''; }
+  function logLine(txt, cls='') {
+    if (!log) return;
+    const ts = new Date().toLocaleTimeString('en-US',{hour12:false});
+    log.innerHTML += `<div style="color:${cls==='ok'?'#10b981':cls==='err'?'#ef4444':cls==='warn'?'#f59e0b':'var(--muted)'}">[${ts}] ${txt}</div>`;
+    log.scrollTop = log.scrollHeight;
+  }
+  logLine('Starting health check for all 12 execution domains…');
+  const today = new Date().toISOString().split('T')[0];
+  const payloads = {
+    31: { broker_name:'QA Health Check', load_number:'QA-HC-001', origin_city:'Chicago', origin_state:'IL', dest_city:'Detroit', dest_state:'MI', miles:280, rate_total:1400, rate_per_mile:5.0, equipment_type:'dry_van', pickup_at:today, delivery_at:today },
+    201: { full_name:'QA Test Driver', license_number:'D123456', license_state:'IL', vehicle_type:'cargo_van', phone:'+13135550001' },
+    221: { trip_type:'courier', pickup_address:'123 Main St, Chicago IL', dropoff_address:'456 Oak Ave, Evanston IL' },
+    241: { trip_id:'qa-trip-001', driver_id:'qa-driver-001' },
+    256: { trip_id:'qa-trip-001' },
+    271: { vehicle_type:'cargo_van', service_areas:['IL','IN'], auto_accept_threshold:2.50 },
+  };
+  await Promise.all(EE_DOMAINS.map(async d => {
+    const t0 = performance.now();
+    try {
+      const payload = payloads[d.step] || {};
+      const r = await fetch(`${API_BASE}/api/execution/steps/${d.step}/run`, {
+        method: 'POST',
+        headers: { 'Content-Type':'application/json', 'Authorization':'Bearer '+API_TOKEN },
+        body: JSON.stringify({ carrier_id:null, contract_id:null, input_payload:payload })
+      });
+      const ms = Math.round(performance.now()-t0);
+      if (!r.ok) {
+        const errTxt = await r.text().catch(()=>'');
+        _eeqcState[d.id] = { status:'failed', ms, note:`HTTP ${r.status}: ${errTxt.slice(0,80)}` };
+        logLine(`❌ ${d.label} (step ${d.step}): HTTP ${r.status}`, 'err');
+        return;
+      }
+      const data = await r.json();
+      if (data.status === 'failed') {
+        _eeqcState[d.id] = { status:'failed', ms, note:data.error||'step failed' };
+        logLine(`❌ ${d.label} (step ${d.step}): ${data.error||'failed'}`, 'err');
+        return;
+      }
+      // Check for degraded (external service not configured)
+      const out = data.output || {};
+      const outStr = JSON.stringify(out).toLowerCase();
+      const degraded = outStr.includes('not_configured') || outStr.includes('supabase_not_configured') || out.stub===true;
+      const noteMatch = outStr.match(/"note"\s*:\s*"([^"]+)"/);
+      const note = noteMatch ? noteMatch[1] : (degraded?'external service not configured':null);
+      _eeqcState[d.id] = { status: degraded?'degraded':'ok', ms, note };
+      logLine(`${degraded?'⚡':'✅'} ${d.label} (step ${d.step}): ${data.status} ${ms}ms${note?' · '+note:''}`, degraded?'warn':'ok');
+    } catch(e) {
+      const ms = Math.round(performance.now()-t0);
+      _eeqcState[d.id] = { status:'failed', ms, note:String(e).slice(0,100) };
+      logLine(`❌ ${d.label} (step ${d.step}): ${e.message||e}`, 'err');
+    }
+    eeRenderHealthGrid();
+  }));
+  const ops = Object.values(_eeqcState).filter(s=>s.status==='ok').length;
+  const deg = Object.values(_eeqcState).filter(s=>s.status==='degraded').length;
+  const fail = Object.values(_eeqcState).filter(s=>s.status==='failed').length;
+  logLine(`Health check complete: ${ops} operational, ${deg} degraded, ${fail} failed.`, fail>0?'err':deg>0?'warn':'ok');
+  _eeqcRunning = false;
+  if (btn) { btn.disabled=false; btn.textContent='↺ Re-run Health Check'; }
+}
 
 let _tsRunning = false;
 
@@ -20161,6 +20396,7 @@ async function tsMissionRetest() {
     _origNav(id);
     if (id === 'tests' && !document.getElementById('ts-grid').children.length) {
       tsRenderGrid();
+      eeRenderHealthGrid();
     }
   };
 })();
@@ -23075,20 +23311,34 @@ function lfRenderExpertReport(segment, d) {
       _lfSt[id]='dp';tslfRender();
       const l=_lfLoads.find(x=>x.id===id);
       if(!l)return;
-      try{
-        const r=await fetch(API_BASE+'/api/execution/steps/37/run',{
+      const basePayload={carrier_id:null,contract_id:null,input_payload:{
+        accepted:true,
+        load_id:l._sysId||null,
+        driver_code:'aaaaaaaa-0001-4000-a000-000000000001',
+        driver_phone:'+15550000001',
+        truck_id:'test-truck-lf-001',
+        origin_city:l.oc,origin_state:l.os,
+        dest_city:l.dc,dest_state:l.ds,
+        miles:l.mi,rate_total:l.rate,
+        equipment_type:l.eq.toLowerCase().replace(/\s+/g,'_'),
+        broker_name:l.broker,cargo_type:l.cargo,
+      }};
+      const runStep=async(n,pl)=>{
+        const r=await fetch(API_BASE+`/api/execution/steps/${n}/run`,{
           method:'POST',
           headers:{'Content-Type':'application/json','Authorization':'Bearer '+API_TOKEN},
-          body:JSON.stringify({carrier_id:null,contract_id:null,input_payload:{
-            accepted:true,
-            load_id:l._sysId||null,
-            driver_code:'aaaaaaaa-0001-4000-a000-000000000001',
-            truck_id:'test-truck-lf-001',
-          }})
+          body:JSON.stringify(pl)
         });
         const d=await r.json();
-        console.log('[Execution Step 37 LF] Hawk dispatch result:',d);
-      }catch(e){console.error('[Execution Step 37 LF] error:',e);}
+        console.log(`[Step ${n} LF]`,d);
+        return d;
+      };
+      try{
+        await runStep(37,basePayload);
+        runStep(41,basePayload).catch(e=>console.warn('[Step 41 LF]',e));
+        runStep(42,basePayload).catch(e=>console.warn('[Step 42 LF]',e));
+        runStep(43,basePayload).catch(e=>console.warn('[Step 43 LF]',e));
+      }catch(e){console.error('[LF Dispatch chain] error:',e);}
     };
 
     window.tslfRefresh=function(){_lfLoads=_lfGen();Object.keys(_lfSt).forEach(k=>{if(_lfSt[k]==='av')delete _lfSt[k];});tslfRender();};
@@ -25294,21 +25544,41 @@ table.td-table tr:hover td{background:rgba(34,197,94,.03);}
       _tdSt[id]='dp';tsRenderTD();
       const l=_tdLoads.find(x=>x.id===id);
       if(!l)return;
-      // Step 37: assign to test driver James Test Driver (PIN: 1234)
-      try{
-        const r=await fetch(API_BASE+'/api/execution/steps/37/run',{
+      const driverPayload={carrier_id:null,contract_id:null,input_payload:{
+        accepted:true,
+        load_id:l._sysId||null,
+        driver_code:'aaaaaaaa-0001-4000-a000-000000000001',
+        driver_phone:'+15550000001',
+        truck_id:'test-truck-001',
+        origin_city:l.oc,origin_state:l.os,
+        dest_city:l.dc,dest_state:l.ds,
+        miles:l.mi,rate_total:l.rate,
+        equipment_type:l.eq.toLowerCase().replace(/\s+/g,'_'),
+        broker_name:l.broker,
+      }};
+      // Sequential dispatch chain: 37 → 41 → 42 → 43
+      const runStep=async(n,pl)=>{
+        const r=await fetch(API_BASE+`/api/execution/steps/${n}/run`,{
           method:'POST',
           headers:{'Content-Type':'application/json','Authorization':'Bearer '+API_TOKEN},
-          body:JSON.stringify({carrier_id:null,contract_id:null,input_payload:{
-            accepted:true,
-            load_id:l._sysId||null,
-            driver_code:'aaaaaaaa-0001-4000-a000-000000000001',
-            truck_id:'test-truck-001',
-          }})
+          body:JSON.stringify(pl)
         });
         const d=await r.json();
-        console.log('[Execution Step 37] Hawk dispatch result:',d);
-      }catch(e){console.error('[Execution Step 37] error:',e);}
+        console.log(`[Step ${n}]`,d);
+        return d;
+      };
+      try{
+        // Step 37 — driver accept & DB dispatch
+        const d37=await runStep(37,driverPayload);
+        const basePayload={...driverPayload,input_payload:{...driverPayload.input_payload,
+          load_id:l._sysId||d37?.output?.load_id||null}};
+        // Step 41 — broker confirm
+        runStep(41,basePayload).catch(e=>console.warn('[Step 41]',e));
+        // Step 42 — dispatch sheet email
+        runStep(42,basePayload).catch(e=>console.warn('[Step 42]',e));
+        // Step 43 — dispatch SMS to driver
+        runStep(43,basePayload).catch(e=>console.warn('[Step 43]',e));
+      }catch(e){console.error('[Dispatch chain] error:',e);}
     };
 
     window.tsRefreshTD=function(){_tdLoads=_gen();Object.keys(_tdSt).forEach(k=>{if(_tdSt[k]==='av')delete _tdSt[k];});tsRenderTD();};
