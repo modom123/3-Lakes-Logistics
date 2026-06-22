@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TruckSmarter Partnership Playbook — 3 Lakes Logistics / IEBC</title>
+<title>TruckSmarter Partnership Playbook v2 — IEBC Business Consultants</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600&display=swap');
 
@@ -26,477 +26,227 @@
   }
 
   * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Inter', sans-serif; background: #f1f5f9; color: var(--text); font-size: 12.5px; line-height: 1.65; }
+  .page { max-width: 900px; margin: 0 auto; background: var(--white); box-shadow: 0 4px 40px rgba(0,0,0,.12); }
 
-  body {
-    font-family: 'Inter', -apple-system, sans-serif;
-    background: #f1f5f9;
-    color: var(--text);
-    font-size: 12.5px;
-    line-height: 1.65;
-  }
-
-  .page {
-    max-width: 900px;
-    margin: 0 auto;
-    background: var(--white);
-    box-shadow: 0 4px 40px rgba(0,0,0,.12);
-  }
-
-  /* ── COVER ── */
+  /* COVER */
   .cover {
-    background: linear-gradient(150deg, var(--navy) 0%, #0d2045 55%, #1a3a6e 100%);
-    padding: 60px 60px 50px;
-    position: relative;
-    overflow: hidden;
-    min-height: 280px;
+    background: linear-gradient(150deg, #060e1f 0%, #0d1f3c 50%, #122845 100%);
+    padding: 56px 60px 44px;
+    position: relative; overflow: hidden;
   }
-  .cover::before {
-    content: '';
-    position: absolute;
-    top: -80px; right: -80px;
-    width: 320px; height: 320px;
-    border-radius: 50%;
-    background: rgba(37,99,235,.15);
-  }
-  .cover::after {
-    content: '';
-    position: absolute;
-    bottom: -50px; left: 100px;
-    width: 200px; height: 200px;
-    border-radius: 50%;
-    background: rgba(212,160,23,.08);
-  }
-  .cover-inner { position: relative; z-index: 1; }
-  .cover-eyebrow {
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: .16em;
-    text-transform: uppercase;
-    color: var(--gold2);
-    margin-bottom: 14px;
-  }
-  .cover h1 {
-    font-size: 34px;
-    font-weight: 900;
-    color: var(--white);
-    line-height: 1.1;
-    letter-spacing: -.5px;
-    margin-bottom: 10px;
-  }
-  .cover h1 span { color: var(--gold2); }
-  .cover-sub {
-    font-size: 14px;
-    color: rgba(255,255,255,.7);
-    max-width: 560px;
-    line-height: 1.6;
-    margin-bottom: 28px;
-  }
-  .cover-meta {
-    display: flex;
-    gap: 32px;
-    flex-wrap: wrap;
-    padding-top: 24px;
-    border-top: 1px solid rgba(255,255,255,.1);
-  }
-  .cover-meta-item {}
-  .cover-meta-label {
-    font-size: 9px;
-    font-weight: 700;
-    letter-spacing: .1em;
-    text-transform: uppercase;
-    color: rgba(255,255,255,.35);
-    margin-bottom: 2px;
-  }
-  .cover-meta-value {
-    font-size: 12px;
-    font-weight: 600;
-    color: rgba(255,255,255,.85);
-  }
+  .cover::before { content:''; position:absolute; top:-80px; right:-60px; width:300px; height:300px; border-radius:50%; background:rgba(37,99,235,.12); }
+  .cover::after { content:''; position:absolute; bottom:-60px; left:120px; width:220px; height:220px; border-radius:50%; background:rgba(212,160,23,.07); }
+  .cover-inner { position:relative; z-index:1; }
+  .cover-eyebrow { font-size:10px; font-weight:700; letter-spacing:.16em; text-transform:uppercase; color:var(--gold2); margin-bottom:16px; }
+  .cover h1 { font-size:36px; font-weight:900; color:var(--white); line-height:1.1; letter-spacing:-.5px; margin-bottom:8px; }
+  .cover h1 span { color:var(--gold2); }
+  .cover-version { display:inline-block; font-size:9.5px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; background:rgba(245,158,11,.2); border:1px solid rgba(245,158,11,.4); color:var(--gold2); padding:3px 10px; border-radius:20px; margin-bottom:18px; }
+  .cover-sub { font-size:13.5px; color:rgba(255,255,255,.72); max-width:600px; line-height:1.65; margin-bottom:30px; }
+  .cover-sub strong { color:var(--gold2); }
+  .cover-meta { display:flex; gap:30px; flex-wrap:wrap; padding-top:22px; border-top:1px solid rgba(255,255,255,.09); }
+  .cover-meta-label { font-size:9px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:rgba(255,255,255,.3); margin-bottom:3px; }
+  .cover-meta-value { font-size:12px; font-weight:600; color:rgba(255,255,255,.82); }
 
-  /* ── SECTION BREAK ── */
-  .section-break {
-    background: var(--navy);
+  /* ALERT BANNER */
+  .alert-banner {
+    background: #7f1d1d;
+    border-bottom: 2px solid #dc2626;
     padding: 12px 60px;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-  }
-  .section-break .num {
-    background: var(--gold);
-    color: var(--navy);
-    font-size: 10px;
-    font-weight: 900;
-    width: 22px; height: 22px;
-    border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
-    flex-shrink: 0;
-  }
-  .section-break .title {
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: .1em;
-    text-transform: uppercase;
-    color: rgba(255,255,255,.85);
-  }
-  .section-break .sub {
-    font-size: 10px;
-    color: rgba(255,255,255,.4);
-    margin-left: auto;
-    font-style: italic;
-  }
-
-  /* ── BODY ── */
-  .body { padding: 0 60px 48px; }
-
-  /* ── SECTION HEADER ── */
-  .section { margin-top: 36px; }
-  .section-title {
-    font-size: 9.5px;
-    font-weight: 800;
-    letter-spacing: .14em;
-    text-transform: uppercase;
-    color: var(--blue2);
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 16px;
-  }
-  .section-title::after {
-    content: '';
-    flex: 1;
-    height: 1.5px;
-    background: linear-gradient(90deg, var(--blue2), transparent);
-    opacity: .2;
-  }
-
-  /* ── CALLOUT BOX ── */
-  .callout {
-    border-radius: 10px;
-    padding: 18px 20px;
-    margin-bottom: 16px;
-  }
-  .callout.blue { background: #eff6ff; border: 1px solid #bfdbfe; }
-  .callout.gold { background: #fffbeb; border: 1px solid #fde68a; }
-  .callout.green { background: #f0fdf4; border: 1px solid #bbf7d0; }
-  .callout.red { background: #fef2f2; border: 1px solid #fecaca; }
-  .callout.navy { background: var(--navy); }
-  .callout.purple { background: #faf5ff; border: 1px solid #ddd6fe; }
-  .callout-title {
-    font-size: 11px;
-    font-weight: 800;
-    margin-bottom: 6px;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
-  .callout.blue .callout-title { color: var(--blue); }
-  .callout.gold .callout-title { color: #92400e; }
-  .callout.green .callout-title { color: #14532d; }
-  .callout.red .callout-title { color: #991b1b; }
-  .callout.navy .callout-title { color: var(--gold2); }
-  .callout.purple .callout-title { color: #5b21b6; }
-  .callout-body {
-    font-size: 12px;
-    line-height: 1.6;
-  }
-  .callout.blue .callout-body { color: #1e40af; }
-  .callout.gold .callout-body { color: #78350f; }
-  .callout.green .callout-body { color: #15803d; }
-  .callout.red .callout-body { color: #b91c1c; }
-  .callout.navy .callout-body { color: rgba(255,255,255,.75); }
-  .callout.purple .callout-body { color: #6d28d9; }
-
-  /* ── STEP CARDS ── */
-  .steps { display: flex; flex-direction: column; gap: 12px; }
-  .step {
-    display: flex;
-    gap: 16px;
-    align-items: flex-start;
-    padding: 16px 18px;
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    background: var(--light);
-  }
-  .step.priority { border-color: #bfdbfe; background: #eff6ff; }
-  .step.done { border-color: #bbf7d0; background: #f0fdf4; }
-  .step-num {
-    width: 28px; height: 28px;
-    border-radius: 50%;
-    background: var(--navy);
-    color: var(--white);
-    font-size: 11px;
-    font-weight: 800;
-    display: flex; align-items: center; justify-content: center;
-    flex-shrink: 0;
-    margin-top: 1px;
-  }
-  .step.priority .step-num { background: var(--blue2); }
-  .step-content {}
-  .step-title { font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
-  .step-body { font-size: 11.5px; color: var(--muted); line-height: 1.6; }
-  .step-body strong { color: var(--text); }
-  .step-tag {
-    display: inline-block;
-    font-size: 9px;
-    font-weight: 700;
-    letter-spacing: .06em;
-    text-transform: uppercase;
-    padding: 2px 8px;
-    border-radius: 20px;
-    margin-bottom: 6px;
-  }
-  .tag-now { background: #fee2e2; color: #991b1b; }
-  .tag-week { background: #fef3c7; color: #92400e; }
-  .tag-soon { background: #dbeafe; color: #1e40af; }
-  .tag-build { background: #f3e8ff; color: #6d28d9; }
-
-  /* ── 2-COL ── */
-  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-  .three-col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
-
-  /* ── PLAY CARDS ── */
-  .play-card {
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    overflow: hidden;
-  }
-  .play-header {
-    padding: 13px 16px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-  }
-  .play-header.navy { background: var(--navy); }
-  .play-header.blue { background: var(--blue); }
-  .play-header.teal { background: #0f4c41; }
-  .play-header.purple { background: #4c1d95; }
-  .play-name { font-size: 12px; font-weight: 700; color: var(--white); }
-  .play-icon { font-size: 20px; }
-  .play-body { padding: 14px 16px; background: var(--light); }
-  .play-desc { font-size: 11.5px; color: var(--text); line-height: 1.6; margin-bottom: 10px; }
-  .play-earn {
-    font-size: 11px;
-    font-weight: 700;
-    color: var(--green);
-    padding: 6px 10px;
-    background: #f0fdf4;
-    border: 1px solid #bbf7d0;
-    border-radius: 6px;
-  }
-
-  /* ── EMAIL BOX ── */
-  .email-box {
-    background: var(--navy);
-    border-radius: 10px;
-    overflow: hidden;
-    margin-bottom: 16px;
-  }
-  .email-header {
-    padding: 14px 20px;
-    background: rgba(255,255,255,.05);
-    border-bottom: 1px solid rgba(255,255,255,.08);
-  }
-  .email-field {
-    font-size: 11px;
-    color: rgba(255,255,255,.5);
-    margin-bottom: 3px;
-  }
-  .email-field strong { color: var(--gold2); font-weight: 600; }
-  .email-body {
-    padding: 20px 24px;
-    font-size: 12px;
-    color: rgba(255,255,255,.82);
-    line-height: 1.8;
-    white-space: pre-line;
-  }
-  .email-body strong { color: var(--gold2); }
-  .email-sig {
-    padding: 16px 24px;
-    border-top: 1px solid rgba(255,255,255,.08);
     font-size: 11.5px;
-    color: rgba(255,255,255,.6);
-    line-height: 1.7;
-  }
-
-  /* ── LINKEDIN BOX ── */
-  .linkedin-box {
-    background: #0077b5;
-    border-radius: 10px;
-    overflow: hidden;
-    margin-bottom: 16px;
-  }
-  .linkedin-header {
-    padding: 12px 20px;
-    background: rgba(0,0,0,.15);
-    border-bottom: 1px solid rgba(255,255,255,.1);
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: .08em;
-    text-transform: uppercase;
-    color: rgba(255,255,255,.7);
-  }
-  .linkedin-body {
-    padding: 18px 22px;
-    font-size: 12px;
-    color: rgba(255,255,255,.9);
-    line-height: 1.75;
-    white-space: pre-line;
-  }
-
-  /* ── FOLLOWUP ── */
-  .followup-item {
+    font-weight: 600;
+    color: #fecaca;
     display: flex;
-    gap: 14px;
-    align-items: flex-start;
-    padding: 14px 16px;
-    border-left: 3px solid var(--border);
-    margin-bottom: 12px;
-    background: var(--light);
-    border-radius: 0 8px 8px 0;
-  }
-  .followup-item.d7 { border-color: var(--gold); }
-  .followup-item.d14 { border-color: var(--blue2); }
-  .followup-item.d21 { border-color: var(--purple); }
-  .followup-day {
-    font-size: 9px;
-    font-weight: 800;
-    letter-spacing: .08em;
-    text-transform: uppercase;
-    white-space: nowrap;
-    padding-top: 2px;
-  }
-  .d7 .followup-day { color: var(--gold); }
-  .d14 .followup-day { color: var(--blue2); }
-  .d21 .followup-day { color: var(--purple); }
-  .followup-title { font-size: 12px; font-weight: 700; color: var(--text); margin-bottom: 3px; }
-  .followup-body { font-size: 11px; color: var(--muted); line-height: 1.55; }
-
-  /* ── REVENUE TABLE ── */
-  table { width: 100%; border-collapse: collapse; }
-  th {
-    background: var(--navy);
-    color: rgba(255,255,255,.85);
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: .06em;
-    text-transform: uppercase;
-    padding: 10px 14px;
-    text-align: left;
-  }
-  td {
-    padding: 10px 14px;
-    font-size: 12px;
-    color: var(--text);
-    border-bottom: 1px solid var(--border);
-  }
-  tr:last-child td { border-bottom: none; }
-  tr:nth-child(even) td { background: var(--light); }
-  td.green { color: var(--green); font-weight: 700; }
-  td.bold { font-weight: 700; color: var(--navy); }
-
-  /* ── CHECKLIST ── */
-  .checklist { list-style: none; padding: 0; }
-  .checklist li {
-    display: flex;
-    align-items: flex-start;
+    align-items: center;
     gap: 10px;
-    padding: 7px 0;
-    border-bottom: 1px solid var(--border);
-    font-size: 12px;
-    color: var(--text);
-    line-height: 1.5;
-  }
-  .checklist li:last-child { border-bottom: none; }
-  .check {
-    width: 16px; height: 16px;
-    border: 2px solid var(--border);
-    border-radius: 4px;
-    flex-shrink: 0;
-    margin-top: 1px;
   }
 
-  /* ── TIMELINE ── */
-  .timeline { display: flex; flex-direction: column; gap: 0; }
-  .tl-item { display: flex; gap: 16px; }
-  .tl-left {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    width: 80px;
-    flex-shrink: 0;
-  }
-  .tl-dot {
-    width: 12px; height: 12px;
-    border-radius: 50%;
-    background: var(--blue2);
-    flex-shrink: 0;
-    margin-top: 3px;
-  }
-  .tl-dot.gold { background: var(--gold); }
-  .tl-dot.green { background: var(--green); }
-  .tl-line {
-    width: 2px;
-    flex: 1;
-    background: var(--border);
-    margin: 4px 0;
-    min-height: 20px;
-  }
-  .tl-date {
-    font-size: 9.5px;
-    font-weight: 700;
-    color: var(--muted);
-    letter-spacing: .04em;
-    text-align: right;
-    width: 100%;
-    padding-right: 8px;
-    margin-top: 1px;
-  }
-  .tl-right { padding-bottom: 22px; flex: 1; }
-  .tl-title { font-size: 12.5px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
-  .tl-body { font-size: 11.5px; color: var(--muted); line-height: 1.55; }
+  /* SECTION BREAK */
+  .section-break { background:var(--navy); padding:13px 60px; display:flex; align-items:center; gap:12px; }
+  .section-break .num { background:var(--gold); color:var(--navy); font-size:10px; font-weight:900; width:22px; height:22px; border-radius:50%; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  .section-break .title { font-size:11px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:rgba(255,255,255,.85); }
+  .section-break .sub { font-size:10px; color:rgba(255,255,255,.35); margin-left:auto; font-style:italic; }
 
-  /* ── CONTACT TARGETS ── */
-  .contact-card {
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 14px 16px;
-    background: var(--light);
-  }
-  .contact-title { font-size: 11.5px; font-weight: 700; color: var(--text); margin-bottom: 2px; }
-  .contact-role { font-size: 10.5px; color: var(--blue2); font-weight: 600; margin-bottom: 6px; }
-  .contact-note { font-size: 11px; color: var(--muted); line-height: 1.5; }
+  /* BODY */
+  .body { padding: 0 60px 48px; }
+  .section { margin-top: 32px; }
+  .section-title { font-size:9.5px; font-weight:800; letter-spacing:.14em; text-transform:uppercase; color:var(--blue2); display:flex; align-items:center; gap:10px; margin-bottom:16px; }
+  .section-title::after { content:''; flex:1; height:1.5px; background:linear-gradient(90deg,var(--blue2),transparent); opacity:.2; }
 
-  /* ── FOOTER ── */
-  .footer {
-    background: var(--navy);
-    padding: 18px 60px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-  }
-  .footer-left { color: rgba(255,255,255,.4); font-size: 10.5px; line-height: 1.6; }
-  .footer-left strong { color: var(--gold2); }
-  .footer-right { font-size: 10.5px; color: rgba(255,255,255,.3); }
+  /* CALLOUT */
+  .callout { border-radius:10px; padding:16px 20px; margin-bottom:14px; }
+  .callout.blue { background:#eff6ff; border:1px solid #bfdbfe; }
+  .callout.gold { background:#fffbeb; border:1px solid #fde68a; }
+  .callout.green { background:#f0fdf4; border:1px solid #bbf7d0; }
+  .callout.red { background:#fef2f2; border:1px solid #fecaca; }
+  .callout.navy { background:var(--navy); }
+  .callout.purple { background:#faf5ff; border:1px solid #ddd6fe; }
+  .callout.slate { background:#f1f5f9; border:1px solid #cbd5e1; }
+  .callout-title { font-size:11px; font-weight:800; margin-bottom:5px; display:flex; align-items:center; gap:6px; }
+  .callout.blue .callout-title { color:var(--blue); }
+  .callout.gold .callout-title { color:#92400e; }
+  .callout.green .callout-title { color:#14532d; }
+  .callout.red .callout-title { color:#991b1b; }
+  .callout.navy .callout-title { color:var(--gold2); }
+  .callout.purple .callout-title { color:#5b21b6; }
+  .callout.slate .callout-title { color:var(--navy); }
+  .callout-body { font-size:12px; line-height:1.65; }
+  .callout.blue .callout-body { color:#1e40af; }
+  .callout.gold .callout-body { color:#78350f; }
+  .callout.green .callout-body { color:#15803d; }
+  .callout.red .callout-body { color:#b91c1c; }
+  .callout.navy .callout-body { color:rgba(255,255,255,.75); }
+  .callout.purple .callout-body { color:#6d28d9; }
+  .callout.slate .callout-body { color:var(--text); }
 
-  /* ── PAGE BREAK HINT ── */
-  .page-hint {
-    font-size: 9px;
-    color: #cbd5e1;
-    text-align: right;
-    padding: 6px 0 0;
-    letter-spacing: .04em;
-  }
+  /* GRID */
+  .two-col { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .three-col { display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; }
+
+  /* VS TABLE */
+  .vs-table { width:100%; border-collapse:collapse; border-radius:10px; overflow:hidden; }
+  .vs-table thead tr th { padding:11px 16px; font-size:10px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; text-align:left; }
+  .vs-table thead th.h-ts { background:#1a3a5c; color:#93c5fd; }
+  .vs-table thead th.h-iebc { background:#14532d; color:#86efac; }
+  .vs-table thead th.h-label { background:var(--navy); color:rgba(255,255,255,.4); }
+  .vs-table tbody tr td { padding:10px 16px; font-size:11.5px; border-bottom:1px solid var(--border); }
+  .vs-table tbody tr:last-child td { border-bottom:none; }
+  .vs-table tbody tr:nth-child(even) td { background:var(--light); }
+  .vs-label { font-weight:600; color:var(--text); }
+  .vs-ts { color:var(--muted); }
+  .vs-ts.yes { color:#2563eb; font-weight:600; }
+  .vs-ts.no { color:#dc2626; }
+  .vs-iebc { color:var(--green); font-weight:600; }
+  .vs-iebc.no { color:var(--muted); font-weight:400; }
+
+  /* PHASE CARDS */
+  .phase-row { display:flex; gap:0; margin-bottom:16px; }
+  .phase-card { flex:1; padding:18px 16px; position:relative; }
+  .phase-card.ts { background:#0f2744; border:1px solid #1d4ed8; border-right:none; border-radius:10px 0 0 10px; }
+  .phase-card.gap { background:#1a0a00; border:1px solid var(--gold); flex:0 0 60px; display:flex; align-items:center; justify-content:center; }
+  .phase-card.iebc { background:#0a2010; border:1px solid #16a34a; border-left:none; border-radius:0 10px 10px 0; }
+  .phase-label { font-size:9px; font-weight:800; letter-spacing:.1em; text-transform:uppercase; margin-bottom:8px; }
+  .phase-card.ts .phase-label { color:#60a5fa; }
+  .phase-card.iebc .phase-label { color:#4ade80; }
+  .phase-card.gap .phase-label { display:none; }
+  .phase-title { font-size:13px; font-weight:700; margin-bottom:8px; }
+  .phase-card.ts .phase-title { color:#fff; }
+  .phase-card.iebc .phase-title { color:#fff; }
+  .phase-arrow { font-size:24px; color:var(--gold2); }
+  .phase-items { list-style:none; padding:0; }
+  .phase-items li { font-size:11px; padding:3px 0 3px 14px; position:relative; line-height:1.5; }
+  .phase-card.ts .phase-items li { color:rgba(255,255,255,.7); }
+  .phase-card.ts .phase-items li::before { content:'✓'; position:absolute; left:0; color:#60a5fa; font-size:9px; top:4px; }
+  .phase-card.iebc .phase-items li { color:rgba(255,255,255,.7); }
+  .phase-card.iebc .phase-items li::before { content:'✓'; position:absolute; left:0; color:#4ade80; font-size:9px; top:4px; }
+  .phase-gap-label { font-size:8px; font-weight:700; color:var(--gold2); text-align:center; writing-mode:vertical-rl; text-orientation:mixed; letter-spacing:.08em; text-transform:uppercase; }
+
+  /* STEPS */
+  .steps { display:flex; flex-direction:column; gap:10px; }
+  .step { display:flex; gap:16px; align-items:flex-start; padding:15px 17px; border:1px solid var(--border); border-radius:10px; background:var(--light); }
+  .step.priority { border-color:#bfdbfe; background:#eff6ff; }
+  .step.warn { border-color:#fde68a; background:#fffbeb; }
+  .step-num { width:28px; height:28px; border-radius:50%; background:var(--navy); color:var(--white); font-size:11px; font-weight:800; display:flex; align-items:center; justify-content:center; flex-shrink:0; margin-top:1px; }
+  .step.priority .step-num { background:var(--blue2); }
+  .step.warn .step-num { background:var(--gold); color:var(--navy); }
+  .step-tag { display:inline-block; font-size:9px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; padding:2px 8px; border-radius:20px; margin-bottom:5px; }
+  .tag-now { background:#fee2e2; color:#991b1b; }
+  .tag-week { background:#fef3c7; color:#92400e; }
+  .tag-soon { background:#dbeafe; color:#1e40af; }
+  .tag-build { background:#f3e8ff; color:#6d28d9; }
+  .tag-free { background:#dcfce7; color:#14532d; }
+  .step-title { font-size:13px; font-weight:700; color:var(--text); margin-bottom:4px; }
+  .step-body { font-size:11.5px; color:var(--muted); line-height:1.6; }
+  .step-body strong { color:var(--text); font-weight:600; }
+
+  /* EMAIL */
+  .email-box { background:var(--navy); border-radius:10px; overflow:hidden; margin-bottom:14px; }
+  .email-header { padding:14px 22px; background:rgba(255,255,255,.04); border-bottom:1px solid rgba(255,255,255,.07); }
+  .email-field { font-size:11px; color:rgba(255,255,255,.45); margin-bottom:3px; }
+  .email-field strong { color:var(--gold2); font-weight:600; }
+  .email-body { padding:22px 26px; font-size:12px; color:rgba(255,255,255,.82); line-height:1.85; white-space:pre-line; }
+  .email-body strong { color:var(--gold2); font-weight:700; }
+  .email-sig { padding:14px 26px; border-top:1px solid rgba(255,255,255,.07); font-size:11.5px; color:rgba(255,255,255,.5); line-height:1.7; }
+
+  /* LINKEDIN */
+  .linkedin-box { background:#0077b5; border-radius:10px; overflow:hidden; margin-bottom:14px; }
+  .linkedin-header { padding:11px 20px; background:rgba(0,0,0,.18); border-bottom:1px solid rgba(255,255,255,.1); font-size:10px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:rgba(255,255,255,.6); }
+  .linkedin-body { padding:18px 22px; font-size:12px; color:rgba(255,255,255,.9); line-height:1.75; }
+
+  /* FOLLOW UP */
+  .followup-item { display:flex; gap:14px; align-items:flex-start; padding:14px 16px; border-left:3px solid var(--border); margin-bottom:10px; background:var(--light); border-radius:0 8px 8px 0; }
+  .followup-item.d7 { border-color:var(--gold); }
+  .followup-item.d14 { border-color:var(--blue2); }
+  .followup-item.d21 { border-color:var(--purple); }
+  .followup-day { font-size:9px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; white-space:nowrap; padding-top:2px; min-width:44px; }
+  .d7 .followup-day { color:var(--gold); }
+  .d14 .followup-day { color:var(--blue2); }
+  .d21 .followup-day { color:var(--purple); }
+  .followup-title { font-size:12px; font-weight:700; color:var(--text); margin-bottom:3px; }
+  .followup-body { font-size:11px; color:var(--muted); line-height:1.55; }
+
+  /* REVENUE TABLE */
+  table.rev { width:100%; border-collapse:collapse; border-radius:10px; overflow:hidden; }
+  table.rev th { background:var(--navy); color:rgba(255,255,255,.8); font-size:10px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; padding:10px 14px; text-align:left; }
+  table.rev td { padding:10px 14px; font-size:12px; color:var(--text); border-bottom:1px solid var(--border); }
+  table.rev tr:last-child td { border-bottom:none; font-weight:700; background:#f0fdf4; }
+  table.rev tr:nth-child(even) td { background:var(--light); }
+  td.green { color:var(--green); font-weight:700; }
+  td.bold { font-weight:700; color:var(--navy); }
+
+  /* TIMELINE */
+  .timeline { display:flex; flex-direction:column; }
+  .tl-item { display:flex; gap:14px; }
+  .tl-left { display:flex; flex-direction:column; align-items:center; width:72px; flex-shrink:0; }
+  .tl-dot { width:12px; height:12px; border-radius:50%; background:var(--blue2); flex-shrink:0; margin-top:3px; }
+  .tl-dot.gold { background:var(--gold); }
+  .tl-dot.green { background:var(--green); }
+  .tl-dot.purple { background:var(--purple); }
+  .tl-line { width:2px; flex:1; background:var(--border); margin:4px 0; min-height:18px; }
+  .tl-date { font-size:9.5px; font-weight:700; color:var(--muted); letter-spacing:.03em; text-align:right; width:100%; padding-right:6px; margin-top:1px; }
+  .tl-right { padding-bottom:20px; flex:1; }
+  .tl-title { font-size:12.5px; font-weight:700; color:var(--text); margin-bottom:3px; }
+  .tl-body { font-size:11.5px; color:var(--muted); line-height:1.55; }
+
+  /* TECH SPEC */
+  .tech-block { background:var(--navy); border-radius:10px; padding:20px 24px; }
+  .tech-block-title { font-size:10px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:rgba(255,255,255,.35); margin-bottom:14px; }
+  .tech-row { display:flex; gap:10px; margin-bottom:9px; align-items:flex-start; }
+  .tech-row:last-child { margin-bottom:0; }
+  .tech-key { font-size:10px; font-weight:700; color:rgba(255,255,255,.35); text-transform:uppercase; letter-spacing:.05em; width:90px; flex-shrink:0; padding-top:2px; }
+  .tech-val { font-size:11.5px; color:rgba(255,255,255,.75); line-height:1.55; flex:1; font-family:'JetBrains Mono', monospace; }
+  .tech-val em { font-style:normal; color:var(--gold2); }
+
+  /* CHECKLIST */
+  .checklist { list-style:none; padding:0; }
+  .checklist li { display:flex; align-items:flex-start; gap:10px; padding:7px 0; border-bottom:1px solid var(--border); font-size:12px; color:var(--text); line-height:1.5; }
+  .checklist li:last-child { border-bottom:none; }
+  .check { width:16px; height:16px; border:2px solid var(--border); border-radius:4px; flex-shrink:0; margin-top:1px; }
+
+  /* CONTACT CARD */
+  .contact-card { border:1px solid var(--border); border-radius:8px; padding:14px 16px; background:var(--light); }
+  .contact-title { font-size:11.5px; font-weight:700; color:var(--text); margin-bottom:2px; }
+  .contact-role { font-size:10.5px; color:var(--blue2); font-weight:600; margin-bottom:6px; }
+  .contact-note { font-size:11px; color:var(--muted); line-height:1.5; }
+
+  /* CODE PILL */
+  .code { font-family:'JetBrains Mono', monospace; background:#f1f5f9; border:1px solid var(--border); padding:1px 6px; border-radius:4px; font-size:11px; color:#7c3aed; }
+
+  /* FOOTER */
+  .footer { background:var(--navy); padding:18px 60px; display:flex; align-items:center; justify-content:space-between; }
+  .footer-left { color:rgba(255,255,255,.4); font-size:10.5px; line-height:1.6; }
+  .footer-left strong { color:var(--gold2); }
+  .footer-right { font-size:10.5px; color:rgba(255,255,255,.3); }
 
   @media print {
-    body { background: white; font-size: 11px; }
-    .page { box-shadow: none; max-width: 100%; }
-    .cover, .section-break, .email-box, .linkedin-box, .footer { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-    .play-header { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-    th { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-    .section { margin-top: 24px; }
-    .two-col, .three-col { page-break-inside: avoid; }
-    .step { page-break-inside: avoid; }
-    .email-box { page-break-inside: avoid; }
+    body { background:white; font-size:11px; }
+    .page { box-shadow:none; max-width:100%; }
+    .cover,.section-break,.email-box,.linkedin-box,.footer,.alert-banner,.tech-block { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+    .phase-card.ts,.phase-card.gap,.phase-card.iebc { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+    .vs-table thead th { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+    table.rev th { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+    .section { margin-top:22px; }
+    .step,.phase-row,.two-col,.three-col { page-break-inside:avoid; }
   }
 </style>
 </head>
@@ -506,13 +256,16 @@
   <!-- COVER -->
   <div class="cover">
     <div class="cover-inner">
-      <div class="cover-eyebrow">Confidential — CSO Execution Guide</div>
+      <div class="cover-eyebrow">Confidential — CSO Execution Guide · Version 2.0</div>
+      <div class="cover-version">⚡ Rebuilt with Full Market Intelligence</div>
       <h1>TruckSmarter<br><span>Partnership Playbook</span></h1>
-      <div class="cover-sub">A complete step-by-step execution guide for Cecilia Gulley, CSO — covering broker enrollment, partnership outreach, revenue model, email sequences, and integration roadmap for the TruckSmarter opportunity.</div>
+      <div class="cover-sub">
+        The complete execution guide for Cecilia Gulley, CSO — repositioned around <strong>IEBC's Phase 2 AI advantage</strong>. TruckSmarter finds and verifies loads. IEBC runs everything after that. This playbook covers the technical landscape, exact positioning, outreach scripts, follow-up sequences, integration roadmap, and 30-day execution timeline.
+      </div>
       <div class="cover-meta">
         <div class="cover-meta-item">
           <div class="cover-meta-label">Prepared For</div>
-          <div class="cover-meta-value">Cecilia Gulley — CSO, 3 Lakes Logistics / IEBC</div>
+          <div class="cover-meta-value">Cecilia Gulley — CSO, IEBC / 3 Lakes Logistics</div>
         </div>
         <div class="cover-meta-item">
           <div class="cover-meta-label">Prepared By</div>
@@ -523,104 +276,183 @@
           <div class="cover-meta-value">June 2026</div>
         </div>
         <div class="cover-meta-item">
-          <div class="cover-meta-label">Priority</div>
-          <div class="cover-meta-value">🔴 Execute Within 7 Days</div>
+          <div class="cover-meta-label">Approach</div>
+          <div class="cover-meta-value">IEBC Tech Partnership — No Broker License Required</div>
         </div>
       </div>
     </div>
+  </div>
+
+  <!-- ALERT -->
+  <div class="alert-banner">
+    ⚠️ IMPORTANT: Do NOT mention 3 Lakes Logistics as a broker or reference MC numbers in any outreach. We lead 100% as IEBC Business Consultants — AI systems company. Read Section 2 before making any contact.
   </div>
 
   <!-- SECTION 1 -->
   <div class="section-break">
     <div class="num">1</div>
-    <div class="title">The Opportunity — What Is TruckSmarter?</div>
+    <div class="title">TruckSmarter — What They've Actually Built</div>
+    <div class="sub">Intelligence brief</div>
   </div>
 
   <div class="body">
-
     <div class="section">
-      <div class="callout blue">
-        <div class="callout-title">🎯 The One-Sentence Summary</div>
-        <div class="callout-body">TruckSmarter is a free trucking super-app used by hundreds of thousands of owner-operators and small carriers — they need brokers to post loads AND they need carrier tech to monetize their user base. We have both.</div>
+      <div class="callout slate">
+        <div class="callout-title">📱 The Platform at a Glance</div>
+        <div class="callout-body">TruckSmarter is a VC-backed ($20M+ raised) free trucking super-app. Their load board aggregates <strong>100,000+ daily loads</strong> from major brokers (C.H. Robinson, Spot, Armstrong, and 100+ others). Unlike DAT or Truckstop, the load board is completely free — they monetize downstream via <strong>freight factoring at 2.5–3% for same-day payouts</strong> and carrier services.</div>
       </div>
 
       <div class="two-col">
-        <div class="play-card">
-          <div class="play-header navy"><span class="play-name">What TruckSmarter Is</span><span class="play-icon">📱</span></div>
-          <div class="play-body">
-            <div class="play-desc">A VC-backed ($20M+ raised) free trucking app built for owner-operators. Features a free load board, fuel card, factoring, insurance, and business tools — all in one mobile app for drivers who run 1–5 trucks.</div>
+        <div class="callout blue" style="margin-bottom:0;">
+          <div class="callout-title">🤖 Their $49/Month AI Dispatch Tool</div>
+          <div class="callout-body">
+            TruckSmarter's AI Dispatch assistant monitors lanes 24/7 based on carrier preferences (RPM, max deadhead, weight, trailer type). It actively:<br><br>
+            ✓ Calls brokers to verify if loads are still live<br>
+            ✓ Navigates phone trees and holds<br>
+            ✓ Sends professional bid emails on carrier's behalf<br>
+            ✓ Filters and surfaces the best matching freight<br><br>
+            <strong>Price: $49/month per carrier.</strong>
           </div>
         </div>
-        <div class="play-card">
-          <div class="play-header blue"><span class="play-name">Their Business Model</span><span class="play-icon">💰</span></div>
-          <div class="play-body">
-            <div class="play-desc">They give the load board away FREE to build a massive carrier audience, then monetize that audience through fuel cards, factoring, insurance, and premium tools — exactly like how apps make money on services, not subscriptions.</div>
+        <div class="callout red" style="margin-bottom:0;">
+          <div class="callout-title">❌ What Their AI Does NOT Do</div>
+          <div class="callout-body">
+            TruckSmarter's AI stops the moment the broker responds. After that, everything is manual:<br><br>
+            ✗ Rate negotiation (multi-step back-and-forth)<br>
+            ✗ Contract and rate confirmation generation<br>
+            ✗ BOL and dispatch documentation<br>
+            ✗ Multi-dispatcher TMS backend<br>
+            ✗ Invoicing and carrier settlement<br>
+            ✗ Persistent memory across negotiations<br>
+            ✗ Enterprise multi-fleet operations<br><br>
+            <strong>This is the gap IEBC fills.</strong>
           </div>
         </div>
       </div>
 
       <div class="callout gold" style="margin-top:14px;">
-        <div class="callout-title">💡 Why This Matters for Us</div>
-        <div class="callout-body">TruckSmarter already has the audience we need — owner-operators actively looking for loads. We have two things they need: (1) <strong>loads to put on their board</strong> from 3LL, and (2) <strong>carrier tech they can sell their users</strong> through IEBC. This is a two-channel deal, not just a lead generation play.</div>
+        <div class="callout-title">🔗 Their Partner Ecosystem</div>
+        <div class="callout-body">
+          <strong>Parade:</strong> TruckSmarter integrates with Parade (broker-side capacity management). Brokers post a load to Parade → it instantly pushes to TruckSmarter carriers for "Book Now" execution. This is a key integration channel for 3LL once we're licensed.<br><br>
+          <strong>TCS Fuel Cards:</strong> Partnered to embed route-level fuel intelligence into their AI dispatch tool — carriers see true net profit (gross rate minus exact fuel cost per route) before booking. This is the type of embedded service partnership model TruckSmarter actively pursues.<br><br>
+          <strong>Account Aggregation:</strong> Carriers can connect DAT, Truckstop, and broker portals directly into TruckSmarter — all loads in one unified search. This creates a clean API integration opportunity for IEBC.
+        </div>
       </div>
     </div>
-
   </div>
 
   <!-- SECTION 2 -->
   <div class="section-break">
     <div class="num">2</div>
-    <div class="title">The Four Revenue Plays</div>
-    <div class="sub">What we get out of this</div>
+    <div class="title">IEBC Positioning — The Phase 2 Advantage</div>
+    <div class="sub">Read this before any outreach</div>
   </div>
 
   <div class="body">
     <div class="section">
-      <div class="two-col">
-        <div class="play-card">
-          <div class="play-header navy"><span class="play-name">Play 1 — Post 3LL Loads (Free)</span><span class="play-icon">🚚</span></div>
-          <div class="play-body">
-            <div class="play-desc">Sign up as an approved freight broker on TruckSmarter and post 3LL loads directly to their driver network. Zero cost. Gets us carrier coverage on lanes without paying DAT/Truckstop fees.</div>
-            <div class="play-earn">💵 Saves $300–$500/mo in board fees. Faster coverage on hard lanes.</div>
-          </div>
+      <div class="callout navy">
+        <div class="callout-title">💡 The Core Pitch in One Sentence</div>
+        <div class="callout-body">"TruckSmarter built an exceptional Phase 1 AI — finding, verifying, and bidding on freight. IEBC built Phase 2 — everything that happens after the broker responds. Together, it's a complete autonomous freight operation from load search to carrier payment."</div>
+      </div>
+
+      <div class="phase-row">
+        <div class="phase-card ts">
+          <div class="phase-label">TruckSmarter AI — Phase 1 ($49/mo)</div>
+          <div class="phase-title">Find &amp; Verify</div>
+          <ul class="phase-items">
+            <li>Search 100K+ daily loads</li>
+            <li>Filter by lane, RPM, equipment</li>
+            <li>Call brokers to verify load is live</li>
+            <li>Send initial bid email</li>
+            <li>Surface best-matching freight</li>
+          </ul>
         </div>
-        <div class="play-card">
-          <div class="play-header blue"><span class="play-name">Play 2 — Carrier Recruitment</span><span class="play-icon">🎯</span></div>
-          <div class="play-body">
-            <div class="play-desc">Every driver who books a 3LL load through TruckSmarter enters our automated carrier onboarding sequence. Eagle Eye captures them, sends agreements, and adds them to our preferred carrier network.</div>
-            <div class="play-earn">💵 Low-cost carrier acquisition. Every new carrier = reduced coverage costs long-term.</div>
-          </div>
+        <div class="phase-card gap">
+          <div class="phase-gap-label">HAND OFF</div>
+          <div class="phase-arrow">→</div>
         </div>
-        <div class="play-card">
-          <div class="play-header teal"><span class="play-name">Play 3 — IEBC Tech Partnership</span><span class="play-icon">🤖</span></div>
-          <div class="play-body">
-            <div class="play-desc">IEBC's carrier ops suite (dispatch automation, documents, settlement, onboarding, mobile app) gets offered to TruckSmarter's user base. TruckSmarter sells it, marks it up, keeps the margin — we get wholesale recurring revenue.</div>
-            <div class="play-earn">💵 Recurring monthly revenue per carrier user. 100 carriers = $5K–$15K/mo wholesale.</div>
-          </div>
-        </div>
-        <div class="play-card">
-          <div class="play-header purple"><span class="play-name">Play 4 — Eagle Eye Integration</span><span class="play-icon">⚡</span></div>
-          <div class="play-body">
-            <div class="play-desc">Connect Eagle Eye directly to TruckSmarter's API. 3LL loads auto-post to TruckSmarter when entered. Carrier responses come back into Eagle Eye's inbox. Bond Office AI agents handle coverage automatically.</div>
-            <div class="play-earn">💵 Eliminates manual board posting. AI runs coverage 24/7 without a dispatcher.</div>
-          </div>
+        <div class="phase-card iebc">
+          <div class="phase-label">IEBC AI — Phase 2 (your product)</div>
+          <div class="phase-title">Negotiate &amp; Execute</div>
+          <ul class="phase-items">
+            <li>Multi-step rate negotiation</li>
+            <li>Rate confirmation generation</li>
+            <li>BOL &amp; dispatch documentation</li>
+            <li>Multi-dispatcher TMS backend</li>
+            <li>Invoicing &amp; carrier settlement</li>
+            <li>Persistent agent memory &amp; context</li>
+            <li>Enterprise multi-fleet operations</li>
+          </ul>
         </div>
       </div>
+
+      <div class="section-title">Full Capability Comparison</div>
+      <table class="vs-table">
+        <thead>
+          <tr>
+            <th class="h-label">Capability</th>
+            <th class="h-ts">TruckSmarter AI ($49/mo)</th>
+            <th class="h-iebc">IEBC AI System</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td class="vs-label">Load search &amp; filtering</td><td class="vs-ts yes">✓ Core feature</td><td class="vs-iebc no">— (uses TruckSmarter's feed)</td></tr>
+          <tr><td class="vs-label">Broker verification calls</td><td class="vs-ts yes">✓ Automated</td><td class="vs-iebc no">— (TruckSmarter handles)</td></tr>
+          <tr><td class="vs-label">Initial bid email</td><td class="vs-ts yes">✓ Automated</td><td class="vs-iebc no">— (TruckSmarter handles)</td></tr>
+          <tr><td class="vs-label">Rate negotiation (back &amp; forth)</td><td class="vs-ts no">✗ Not available</td><td class="vs-iebc">✓ Multi-agent AI</td></tr>
+          <tr><td class="vs-label">Contract &amp; rate confirmation</td><td class="vs-ts no">✗ Not available</td><td class="vs-iebc">✓ Auto-generated</td></tr>
+          <tr><td class="vs-label">BOL &amp; dispatch documents</td><td class="vs-ts no">✗ Not available</td><td class="vs-iebc">✓ Auto-generated</td></tr>
+          <tr><td class="vs-label">Multi-dispatcher TMS</td><td class="vs-ts no">✗ Not available</td><td class="vs-iebc">✓ Eagle Eye platform</td></tr>
+          <tr><td class="vs-label">Invoicing &amp; settlement</td><td class="vs-ts no">✗ Not available</td><td class="vs-iebc">✓ Settler automation</td></tr>
+          <tr><td class="vs-label">Persistent agent memory</td><td class="vs-ts no">✗ Not available</td><td class="vs-iebc">✓ pgvector / Supabase</td></tr>
+          <tr><td class="vs-label">50+ specialized AI personas</td><td class="vs-ts no">✗ Single dispatch AI</td><td class="vs-iebc">✓ Full agent network</td></tr>
+          <tr><td class="vs-label">Mobile app (Android)</td><td class="vs-ts yes">✓ iOS &amp; Android</td><td class="vs-iebc">✓ Android (Play Store)</td></tr>
+        </tbody>
+      </table>
     </div>
   </div>
 
   <!-- SECTION 3 -->
   <div class="section-break">
     <div class="num">3</div>
-    <div class="title">Step-by-Step Execution — Week 1</div>
-    <div class="sub">Do these in order</div>
+    <div class="title">The Three Partnership Models</div>
+    <div class="sub">Pick the right angle for each conversation</div>
   </div>
 
   <div class="body">
     <div class="section">
+
+      <div class="callout green">
+        <div class="callout-title">🏆 Model A — White-Label "TruckSmarter Pro" (Best Outcome)</div>
+        <div class="callout-body">TruckSmarter offers IEBC's Phase 2 AI suite as a premium tier above their $49/mo tool — branded as "TruckSmarter Pro" or "TruckSmarter Complete." They set the price ($149–$299/mo), collect it, pay IEBC a wholesale rate, keep the margin. Their users get a complete end-to-end automated freight operation. TruckSmarter gains a new recurring revenue stream without building anything. IEBC gets distribution to hundreds of thousands of carriers.</div>
+      </div>
+
+      <div class="callout blue">
+        <div class="callout-title">🔗 Model B — Preferred Tech Partner (Most Likely First Step)</div>
+        <div class="callout-body">IEBC is listed as a recommended/preferred tool partner on TruckSmarter's partner page — similar to how TCS Fuel Cards is featured. TruckSmarter promotes IEBC to their user base as the "back-office AI" that pairs with TruckSmarter's dispatch tool. Revenue flows to IEBC directly. TruckSmarter earns referral fees or affiliate revenue per signup. This is an easier agreement to reach and creates proof before pursuing Model A.</div>
+      </div>
+
+      <div class="callout purple">
+        <div class="callout-title">⚡ Model C — API Integration Partnership (Technical Angle)</div>
+        <div class="callout-body">IEBC builds a direct integration between Eagle Eye and TruckSmarter's load feed API. TruckSmarter's load data flows into Eagle Eye's dispatch agents in real time. IEBC can use this to demonstrate technical depth AND propose that TruckSmarter resell the integration as a premium feature to enterprise carrier accounts and small fleet operators.</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- SECTION 4 -->
+  <div class="section-break">
+    <div class="num">4</div>
+    <div class="title">Step-by-Step Execution — Week 1</div>
+    <div class="sub">Do these in exact order</div>
+  </div>
+
+  <div class="body">
+    <div class="section">
+
       <div class="callout red">
-        <div class="callout-title">🔴 Cecilia — Start Here. Do These First.</div>
-        <div class="callout-body">The steps below are in priority order. Complete the broker signup first (it takes a few days to approve), then run the LinkedIn and email outreach simultaneously. Do not wait on the tech conversation until broker approval is confirmed.</div>
+        <div class="callout-title">🔴 Stop. Read This First.</div>
+        <div class="callout-body">We do not have an MC number. We are not pitching as a freight broker. Every outreach goes out as <strong>IEBC Business Consultants</strong> — an AI systems company. Do not mention 3 Lakes Logistics in any first contact. Do not discuss load posting. The pitch is entirely about our tech and their carrier users. Keep it clean.</div>
       </div>
 
       <div class="steps">
@@ -628,12 +460,11 @@
         <div class="step priority">
           <div class="step-num">1</div>
           <div class="step-content">
-            <div class="step-tag tag-now">Do Today</div>
-            <div class="step-title">Sign Up as a Broker on TruckSmarter</div>
+            <div class="step-tag tag-free">Free — No Credentials Needed</div>
+            <div class="step-title">Create a Carrier Account on TruckSmarter</div>
             <div class="step-body">
-              Go to <strong>trucksmarter.com</strong> → look for "For Brokers," "Broker Portal," or "Post Loads" in the navigation or footer.<br><br>
-              You will need: <strong>3LL's MC number</strong>, DOT number, company name, and your contact email. Fill out the broker application completely. Use <strong>cece@3lakeslogistics.com</strong> as the account email so all carrier communications route to Eagle Eye.<br><br>
-              <strong>Approval typically takes 1–3 business days.</strong> Once approved, you'll get login credentials to their broker posting portal.
+              Go to <strong>trucksmarter.com</strong> — create a free carrier account. No MC number required for a basic carrier account. Use a personal or IEBC email.<br><br>
+              <strong>Why:</strong> This gives you inside access to their platform so you can understand exactly what their $49 AI Dispatch does and doesn't do — making your pitch surgical. You'll see their UX, their feature set, and where the experience breaks. You can reference this on the call: <em>"We're users of your platform — we saw the gap firsthand."</em>
             </div>
           </div>
         </div>
@@ -642,28 +473,23 @@
           <div class="step-num">2</div>
           <div class="step-content">
             <div class="step-tag tag-now">Do Today</div>
-            <div class="step-title">Find the Right Contact on LinkedIn</div>
+            <div class="step-title">Sign Up for TruckSmarter's $49 AI Dispatch Trial</div>
             <div class="step-body">
-              Go to <strong>LinkedIn.com</strong> → search "TruckSmarter" → click the company → click "People."<br><br>
-              Search for titles: <strong>"Head of Partnerships," "VP Business Development," "Director of Partnerships," "Head of Growth," "BD Manager."</strong><br><br>
-              If you find a direct match, send a connection request using the LinkedIn message script in Section 4 of this guide. If no clear BD contact exists, look for the <strong>CEO or COO</strong> — TruckSmarter is a startup, so the founders may handle partnerships directly.<br><br>
-              <strong>Write down the name and title before moving to Step 3.</strong>
+              Within the carrier account, sign up for their AI Dispatch product. Run it for 48–72 hours. See exactly where it ends — the moment a broker responds and the AI goes silent.<br><br>
+              <strong>This is your proof point.</strong> On the partnership call you can say: "We tested your AI Dispatch. It's excellent at Phase 1. The moment [broker] responded with a counteroffer, it stopped. That's where IEBC picks up." That specificity wins the room.
             </div>
           </div>
         </div>
 
-        <div class="step">
+        <div class="step priority">
           <div class="step-num">3</div>
           <div class="step-content">
             <div class="step-tag tag-now">Do Today</div>
-            <div class="step-title">Find Their Direct Email Address</div>
+            <div class="step-title">Find the Right LinkedIn Contact</div>
             <div class="step-body">
-              Try these in order:<br><br>
-              1. Check their website footer/contact page for a partnerships or business email<br>
-              2. Try <strong>partnerships@trucksmarter.com</strong> and <strong>bd@trucksmarter.com</strong> — common formats for startups<br>
-              3. Use <strong>hunter.io</strong> (free plan) — type "trucksmarter.com" to find verified email addresses on their domain<br>
-              4. Look at their LinkedIn "About" section — some companies list an email there<br><br>
-              <strong>Once found, save it. You'll use it in Step 5.</strong>
+              Go to <strong>LinkedIn.com</strong> → search "TruckSmarter" → Company page → People tab.<br><br>
+              Search for these titles in order: <strong>Head of Partnerships → VP Business Development → Director of Growth → Head of Revenue → CEO / Co-Founder.</strong><br><br>
+              TruckSmarter is a startup — if no dedicated BD role exists, go straight to the founder. Write down: full name, exact title, and profile URL. You'll need this for Steps 4 and 5.
             </div>
           </div>
         </div>
@@ -671,11 +497,15 @@
         <div class="step">
           <div class="step-num">4</div>
           <div class="step-content">
-            <div class="step-tag tag-now">Today / Tomorrow</div>
-            <div class="step-title">Send the LinkedIn Connection Request</div>
+            <div class="step-tag tag-now">Do Today</div>
+            <div class="step-title">Find Their Direct Email</div>
             <div class="step-body">
-              Use the <strong>exact LinkedIn message in Section 4</strong> of this guide. Do not deviate from it. Do not write a generic "I'd like to connect." The message in this guide is specifically written to get a response from a partnerships person.<br><br>
-              <strong>Important:</strong> Do NOT pitch the full tech deal in the connection note. The goal of this message is only to get the connection accepted. The pitch comes in email.
+              Try in this order:<br><br>
+              1. <strong>hunter.io</strong> — free plan, type "trucksmarter.com" to find verified emails on their domain<br>
+              2. Try <strong>partnerships@trucksmarter.com</strong> and <strong>bd@trucksmarter.com</strong><br>
+              3. Check trucksmarter.com footer and contact page<br>
+              4. Their LinkedIn "About" section sometimes lists a business email<br><br>
+              Most startups use <span class="code">firstname@domain.com</span> format. Once you know their name, try that format first.
             </div>
           </div>
         </div>
@@ -683,12 +513,10 @@
         <div class="step">
           <div class="step-num">5</div>
           <div class="step-content">
-            <div class="step-tag tag-week">Day 1–2</div>
-            <div class="step-title">Send the Partnership Email</div>
+            <div class="step-tag tag-now">Today / Tomorrow</div>
+            <div class="step-title">Send LinkedIn Connection Request</div>
             <div class="step-body">
-              Use the <strong>exact email in Section 5</strong> of this guide. Send it from <strong>cece@3lakeslogistics.com</strong> via Eagle Eye.<br><br>
-              Fill in the [Name] field with the contact you found in Step 2. Send it in the <strong>morning (8–10am their local time)</strong> for best open rates — TruckSmarter is based in San Francisco (PT).<br><br>
-              <strong>Do not attach anything to this first email.</strong> Keep it clean. The goal is a reply confirming a call, not a document dump.
+              Use the <strong>exact message in Section 5</strong>. Do not improvise. The LinkedIn note is short by design — its only job is to get the connection accepted. Do not pitch anything in the connection note.
             </div>
           </div>
         </div>
@@ -696,60 +524,43 @@
         <div class="step">
           <div class="step-num">6</div>
           <div class="step-content">
-            <div class="step-tag tag-week">After Broker Approval (Day 2–4)</div>
-            <div class="step-title">Post Your First Load on TruckSmarter</div>
+            <div class="step-tag tag-week">Day 2–3</div>
+            <div class="step-title">Send Partnership Email from Eagle Eye</div>
             <div class="step-body">
-              Once broker access is approved, log into the broker portal and post 3LL's first available load.<br><br>
-              <strong>What to post:</strong> Choose a load on a popular lane (Midwest to Southeast, or any full truckload with good rate). Post with full details — origin, destination, weight, equipment type, rate, and contact number.<br><br>
-              <strong>This does two things:</strong> Gets us immediate carrier coverage AND gives us proof that we're already an active broker on TruckSmarter when we talk to their partnerships team. It makes us a real partner, not just a prospect.
+              Use the <strong>exact email in Section 6</strong>. Send from <strong>cece@3lakeslogistics.com</strong> via Eagle Eye. Fill in [Name] only.<br><br>
+              Send <strong>Tuesday, Wednesday, or Thursday — 8–10am Pacific time</strong> (TruckSmarter is SF-based). Do not send Friday afternoon or Monday morning. Log the send date and contact name in Eagle Eye.
+            </div>
+          </div>
+        </div>
+
+        <div class="step warn">
+          <div class="step-num">7</div>
+          <div class="step-content">
+            <div class="step-tag tag-week">When They Reply</div>
+            <div class="step-title">Notify Mark Before Responding Further</div>
+            <div class="step-body">
+              The moment TruckSmarter responds — email, LinkedIn, phone — <strong>notify Mark Odom immediately</strong> before sending any reply. Do not discuss pricing, deal terms, technical specs, or partnership structure without Mark present. Cecilia's job is to open the door. Mark closes the deal.
             </div>
           </div>
         </div>
 
         <div class="step">
-          <div class="step-num">7</div>
+          <div class="step-num">8</div>
           <div class="step-content">
             <div class="step-tag tag-soon">Day 3–7</div>
-            <div class="step-title">Report Back to Mark</div>
+            <div class="step-title">Report Status Back to Mark</div>
             <div class="step-body">
-              After completing Steps 1–6, report the following to Mark:<br><br>
-              ✓ Broker application submitted? (Y/N) — Date submitted<br>
+              After executing Steps 1–7, report to Mark:<br><br>
+              ✓ Carrier account created? (Y/N)<br>
+              ✓ AI Dispatch trial activated? (Y/N) — what did you observe?<br>
               ✓ LinkedIn contact found? Name + title<br>
-              ✓ LinkedIn connection request sent? (Y/N)<br>
-              ✓ Email sent? (Y/N) — Date sent, recipient name<br>
-              ✓ Any replies received?<br>
-              ✓ First load posted? (Y/N)<br><br>
-              Use Eagle Eye to track all communications. Log everything.
+              ✓ Connection request sent? (Y/N)<br>
+              ✓ Email sent? (Y/N) — date sent, recipient<br>
+              ✓ Any replies received?
             </div>
           </div>
         </div>
 
-      </div>
-    </div>
-  </div>
-
-  <!-- SECTION 4 -->
-  <div class="section-break">
-    <div class="num">4</div>
-    <div class="title">LinkedIn Connection Message</div>
-    <div class="sub">Use this word for word</div>
-  </div>
-
-  <div class="body">
-    <div class="section">
-      <div class="callout gold">
-        <div class="callout-title">⚠️ Instructions</div>
-        <div class="callout-body">This is a short, specific connection note. LinkedIn limits connection notes to 300 characters. Copy the message below exactly. Replace [First Name] with their actual first name. Do NOT add anything else.</div>
-      </div>
-
-      <div class="linkedin-box">
-        <div class="linkedin-header">LinkedIn Connection Note — Copy Exactly (300 char max)</div>
-        <div class="linkedin-body">Hi [First Name] — I'm the CSO at 3 Lakes Logistics. We're an active freight broker exploring load board and tech partnerships. I think there's a clean revenue fit between what TruckSmarter is building and what IEBC has built for carriers. Would love to connect.</div>
-      </div>
-
-      <div class="callout green">
-        <div class="callout-title">✅ What to Do When They Accept</div>
-        <div class="callout-body">Once they accept the connection, send a brief follow-up LinkedIn message: <em>"Thanks for connecting [First Name]. I'll shoot you a quick email with what I have in mind — keep an eye out from cece@3lakeslogistics.com."</em> Then send the email in Section 5 immediately.</div>
       </div>
     </div>
   </div>
@@ -757,53 +568,25 @@
   <!-- SECTION 5 -->
   <div class="section-break">
     <div class="num">5</div>
-    <div class="title">Partnership Outreach Email</div>
-    <div class="sub">Send from Eagle Eye — cece@3lakeslogistics.com</div>
+    <div class="title">LinkedIn Connection Message</div>
+    <div class="sub">Use word for word — 300 character limit</div>
   </div>
 
   <div class="body">
     <div class="section">
       <div class="callout gold">
-        <div class="callout-title">⚠️ Instructions Before Sending</div>
-        <div class="callout-body">Replace [Name] with the contact's first name. Replace [Title] with their actual title. Send from <strong>cece@3lakeslogistics.com</strong> on a Tuesday, Wednesday, or Thursday morning between 8–10am Pacific time. Do not send Friday afternoon or Monday morning.</div>
+        <div class="callout-title">⚠️ Instructions</div>
+        <div class="callout-body">Replace [First Name] with their first name. Send exactly as written. Do not add anything. The note must stay under 300 characters. Its only purpose is to get the connection accepted — not to pitch. The pitch comes in email after they connect.</div>
       </div>
 
-      <div class="email-box">
-        <div class="email-header">
-          <div class="email-field"><strong>FROM:</strong> Cecilia Gulley &lt;cece@3lakeslogistics.com&gt;</div>
-          <div class="email-field"><strong>TO:</strong> [Name] &lt;[email]@trucksmarter.com&gt;</div>
-          <div class="email-field"><strong>SUBJECT:</strong> Partnership Opportunity — Revenue-Share on Carrier Tech Your Drivers Already Need</div>
-        </div>
-        <div class="email-body">Hi [Name],
+      <div class="linkedin-box">
+        <div class="linkedin-header">LinkedIn Connection Note — Copy Exactly</div>
+        <div class="linkedin-body">Hi [First Name] — I'm CSO at IEBC Business Consultants. We build AI back-office systems for owner-operators and small fleets. I think there's a clean tech partnership angle with TruckSmarter — our AI picks up exactly where your dispatch tool hands off. Worth a quick connect.</div>
+      </div>
 
-I'll keep this short because I know your inbox is competitive.
-
-My name is Cecilia Gulley. I'm the Chief Strategy Officer at <strong>3 Lakes Logistics</strong> and <strong>IEBC Business Consultants</strong> out of Detroit. Our CEO Mark Odom asked me to reach out because we think there's a clean two-sided opportunity with TruckSmarter — and a direct revenue line in it for your team.
-
-<strong>Who we are:</strong>
-3 Lakes Logistics is a licensed freight brokerage actively posting loads and building carrier relationships. IEBC Business Consultants is our parent tech company — we build AI-powered business infrastructure for small carriers and owner-operators.
-
-<strong>What we've built that your users need:</strong>
-Your driver base is running 1–5 trucks with no back-office. The moment they book a load, the chaos starts — paperwork, dispatch coordination, settlement, compliance documents. We've built the full carrier ops stack that solves exactly that:
-
-  • AI-powered dispatch automation (load matching runs without a dispatcher)
-  • Automated document engine (rate cons, agreements, BOLs generated instantly)
-  • Driver onboarding portal (digital application, doc upload, e-signature)
-  • Settlement &amp; invoice automation (weekly payouts calculated automatically)
-  • Mobile app published on Android
-
-<strong>The partnership model:</strong>
-You offer these tools to your carrier base under your brand or as a TruckSmarter premium tier. You set the price, collect the subscription, pay IEBC a wholesale rate, and keep the margin. Your users get infrastructure they can't build. You get a new recurring revenue stream on top of the audience you've already built.
-
-On the 3LL side, we're also ready to post loads directly to your board as an active broker — so this relationship works in both directions from day one.
-
-I'm not looking for a lengthy procurement process. Just a 20-minute call to see if the numbers make sense for both sides.
-
-Do you have 20 minutes this week or next?</div>
-        <div class="email-sig">Cecilia Gulley
-Chief Strategy Officer
-3 Lakes Logistics / IEBC Business Consultants
-cece@3lakeslogistics.com | Detroit, MI</div>
+      <div class="callout green">
+        <div class="callout-title">✅ After They Accept — Send This Follow-Up in LinkedIn</div>
+        <div class="callout-body">"Thanks for connecting [First Name]. I'll shoot you a quick email outlining what I have in mind — keep an eye out from cece@3lakeslogistics.com." Then immediately send the email in Section 6.</div>
       </div>
     </div>
   </div>
@@ -811,86 +594,100 @@ cece@3lakeslogistics.com | Detroit, MI</div>
   <!-- SECTION 6 -->
   <div class="section-break">
     <div class="num">6</div>
-    <div class="title">Follow-Up Sequence</div>
-    <div class="sub">If no response — execute in order</div>
+    <div class="title">Partnership Email — Full Script</div>
+    <div class="sub">Send from Eagle Eye · cece@3lakeslogistics.com</div>
   </div>
 
   <div class="body">
     <div class="section">
-      <div class="callout blue">
-        <div class="callout-title">📋 The Rule: Three Touches, Then Pivot</div>
-        <div class="callout-body">If no response after the first email, execute Day 7 and Day 14 follow-ups below. If still no response after Day 14, try the alternate contact strategy in Section 7. Never send more than 3 unsolicited emails to the same person.</div>
+      <div class="callout gold">
+        <div class="callout-title">⚠️ Before Sending — Checklist</div>
+        <div class="callout-body">☐ Replace [Name] with their first name &nbsp;|&nbsp; ☐ Replace [Title] with their actual title &nbsp;|&nbsp; ☐ Send Tuesday–Thursday 8–10am Pacific &nbsp;|&nbsp; ☐ Send from cece@3lakeslogistics.com via Eagle Eye &nbsp;|&nbsp; ☐ No attachments on first email</div>
       </div>
 
-      <div class="followup-item d7">
-        <div class="followup-day">Day 7<br>Follow-Up</div>
-        <div>
-          <div class="followup-title">Email 2 — Quick Bump</div>
-          <div class="followup-body">
-            <strong>Subject:</strong> Re: Partnership Opportunity — Revenue-Share on Carrier Tech<br><br>
-            "Hi [Name] — just bumping this up in case it got buried. Happy to send a one-pager if it's easier to review async. Either way, let me know if there's a better person to connect with on your end. — Cecilia"
-          </div>
+      <div class="email-box">
+        <div class="email-header">
+          <div class="email-field"><strong>FROM:</strong> Cecilia Gulley &lt;cece@3lakeslogistics.com&gt;</div>
+          <div class="email-field"><strong>TO:</strong> [Name] &lt;[email]@trucksmarter.com&gt;</div>
+          <div class="email-field"><strong>SUBJECT:</strong> IEBC + TruckSmarter — AI that picks up where your dispatch tool hands off</div>
         </div>
-      </div>
+        <div class="email-body">Hi [Name],
 
-      <div class="followup-item d14">
-        <div class="followup-day">Day 14<br>Follow-Up</div>
-        <div>
-          <div class="followup-title">Email 3 — New Angle (Broker First)</div>
-          <div class="followup-body">
-            <strong>Subject:</strong> We just started posting loads on TruckSmarter — quick question<br><br>
-            "Hi [Name] — separate from my earlier note, 3 Lakes Logistics just got approved as a broker on TruckSmarter and posted our first load this week. Really impressed with the platform. If there's an opportunity to talk about a deeper partnership at some point, we'd love that. Even a 10-minute intro call would be great. Best, Cecilia"
-          </div>
-        </div>
-      </div>
+I'll get straight to it.
 
-      <div class="followup-item d21">
-        <div class="followup-day">Day 21<br>Pivot</div>
-        <div>
-          <div class="followup-title">Try the CEO / Co-Founder Directly</div>
-          <div class="followup-body">
-            If the partnerships contact hasn't responded in 21 days, search LinkedIn for TruckSmarter's CEO or Co-Founder and send a direct LinkedIn connection + short message. Use the same framework but mention you've already been posting loads on the platform. Founders respond to active users and customers.
-          </div>
-        </div>
-      </div>
+My name is Cecilia Gulley. I'm the Chief Strategy Officer at <strong>IEBC Business Consultants</strong>. We build AI-powered back-office systems for owner-operators and small fleet operators — and we've been using TruckSmarter's platform while building out our own dispatch automation stack.
 
+Here's what we observed: Your AI Dispatch is exceptional at Phase 1 — finding loads, verifying they're live, sending the initial bid. It's genuinely the best tool in the market for that. But the moment a broker responds with a counter, your tool hands the conversation back to the carrier. From there, everything is manual — negotiation, paperwork, rate confirmation, invoicing, settlement.
+
+<strong>That's exactly where IEBC's system picks up.</strong>
+
+We've built the Phase 2 layer:
+  • Multi-step rate negotiation handled by AI agents (no human back-and-forth)
+  • Rate confirmations and contracts auto-generated at agreement
+  • BOL, dispatch docs, and carrier agreements automated end-to-end
+  • Full TMS backend for multi-dispatcher operations
+  • Invoicing and weekly carrier settlement automation
+  • Persistent AI memory across all negotiations and carrier relationships
+
+Your users currently pay $49/month for Phase 1 and then manually manage everything after. We can complete that picture — offered as a premium tier above your current product, white-labeled under TruckSmarter or as a preferred partner integration.
+
+TruckSmarter keeps the customer relationship and the margin. IEBC handles the technology and delivery. Your carrier base gets a complete autonomous freight operation, not just a load finder.
+
+I'd love 20 minutes to walk through the specifics — what the integration looks like technically, and what the revenue model could look like for TruckSmarter.
+
+Is there time this week or next?</div>
+        <div class="email-sig">Cecilia Gulley
+Chief Strategy Officer — IEBC Business Consultants
+cece@3lakeslogistics.com
+Detroit, MI</div>
+      </div>
     </div>
   </div>
 
   <!-- SECTION 7 -->
   <div class="section-break">
     <div class="num">7</div>
-    <div class="title">Who to Target — Contact Hierarchy</div>
-    <div class="sub">LinkedIn search order</div>
+    <div class="title">Follow-Up Sequence</div>
+    <div class="sub">Execute in order if no reply</div>
   </div>
 
   <div class="body">
     <div class="section">
       <div class="callout blue">
-        <div class="callout-title">🔍 How to Search on LinkedIn</div>
-        <div class="callout-body">Go to LinkedIn → search "TruckSmarter" → Company page → People tab. Then use the title filters below in order. Target whoever appears at the highest priority first.</div>
+        <div class="callout-title">📋 The Rule — Three Touches, Then Pivot to Founder</div>
+        <div class="callout-body">Send the initial email. If no reply in 7 days, send Day 7 follow-up. If still no reply after Day 14, send Day 14 message. If three emails produce no response, pivot directly to the CEO or co-founder on LinkedIn. Never send more than 3 emails to the same person.</div>
       </div>
-      <div class="three-col">
-        <div class="contact-card">
-          <div class="contact-title">🥇 Priority 1</div>
-          <div class="contact-role">VP / Head of Partnerships</div>
-          <div class="contact-note">Also try: "Director of Partnerships," "Head of Business Development," "BD Lead"</div>
-        </div>
-        <div class="contact-card">
-          <div class="contact-title">🥈 Priority 2</div>
-          <div class="contact-role">VP / Head of Growth</div>
-          <div class="contact-note">Also try: "Growth," "Revenue," "Head of Sales" — they often own BD at early-stage companies</div>
-        </div>
-        <div class="contact-card">
-          <div class="contact-title">🥉 Priority 3</div>
-          <div class="contact-role">CEO / Co-Founder</div>
-          <div class="contact-note">At a startup this size, founders often own partnership decisions. Reach out directly if no BD role found.</div>
+
+      <div class="followup-item d7">
+        <div class="followup-day">Day 7</div>
+        <div>
+          <div class="followup-title">Quick Bump — Same Thread</div>
+          <div class="followup-body">
+            <strong>Subject:</strong> Re: IEBC + TruckSmarter — AI that picks up where your dispatch tool hands off<br><br>
+            "Hi [Name] — bumping this up in case it got buried. The short version: we've built the back-office AI that pairs with TruckSmarter's dispatch tool — rate negotiation, contracts, settlement, TMS backend. Happy to send a one-pager if it's easier to review async, or connect you with the right person on our end. — Cecilia"
+          </div>
         </div>
       </div>
 
-      <div class="callout green" style="margin-top:16px;">
-        <div class="callout-title">✅ Email Format Guessing (if hunter.io doesn't work)</div>
-        <div class="callout-body">Most startups use: <strong>firstname@trucksmarter.com</strong> or <strong>firstname.lastname@trucksmarter.com</strong>. Try partnerships@trucksmarter.com and hello@trucksmarter.com as fallback. Check their website footer — many companies list a contact email there.</div>
+      <div class="followup-item d14">
+        <div class="followup-day">Day 14</div>
+        <div>
+          <div class="followup-title">New Angle — Reference the Product Gap Directly</div>
+          <div class="followup-body">
+            <strong>Subject:</strong> One specific question about TruckSmarter's roadmap<br><br>
+            "Hi [Name] — I'll make this quick. We've been using your AI Dispatch and love what it does for Phase 1 (find, verify, bid). Quick question: is rate negotiation automation on your product roadmap? We've built that layer and are looking at partnership options for distribution. If it's already on your roadmap, we step back. If not, there might be something worth a quick call. Either way, appreciate your time. — Cecilia, IEBC"
+          </div>
+        </div>
+      </div>
+
+      <div class="followup-item d21">
+        <div class="followup-day">Day 21</div>
+        <div>
+          <div class="followup-title">Pivot to CEO / Co-Founder on LinkedIn</div>
+          <div class="followup-body">
+            If zero response from partnerships contact, find TruckSmarter's CEO or co-founder on LinkedIn. Send a short connection note: <em>"Hi [Name] — CEO at IEBC. We build the AI back-office layer that pairs with your dispatch tool. We're already users of TruckSmarter. Think there's a real partnership play here — would love to connect briefly."</em> Founders at this stage respond to specific, technical partnership pitches from other founders.
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -898,64 +695,33 @@ cece@3lakeslogistics.com | Detroit, MI</div>
   <!-- SECTION 8 -->
   <div class="section-break">
     <div class="num">8</div>
-    <div class="title">Revenue Model — What We Make</div>
-    <div class="sub">Show this on the call</div>
+    <div class="title">The Parade Parallel Strategy</div>
+    <div class="sub">Run simultaneously — don't wait on TruckSmarter</div>
   </div>
 
   <div class="body">
     <div class="section">
-      <table>
-        <thead>
-          <tr>
-            <th>Revenue Stream</th>
-            <th>How It Works</th>
-            <th>TruckSmarter Gets</th>
-            <th>3LL / IEBC Gets</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td class="bold">Load Board Posting</td>
-            <td>3LL posts loads free on their board</td>
-            <td class="green">More load inventory for drivers</td>
-            <td class="green">Free carrier coverage + no board fees</td>
-          </tr>
-          <tr>
-            <td class="bold">Carrier Tech — Starter</td>
-            <td>Dispatch automation + documents sold to owner-ops at $99/mo</td>
-            <td class="green">~$40–60/user/mo (markup kept)</td>
-            <td class="green">$39–49/user/mo wholesale</td>
-          </tr>
-          <tr>
-            <td class="bold">Carrier Tech — Pro</td>
-            <td>Full suite (AI agents, settlement, mobile app) at $299/mo</td>
-            <td class="green">~$100–150/user/mo (markup kept)</td>
-            <td class="green">$149/user/mo wholesale</td>
-          </tr>
-          <tr>
-            <td class="bold">Onboarding + Setup</td>
-            <td>One-time setup fee per carrier onboarded</td>
-            <td class="green">Optional rev share on setup</td>
-            <td class="green">$199–499 one-time per carrier</td>
-          </tr>
-          <tr>
-            <td class="bold">100 Carrier Users</td>
-            <td>Mix of Starter + Pro at avg $75/mo</td>
-            <td class="green">~$5,000–7,500/mo margin</td>
-            <td class="green">$4,900–7,500/mo recurring</td>
-          </tr>
-          <tr>
-            <td class="bold">500 Carrier Users</td>
-            <td>Scale scenario at avg $75/mo</td>
-            <td class="green">~$25,000–37,500/mo</td>
-            <td class="green">$24,500–37,500/mo recurring</td>
-          </tr>
-        </tbody>
-      </table>
+      <div class="callout navy">
+        <div class="callout-title">🔗 What Is Parade?</div>
+        <div class="callout-body">Parade is a broker-side capacity management platform that feeds loads directly into TruckSmarter's carrier network. Brokers who use Parade get their loads pushed to TruckSmarter for "Book Now" execution automatically. Parade is the B2B enterprise layer that TruckSmarter built their broker integrations through — making Parade a separate and equally important partnership target.</div>
+      </div>
 
-      <div class="callout navy" style="margin-top:16px;">
-        <div class="callout-title">💡 Key Talking Point for the Call</div>
-        <div class="callout-body">"You already have the users. We already have the product. The only thing missing is the distribution agreement. TruckSmarter keeps the customer relationship, sets the price, and earns the margin. IEBC handles the tech, support, and delivery. You add a revenue line without building anything."</div>
+      <div class="two-col">
+        <div class="callout blue" style="margin-bottom:0;">
+          <div class="callout-title">Why Approach Parade</div>
+          <div class="callout-body">
+            Parade serves freight brokers directly — the exact customers who need IEBC's automation. A partnership with Parade means IEBC tools reach small-to-mid brokers who are already plugged into the TruckSmarter ecosystem. It's a parallel distribution channel to the same market.<br><br>
+            <strong>Website:</strong> parade.ai<br>
+            <strong>Search:</strong> "Parade" + "Partnerships" on LinkedIn
+          </div>
+        </div>
+        <div class="callout green" style="margin-bottom:0;">
+          <div class="callout-title">The Pitch to Parade</div>
+          <div class="callout-body">
+            "Your brokers post loads to Parade and push to TruckSmarter carriers. Once the carrier accepts, everything goes manual — rate negotiation, contracts, settlement. IEBC automates that entire post-acceptance workflow for your broker clients. We'd like to explore a broker-facing integration."<br><br>
+            <strong>Same Phase 2 angle. Different audience.</strong>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -963,111 +729,38 @@ cece@3lakeslogistics.com | Detroit, MI</div>
   <!-- SECTION 9 -->
   <div class="section-break">
     <div class="num">9</div>
-    <div class="title">Execution Timeline</div>
-    <div class="sub">Full 30-day roadmap</div>
+    <div class="title">Technical Integration — How It Would Work</div>
+    <div class="sub">For reference on the call — Mark leads this conversation</div>
   </div>
 
   <div class="body">
     <div class="section">
-      <div class="timeline">
-        <div class="tl-item">
-          <div class="tl-left">
-            <div class="tl-date">Day 1</div>
-            <div class="tl-dot"></div>
-            <div class="tl-line"></div>
-          </div>
-          <div class="tl-right">
-            <div class="tl-title">Submit Broker Application + Find LinkedIn Contact</div>
-            <div class="tl-body">Go to trucksmarter.com → apply as a freight broker using 3LL's MC#. Simultaneously search LinkedIn for the BD/partnerships contact. Write down their name and title.</div>
-          </div>
+      <div class="callout slate">
+        <div class="callout-title">📋 Cecilia: You Do Not Need to Explain This on the Call</div>
+        <div class="callout-body">This section is background for you to understand what's possible. If TruckSmarter asks technical questions, say "Our CEO Mark Odom is our technical lead — I'll bring him into the next conversation to walk through the integration specifics." Do not attempt to explain API architecture yourself.</div>
+      </div>
+
+      <div class="tech-block">
+        <div class="tech-block-title">Integration Architecture — Eagle Eye ↔ TruckSmarter</div>
+        <div class="tech-row">
+          <div class="tech-key">Load Feed</div>
+          <div class="tech-val">TruckSmarter's web portal runs on structured <em>GraphQL/REST APIs</em>. Their load data can be pulled programmatically into Eagle Eye's dispatch agents, giving IEBC access to 100K+ daily loads without paying DAT or Truckstop fees.</div>
         </div>
-        <div class="tl-item">
-          <div class="tl-left">
-            <div class="tl-date">Day 1–2</div>
-            <div class="tl-dot"></div>
-            <div class="tl-line"></div>
-          </div>
-          <div class="tl-right">
-            <div class="tl-title">Send LinkedIn Connection + Find Email</div>
-            <div class="tl-body">Send LinkedIn connection note using the script in Section 4. Use hunter.io to find their direct email address. Confirm email format from website footer.</div>
-          </div>
+        <div class="tech-row">
+          <div class="tech-key">RPA Option</div>
+          <div class="tech-val">If API access isn't part of the partnership, an <em>n8n RPA automation flow</em> can aggregate TruckSmarter search results and feed them into Eagle Eye — a zero-cost integration approach that doesn't require TruckSmarter's cooperation.</div>
         </div>
-        <div class="tl-item">
-          <div class="tl-left">
-            <div class="tl-date">Day 2</div>
-            <div class="tl-dot"></div>
-            <div class="tl-line"></div>
-          </div>
-          <div class="tl-right">
-            <div class="tl-title">Send Partnership Email</div>
-            <div class="tl-body">Send the partnership email from Section 5 via Eagle Eye (cece@3lakeslogistics.com). Send Tuesday–Thursday, 8–10am Pacific time. Log the send date and recipient in Eagle Eye.</div>
-          </div>
+        <div class="tech-row">
+          <div class="tech-key">Handoff Point</div>
+          <div class="tech-val">TruckSmarter AI sends the bid email. Broker responds. <em>Eagle Eye's Claude-powered agents take the thread</em> — they handle negotiation, generate rate confirmation, and pass to dispatch queue automatically.</div>
         </div>
-        <div class="tl-item">
-          <div class="tl-left">
-            <div class="tl-date">Day 3–5</div>
-            <div class="tl-dot gold"></div>
-            <div class="tl-line"></div>
-          </div>
-          <div class="tl-right">
-            <div class="tl-title">Broker Application Approved — Post First Load</div>
-            <div class="tl-body">Once broker credentials arrive by email, log into TruckSmarter broker portal and post 3LL's first available load. Take a screenshot of the posted load. This gives us proof of active partnership for future conversations.</div>
-          </div>
+        <div class="tech-row">
+          <div class="tech-key">TMS Backend</div>
+          <div class="tech-val">Eagle Eye runs the <em>multi-dispatcher TMS layer</em> TruckSmarter doesn't have — load board, dispatch coordination, carrier comms, BOL tracking, and settlement, all in one platform.</div>
         </div>
-        <div class="tl-item">
-          <div class="tl-left">
-            <div class="tl-date">Day 7</div>
-            <div class="tl-dot"></div>
-            <div class="tl-line"></div>
-          </div>
-          <div class="tl-right">
-            <div class="tl-title">Day 7 Follow-Up (if no reply)</div>
-            <div class="tl-body">Send Day 7 follow-up email from Section 6. Keep it to 2–3 sentences. No attachment. Goal is just to bump the thread back to the top of their inbox.</div>
-          </div>
-        </div>
-        <div class="tl-item">
-          <div class="tl-left">
-            <div class="tl-date">Day 7–14</div>
-            <div class="tl-dot gold"></div>
-            <div class="tl-line"></div>
-          </div>
-          <div class="tl-right">
-            <div class="tl-title">If They Reply — Schedule the Call</div>
-            <div class="tl-body">Offer 2–3 specific time slots. Use Calendly or just list times directly in the email. Example: "I'm free Tuesday 10am–12pm ET or Thursday 2–4pm ET — does either work?" Confirm the call and notify Mark immediately.</div>
-          </div>
-        </div>
-        <div class="tl-item">
-          <div class="tl-left">
-            <div class="tl-date">Day 14</div>
-            <div class="tl-dot"></div>
-            <div class="tl-line"></div>
-          </div>
-          <div class="tl-right">
-            <div class="tl-title">Day 14 Follow-Up (if still no reply)</div>
-            <div class="tl-body">Send Day 14 email from Section 6 — use the "we just posted our first load" angle. This is now a warmer message because we're already an active user of their platform.</div>
-          </div>
-        </div>
-        <div class="tl-item">
-          <div class="tl-left">
-            <div class="tl-date">Day 21</div>
-            <div class="tl-dot"></div>
-            <div class="tl-line"></div>
-          </div>
-          <div class="tl-right">
-            <div class="tl-title">Pivot to CEO / Founder if Needed</div>
-            <div class="tl-body">If no response after Day 14 follow-up, identify the CEO or co-founder on LinkedIn and reach out directly. Brief message referencing that 3LL is already an active broker on their platform and we have a tech partnership idea.</div>
-          </div>
-        </div>
-        <div class="tl-item">
-          <div class="tl-left">
-            <div class="tl-date">Day 30</div>
-            <div class="tl-dot green"></div>
-            <div class="tl-line"></div>
-          </div>
-          <div class="tl-right">
-            <div class="tl-title">Target: Partnership Call Completed — Deal Framework Agreed</div>
-            <div class="tl-body">Goal by Day 30 is to have had at least one discovery call and agreed on a framework for the tech partnership. Mark will lead the actual deal negotiation. Cecilia's role is to get the meeting and keep the thread alive.</div>
-          </div>
+        <div class="tech-row">
+          <div class="tech-key">Memory Layer</div>
+          <div class="tech-val">Supabase + <em>pgvector</em> gives IEBC's agents persistent memory — they remember carrier preferences, negotiation history, and relationship context across every interaction. TruckSmarter has no equivalent.</div>
         </div>
       </div>
     </div>
@@ -1076,7 +769,154 @@ cece@3lakeslogistics.com | Detroit, MI</div>
   <!-- SECTION 10 -->
   <div class="section-break">
     <div class="num">10</div>
-    <div class="title">Master Checklist</div>
+    <div class="title">Revenue Model — What Both Sides Make</div>
+  </div>
+
+  <div class="body">
+    <div class="section">
+      <table class="rev">
+        <thead>
+          <tr>
+            <th>Tier / Scenario</th>
+            <th>Monthly Price to Carrier</th>
+            <th>TruckSmarter Keeps</th>
+            <th>IEBC Wholesale</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="bold">Phase 2 Add-On (above $49 tier)</td>
+            <td>$149/mo</td>
+            <td class="green">~$50–75/user</td>
+            <td class="green">~$74–99/user</td>
+          </tr>
+          <tr>
+            <td class="bold">TruckSmarter Pro (bundled)</td>
+            <td>$199/mo (Phase 1 + 2)</td>
+            <td class="green">~$75–100/user</td>
+            <td class="green">~$99/user</td>
+          </tr>
+          <tr>
+            <td class="bold">Enterprise Fleet (5+ trucks)</td>
+            <td>$499/mo</td>
+            <td class="green">~$150–200/mo</td>
+            <td class="green">~$299/mo</td>
+          </tr>
+          <tr>
+            <td class="bold">100 Carrier Users (Phase 2)</td>
+            <td>avg $149/mo</td>
+            <td class="green">$5,000–7,500/mo</td>
+            <td class="green">$7,400–9,900/mo</td>
+          </tr>
+          <tr>
+            <td class="bold">500 Carrier Users (Phase 2)</td>
+            <td>avg $149/mo</td>
+            <td class="green">$25,000–37,500/mo</td>
+            <td class="green">$37,000–49,500/mo</td>
+          </tr>
+          <tr>
+            <td class="bold">1,000 Carrier Users (scale)</td>
+            <td>avg $149/mo</td>
+            <td class="green">$50,000–75,000/mo</td>
+            <td class="green">$74,000+/mo recurring</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="callout navy" style="margin-top:14px;">
+        <div class="callout-title">💡 Key Talking Point on Revenue</div>
+        <div class="callout-body">"You already have the users. We already have the product. TruckSmarter keeps the customer relationship, sets the price, and earns the margin on every user. IEBC handles the technology, support, and delivery. You add a significant recurring revenue line without writing a single line of code."</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SECTION 11 -->
+  <div class="section-break">
+    <div class="num">11</div>
+    <div class="title">30-Day Execution Timeline</div>
+  </div>
+
+  <div class="body">
+    <div class="section">
+      <div class="timeline">
+        <div class="tl-item">
+          <div class="tl-left"><div class="tl-date">Day 1</div><div class="tl-dot"></div><div class="tl-line"></div></div>
+          <div class="tl-right">
+            <div class="tl-title">Create Carrier Account + Activate $49 AI Dispatch Trial</div>
+            <div class="tl-body">Sign up at trucksmarter.com as a carrier (free, no MC# needed). Activate the AI Dispatch trial. Observe exactly where it stops — this becomes your pitch proof point.</div>
+          </div>
+        </div>
+        <div class="tl-item">
+          <div class="tl-left"><div class="tl-date">Day 1</div><div class="tl-dot"></div><div class="tl-line"></div></div>
+          <div class="tl-right">
+            <div class="tl-title">Find LinkedIn Contact + Direct Email</div>
+            <div class="tl-body">Search TruckSmarter on LinkedIn → People tab → find Head of Partnerships or equivalent. Use hunter.io to find their direct email. Write both down.</div>
+          </div>
+        </div>
+        <div class="tl-item">
+          <div class="tl-left"><div class="tl-date">Day 1–2</div><div class="tl-dot"></div><div class="tl-line"></div></div>
+          <div class="tl-right">
+            <div class="tl-title">Send LinkedIn Connection Request</div>
+            <div class="tl-body">Use the exact script in Section 5. Wait for connection acceptance before sending the follow-up message.</div>
+          </div>
+        </div>
+        <div class="tl-item">
+          <div class="tl-left"><div class="tl-date">Day 2–3</div><div class="tl-dot gold"></div><div class="tl-line"></div></div>
+          <div class="tl-right">
+            <div class="tl-title">Send Partnership Email from Eagle Eye</div>
+            <div class="tl-body">Use the full email in Section 6. Send Tuesday–Thursday, 8–10am Pacific. Log in Eagle Eye. No attachments.</div>
+          </div>
+        </div>
+        <div class="tl-item">
+          <div class="tl-left"><div class="tl-date">Day 2–3</div><div class="tl-dot purple"></div><div class="tl-line"></div></div>
+          <div class="tl-right">
+            <div class="tl-title">Simultaneously — Find Parade's BD Contact</div>
+            <div class="tl-body">Search parade.ai and LinkedIn for "Parade" partnerships contacts. Use the same Phase 2 positioning, different audience (brokers not carriers). Run both outreach streams in parallel.</div>
+          </div>
+        </div>
+        <div class="tl-item">
+          <div class="tl-left"><div class="tl-date">Day 7</div><div class="tl-dot"></div><div class="tl-line"></div></div>
+          <div class="tl-right">
+            <div class="tl-title">Day 7 Follow-Up (if no reply)</div>
+            <div class="tl-body">Send Day 7 bump email from Section 7. 2–3 sentences only. No new attachment.</div>
+          </div>
+        </div>
+        <div class="tl-item">
+          <div class="tl-left"><div class="tl-date">Day 7–14</div><div class="tl-dot green"></div><div class="tl-line"></div></div>
+          <div class="tl-right">
+            <div class="tl-title">If They Reply — Notify Mark Immediately</div>
+            <div class="tl-body">Do not reply further without Mark. Offer 2–3 specific call times. Example: "I have Tuesday 10am–12pm ET or Thursday 2–4pm ET — does either work?" Confirm the call and brief Mark on everything observed from the AI Dispatch trial.</div>
+          </div>
+        </div>
+        <div class="tl-item">
+          <div class="tl-left"><div class="tl-date">Day 14</div><div class="tl-dot"></div><div class="tl-line"></div></div>
+          <div class="tl-right">
+            <div class="tl-title">Day 14 Follow-Up — Roadmap Question Angle</div>
+            <div class="tl-body">Use the "one specific question about your roadmap" email from Section 7. This reframes the conversation and often gets a reply when the first emails didn't.</div>
+          </div>
+        </div>
+        <div class="tl-item">
+          <div class="tl-left"><div class="tl-date">Day 21</div><div class="tl-dot"></div><div class="tl-line"></div></div>
+          <div class="tl-right">
+            <div class="tl-title">Pivot to CEO/Co-Founder if Needed</div>
+            <div class="tl-body">Find and message TruckSmarter's CEO or co-founder directly on LinkedIn. Brief, founder-to-founder framing. Reference being an active user of their platform.</div>
+          </div>
+        </div>
+        <div class="tl-item">
+          <div class="tl-left"><div class="tl-date">Day 30</div><div class="tl-dot green"></div><div class="tl-line"></div></div>
+          <div class="tl-right">
+            <div class="tl-title">Target: Discovery Call Completed — Framework Agreed</div>
+            <div class="tl-body">Goal is a completed intro call with a clear next step — whether that's a technical demo, a partnership agreement draft, or a defined pilot program. Mark leads from here.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SECTION 12 -->
+  <div class="section-break">
+    <div class="num">12</div>
+    <div class="title">Master Execution Checklist</div>
     <div class="sub">Print this. Check off each item.</div>
   </div>
 
@@ -1084,37 +924,44 @@ cece@3lakeslogistics.com | Detroit, MI</div>
     <div class="section">
       <div class="two-col">
         <div>
-          <div class="section-title">Broker Setup</div>
+          <div class="section-title">Research &amp; Setup</div>
           <ul class="checklist">
-            <li><div class="check"></div>Go to trucksmarter.com — find broker signup page</li>
-            <li><div class="check"></div>Submit broker application with 3LL MC# and DOT#</li>
-            <li><div class="check"></div>Use cece@3lakeslogistics.com as account email</li>
-            <li><div class="check"></div>Receive broker approval email (1–3 days)</li>
-            <li><div class="check"></div>Log into broker portal and confirm access</li>
-            <li><div class="check"></div>Post first 3LL load — screenshot it</li>
-            <li><div class="check"></div>Track carrier inquiries coming into Eagle Eye</li>
+            <li><div class="check"></div>Create free carrier account on trucksmarter.com</li>
+            <li><div class="check"></div>Activate $49 AI Dispatch trial</li>
+            <li><div class="check"></div>Document where AI Dispatch stops (screenshot it)</li>
+            <li><div class="check"></div>Note exact feature gaps you observed firsthand</li>
+            <li><div class="check"></div>Find LinkedIn contact — name, title, profile URL</li>
+            <li><div class="check"></div>Find direct email via hunter.io or website</li>
+            <li><div class="check"></div>Locate Parade BD contact as parallel target</li>
           </ul>
         </div>
         <div>
           <div class="section-title">Outreach Execution</div>
           <ul class="checklist">
-            <li><div class="check"></div>Search LinkedIn for TruckSmarter partnerships contact</li>
-            <li><div class="check"></div>Write down contact name, title, and profile URL</li>
-            <li><div class="check"></div>Find their email via hunter.io or company site</li>
-            <li><div class="check"></div>Send LinkedIn connection request (script in Section 4)</li>
-            <li><div class="check"></div>Send partnership email (script in Section 5)</li>
-            <li><div class="check"></div>Log send date and contact name in Eagle Eye</li>
+            <li><div class="check"></div>Send LinkedIn connection note (Section 5 script)</li>
+            <li><div class="check"></div>Send partnership email from Eagle Eye (Section 6)</li>
+            <li><div class="check"></div>Log send date and contact in Eagle Eye</li>
             <li><div class="check"></div>Send Day 7 follow-up if no reply</li>
             <li><div class="check"></div>Send Day 14 follow-up if no reply</li>
-            <li><div class="check"></div>Notify Mark immediately when reply received</li>
-            <li><div class="check"></div>Schedule intro call and confirm with Mark</li>
+            <li><div class="check"></div>Send Parade outreach in parallel (Day 2–3)</li>
+            <li><div class="check"></div>Notify Mark immediately upon any reply</li>
+            <li><div class="check"></div>Schedule intro call with 3 time slot options</li>
+            <li><div class="check"></div>Brief Mark before the call with all observations</li>
           </ul>
         </div>
       </div>
 
-      <div class="callout navy" style="margin-top:20px;">
-        <div class="callout-title">📞 When They Reply — Notify Mark Immediately</div>
-        <div class="callout-body">The moment TruckSmarter responds to any outreach — email, LinkedIn, or phone — notify Mark Odom directly before responding further. Do not negotiate deal terms, pricing, or tech specs without Mark on the call. Cecilia's job is to open the door. Mark closes the deal.</div>
+      <div class="callout red" style="margin-top:18px;">
+        <div class="callout-title">🔴 Final Reminder — What NOT to Say</div>
+        <div class="callout-body">
+          ✗ Do NOT mention 3 Lakes Logistics as a broker<br>
+          ✗ Do NOT mention MC numbers or DOT numbers<br>
+          ✗ Do NOT discuss load posting or freight coverage<br>
+          ✗ Do NOT negotiate pricing or deal terms without Mark<br>
+          ✗ Do NOT send a second attachment or pitch deck without Mark's approval<br>
+          ✗ Do NOT say "we're still getting our broker license" — it undermines the pitch<br><br>
+          Lead as <strong>IEBC Business Consultants — AI systems company</strong>. That's the identity. That's the pitch. Stay in your lane.
+        </div>
       </div>
     </div>
   </div>
@@ -1122,7 +969,7 @@ cece@3lakeslogistics.com | Detroit, MI</div>
   <!-- FOOTER -->
   <div class="footer">
     <div class="footer-left">
-      <strong>3 Lakes Logistics / IEBC Business Consultants</strong><br>
+      <strong>IEBC Business Consultants</strong> — TruckSmarter Partnership Playbook v2.0<br>
       Confidential — Prepared for Cecilia Gulley, CSO · June 2026
     </div>
     <div class="footer-right">Mark Odom, CEO · 661.466.9932</div>
