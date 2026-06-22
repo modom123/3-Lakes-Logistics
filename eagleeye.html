@@ -880,6 +880,7 @@ select.form-input option{background:var(--surface);}
     <div class="sb-item" onclick="nav('trading-desk')"><span class="sb-icon">📈</span> Trading Desk <span class="sb-badge" id="td-open-badge" style="display:none;background:#f59e0b;color:#000">0</span></div>
     <div class="sb-item" onclick="nav('broker-shippers')"><span class="sb-icon">🏭</span> Shippers <span class="sb-badge" id="bd-shipper-badge" style="display:none;background:#22c55e;color:#000">0</span></div>
     <div class="sb-item" onclick="nav('broker-docs')"><span class="sb-icon">📄</span> Docs &amp; Invoices <span class="sb-badge" id="bd-docs-badge" style="display:none;background:#f59e0b;color:#000">0</span></div>
+    <div class="sb-item" onclick="nav('falcon-board')"><span class="sb-icon">🦅</span> FALCON Board <span class="sb-badge" id="falcon-live-badge" style="display:none;background:#f59e0b;color:#000">0</span></div>
   </div>
 
   <div class="sb-section">
@@ -4980,7 +4981,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 let allCarriers=[], allLoads=[], allInvoices=[], currentInvFilter='all', loadCounter=3849;
 
-const pageNames={dashboard:'Dashboard',dispatch:'Dispatch Board','fleet-map':'Fleet Map',carriers:'Carriers',drivers:'Drivers',loads:'Load Manager',invoices:'Invoices & Billing',compliance:'DOT Compliance',ifta:'IFTA / Permits',insurance:'Insurance',revenue:'Revenue Tracker',providers:'Compliance Providers',checklist:'Daily Checklist',notes:'Dispatcher Notes',reports:'Team Reports','exec-command':'Exec Command',agents:'AI Agents',founders:'Founders Program',leads:'Pipeline',salesforce:'Sales & Marketing',execution:'Execution Engine',factoring:'Factoring',email:'Email Center',vault:'Document Vault',clm:'CLM Scanner',ledger:'Atomic Ledger',agreements:'Agreements','lf-map':'Light Fleet Live Map','lf-nemt':'NEMT — Medical Transport','lf-medical':'Medical Courier','lf-executive':'Executive Transport','lf-courier':'Courier & Last-Mile','lf-gig':'Gig Fleet Management','lf-bizdev':'Light Fleet — Business Development','lf-million':'Light Fleet — $1M Blueprint','load-hunter':'Load Hunter — Live Board Scanner','mark-office':'Mark Odom — CEO Office','ccg-office':'CC Gulley Office','trading-desk':'Trading Desk','broker-division':'N. American Trading — Hub','broker-shippers':'Shipper Pipeline','broker-docs':'Docs & Invoices','trading-desk':'Trading Desk',costs:'Cost Tracking — IEBC','tech-monitor':'Tech Monitor — Marcus Reid & Jamie Park','driver-tracker':'Driver GPS Tracker'};
+const pageNames={dashboard:'Dashboard',dispatch:'Dispatch Board','fleet-map':'Fleet Map',carriers:'Carriers',drivers:'Drivers',loads:'Load Manager',invoices:'Invoices & Billing',compliance:'DOT Compliance',ifta:'IFTA / Permits',insurance:'Insurance',revenue:'Revenue Tracker',providers:'Compliance Providers',checklist:'Daily Checklist',notes:'Dispatcher Notes',reports:'Team Reports','exec-command':'Exec Command',agents:'AI Agents',founders:'Founders Program',leads:'Pipeline',salesforce:'Sales & Marketing',execution:'Execution Engine',factoring:'Factoring',email:'Email Center',vault:'Document Vault',clm:'CLM Scanner',ledger:'Atomic Ledger',agreements:'Agreements','lf-map':'Light Fleet Live Map','lf-nemt':'NEMT — Medical Transport','lf-medical':'Medical Courier','lf-executive':'Executive Transport','lf-courier':'Courier & Last-Mile','lf-gig':'Gig Fleet Management','lf-bizdev':'Light Fleet — Business Development','lf-million':'Light Fleet — $1M Blueprint','load-hunter':'Load Hunter — Live Board Scanner','mark-office':'Mark Odom — CEO Office','ccg-office':'CC Gulley Office','trading-desk':'Trading Desk','broker-division':'N. American Trading — Hub','broker-shippers':'Shipper Pipeline','broker-docs':'Docs & Invoices','trading-desk':'Trading Desk',costs:'Cost Tracking — IEBC','tech-monitor':'Tech Monitor — Marcus Reid & Jamie Park','driver-tracker':'Driver GPS Tracker','falcon-board':'FALCON Board — Carrier Portal Tracker'};
 
 // ── 3 Lakes Logistics Backend API (FastAPI) ──
 const API_BASE = (window.__3LL_API_BASE || 'https://three-lakes-logistics-api.onrender.com').replace(/\/$/,'');
@@ -5095,7 +5096,7 @@ function nav(id){
   document.querySelectorAll('.sb-item').forEach(n=>{if(n.getAttribute('onclick')?.includes("'"+id+"'"))n.classList.add('active');});
   document.getElementById('page-title').textContent=pageNames[id]||id;
   // LF pages use full-page layout — hero acts as page header, topbar title hidden
-  const _lfFullPages=['lf-nemt','lf-medical','lf-executive','lf-courier','lf-gig','lf-bizdev','lf-million','lf-map','broker-division','trading-desk','broker-shippers','broker-docs','lf-drivers','lf-driver','lf-reports','exec-command','load-hunter'];
+  const _lfFullPages=['lf-nemt','lf-medical','lf-executive','lf-courier','lf-gig','lf-bizdev','lf-million','lf-map','broker-division','trading-desk','broker-shippers','broker-docs','lf-drivers','lf-driver','lf-reports','exec-command','load-hunter','falcon-board'];
   document.querySelector('.content').classList.toggle('lf-fullpage',_lfFullPages.includes(id));
   document.getElementById('main').classList.toggle('lf-fullpage',_lfFullPages.includes(id));
   // Fixed full-page overlays: always measure actual header stack
@@ -5147,6 +5148,7 @@ function nav(id){
   if(id==='email'&&typeof mailInit==='function'){mailInit();}
   if(id==='costs'){loadCostData();}
   if(id==='tech-monitor'){loadTechMonitor();}
+  if(id==='falcon-board'){falconBoardLoad();}
 }
 
 function openModal(id){
@@ -20892,7 +20894,8 @@ async function deactivateDriver(driverId) {
 #page-lf-nemt, #page-lf-medical, #page-lf-executive, #page-lf-courier,
 #page-lf-gig, #page-lf-drivers, #page-lf-driver, #page-lf-reports,
 #page-lf-bizdev, #page-lf-million, #page-exec-command, #page-load-hunter,
-#page-broker-division, #page-broker-shippers, #page-broker-docs, #page-trading-desk {
+#page-broker-division, #page-broker-shippers, #page-broker-docs, #page-trading-desk,
+#page-falcon-board {
   --navy:#FFFFFF; --navy2:#F0F0F4; --navy3:#E4E4EC;   /* "navy" headings → white on black */
   --gold:#F5C842; --gold2:#E4A830; --gold3:#F5C842;
   --surface:#15151D;          /* cards / panels */
@@ -27512,5 +27515,205 @@ function _dcAnimateBars(el){ el.querySelectorAll('.dc-bar-fill[data-w]').forEach
 // ── END LIGHT FLEET DRIVER SYSTEM ─────────────────────────────────────────────
 </script>
 
+
+<!-- ═══════════════════════════════ FALCON BOARD PAGE ═══════════════════════════════ -->
+<div class="page" id="page-falcon-board">
+<style>
+#page-falcon-board{overflow-y:auto;}
+.fb-wrap{max-width:1400px;margin:0 auto;padding:24px 20px;}
+.fb-hero{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:24px;}
+.fb-hero h1{font-size:22px;font-weight:800;color:#fff;display:flex;align-items:center;gap:10px;margin:0;}
+.fb-stat-row{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;margin-bottom:24px;}
+.fb-stat{background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:14px 16px;}
+.fb-stat-val{font-size:26px;font-weight:800;color:#F5C842;}
+.fb-stat-lbl{font-size:10px;color:rgba(255,255,255,.45);margin-top:2px;text-transform:uppercase;letter-spacing:.5px;}
+.fb-filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px;}
+.fb-filter-btn{padding:5px 14px;border-radius:20px;border:1px solid rgba(255,255,255,.12);background:transparent;color:rgba(255,255,255,.6);font-size:11px;cursor:pointer;transition:all .15s;}
+.fb-filter-btn.active{background:#F5C842;color:#000;border-color:#F5C842;font-weight:700;}
+.fb-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:14px;}
+.fb-card{background:rgba(255,255,255,.028);border:1px solid rgba(255,255,255,.07);border-radius:14px;padding:18px;transition:background .15s;}
+.fb-card:hover{background:rgba(255,255,255,.05);}
+.fb-card-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px;}
+.fb-load-num{font-size:13px;font-weight:700;color:#fff;}
+.fb-badge{font-size:9px;font-weight:700;padding:3px 8px;border-radius:20px;text-transform:uppercase;letter-spacing:.5px;}
+.fb-badge-dispatched{background:rgba(99,102,241,.2);color:#a5b4fc;}
+.fb-badge-confirmed{background:rgba(245,200,66,.15);color:#F5C842;}
+.fb-badge-en_route{background:rgba(59,130,246,.18);color:#93c5fd;}
+.fb-badge-at_pickup{background:rgba(245,158,11,.18);color:#fbbf24;}
+.fb-badge-in_transit{background:rgba(16,185,129,.15);color:#6ee7b7;}
+.fb-badge-at_delivery{background:rgba(139,92,246,.18);color:#c4b5fd;}
+.fb-badge-delivered{background:rgba(34,197,94,.15);color:#4ade80;}
+.fb-route{font-size:11px;color:rgba(255,255,255,.55);margin-bottom:10px;}
+.fb-meta{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;}
+.fb-chip{font-size:9px;padding:2px 7px;border-radius:10px;background:rgba(255,255,255,.06);color:rgba(255,255,255,.5);}
+.fb-docs{display:flex;gap:6px;margin-bottom:12px;}
+.fb-doc{font-size:9px;padding:3px 8px;border-radius:8px;background:rgba(255,255,255,.04);color:rgba(255,255,255,.35);border:1px solid rgba(255,255,255,.07);}
+.fb-doc.ok{background:rgba(34,197,94,.12);color:#4ade80;border-color:rgba(34,197,94,.2);}
+.fb-actions{display:flex;gap:6px;flex-wrap:wrap;}
+.fb-btn{padding:5px 12px;border-radius:8px;font-size:10px;font-weight:700;cursor:pointer;border:none;transition:all .15s;}
+.fb-btn-gold{background:#F5C842;color:#000;}
+.fb-btn-gold:hover{background:#f0bb1c;}
+.fb-btn-ghost{background:transparent;border:1px solid rgba(255,255,255,.15);color:rgba(255,255,255,.7);}
+.fb-btn-ghost:hover{background:rgba(255,255,255,.07);}
+.fb-empty{text-align:center;padding:60px 20px;color:rgba(255,255,255,.3);font-size:13px;}
+.fb-refresh-btn{padding:7px 16px;border-radius:8px;border:1px solid rgba(245,200,66,.35);background:transparent;color:#F5C842;font-size:11px;font-weight:700;cursor:pointer;}
+.fb-refresh-btn:hover{background:rgba(245,200,66,.1);}
+</style>
+
+<div class="fb-wrap">
+  <div class="fb-hero">
+    <h1>🦅 FALCON Board <span style="font-size:11px;font-weight:400;color:rgba(255,255,255,.4);margin-left:4px">Carrier Portal Tracker</span></h1>
+    <div style="display:flex;gap:8px;align-items:center">
+      <span id="fb-last-refresh" style="font-size:10px;color:rgba(255,255,255,.3)"></span>
+      <button class="fb-refresh-btn" onclick="falconBoardLoad()">↻ Refresh</button>
+      <button class="fb-btn fb-btn-gold" onclick="nav('trading-desk')">Trading Desk →</button>
+    </div>
+  </div>
+
+  <div class="fb-stat-row" id="fb-stats">
+    <div class="fb-stat"><div class="fb-stat-val" id="fb-s-total">—</div><div class="fb-stat-lbl">Total Active</div></div>
+    <div class="fb-stat"><div class="fb-stat-val" id="fb-s-transit">—</div><div class="fb-stat-lbl">In Transit</div></div>
+    <div class="fb-stat"><div class="fb-stat-val" id="fb-s-delivered">—</div><div class="fb-stat-lbl">Delivered</div></div>
+    <div class="fb-stat"><div class="fb-stat-val" id="fb-s-docs">—</div><div class="fb-stat-lbl">Docs Complete</div></div>
+    <div class="fb-stat"><div class="fb-stat-val" id="fb-s-revenue" style="font-size:18px">—</div><div class="fb-stat-lbl">Gross Revenue</div></div>
+  </div>
+
+  <div class="fb-filters">
+    <button class="fb-filter-btn active" data-fb-filter="all" onclick="fbSetFilter('all')">All</button>
+    <button class="fb-filter-btn" data-fb-filter="dispatched" onclick="fbSetFilter('dispatched')">Dispatched</button>
+    <button class="fb-filter-btn" data-fb-filter="confirmed" onclick="fbSetFilter('confirmed')">Confirmed</button>
+    <button class="fb-filter-btn" data-fb-filter="en_route" onclick="fbSetFilter('en_route')">En Route</button>
+    <button class="fb-filter-btn" data-fb-filter="in_transit" onclick="fbSetFilter('in_transit')">In Transit</button>
+    <button class="fb-filter-btn" data-fb-filter="delivered" onclick="fbSetFilter('delivered')">Delivered</button>
+  </div>
+
+  <div class="fb-grid" id="fb-grid"><div class="fb-empty">Loading FALCON loads…</div></div>
+</div>
+</div><!-- /page-falcon-board -->
+
+<script>
+(function(){
+const _FALCON_API = API_BASE + '/api/falcon';
+let _fbLoads = [];
+let _fbFilter = 'all';
+
+const _STATUS_LABELS = {
+  dispatched:'Dispatched', confirmed:'Confirmed', en_route:'En Route',
+  at_pickup:'At Pickup', in_transit:'In Transit', at_delivery:'At Delivery', delivered:'Delivered'
+};
+
+window.falconBoardLoad = async function(){
+  const grid = document.getElementById('fb-grid');
+  grid.innerHTML = '<div class="fb-empty">Loading…</div>';
+  try {
+    const r = await fetch(_FALCON_API + '/board?limit=200');
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    const d = await r.json();
+    _fbLoads = d.loads || [];
+    fbUpdateStats(_fbLoads);
+    fbRender();
+    document.getElementById('fb-last-refresh').textContent = 'Updated ' + new Date().toLocaleTimeString();
+    const badge = document.getElementById('falcon-live-badge');
+    const active = _fbLoads.filter(l=>l.status!=='delivered').length;
+    if(badge){ badge.textContent=active; badge.style.display=active?'':'none'; }
+  } catch(e) {
+    grid.innerHTML = `<div class="fb-empty">⚠ Failed to load: ${e.message}<br><br><button class="fb-refresh-btn" onclick="falconBoardLoad()">Retry</button></div>`;
+  }
+};
+
+window.fbSetFilter = function(f){
+  _fbFilter = f;
+  document.querySelectorAll('.fb-filter-btn').forEach(b=>b.classList.toggle('active', b.dataset.fbFilter===f));
+  fbRender();
+};
+
+function fbUpdateStats(loads){
+  const inT = loads.filter(l=>['in_transit','at_delivery'].includes(l.status)).length;
+  const del = loads.filter(l=>l.status==='delivered').length;
+  const docs = loads.filter(l=>l.bol_url&&l.pod_url).length;
+  const rev = loads.reduce((s,l)=>s+parseFloat(l.rate_total||0),0);
+  document.getElementById('fb-s-total').textContent = loads.length;
+  document.getElementById('fb-s-transit').textContent = inT;
+  document.getElementById('fb-s-delivered').textContent = del;
+  document.getElementById('fb-s-docs').textContent = docs;
+  document.getElementById('fb-s-revenue').textContent = '$'+rev.toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0});
+}
+
+function fbRender(){
+  const grid = document.getElementById('fb-grid');
+  const loads = _fbFilter==='all' ? _fbLoads : _fbLoads.filter(l=>l.status===_fbFilter);
+  if(!loads.length){
+    grid.innerHTML = '<div class="fb-empty">No FALCON loads' + (_fbFilter!=='all' ? ' with status "'+_fbFilter+'"' : '') + '</div>';
+    return;
+  }
+  grid.innerHTML = loads.map(fbCardHtml).join('');
+}
+
+function fbCardHtml(l){
+  const st = l.status || 'dispatched';
+  const badge = _STATUS_LABELS[st] || st;
+  const origin = [l.origin_city, l.origin_state].filter(Boolean).join(', ') || '—';
+  const dest = [l.dest_city, l.dest_state].filter(Boolean).join(', ') || '—';
+  const pickup = l.pickup_at ? new Date(l.pickup_at).toLocaleDateString('en-US',{month:'short',day:'numeric'}) : '—';
+  const rate = l.rate_total ? '$'+parseFloat(l.rate_total).toLocaleString() : '—';
+  const miles = l.miles ? l.miles+'mi' : '';
+  const eq = l.equipment_type || '';
+  const driver = l.driver_code || '—';
+  const bolOk = !!l.bol_url;
+  const podOk = !!l.pod_url;
+  const token = l.falcon_token || '';
+  const portalUrl = `${window.location.origin}/falcon.html?t=${token}`;
+  return `<div class="fb-card">
+    <div class="fb-card-top">
+      <div>
+        <div class="fb-load-num">${l.load_number||l.id?.slice(0,8)||'—'}</div>
+        <div class="fb-route" style="margin-top:3px">${origin} → ${dest}</div>
+      </div>
+      <span class="fb-badge fb-badge-${st}">${badge}</span>
+    </div>
+    <div class="fb-meta">
+      <span class="fb-chip">📅 ${pickup}</span>
+      <span class="fb-chip">💰 ${rate}</span>
+      ${miles?`<span class="fb-chip">🛣 ${miles}</span>`:''}
+      ${eq?`<span class="fb-chip">🚛 ${eq}</span>`:''}
+      <span class="fb-chip">👤 ${driver}</span>
+      ${l.broker_name?`<span class="fb-chip">🏢 ${l.broker_name}</span>`:''}
+    </div>
+    <div class="fb-docs">
+      <span class="fb-doc${bolOk?' ok':''}">📋 BOL ${bolOk?'✓ Uploaded':'Pending'}</span>
+      <span class="fb-doc${podOk?' ok':''}">📸 POD ${podOk?'✓ Uploaded':'Pending'}</span>
+    </div>
+    <div class="fb-actions">
+      ${token?`<button class="fb-btn fb-btn-gold" onclick="fbCopyLink('${token}')">🔗 Copy Portal Link</button>`:''}
+      ${bolOk?`<button class="fb-btn fb-btn-ghost" onclick="window.open('${l.bol_url}','_blank')">BOL ↗</button>`:''}
+      ${podOk?`<button class="fb-btn fb-btn-ghost" onclick="window.open('${l.pod_url}','_blank')">POD ↗</button>`:''}
+    </div>
+  </div>`;
+}
+
+window.fbCopyLink = function(token){
+  const url = `${window.location.origin}/falcon.html?t=${token}`;
+  if(navigator.clipboard){
+    navigator.clipboard.writeText(url).then(()=>_fbToast('Portal link copied!')).catch(()=>prompt('Copy this link:',url));
+  } else {
+    prompt('Copy this link:',url);
+  }
+};
+
+function _fbToast(msg){
+  let t=document.getElementById('fb-toast');
+  if(!t){
+    t=document.createElement('div');
+    t.id='fb-toast';
+    t.style.cssText='position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#F5C842;color:#000;font-weight:700;font-size:12px;padding:9px 20px;border-radius:20px;z-index:9999;pointer-events:none;opacity:0;transition:opacity .2s';
+    document.body.appendChild(t);
+  }
+  t.textContent=msg;
+  t.style.opacity='1';
+  clearTimeout(t._tmr);
+  t._tmr=setTimeout(()=>t.style.opacity='0',2500);
+}
+})();
+</script>
 
 </html>

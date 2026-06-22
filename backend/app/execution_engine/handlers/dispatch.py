@@ -361,19 +361,33 @@ def h43_signal_dispatch_sms(carrier_id, contract_id, payload):
     driver_phone = payload.get("driver_phone")
     if not driver_phone:
         return {"sent": False, "reason": "no_driver_phone"}
+
+    # Build FALCON portal link if we have load_id + driver_code
+    falcon_link = ""
+    load_id = payload.get("load_id")
+    driver_code = payload.get("driver_code")
+    if load_id and driver_code:
+        try:
+            from ...api.routes_falcon import generate_falcon_token
+            token = generate_falcon_token(str(load_id), str(driver_code))
+            falcon_link = f"\nTrack & upload docs: https://three-lakes-logistics-api.onrender.com/falcon?t={token}"
+        except Exception:  # noqa: BLE001
+            pass
+
     msg = (
-        f"DISPATCHED: Load {payload.get('load_number')} | "
+        f"IEBC DISPATCH: Load {payload.get('load_number','#')} | "
         f"{payload.get('origin_city')},{payload.get('origin_state')} → "
         f"{payload.get('dest_city')},{payload.get('dest_state')} | "
         f"Pickup {payload.get('pickup_at','TBD')[:10] if payload.get('pickup_at') else 'TBD'} | "
         f"Rate ${payload.get('rate_total')}"
+        f"{falcon_link}"
     )
     if s.twilio_account_sid and s.twilio_auth_token:
         try:
             from twilio.rest import Client  # type: ignore
             sid = Client(s.twilio_account_sid, s.twilio_auth_token).messages.create(
                 body=msg, from_=s.twilio_from_number, to=driver_phone).sid
-            return {"sent": True, "sms_sid": sid, "to": driver_phone}
+            return {"sent": True, "sms_sid": sid, "to": driver_phone, "falcon_link": falcon_link.strip()}
         except Exception as e:  # noqa: BLE001
             return {"sent": False, "error": str(e)}
     return {"sent": False, "note": "twilio_not_configured", "would_send": msg}
