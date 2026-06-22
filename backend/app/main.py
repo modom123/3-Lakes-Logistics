@@ -352,6 +352,18 @@ def create_app() -> FastAPI:
     async def google_site_verification():
         return PlainTextResponse("google-site-verification: google9f88d93f841d8a95.html")
 
+    _root_dir = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", ".."))
+
+    @app.get("/falcon", include_in_schema=False)
+    async def falcon_portal():
+        """Serve the FALCON carrier PWA."""
+        fp = os.path.join(_root_dir, "falcon.html")
+        if os.path.exists(fp):
+            with open(fp) as f:
+                return HTMLResponse(f.read())
+        from fastapi.responses import Response
+        return Response(status_code=404, content="FALCON portal not found")
+
     log.info("3 Lakes Logistics API ready (env=%s)", s.env)
     return app
 
