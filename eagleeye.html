@@ -19228,6 +19228,40 @@ const TS_DOMAINS = [
           if (r.status !== 401) throw new Error(`Expected 401, got ${r.status}`);
           return `status ${r.status} — payout status protected`;
         }
+      },
+      {
+        name: 'Test driver login (James · PIN 1234)',
+        run: async () => {
+          const r = await fetch(`${API_BASE}/api/driver-auth/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ phone: '+15550000001', pin: '1234' })
+          });
+          if (!r.ok) throw new Error(`Login failed: HTTP ${r.status}`);
+          const d = await r.json();
+          if (!d.token) throw new Error('No token returned');
+          return `login OK · token ${d.token.slice(0,12)}… ✓`;
+        }
+      },
+      {
+        name: 'Test driver load list (dispatched loads visible)',
+        run: async () => {
+          // Login first
+          const lr = await fetch(`${API_BASE}/api/driver-auth/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ phone: '+15550000001', pin: '1234' })
+          });
+          if (!lr.ok) return 'Test driver login failed — skipping load check';
+          const { token } = await lr.json();
+          const dr = await fetch(`${API_BASE}/api/driver/loads`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          if (!dr.ok) throw new Error(`Loads failed: HTTP ${dr.status}`);
+          const d = await dr.json();
+          const count = d.count ?? (Array.isArray(d.loads) ? d.loads.length : 0);
+          return `${count} load(s) visible to James ✓`;
+        }
       }
     ]
   },
