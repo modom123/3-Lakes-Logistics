@@ -22130,8 +22130,21 @@ async function dashLoadLFRoster(){
     segKeys.forEach(seg=>{const el=document.getElementById('lf-seg-'+seg);if(el)el.textContent=segMap[seg]||0;});
     const bizdevEl=document.getElementById('lf-seg-bizdev');
     if(bizdevEl)bizdevEl.textContent=segMap['bizdev']||segMap['business_dev']||segMap['biz_dev']||0;
-    // LF onboarding (pending/onboarding status)
-    const lfOnboard=drivers.filter(dr=>dr.status==='pending'||dr.status==='onboarding'||dr.status==='inactive');
+    // LF onboarding — a driver counts as "currently onboarding" until they are a
+    // fully verified, active driver. This must cover BOTH intake paths:
+    //   • Stripe-Identity path  → status='inactive', mvr_status='pending' (awaiting verify)
+    //   • honor-system path      → status='active' but not yet cleared (mvr_status!=='clear',
+    //                              activated_at still null) — e.g. a fresh self-service applicant
+    // Relying on status==='inactive' alone dropped honor-system/newly-added applicants
+    // (they land on 'active' before ever being verified). Exclude suspended drivers and
+    // anyone already activated (i.e. later-deactivated ex-drivers keep activated_at set).
+    const lfIsOnboarding=dr=>{
+      if(!dr||dr.status==='suspended') return false;
+      if(dr.activated_at) return false;                                  // already went active once → done
+      if(dr.status==='active' && dr.mvr_status==='clear') return false;  // verified & cleared → done
+      return true;                                                       // applied, not yet cleared → onboarding
+    };
+    const lfOnboard=drivers.filter(lfIsOnboarding);
     const lfObCountEl=document.getElementById('lf-onboard-count');
     if(lfObCountEl)lfObCountEl.textContent=lfOnboard.length;
     const lfObEl=document.getElementById('dash-lf-onboarding');
@@ -22149,12 +22162,14 @@ async function dashLoadLFRoster(){
           lfOnboard.slice(0,8).map(dr=>{
             const svcs=(dr.approved_services||[dr.service_type||'']).filter(Boolean).slice(0,2).join(', ')||'—';
             const mvrColor=dr.mvr_status==='clear'?'var(--green)':dr.mvr_status==='flagged'?'var(--red)':'var(--orange)';
-            const stageColor=dr.status==='pending'?'var(--orange)':dr.status==='inactive'?'var(--muted)':'var(--blue)';
+            // Derive a readable onboarding stage (status is only active/inactive/suspended).
+            const stageLabel=dr.status==='inactive'?'Pending Verification':(dr.mvr_status==='flagged'?'MVR Flagged':'Awaiting MVR');
+            const stageColor=dr.status==='inactive'?'var(--orange)':(dr.mvr_status==='flagged'?'var(--red)':'var(--gold2)');
             return '<tr style="border-bottom:1px solid var(--border)">'+
               '<td style="padding:6px 8px;font-weight:600">'+esc(dr.name||'—')+'</td>'+
               '<td style="padding:6px 8px;color:var(--muted)">'+esc(dr.phone||'—')+'</td>'+
               '<td style="padding:6px 8px;font-size:11px;color:var(--muted)">'+esc(svcs)+'</td>'+
-              '<td style="padding:6px 8px"><span style="color:'+stageColor+';font-weight:600;font-size:11px">'+esc(dr.status||'—')+'</span></td>'+
+              '<td style="padding:6px 8px"><span style="color:'+stageColor+';font-weight:600;font-size:11px">'+esc(stageLabel)+'</span></td>'+
               '<td style="padding:6px 8px;font-size:11px;color:'+mvrColor+';font-weight:600">'+esc(dr.mvr_status||'pending')+'</td>'+
             '</tr>';
           }).join('')+'</tbody></table></div>';
