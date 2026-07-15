@@ -38,6 +38,7 @@ from .api import (
     driver_packet_router,
     checkr_webhook_router,
     stripe_identity_webhook_router,
+    stripe_connect_webhook_router,
     driver_auth_router,
     driver_router,
     driver_messages_router,
@@ -310,6 +311,7 @@ def create_app() -> FastAPI:
     app.include_router(lf_webhooks_router,     prefix="/api",              tags=["lf-webhooks"])
     app.include_router(checkr_webhook_router,          prefix="/api", tags=["checkr-webhook"])
     app.include_router(stripe_identity_webhook_router, prefix="/api", tags=["stripe-identity-webhook"])
+    app.include_router(stripe_connect_webhook_router,  prefix="/api", tags=["stripe-connect-webhook"])
     app.include_router(studio_router,          prefix="/api",              tags=["studio"])
     app.include_router(onboarding_status_router, prefix="/api",           tags=["onboarding-status"])
     app.include_router(cost_tracking_router,    prefix="/api/costs",      tags=["cost-tracking"])

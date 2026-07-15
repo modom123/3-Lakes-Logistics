@@ -22158,6 +22158,7 @@ async function dashLoadLFRoster(){
           '<th style="padding:6px 8px;text-align:left;color:var(--muted);font-size:10px;font-weight:700;text-transform:uppercase">Services</th>'+
           '<th style="padding:6px 8px;text-align:left;color:var(--muted);font-size:10px;font-weight:700;text-transform:uppercase">Stage</th>'+
           '<th style="padding:6px 8px;text-align:left;color:var(--muted);font-size:10px;font-weight:700;text-transform:uppercase">MVR</th>'+
+          '<th style="padding:6px 8px;text-align:left;color:var(--muted);font-size:10px;font-weight:700;text-transform:uppercase">Payout</th>'+
           '</tr></thead><tbody>'+
           lfOnboard.slice(0,8).map(dr=>{
             const svcs=(dr.approved_services||[dr.service_type||'']).filter(Boolean).slice(0,2).join(', ')||'—';
@@ -22165,12 +22166,16 @@ async function dashLoadLFRoster(){
             // Derive a readable onboarding stage (status is only active/inactive/suspended).
             const stageLabel=dr.status==='inactive'?'Pending Verification':(dr.mvr_status==='flagged'?'MVR Flagged':'Awaiting MVR');
             const stageColor=dr.status==='inactive'?'var(--orange)':(dr.mvr_status==='flagged'?'var(--red)':'var(--gold2)');
+            // Stripe Connect payout account status — click to (re)send the setup link.
+            const payMap={connected:['🟢','Connected','var(--green)'],pending:['🟡','Pending','var(--gold2)'],restricted:['🟠','Action needed','var(--orange)'],not_connected:['🔴','Not set up','var(--red)']};
+            const pay=payMap[dr.stripe_account_status||'not_connected']||payMap.not_connected;
             return '<tr style="border-bottom:1px solid var(--border)">'+
               '<td style="padding:6px 8px;font-weight:600">'+esc(dr.name||'—')+'</td>'+
               '<td style="padding:6px 8px;color:var(--muted)">'+esc(dr.phone||'—')+'</td>'+
               '<td style="padding:6px 8px;font-size:11px;color:var(--muted)">'+esc(svcs)+'</td>'+
               '<td style="padding:6px 8px"><span style="color:'+stageColor+';font-weight:600;font-size:11px">'+esc(stageLabel)+'</span></td>'+
               '<td style="padding:6px 8px;font-size:11px;color:'+mvrColor+';font-weight:600">'+esc(dr.mvr_status||'pending')+'</td>'+
+              '<td style="padding:6px 8px;font-size:11px"><span title="Click to (re)send the payout setup link" style="color:'+pay[2]+';font-weight:600;cursor:pointer" onclick="lfResendPayoutLink(\''+dr.id+'\')">'+pay[0]+' '+pay[1]+'</span></td>'+
             '</tr>';
           }).join('')+'</tbody></table></div>';
       }
@@ -22343,6 +22348,25 @@ async function lfFetch(path, method='GET', body=null){
 function lfFmt$(n){ return n!=null ? '$'+Number(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}) : '—'; }
 function lfFmtDate(s){ if(!s) return '—'; const d=new Date(s); return d.toLocaleDateString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}); }
 function lfBadge(s){ return `<span class="lf-badge ${s}">${s.replace('_',' ')}</span>`; }
+
+// (Re)provision a light-fleet driver's Stripe Connect payout account and get a
+// fresh onboarding link. Copies the link to the clipboard and opens it so an
+// admin can hand it to the driver. The driver is also texted the link
+// automatically the first time, at activation.
+async function lfResendPayoutLink(driverId){
+  if(!driverId) return;
+  try{
+    const res = await lfFetch('/api/light-fleet/drivers/'+driverId+'/payout-setup','POST',{});
+    const url = res && res.onboarding_url;
+    if(!url){ toast('No onboarding link returned','error'); return; }
+    try{ await navigator.clipboard.writeText(url); }catch(_){}
+    toast('Payout setup link copied — opening for review','success');
+    window.open(url,'_blank','noopener');
+    if(typeof dashLoadLFRoster==='function') dashLoadLFRoster();
+  }catch(e){
+    toast('Could not create payout link: '+(e.message||e),'error');
+  }
+}
 
 // ── KPIs ──────────────────────────────────────────────────────────────────────
 async function lfLoadKpis(type){

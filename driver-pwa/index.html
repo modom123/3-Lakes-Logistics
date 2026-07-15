@@ -596,6 +596,9 @@
       <!-- compliance alert banner (shown if expiry approaching) -->
       <div id="earn-comp-banner" style="display:none"></div>
 
+      <!-- payout account setup (Stripe Connect) — populated by loadPayoutStatus() -->
+      <div id="payout-setup-card" class="card" style="display:none;margin-bottom:12px"></div>
+
       <!-- period selector -->
       <div style="display:flex;gap:4px;margin-bottom:10px;background:var(--card);border-radius:10px;padding:3px">
         <button class="period-tab active" id="period-week"  onclick="setEarnPeriod('week')">Week</button>
@@ -1305,6 +1308,16 @@ document.addEventListener('DOMContentLoaded', () => {
   setupDriverMode();
   loadCurrentLoad();
   loadProfile();
+  // Returned from Stripe Connect payout onboarding → jump to Pay and refresh status.
+  try {
+    const _pp = new URLSearchParams(location.search).get('payout');
+    if (_pp === 'success' || _pp === 'refresh') {
+      if (typeof showView === 'function') showView('pay');
+      loadPayoutStatus();
+      if (_pp === 'success') showToast('Payout setup received — verifying with Stripe…');
+      history.replaceState(null, '', location.pathname);
+    }
+  } catch (e) {}
   if (DRIVER_MODE !== 'truck') loadLFHomeStats();
   if (DEMO_MODE) {
     document.getElementById('miles-today').textContent = '2,015';
@@ -2815,7 +2828,63 @@ function setEarnPeriod(p) {
   loadEarningsView();
 }
 
+// ── Stripe Connect payout account ──────────────────────────────────────────
+// Shows a "set up payouts" CTA until the driver's Connect account can receive
+// payouts, then a green "payouts active" confirmation. Works for light fleet
+// (id in path) and heavy fleet (driver-token endpoint).
+async function loadPayoutStatus() {
+  const card = document.getElementById('payout-setup-card');
+  if (!card) return;
+  const lfId = localStorage.getItem('3ll_lf_driver_id');
+  if (DEMO_MODE) { card.style.display = 'none'; return; }
+  try {
+    const path = lfId ? `/api/light-fleet/drivers/${lfId}/payout-status` : '/api/payout/status';
+    const res = await apiFetch(path);
+    if (!res.ok) { card.style.display = 'none'; return; }
+    const d = await res.json();
+    const status = d.status || 'not_connected';
+    card.style.display = 'block';
+    if (status === 'connected') {
+      card.style.border = '1px solid var(--green, #059669)';
+      card.innerHTML = '<div style="display:flex;align-items:center;gap:8px">'
+        + '<span style="font-size:18px">🟢</span>'
+        + '<div><div style="font-weight:700">Payouts active</div>'
+        + '<div style="color:var(--muted);font-size:12px">Your earnings deposit straight to your bank.</div></div></div>';
+    } else {
+      const label = status === 'pending' ? 'Finish setting up payouts'
+                  : status === 'restricted' ? 'Payout setup needs attention'
+                  : 'Set up your payouts';
+      const sub = status === 'pending' ? "You started but haven't finished — tap to complete."
+                : 'Connect your bank so 3 Lakes can pay you. Takes about 2 minutes.';
+      card.style.border = '1px solid var(--gold, #E4A830)';
+      card.innerHTML = '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">'
+        + '<div style="display:flex;align-items:center;gap:8px"><span style="font-size:18px">💳</span>'
+        + '<div><div style="font-weight:700">' + label + '</div>'
+        + '<div style="color:var(--muted);font-size:12px">' + sub + '</div></div></div>'
+        + '<button onclick="startPayoutSetup()" style="background:var(--green,#059669);color:#fff;border:none;border-radius:8px;padding:9px 16px;font-weight:700;cursor:pointer">Set up payouts →</button>'
+        + '</div>';
+    }
+  } catch (e) {
+    card.style.display = 'none';
+  }
+}
+
+async function startPayoutSetup() {
+  const lfId = localStorage.getItem('3ll_lf_driver_id');
+  try {
+    showToast('Opening secure payout setup…');
+    const path = lfId ? `/api/light-fleet/drivers/${lfId}/payout-setup` : '/api/payout/setup';
+    const res = await apiFetch(path, 'POST', {});
+    const d = await res.json();
+    if (d && d.onboarding_url) { window.location.href = d.onboarding_url; }
+    else { showToast('Could not start payout setup — try again'); }
+  } catch (e) {
+    showToast('Payout setup failed — try again');
+  }
+}
+
 async function loadEarningsView() {
+  loadPayoutStatus();
   const driverLfId = localStorage.getItem('3ll_lf_driver_id');
 
   if (DEMO_MODE || !driverLfId) {

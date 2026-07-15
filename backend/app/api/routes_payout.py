@@ -76,7 +76,9 @@ async def setup_driver_payout(session: DriverSession):
     Creates a Stripe Connected Account and sends driver to onboarding.
     """
     driver_id = session["driver_id"]
-    stripe_client = get_stripe_client()
+    get_stripe_client()  # 503 if Stripe not configured
+
+    from ..payments import stripe_connect
 
     try:
         # Get driver details
@@ -86,51 +88,31 @@ async def setup_driver_payout(session: DriverSession):
 
         driver = driver_result.data
 
-        # If already connected, return existing onboarding link
+        # If already connected, nothing to do
         if driver.get("stripe_account_id") and driver.get("stripe_account_status") == "connected":
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="payout already set up"
             )
 
-        # Create or retrieve Stripe Connected Account
-        account_id = driver.get("stripe_account_id")
-        if not account_id:
-            # Create new Connected Account
-            account = stripe_client.Account.create(
-                type="express",
-                country="US",
-                email=driver.get("email") or "noreply@3lakes.io",
-                settings={
-                    "payouts": {
-                        "debit_negative_balances": True,
-                        "schedule": {"interval": "manual"}  # Manual payout requests
-                    }
-                },
-                metadata={
-                    "driver_id": driver_id,
-                    "driver_name": f"{driver.get('first_name')} {driver.get('last_name')}"
-                }
-            )
-            account_id = account.id
-
-            # Save to database
-            get_supabase().table("drivers").update({
-                "stripe_account_id": account_id,
-                "stripe_account_status": "pending"
-            }).eq("id", driver_id).execute()
-
-        # Create onboarding link
-        base = "https://www.3lakeslogistics.com/driver-pwa"
-        onboarding_link = stripe_client.AccountLink.create(
-            account=account_id,
-            type="account_onboarding",
-            refresh_url=f"{base}/index.html?payout=refresh",
-            return_url=f"{base}/index.html?payout=success",
+        # Create/reuse the Express account and mint a fresh onboarding link via
+        # the shared Connect helper (also used by light fleet + the webhook).
+        name = f"{driver.get('first_name') or ''} {driver.get('last_name') or ''}".strip()
+        account_id, onboarding_url = stripe_connect.start_onboarding(
+            "drivers",
+            driver_id,
+            email=driver.get("email"),
+            name=name,
+            metadata={"segment": "heavy_fleet"},
         )
+        if not onboarding_url:
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail="could not create onboarding link"
+            )
 
         return PayoutSetupResponse(
-            onboarding_url=onboarding_link.url,
+            onboarding_url=onboarding_url,
             account_id=account_id
         )
 
@@ -155,10 +137,21 @@ async def get_payout_status(session: DriverSession):
         ).eq("id", driver_id).single().execute()
 
         driver = driver_result.data
+        account_id = driver.get("stripe_account_id")
+        acct_status = driver.get("stripe_account_status") or "not_connected"
+
+        # Refresh live from Stripe when an account exists.
+        if account_id:
+            from ..payments import stripe_connect
+            if stripe_connect.is_configured():
+                synced = stripe_connect.sync_account_status(account_id, table="drivers")
+                if synced.get("ok"):
+                    acct_status = synced.get("status", acct_status)
+
         return {
-            "account_id": driver.get("stripe_account_id"),
-            "status": driver.get("stripe_account_status", "not_connected"),
-            "can_receive_payouts": driver.get("stripe_account_status") == "connected"
+            "account_id": account_id,
+            "status": acct_status,
+            "can_receive_payouts": acct_status == "connected"
         }
 
     except Exception as e:

@@ -35,6 +35,7 @@ from .routes_lf_webhooks   import router as lf_webhooks_router
 from .routes_driver_packet import router as driver_packet_router
 from .routes_checkr_webhook          import router as checkr_webhook_router
 from .routes_stripe_identity_webhook import router as stripe_identity_webhook_router
+from .routes_stripe_connect_webhook import router as stripe_connect_webhook_router
 from .routes_onboarding_status import router as onboarding_status_router
 from .routes_cost_tracking     import router as cost_tracking_router
 from .routes_office            import router as office_router
@@ -96,6 +97,7 @@ __all__ = [
     "driver_packet_router",
     "checkr_webhook_router",
     "stripe_identity_webhook_router",
+    "stripe_connect_webhook_router",
     "studio_router",
     "onboarding_status_router",
     "cost_tracking_router",

@@ -1420,6 +1420,91 @@ def request_instant_pay(driver_id: str, payload: dict) -> dict:
 
 
 # ===========================================================================
+# DRIVER PAYOUT ACCOUNT — Stripe Connect onboarding
+# ===========================================================================
+
+@router.post("/drivers/{driver_id}/payout-setup")
+def lf_driver_payout_setup(driver_id: str) -> dict:
+    """Create (or reuse) the driver's Stripe Connect payout account and return a
+    fresh Stripe-hosted onboarding link.
+
+    Used by Eagle Eye ('Resend payout link') and the driver PWA 'Set up payouts'
+    button. Onboarding is idempotent — re-calling reuses the existing account and
+    just mints a new link.
+    """
+    from ..payments import stripe_connect
+
+    if not stripe_connect.is_configured():
+        raise HTTPException(status_code=503, detail="stripe not configured")
+    sb = get_supabase()
+    drv = (
+        sb.table("light_vehicle_drivers")
+        .select("id,name,email,phone")
+        .eq("id", driver_id)
+        .maybe_single()
+        .execute()
+        .data
+    )
+    if not drv:
+        raise HTTPException(status_code=404, detail="driver not found")
+
+    account_id, url = stripe_connect.start_onboarding(
+        "light_vehicle_drivers",
+        driver_id,
+        email=drv.get("email"),
+        name=drv.get("name"),
+        metadata={"segment": "light_fleet"},
+    )
+    if not url:
+        raise HTTPException(status_code=502, detail="could not create onboarding link")
+    return {"ok": True, "driver_id": driver_id, "account_id": account_id, "onboarding_url": url}
+
+
+@router.get("/drivers/{driver_id}/payout-status")
+def lf_driver_payout_status(driver_id: str) -> dict:
+    """Return the driver's payout-account status, refreshed live from Stripe when
+    a Connect account exists."""
+    sb = get_supabase()
+    drv = (
+        sb.table("light_vehicle_drivers")
+        .select(
+            "id,stripe_account_id,stripe_account_status,"
+            "stripe_payouts_enabled,stripe_onboarded_at"
+        )
+        .eq("id", driver_id)
+        .maybe_single()
+        .execute()
+        .data
+    )
+    if not drv:
+        raise HTTPException(status_code=404, detail="driver not found")
+
+    account_id = drv.get("stripe_account_id")
+    status = drv.get("stripe_account_status") or "not_connected"
+    payouts_enabled = bool(drv.get("stripe_payouts_enabled"))
+
+    if account_id:
+        from ..payments import stripe_connect
+
+        if stripe_connect.is_configured():
+            synced = stripe_connect.sync_account_status(
+                account_id, table="light_vehicle_drivers"
+            )
+            if synced.get("ok"):
+                status = synced.get("status", status)
+                payouts_enabled = bool(synced.get("payouts_enabled"))
+
+    return {
+        "driver_id": driver_id,
+        "account_id": account_id,
+        "status": status,
+        "payouts_enabled": payouts_enabled,
+        "can_receive_payouts": status == "connected",
+        "onboarded_at": drv.get("stripe_onboarded_at"),
+    }
+
+
+# ===========================================================================
 # LIVE GPS — Light Fleet Map
 # ===========================================================================
 

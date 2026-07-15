@@ -36,6 +36,12 @@ _WELCOME_SMS = (
     "Questions? Call 661-466-9932."
 )
 
+_PAYOUT_SMS = (
+    "One more step to get paid, {name}! Set up your secure payout account so 3 Lakes "
+    "can deposit your earnings straight to your bank: {url} "
+    "Takes about 2 minutes. Questions? Call 661-466-9932."
+)
+
 _DENY_MVR_SMS = (
     "Thank you for your interest in 3 Lakes Light Fleet. "
     "Unfortunately, your driving record does not meet our requirements at this time. "
@@ -90,6 +96,39 @@ def _send_sms(phone: str, message: str) -> bool:
         except Exception as e:  # noqa: BLE001
             logging.getLogger("3ll.maya").warning("Twilio SMS failed: %s", e)
     return True  # log-only fallback still returns True so flow continues
+
+
+def _provision_payout(driver_id: str, driver: dict) -> None:
+    """Create the driver's Stripe Connect payout account and text them the setup
+    link. Best-effort: never raises, so it can never block driver activation
+    (payout onboarding runs in parallel with going active)."""
+    if not driver_id:
+        return
+    try:
+        from ..payments import stripe_connect
+
+        if not stripe_connect.is_configured():
+            return
+        name = (driver.get("name") or "").strip()
+        account_id, url = stripe_connect.start_onboarding(
+            "light_vehicle_drivers",
+            str(driver_id),
+            email=driver.get("email"),
+            name=name,
+            metadata={"segment": "light_fleet"},
+        )
+        if url:
+            phone = _normalize_phone(driver.get("phone") or "")
+            if phone:
+                first = name.split(" ")[0] if name else "there"
+                _send_sms(phone, _PAYOUT_SMS.format(name=first, url=url))
+            log_agent(
+                _NAME,
+                "payout_onboarding_started",
+                payload={"driver_id": str(driver_id), "account_id": account_id},
+            )
+    except Exception as e:  # noqa: BLE001
+        log_agent(_NAME, "payout_provision_error", error=str(e)[:200])
 
 
 def _split_name(full_name: str) -> tuple[str, str]:
@@ -333,6 +372,10 @@ def process_intake(payload: dict[str, Any]) -> dict[str, Any]:
     if phone:
         _send_sms(phone, _WELCOME_SMS)
 
+    # Provision Stripe Connect payout account + text the setup link (parallel,
+    # non-blocking) so a self-service-activated driver can actually be paid.
+    _provision_payout(driver_id, {"name": name, "phone": phone, "email": email})
+
     mem.remember(
         _NAME, "last_intake",
         {"name": name, "driver_id": str(driver_id), "checkr": "fallback_no_key"},
@@ -400,6 +443,14 @@ def approve_driver(
     phone = _normalize_phone(driver.get("phone") or "")
     if phone:
         _send_sms(phone, _WELCOME_SMS)
+
+    # Provision Stripe Connect payout account + text the setup link (parallel,
+    # non-blocking) so the freshly-activated driver can actually be paid.
+    _provision_payout(
+        driver_id,
+        {"name": updates.get("name") or driver.get("name"),
+         "phone": driver.get("phone"), "email": driver.get("email")},
+    )
 
     # Register driver on every platform they opted into at signup
     platforms_opted_in: list[str] = driver.get("platforms_opted_in") or []
