@@ -25,6 +25,12 @@ log = logging.getLogger("3ll.email.imap")
 IMAP_HOST = "imap.hostinger.com"
 IMAP_PORT = 993
 
+# Body size caps. HTML emails (Checkr, newsletters, receipts) carry large inline
+# CSS + hidden preheaders, so a tight cap can truncate before the visible content
+# and leave the reader with a blank pane.
+_MAX_HTML = 250_000
+_MAX_TEXT = 50_000
+
 MAILBOX_CONFIG = [
     {"name": "loads", "address": "loads@3lakeslogistics.com"},
     {"name": "sales", "address": "sales@3lakeslogistics.com"},
@@ -105,20 +111,23 @@ def _parse_message(
             elif ctype == "text/plain" and not body_text:
                 try:
                     charset = part.get_content_charset() or "utf-8"
-                    body_text = (part.get_payload(decode=True) or b"").decode(charset, errors="replace")[:10000]
+                    body_text = (part.get_payload(decode=True) or b"").decode(charset, errors="replace")[:_MAX_TEXT]
                 except Exception:
                     pass
             elif ctype == "text/html" and not body_html:
                 try:
                     charset = part.get_content_charset() or "utf-8"
-                    body_html = (part.get_payload(decode=True) or b"").decode(charset, errors="replace")[:10000]
+                    # HTML emails (Checkr, newsletters, receipts) carry large inline
+                    # CSS/preheaders; a tight cap truncates before the visible body.
+                    body_html = (part.get_payload(decode=True) or b"").decode(charset, errors="replace")[:_MAX_HTML]
                 except Exception:
                     pass
     else:
         ctype = msg.get_content_type()
         try:
             charset = msg.get_content_charset() or "utf-8"
-            content = (msg.get_payload(decode=True) or b"").decode(charset, errors="replace")[:10000]
+            _cap = _MAX_HTML if ctype == "text/html" else _MAX_TEXT
+            content = (msg.get_payload(decode=True) or b"").decode(charset, errors="replace")[:_cap]
             if ctype == "text/html":
                 body_html = content
             else:
