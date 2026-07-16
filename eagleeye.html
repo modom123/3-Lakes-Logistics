@@ -14864,11 +14864,11 @@ window.moEmailOpen = async function(id,from,mb){
         <button style="font-size:11px;padding:5px 14px;border-radius:6px;border:1px solid #2563eb;background:#eff6ff;color:#2563eb;font-weight:700;cursor:pointer;" onclick="moEmailAddToCRM('${(m.from_address||'').replace(/'/g,'\\\'').replace(/\\/g,'\\\\')}','${(m.subject||'').replace(/'/g,'\\\'').replace(/\\/g,'\\\\')}')" >➕ Add to CRM</button>
       </div>
     </div>
-    ${m.body_html
+    ${_emailHtmlHasContent(m.body_html)
       ? `<iframe sandbox="allow-same-origin" class="mo-email-html-frame" style="width:100%;min-height:320px;flex:1;border:none;border-radius:4px;background:#fff;"></iframe>`
-      : `<div style="background:#fafafa;border:1px solid #e5e7eb;border-radius:6px;padding:16px 20px;font-size:13px;color:#1a1a1a;line-height:1.75;white-space:pre-wrap;font-family:inherit;word-break:break-word;">${(m.body_text||'(Empty message)').replace(/</g,'&lt;').replace(/>/g,'&gt;').slice(0,8000)}</div>`
+      : `<div style="background:#fff;border:1px solid #e5e7eb;border-radius:6px;padding:16px 20px;font-size:13px;color:#1a1a1a;line-height:1.75;white-space:pre-wrap;font-family:inherit;word-break:break-word;">${(m.body_text||_emailStripToText(m.body_html)||'(Empty message)').replace(/</g,'&lt;').replace(/>/g,'&gt;').slice(0,8000)}</div>`
     }`;
-    if(m.body_html){const fr=view.querySelector('.mo-email-html-frame');if(fr)fr.srcdoc=_emailHtmlDoc(m.body_html);}
+    if(_emailHtmlHasContent(m.body_html)){const fr=view.querySelector('.mo-email-html-frame');if(fr)fr.srcdoc=_emailHtmlDoc(m.body_html);}
   }catch(e){view.innerHTML='<div style="padding:20px;color:#888;">Could not load message</div>';}
 };
 
@@ -16388,11 +16388,11 @@ window.ccgEmailOpen = async function(id,from){
         <button class="ccg-hdr-btn" style="font-size:10px;padding:4px 10px;" onclick="ccgComposeForward('${m.id}','${(m.subject||'').replace(/'/g,'\\\'').slice(0,55)}')">→ Forward</button>
       </div>
     </div>
-    ${m.body_html
+    ${_emailHtmlHasContent(m.body_html)
       ? `<iframe sandbox="allow-same-origin" class="ccg-email-html-frame" style="width:100%;min-height:320px;flex:1;border:none;border-radius:6px;background:#fff;"></iframe>`
-      : `<div style="background:#fff;border-radius:6px;padding:16px 20px;font-size:13px;color:#1a1a1a;line-height:1.75;white-space:pre-wrap;font-family:inherit;word-break:break-word;">${(m.body_text||'(Empty message)').replace(/</g,'&lt;').replace(/>/g,'&gt;').slice(0,8000)}</div>`
+      : `<div style="background:#fff;border-radius:6px;padding:16px 20px;font-size:13px;color:#1a1a1a;line-height:1.75;white-space:pre-wrap;font-family:inherit;word-break:break-word;">${(m.body_text||_emailStripToText(m.body_html)||'(Empty message)').replace(/</g,'&lt;').replace(/>/g,'&gt;').slice(0,8000)}</div>`
     }`;
-    if(m.body_html){const fr=view.querySelector('.ccg-email-html-frame');if(fr)fr.srcdoc=_emailHtmlDoc(m.body_html);}
+    if(_emailHtmlHasContent(m.body_html)){const fr=view.querySelector('.ccg-email-html-frame');if(fr)fr.srcdoc=_emailHtmlDoc(m.body_html);}
   }catch(e){view.innerHTML='<div style="padding:20px;color:rgba(255,255,255,.82);">Could not load message</div>';}
 };
 
