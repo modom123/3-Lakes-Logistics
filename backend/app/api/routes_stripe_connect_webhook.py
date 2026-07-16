@@ -9,7 +9,8 @@ reality without anyone polling:
 Setup (Stripe Dashboard → Developers → Webhooks, a *Connect* endpoint):
   URL:    https://three-lakes-logistics-api.onrender.com/api/webhooks/stripe-connect
   Events: account.updated
-  Secret: STRIPE_WEBHOOK_SECRET  (reuses the general webhook secret in settings)
+  Secret: STRIPE_CONNECT_WEBHOOK_SECRET  (this endpoint's own signing secret —
+          distinct from the billing webhook's STRIPE_WEBHOOK_SECRET)
 """
 from __future__ import annotations
 
@@ -36,7 +37,7 @@ async def stripe_connect_webhook(
     body = await request.body()
     s = get_settings()
 
-    secret = s.stripe_webhook_secret
+    secret = s.stripe_connect_webhook_secret
     if secret:
         try:
             stripe.api_key = s.stripe_secret_key

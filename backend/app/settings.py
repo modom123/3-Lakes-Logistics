@@ -24,8 +24,9 @@ class Settings(BaseSettings):
     supabase_db_url: str = ""
 
     stripe_secret_key: str = ""
-    stripe_webhook_secret: str = ""
+    stripe_webhook_secret: str = ""            # billing/subscription webhook (penny)
     stripe_identity_webhook_secret: str = ""   # separate secret for Identity webhook endpoint
+    stripe_connect_webhook_secret: str = ""    # separate secret for Connect (account.updated) webhook
     stripe_price_founders: str = ""
     stripe_price_pro: str = ""
 
