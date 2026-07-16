@@ -10551,6 +10551,41 @@ function _emailHtmlDoc(html){
     + '</style></head><body>' + (html || '') + '</body></html>';
 }
 
+// Grow a srcdoc email iframe to fit its full content height so the whole
+// message is readable (the outer pane scrolls) instead of being clipped inside
+// a short fixed-height box. Because the frames are same-origin (srcdoc +
+// allow-same-origin) we can measure the rendered document directly. We remeasure
+// on load and again after images/fonts settle, and cap growth so a runaway
+// document can't blow out the layout.
+function _sizeEmailFrame(fr, minH){
+  if(!fr) return;
+  minH = minH || 320;
+  const fit = () => {
+    try{
+      const doc = fr.contentDocument || fr.contentWindow && fr.contentWindow.document;
+      if(!doc || !doc.body) return;
+      const h = Math.max(
+        doc.body.scrollHeight, doc.documentElement.scrollHeight,
+        doc.body.offsetHeight, doc.documentElement.offsetHeight
+      );
+      const target = Math.min(Math.max(h + 4, minH), 20000);
+      fr.style.height = target + 'px';
+      fr.style.flex = 'none';       // stop the flex parent from squashing it back
+      fr.style.minHeight = minH + 'px';
+    }catch(e){/* cross-origin or not ready — leave the fixed height */}
+  };
+  fr.addEventListener('load', () => {
+    fit(); setTimeout(fit, 150); setTimeout(fit, 600);
+    // Late-loading images/fonts can change the height after the first fit.
+    try{
+      const win = fr.contentWindow;
+      if(win) win.addEventListener('resize', fit);
+      const imgs = fr.contentDocument ? fr.contentDocument.images : [];
+      for(const im of imgs){ if(!im.complete) im.addEventListener('load', fit, {once:true}); }
+    }catch(e){}
+  });
+}
+
 let _lastOpenedEmail = null;
 let _mailBodyMode = 'html';
 
@@ -10589,7 +10624,7 @@ function mailSetBodyMode(mode){
   const render=document.getElementById('mail-body-render');
   if(render){
     render.innerHTML=_mailBodyInner(e,mode);
-    if(mode==='html' && e.body_html){const fr=render.querySelector('.mail-html-body-frame');if(fr)fr.srcdoc=_emailHtmlDoc(e.body_html);}
+    if(mode==='html' && e.body_html){const fr=render.querySelector('.mail-html-body-frame');if(fr){_sizeEmailFrame(fr,300);fr.srcdoc=_emailHtmlDoc(e.body_html);}}
   }
   const bh=document.getElementById('mail-mode-html'),bt=document.getElementById('mail-mode-text');
   if(bh&&bt){
@@ -14865,7 +14900,7 @@ window.moEmailOpen = async function(id,from,mb){
       ? `<iframe sandbox="allow-same-origin" class="mo-email-html-frame" style="width:100%;min-height:320px;flex:1;border:none;border-radius:4px;background:#fff;"></iframe>`
       : `<div style="background:#fff;border:1px solid #e5e7eb;border-radius:6px;padding:16px 20px;font-size:13px;color:#1a1a1a;line-height:1.75;white-space:pre-wrap;font-family:inherit;word-break:break-word;">${(m.body_text||_emailStripToText(m.body_html)||'(Empty message)').replace(/</g,'&lt;').replace(/>/g,'&gt;').slice(0,8000)}</div>`
     }`;
-    if(_emailHtmlHasContent(m.body_html)){const fr=view.querySelector('.mo-email-html-frame');if(fr)fr.srcdoc=_emailHtmlDoc(m.body_html);}
+    if(_emailHtmlHasContent(m.body_html)){const fr=view.querySelector('.mo-email-html-frame');if(fr){_sizeEmailFrame(fr,320);fr.srcdoc=_emailHtmlDoc(m.body_html);}}
   }catch(e){view.innerHTML='<div style="padding:20px;color:#888;">Could not load message</div>';}
 };
 
@@ -16389,7 +16424,7 @@ window.ccgEmailOpen = async function(id,from){
       ? `<iframe sandbox="allow-same-origin" class="ccg-email-html-frame" style="width:100%;min-height:320px;flex:1;border:none;border-radius:6px;background:#fff;"></iframe>`
       : `<div style="background:#fff;border-radius:6px;padding:16px 20px;font-size:13px;color:#1a1a1a;line-height:1.75;white-space:pre-wrap;font-family:inherit;word-break:break-word;">${(m.body_text||_emailStripToText(m.body_html)||'(Empty message)').replace(/</g,'&lt;').replace(/>/g,'&gt;').slice(0,8000)}</div>`
     }`;
-    if(_emailHtmlHasContent(m.body_html)){const fr=view.querySelector('.ccg-email-html-frame');if(fr)fr.srcdoc=_emailHtmlDoc(m.body_html);}
+    if(_emailHtmlHasContent(m.body_html)){const fr=view.querySelector('.ccg-email-html-frame');if(fr){_sizeEmailFrame(fr,320);fr.srcdoc=_emailHtmlDoc(m.body_html);}}
   }catch(e){view.innerHTML='<div style="padding:20px;color:rgba(255,255,255,.82);">Could not load message</div>';}
 };
 
