@@ -22126,6 +22126,26 @@ function lfRefresh(pageId){
 
 function loadLightFleet(id){ lfRefresh(id); }
 
+// ── Canonical light-fleet onboarding completion ───────────────────────────────
+// A driver is only "fully onboarded" (and countable as active) once BOTH of the
+// two required steps are complete:
+//   1. VERIFIED       → mvr_status === 'clear' (identity / MVR cleared)
+//   2. PAYOUT CONNECTED→ stripe_account_status === 'connected' (or stripe_payouts_enabled)
+// Until BOTH are done the driver stays in the onboarding pipeline — even if their
+// raw DB status is 'active'. This is the single source of truth used everywhere
+// the dashboard classifies a driver as onboarding vs. active/complete.
+function lfVerified(dr){ return !!dr && dr.mvr_status === 'clear'; }
+function lfPayoutReady(dr){ return !!dr && (dr.stripe_account_status === 'connected' || dr.stripe_payouts_enabled === true); }
+function lfOnboardComplete(dr){ return lfVerified(dr) && lfPayoutReady(dr); }
+function lfIsOnboarding(dr){ return !!dr && dr.status !== 'suspended' && !lfOnboardComplete(dr); }
+// What is this driver still waiting on? (for the onboarding pipeline stage label)
+function lfOnboardBlockers(dr){
+  const b = [];
+  if(!lfVerified(dr))    b.push(dr.mvr_status === 'flagged' ? 'MVR Flagged' : (dr.status === 'inactive' ? 'ID Verification' : 'MVR/Verification'));
+  if(!lfPayoutReady(dr)) b.push(dr.stripe_account_status === 'pending' ? 'Finish Payout Setup' : 'Payout Setup');
+  return b;
+}
+
 async function lfLoadRoster(service, stripId){
   const strip = document.getElementById(stripId);
   if(!strip) return;
@@ -22139,7 +22159,11 @@ async function lfLoadRoster(service, stripId){
     }
     strip.innerHTML = drivers.map(dr => {
       const veh = [dr.vehicle_year, dr.vehicle_make, dr.vehicle_model].filter(Boolean).join(' ') || '—';
-      const sc = dr.status === 'active' ? '#22c55e' : dr.status === 'suspended' ? '#ef4444' : '#f59e0b';
+      // Show "active" only when fully onboarded (verified + payout); otherwise the
+      // driver is still onboarding even if their raw status is 'active'.
+      const complete = lfOnboardComplete(dr);
+      const statusLabel = dr.status === 'suspended' ? 'suspended' : (complete ? 'active' : 'onboarding');
+      const sc = dr.status === 'suspended' ? '#ef4444' : (complete ? '#22c55e' : '#f59e0b');
       const initials = (dr.name||'?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
       const mvrColor = dr.mvr_status==='clear'?'#22c55e':dr.mvr_status==='flagged'?'#ef4444':'#f59e0b';
       // Welcome workflow dot: green = all 3 instant steps done, yellow = partial, grey = not started
@@ -22164,7 +22188,7 @@ async function lfLoadRoster(service, stripId){
         </div>
         <div class="lf-driver-card-vehicle">${veh}</div>
         <div class="lf-driver-card-badges">
-          <span style="padding:2px 7px;border-radius:6px;background:${sc}22;color:${sc};font-size:9px;font-weight:700;font-family:var(--ff-m)">${dr.status||'inactive'}</span>
+          <span style="padding:2px 7px;border-radius:6px;background:${sc}22;color:${sc};font-size:9px;font-weight:700;font-family:var(--ff-m)">${statusLabel}</span>
           <span style="padding:2px 7px;border-radius:6px;background:${mvrColor}22;color:${mvrColor};font-size:9px;font-weight:700;font-family:var(--ff-m)">MVR: ${dr.mvr_status||'pending'}</span>
         </div>
       </div>`;
@@ -22187,10 +22211,13 @@ async function dashLoadLFRoster(){
     const lfKpiEl=document.getElementById('dash-lf-kpi-total');
     const lfKpiSub=document.getElementById('dash-lf-kpi-sub');
     if(lfTotalEl)lfTotalEl.textContent=drivers.length;
-    const lfActiveCt=drivers.filter(dr=>dr.status==='active').length;
+    // "Active" = fully onboarded only (verified AND payout connected). A driver
+    // whose raw status is 'active' but who isn't verified / hasn't set up payouts
+    // is NOT counted here — they remain in the onboarding pipeline below.
+    const lfActiveCt=drivers.filter(dr=>dr.status!=='suspended' && lfOnboardComplete(dr)).length;
     if(lfActiveEl)lfActiveEl.textContent=lfActiveCt;
     if(lfKpiEl)lfKpiEl.textContent=drivers.length;
-    if(lfKpiSub)lfKpiSub.textContent=lfActiveCt+' active across all segments';
+    if(lfKpiSub)lfKpiSub.textContent=lfActiveCt+' fully onboarded across all segments';
     // Segment counts
     const segKeys=['nemt','medical','executive','courier','gig'];
     const segMap={};
@@ -22200,20 +22227,10 @@ async function dashLoadLFRoster(){
     segKeys.forEach(seg=>{const el=document.getElementById('lf-seg-'+seg);if(el)el.textContent=segMap[seg]||0;});
     const bizdevEl=document.getElementById('lf-seg-bizdev');
     if(bizdevEl)bizdevEl.textContent=segMap['bizdev']||segMap['business_dev']||segMap['biz_dev']||0;
-    // LF onboarding — a driver counts as "currently onboarding" until they are a
-    // fully verified, active driver. This must cover BOTH intake paths:
-    //   • Stripe-Identity path  → status='inactive', mvr_status='pending' (awaiting verify)
-    //   • honor-system path      → status='active' but not yet cleared (mvr_status!=='clear',
-    //                              activated_at still null) — e.g. a fresh self-service applicant
-    // Relying on status==='inactive' alone dropped honor-system/newly-added applicants
-    // (they land on 'active' before ever being verified). Exclude suspended drivers and
-    // anyone already activated (i.e. later-deactivated ex-drivers keep activated_at set).
-    const lfIsOnboarding=dr=>{
-      if(!dr||dr.status==='suspended') return false;
-      if(dr.activated_at) return false;                                  // already went active once → done
-      if(dr.status==='active' && dr.mvr_status==='clear') return false;  // verified & cleared → done
-      return true;                                                       // applied, not yet cleared → onboarding
-    };
+    // LF onboarding pipeline — anyone not yet fully onboarded (see lfOnboardComplete:
+    // requires BOTH identity/MVR verification AND a connected Stripe payout account).
+    // A driver whose raw status is 'active' but who is unverified or hasn't set up
+    // payouts stays here until both are done.
     const lfOnboard=drivers.filter(lfIsOnboarding);
     const lfObCountEl=document.getElementById('lf-onboard-count');
     if(lfObCountEl)lfObCountEl.textContent=lfOnboard.length;
@@ -22233,9 +22250,10 @@ async function dashLoadLFRoster(){
           lfOnboard.slice(0,8).map(dr=>{
             const svcs=(dr.approved_services||[dr.service_type||'']).filter(Boolean).slice(0,2).join(', ')||'—';
             const mvrColor=dr.mvr_status==='clear'?'var(--green)':dr.mvr_status==='flagged'?'var(--red)':'var(--orange)';
-            // Derive a readable onboarding stage (status is only active/inactive/suspended).
-            const stageLabel=dr.status==='inactive'?'Pending Verification':(dr.mvr_status==='flagged'?'MVR Flagged':'Awaiting MVR');
-            const stageColor=dr.status==='inactive'?'var(--orange)':(dr.mvr_status==='flagged'?'var(--red)':'var(--gold2)');
+            // Stage = the outstanding required step(s): verification and/or payout.
+            const blockers=lfOnboardBlockers(dr);
+            const stageLabel=blockers.length?blockers.join(' + '):'Finalizing';
+            const stageColor=dr.mvr_status==='flagged'?'var(--red)':(blockers.length>1?'var(--orange)':'var(--gold2)');
             // Stripe Connect payout account status — click to (re)send the setup link.
             const payMap={connected:['🟢','Connected','var(--green)'],pending:['🟡','Pending','var(--gold2)'],restricted:['🟠','Action needed','var(--orange)'],not_connected:['🔴','Not set up','var(--red)']};
             const pay=payMap[dr.stripe_account_status||'not_connected']||payMap.not_connected;
@@ -22256,14 +22274,16 @@ async function dashLoadLFRoster(){
       if(!drivers.length){lfRecentEl.innerHTML='<div class="t-sm t-muted">No drivers yet</div>';}
       else{lfRecentEl.innerHTML=drivers.slice(0,3).map(dr=>{
         const veh=[dr.vehicle_year,dr.vehicle_make,dr.vehicle_model].filter(Boolean).join(' ')||'—';
-        const sc=dr.status==='active'?'var(--green)':dr.status==='pending'?'var(--orange)':'var(--muted)';
+        const rComplete=lfOnboardComplete(dr);
+        const rLabel=dr.status==='suspended'?'suspended':(rComplete?'active':'onboarding');
+        const sc=dr.status==='suspended'?'var(--red)':(rComplete?'var(--green)':'var(--orange)');
         return '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">'+
           '<div style="width:30px;height:30px;border-radius:8px;background:linear-gradient(135deg,#6366f1,#8b5cf6);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#fff;flex-shrink:0">'+esc((dr.name||'?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase())+'</div>'+
           '<div style="flex:1;min-width:0">'+
             '<div style="font-weight:600;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(dr.name||'—')+'</div>'+
             '<div style="font-size:11px;color:var(--muted)">'+esc(veh)+'</div>'+
           '</div>'+
-          '<span style="color:'+sc+';font-weight:600;font-size:11px">'+esc(dr.status||'inactive')+'</span>'+
+          '<span style="color:'+sc+';font-weight:600;font-size:11px">'+esc(rLabel)+'</span>'+
         '</div>';
       }).join('');}
     }
@@ -22285,13 +22305,16 @@ async function dashLoadLFRoster(){
         const veh = [dr.vehicle_year,dr.vehicle_make,dr.vehicle_model].filter(Boolean).join(' ')||'—';
         const svcs = (dr.approved_services||[]).map(s=>`<span style="display:inline-block;padding:1px 7px;border-radius:10px;background:rgba(200,144,42,.15);color:var(--gold);font-size:10px;font-family:var(--ff-m);margin-right:3px">${s}</span>`).join('');
         const ago = dr.created_at ? lfFmtDate(dr.created_at) : '—';
-        const statusColor = dr.status==='active'?'var(--green)':dr.status==='pending'?'var(--orange)':'var(--muted)';
+        // "active" only when fully onboarded (verified + payout); else "onboarding".
+        const rComplete = lfOnboardComplete(dr);
+        const rStatusLabel = dr.status==='suspended'?'suspended':(rComplete?'active':'onboarding');
+        const statusColor = dr.status==='suspended'?'var(--red)':(rComplete?'var(--green)':'var(--orange)');
         return `<tr style="border-bottom:1px solid var(--border)">
           <td style="padding:8px 12px;font-weight:600">${dr.name||'—'}</td>
           <td style="padding:8px 12px;color:var(--muted)">${dr.phone||'—'}</td>
           <td style="padding:8px 12px;color:var(--muted);font-size:11px">${veh}</td>
           <td style="padding:8px 12px">${svcs||'—'}</td>
-          <td style="padding:8px 12px"><span style="color:${statusColor};font-weight:600;font-size:11px">${dr.status||'—'}</span></td>
+          <td style="padding:8px 12px"><span style="color:${statusColor};font-weight:600;font-size:11px">${rStatusLabel}</span></td>
           <td style="padding:8px 12px;color:var(--muted);font-size:11px">${ago}</td>
         </tr>`;
       }).join('')}</tbody>

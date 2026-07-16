@@ -358,37 +358,42 @@ def process_intake(payload: dict[str, Any]) -> dict[str, Any]:
             sb.table("light_vehicle_drivers").update({"status": "inactive", "mvr_status": "flagged"}).eq("id", str(driver_id)).execute()
         return {"status": "denied", "reason": "dirty_record_self_reported", "driver_id": str(driver_id) if driver_id else None}
 
-    # Self-reported clean + no Checkr — activate with warning flag
+    # Self-reported clean, but no Checkr key means we cannot actually verify the
+    # driver — so we do NOT activate them. A driver is only "onboarded/active" once
+    # BOTH required steps are complete: (1) identity/MVR verification AND (2) a
+    # connected Stripe payout account. Until then they stay in the onboarding
+    # pipeline (status stays 'inactive', mvr 'pending'). Do not set onboarded_at.
     if sb and driver_id:
         try:
             sb.table("light_vehicle_drivers").update({
-                "status": "active",
-                "mvr_status": "pending",   # not truly verified
-                "onboarded_at": _now(),
+                "status": "inactive",      # remains in onboarding — not active until verified + payout
+                "mvr_status": "pending",   # not verified
             }).eq("id", str(driver_id)).execute()
         except Exception:  # noqa: BLE001
             pass
 
     if phone:
-        _send_sms(phone, _WELCOME_SMS)
+        _send_sms(phone, _PENDING_SMS)
 
-    # Provision Stripe Connect payout account + text the setup link (parallel,
-    # non-blocking) so a self-service-activated driver can actually be paid.
+    # Provision the Stripe Connect payout account + text the setup link — this is
+    # one of the two required onboarding steps (no-op if Stripe isn't configured).
     _provision_payout(driver_id, {"name": name, "phone": phone, "email": email})
 
     mem.remember(
         _NAME, "last_intake",
         {"name": name, "driver_id": str(driver_id), "checkr": "fallback_no_key"},
         confidence=0.6,
-        summary=f"Approved (honor-system, no Checkr key): {name}",
+        summary=f"Intake received (honor-system, no Checkr key) — held in onboarding pending verification: {name}",
     )
-    log_agent(_NAME, "approved_fallback", payload={"name": name}, result="no_checkr_key — self-reported only")
+    log_agent(_NAME, "intake_pending_verification", payload={"name": name}, result="no_checkr_key — awaiting verification + payout")
 
+    # approved=True keeps the signup successful (the record persists); the driver
+    # is simply held in onboarding until verification + payout complete.
     return {
         "approved": True,
-        "status": "approved",
+        "status": "pending_verification",
         "driver_id": str(driver_id) if driver_id else None,
-        "warning": "CHECKR_API_KEY not configured — MVR not verified",
+        "warning": "CHECKR_API_KEY not configured — held in onboarding pending verification + payout",
         **({"db_error": _db_error} if _db_error else {}),
     }
 
