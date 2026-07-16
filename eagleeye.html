@@ -10536,6 +10536,24 @@ async function mailOpen(id){
   }catch(err){bc.innerHTML=`<div style="padding:20px;color:var(--red)">${esc(err.message)}</div>`;}
 }
 
+// Wrap raw email HTML in a normalized, forced-light document so the message
+// always renders as a clean white sheet with dark text — regardless of the
+// app's dark theme or the viewer's OS dark mode (which otherwise auto-inverts
+// the srcdoc iframe and makes the email unreadable / invisible-on-background).
+// Emails that set their own explicit colours still win.
+function _emailHtmlDoc(html){
+  return '<!doctype html><html><head><meta charset="utf-8">'
+    + '<meta name="color-scheme" content="light only">'
+    + '<meta name="viewport" content="width=device-width, initial-scale=1">'
+    + '<base target="_blank">'
+    + '<style>:root{color-scheme:light only}'
+    + 'html,body{background:#ffffff;margin:0;padding:16px;'
+    + 'color:#1a1a1a;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;'
+    + 'font-size:14px;line-height:1.6;word-break:break-word;-webkit-text-size-adjust:100%;}'
+    + 'img{max-width:100%;height:auto}table{max-width:100%}a{color:#2563eb}'
+    + '</style></head><body>' + (html || '') + '</body></html>';
+}
+
 let _lastOpenedEmail = null;
 function _renderBody(e,container){
   _lastOpenedEmail = e;
@@ -10569,7 +10587,7 @@ function _renderBody(e,container){
     </div>
     <div style="flex:1;overflow-y:auto;display:flex;flex-direction:column">${bodyContent}</div>
     ${attHtml}`;
-  if(e.body_html){const fr=container.querySelector('.mail-html-body-frame');if(fr)fr.srcdoc=e.body_html;}
+  if(e.body_html){const fr=container.querySelector('.mail-html-body-frame');if(fr)fr.srcdoc=_emailHtmlDoc(e.body_html);}
 }
 
 function mailCompose(){
@@ -14798,7 +14816,7 @@ window.moEmailOpen = async function(id,from,mb){
       ? `<iframe sandbox="allow-same-origin" class="mo-email-html-frame" style="width:100%;min-height:320px;flex:1;border:none;border-radius:4px;background:#fff;"></iframe>`
       : `<div style="background:#fafafa;border:1px solid #e5e7eb;border-radius:6px;padding:16px 20px;font-size:13px;color:#1a1a1a;line-height:1.75;white-space:pre-wrap;font-family:inherit;word-break:break-word;">${(m.body_text||'(Empty message)').replace(/</g,'&lt;').replace(/>/g,'&gt;').slice(0,8000)}</div>`
     }`;
-    if(m.body_html){const fr=view.querySelector('.mo-email-html-frame');if(fr)fr.srcdoc=m.body_html;}
+    if(m.body_html){const fr=view.querySelector('.mo-email-html-frame');if(fr)fr.srcdoc=_emailHtmlDoc(m.body_html);}
   }catch(e){view.innerHTML='<div style="padding:20px;color:#888;">Could not load message</div>';}
 };
 
@@ -16322,7 +16340,7 @@ window.ccgEmailOpen = async function(id,from){
       ? `<iframe sandbox="allow-same-origin" class="ccg-email-html-frame" style="width:100%;min-height:320px;flex:1;border:none;border-radius:6px;background:#fff;"></iframe>`
       : `<div style="background:#fff;border-radius:6px;padding:16px 20px;font-size:13px;color:#1a1a1a;line-height:1.75;white-space:pre-wrap;font-family:inherit;word-break:break-word;">${(m.body_text||'(Empty message)').replace(/</g,'&lt;').replace(/>/g,'&gt;').slice(0,8000)}</div>`
     }`;
-    if(m.body_html){const fr=view.querySelector('.ccg-email-html-frame');if(fr)fr.srcdoc=m.body_html;}
+    if(m.body_html){const fr=view.querySelector('.ccg-email-html-frame');if(fr)fr.srcdoc=_emailHtmlDoc(m.body_html);}
   }catch(e){view.innerHTML='<div style="padding:20px;color:rgba(255,255,255,.82);">Could not load message</div>';}
 };
 
