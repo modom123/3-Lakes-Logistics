@@ -194,6 +194,10 @@ def fire_sofia() -> None:
 
 def fire_vance_batch() -> None:
     """Run Vance batch daily — outbound calls to high-score leads (score >= 8)."""
+    from .settings import get_settings  # noqa: PLC0415
+    if not get_settings().automated_cold_outreach:
+        log.info("daily_agent: %s skipped (AUTOMATED_COLD_OUTREACH=false)", "fire_vance_batch")
+        return
     def _run():
         try:
             from .agents.vance import run_batch  # noqa: PLC0415
@@ -210,6 +214,10 @@ def fire_vance_batch() -> None:
 
 def fire_sms_campaign() -> None:
     """Run SMS campaigner daily — bulk SMS to Tier B leads (score 4-7)."""
+    from .settings import get_settings  # noqa: PLC0415
+    if not get_settings().automated_cold_outreach:
+        log.info("daily_agent: %s skipped (AUTOMATED_COLD_OUTREACH=false)", "fire_sms_campaign")
+        return
     def _run():
         try:
             from .agents.sms_campaigner import send_batch  # noqa: PLC0415

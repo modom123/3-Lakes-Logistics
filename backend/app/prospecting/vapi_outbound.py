@@ -6,7 +6,7 @@ VANCE_COLD_CALL_SCRIPT = """\
 "Hey — this is Vance with 3 Lakes Logistics. Quick 30 seconds. You running your own authority right now, or leased on?"
 
 [founders pitch]
-"We just opened 1,000 Founders spots — flat $200/mo for full dispatch, load boards, compliance monitoring, weekly ACH payouts. Rate is locked for life. 800+ carriers have already grabbed spots in Dry Van and Reefer."
+"We just opened 1,000 Founders spots — flat $300/mo per truck for full dispatch, load boards, compliance monitoring, weekly ACH payouts. You keep 100% of every load and the rate is locked for life. Not ready for a monthly? Pay-As-You-Go is 8% per load, no contract."
 
 [qualifier]
 "How many trucks you running, and what trailer type are you on?"

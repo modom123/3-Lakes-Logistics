@@ -813,6 +813,7 @@ select.form-input option{background:var(--surface);}
     <div class="sb-item" onclick="nav('invoices')"><span class="sb-icon">🧾</span> Invoices <span class="sb-badge" id="invoice-notif" style="display:none">●</span></div>
     <div class="sb-item" onclick="nav('salesforce')" style="background:rgba(15,76,129,.07);border-left:3px solid var(--navy)"><span class="sb-icon">🏆</span> <strong>Sales &amp; Marketing</strong> <span class="sb-badge" id="sm-notif-cmd" style="display:none;background:#ef4444;color:#fff">!</span></div>
     <div class="sb-item" onclick="nav('leads')" style="padding-left:32px;font-size:12px;"><span class="sb-icon">🎯</span> Pipeline</div>
+    <div class="sb-item" onclick="nav('call-list')" style="padding-left:32px;font-size:12px;"><span class="sb-icon">📞</span> Call List &amp; Launch Check</div>
   </div>
 
   <div class="sb-section" id="sb-lf-section">
@@ -1388,7 +1389,47 @@ select.form-input option{background:var(--surface);}
     </div>
 
     <!-- ═══ LOAD HUNTER ═══ -->
-    <div class="page" id="page-load-hunter">
+    <!-- ── Call List & Launch Check (added 2026-09-29 22:31 UTC) ─────────────── -->
+<div class="page" id="page-call-list">
+<style>
+#page-call-list{overflow-y:auto;}
+.cl-wrap{max-width:1400px;margin:0 auto;padding:24px 20px;}
+.cl-hero{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:18px;}
+.cl-hero h1{font-size:22px;font-weight:800;color:#fff;margin:0;}
+.cl-box{background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:14px 16px;margin-bottom:18px;color:#fff;font-size:12px;}
+.cl-box h3{margin:0 0 8px;font-size:13px;color:#F5C842;}
+.cl-ok{color:#4ade80;} .cl-bad{color:#f87171;} .cl-warn{color:#fbbf24;}
+.cl-fix{color:rgba(255,255,255,.7);font-size:11px;margin-left:20px;}
+.cl-table{width:100%;border-collapse:collapse;font-size:12px;color:#fff;}
+.cl-table th{text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:rgba(255,255,255,.82);padding:8px;border-bottom:1px solid rgba(255,255,255,.1);}
+.cl-table td{padding:8px;border-bottom:1px solid rgba(255,255,255,.05);vertical-align:top;}
+.cl-table a{color:#F5C842;text-decoration:none;font-weight:700;}
+.cl-table select,.cl-table input{background:#0b1220;color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:6px;padding:4px 6px;font-size:11px;}
+.cl-btn{padding:6px 14px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;border:none;background:#F5C842;color:#000;}
+.cl-btn.alt{background:transparent;color:#fff;border:1px solid rgba(255,255,255,.2);}
+</style>
+<div class="cl-wrap">
+  <div class="cl-hero">
+    <h1>📞 Call List &amp; Launch Check</h1>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <label style="color:#fff;font-size:11px"><input type="checkbox" id="cl-dialnow"> Only leads in calling hours now</label>
+      <button class="cl-btn alt" onclick="callListPull()">Pull new FMCSA leads</button>
+      <button class="cl-btn alt" onclick="callListCsv()">Download CSV</button>
+      <button class="cl-btn" onclick="callListLoad()">Refresh</button>
+    </div>
+  </div>
+  <div class="cl-box" id="cl-launch"><h3>Launch readiness</h3>Checking…</div>
+  <div class="cl-box" id="cl-pitch"></div>
+  <div class="cl-box" style="padding:0;overflow-x:auto">
+    <table class="cl-table">
+      <thead><tr><th>Company</th><th>Phone</th><th>Where</th><th>Trucks</th><th>Authority age</th><th>Score</th><th>Status</th><th>Outcome</th><th>Notes</th><th></th></tr></thead>
+      <tbody id="cl-rows"><tr><td colspan="10">Loading…</td></tr></tbody>
+    </table>
+  </div>
+</div>
+</div><!-- /page-call-list -->
+
+<div class="page" id="page-load-hunter">
     <style>
     .lh-wrap{padding:20px;max-width:1400px;margin:0 auto}
     .lh-hero{background:linear-gradient(135deg,#0f172a,#1c1917);border-radius:14px;padding:24px 28px;margin-bottom:18px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px}
@@ -4978,7 +5019,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 let allCarriers=[], allLoads=[], allInvoices=[], currentInvFilter='all', loadCounter=3849;
 
-const pageNames={dashboard:'Dashboard',dispatch:'Dispatch Board','fleet-map':'Fleet Map',carriers:'Carriers',drivers:'Drivers',loads:'Load Manager',invoices:'Invoices & Billing',compliance:'DOT Compliance',ifta:'IFTA / Permits',insurance:'Insurance',revenue:'Revenue Tracker',providers:'Compliance Providers',checklist:'Daily Checklist',notes:'Dispatcher Notes',reports:'Team Reports','exec-command':'Exec Command',agents:'AI Agents',founders:'Founders Program',leads:'Pipeline',salesforce:'Sales & Marketing',execution:'Execution Engine',factoring:'Factoring',email:'Email Center',vault:'Document Vault',clm:'CLM Scanner',ledger:'Atomic Ledger',agreements:'Agreements','lf-map':'Light Fleet Live Map','lf-nemt':'NEMT — Medical Transport','lf-medical':'Medical Courier','lf-executive':'Executive Transport','lf-courier':'Courier & Last-Mile','lf-gig':'Gig Fleet Management','lf-bizdev':'Light Fleet — Business Development','lf-million':'Light Fleet — $1M Blueprint','load-hunter':'Load Hunter — Live Board Scanner','mark-office':'Mark Odom — CEO Office','ccg-office':'CC Gulley Office','trading-desk':'Trading Desk','broker-division':'N. American Trading — Hub','broker-shippers':'Shipper Pipeline','broker-docs':'Docs & Invoices','trading-desk':'Trading Desk',costs:'Cost Tracking — IEBC','tech-monitor':'Tech Monitor — Marcus Reid & Jamie Park','driver-tracker':'Driver GPS Tracker','falcon-board':'FALCON Board — Carrier Portal Tracker'};
+const pageNames={dashboard:'Dashboard',dispatch:'Dispatch Board','fleet-map':'Fleet Map',carriers:'Carriers',drivers:'Drivers',loads:'Load Manager',invoices:'Invoices & Billing',compliance:'DOT Compliance',ifta:'IFTA / Permits',insurance:'Insurance',revenue:'Revenue Tracker',providers:'Compliance Providers',checklist:'Daily Checklist',notes:'Dispatcher Notes',reports:'Team Reports','exec-command':'Exec Command',agents:'AI Agents',founders:'Founders Program',leads:'Pipeline',salesforce:'Sales & Marketing',execution:'Execution Engine',factoring:'Factoring',email:'Email Center',vault:'Document Vault',clm:'CLM Scanner',ledger:'Atomic Ledger',agreements:'Agreements','lf-map':'Light Fleet Live Map','lf-nemt':'NEMT — Medical Transport','lf-medical':'Medical Courier','lf-executive':'Executive Transport','lf-courier':'Courier & Last-Mile','lf-gig':'Gig Fleet Management','lf-bizdev':'Light Fleet — Business Development','lf-million':'Light Fleet — $1M Blueprint','load-hunter':'Load Hunter — Live Board Scanner','mark-office':'Mark Odom — CEO Office','ccg-office':'CC Gulley Office','trading-desk':'Trading Desk','broker-division':'N. American Trading — Hub','broker-shippers':'Shipper Pipeline','broker-docs':'Docs & Invoices','trading-desk':'Trading Desk',costs:'Cost Tracking — IEBC','tech-monitor':'Tech Monitor — Marcus Reid & Jamie Park','driver-tracker':'Driver GPS Tracker','falcon-board':'FALCON Board — Carrier Portal Tracker','call-list':'Call List & Launch Check'};
 
 // ── 3 Lakes Logistics Backend API (FastAPI) ──
 const API_BASE = (window.__3LL_API_BASE || 'https://three-lakes-logistics-api.onrender.com').replace(/\/$/,'');
@@ -5093,7 +5134,7 @@ function nav(id){
   document.querySelectorAll('.sb-item').forEach(n=>{if(n.getAttribute('onclick')?.includes("'"+id+"'"))n.classList.add('active');});
   document.getElementById('page-title').textContent=pageNames[id]||id;
   // LF pages use full-page layout — hero acts as page header, topbar title hidden
-  const _lfFullPages=['lf-nemt','lf-medical','lf-executive','lf-courier','lf-gig','lf-bizdev','lf-million','lf-map','broker-division','trading-desk','broker-shippers','broker-docs','lf-drivers','lf-driver','lf-reports','exec-command','load-hunter','falcon-board'];
+  const _lfFullPages=['lf-nemt','lf-medical','lf-executive','lf-courier','lf-gig','lf-bizdev','lf-million','lf-map','broker-division','trading-desk','broker-shippers','broker-docs','lf-drivers','lf-driver','lf-reports','exec-command','load-hunter','falcon-board','call-list'];
   document.querySelector('.content').classList.toggle('lf-fullpage',_lfFullPages.includes(id));
   document.getElementById('main').classList.toggle('lf-fullpage',_lfFullPages.includes(id));
   // Fixed full-page overlays: always measure actual header stack
@@ -5146,6 +5187,7 @@ function nav(id){
   if(id==='costs'){loadCostData();}
   if(id==='tech-monitor'){loadTechMonitor();}
   if(id==='falcon-board'){falconBoardLoad();}
+  if(id==='call-list'){callListLoad();}
 }
 
 function openModal(id){
@@ -26289,7 +26331,7 @@ async function tdQuickPost() {
     if (res) { res.style.color='#f87171'; res.textContent='Error: ' + e.message; }
   }
 }
-</script>\n
+</script>
 
 <script>
 // ── COST TRACKING — IEBC ─────────────────────────────────────────────────────
@@ -27865,6 +27907,79 @@ function _dcAnimateBars(el){ el.querySelectorAll('.dc-bar-fill[data-w]').forEach
   <div class="fb-grid" id="fb-grid"><div class="fb-empty">Loading FALCON loads…</div></div>
 </div>
 </div><!-- /page-falcon-board -->
+
+<script>
+(function(){
+  const esc = v => String(v==null?'':v).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const OUTCOMES = ['no_answer','voicemail','callback','interested','sent_signup','signed','not_interested','wrong_number','do_not_call'];
+
+  async function loadLaunch(){
+    const box = document.getElementById('cl-launch');
+    try{
+      const r = await apiFetch('/api/health/launch?include_leads=true');
+      const line = i => `<div><span class="${i.ok?'cl-ok':(i.blocking?'cl-bad':'cl-warn')}">${i.ok?'✔':(i.blocking?'✖':'•')}</span> ${esc(i.name)}${i.ok?'':`<div class="cl-fix">→ ${esc(i.fix)}</div>`}</div>`;
+      box.innerHTML = `<h3>Launch readiness — <span class="${r.ready?'cl-ok':'cl-bad'}">${r.ready?'READY':'NOT READY'}</span> (${r.blocking_open} blocking, ${r.recommended_open} recommended)</h3>`
+        + r.items.filter(i=>i.blocking).map(line).join('')
+        + '<div style="margin-top:8px;color:rgba(255,255,255,.82)">Recommended</div>'
+        + r.items.filter(i=>!i.blocking).map(line).join('');
+    }catch(e){ box.innerHTML = '<h3>Launch readiness</h3><span class="cl-bad">Could not load: '+esc(e.message)+'</span>'; }
+  }
+
+  async function loadList(){
+    const tb = document.getElementById('cl-rows');
+    const dialNow = document.getElementById('cl-dialnow').checked;
+    try{
+      const r = await apiFetch('/api/leads/call-list?limit=100&dial_now='+dialNow);
+      document.getElementById('cl-pitch').innerHTML = '<h3>Script</h3><b>Opener:</b> Hi, this is (your name) with 3 Lakes Logistics. I saw (company) got its authority recently. Are you finding enough loads, or would a dispatcher help?<br><b>Pitch:</b> '+esc(r.pitch)+'<br><b>Close:</b> Can I text you the signup link right now? (3lakeslogistics.com)';
+      if(!r.items.length){ tb.innerHTML = '<tr><td colspan="10">No leads due. Click “Pull new FMCSA leads”.</td></tr>'; return; }
+      tb.innerHTML = r.items.map(l => `<tr data-id="${esc(l.id)}">
+        <td><b>${esc(l.company)}</b><div style="opacity:.7">DOT ${esc(l.dot_number)}${l.mc_number?' · MC '+esc(l.mc_number):''}</div></td>
+        <td><a href="tel:${esc(l.phone)}">${esc(l.phone)}</a></td>
+        <td>${esc([l.city,l.state].filter(Boolean).join(', '))}</td>
+        <td>${esc(l.fleet_size)}</td>
+        <td>${l.dot_age_days==null?'—':esc(l.dot_age_days)+' days'}</td>
+        <td>${esc(l.score)}</td>
+        <td>${esc(l.status)}</td>
+        <td><select>${OUTCOMES.map(o=>`<option value="${o}">${o.replace(/_/g,' ')}</option>`).join('')}</select></td>
+        <td><input type="text" placeholder="notes" style="width:160px"></td>
+        <td><button class="cl-btn" onclick="callListLog(this)">Log</button></td></tr>`).join('');
+    }catch(e){ tb.innerHTML = '<tr><td colspan="10" class="cl-bad">Could not load call list: '+esc(e.message)+'</td></tr>'; }
+  }
+
+  window.callListLoad = function(){ loadLaunch(); loadList(); };
+
+  window.callListLog = async function(btn){
+    const tr = btn.closest('tr');
+    const outcome = tr.querySelector('select').value;
+    const notes = tr.querySelector('input').value;
+    btn.disabled = true; btn.textContent = '…';
+    try{
+      await apiFetch('/api/leads/'+encodeURIComponent(tr.dataset.id)+'/log-call','POST',{outcome, notes});
+      tr.style.opacity = .35; btn.textContent = '✔';
+    }catch(e){ btn.disabled = false; btn.textContent = 'Log'; alert('Log failed: '+e.message); }
+  };
+
+  window.callListPull = async function(){
+    try{
+      const r = await apiFetch('/api/prospecting/run?min_score=0&limit=200','POST');
+      alert('Sourced '+r.sourced+' carriers, added '+r.inserted+' new leads.');
+      loadList();
+    }catch(e){ alert('Lead pull failed: '+e.message); }
+  };
+
+  window.callListCsv = async function(){
+    try{
+      const r = await fetch(API_BASE+'/api/leads/call-list?limit=500&format=csv',{headers:{'Authorization':'Bearer '+API_TOKEN}});
+      if(!r.ok) throw new Error(r.status+'');
+      const url = URL.createObjectURL(await r.blob());
+      const a = document.createElement('a');
+      const d = new Date(), p = n => String(n).padStart(2,'0');
+      a.href = url; a.download = `call_list_${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}_${p(d.getHours())}${p(d.getMinutes())}.csv`;
+      a.click(); URL.revokeObjectURL(url);
+    }catch(e){ alert('CSV download failed: '+e.message); }
+  };
+})();
+</script>
 
 <script>
 (function(){

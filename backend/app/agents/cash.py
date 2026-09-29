@@ -16,19 +16,14 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any
 
+from .. import pricing
 from ..logging_service import log_agent
 from ..supabase_client import get_supabase
 from . import memory as mem
 
 _NAME = "cash"
 
-# Platform fee rates by driver plan
-_FEE_RATES = {
-    "starter":    0.10,
-    "pro_fleet":  0.05,
-    "add_on":     0.05,
-    "default":    0.10,
-}
+# Platform fee — flat for every light fleet plan (see app/pricing.py)
 
 
 def _db():
@@ -95,7 +90,7 @@ def settle_trip(trip_id: str) -> dict[str, Any]:
     trip_type = trip.get("trip_type", "gig")
 
     plan = _driver_plan(str(driver_id)) if driver_id else "starter"
-    fee_rate = _FEE_RATES.get(plan, _FEE_RATES["default"])
+    fee_rate = pricing.LIGHT_FLEET_FEE_PCT
     platform_fee = round(rate_total * fee_rate, 2)
     driver_payout = round(rate_total - platform_fee, 2)
 

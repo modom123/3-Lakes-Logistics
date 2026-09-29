@@ -13,6 +13,7 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, HTTPException, Query, UploadFile, File
 from pydantic import BaseModel
 
+from .. import pricing
 from ..supabase_client import get_supabase
 from ..logging_service import get_logger
 from ..settings import get_settings
@@ -253,7 +254,8 @@ def get_pay_status(load_id: str, t: str = Query(...)):
     try:
         load = sb.table("loads").select("rate_total, status, delivered_at, broker_name").eq("id", load_id).single().execute().data or {}
         gross = float(load.get("rate_total") or 0)
-        fee = round(gross * 0.15, 2)
+        fee_pct = pricing.IEBC_FALCON_FEE_PCT
+        fee = round(gross * fee_pct, 2)
         net = round(gross - fee, 2)
         status = load.get("status", "dispatched")
         if status == "delivered":
@@ -268,7 +270,7 @@ def get_pay_status(load_id: str, t: str = Query(...)):
         return {
             "load_id": load_id,
             "gross_rate": gross,
-            "platform_fee_pct": 15,
+            "platform_fee_pct": round(fee_pct * 100, 2),
             "platform_fee": fee,
             "your_net": net,
             "pay_status": pay_status,

@@ -62,6 +62,12 @@ class Settings(BaseSettings):
 
     fmcsa_webkey: str = ""
 
+    # Scheduled AI-voice calls (Vance/Bland) and SMS blasts to cold leads.
+    # TCPA generally requires prior express written consent for artificial-voice
+    # calls and marketing texts to cell phones. Set AUTOMATED_COLD_OUTREACH=false
+    # to stop the daily jobs; hand-dialing and email campaigns keep running.
+    automated_cold_outreach: bool = True
+
     # US DOT open data (data.transportation.gov) — Socrata app token
     # Used by Alexander Wright agent for market intelligence
     # Free token at https://data.transportation.gov/login

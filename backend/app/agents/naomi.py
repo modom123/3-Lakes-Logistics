@@ -111,7 +111,8 @@ def _get_hot_states(top_n: int = 5) -> dict[str, float]:
 
 # ── Stage 2: FMCSA census pull ────────────────────────────────────────────────
 
-def _fmcsa_fetch(where: str, limit: int = 50, _retries: int = 2) -> list[dict]:
+def _fmcsa_fetch(where: str, limit: int = 50, _retries: int = 2,
+                 order: str = "total_power_units DESC") -> list[dict]:
     import time
     settings = get_settings()
     params: dict[str, Any] = {
@@ -119,9 +120,10 @@ def _fmcsa_fetch(where: str, limit: int = 50, _retries: int = 2) -> list[dict]:
         "$select": (
             "dot_number,legal_name,dba_name,telephone,phy_city,phy_state,"
             "total_power_units,total_drivers,tractor_trucks,straight_trucks,"
-            "equipment_type,safety_rating,operating_status,oos_date,mc_mx_ff_number"
+            "equipment_type,safety_rating,operating_status,oos_date,mc_mx_ff_number,"
+            "add_date"
         ),
-        "$order": "total_power_units DESC",
+        "$order": order,
         "$limit": limit,
     }
     headers: dict[str, str] = {}
@@ -161,8 +163,31 @@ def _int(val: Any) -> int:
         return 0
 
 
+# Ideal customer: a small carrier (1-10 power units) with recent authority —
+# they need loads and don't have a dispatcher yet. Big fleets run their own.
+ICP_MAX_POWER_UNITS = 10
+
+
+def _dot_age_days(add_date: Any) -> int | None:
+    """Days since FMCSA add_date; accepts ISO ('2026-09-01T00:00:00') or 'YYYYMMDD'."""
+    from datetime import datetime, timezone
+    raw = str(add_date or "").strip()
+    for fmt, n in (("%Y-%m-%d", 10), ("%Y%m%d", 8)):
+        try:
+            dt = datetime.strptime(raw[:n], fmt).replace(tzinfo=timezone.utc)
+            return max((datetime.now(timezone.utc) - dt).days, 0)
+        except ValueError:
+            continue
+    return None
+
+
 def _pull_fmcsa_prospects(hot_states: dict[str, float], per_state: int = 30) -> list[dict[str, Any]]:
-    """Fetch authorized carriers from hot states not already in leads table."""
+    """Fetch newest small authorized carriers from hot states not already in leads.
+
+    Sorted by add_date DESC so each daily run surfaces the freshest authorities
+    first; fleet size is capped in Python because the census stores
+    total_power_units as text and a string compare against '10' is unreliable.
+    """
     if not hot_states:
         return []
 
@@ -177,12 +202,19 @@ def _pull_fmcsa_prospects(hot_states: dict[str, float], per_state: int = 30) -> 
         where = (
             f"phy_state='{state}' AND operating_status='AUTHORIZED' "
             f"AND oos_date IS NULL AND entity_type='CARRIER' "
-            f"AND total_power_units >= '1' AND total_power_units <= '50'"
+            f"AND total_power_units >= '1' AND add_date IS NOT NULL"
         )
-        rows = _fmcsa_fetch(where, limit=per_state)
+        # Over-fetch: the fleet-size cap below drops some rows.
+        rows = _fmcsa_fetch(where, limit=per_state * 3, order="add_date DESC")
+        kept = 0
         for row in rows:
+            if kept >= per_state:
+                break
             dot = str(row.get("dot_number") or "").strip()
             if dot in known_dots or not dot:
+                continue
+            units = _int(row.get("total_power_units"))
+            if not 1 <= units <= ICP_MAX_POWER_UNITS:
                 continue
             mc_raw = str(row.get("mc_mx_ff_number") or "")
             mc_clean = mc_raw.replace("MC-", "").replace("MX-", "").strip() or None
@@ -202,8 +234,10 @@ def _pull_fmcsa_prospects(hot_states: dict[str, float], per_state: int = 30) -> 
                 "status":        "New",
                 "score":         5,  # neutral base — re-scored by model
                 "safety_rating": row.get("safety_rating") or "Not Rated",
+                "dot_age_days":  _dot_age_days(row.get("add_date")),
             })
             known_dots.add(dot)  # prevent dupes across states
+            kept += 1
 
     log.info("FMCSA prospects: %d new carriers found across %d states", len(prospects), min(len(hot_states), 5))
     return prospects
@@ -225,6 +259,7 @@ def _persist_fmcsa_prospects(prospects: list[dict[str, Any]]) -> int:
             "state":             p.get("state"),
             "fleet_size":        p.get("fleet_size"),
             "equipment_type":    p.get("equipment_type"),
+            "dot_age_days":      p.get("dot_age_days"),
             "score":             int(p.get("score") or 5),
             "status":            "New",
             "source":            "fmcsa_census",

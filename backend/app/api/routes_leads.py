@@ -1,10 +1,13 @@
 """Leads — powers the EAGLE EYE `Leads` page and Vance outbound."""
 from __future__ import annotations
 
+from datetime import datetime, timezone
+
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import PlainTextResponse
 
 from ..models.lead import Lead
-from ..prospecting import dedupe, scoring
+from ..prospecting import call_list, dedupe, scoring
 from ..supabase_client import get_supabase
 from .deps import require_bearer
 
@@ -60,6 +63,54 @@ def create_lead(lead: Lead) -> dict:
     except Exception as exc:
         raise HTTPException(500, f"Database error creating lead: {exc}") from exc
     return {"ok": True, "lead": (res.data or [None])[0]}
+
+
+@router.get("/call-list")
+def get_call_list(limit: int = 50, dial_now: bool = False, format: str = "json"):
+    """Today's hand-dial list: phone present, not DNC, due for a touch, best first.
+
+    dial_now=true keeps only leads inside 9am-5pm local time right now.
+    format=csv returns a spreadsheet with blank outcome/notes columns.
+    """
+    try:
+        rows = (
+            get_supabase().table("leads").select("*")
+            .order("score", desc=True).limit(2000).execute().data or []
+        )
+    except Exception as exc:
+        raise HTTPException(500, f"Database error loading leads: {exc}") from exc
+    items = call_list.build_call_list(rows, limit=limit, dial_now=dial_now)
+    if format == "csv":
+        stamp = datetime.now(timezone.utc).strftime("%Y-%m-%d_%H%M")
+        return PlainTextResponse(
+            call_list.to_csv(items), media_type="text/csv",
+            headers={"Content-Disposition": f'attachment; filename="call_list_{stamp}.csv"'},
+        )
+    return {"count": len(items), "pitch": call_list.PITCH, "items": items}
+
+
+@router.post("/{lead_id}/log-call")
+def log_call(lead_id: str, body: dict) -> dict:
+    """Record a hand-dialed call. Body: {outcome, notes?}.
+
+    Outcomes: no_answer, voicemail, callback, interested, sent_signup, signed,
+    not_interested, wrong_number, do_not_call.
+    """
+    outcome = (body.get("outcome") or "").strip()
+    if outcome not in call_list.OUTCOMES:
+        raise HTTPException(400, f"outcome must be one of {sorted(call_list.OUTCOMES)}")
+    sb = get_supabase()
+    notes = (body.get("notes") or "").strip()
+    if notes:
+        prev = (sb.table("leads").select("notes").eq("id", lead_id).limit(1).execute().data or [{}])[0]
+        stamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M")
+        notes = "\n".join(x for x in [prev.get("notes"), f"[{stamp} call:{outcome}] {notes}"] if x)
+    patch = call_list.outcome_patch(outcome, notes or None)
+    try:
+        sb.table("leads").update(patch).eq("id", lead_id).execute()
+    except Exception as exc:
+        raise HTTPException(500, f"Database error updating lead: {exc}") from exc
+    return {"ok": True, "lead_id": lead_id, **{k: patch[k] for k in ("status", "next_touch_at")}}
 
 
 @router.patch("/{lead_id}")

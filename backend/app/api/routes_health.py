@@ -4,11 +4,12 @@ from __future__ import annotations
 import time
 from datetime import datetime, timezone
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 
 from ..circuit_breaker import breakers
 from ..logging_service import get_logger
 from ..settings import get_settings
+from .deps import require_bearer
 
 log = get_logger(__name__)
 router = APIRouter()
@@ -148,3 +149,10 @@ async def health_circuits():
 async def health_ping():
     """Ultra-fast ping for load balancer health checks (< 5ms)."""
     return "ok"
+
+
+@router.get("/api/health/launch", tags=["health"], dependencies=[Depends(require_bearer)])
+def health_launch(verify_stripe: bool = False, include_leads: bool = True):
+    """Go / no-go for taking paying customers. Booleans only — no secrets."""
+    from ..launch_readiness import check
+    return check(verify_stripe=verify_stripe, include_leads=include_leads)

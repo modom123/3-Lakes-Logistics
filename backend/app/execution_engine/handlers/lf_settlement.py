@@ -7,6 +7,8 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
+from ... import pricing
+
 _NOW = lambda: datetime.now(timezone.utc).isoformat()  # noqa: E731
 
 
@@ -73,7 +75,7 @@ def h257_apply_rate(carrier_id, contract_id, payload) -> dict:
 def h258_platform_fee_deduction(carrier_id, contract_id, payload) -> dict:
     trip_id = payload.get("trip_id")
     rate_total = payload.get("rate_total") or payload.get("final_rate", 0.0)
-    fee_pct = 0.15
+    fee_pct = pricing.LIGHT_FLEET_FEE_PCT
     fee_plan = "starter"
     try:
         platform_fee = round(float(rate_total) * fee_pct, 2)

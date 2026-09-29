@@ -15,6 +15,7 @@ from fastapi import APIRouter, HTTPException, Depends, status
 from pydantic import BaseModel
 import stripe
 
+from .. import pricing
 from ..supabase_client import get_supabase
 from ..settings import get_settings
 from ..logging_service import get_logger
@@ -170,7 +171,7 @@ async def get_payout_status(session: DriverSession):
 async def request_payout(req: PayoutRequestModel, session: DriverSession):
     """Request instant payout for delivered load.
 
-    Calculates deductions (8% dispatch fee, $45 insurance) and creates
+    Calculates deductions (plan-based dispatch fee, $45 insurance) and creates
     Stripe Transfer to driver's connected account.
     """
     driver_id = session["driver_id"]
@@ -179,7 +180,7 @@ async def request_payout(req: PayoutRequestModel, session: DriverSession):
     try:
         # Validate load exists & is delivered by this driver
         load_result = get_supabase().table("loads").select(
-            "id, driver_id, rate_total, delivered_at"
+            "id, driver_id, rate_total, delivered_at, carrier_id"
         ).eq("id", req.load_id).eq("driver_id", driver_id).eq("status", "delivered").single().execute()
 
         load = load_result.data
@@ -201,9 +202,10 @@ async def request_payout(req: PayoutRequestModel, session: DriverSession):
                 detail="payout not set up - complete onboarding first"
             )
 
-        # Calculate net pay: gross - dispatch fee (8%) - insurance ($45)
+        # Calculate net pay: gross - dispatch fee (per carrier plan) - insurance ($45)
         gross_cents = int(load.get("rate_total", 0) * 100)
-        dispatch_fee = int(gross_cents * 0.08)
+        fee_pct = pricing.heavy_fee_pct(pricing.carrier_plan(get_supabase(), load.get("carrier_id")))
+        dispatch_fee = int(gross_cents * fee_pct)
         insurance_cents = 4500  # $45
         net_cents = gross_cents - dispatch_fee - insurance_cents
 

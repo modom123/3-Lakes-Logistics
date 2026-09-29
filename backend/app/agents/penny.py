@@ -18,19 +18,38 @@ def _sk() -> str:
     return s
 
 
+def _price_for_plan(plan: str | None, s) -> str | None:
+    """Stripe price id for a subscription plan.
+
+    Returns "" for plans with no monthly subscription (billed per load or by
+    contract) and None when the plan needs a price that isn't configured.
+    """
+    p = (plan or "founders").strip().lower()
+    if p == "founders":
+        return s.stripe_price_founders or None
+    if p in ("pro", "standard"):
+        return s.stripe_price_pro or None
+    return ""
+
+
 def create_checkout_session(carrier_id: str, plan: str, email: str, founders_truck_count: int = 1) -> str | None:
     """Step 17: after intake we hand the carrier a Stripe checkout URL."""
     s = get_settings()
-    if not s.stripe_secret_key or not s.stripe_price_founders:
+    price_id = _price_for_plan(plan, s)
+    if price_id == "":
+        # pay_as_you_go / enterprise / discuss: no monthly subscription to sell.
+        log_agent("penny", "checkout_skipped", carrier_id=carrier_id, result=f"plan={plan}")
+        return None
+    if not s.stripe_secret_key or not price_id:
         log_agent("penny", "checkout", carrier_id=carrier_id, error="stripe_not_configured")
         return None
     try:
         _sk()
-        quantity = founders_truck_count if plan == "founders" else 1
+        quantity = max(int(founders_truck_count or 1), 1) if plan == "founders" else 1
         session = stripe.checkout.Session.create(
             mode="subscription",
             customer_email=email,
-            line_items=[{"price": s.stripe_price_founders, "quantity": quantity}],
+            line_items=[{"price": price_id, "quantity": quantity}],
             success_url="https://3lakeslogistics.com/welcome?cid=" + carrier_id,
             cancel_url="https://3lakeslogistics.com/?cid=" + carrier_id,
             metadata={"carrier_id": carrier_id, "plan": plan, "founders_truck_count": str(founders_truck_count)},

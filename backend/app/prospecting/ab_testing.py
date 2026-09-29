@@ -6,8 +6,8 @@ import hashlib
 
 TEMPLATES: dict[str, list[dict]] = {
     "founders_v1": [
-        {"variant": "A", "body": "Hey {first_name}, just 1,000 Founders spots in our dispatch program — $200/mo locked for life. Want the link?"},
-        {"variant": "B", "body": "{first_name}, we're holding {remaining} {trailer_type} Founders spots. Full dispatch, $200/mo. Interested?"},
+        {"variant": "A", "body": "Hey {first_name}, just 1,000 Founders spots in our dispatch program — $300/mo locked for life. Want the link?"},
+        {"variant": "B", "body": "{first_name}, we're holding {remaining} {trailer_type} Founders spots. Full dispatch, $300/mo, keep 100% of every load. Interested?"},
     ],
 }
 

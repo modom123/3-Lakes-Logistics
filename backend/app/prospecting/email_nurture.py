@@ -5,8 +5,8 @@
 from __future__ import annotations
 
 NURTURE_SEQUENCE = [
-    {"day": 0,  "subject": "Your $200/mo dispatch spot (1 of 1,000)",
-     "body_md": "**{first_name}** — we're holding a Founders slot for {company_name}...\n\n- Flat $200/mo, locked for life\n- Full-service dispatch, 10% on loads\n- Weekly ACH payouts via Settler\n\n**[Claim spot →](https://3lakeslogistics.com/?utm={utm})**"},
+    {"day": 0,  "subject": "Your $300/mo dispatch spot (1 of 1,000)",
+     "body_md": "**{first_name}** — we're holding a Founders slot for {company_name}...\n\n- Flat $300/mo per truck, locked for life\n- Full-service dispatch, 0% commission — keep 100% of every load\n- Weekly ACH payouts via Settler\n\n**[Claim spot →](https://3lakeslogistics.com/?utm={utm})**"},
     {"day": 2,  "subject": "{first_name}, 3 questions about your trucks",
      "body_md": "Quick one — how many of your {fleet_size} trucks run dry van vs reefer? I can pull your DOT {dot_number} and show you what loads we're covering this week."},
     {"day": 5,  "subject": "Carriers like yours are averaging 2.8 $/mi",
