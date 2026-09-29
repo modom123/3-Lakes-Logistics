@@ -1407,6 +1407,19 @@ select.form-input option{background:var(--surface);}
 .cl-table select,.cl-table input{background:#0b1220;color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:6px;padding:4px 6px;font-size:11px;}
 .cl-btn{padding:6px 14px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;border:none;background:#F5C842;color:#000;}
 .cl-btn.alt{background:transparent;color:#fff;border:1px solid rgba(255,255,255,.2);}
+.ck-head{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:8px;}
+.ck-bar{height:6px;background:rgba(255,255,255,.08);border-radius:4px;overflow:hidden;margin:6px 0 10px;}
+.ck-bar>div{height:100%;background:#4ade80;}
+.ck-sec{margin:12px 0 4px;font-size:11px;font-weight:800;color:#F5C842;text-transform:uppercase;letter-spacing:.5px;}
+.ck-row{display:flex;align-items:flex-start;gap:8px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.05);}
+.ck-row input[type=checkbox]{margin-top:2px;width:16px;height:16px;accent-color:#4ade80;cursor:pointer;flex-shrink:0;}
+.ck-row label{flex:1;cursor:pointer;line-height:1.45;}
+.ck-row.done label{text-decoration:line-through;opacity:.5;}
+.ck-when{font-size:10px;opacity:.6;margin-left:6px;}
+.ck-erase{background:transparent;border:1px solid rgba(248,113,113,.5);color:#f87171;border-radius:6px;font-size:10px;padding:2px 8px;cursor:pointer;flex-shrink:0;}
+.ck-add{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;}
+.ck-add input,.ck-add select{background:#0b1220;color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:6px;padding:5px 8px;font-size:11px;}
+.ck-add input{flex:1;min-width:200px;}
 </style>
 <div class="cl-wrap">
   <div class="cl-hero">
@@ -1418,6 +1431,8 @@ select.form-input option{background:var(--surface);}
       <button class="cl-btn" onclick="callListLoad()">Refresh</button>
     </div>
   </div>
+  <div class="cl-box" id="cl-quota"><h3>Today's calls</h3>Loading…</div>
+  <div class="cl-box" id="cl-checklist"><h3>Launch checklist</h3>Loading…</div>
   <div class="cl-box" id="cl-launch"><h3>Launch readiness</h3>Checking…</div>
   <div class="cl-box" id="cl-pitch"></div>
   <div class="cl-box" style="padding:0;overflow-x:auto">
@@ -27946,7 +27961,110 @@ function _dcAnimateBars(el){ el.querySelectorAll('.dc-bar-fill[data-w]').forEach
     }catch(e){ tb.innerHTML = '<tr><td colspan="10" class="cl-bad">Could not load call list: '+esc(e.message)+'</td></tr>'; }
   }
 
-  window.callListLoad = function(){ loadLaunch(); loadList(); };
+  // ── Launch checklist: shared via /api/office/state/launch_checklist, cached in localStorage ──
+  const CK_KEY = 'launch_checklist';
+  const CK_DEFAULT = [
+    ['Wed 9/30 — Money & legal', 'Finish Stripe account activation (bank, EIN, identity)'],
+    ['Wed 9/30 — Money & legal', 'Put live Stripe key (sk_live_…) in Render → STRIPE_SECRET_KEY'],
+    ['Wed 9/30 — Money & legal', 'Run: cd backend && python -m scripts.init_stripe_product → paste STRIPE_PRICE_FOUNDERS / STRIPE_PRICE_PRO into Render'],
+    ['Wed 9/30 — Money & legal', 'Stripe webhook → /api/webhooks/stripe (checkout.session.completed, invoice.paid, invoice.payment_failed, customer.subscription.deleted) → STRIPE_WEBHOOK_SECRET'],
+    ['Wed 9/30 — Money & legal', 'Set POSTMARK_SERVER_TOKEN in Render (welcome + onboarding emails)'],
+    ['Wed 9/30 — Money & legal', 'Confirm authority: dispatcher only, or broker (MC + $75K BMC-84 bond)? Fix website wording to match'],
+    ['Wed 9/30 — Money & legal', 'Have dispatcher-service + carrier agreements reviewed (contingent cargo / E&O insurance)'],
+    ['Wed 9/30 — Money & legal', 'Set AUTOMATED_COLD_OUTREACH=false in Render (TCPA — no AI calls/SMS to non-consented leads)'],
+    ['Thu 10/1 — Loads & leads', 'Subscribe to DAT One (~$149/mo) for booking real loads'],
+    ['Thu 10/1 — Loads & leads', 'Get free DOT open-data token → DOT_API_KEY in Render'],
+    ['Thu 10/1 — Loads & leads', 'Click “Pull new FMCSA leads” until the call list has 200+ leads'],
+    ['Thu 10/1 — Loads & leads', 'Test signup yourself: Pay-As-You-Go (no charge) and Founders ($300 checkout) — then refund'],
+    ['Thu 10/1 — Loads & leads', 'Launch readiness box below shows READY (all blocking items green)'],
+    ['Thu 10/1 — Loads & leads', 'Practice the call script out loud 5 times'],
+    ['Fri 10/2 — Open for business', 'Morning 9:00–11:30 local: first 13 calls, log every one'],
+    ['Fri 10/2 — Open for business', 'Afternoon 1:00–4:30 local: remaining 12 calls — “Today’s calls” bar shows 25 of 25'],
+    ['Fri 10/2 — Open for business', 'Text the signup link to every “interested” while still on the phone'],
+    ['Fri 10/2 — Open for business', 'End of day: write down dials / conversations / sign-ups'],
+    ['Week 1 goal', '125 calls logged (25 × 5 weekdays)'],
+    ['Week 1 goal', 'Sign first 1–3 carriers'],
+    ['Week 1 goal', 'Book first real load'],
+  ];
+  let ckState = null;
+
+  function ckDefaults(){
+    return {seeded:true, items: CK_DEFAULT.map(([section,text],i)=>({id:'d'+i, section, text, done:false, done_at:null}))};
+  }
+  function ckLocal(){ try{ return JSON.parse(localStorage.getItem(CK_KEY)||'null'); }catch(_){ return null; } }
+  function ckSave(){
+    try{ localStorage.setItem(CK_KEY, JSON.stringify(ckState)); }catch(_){}
+    apiFetch('/api/office/state/'+CK_KEY,'PUT',{value:ckState}).catch(()=>{});
+  }
+  async function loadChecklist(){
+    let server = null;
+    try{ const d = await apiFetch('/api/office/state/'+CK_KEY); if(d && d.ok) server = d.value; }catch(_){}
+    if(server && server.seeded){ ckState = server; }
+    else { ckState = ckLocal() || ckDefaults(); ckSave(); }
+    try{ localStorage.setItem(CK_KEY, JSON.stringify(ckState)); }catch(_){}
+    renderChecklist();
+  }
+  function renderChecklist(){
+    const box = document.getElementById('cl-checklist');
+    const items = ckState.items || [];
+    const done = items.filter(i=>i.done).length;
+    const pct = items.length ? Math.round(done*100/items.length) : 100;
+    const sections = [...new Set(items.map(i=>i.section))];
+    let html = `<div class="ck-head"><h3 style="margin:0">🚀 Launch checklist — ${done} of ${items.length} done</h3>
+      <div style="display:flex;gap:6px">${done?'<button class="cl-btn alt" onclick="ckEraseDone()">Erase all completed</button>':''}
+      <button class="cl-btn alt" onclick="ckReset()">Restore default list</button></div></div>
+      <div class="ck-bar"><div style="width:${pct}%"></div></div>`;
+    if(!items.length) html += '<div class="cl-ok">All done and erased. 🎉</div>';
+    sections.forEach(sec=>{
+      html += `<div class="ck-sec">${esc(sec)}</div>`;
+      items.filter(i=>i.section===sec).forEach(i=>{
+        html += `<div class="ck-row${i.done?' done':''}"><input type="checkbox" id="ck-${esc(i.id)}" ${i.done?'checked':''} onchange="ckToggle('${esc(i.id)}')">
+          <label for="ck-${esc(i.id)}">${esc(i.text)}${i.done&&i.done_at?`<span class="ck-when">✔ ${esc(new Date(i.done_at).toLocaleString())}</span>`:''}</label>
+          ${i.done?`<button class="ck-erase" onclick="ckErase('${esc(i.id)}')">Erase</button>`:''}</div>`;
+      });
+    });
+    html += `<div class="ck-add"><select id="ck-new-sec">${sections.map(s=>`<option>${esc(s)}</option>`).join('')}<option>Other</option></select>
+      <input id="ck-new-text" placeholder="Add a checklist item…" onkeydown="if(event.key==='Enter')ckAdd()"><button class="cl-btn" onclick="ckAdd()">Add</button></div>`;
+    box.innerHTML = html;
+  }
+  window.ckToggle = function(id){
+    const it = ckState.items.find(i=>i.id===id); if(!it) return;
+    it.done = !it.done; it.done_at = it.done ? new Date().toISOString() : null;
+    ckSave(); renderChecklist();
+  };
+  window.ckErase = function(id){
+    ckState.items = ckState.items.filter(i=>i.id!==id); ckSave(); renderChecklist();
+  };
+  window.ckEraseDone = function(){
+    const n = ckState.items.filter(i=>i.done).length;
+    if(!n || !confirm('Erase '+n+' completed item(s)?')) return;
+    ckState.items = ckState.items.filter(i=>!i.done); ckSave(); renderChecklist();
+  };
+  window.ckAdd = function(){
+    const t = document.getElementById('ck-new-text').value.trim(); if(!t) return;
+    ckState.items.push({id:'u'+Date.now(), section:document.getElementById('ck-new-sec').value, text:t, done:false, done_at:null});
+    ckSave(); renderChecklist();
+  };
+  window.ckReset = function(){
+    if(!confirm('Replace the current checklist with the default launch list?')) return;
+    ckState = ckDefaults(); ckSave(); renderChecklist();
+  };
+
+  async function loadQuota(){
+    const box = document.getElementById('cl-quota');
+    const midnight = new Date(); midnight.setHours(0,0,0,0);
+    try{
+      const q = await apiFetch('/api/leads/call-stats?since='+encodeURIComponent(midnight.toISOString()));
+      const pct = Math.min(100, Math.round(q.made*100/Math.max(q.target,1)));
+      const outcomes = Object.entries(q.by_status||{}).map(([k,v])=>esc(k)+': '+v).join(' · ');
+      const low = q.callable_waiting < q.target;
+      box.innerHTML = `<div class="ck-head"><h3 style="margin:0">📞 Today's calls — <span class="${q.done?'cl-ok':'cl-warn'}">${q.made} of ${q.target}</span>${q.done?' ✔ goal hit':' · '+q.remaining+' to go'}</h3>
+        <div class="${low?'cl-bad':'cl-ok'}">${q.callable_waiting} leads waiting (${q.days_of_leads} days)${low?' — click “Pull new FMCSA leads”':''}</div></div>
+        <div class="ck-bar"><div style="width:${pct}%"></div></div>${outcomes?'<div style="opacity:.8">'+outcomes+'</div>':''}`;
+    }catch(e){ box.innerHTML = '<h3>Today\'s calls</h3><span class="cl-bad">Could not load: '+esc(e.message)+'</span>'; }
+  }
+
+  window.callListLoad = function(){ loadQuota(); loadChecklist(); loadLaunch(); loadList(); };
 
   window.callListLog = async function(btn){
     const tr = btn.closest('tr');
@@ -27955,15 +28073,15 @@ function _dcAnimateBars(el){ el.querySelectorAll('.dc-bar-fill[data-w]').forEach
     btn.disabled = true; btn.textContent = '…';
     try{
       await apiFetch('/api/leads/'+encodeURIComponent(tr.dataset.id)+'/log-call','POST',{outcome, notes});
-      tr.style.opacity = .35; btn.textContent = '✔';
+      tr.style.opacity = .35; btn.textContent = '✔'; loadQuota();
     }catch(e){ btn.disabled = false; btn.textContent = 'Log'; alert('Log failed: '+e.message); }
   };
 
   window.callListPull = async function(){
     try{
-      const r = await apiFetch('/api/prospecting/run?min_score=0&limit=200','POST');
-      alert('Sourced '+r.sourced+' carriers, added '+r.inserted+' new leads.');
-      loadList();
+      const r = await apiFetch('/api/leads/ensure-supply','POST');
+      alert('Added '+r.added+' new carriers. '+r.callable_after+' leads now waiting'+(r.short?(' — still '+r.short+' short; FMCSA may be rate-limiting (set DOT_API_KEY).'):' — enough for '+Math.floor(r.callable_after/r.target_per_day)+' days.'));
+      loadQuota(); loadList();
     }catch(e){ alert('Lead pull failed: '+e.message); }
   };
 

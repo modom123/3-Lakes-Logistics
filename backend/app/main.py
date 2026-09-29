@@ -88,6 +88,7 @@ def _start_scheduler(app: FastAPI) -> None:
             fire_alexander,
             fire_victoria,
             fire_naomi,
+            fire_lead_supply,
             fire_winston,
             fire_isabella,
             fire_sofia,
@@ -134,6 +135,9 @@ def _start_scheduler(app: FastAPI) -> None:
         scheduler.add_job(fire_sofia, CronTrigger(hour=8, minute=15), id="sofia_daily", replace_existing=True)
         scheduler.add_job(fire_mark_odom, CronTrigger(hour=8, minute=30), id="mark_odom_daily", replace_existing=True)
         scheduler.add_job(fire_naomi, CronTrigger(hour=18, minute=0), id="naomi_evening", replace_existing=True)
+        # 11:30 UTC = 7:30am Eastern, before the first dials; again at 17:30 UTC as a backstop.
+        scheduler.add_job(fire_lead_supply, CronTrigger(day_of_week="mon-fri", hour=11, minute=30), id="lead_supply_morning", replace_existing=True)
+        scheduler.add_job(fire_lead_supply, CronTrigger(day_of_week="mon-fri", hour=17, minute=30), id="lead_supply_midday", replace_existing=True)
         scheduler.add_job(fire_vance_batch, CronTrigger(hour=13, minute=0), id="vance_batch_daily", replace_existing=True)
         scheduler.add_job(fire_vance_batch, CronTrigger(hour=17, minute=0), id="vance_batch_evening", replace_existing=True)
         scheduler.add_job(fire_sms_campaign, CronTrigger(hour=14, minute=0), id="sms_outreach_daily", replace_existing=True)

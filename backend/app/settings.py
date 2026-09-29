@@ -68,6 +68,11 @@ class Settings(BaseSettings):
     # to stop the daily jobs; hand-dialing and email campaigns keep running.
     automated_cold_outreach: bool = True
 
+    # Hand-dialed sales calls per weekday. A morning job tops up the lead pool
+    # so at least LEAD_BUFFER_DAYS worth of callable leads are always waiting.
+    daily_call_target: int = 25
+    lead_buffer_days: int = 3
+
     # US DOT open data (data.transportation.gov) — Socrata app token
     # Used by Alexander Wright agent for market intelligence
     # Free token at https://data.transportation.gov/login

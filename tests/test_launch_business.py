@@ -144,3 +144,59 @@ def test_falcon_fee_matches_portal_copy():
     # falcon.html tells IEBC-channel carriers "Platform Fee (15%)"
     assert pricing.IEBC_FALCON_FEE_PCT == 0.15
     assert "Platform Fee (15%)" in (Path(__file__).resolve().parents[1] / "falcon.html").read_text()
+
+
+# ── 25 calls a day ───────────────────────────────────────────────────────────
+
+def test_call_stats_counts_only_todays_calls():
+    midnight = NOW.replace(hour=5)  # caller's local midnight in UTC
+    rows = [
+        {"outreach_channel": "call", "last_contact_at": (midnight + timedelta(hours=1)).isoformat(), "status": "Contacted"},
+        {"outreach_channel": "call", "last_contact_at": (midnight + timedelta(hours=2)).isoformat(), "status": "Interested"},
+        {"outreach_channel": "call", "last_contact_at": (midnight - timedelta(hours=1)).isoformat(), "status": "Contacted"},
+        {"outreach_channel": "email", "last_contact_at": (midnight + timedelta(hours=1)).isoformat()},
+    ]
+    st = call_list.call_stats(rows, midnight, 25)
+    assert (st["made"], st["remaining"], st["done"]) == (2, 23, False)
+    assert st["by_status"] == {"Contacted": 1, "Interested": 1}
+
+
+class _FakeSB:
+    """Just enough of the Supabase client for ensure_supply."""
+    def __init__(self, rows):
+        self.rows = rows
+    def table(self, _):
+        return self
+    def select(self, *_):
+        return self
+    def limit(self, _):
+        return self
+    def execute(self):
+        return type("R", (), {"data": list(self.rows)})()
+
+
+def test_ensure_supply_tops_up_until_buffer(monkeypatch):
+    from app.agents import naomi
+    sb = _FakeSB([_lead(id=f"x{i}") for i in range(10)])
+    pulls = []
+
+    def fake_pull(states, per_state=40):
+        pulls.append(list(states))
+        return [_lead(id=f"{s}{i}", dot_number=f"{s}{i}") for s in states for i in range(10)]
+
+    def fake_persist(prospects):
+        sb.rows.extend(prospects)
+        return len(prospects)
+
+    monkeypatch.setattr(naomi, "_pull_fmcsa_prospects", fake_pull)
+    monkeypatch.setattr(naomi, "_persist_fmcsa_prospects", fake_persist)
+    r = call_list.ensure_supply(25, 3, sb=sb)  # need 75, have 10 → one 4-state pull adds 40, second adds 40
+    assert r["callable_before"] == 10 and r["callable_after"] == 90 and r["short"] == 0
+    assert len(pulls) == 2
+
+
+def test_ensure_supply_noop_when_full(monkeypatch):
+    from app.agents import naomi
+    monkeypatch.setattr(naomi, "_pull_fmcsa_prospects", lambda *a, **k: pytest.fail("should not pull"))
+    sb = _FakeSB([_lead(id=f"x{i}") for i in range(80)])
+    assert call_list.ensure_supply(25, 3, sb=sb)["added"] == 0

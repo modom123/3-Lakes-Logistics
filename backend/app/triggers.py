@@ -125,6 +125,20 @@ def fire_victoria() -> None:
     _bg(_run)
 
 
+def fire_lead_supply() -> None:
+    """Weekday morning — make sure the call list holds LEAD_BUFFER_DAYS of daily calls."""
+    def _run():
+        try:
+            from .prospecting.call_list import ensure_supply  # noqa: PLC0415
+            from .settings import get_settings  # noqa: PLC0415
+            s = get_settings()
+            result = ensure_supply(s.daily_call_target, s.lead_buffer_days)
+            log.info("daily_agent: lead_supply %s", result)
+        except Exception as exc:  # noqa: BLE001
+            log.error("daily_agent: lead_supply failed: %s", exc)
+    _bg(_run)
+
+
 def fire_naomi() -> None:
     """Run Naomi daily — lead scoring + FMCSA prospect pull."""
     def _run():

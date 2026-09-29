@@ -8,6 +8,7 @@ Keys in use:
   mo_todos   — shared executive TODO list
   oc_mark    — Mark Odom's contacts
   oc_cece    — CC Gulley's contacts
+  launch_checklist — Friday launch checklist on the Call List page
 
 Endpoints degrade gracefully: if the office_state table isn't present yet, they
 return ok=False and the frontend transparently falls back to localStorage.
@@ -25,7 +26,7 @@ log = get_logger("3ll.api.office")
 
 
 def _ok_key(key: str) -> bool:
-    return key in ("mo_todos", "cc_todos") or key.startswith("oc_")
+    return key in ("mo_todos", "cc_todos", "launch_checklist") or key.startswith("oc_")
 
 
 @router.get("/state/{key}")

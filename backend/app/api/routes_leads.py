@@ -89,6 +89,40 @@ def get_call_list(limit: int = 50, dial_now: bool = False, format: str = "json")
     return {"count": len(items), "pitch": call_list.PITCH, "items": items}
 
 
+@router.get("/call-stats")
+def get_call_stats(since: str | None = None) -> dict:
+    """Today's calls vs the daily target, plus how many callable leads are waiting.
+
+    since = ISO timestamp of the caller's local midnight (defaults to UTC midnight).
+    """
+    from ..settings import get_settings
+    s = get_settings()
+    try:
+        start = datetime.fromisoformat(since.replace("Z", "+00:00")) if since else \
+            datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+    except ValueError as exc:
+        raise HTTPException(400, "since must be an ISO timestamp") from exc
+    if start.tzinfo is None:
+        start = start.replace(tzinfo=timezone.utc)
+    try:
+        rows = get_supabase().table("leads").select("*").limit(5000).execute().data or []
+    except Exception as exc:
+        raise HTTPException(500, f"Database error loading leads: {exc}") from exc
+    stats = call_list.call_stats(rows, start, s.daily_call_target)
+    waiting = call_list.count_callable(rows)
+    stats["callable_waiting"] = waiting
+    stats["days_of_leads"] = round(waiting / max(s.daily_call_target, 1), 1)
+    return stats
+
+
+@router.post("/ensure-supply")
+def ensure_lead_supply() -> dict:
+    """Top up FMCSA leads until LEAD_BUFFER_DAYS of daily calls are waiting."""
+    from ..settings import get_settings
+    s = get_settings()
+    return call_list.ensure_supply(s.daily_call_target, s.lead_buffer_days)
+
+
 @router.post("/{lead_id}/log-call")
 def log_call(lead_id: str, body: dict) -> dict:
     """Record a hand-dialed call. Body: {outcome, notes?}.

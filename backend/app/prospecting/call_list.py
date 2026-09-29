@@ -128,3 +128,62 @@ def outcome_patch(outcome: str, notes: str | None = None, now_utc: datetime | No
     if notes:
         patch["notes"] = notes[:2000]
     return patch
+
+
+# Broad fallback when the daily hot-state pull leaves the pool short.
+# High-volume trucking states, roughly by number of new authorities.
+TOPUP_STATES = ["TX", "FL", "CA", "GA", "IL", "OH", "NC", "PA", "TN", "NJ",
+                "IN", "AZ", "MI", "NY", "MO", "AL", "SC", "VA", "WA", "KY"]
+
+
+def count_callable(rows: list[dict[str, Any]], now_utc: datetime | None = None) -> int:
+    return len(build_call_list(rows, limit=1_000_000, now_utc=now_utc))
+
+
+def ensure_supply(target_per_day: int, buffer_days: int, sb=None) -> dict[str, Any]:
+    """Pull more FMCSA carriers until `target_per_day * buffer_days` leads are callable.
+
+    Walks TOPUP_STATES a few at a time so one thin state never starves the list.
+    """
+    from ..agents import naomi
+    from ..supabase_client import get_supabase
+    from . import scoring
+    sb = sb or get_supabase()
+    need = target_per_day * buffer_days
+
+    def _callable() -> int:
+        rows = sb.table("leads").select("*").limit(5000).execute().data or []
+        return count_callable(rows)
+
+    before = have = _callable()
+    added = 0
+    for i in range(0, len(TOPUP_STATES), 4):
+        if have >= need:
+            break
+        states = {st: 1.0 for st in TOPUP_STATES[i:i + 4]}
+        prospects = [p for p in naomi._pull_fmcsa_prospects(states, per_state=40) if p.get("phone")]
+        for pr in prospects:
+            pr["score"] = scoring.score_lead(pr)
+        added += naomi._persist_fmcsa_prospects(prospects)
+        have = _callable()
+    return {"target_per_day": target_per_day, "needed": need, "callable_before": before,
+            "callable_after": have, "added": added, "short": max(need - have, 0)}
+
+
+def call_stats(rows: list[dict[str, Any]], since: datetime, target: int) -> dict[str, Any]:
+    """Calls logged since `since` (the caller's local midnight), by outcome status."""
+    made = 0
+    by_status: dict[str, int] = {}
+    for r in rows:
+        if r.get("outreach_channel") != "call" or not r.get("last_contact_at"):
+            continue
+        try:
+            ts = datetime.fromisoformat(str(r["last_contact_at"]).replace("Z", "+00:00"))
+        except ValueError:
+            continue
+        if ts >= since:
+            made += 1
+            st = r.get("status") or "Contacted"
+            by_status[st] = by_status.get(st, 0) + 1
+    return {"target": target, "made": made, "remaining": max(target - made, 0),
+            "by_status": by_status, "done": made >= target}

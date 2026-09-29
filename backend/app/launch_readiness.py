@@ -50,6 +50,8 @@ def _verify_stripe_prices(s) -> list[dict[str, Any]]:
 
 def _lead_counts() -> list[dict[str, Any]]:
     from .prospecting.call_list import build_call_list
+    s = get_settings()
+    need = s.daily_call_target * s.lead_buffer_days
     from .supabase_client import get_supabase
     try:
         rows = get_supabase().table("leads").select("*").limit(2000).execute().data or []
@@ -58,8 +60,10 @@ def _lead_counts() -> list[dict[str, Any]]:
     callable_now = build_call_list(rows, limit=10_000)
     return [
         _item("Leads table readable", True, "", blocking=True),
-        _item(f"At least 50 callable leads (have {len(callable_now)})", len(callable_now) >= 50,
-              "POST /api/prospecting/run (or wait for Naomi's 07:15 UTC run) to pull FMCSA carriers.",
+        _item(f"{need} callable leads = {s.lead_buffer_days} days of {s.daily_call_target} calls (have {len(callable_now)})",
+              len(callable_now) >= need,
+              "Click “Pull new FMCSA leads” on the Call List page (POST /api/leads/ensure-supply). "
+              "It also runs every weekday at 11:30 UTC.",
               blocking=False),
     ]
 
