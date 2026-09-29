@@ -246,11 +246,19 @@ class TestVehicleEligibility(unittest.TestCase):
         self.assertTrue(r["supports_executive"])
         self.assertTrue(r["supports_courier"])
 
-    def test_sedan_executive_only(self):
+    def test_sedan_runs_executive_and_courier(self):
         r = self._classify("sedan")
         self.assertTrue(r["supports_executive"])
-        self.assertFalse(r["supports_courier"])
+        self.assertTrue(r["supports_courier"], "Sedans may take courier work.")
         self.assertFalse(r["supports_nemt"])
+
+    def test_semis_never_run_courier(self):
+        for vt in ("Class 6 Semi", "class_7", "Class 8 Semi", "semi", "semi-truck", "Tractor", "18-wheeler"):
+            with self.subTest(vehicle_type=vt):
+                self.assertFalse(self._classify(vt)["supports_courier"])
+        for vt in ("box_truck", "cargo_van", "pickup", "semicustom sedan"):
+            with self.subTest(vehicle_type=vt):
+                self.assertTrue(self._classify(vt)["supports_courier"])
 
     def test_unknown_vehicle_defaults_to_passenger_and_gig_only(self):
         r = self._classify("Class 8 Semi")

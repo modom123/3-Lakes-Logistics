@@ -24832,8 +24832,7 @@ function bdEmailProspect(id){
 
 let _bdDrawerProspectId = null;
 
-const BD_REPS = {marcus_webb:'Marcus Webb',jordan_vale:'Jordan Vale',priya_santos:'Priya Santos'};
-const BD_SECTOR_LABELS = {healthcare:'Healthcare',enterprise:'Enterprise',platform:'Platform'};
+const BD_SECTOR_NAMES = {healthcare:'Healthcare',enterprise:'Enterprise',platform:'Platform'};
 const BD_SECTOR_ICONS = {healthcare:'🏥',enterprise:'🏢',platform:'🔗'};
 const BD_SECTOR_COLORS = {healthcare:'#60a5fa',enterprise:'#a78bfa',platform:'#4ade80'};
 const BD_STATUS_LABELS = {prospect:'Prospect',prospecting:'Prospecting',contacted:'Contacted',proposal:'Proposal Sent',negotiating:'Negotiating',contract:'Contract',active:'Active Client',lost:'Lost'};
@@ -24854,7 +24853,7 @@ function bdOpenProspect(id){
   // Badges
   const badges = document.getElementById('bd-drawer-badges');
   badges.innerHTML = `
-    <span style="font-size:10px;font-weight:700;padding:3px 9px;border-radius:10px;background:rgba(255,255,255,.07);color:${sectorColor}">${sectorIcon} ${BD_SECTOR_LABELS[p.sector]||p.sector}</span>
+    <span style="font-size:10px;font-weight:700;padding:3px 9px;border-radius:10px;background:rgba(255,255,255,.07);color:${sectorColor}">${sectorIcon} ${BD_SECTOR_NAMES[p.sector]||p.sector}</span>
     <span style="font-size:10px;font-weight:700;padding:3px 9px;border-radius:10px;background:rgba(255,255,255,.07);color:rgba(255,255,255,.82)">👤 ${BD_REPS[p.rep]||p.rep||'—'}</span>
     <span style="font-size:10px;font-weight:700;padding:3px 9px;border-radius:10px;background:rgba(245,158,11,.12);color:#fbbf24">Step ${p.sequence_step||0}/4</span>
   `;

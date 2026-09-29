@@ -5,6 +5,8 @@ No CDL required. Covers MVR, background, vehicle insurance, service assignment.
 """
 from __future__ import annotations
 
+import re
+
 from datetime import datetime, timezone, date
 from uuid import UUID
 import logging
@@ -323,9 +325,17 @@ def h205_verify_vehicle_insurance(carrier_id, contract_id, payload) -> dict:
 _SERVICE_RULES: dict[str, dict] = {
     "nemt":      {"max_age": 10, "types": {"suv", "minivan", "wheelchair_van"}},
     "executive": {"max_age": 7,  "types": {"sedan", "suv", "luxury"}},
-    "courier":   {"max_age": 15, "types": None},   # None = any type allowed
+    "courier":   {"max_age": 15, "types": None, "no_heavy": True},  # any light vehicle
     "gig":       {"max_age": 15, "types": None},
 }
+
+# Heavy trucks (Class 6–8: semis, tractors) belong in the heavy fleet, not
+# light-fleet courier work. Matched as words anywhere in the vehicle type.
+_HEAVY_VEHICLE = re.compile(r"\b(semi|tractor|18[- ]?wheeler|big[- ]?rig|class[ _-]?[678])\b")
+
+
+def is_heavy_vehicle(vehicle_type: str | None) -> bool:
+    return bool(_HEAVY_VEHICLE.search((vehicle_type or "").lower()))
 
 
 def _vehicle_age(vehicle_year: int | None) -> int | None:
@@ -343,6 +353,8 @@ def check_vehicle_eligibility(vehicle_type: str, vehicle_year: int | None) -> di
     result = {}
     for service, rules in _SERVICE_RULES.items():
         type_ok = (rules["types"] is None) or (vt in rules["types"])
+        if rules.get("no_heavy") and is_heavy_vehicle(vt):
+            type_ok = False
         age_ok  = (age is None) or (age <= rules["max_age"])
         result[service] = type_ok and age_ok
     return result
